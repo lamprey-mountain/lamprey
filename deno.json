@@ -1,9 +1,17 @@
 {
-  "workspace": ["frontend", "backend"],
-  "compilerOptions": {
-    "strict": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "solid-js"
-  }
+	"workspace": ["frontend", "backend"],
+	"compilerOptions": {
+		"strict": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],
+		"jsx": "react-jsx",
+		"jsxImportSource": "solid-js"
+	},
+	"lint": {},
+	"fmt": {
+		"useTabs": true
+	},
+	"lock": {
+		"path": "./deno.lock",
+		"frozen": true
+	}
 }

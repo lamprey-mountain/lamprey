@@ -1,64 +1,76 @@
 .nav {
-  width: 144px;
-  background: #111;
-  display: flex;
-  flex-direction: column;
+	width: 144px;
+	background: #111;
+	display: flex;
+	flex-direction: column;
 }
 
 .nav button {
-  color: #eee;
-  background: #222;
-  border: 0;
+	color: #eee;
+	background: #222;
+	border: 0;
 }
 
 .nav button:hover, .nav button:focus {
-  background: #333;
+	background: #333;
 }
 
 .loader {
-  --spinner-size: 10px;
-  position: fixed;
-  display: flex;
-  align-items: center;
-  bottom: 4px;
-  left: 4px;
-  padding: 4px;
-  color: #eee;
-  background: #2228;
-  transition: opacity 100ms linear;
-  opacity: 0;
+	--spinner-size: 10px;
+	position: fixed;
+	display: flex;
+	align-items: center;
+	bottom: 4px;
+	left: 4px;
+	padding: 4px;
+	color: #eee;
+	background: #2228;
+	transition: opacity 100ms linear;
+	opacity: 0;
 }
 
 .loaderSpinner {
-  margin-right: 8px;
-  height: var(--spinner-size);
-  width: var(--spinner-size);
-  border: solid #eee 2px;
-  border-top-color: transparent;
-  border-bottom-color: transparent;
-  border-radius: 50%;
-  animation: loader 300ms linear infinite;
+	margin-right: 8px;
+	height: var(--spinner-size);
+	width: var(--spinner-size);
+	border: solid #eee 2px;
+	border-top-color: transparent;
+	border-bottom-color: transparent;
+	border-radius: 50%;
+	animation: loader 300ms linear infinite;
 }
 
 .loaderDots::before {
-  position: absolute;
-  content: "";
-  animation: loaderAfter 500ms linear infinite;
+	position: absolute;
+	content: "";
+	animation: loaderAfter 500ms linear infinite;
 }
 
 .loaderDots::after {
-  content: "...";
-  visibility: hidden;
+	content: "...";
+	visibility: hidden;
 }
 
 @keyframes loader {
-  0% { transform: rotate(0); }
-  100% { transform: rotate(1turn); }
+	0% {
+		transform: rotate(0);
+	}
+	100% {
+		transform: rotate(1turn);
+	}
 }
 
 @keyframes loaderAfter {
-  0% { content: ""; }
-  25% { content: "."; }
-  50% { content: ".."; }
-  75% { content: "..."; }
+	0% {
+		content: "";
+	}
+	25% {
+		content: ".";
+	}
+	50% {
+		content: "..";
+	}
+	75% {
+		content: "...";
+	}
 }

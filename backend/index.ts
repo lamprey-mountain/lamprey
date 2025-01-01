@@ -20,50 +20,54 @@ app.openAPIRegistry.register("Role", t.Role);
 app.openAPIRegistry.register("Invite", t.Invite);
 app.openAPIRegistry.register("Permissions", t.Permissions);
 app.openAPIRegistry.registerComponent("securitySchemes", "token", {
-  type: "apiKey",
-  name: "authorization",
-  in: "header",
+	type: "apiKey",
+	name: "authorization",
+	in: "header",
 });
 app.use(logger());
 app.use((c, next) => {
-  // cors middleware has issues with websockets
-  if (c.req.path === "/api/v1/sync") return next();
-  return cors()(c, next);
+	// cors middleware has issues with websockets
+	if (c.req.path === "/api/v1/sync") return next();
+	return cors()(c, next);
 });
 
 routes.setup(app);
 
 app.doc("/api/docs.json", {
-  openapi: "3.0.0",
-  info: {
-    version: "0.0.1",
-    title: "My API",
-  },
-  // security: [{
-  //   type: "apiKey",
-  //   name: "authorization",
-  //   in: "header",
-  // }],
-  tags: [
-    {
-      name: "room",
-      description: "routes for messing with rooms. *mark* `down` [test](https://example.com)",
-    },
-  ],
-  servers: [
-    { url: "http://localhost:8000", description: "local dev" },
-    { url: "https://chat.celery.eu.org", description: "production" },
-  ],
+	openapi: "3.0.0",
+	info: {
+		version: "0.0.1",
+		title: "My API",
+	},
+	// security: [{
+	//   type: "apiKey",
+	//   name: "authorization",
+	//   in: "header",
+	// }],
+	tags: [
+		{
+			name: "room",
+			description:
+				"routes for messing with rooms. *mark* `down` [test](https://example.com)",
+		},
+	],
+	servers: [
+		{ url: "http://localhost:8000", description: "local dev" },
+		{ url: "https://chat.celery.eu.org", description: "production" },
+	],
 });
 
-app.get("/api/docs/*", apiReference({
-  theme: "saturn",
-  pageTitle: "api reference",
-  pathRouting: { basePath: "/api/docs" },
-  layout: "modern",
-  // withDefaultFonts: false,
-  hideClientButton: true,
-  spec: { url: "/api/docs.json" },
-}));
+app.get(
+	"/api/docs/*",
+	apiReference({
+		theme: "saturn",
+		pageTitle: "api reference",
+		pathRouting: { basePath: "/api/docs" },
+		layout: "modern",
+		// withDefaultFonts: false,
+		hideClientButton: true,
+		spec: { url: "/api/docs.json" },
+	}),
+);
 
 export default app;

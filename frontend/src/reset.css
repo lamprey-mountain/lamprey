@@ -1,6 +1,6 @@
 /* will star have a performance impact? */
 * {
-  all: unset;
-  display: revert;
-  box-sizing: border-box;
+	all: unset;
+	display: revert;
+	box-sizing: border-box;
 }

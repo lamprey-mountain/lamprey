@@ -9,16 +9,16 @@ import setupAuth from "./auth/index.ts";
 import setupSync from "./sync/index.ts";
 
 export function setup(app: OpenAPIHono<HonoEnv>) {
-  setupRooms(app);
-  setupThreads(app);
-  setupMessages(app);
-  setupUsers(app);
-  setupSessions(app);
-  setupAuth(app);
-  setupSync(app);
-  
-  // stub for now, actually serve app later
-  app.get("/", (c) => {
-    return c.html(Deno.readTextFileSync("./index.html"));
-  });
+	setupRooms(app);
+	setupThreads(app);
+	setupMessages(app);
+	setupUsers(app);
+	setupSessions(app);
+	setupAuth(app);
+	setupSync(app);
+
+	// stub for now, actually serve app later
+	app.get("/", (c) => {
+		return c.html(Deno.readTextFileSync("./index.html"));
+	});
 }

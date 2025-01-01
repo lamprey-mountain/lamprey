@@ -1,24 +1,43 @@
 import { z } from "npm:@hono/zod-openapi";
-import { Message, MessageId, MessageVersionId, Room, RoomId, Session, SessionId, Thread, ThreadId, User, UserId } from "./common.ts";
+import {
+	Message,
+	MessageId,
+	MessageVersionId,
+	Room,
+	RoomId,
+	Session,
+	SessionId,
+	Thread,
+	ThreadId,
+	User,
+	UserId,
+} from "./common.ts";
 
 export const MessageClient = z.union([
-  z.object({ type: z.literal("hello"), token: z.string(), last_id: z.string().optional() }),
-  z.object({ type: z.literal("pong") }),
+	z.object({
+		type: z.literal("hello"),
+		token: z.string(),
+		last_id: z.string().optional(),
+	}),
+	z.object({ type: z.literal("pong") }),
 ]);
 
 export const MessageServer = z.union([
-  z.object({ type: z.literal("ping") }),
-  z.object({ type: z.literal("ready"), user: User }),
-  z.object({ type: z.literal("error"), error: z.string() }),
-  z.object({ type: z.literal("upsert.room"), room: Room }),
-  z.object({ type: z.literal("upsert.thread"), thread: Thread }),
-  z.object({ type: z.literal("upsert.message"), message: Message }),
-  z.object({ type: z.literal("upsert.user"), user: User }),
-  z.object({ type: z.literal("upsert.session"), session: Session }),
-  z.object({ type: z.literal("delete.message"), message_id: MessageId }),
-  z.object({ type: z.literal("delete.message_version"), version_id: MessageVersionId }),
-  z.object({ type: z.literal("delete.user"), user_id: UserId }),
-  z.object({ type: z.literal("delete.session"), session_id: SessionId }),
+	z.object({ type: z.literal("ping") }),
+	z.object({ type: z.literal("ready"), user: User }),
+	z.object({ type: z.literal("error"), error: z.string() }),
+	z.object({ type: z.literal("upsert.room"), room: Room }),
+	z.object({ type: z.literal("upsert.thread"), thread: Thread }),
+	z.object({ type: z.literal("upsert.message"), message: Message }),
+	z.object({ type: z.literal("upsert.user"), user: User }),
+	z.object({ type: z.literal("upsert.session"), session: Session }),
+	z.object({ type: z.literal("delete.message"), message_id: MessageId }),
+	z.object({
+		type: z.literal("delete.message_version"),
+		version_id: MessageVersionId,
+	}),
+	z.object({ type: z.literal("delete.user"), user_id: UserId }),
+	z.object({ type: z.literal("delete.session"), session_id: SessionId }),
 ]);
 
 /*

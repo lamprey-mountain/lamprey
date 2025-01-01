@@ -1,22 +1,22 @@
 {
-  "tasks": {
-    "dev": "deno run -A --node-modules-dir npm:vite",
-    "build": "deno run -A --node-modules-dir npm:vite build",
-    "preview": "deno run -A --node-modules-dir npm:vite preview",
-    "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/"
-  },
-  "imports": {
-    "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
-    "highlight.js": "npm:highlight.js@^11.11.1",
-    "marked": "npm:marked@^15.0.4",
-    "prosemirror-history": "npm:prosemirror-history@^1.4.1",
-    "prosemirror-keymap": "npm:prosemirror-keymap@^1.2.2",
-    "prosemirror-model": "npm:prosemirror-model@^1.24.1",
-    "prosemirror-state": "npm:prosemirror-state@^1.4.3",
-    "prosemirror-view": "npm:prosemirror-view@^1.37.1",
-    "solid-js": "npm:solid-js@^1.9.3",
-    "uuidv7": "npm:uuidv7@^1.0.2",
-    "vite": "npm:vite@^6.0.1",
-    "vite-plugin-solid": "npm:vite-plugin-solid@^2.11.0",
-  }
+	"tasks": {
+		"dev": "deno run -A --node-modules-dir npm:vite",
+		"build": "deno run -A --node-modules-dir npm:vite build",
+		"preview": "deno run -A --node-modules-dir npm:vite preview",
+		"serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/"
+	},
+	"imports": {
+		"@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
+		"highlight.js": "npm:highlight.js@^11.11.1",
+		"marked": "npm:marked@^15.0.4",
+		"prosemirror-history": "npm:prosemirror-history@^1.4.1",
+		"prosemirror-keymap": "npm:prosemirror-keymap@^1.2.2",
+		"prosemirror-model": "npm:prosemirror-model@^1.24.1",
+		"prosemirror-state": "npm:prosemirror-state@^1.4.3",
+		"prosemirror-view": "npm:prosemirror-view@^1.37.1",
+		"solid-js": "npm:solid-js@^1.9.3",
+		"uuidv7": "npm:uuidv7@^1.0.2",
+		"vite": "npm:vite@^6.0.1",
+		"vite-plugin-solid": "npm:vite-plugin-solid@^2.11.0"
+	}
 }
