@@ -48,7 +48,8 @@ export const MessageList = createRoute({
       before: MessageId.optional(),
       // around: MessageId.optional(),
       // pinned: z.boolean().optional(),
-      limit: Uint.min(1).max(100).default(10),
+      // limit: Uint.min(1).max(100).default(10),
+      limit: z.string().default("10").transform(i => parseInt(i, 10)).pipe(Uint.min(1).max(100)),
     }),
   },
   responses: {

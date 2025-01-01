@@ -30,7 +30,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
     const after = c.req.param("after");
     const before = c.req.param("before");
     const [count] = db.prepareQuery("SELECT count(*) FROM threads WHERE room_id = ?").first([room_id])!;
-    const rows = db.prepareQuery("SELECT * FROM threads WHERE room_id = ? AND id > ? AND id < ? LIMIT ?")
+    const rows = db.prepareQuery("SELECT * FROM threads WHERE room_id = ? AND thread_id > ? AND thread_id < ? LIMIT ?")
       .allEntries([room_id, after ?? UUID_MIN, before ?? UUID_MAX, limit + 1]);
     return c.json({
       has_more: rows.length > limit,

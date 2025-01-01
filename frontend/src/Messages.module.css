@@ -1,0 +1,118 @@
+.messages {
+  list-style: none;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+
+.messageWrap {
+  display: grid;
+  grid-template-columns: 128px auto max-content;
+  grid-wrap: none;
+  padding: 0 8px;
+}
+
+.message {
+  /* empty */
+}
+
+.is_local .body {
+  color: #888888;
+}
+
+.sender {
+  color: #999;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.sender:hover {
+  text-decoration: underline;
+}
+
+.body {
+  margin: 0 8px;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+.time {
+  visibility: hidden;
+  color: #aaa;
+}
+
+.messageWrap:hover {
+  background: #dddddd22;
+}
+
+.messageWrap:hover .time {
+  visibility: visible;
+}
+
+.messages.notime .time {
+  display: none;
+}
+
+.unreadMarker {
+  color: #3fa9c9;
+  background: #3fa9c922;
+  box-shadow: 3px 0 0 #3fa9c9 inset;
+}
+
+.mention {
+  background: #67dc8222;
+  box-shadow: 3px 0 0 #67dc82 inset;
+}
+
+.unread {
+  box-shadow: 3px 0 0 #3fa9c9 inset;
+}
+
+.timeSplit {
+  color: #aaa;
+  font-style: italic;
+}
+
+.timeSplit2 {
+  display: flex;
+  color: #aaa;
+  font-size: .9rem;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px;
+}
+
+.timeSplit2 > hr {
+  flex: 1;
+  border-bottom: solid #ccc 1px;
+}
+
+.timeSplit2 > time {
+  /* HACK: visually center text */
+  margin-top: -1px;
+}
+
+.unreadMarker2 {
+  display: flex;
+  font-size: .9rem;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  color: #3fa9c9;
+  /* background: #3fa9c922; */
+  box-shadow: 3px 0 0 #3fa9c9 inset;
+}
+
+.unreadMarker2 > hr {
+  flex: 1;
+  border-bottom: solid #3fa9c9 1px;
+}
+
+/* stop list-style-type: inline markers from being forced onto a newlin */
+.body :global(li > *) {
+  display: inline;
+}

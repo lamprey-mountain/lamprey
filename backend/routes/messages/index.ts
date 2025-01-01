@@ -30,7 +30,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
   app.openapi(withAuth(MessageList), (c) => {
     const room_id = c.req.param("room_id");
     const thread_id = c.req.param("thread_id");
-    const limit = parseInt(c.req.query("limit") ?? "10", 10);
+    const limit = c.req.query("limit") ?? 10;
     const after = c.req.query("after");
     const before = c.req.query("before");
     const rows = db.prepareQuery(`SELECT * FROM messages_coalesced WHERE thread_id = ? AND message_id > ? AND message_id < ? LIMIT ?`)

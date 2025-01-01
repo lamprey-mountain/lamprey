@@ -1,0 +1,8 @@
+/* FIXME: have actually good css (these are copied from a dark mode site and are missing a lot of syntax elements)*/
+.hljs-number, .hljs-literal { color: #ff9e64; }
+.hljs-string { color: #9ece6a; }
+.hljs-attr { color: #7dcfff; }
+.hljs-keyword { color: #bb9af7; }
+.hljs-comment { color: #565f89; }
+.hljs-built_in { color: #e0af68; }
+

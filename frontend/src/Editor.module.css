@@ -1,0 +1,37 @@
+.editorInside {
+  background: var(--color-bg2);
+  flex: 1;
+  border: solid var(--color-border) 1px;
+  padding: 0 2px;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+.editorDisabled {
+  background: var(--color-bg3);
+}
+
+.editorInside :global([data-mention]) {
+  color: #78e;
+}
+
+.editorInside :global(.placeholder), .editorInside :global(.syn) {
+  color: #777;
+}
+
+.editorInside :global(.placeholder) {
+  position: absolute;
+}
+
+.editorInside :global(.link) {
+  color: #b318f0;
+  text-decoration: underline;
+}
+
+.editorInside :global(.header) {
+  font-weight: bold;
+}
+
+.editorInside:focus {
+  outline: solid #4af 1px;
+}
