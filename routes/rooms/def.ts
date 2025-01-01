@@ -1,6 +1,6 @@
 import { z, createRoute } from "npm:@hono/zod-openapi";
-import { Uint, Room, RoomId, RoomPatch, UserId } from "../types.ts";
-import { common } from "./common.ts";
+import { Uint, Room, RoomId, RoomPatch, UserId } from "../../types.ts";
+import { common } from "../common.ts";
 
 export const RoomCreate = createRoute({
   method: "post",
@@ -103,7 +103,7 @@ export const RoomList = createRoute({
       after: RoomId.optional(),
       before: RoomId.optional(),
       around: RoomId.optional(),
-      limit: Uint.min(1).max(100).default(10),
+      limit: z.string().transform(i => parseInt(i, 10)).pipe(Uint.min(1).max(100).default(10)),
     }),
   },
   responses: {
@@ -195,4 +195,3 @@ export const RoomAck = createRoute({
     },
   }
 });
-

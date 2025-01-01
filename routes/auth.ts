@@ -1,167 +1,25 @@
-import { z, createRoute } from "npm:@hono/zod-openapi";
-import { UserPatch, User, UserId, Room, RoomId, Session } from "../types.ts";
-import { common } from "./common.ts";
+import { Context, Next } from "npm:hono";
+import { db, HonoEnv } from "globals";
+import { RouteConfig } from "npm:@hono/zod-openapi";
 
-export const AuthLogin = createRoute({
-  method: "put",
-  path: "/api/v1/__temp_login",
-  summary: "Auth login (TEMP)",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            email: z.string(),
-            password: z.string()
-          }),
-        }
-      }
-    }
-  },
-  responses: {
-    ...common,
-    201: {
-      description: "created",
-      content: {
-        "application/json": {
-          schema: Session,
-        }
-      },
-    },
-  }
-});
+type AuthOptions = {
+  strict: boolean
+}
 
-export const AuthPasswordSet = createRoute({
-  method: "put",
-  path: "/api/v1/users/@me/password",
-  summary: "Auth password set",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            password: z.string()
-          }),
-        }
-      }
-    }
-  },
-  responses: {
-    ...common,
-    204: {
-      description: "success",
-    },
-  }
-});
+export const auth = (opts: AuthOptions) => async (c: Context<HonoEnv>, next: Next) => {
+  const auth = c.req.header("authorization");
+  if (!auth) return c.json({ error: "Missing authorization token" }, 401);
+  const row = db.prepareQuery("SELECT * FROM sessions WHERE token = ?").firstEntry([auth]);
+  if (!row) return c.json({ error: "Invalid or expired token" }, 401);
+  if (opts.strict && row.level as number < 1) return c.json({ error: "Unauthorized" }, 403);
+  c.set("user_id", row.user_id as string);
+  c.set("session_id", row.session_id as string);
+  c.set("session_level", row.level as number);
+  await next();
+};
 
-export const AuthPasswordDo = createRoute({
-  method: "post",
-  path: "/api/v1/users/@me/password",
-  summary: "Auth password do",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            password: z.string()
-          }),
-        }
-      }
-    }
-  },
-  responses: {
-    ...common,
-    204: {
-      description: "success",
-    },
-  }
-});
-
-export const AuthTotpSet = createRoute({
-  method: "put",
-  path: "/api/v1/users/@me/totp",
-  summary: "Auth totp set",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            enable: z.boolean()
-          }),
-        }
-      }
-    }
-  },
-  responses: {
-    ...common,
-    204: {
-      description: "success",
-    },
-  }
-});
-
-export const AuthTotpDo = createRoute({
-  method: "post",
-  path: "/api/v1/users/@me/totp",
-  summary: "Auth totp do",
-  tags: ["auth"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            code: z.string().regex(/^[0-9]{6}$/),
-          }),
-        }
-      }
-    }
-  },
-  responses: {
-    ...common,
-    204: {
-      description: "success",
-    },
-  }
-});
-
-export const AuthDiscordInfo = createRoute({
-  method: "get",
-  path: "/api/v1/users/@me/discord",
-  summary: "Auth discord info",
-  tags: ["auth"],
-  responses: {
-    ...common,
-    200: {
-      description: "success",
-      content: {
-        "application/json": {
-          schema: z.object({
-            url: z.string().url(),
-          }),
-        }
-      }
-    },
-  }
-});
-
-export const AuthDiscordFinish = createRoute({
-  method: "get",
-  path: "/api/v1/users/@me/discord/redirect",
-  summary: "Auth discord finish",
-  tags: ["auth"],
-  responses: {
-    ...common,
-    200: {
-      description: "success",
-      content: {
-        "text/plain": {
-          schema: z.string(),
-        },
-      },
-    },
-  }
-});
+export function withAuth<T extends RouteConfig>(route: T, opts: AuthOptions = { strict: true }) {
+  const m = route.middleware;
+  const middleware = [...Array.isArray(m) ? m : m ? [m] : [], auth(opts)];
+  return { ...route, middleware } as T;
+}

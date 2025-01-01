@@ -1,14 +1,32 @@
+// TODO: rename this to globals.ts
 import { DB } from "https://deno.land/x/sqlite@v3.9.1/mod.ts";
+import { MessageServer } from "./types/sync.ts";
+import { z } from "@hono/zod-openapi";
 // import { PGlite } from "pglite";
+import EventEmitter from "events";
+export * as discord from "./oauth2.ts";
+
+// HACK: https://github.com/andywer/typed-emitter/issues/39
+import TypedEventEmitter, { EventMap } from "typed-emitter";
+type TypedEmitter<T extends EventMap> = TypedEventEmitter.default<T>;
 
 // maybe use postgres?
 // await PGlite.create({
 //   dataDir: "./data",
 // });
 
-export const db = new DB();
-// export const db = new DB("test.db");
-db.execute(Deno.readTextFileSync("a.sql"));
+// export const db = new DB();
+export const db = new DB("test.db");
+// db.execute(Deno.readTextFileSync("schema.sql"));
+
+type MsgServer = z.infer<typeof MessageServer>;
+
+type Events = {
+  sushi: (msg: MsgServer) => void,
+}
+
+export const events = new EventEmitter() as TypedEmitter<Events>;
+export const broadcast = (msg: MsgServer) => events.emit("sushi", msg);
 
 export type HonoEnv = {
   Variables: {

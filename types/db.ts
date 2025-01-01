@@ -1,5 +1,5 @@
 import { z } from "npm:@hono/zod-openapi";
-import { Embed, Media, MessageId, MessageVersionId, RoleId, RoomId, ThreadId, User, UserId } from "./common.ts";
+import { Embed, Media, MessageId, MessageVersionId, RoleId, RoomId, ThreadId, Uint, User, UserId } from "./common.ts";
 
 export const MessageFromDb = z.object({
   room_id: RoomId,
@@ -20,6 +20,8 @@ export const MessageFromDb = z.object({
   mentions_rooms: ThreadId.array().default([]),
   author_id: UserId,
   is_pinned: z.boolean().default(false),
+  nonce: z.undefined().transform(_ => null),
+  ordering: Uint.describe("the order that this message appears in the room"),
 });
 
 export const ThreadFromDb = z.object({

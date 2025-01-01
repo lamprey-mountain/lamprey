@@ -2,14 +2,14 @@ CREATE TABLE rooms (
     room_id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT
-);
+) STRICT;
 
 CREATE TABLE role (
     role_id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT,
     permissions INT NOT NULL
-);
+) STRICT;
 
 CREATE TABLE role_application (
     user_id INT,
@@ -17,7 +17,7 @@ CREATE TABLE role_application (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (role_id) REFERENCES roles(role_id),
     PRIMARY KEY (user_id, role_id)
-);
+) STRICT;
 
 CREATE TABLE threads (
     thread_id TEXT PRIMARY KEY,
@@ -27,7 +27,7 @@ CREATE TABLE threads (
     is_closed INT NOT NULL,
     is_locked INT NOT NULL,
     FOREIGN KEY (room_id) REFERENCES rooms(room_id)
-);
+) STRICT;
 
 CREATE TABLE messages (
     message_id TEXT NOT NULL,
@@ -41,25 +41,45 @@ CREATE TABLE messages (
     FOREIGN KEY (thread_id) REFERENCES threads(thread_id),
     FOREIGN KEY (author_id) REFERENCES users(user_id)
     -- FOREIGN KEY (reply) REFERENCES messages(message_id)
-);
+) STRICT;
 
 CREATE INDEX messages_message_id ON messages (message_id);
 
+-- replace users with only members (ie. make users less "persistent") and accounts?
 CREATE TABLE users (
     user_id TEXT PRIMARY KEY,
+    parent_id TEXT,
     name TEXT,
     description TEXT,
     avatar_url TEXT,
-    is_bot INT
-);
+    email TEXT,
+    status TEXT,
+    is_bot INT,
+    is_alias INT,
+    is_system INT,
+    can_fork INT,
+    discord_id TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) STRICT;
+
+CREATE UNIQUE INDEX users_email ON users (email);
 
 CREATE TABLE sessions (
     session_id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     token TEXT NOT NULL,
     name TEXT,
+    status INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
+) STRICT;
+
+CREATE TABLE auth (
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    data ANY,
+    PRIMARY KEY (user_id, type),
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) STRICT;
 
 CREATE TABLE room_members (
     member_id TEXT PRIMARY KEY,
@@ -67,7 +87,7 @@ CREATE TABLE room_members (
     room_id TEXT,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (room_id) REFERENCES rooms(room_id)
-);
+) STRICT;
 
 CREATE TABLE thread_members (
     member_id TEXT NOT NULL,
@@ -75,7 +95,7 @@ CREATE TABLE thread_members (
     FOREIGN KEY (member_id) REFERENCES members(member_id),
     FOREIGN KEY (thread_id) REFERENCES threads(thread_id),
     PRIMARY KEY (member_id, thread_id)
-);
+) STRICT;
 
 CREATE TABLE media (
     media_id TEXT PRIMARY KEY,
@@ -84,20 +104,20 @@ CREATE TABLE media (
     uploader TEXT NOT NULL,
     deleted_at TEXT,
     FOREIGN KEY (uploader) REFERENCES users(user_id)
-);
+) STRICT;
 
 CREATE TABLE message_attachments (
     message_version_id TEXT,
     media_id TEXT,
     FOREIGN KEY (media_id) REFERENCES media(media_id),
     FOREIGN KEY (message_version_id) REFERENCES messages(version_id)
-);
+) STRICT;
 
 -- TODO: test
--- CREATE TRIGGER cleanup_message_media AFTER DELETE ON messages BEGIN
---     UPDATE media SET deleted_at = datetime() WHERE media_id IN 
---         (SELECT media_id FROM message_attachments WHERE message_version_id = OLD.version_id);
--- END;
+CREATE TRIGGER cleanup_message_media AFTER DELETE ON messages BEGIN
+    UPDATE media SET deleted_at = datetime() WHERE media_id IN 
+        (SELECT media_id FROM message_attachments WHERE message_version_id = OLD.version_id);
+END;
 
 -- CREATE TABLE user_relations (
 --     user_id TEXT PRIMARY KEY,
@@ -113,9 +133,9 @@ CREATE TABLE message_attachments (
 --     user_id TEXT NOT NULL,
 --     data TEXT NOT NULL,
 --     FOREIGN KEY (user_id) REFERENCES users(user_id)
--- );
+-- ) STRICT;
 
-CREATE TABLE config (key TEXT PRIMARY KEY, value BLOB);
+CREATE TABLE config (key TEXT PRIMARY KEY, value ANY);
 
 CREATE VIEW messages_coalesced AS
     SELECT *
@@ -123,17 +143,11 @@ CREATE VIEW messages_coalesced AS
         FROM messages)
     WHERE row_num = 1;
 
--- CREATE VIEW message_counts AS
---   SELECT thread_id, count(*)
---   FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY message_id ORDER BY version_id DESC) AS row_num
---         FROM messages)
---   WHERE row_num = 1 GROUP BY thread_id;
-
 CREATE VIEW messages_counts AS
     SELECT thread_id, count(*)
     FROM message_coalesced
     GROUP BY thread_id;
 
 -- INSERT INTO users (user_id, name) VALUES ('01940be4-6ca5-7351-ac71-914f49f9824c', 'tezlm');
--- INSERT INTO sessions (session_id, token, user_id) VALUES ('01940be4-b547-7b8e-b3f0-63900545a0f9', 'abcdefg', '01940be4-6ca5-7351-ac71-914f49f9824c');
-
+-- INSERT INTO sessions (session_id, token, user_id, status) VALUES ('01940be4-b547-7b8e-b3f0-63900545a0f9', 'abcdefg', '01940be4-6ca5-7351-ac71-914f49f9824c', 1);
+-- UPDATE sessions SET status = 1 WHERE status = 2;

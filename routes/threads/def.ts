@@ -1,6 +1,6 @@
 import { z, createRoute } from "npm:@hono/zod-openapi";
-import { Uint, ThreadId, ThreadPatch, Thread, RoomId } from "../types.ts";
-import { common } from "./common.ts";
+import { Uint, ThreadId, ThreadPatch, Thread, RoomId } from "../../types.ts";
+import { common } from "../common.ts";
 
 export const ThreadCreate = createRoute({
   method: "post",

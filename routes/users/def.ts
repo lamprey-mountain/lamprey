@@ -1,6 +1,6 @@
 import { z, createRoute } from "npm:@hono/zod-openapi";
-import { UserPatch, User, UserId } from "../types.ts";
-import { common } from "./common.ts";
+import { UserPatch, User, UserId } from "../../types.ts";
+import { common } from "../common.ts";
 
 export const UserCreate = createRoute({
   method: "post",

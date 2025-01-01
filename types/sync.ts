@@ -8,6 +8,8 @@ export const MessageClient = z.union([
 
 export const MessageServer = z.union([
   z.object({ type: z.literal("ping") }),
+  z.object({ type: z.literal("ready"), user: User }),
+  z.object({ type: z.literal("error"), error: z.string() }),
   z.object({ type: z.literal("upsert.room"), room: Room }),
   z.object({ type: z.literal("upsert.thread"), thread: Thread }),
   z.object({ type: z.literal("upsert.message"), message: Message }),
@@ -18,3 +20,18 @@ export const MessageServer = z.union([
   z.object({ type: z.literal("delete.user"), user_id: UserId }),
   z.object({ type: z.literal("delete.session"), session_id: SessionId }),
 ]);
+
+/*
+// expose a sse route per room..? would be nice if there was auth though
+// return streamSSE(c, async (stream) => {
+//   while (true) {
+//     const message = `It is ${new Date().toISOString()}`
+//     await stream.writeSSE({
+//       data: message,
+//       event: 'time-update',
+//       id: String(id++),
+//     })
+//     await stream.sleep(1000)
+//   }
+// })
+*/

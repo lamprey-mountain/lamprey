@@ -1,15 +1,4 @@
-import { z, createRoute } from "npm:@hono/zod-openapi";
-
-const SendEvents = z.union([
-  z.object({
-    op: z.literal("ping"),
-    data: z.literal("foobar"),
-  }),
-  z.object({
-    op: z.literal("hello"),
-    data: z.literal("something"),
-  }),
-]);
+import { createRoute } from "npm:@hono/zod-openapi";
 
 export const SyncInit = createRoute({
   method: "get",
@@ -25,3 +14,4 @@ export const SyncInit = createRoute({
     },
   }
 });
+

@@ -1,20 +1,12 @@
-// deno-lint-ignore-file
-
 import { logger } from "npm:hono/logger";
 // import { nanoid } from "npm:nanoid";
 import { OpenAPIHono } from "npm:@hono/zod-openapi";
 import { apiReference } from "npm:@scalar/hono-api-reference";
 import * as t from "./types.ts";
-import * as routes from "./routes.ts";
-import { auth, withAuth } from "./auth.ts";
-import { HonoEnv } from "./data.ts";
-
-// import { UUID } from "uuidv7";
-// function getTimestamp(uuid: string): Date {
-//   const bytes = UUID.parse(uuid).bytes;
-//   const timestamp = bytes.slice(0, 6).reduce((acc: number, e: number) => acc * 256 + e, 0);
-//   return new Date(timestamp);
-// }
+// import * as routes from "./routes.ts";
+import * as routes from "./routes/index.ts";
+import { HonoEnv } from "globals";
+import { cors } from "hono/cors";
 
 const app = new OpenAPIHono<HonoEnv>();
 app.openAPIRegistry.register("Room", t.Room);
@@ -33,6 +25,11 @@ app.openAPIRegistry.registerComponent("securitySchemes", "token", {
   in: "header",
 });
 app.use(logger());
+app.use((c, next) => {
+  // cors middleware has issues with websockets
+  if (c.req.path === "/api/v1/sync") return next();
+  return cors()(c, next);
+});
 
 routes.setup(app);
 

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>testing</title>
+    <meta charset="utf8" />
+  </head>
+  <body>
+    <a href="/api/docs">docs</a><br />
+    <a href="/api/v1/auth/discord">login</a><br />
+    user_id: <code style="user-select:all" id="user_id"></code><br />
+    token: <code style="user-select:all" id="token"></code><br />
+    <button onclick="clearAndReload()">clear localstorage</button><br />
+    
+    <script>
+      const ws = new WebSocket("ws://localhost:8000/api/v1/sync");
+      const $ = id => document.getElementById(id)
+      $("user_id").textContent = localStorage.getItem("user_id") ?? "(null)";
+      $("token").textContent = localStorage.getItem("token") ?? "(null)";
+      function clearAndReload() {
+        localStorage.clear();
+        location.reload();
+      }
+      const send = (d) => {
+        console.log("send", d);
+        ws.send(JSON.stringify(d));
+      }
+      ws.onopen = () => send({ type: "hello", token: localStorage.getItem("token") })
+      ws.onclose = () => console.log("closed");
+      ws.onmessage = (ev) => console.log("recv", JSON.parse(ev.data));
+    </script>
+  </body>
+</html>

@@ -6,7 +6,10 @@
     "uuidv7": "https://unpkg.com/uuidv7@1.0.2/dist/index.js",
     "zod": "npm:zod@^3.24.1",
     "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
-    "otpauth": "jsr:@hectorm/otpauth"
+    "otpauth": "jsr:@hectorm/otpauth",
+    "events": "node:events",
+    "typed-emitter": "npm:typed-emitter",
+    "globals": "./data.ts",
   },
   "compilerOptions": {
     "strict": true

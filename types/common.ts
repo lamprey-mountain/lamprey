@@ -1,6 +1,6 @@
 import { z } from "npm:@hono/zod-openapi";
 
-export const Uint = z.number().int().positive();
+export const Uint = z.number().int().nonnegative();
 
 const roomIdExample           = "00000000-0000-0000-0000-00000000room";
 const userIdExample           = "00000000-0000-0000-0000-00000000user";
@@ -105,6 +105,8 @@ export const Message = z.object({
   thread_id: ThreadId,
   message_id: MessageId,
   version_id: MessageVersionId,
+  nonce: z.string().nullable(),
+  ordering: Uint.describe("the order that this message appears in the room"),
   content: z.string().min(1).max(8192).nullable(),
   attachments: Media.array().default([]),
   embeds: Embed.array().default([]),
@@ -178,7 +180,7 @@ export const Session = z.object({
   session_id: SessionId,
   user_id: UserId,
   token: SessionToken,
-  level: Uint.max(2).describe("0 = unauthenticated, 1 = can do basic stuff, 2 = sudo mode"),
+  status: Uint.max(2).describe("0 = unauthenticated, 1 = can do basic stuff, 2 = sudo mode"),
   name: z.string().nullable(),
 }).openapi("Session");
 
@@ -212,7 +214,7 @@ export const Invite = z.object({
 
 export const RoomPatch = Room.pick({ name: true, description: true }).partial();
 export const ThreadPatch = Thread.pick({ name: true, description: true, is_closed: true, is_locked: true }).partial();
-export const MessagePatch = Message.pick({ content: true, attachments: true, embeds: true, metadata: true, reply: true }).partial();
+export const MessagePatch = Message.pick({ content: true, attachments: true, embeds: true, metadata: true, reply: true, nonce: true }).partial();
 export const UserPatch = User.pick({ name: true, description: true, status: true, is_alias: true, is_bot: true }).partial();
 export const SessionPatch = Session.pick({ user_id: true, name: true }).partial();
 export const RolePatch = Role.pick({ name: true, description: true, permissions: true }).partial();

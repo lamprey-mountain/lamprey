@@ -1,9 +1,9 @@
 import { uuidv7 } from "uuidv7";
 const CLIENT_ID = "1322383185480384542";
-const CLIENT_SECRET = "";
-const REDIRECT_URI = "http://localhost:8080/api/v1/link/discord";
+const CLIENT_SECRET = "hsZbosWwans9HO7M8wHW5MO04bQNc1oj";
+const REDIRECT_URI = "http://localhost:8000/api/v1/auth/discord/redirect";
 
-function buildUrl(state: string): string {
+export function buildUrl(state: string): string {
   const url = new URL("https://canary.discord.com/oauth2/authorize");
   url.searchParams.set("client_id", CLIENT_ID);
   url.searchParams.set("response_type", "code");
@@ -13,7 +13,7 @@ function buildUrl(state: string): string {
   return url.href;
 }
 
-async function exchangeCodeForToken(code: string) {
+export async function exchangeCodeForToken(code: string) {
   const params = new URLSearchParams([
     ["grant_type", "authorization_code"],
     ["code", code],
@@ -31,7 +31,7 @@ async function exchangeCodeForToken(code: string) {
   return await res.json();
 }
 
-async function getUser(token: string) {
+export async function getUser(token: string) {
   const res = await fetch("https://discord.com/api/v10/oauth2/@me", {
     method: "GET",
     headers: {
@@ -41,7 +41,7 @@ async function getUser(token: string) {
   return await res.json();
 }
 
-async function revokeToken(token: string) {
+export async function revokeToken(token: string) {
   const params = new URLSearchParams([
     ["token_type_hint", "access_token"],
     ["token", token],

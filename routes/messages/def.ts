@@ -1,6 +1,6 @@
 import { z, createRoute } from "npm:@hono/zod-openapi";
-import { Uint, MessageId, MessagePatch, Message, RoomId, ThreadId, MessageVersionId } from "../types.ts";
-import { common } from "./common.ts";
+import { Uint, MessageId, MessagePatch, Message, RoomId, ThreadId, MessageVersionId } from "../../types.ts";
+import { common } from "../common.ts";
 
 export const MessageCreate = createRoute({
   method: "post",
