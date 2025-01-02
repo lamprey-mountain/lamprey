@@ -55,7 +55,7 @@ export const InviteCode = z.string().openapi({
 
 // TODO: media. how to implement this?
 export const Media = z.object({
-	media_id: MediaId,
+	id: MediaId,
 	filename: z.string().describe("The original filename"),
 	url: z.string().describe("A url to download this media from"),
 	source_url: z.string().optional().describe(
@@ -80,14 +80,14 @@ export const Embed = z.object({
 });
 
 export const Room = z.object({
-	room_id: RoomId,
+	id: RoomId,
 	name: z.string().min(1).max(64),
 	description: z.string().min(1).max(2048).nullable(),
 	// default_roles: RoleId.array(),
 }).describe("a room").openapi({
 	title: "Room",
 	example: {
-		room_id: roomIdExample,
+		id: roomIdExample,
 		name: "inspirational quotes",
 		description:
 			"i expect i'll be able to solve a lot of my problems once my baby brain falls out and my adult brain grows in",
@@ -107,8 +107,8 @@ export const Room = z.object({
 //   type: z.literal("report"),
 // });
 
-export const User = z.object({
-	user_id: UserId,
+export const UserBase = z.object({
+	id: UserId,
 	parent_id: UserId.nullable(),
 	name: z.string().min(2).max(64),
 	description: z.string().max(8192).nullable(),
@@ -118,10 +118,12 @@ export const User = z.object({
 	is_bot: z.boolean().describe("is a bot owned by its parent"),
 	is_alias: z.boolean().describe("is considered the same user as its parent"),
 	is_system: z.boolean().describe("is an official system user"),
-}).openapi("User");
+});
+
+export const User = UserBase.openapi("User");
 
 export const Member = z.object({
-	member_id: MemberId,
+	id: MemberId,
 	user_id: UserId,
 	room_id: RoomId,
 	override_name: z.string().min(2).max(64),
@@ -130,12 +132,11 @@ export const Member = z.object({
 	roles: RoleId.array(),
 }).openapi("Member");
 
-export const Message = z.object({
-	room_id: RoomId,
+export const MessageBase = z.object({
+	id: MessageId,
 	thread_id: ThreadId,
-	message_id: MessageId,
 	version_id: MessageVersionId,
-	nonce: z.string().nullable(),
+	nonce: z.string().nullish().transform(i => i ?? null),
 	ordering: Uint.describe("the order that this message appears in the room"),
 	content: z.string().min(1).max(8192).nullable(),
 	attachments: Media.array().default([]),
@@ -150,7 +151,9 @@ export const Message = z.object({
 	// mentions_rooms: ThreadId.array(),
 	author_id: UserId,
 	is_pinned: z.boolean(),
-})
+});
+
+export const Message = MessageBase
 	.openapi({
 		title: "Message",
 		// example: {
@@ -163,9 +166,9 @@ export const Message = z.object({
 		// }
 	});
 
-export const Thread = z.object({
+export const ThreadBase = z.object({
+	id: ThreadId,
 	room_id: RoomId,
-	thread_id: ThreadId,
 	name: z.string().min(1).max(64),
 	description: z.string().min(1).max(2048).nullable(),
 	is_closed: z.boolean(),
@@ -174,11 +177,14 @@ export const Thread = z.object({
 	// is_wiki: z.boolean(), // editable by everyone
 	// is_private: z.boolean(),
 	// recipients: Member.array(),
-}).openapi({
+})
+
+export const Thread = ThreadBase
+.openapi({
 	title: "Thread",
 	example: {
+		id: threadIdExample,
 		room_id: roomIdExample,
-		thread_id: threadIdExample,
 		name: "talkin",
 		description: "i am quite warm an dunpleasant",
 		is_closed: false,
@@ -207,7 +213,7 @@ export const Thread = z.object({
 // });
 
 export const Session = z.object({
-	session_id: SessionId,
+	id: SessionId,
 	user_id: UserId,
 	token: SessionToken,
 	status: Uint.max(2).describe(
@@ -217,7 +223,7 @@ export const Session = z.object({
 }).openapi("Session");
 
 export const Role = z.object({
-	role_id: RoleId,
+	id: RoleId,
 	name: z.string().min(1).max(64),
 	description: z.string().max(2048),
 	permissions: Uint,

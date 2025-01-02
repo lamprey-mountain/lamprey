@@ -1,4 +1,3 @@
-import * as styles from "./Editor.module.css";
 import { Command, EditorState, TextSelection } from "prosemirror-state";
 import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import { DOMParser, Schema, Slice } from "prosemirror-model";
@@ -456,8 +455,8 @@ export const Editor = (props: EditorProps) => {
 	return (
 		<div
 			classList={{
-				[styles.editorInside]: true,
-				[styles.editorDisabled]: props.disabled ?? false,
+				editorInside: true,
+				editorDisabled: props.disabled ?? false,
 			}}
 			tabindex={0}
 			ref={editorEl!}

@@ -20,11 +20,11 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const session_id = c.req.param("session_id") === "@me"
 			? c.get("session_id")
 			: c.req.param("session_id");
-		db.prepareQuery(`DELETE FROM sessions WHERE session_id = ?`).execute([
+		db.prepareQuery(`DELETE FROM sessions WHERE id = ?`).execute([
 			session_id,
 		]);
-		broadcast({ type: "delete.session", session_id });
-		return c.json({}, 204);
+		broadcast({ type: "delete.session", id: session_id });
+		return new Response(null, { status: 204 });
 	});
 
 	app.openapi(withAuth(SessionList), (c) => {
@@ -38,7 +38,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const session_id = c.req.param("session_id") === "@me"
 			? c.get("session_id")
 			: c.req.param("session_id");
-		const row = db.prepareQuery("SELECT * FROM sessions WHERE session_id = ?")
+		const row = db.prepareQuery("SELECT * FROM sessions WHERE id = ?")
 			.firstEntry([session_id]);
 		if (!row) return c.json({ error: "not found" }, 404);
 		const session = Session.parse(row);

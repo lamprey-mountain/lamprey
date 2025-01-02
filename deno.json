@@ -1,17 +1,20 @@
 {
-	"workspace": ["frontend", "backend"],
+  "workspace": ["frontend", "backend"],
 	"compilerOptions": {
 		"strict": true,
 		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],
 		"jsx": "react-jsx",
 		"jsxImportSource": "solid-js"
 	},
-	"lint": {},
 	"fmt": {
 		"useTabs": true
 	},
 	"lock": {
 		"path": "./deno.lock",
-		"frozen": true
-	}
+  	// frozen lockfile has too many issues for now?
+		"frozen": false
+	},
+	"imports": {
+		"uuidv7": "npm:uuidv7@^1.0.2",
+	},
 }

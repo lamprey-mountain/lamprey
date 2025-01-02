@@ -62,23 +62,23 @@ export enum Permissions {
 
 export const queries = {
 	roomInsert: db.prepareQuery(
-		"INSERT INTO rooms (room_id, name, description) VALUES (:room_id, :name, :description) RETURNING *",
+		"INSERT INTO rooms (id, name, description) VALUES (:id, :name, :description) RETURNING *",
 	),
 	roomUpdate: db.prepareQuery(
-		"UPDATE rooms SET name = :name, description = :description WHERE room_id = :room_id RETURNING *",
+		"UPDATE rooms SET name = :name, description = :description WHERE id = :id RETURNING *",
 	),
-	roomSelect: db.prepareQuery("SELECT * FROM rooms WHERE room_id = :room_id"),
+	roomSelect: db.prepareQuery("SELECT * FROM rooms WHERE id = :id"),
 	threadInsert: db.prepareQuery(
-		"INSERT INTO threads (thread_id, room_id, name, description, is_closed, is_locked) VALUES (:thread_id, :room_id, :name, :description, :is_closed, :is_locked) RETURNING *",
+		"INSERT INTO threads (id, room_id, name, description, is_closed, is_locked) VALUES (:id, :room_id, :name, :description, :is_closed, :is_locked) RETURNING *",
 	),
 	threadSelect: db.prepareQuery(
-		"SELECT * FROM threads WHERE thread_id = :thread_id",
+		"SELECT * FROM threads WHERE id = :id",
 	),
 	threadUpdate: db.prepareQuery(
-		"UPDATE threads SET name = :name, description = :description, is_closed = :is_closed, is_locked = :is_locked WHERE thread_id = :thread_id",
+		"UPDATE threads SET name = :name, description = :description, is_closed = :is_closed, is_locked = :is_locked WHERE id = :id",
 	),
 	sessionSelect: db.prepareQuery(
-		"SELECT * FROM sessions WHERE session_id = :session_id",
+		"SELECT * FROM sessions WHERE id = :id",
 	),
 	sessionSelectUser: db.prepareQuery(
 		"SELECT * FROM sessions WHERE user_id = :user_id",

@@ -9,7 +9,7 @@ import { uuidv7 } from "uuidv7";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(SyncInit, async (c, next) => {
-		let id = uuidv7();
+		const id = uuidv7();
 		let ws: WebSocket;
 		let state: "closed" | "unauth" | "auth" = "closed";
 		let heartbeatTimeout: number;
@@ -75,7 +75,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 						// if (row.level as number < 1) return c.json({ error: "Unauthorized" }, 403);
 						user_id = rowSession.user_id as string;
 						const rowUser = db.prepareQuery(
-							"SELECT * FROM users WHERE user_id = ?",
+							"SELECT * FROM users WHERE id = ?",
 						).firstEntry([user_id]);
 						if (!rowUser) {
 							throw new Error("user doesn't exist, but session does...!?");
@@ -88,7 +88,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 					} else if (msg.type === "pong") {
 						rescheduleHeartbeat();
 					}
-				} catch {
+				} catch (err) {
+					console.log(`websocket error ${id}`, err);
 					ws.close();
 					state = "closed";
 				}

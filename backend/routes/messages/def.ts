@@ -12,12 +12,11 @@ import { common } from "../common.ts";
 
 export const MessageCreate = createRoute({
 	method: "post",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages",
+	path: "/api/v1/threads/{thread_id}/messages",
 	summary: "Message create",
 	tags: ["message"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: ThreadId,
 		}),
 		body: {
@@ -43,12 +42,11 @@ export const MessageCreate = createRoute({
 
 export const MessageList = createRoute({
 	method: "get",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages",
+	path: "/api/v1/threads/{thread_id}/messages",
 	summary: "Message list",
 	tags: ["message"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: ThreadId,
 		}),
 		query: z.object({
@@ -61,6 +59,16 @@ export const MessageList = createRoute({
 				Uint.min(1).max(100),
 			),
 		}),
+		// query: z.object({
+		// 	from: MessageId.optional(),
+		// 	to: MessageId.optional(),
+		// 	dir: z.enum(["f", "b"]),
+		// 	// pinned: z.boolean().optional(),
+		// 	// limit: Uint.min(1).max(100).default(10),
+		// 	limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
+		// 		Uint.min(1).max(100),
+		// 	),
+		// }),
 	},
 	responses: {
 		...common,
@@ -69,7 +77,7 @@ export const MessageList = createRoute({
 			content: {
 				"application/json": {
 					schema: z.object({
-						messages: Message.array(),
+						items: Message.array(),
 						total: Uint,
 						has_more: z.boolean(),
 					}),
@@ -81,14 +89,13 @@ export const MessageList = createRoute({
 
 export const MessageUpdate = createRoute({
 	method: "patch",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}",
 	summary: "Message update",
 	tags: ["message"],
 	request: {
 		params: z.object({
 			message_id: MessageId,
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 		body: {
 			content: {
@@ -113,14 +120,13 @@ export const MessageUpdate = createRoute({
 
 export const MessageDelete = createRoute({
 	method: "delete",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}",
 	summary: "Message delete",
 	tags: ["message"],
 	request: {
 		params: z.object({
 			message_id: MessageId,
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 	},
 	responses: {
@@ -133,14 +139,13 @@ export const MessageDelete = createRoute({
 
 export const MessageGet = createRoute({
 	method: "get",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}",
 	summary: "Message get",
 	tags: ["message"],
 	request: {
 		params: z.object({
 			message_id: MessageId,
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 		query: z.object({
 			after: MessageId.optional(),
@@ -169,12 +174,11 @@ export const MessageGet = createRoute({
 
 export const MessageVersionsList = createRoute({
 	method: "get",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}",
 	summary: "Message versions list",
 	tags: ["message"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: MessageId,
 		}),
 	},
@@ -194,12 +198,11 @@ export const MessageVersionsList = createRoute({
 export const MessageVersionsGet = createRoute({
 	method: "get",
 	path:
-		"/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}/version/{version_id}",
+		"/api/v1/threads/{thread_id}/messages/{message_id}/version/{version_id}",
 	summary: "Message versions get",
 	tags: ["message"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: ThreadId,
 			message_id: MessageId,
 			version_id: MessageVersionId,
@@ -221,12 +224,11 @@ export const MessageVersionsGet = createRoute({
 export const MessageVersionsDelete = createRoute({
 	method: "delete",
 	path:
-		"/api/v1/rooms/{room_id}/threads/{thread_id}/message/{message_id}/version/{version_id}",
+		"/api/v1/threads/{thread_id}/message/{message_id}/version/{version_id}",
 	summary: "Message versions delete",
 	tags: ["message"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: ThreadId,
 			message_id: MessageId,
 			version_id: MessageVersionId,
@@ -242,14 +244,13 @@ export const MessageVersionsDelete = createRoute({
 
 export const MessageAck = createRoute({
 	method: "put",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}/ack",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}/ack",
 	summary: "Message ack",
 	tags: ["ack"],
 	request: {
 		params: z.object({
 			message_id: MessageId,
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 	},
 	responses: {

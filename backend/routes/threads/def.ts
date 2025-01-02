@@ -8,9 +8,6 @@ export const ThreadCreate = createRoute({
 	summary: "Thread create",
 	tags: ["thread"],
 	request: {
-		params: z.object({
-			room_id: RoomId,
-		}),
 		body: {
 			content: {
 				"application/json": {
@@ -38,12 +35,10 @@ export const ThreadList = createRoute({
 	summary: "Thread list",
 	tags: ["thread"],
 	request: {
-		params: z.object({
-			room_id: RoomId,
-		}),
 		query: z.object({
 			// pinned: z.boolean().optional(),
-			limit: Uint.min(1).max(100).default(10),
+			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
+				Uint.min(1).max(100)),
 			after: ThreadId.optional(),
 			before: ThreadId.optional(),
 			// around: ThreadId.optional(),
@@ -56,7 +51,7 @@ export const ThreadList = createRoute({
 			content: {
 				"application/json": {
 					schema: z.object({
-						rooms: Thread.array(),
+						items: Thread.array(),
 						total: Uint,
 						has_more: z.boolean(),
 					}),
@@ -68,13 +63,12 @@ export const ThreadList = createRoute({
 
 export const ThreadUpdate = createRoute({
 	method: "patch",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}",
+	path: "/api/v1/threads/{thread_id}",
 	summary: "Thread update",
 	tags: ["thread"],
 	request: {
 		params: z.object({
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 		body: {
 			content: {
@@ -99,13 +93,10 @@ export const ThreadUpdate = createRoute({
 
 export const ThreadBulkUpdate = createRoute({
 	method: "patch",
-	path: "/api/v1/rooms/{room_id}/threads",
+	path: "/api/v1/threads",
 	summary: "Thread bulk update",
 	tags: ["thread"],
 	request: {
-		params: z.object({
-			room_id: RoomId,
-		}),
 		body: {
 			content: {
 				"application/json": {
@@ -133,12 +124,11 @@ export const ThreadBulkUpdate = createRoute({
 
 export const ThreadGet = createRoute({
 	method: "get",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}",
+	path: "/api/v1/threads/{thread_id}",
 	summary: "Thread get",
 	tags: ["thread"],
 	request: {
 		params: z.object({
-			room_id: RoomId,
 			thread_id: ThreadId,
 		}),
 	},
@@ -157,13 +147,12 @@ export const ThreadGet = createRoute({
 
 export const ThreadAck = createRoute({
 	method: "put",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/ack",
+	path: "/api/v1/threads/{thread_id}/ack",
 	summary: "Thread ack",
 	tags: ["ack"],
 	request: {
 		params: z.object({
 			thread_id: ThreadId,
-			room_id: RoomId,
 		}),
 	},
 	responses: {

@@ -1,6 +1,5 @@
 // import { Tooltip } from "./Atoms.tsx";
 const Tooltip = (props) => props.children;
-import * as styles from "./Messages.module.css";
 import {
 	createEffect,
 	createSignal,
@@ -49,8 +48,8 @@ export const Message = (props: MessageProps) => {
 	});
 
 	return (
-		<div class={styles.messageWrap}>
-			<span class={styles.sender}>
+		<div class="messageWrap">
+			<span class="sender">
 				<Tooltip
 					tip={() => <User name={props.message.sender} />}
 					attrs={{ class: "" }}
@@ -61,87 +60,91 @@ export const Message = (props: MessageProps) => {
 			{props.message.type === "message_html"
 				? (
 					<span
-						class={styles.body}
+						class="body"
 						ref={bodyEl!}
 						innerHTML={props.message.body}
 					>
 					</span>
 				)
-				: <span class={styles.body} ref={bodyEl!}>{props.message.body}</span>}
-			<span class={styles.time}>
+				: <span class="body" ref={bodyEl!}>{props.message.body}</span>}
+			<span class="time">
 				{new Date(props.message.origin_ts).toDateString()}
 			</span>
 		</div>
 	);
 };
 
+export const TimelineItem = (props: { msg: Message }) => {
+	return (
+		<Switch>
+			<Match when={props.msg.type === "message" || props.msg.type === "message_html"}>
+				<li
+					classList={{
+						message: true,
+						unread: props.msg.unread,
+						mention: props.msg.mention,
+						is_local: props.msg.is_local,
+					}}
+				>
+					<Message message={props.msg} />
+				</li>
+			</Match>
+			<Match when={props.msg.type === "unread-marker" && false}>
+				<li
+					classList={{
+						message: true,
+						unreadMarker: true,
+					}}
+				>
+					<div class="messageWrap">
+						<span class="sender">-----</span>
+						<span class="body">new messages</span>
+					</div>
+				</li>
+			</Match>
+			<Match when={props.msg.type === "unread-marker"}>
+				<li classList={{ unreadMarker2: true }}>
+					<hr />
+					<span>unread messages</span>
+					<hr />
+				</li>
+			</Match>
+			<Match when={props.msg.type === "time-split" && false}>
+				<li
+					classList={{
+						message: true,
+						timeSplit: true,
+					}}
+				>
+					<div class="messageWrap">
+						<span class="sender">-----</span>
+						<span class="body">
+							time changed to{" "}
+							<time>{new Date(props.msg.origin_ts).toDateString()}</time>
+						</span>
+					</div>
+				</li>
+			</Match>
+			<Match when={props.msg.type === "time-split"}>
+				<li
+					classList={{
+						timeSplit2: true,
+					}}
+				>
+					<hr />
+					<time>{new Date(props.msg.origin_ts).toDateString()}</time>
+					<hr />
+				</li>
+			</Match>
+		</Switch>
+	)
+}
+
 export const Messages = (props: MessagesProps) => {
 	return (
 		<>
-			<ul class={styles.messages} classList={{ [styles.notime]: props.notime }}>
-				{props.messages.map((i) => (
-					<Switch>
-						<Match when={i.type === "message" || i.type === "message_html"}>
-							<li
-								classList={{
-									[styles.message]: true,
-									[styles.unread]: i.unread,
-									[styles.mention]: i.mention,
-									[styles.is_local]: i.is_local,
-								}}
-							>
-								<Message message={i} />
-							</li>
-						</Match>
-						<Match when={i.type === "unread-marker" && false}>
-							<li
-								classList={{
-									[styles.message]: true,
-									[styles.unreadMarker]: true,
-								}}
-							>
-								<div class={styles.messageWrap}>
-									<span class={styles.sender}>-----</span>
-									<span class={styles.body}>new messages</span>
-								</div>
-							</li>
-						</Match>
-						<Match when={i.type === "unread-marker"}>
-							<li classList={{ [styles.unreadMarker2]: true }}>
-								<hr />
-								<span>unread messages</span>
-								<hr />
-							</li>
-						</Match>
-						<Match when={i.type === "time-split" && false}>
-							<li
-								classList={{
-									[styles.message]: true,
-									[styles.timeSplit]: true,
-								}}
-							>
-								<div class={styles.messageWrap}>
-									<span class={styles.sender}>-----</span>
-									<span class={styles.body}>
-										time changed to{" "}
-										<time>{new Date(i.origin_ts).toDateString()}</time>
-									</span>
-								</div>
-							</li>
-						</Match>
-						<Match when={i.type === "time-split"}>
-							<li
-								classList={{
-									[styles.timeSplit2]: true,
-								}}
-							>
-								<hr />
-								<time>{new Date(i.origin_ts).toDateString()}</time>
-								<hr />
-							</li>
-						</Match>
-					</Switch>
-				))}
+			<ul class="messages" classList={{ "notime": props.notime }}>
+				{props.messages.map((i) => <TimelineItem msg={i} />)}
 			</ul>
 		</>
 	);

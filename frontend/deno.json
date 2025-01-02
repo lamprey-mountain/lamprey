@@ -15,8 +15,11 @@
 		"prosemirror-state": "npm:prosemirror-state@^1.4.3",
 		"prosemirror-view": "npm:prosemirror-view@^1.37.1",
 		"solid-js": "npm:solid-js@^1.9.3",
-		"uuidv7": "npm:uuidv7@^1.0.2",
 		"vite": "npm:vite@^6.0.1",
-		"vite-plugin-solid": "npm:vite-plugin-solid@^2.11.0"
-	}
+		"vite-plugin-solid": "npm:vite-plugin-solid@^2.11.0",
+		"event-emitter": "npm:event-emitter@^0.3.5",
+		"typed-emitter": "npm:typed-emitter@^2.1.0",
+		"sdk": "./src/sdk/index.ts",
+		"tailwindcss": "npm:tailwindcss",
+	},
 }

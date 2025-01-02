@@ -2,6 +2,11 @@
 @import "./reset.css";
 @import "./components.css";
 @import "./code.css";
+@import "./util.css";
+@import "./temp.css";
+/* @tailwind base; */
+/* @tailwind components; */
+/* @tailwind utilities; */
 
 :root {
 	--font-default:
@@ -9,6 +14,9 @@
 		sans-serif;
 	--font-mono: "Iosevka Zesty", "Courier New", Courier, monospace;
 	--color-fg: #111111;
+	--color-fg2: #222222;
+	--color-fg3: #333333;
+	--color-fg4: #444444;
 	--color-bg: #f8f8f8;
 	--color-bg2: #eeeeee;
 	--color-bg3: #cccccc;
@@ -23,16 +31,16 @@
 }
 
 :root {
-	/* --color-fg: #f8f8f8; */
-	/* --color-bg: #111111; */
-	/* --color-bg2: #222222; */
-	/* --color-bg3: #333333; */
-	/* --color-border: #333333; */
+	--color-fg: #f8f8f8;
+	--color-bg: #111111;
+	--color-bg2: #222222;
+	--color-bg3: #333333;
+	--color-border: #333333;
 }
 
 html {
 	/* <html> has a scrollbar??? */
-	/* overflow: hidden; */
+	overflow: hidden;
 }
 
 html, body, #mount {
@@ -66,7 +74,7 @@ ol {
 	list-style-type: decimal;
 }
 
-/* some other stuff is also probably broken too */
+some other stuff is also probably broken too
 input[type="checkbox"] {
 	appearance: checkbox;
 }
@@ -120,7 +128,7 @@ blockquote {
 	background: #e4e4e4;
 	border-left: solid #cccccc 3px;
 	padding: 2px 4px;
-	/* display: inline-block; */
+	display: inline-block;
 }
 
 .hastooltip, abbr {
@@ -189,4 +197,19 @@ pre {
 
 ol {
 	counter-reset: list-item 0;
+}
+
+#root > nav {
+	display: flex;
+	flex-direction: column;
+}
+
+#root > nav button {
+	color: #eee;
+	background: #222;
+	border: 0;
+}
+
+#root > nav button:hover, #root > nav button:focus {
+	background: #333;
 }

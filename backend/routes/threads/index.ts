@@ -12,7 +12,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const r = await c.req.json();
 		const room_id = c.req.param("room_id");
 		const row = q.threadInsert.firstEntry({
-			thread_id: uuidv7(),
+			id: uuidv7(),
 			room_id,
 			name: r.name,
 			description: r.description,
@@ -33,19 +33,20 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			"SELECT count(*) FROM threads WHERE room_id = ?",
 		).first([room_id])!;
 		const rows = db.prepareQuery(
-			"SELECT * FROM threads WHERE room_id = ? AND thread_id > ? AND thread_id < ? LIMIT ?",
+			"SELECT * FROM threads WHERE room_id = ? AND id > ? AND id < ? LIMIT ?",
 		)
 			.allEntries([room_id, after ?? UUID_MIN, before ?? UUID_MAX, limit + 1]);
 		return c.json({
 			has_more: rows.length > limit,
 			total: count,
-			threads: rows.slice(0, limit).map((i) => ThreadFromDb.parse(i)),
+			items: rows.slice(0, limit).map((i) => ThreadFromDb.parse(i)),
 		});
 	});
 
 	app.openapi(withAuth(ThreadGet), (c) => {
 		const thread_id = c.req.param("thread_id");
-		const row = q.threadSelect.firstEntry({ thread_id });
+		const row = q.threadSelect.firstEntry({ id: thread_id });
+		console.log({ thread_id, row })
 		if (!row) return c.json({ error: "not found" }, 404);
 		return c.json(row);
 	});
@@ -55,10 +56,10 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const thread_id = c.req.param("thread_id");
 		let row;
 		db.transaction(() => {
-			const old = q.threadSelect.firstEntry({ thread_id });
+			const old = q.threadSelect.firstEntry({ id: thread_id });
 			if (!old) return;
 			row = q.threadUpdate.firstEntry({
-				thread_id,
+				id: thread_id,
 				name: patch.name === undefined ? old.name : patch.name,
 				description: patch.description === undefined
 					? old.description

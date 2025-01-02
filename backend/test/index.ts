@@ -26,30 +26,30 @@ async function http(
 async function test() {
 	const room = await http("POST", "/api/v1/rooms", { name: "arst" });
 	await http("GET", "/api/v1/rooms");
-	await http("PATCH", `/api/v1/rooms/${room.room_id}`, {
+	await http("PATCH", `/api/v1/rooms/${room.id}`, {
 		description: "foobar",
 	});
-	await http("GET", `/api/v1/rooms/${room.room_id}`);
-	const thread = await http("POST", `/api/v1/rooms/${room.room_id}/threads`, {
+	await http("GET", `/api/v1/rooms/${room.id}`);
+	const thread = await http("POST", `/api/v1/rooms/${room.id}/threads`, {
 		name: "test thread",
 	});
 	const message = await http(
 		"POST",
-		`/api/v1/rooms/${room.room_id}/threads/${thread.thread_id}/messages`,
+		`/api/v1/threads/${thread.id}/messages`,
 		{ content: "hello world" },
 	);
 	await http(
 		"GET",
-		`/api/v1/rooms/${room.room_id}/threads/${thread.thread_id}/messages`,
+		`/api/v1/threads/${thread.id}/messages`,
 	);
 	await http(
 		"PATCH",
-		`/api/v1/rooms/${room.room_id}/threads/${thread.thread_id}/messages/${message.message_id}`,
+		`/api/v1/threads/${thread.id}/messages/${message.id}`,
 		{ content: "goodbye world" },
 	);
 	await http(
 		"GET",
-		`/api/v1/rooms/${room.room_id}/threads/${thread.thread_id}/messages`,
+		`/api/v1/threads/${thread.id}/messages`,
 	);
 }
 

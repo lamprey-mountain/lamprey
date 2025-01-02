@@ -125,7 +125,7 @@ export const ReportCreateUser = createRoute({
 
 export const ReportCreateThread = createRoute({
 	method: "post",
-	path: "/api/v1/rooms/{room_id}/threads/{thread_id}/report",
+	path: "/api/v1/threads/{thread_id}/report",
 	summary: "Report create (thread)",
 	tags: ["moderation"],
 	request: {
@@ -161,7 +161,7 @@ export const ReportCreateThread = createRoute({
 export const ReportCreateMessage = createRoute({
 	method: "post",
 	path:
-		"/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}/report",
+		"/api/v1/threads/{thread_id}/messages/{message_id}/report",
 	summary: "Report create (message)",
 	tags: ["moderation"],
 	request: {

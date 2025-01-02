@@ -103,7 +103,7 @@ export const RoomList = createRoute({
 			after: RoomId.optional(),
 			before: RoomId.optional(),
 			around: RoomId.optional(),
-			limit: z.string().transform((i) => parseInt(i, 10)).pipe(
+			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
 				Uint.min(1).max(100).default(10),
 			),
 		}),
@@ -115,7 +115,7 @@ export const RoomList = createRoute({
 			content: {
 				"application/json": {
 					schema: z.object({
-						rooms: Room.array(),
+						items: Room.array(),
 						total: Uint,
 						has_more: z.boolean(),
 					}),

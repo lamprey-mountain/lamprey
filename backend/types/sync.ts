@@ -31,13 +31,10 @@ export const MessageServer = z.union([
 	z.object({ type: z.literal("upsert.message"), message: Message }),
 	z.object({ type: z.literal("upsert.user"), user: User }),
 	z.object({ type: z.literal("upsert.session"), session: Session }),
-	z.object({ type: z.literal("delete.message"), message_id: MessageId }),
-	z.object({
-		type: z.literal("delete.message_version"),
-		version_id: MessageVersionId,
-	}),
-	z.object({ type: z.literal("delete.user"), user_id: UserId }),
-	z.object({ type: z.literal("delete.session"), session_id: SessionId }),
+	z.object({ type: z.literal("delete.message"), id: MessageId }),
+	z.object({ type: z.literal("delete.message_version"), id: MessageVersionId }),
+	z.object({ type: z.literal("delete.user"), id: UserId }),
+	z.object({ type: z.literal("delete.session"), id: SessionId }),
 ]);
 
 /*
