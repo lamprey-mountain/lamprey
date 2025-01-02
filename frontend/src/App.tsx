@@ -40,6 +40,7 @@ const App: Component = () => {
 
 	createEffect(() => roomId() && client.fetchRoom(roomId()!));
 	createEffect(() => threadId() && client.fetchThread(threadId()!));
+	createEffect(() => roomId() && client.fetchThreadsInRoom(roomId()!));
 
 	const handleHashChange = () => setHash(location.hash.slice(1));
 	globalThis.addEventListener("hashchange", handleHashChange);
@@ -51,14 +52,12 @@ const App: Component = () => {
 	// createEffect(() => setTitle(parts.get(hash())?.title ?? "unknown"));
 
 	return (
-		<div id="root">
+		<div id="root" class="flex h-screen font-sans">
 			<chatctx.Provider value={{ client, roomId, threadId, thread, room, setRoomId, setThreadId }}>
 				<ChatNav rooms={rooms()} threads={threads()} />
-				<main class="flex-col" style="height: 100%;">
-					<Show when={thread()}>
-						<ChatMain thread={thread()!} />
-					</Show>
-				</main>
+				<Show when={thread()} fallback={<div>thread not found...</div>}>
+					<ChatMain thread={thread()!} />
+				</Show>
 			</chatctx.Provider>
 		</div>
 	);

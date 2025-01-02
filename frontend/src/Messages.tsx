@@ -24,6 +24,9 @@ const User = (props: UserProps) => {
 	);
 };
 
+const WRAPPER_CSS = "group grid grid-cols-[128px_auto_max-content] px-[8px] hover:bg-bg1/30";
+const BODY_CSS = "mx-[8px] overflow-hidden whitespace-pre-wrap";
+
 type Message = any;
 
 type MessageProps = {
@@ -48,8 +51,8 @@ export const Message = (props: MessageProps) => {
 	});
 
 	return (
-		<div class="messageWrap">
-			<span class="sender">
+		<div class={WRAPPER_CSS}>
+			<span class="hover:underline cursor-pointer truncate text-right text-fg4">
 				<Tooltip
 					tip={() => <User name={props.message.sender} />}
 					attrs={{ class: "" }}
@@ -60,14 +63,14 @@ export const Message = (props: MessageProps) => {
 			{props.message.type === "message_html"
 				? (
 					<span
-						class="body"
+						class={BODY_CSS}
 						ref={bodyEl!}
 						innerHTML={props.message.body}
 					>
 					</span>
 				)
-				: <span class="body" ref={bodyEl!}>{props.message.body}</span>}
-			<span class="time">
+				: <span class={BODY_CSS} ref={bodyEl!}>{props.message.body}</span>}
+			<span class="invisible group-hover:visible text-fg4">
 				{new Date(props.message.origin_ts).toDateString()}
 			</span>
 		</div>
@@ -79,24 +82,22 @@ export const TimelineItem = (props: { msg: Message }) => {
 		<Switch>
 			<Match when={props.msg.type === "message" || props.msg.type === "message_html"}>
 				<li
+					class=""
 					classList={{
-						message: true,
 						unread: props.msg.unread,
-						mention: props.msg.mention,
-						is_local: props.msg.is_local,
+						"bg-[#67dc8222]": props.msg.mention,
+						"shadow-arst": props.msg.mention || props.msg.unread,
+						"shadow-[#67dc82]": props.msg.mention,
+						"shadow-[#3fa9c9]": props.msg.unread,
+						"text-fg4": props.msg.is_local,
 					}}
 				>
 					<Message message={props.msg} />
 				</li>
 			</Match>
 			<Match when={props.msg.type === "unread-marker" && false}>
-				<li
-					classList={{
-						message: true,
-						unreadMarker: true,
-					}}
-				>
-					<div class="messageWrap">
+				<li class="text-[#3fa9c9] shadow-arst shadow-[#3fa9c9] shadow-[#3fa9c922]">
+					<div class="grid grid-cols-[128px_auto_max-content] px-[8px]">
 						<span class="sender">-----</span>
 						<span class="body">new messages</span>
 					</div>
@@ -116,7 +117,7 @@ export const TimelineItem = (props: { msg: Message }) => {
 						timeSplit: true,
 					}}
 				>
-					<div class="messageWrap">
+					<div class="grid grid-cols-[128px_auto_max-content] px-[8px]">
 						<span class="sender">-----</span>
 						<span class="body">
 							time changed to{" "}
@@ -143,7 +144,7 @@ export const TimelineItem = (props: { msg: Message }) => {
 export const Messages = (props: MessagesProps) => {
 	return (
 		<>
-			<ul class="messages" classList={{ "notime": props.notime }}>
+			<ul class="flex flex-col justify-end py-[8px]" classList={{ "notime": props.notime }}>
 				{props.messages.map((i) => <TimelineItem msg={i} />)}
 			</ul>
 		</>

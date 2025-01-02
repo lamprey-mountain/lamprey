@@ -199,24 +199,24 @@ export function createList<T>(options: {
   const margin = 0;
   const observer = new IntersectionObserver((entries) => {
     const el = entries[0];
-    console.log("list::intersection", entries);
+    // console.log("list::intersection", entries);
     if (el.target === topEl()) {
       if (el.isIntersecting) {
-        console.log("list::up");
+        // console.log("list::up");
         anchorRef = el.target;
         anchorRect = el.boundingClientRect;
         options.onPaginate?.("backwards");
       }
     } else if (entries[0].target === bottomEl()) {
       if (el.isIntersecting) {
-        console.log("list::down");
+        // console.log("list::down");
         shouldAutoscroll = options.autoscroll?.() || false;
         anchorRef = el.target;
         anchorRect = el.boundingClientRect;
         options.onPaginate?.("forwards");
       } else {
         shouldAutoscroll = false;
-        console.log({ shouldAutoscroll })
+        // console.log({ shouldAutoscroll })
       }
     } else {
       console.warn("list::unknownIntersectionEntry");
@@ -251,16 +251,16 @@ export function createList<T>(options: {
     List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
       function reanchor() {
         const wrap = wrapperEl();
-        console.log("list::reanchor", wrap, anchorRef);
+        // console.log("list::reanchor", wrap, anchorRef);
         if (!wrap || !anchorRef) return setRefs();
         if (shouldAutoscroll) {
-          console.log("list::autoscroll");
+          // console.log("list::autoscroll");
           wrap.scrollBy({ top: 999999, behavior: "instant" });
         } else {
           // FIXME: tons of reflow and jank
-          console.time("perf::forceReflow");
+          // console.time("perf::forceReflow");
           const currentRect = anchorRef.getBoundingClientRect();
-          console.timeEnd("perf::forceReflow");
+          // console.timeEnd("perf::forceReflow");
           const diff = (currentRect.y - anchorRect.y) + (currentRect.height - anchorRect.height);
           wrapperEl()?.scrollBy(0, diff);
         }
@@ -287,7 +287,7 @@ export function createList<T>(options: {
       }));
       
       return (
-        <ul class="scroll" ref={setWrapperEl}>
+        <ul class="list-none py-[8px] flex flex-col overflow-y-auto [overflow-anchor:none]" ref={setWrapperEl}>
           <For each={options.items()}>
             {(item, idx) => props.children(item, idx)}
           </For>

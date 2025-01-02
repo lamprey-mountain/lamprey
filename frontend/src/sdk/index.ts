@@ -112,11 +112,11 @@ export class Timeline {
 
     const url = new URL(`/api/v1/threads/${this.thread_id}/messages`, this.client.baseUrl);
     url.searchParams.set("limit", limit.toString());
+    const before = this.messages[0]?.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
+    const after = this.messages.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
     if (dir === "f") {
-      const after = this.messages[0]?.id ?? "00000000-0000-0000-0000-000000000000";
       url.searchParams.set("after", after);
     } else {
-      const before = this.messages.at(-1)?.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
       url.searchParams.set("before", before);
     }
     
@@ -341,6 +341,7 @@ export class Client {
     	  const { live } = thread.timelines;
     	  const messages = [...live.messages.filter(i => i.data.nonce !== message.data.nonce), message];
     	  live.messages = messages;
+    	  live.events.emit("append", [message]);
     	} else {
     		console.warn("unknown message type", msg.type);
     		return;
@@ -396,6 +397,19 @@ export class Client {
     this.threads.set(id, thread);
 		this.events.emit("update");
     return thread;
+  }
+  
+  async fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
+    const data = await this.http("GET", `/api/v1/rooms/${id}/threads`);
+    const threads = [];
+    for (const t of data.items) {
+	    const existing = this.threads.get(t.id);
+	    const thread = new Thread(this, t.id, data, existing?.timelines);
+	    this.threads.set(t.id, thread);
+	    threads.push(thread);
+    }
+		this.events.emit("update");
+    return threads;
   }
 }
 

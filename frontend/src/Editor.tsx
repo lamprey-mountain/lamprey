@@ -150,7 +150,7 @@ export const Editor = (props: EditorProps) => {
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
-						<div class="placeholder">{/* @once */ props.placeholder}</div>
+						<div class="absolute text-fg4">{/* @once */ props.placeholder}</div>
 					) as HTMLDivElement;
 					return DecorationSet.create(state.doc, [
 						Decoration.widget(0, placeholder),
@@ -454,10 +454,8 @@ export const Editor = (props: EditorProps) => {
 
 	return (
 		<div
-			classList={{
-				editorInside: true,
-				editorDisabled: props.disabled ?? false,
-			}}
+			class="bg-bg3 flex-1 border-1 border-sep px-[2px] whitespace-pre-wrap overflow-y-auto"
+			classList={{ "bg-bg4": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}
 		>
