@@ -39,13 +39,13 @@ const App: Component = () => {
 	client.connect();
 
 	createEffect(async () => {
-		await (roomId() && client.fetchRoom(roomId()!));
-		roomId() && setRoom(client.rooms.get(roomId()!));
+		if (roomId() && !client.rooms.has(roomId()!)) await client.fetchRoom(roomId()!);
+		if (roomId()) setRoom(client.rooms.get(roomId()!));
 	});
 	
 	createEffect(async () => {
-		await (threadId() && client.fetchThread(threadId()!));
-		threadId() && setThread(client.threads.get(threadId()!));
+		if (threadId() && !client.threads.has(threadId()!)) await client.fetchThread(threadId()!);
+		if (threadId()) setThread(client.threads.get(threadId()!));
 	});
 	
 	createEffect(async () => {

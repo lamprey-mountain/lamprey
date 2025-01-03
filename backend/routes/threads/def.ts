@@ -31,7 +31,7 @@ export const ThreadCreate = createRoute({
 
 export const ThreadList = createPagination({
 	method: "get",
-	path: "/api/v2/rooms/{room_id}/threads",
+	path: "/api/v1/rooms/{room_id}/threads",
 	summary: "Thread list",
 	tags: ["thread"],
 	pagination: {

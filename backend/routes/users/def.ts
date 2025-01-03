@@ -135,7 +135,7 @@ export const UserGet = createRoute({
 	tags: ["user"],
 	request: {
 		params: z.object({
-			user_id: UserId,
+			user_id: UserId.or(z.literal("@self")),
 		}),
 	},
 	responses: {
@@ -151,20 +151,20 @@ export const UserGet = createRoute({
 	},
 });
 
-export const UserGetSelf = createRoute({
-	method: "get",
-	path: "/api/v1/users/@self",
-	summary: "User get self",
-	tags: ["user"],
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: User,
-				},
-			},
-		},
-	},
-});
+// export const UserGetSelf = createRoute({
+// 	method: "get",
+// 	path: "/api/v1/users/@self",
+// 	summary: "User get self",
+// 	tags: ["user"],
+// 	responses: {
+// 		...common,
+// 		200: {
+// 			description: "success",
+// 			content: {
+// 				"application/json": {
+// 					schema: User,
+// 				},
+// 			},
+// 		},
+// 	},
+// });

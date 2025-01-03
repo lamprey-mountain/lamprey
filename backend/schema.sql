@@ -1,77 +1,6 @@
-CREATE TABLE rooms (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT
-) STRICT;
-
-CREATE TABLE role (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    permissions INT NOT NULL
-) STRICT;
-
-CREATE TABLE role_application (
-    user_id INT,
-    role_id INT,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    PRIMARY KEY (user_id, role_id)
-) STRICT;
-
-CREATE TABLE threads (
-    id TEXT PRIMARY KEY,
-    room_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    is_closed INT NOT NULL,
-    is_locked INT NOT NULL,
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
-) STRICT;
-
-CREATE TABLE messages (
-    id TEXT NOT NULL,
-    thread_id TEXT NOT NULL,
-    version_id TEXT PRIMARY KEY,
-    ordering INT NOT NULL,
-    content TEXT NOT NULL,
-    metadata TEXT NOT NULL,
-    reply TEXT,
-    author_id TEXT NOT NULL,
-    FOREIGN KEY (thread_id) REFERENCES threads(id),
-    FOREIGN KEY (author_id) REFERENCES users(id)
-    -- FOREIGN KEY (reply) REFERENCES messages(id)
-) STRICT;
-
 CREATE INDEX messages_message_id ON messages (id);
 
--- replace users with only members (ie. make users less "persistent") and accounts?
-CREATE TABLE users (
-    id TEXT PRIMARY KEY,
-    parent_id TEXT,
-    name TEXT,
-    description TEXT,
-    avatar_url TEXT,
-    email TEXT,
-    status TEXT,
-    is_bot INT,
-    is_alias INT,
-    is_system INT,
-    can_fork INT,
-    discord_id TEXT,
-    FOREIGN KEY (parent_id) REFERENCES users(id)
-) STRICT;
-
 CREATE UNIQUE INDEX users_email ON users (email);
-
-CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    token TEXT NOT NULL,
-    name TEXT,
-    status INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-) STRICT;
 
 CREATE TABLE auth (
     user_id TEXT NOT NULL,
@@ -137,17 +66,6 @@ END;
 
 CREATE TABLE config (key TEXT PRIMARY KEY, value ANY);
 
-CREATE VIEW messages_coalesced AS
-    SELECT *
-    FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY id ORDER BY version_id DESC) AS row_num
-        FROM messages)
-    WHERE row_num = 1;
-
-CREATE VIEW messages_counts AS
-    SELECT thread_id, count(*)
-    FROM message_coalesced
-    GROUP BY thread_id;
-
 CREATE TABLE invites (
     target_type TEXT NOT NULL,
     target_id TEXT NOT NULL,
@@ -157,6 +75,6 @@ CREATE TABLE invites (
 ) STRICT;
 
 INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork)
-VALUES ('01940be4-6ca5-7351-ac71-914f49f9824c', null, 'tezlm', null, null, 0, 0, 0, 1);
+VALUES ('01940be4-6ca5-7351-ac71-914f49f9824c', null, 'tezlm', null, null, false, false, false, true);
 INSERT INTO sessions (id, token, user_id, status) VALUES ('01940be4-b547-7b8e-b3f0-63900545a0f9', 'abcdefg', '01940be4-6ca5-7351-ac71-914f49f9824c', 1);
 -- UPDATE sessions SET status = 1 WHERE status = 2;

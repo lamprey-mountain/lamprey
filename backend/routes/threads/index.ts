@@ -8,9 +8,10 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(ThreadCreate), async (c) => {
 		const r = await c.req.json();
 		const room_id = c.req.param("room_id");
-		if (!await data.roomSelect(room_id)) return c.json({ error: "room not found" }, 404);
-		const thread = await data.threadInsert( uuidv7(), room_id, r,
-		);
+		const perms = await data.resolvePermissions(c.get("user_id"), room_id);
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		if (!perms.has("ThreadCreate")) return c.json({ error: "permission denied" }, 403);
+		const thread = await data.threadInsert( uuidv7(), room_id, r);
 		broadcast({ type: "upsert.thread", thread });
 		return c.json(thread, 201);
 	});

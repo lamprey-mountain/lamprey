@@ -18,7 +18,7 @@ app.openAPIRegistry.register("User", t.User);
 app.openAPIRegistry.register("Member", t.Member);
 app.openAPIRegistry.register("Role", t.Role);
 app.openAPIRegistry.register("Invite", t.Invite);
-app.openAPIRegistry.register("Permissions", t.Permissions);
+app.openAPIRegistry.register("Permission", t.Permission);
 app.openAPIRegistry.registerComponent("securitySchemes", "token", {
 	type: "apiKey",
 	name: "authorization",

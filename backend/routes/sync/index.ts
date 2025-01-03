@@ -35,9 +35,24 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			}, 1000 * 45);
 		}
 
-		function handle(msg: z.infer<typeof MessageServer>) {
+		async function handle(msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
 			// if (state === "unauth") return;
+			// TODO: handle deletes
+			if (msg.type === "upsert.message") {
+				const thread = await data.threadSelect(msg.message.thread_id);
+				if (!thread) throw new Error("no thread?");
+				const perms = await data.resolvePermissions(user_id, thread.room_id);
+				if (!perms.has("View")) return;
+			} else {
+				const room_id = msg.type === "upsert.room" ? msg.room.id
+					: msg.type === "upsert.thread" ? msg.thread.room_id
+					: null;
+				if (room_id) {
+					const perms = await data.resolvePermissions(user_id, room_id);
+					if (!perms.has("View")) return;
+				}
+			}
 			ws.send(JSON.stringify(msg));
 		}
 

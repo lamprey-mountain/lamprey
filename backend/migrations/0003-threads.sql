@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS threads (
-    id TEXT PRIMARY KEY,
-    room_id TEXT NOT NULL,
+    id UUID PRIMARY KEY,
+    room_id UUID NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    is_closed INT NOT NULL,
-    is_locked INT NOT NULL,
+    is_closed BOOL NOT NULL,
+    is_locked BOOL NOT NULL,
     FOREIGN KEY (room_id) REFERENCES rooms(id)
 );

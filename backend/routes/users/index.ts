@@ -12,11 +12,21 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			parent_id,
 			is_system: false,
 			can_fork: false,
+			discord_id: null,
 		})
 		broadcast({ type: "upsert.user", user });
 		return c.json(user, 201);
 	});
 
+	app.openapi(withAuth(UserUpdateSelf), async (c) => {
+		const user_id = c.get("user_id");
+		const patch = await c.req.json();
+		const user = await data.userUpdate(user_id, patch, {});
+		if (!user) return c.json({ error: "not found" }, 404);
+		broadcast({ type: "upsert.user", user });
+		return c.json(user, 200);
+	});
+	
 	app.openapi(withAuth(UserUpdate), async (c) => {
 		const user_id = c.req.param("user_id");
 		const patch = await c.req.json();
@@ -26,15 +36,13 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		return c.json(user, 200);
 	});
 	
-	app.openapi(withAuth(UserUpdateSelf), async (c) => {
+	app.openapi(withAuth(UserDeleteSelf), async (c) => {
 		const user_id = c.get("user_id");
-		const patch = await c.req.json();
-		const user = await data.userUpdate(user_id, patch, {});
-		if (!user) return c.json({ error: "not found" }, 404);
-		broadcast({ type: "upsert.user", user });
-		return c.json(user, 200);
+		await data.userDelete(user_id);
+		broadcast({ type: "delete.user", id: user_id });
+		return new Response(null, { status: 204 });
 	});
-
+	
 	app.openapi(withAuth(UserDelete), async (c) => {
 		const user_id = c.req.param("user_id");
 		await data.userDelete(user_id);
@@ -42,22 +50,16 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		return new Response(null, { status: 204 });
 	});
 	
-	app.openapi(withAuth(UserDeleteSelf), async (c) => {
-		const user_id = c.get("user_id");
-		await data.userDelete(user_id);
-		broadcast({ type: "delete.user", id: user_id });
-		return new Response(null, { status: 204 });
-	});
-
-	app.openapi(withAuth(UserGet), async (c) => {
-		const user_id = c.req.param("user_id");
-		const user = await data.userSelect(user_id);
-		if (!user) return c.json({ error: "not found" }, 404);
-		return c.json(user, 200);
-	});
+	// app.openapi(withAuth(UserGetSelf), async (c) => {
+	// 	const user_id = c.get("user_id");
+	// 	const user = await data.userSelect(user_id);
+	// 	if (!user) return c.json({ error: "not found" }, 404);
+	// 	return c.json(user, 200);
+	// });
 	
-	app.openapi(withAuth(UserGetSelf), async (c) => {
-		const user_id = c.get("user_id");
+	app.openapi(withAuth(UserGet), async (c) => {
+		let user_id = c.req.param("user_id");
+		if (user_id === "@self") user_id = c.get("user_id");
 		const user = await data.userSelect(user_id);
 		if (!user) return c.json({ error: "not found" }, 404);
 		return c.json(user, 200);

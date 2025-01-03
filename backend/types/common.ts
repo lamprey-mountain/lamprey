@@ -1,4 +1,6 @@
 import { z } from "npm:@hono/zod-openapi";
+import { Permission } from "./permissions.ts";
+export { Permission } from "./permissions.ts";
 
 export const Uint = z.number().int().nonnegative();
 
@@ -29,9 +31,9 @@ export const MessageId = z.string().uuid().describe(
 export const MessageVersionId = z.string().uuid().describe(
 	"A unique identifier for this MessageVersion",
 ).openapi({ title: "MessageVersionId", example: messageVersionIdExample });
-export const MemberId = z.string().uuid().describe(
-	"A unique identifier for this Member",
-).openapi({ title: "MemberId", example: memberIdExample });
+// export const MemberId = z.string().uuid().describe(
+// 	"A unique identifier for this Member",
+// ).openapi({ title: "MemberId", example: memberIdExample });
 export const RoleId = z.string().uuid().describe(
 	"A unique identifier for this Role",
 ).openapi({ title: "RoleId", example: roleIdExample });
@@ -107,6 +109,16 @@ export const Room = z.object({
 //   type: z.literal("report"),
 // });
 
+export const Role = z.object({
+	id: RoleId,
+	room_id: RoomId,
+	name: z.string().min(1).max(64),
+	description: z.string().max(2048).nullable(),
+	permissions: Permission.array(),
+	// is_self_applicable: z.boolean(),
+	// is_mentionable: z.boolean(),
+}).openapi("Role");
+
 export const UserBase = z.object({
 	id: UserId,
 	parent_id: UserId.nullable(),
@@ -122,15 +134,17 @@ export const UserBase = z.object({
 
 export const User = UserBase.openapi("User");
 
-export const Member = z.object({
-	id: MemberId,
+export const MemberBase = z.object({
 	user_id: UserId,
 	room_id: RoomId,
-	override_name: z.string().min(2).max(64),
-	override_description: z.string().max(8192),
+	membership: z.enum(["join", "ban", "ghost"]).default("join"),
+	override_name: z.string().min(2).max(64).nullable(),
+	override_description: z.string().max(8192).nullable(),
 	// override_avatar: z.string().url().or(z.literal("")),
-	roles: RoleId.array(),
-}).openapi("Member");
+	roles: Role.array(),
+});
+
+export const Member = MemberBase.openapi("Member");
 
 export const MessageBase = z.object({
 	id: MessageId,
@@ -149,7 +163,7 @@ export const MessageBase = z.object({
 	// resolve everything here?
 	// mentions_threads: ThreadId.array(),
 	// mentions_rooms: ThreadId.array(),
-	author_id: UserId,
+	author: User,
 	is_pinned: z.boolean(),
 });
 
@@ -222,15 +236,6 @@ export const Session = z.object({
 	name: z.string().nullable(),
 }).openapi("Session");
 
-export const Role = z.object({
-	id: RoleId,
-	name: z.string().min(1).max(64),
-	description: z.string().max(2048),
-	permissions: Uint,
-	is_self_applicable: z.boolean(),
-	is_mentionable: z.boolean(),
-}).openapi("Role");
-
 export const Invite = z.object({
 	code: InviteCode,
 	// target: z.union([
@@ -240,7 +245,7 @@ export const Invite = z.object({
 	// ]),
 	target_id: z.string(),
 	target_type: z.enum(["room", "thread", "user"]),
-	creator_id: UserId.optional(),
+	creator_id: UserId.nullable(),
 	// roles: RoleId.array().optional(),
 	// expires_at: z.date().optional(),
 	// max_uses: Uint.optional(),
@@ -283,33 +288,7 @@ export const InvitePatch = Invite.pick({ })
 export const MemberPatch = Member.pick({
 	override_name: true,
 	override_description: true,
-	roles: true,
 }).partial();
-
-const permsdesc = `\`\`\`js
-export enum Permissions {
-  RoomManage         = 1 << 0,
-  ThreadCreate       = 1 << 1,
-  ThreadManage       = 1 << 2,
-  MessageCreate      = 1 << 3,
-  MessageFilesEmbeds = 1 << 4,
-  MessagePin         = 1 << 5,
-  MessageManage      = 1 << 6,
-  MessageMassMention = 1 << 7,
-  MemberKick         = 1 << 8,
-  MemberBan          = 1 << 9,
-  MemberManage       = 1 << 10,
-  InviteCreate       = 1 << 11,
-  InviteManage       = 1 << 12,
-  RoleManage         = 1 << 13,
-  RoleApply          = 1 << 14,
-}
-\`\`\``;
-
-export const Permissions = Uint.describe("permissions bitflags").openapi({
-	title: "bitflags",
-	description: permsdesc,
-});
 
 export const AuditLogEntry = z.object({
 	actor: Member,

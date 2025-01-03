@@ -49,10 +49,10 @@ export const Message = (props: MessageProps) => {
 		<div class={WRAPPER_CSS}>
 			<span class="hover:underline cursor-pointer truncate text-right text-fg4">
 				<Tooltip
-					tip={() => <User name={props.message.data.author_id} />}
+					tip={() => <User name={props.message.data.author.name} />}
 					attrs={{ class: "" }}
 				>
-					{props.message.data.author_id}
+					{props.message.data.author.name}
 				</Tooltip>
 			</span>
 			<span class={BODY_CSS} ref={bodyEl!}>{props.message.data.content}</span>

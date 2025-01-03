@@ -1,5 +1,4 @@
 import { createRoute, RouteConfig, z } from "npm:@hono/zod-openapi";
-import { Permissions } from "../data.ts";
 import { Uint } from "../types.ts";
 
 export const common = {

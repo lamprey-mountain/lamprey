@@ -1,5 +1,5 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
-import { Member, MemberId, MemberPatch, RoleId, RoomId } from "../../types.ts";
+import { Member, MemberPatch, RoleId, RoomId, UserId } from "../../types.ts";
 import { common, createPagination } from "../common.ts";
 
 export const RoomMemberList = createPagination({
@@ -13,20 +13,43 @@ export const RoomMemberList = createPagination({
 		}),
 	},
 	pagination: {
-	  id: MemberId,
+	  id: UserId,
 	  ty: Member,
 	},
 });
 
 export const RoomMemberGet = createRoute({
 	method: "get",
-	path: "/api/v1/rooms/{room_id}/members/{member_id}",
+	path: "/api/v1/rooms/{room_id}/members/{user_id}",
 	summary: "Member get",
 	tags: ["member"],
 	request: {
 		params: z.object({
 			room_id: RoomId,
-			member_id: MemberId,
+			user_id: UserId,
+		}),
+	},
+	responses: {
+	  ...common,
+		200: {
+			description: "success",
+			content: {
+				"application/json": {
+					schema: Member,
+				},
+			},
+		},
+	},
+});
+
+export const RoomMemberGetSelf = createRoute({
+	method: "get",
+	path: "/api/v1/rooms/{room_id}/members/@self",
+	summary: "Member get self",
+	tags: ["member"],
+	request: {
+		params: z.object({
+			room_id: RoomId,
 		}),
 	},
 	responses: {
@@ -44,13 +67,13 @@ export const RoomMemberGet = createRoute({
 
 export const RoomMemberUpdate = createRoute({
 	method: "patch",
-	path: "/api/v1/rooms/{room_id}/members/{member_id}",
+	path: "/api/v1/rooms/{room_id}/members/{user_id}",
 	summary: "Member update",
 	tags: ["member"],
 	request: {
 		params: z.object({
 			room_id: RoomId,
-			member_id: MemberId,
+			user_id: UserId,
 		}),
 		body: {
 			content: {
@@ -94,13 +117,13 @@ export const RoomMemberLeave = createRoute({
 
 export const RoomMemberKick = createRoute({
 	method: "delete",
-	path: "/api/v1/rooms/{room_id}/members/{member_id}",
+	path: "/api/v1/rooms/{room_id}/members/{user_id}",
 	summary: "Member kick",
 	tags: ["member"],
 	request: {
 		params: z.object({
 			room_id: RoomId,
-			member_id: MemberId,
+			user_id: UserId,
 		}),
 	},
 	responses: {

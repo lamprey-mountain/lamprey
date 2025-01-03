@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS room_members (
-    id TEXT PRIMARY KEY,
-    user_id TEXT,
-    room_id TEXT,
+    room_id UUID,
+    user_id UUID,
+    membership TEXT NOT NULL,
+    FOREIGN KEY (room_id) REFERENCES rooms(id),
     FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (room_id) REFERENCES rooms(id)
+    PRIMARY KEY (room_id, user_id)
 );

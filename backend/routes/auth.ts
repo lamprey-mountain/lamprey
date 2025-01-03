@@ -1,5 +1,5 @@
 import { Context, Next } from "npm:hono";
-import { data, HonoEnv, Permissions } from "globals";
+import { data, HonoEnv } from "globals";
 import { RouteConfig } from "npm:@hono/zod-openapi";
 
 type AuthOptions = {
