@@ -97,6 +97,7 @@ type TimelineEvents = {
 
 export class Timeline {
   public events: TypedEmitter<TimelineEvents> = new EventEmitter();
+  private lock: Promise<void> = Promise.resolve();
   
   constructor(
     public readonly client: Client,
@@ -109,18 +110,24 @@ export class Timeline {
   public async paginate(dir: "f" | "b", limit: number = 50): Promise<Timeline> {
     if (dir === "b" && this.isAtBeginning) return this;
     if (dir === "f" && this.isAtEnd) return this;
-
-    const url = new URL(`/api/v1/threads/${this.thread_id}/messages`, this.client.baseUrl);
+    await this.lock;
+    if (dir === "b" && this.isAtBeginning) return this;
+    if (dir === "f" && this.isAtEnd) return this;
+    
+    const url = new URL(`/api/v2/threads/${this.thread_id}/messages`, this.client.baseUrl);
+    url.searchParams.set("dir", dir);
     url.searchParams.set("limit", limit.toString());
     const before = this.messages[0]?.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
     const after = this.messages.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
     if (dir === "f") {
-      url.searchParams.set("after", after);
+      url.searchParams.set("from", after);
     } else {
-      url.searchParams.set("before", before);
+      url.searchParams.set("from", before);
     }
     
-		const data = await this.client.httpDirect("GET", url.href);
+    const prom = this.client.httpDirect("GET", url.href);
+    this.lock = prom;
+		const data = await prom;
 		const batch = data.items.map((i: any) => new Message(this.client, i.thread_id, i.id, i));
 		if (dir === "f") {
 		  this.messages.push(...batch);
@@ -339,7 +346,7 @@ export class Client {
     	  const message = new Message(this, thread_id, msg.message.id, msg.message);
     	  const thread = this.threads.get(thread_id)!;
     	  const { live } = thread.timelines;
-    	  const messages = [...live.messages.filter(i => i.data.nonce !== message.data.nonce), message];
+    	  const messages = message.data.nonce ? [...live.messages.filter(i => i.data.nonce !== message.data.nonce), message] : [...live.messages, message];
     	  live.messages = messages;
     	  live.events.emit("append", [message]);
     	} else {
@@ -399,12 +406,12 @@ export class Client {
     return thread;
   }
   
-  async fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
-    const data = await this.http("GET", `/api/v1/rooms/${id}/threads`);
+  public async temp_fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
+    const data = await this.http("GET", `/api/v2/rooms/${id}/threads?dir=f`);
     const threads = [];
     for (const t of data.items) {
 	    const existing = this.threads.get(t.id);
-	    const thread = new Thread(this, t.id, data, existing?.timelines);
+	    const thread = new Thread(this, t.id, t, existing?.timelines);
 	    this.threads.set(t.id, thread);
 	    threads.push(thread);
     }
@@ -422,15 +429,16 @@ export function getTimestampFromUUID(uuid: string): Date {
 	return new Date(timestamp);
 }
 
-export async function *createPagination(client: Client, path: string, after?: string) {
-	const url = new URL(path, client.baseUrl);
-	url.searchParams.set("limit", "5");
-	if (after) url.searchParams.set("after", after);
-	while (true) {
-	  const batch = await client.httpDirect("GET", url.href);
-	  for (const item of batch.items) yield item;
-	  if (!batch.has_more) break;
-	  console.log(batch.items)
-		url.searchParams.set("after", batch.items.at(-1).id);
-	}
-}
+// export async function *createPagination(client: Client, path: string, after?: string) {
+// 	const url = new URL(path, client.baseUrl);
+// 	url.searchParams.set("limit", "5");
+//   url.searchParams.set("dir", "f");
+// 	if (after) url.searchParams.set("from", after);
+// 	while (true) {
+// 	  const batch = await client.httpDirect("GET", url.href);
+// 	  for (const item of batch.items) yield item;
+// 	  if (!batch.has_more) break;
+// 	  console.log(batch.items)
+// 		url.searchParams.set("from", batch.items.at(-1).id);
+// 	}
+// }

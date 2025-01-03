@@ -454,7 +454,7 @@ export const Editor = (props: EditorProps) => {
 
 	return (
 		<div
-			class="bg-bg3 flex-1 border-1 border-sep px-[2px] whitespace-pre-wrap overflow-y-auto"
+			class="bg-bg3 flex-1 border-[1px] border-sep px-[4px] whitespace-pre-wrap overflow-y-auto"
 			classList={{ "bg-bg4": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}

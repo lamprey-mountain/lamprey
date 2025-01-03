@@ -57,12 +57,12 @@ export async function revokeToken(token: string) {
 	});
 }
 
-const state = uuidv7();
-const url = buildUrl(state);
-// display url to user...
-// ...receive code from request
-const code = "abc123";
-const { access_token: token } = await exchangeCodeForToken(code);
-const { user } = await getUser(token);
-// do something wtih user.id, etc
-await revokeToken(token);
+// const state = uuidv7();
+// const url = buildUrl(state);
+// // display url to user...
+// // ...receive code from request
+// const code = "abc123";
+// const { access_token: token } = await exchangeCodeForToken(code);
+// const { user } = await getUser(token);
+// // do something wtih user.id, etc
+// await revokeToken(token);

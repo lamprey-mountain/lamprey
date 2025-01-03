@@ -1,6 +1,6 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
 import { RoomId, Thread, ThreadId, ThreadPatch, Uint } from "../../types.ts";
-import { common } from "../common.ts";
+import { common, createPagination } from "../common.ts";
 
 export const ThreadCreate = createRoute({
 	method: "post",
@@ -27,6 +27,20 @@ export const ThreadCreate = createRoute({
 			},
 		},
 	},
+});
+
+export const ThreadList2 = createPagination({
+	method: "get",
+	path: "/api/v2/rooms/{room_id}/threads",
+	summary: "Thread list",
+	tags: ["thread"],
+	pagination: {
+		id: ThreadId,
+		ty: Thread,
+	},
+	query: z.object({
+		// pinned: z.boolean().optional(),
+	}),
 });
 
 export const ThreadList = createRoute({

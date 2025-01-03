@@ -1,6 +1,6 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
 import { Room, RoomId, RoomPatch, Uint, UserId } from "../../types.ts";
-import { common } from "../common.ts";
+import { common, createPagination } from "../common.ts";
 
 export const RoomCreate = createRoute({
 	method: "post",
@@ -91,6 +91,20 @@ export const DmGet = createRoute({
 			},
 		},
 	},
+});
+
+export const MessageList2 = createPagination({
+	method: "get",
+	path: "/api/v2/rooms",
+	summary: "Room list",
+	tags: ["room"],
+	pagination: {
+		id: RoomId,
+		ty: Room,
+	},
+	query: z.object({
+		// pinned: z.boolean().optional(),
+	}),
 });
 
 export const RoomList = createRoute({

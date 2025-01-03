@@ -233,21 +233,18 @@ export const Role = z.object({
 
 export const Invite = z.object({
 	code: InviteCode,
-	target_id: z.union([
-		z.object({ user_id: UserId }),
-		z.object({ room_id: RoomId }),
-		z.object({ thread_id: ThreadId }),
-	]),
-	target: z.union([
-		z.object({ user: User }),
-		z.object({ room: Room }),
-		z.object({ thread: Thread }),
-	]),
-	creator: UserId.optional(),
-	roles: RoleId.array().optional(),
-	expires_at: z.date().optional(),
-	max_uses: Uint.optional(),
-	uses: Uint,
+	// target: z.union([
+	// 	z.object({ user: User }),
+	// 	z.object({ room: Room }),
+	// 	z.object({ thread: Thread }),
+	// ]),
+	target_id: z.string(),
+	target_type: z.enum(["room", "thread", "user"]),
+	creator_id: UserId.optional(),
+	// roles: RoleId.array().optional(),
+	// expires_at: z.date().optional(),
+	// max_uses: Uint.optional(),
+	// uses: Uint,
 }).openapi("Invite");
 
 export const RoomPatch = Room.pick({ name: true, description: true }).partial();
@@ -279,7 +276,9 @@ export const RolePatch = Role.pick({
 	description: true,
 	permissions: true,
 }).partial();
-export const InvitePatch = Invite.pick({ expires_at: true, max_uses: true })
+// export const InvitePatch = Invite.pick({ expires_at: true, max_uses: true })
+// 	.partial();
+export const InvitePatch = Invite.pick({ })
 	.partial();
 export const MemberPatch = Member.pick({
 	override_name: true,

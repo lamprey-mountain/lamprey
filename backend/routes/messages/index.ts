@@ -4,6 +4,7 @@ import {
 	MessageCreate,
 	MessageDelete,
 	MessageList,
+	MessageList2,
 	MessageUpdate,
 	MessageVersionsDelete,
 	MessageVersionsGet,
@@ -76,6 +77,41 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			.slice(0, limit)
 			.map((i) => MessageFromDb.parse({ ...i, room_id }));
 		if (reverse) messages.reverse();
+		return c.json({
+			has_more: rows.length > limit,
+			total: count,
+			items: messages,
+		});
+	});
+	
+	app.openapi(withAuth(MessageList2), (c) => {
+		const room_id = c.req.param("room_id");
+		const thread_id = c.req.param("thread_id");
+		const limit = parseInt(c.req.query("limit") ?? "10", 10);
+		const from = c.req.query("from");
+		const to = c.req.query("to");
+		const dir = c.req.query("dir");
+		const after = (dir === "f" ? from : to) ?? UUID_MIN;
+		const before = (dir === "f" ? to : from) ?? UUID_MAX;
+		const rows = db.prepareQuery(`
+			SELECT * FROM messages_coalesced
+			WHERE thread_id = ? AND id > ? AND id < ?
+			ORDER BY id ${dir === "b" ? "DESC" : "ASC"} LIMIT ?
+		`)
+			.allEntries([
+				thread_id,
+				after,
+				before,
+				limit + 1,
+			]);
+		const [count] = db.prepareQuery(
+			`SELECT count(*) FROM messages_coalesced WHERE thread_id = ?`,
+		)
+			.first([thread_id])!;
+		const messages = rows
+			.slice(0, limit)
+			.map((i) => MessageFromDb.parse({ ...i, room_id }));
+		if (dir === "b") messages.reverse();
 		return c.json({
 			has_more: rows.length > limit,
 			total: count,

@@ -1,6 +1,7 @@
 {
 	"imports": {
-		"pglite": "npm:@electric-sql/pglite@^0.2.15",
+		// "pglite": "npm:@electric-sql/pglite@^0.2.15",
+    "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
 		"@hono/zod-openapi": "npm:@hono/zod-openapi@^0.18.3",
 		"hono": "npm:hono@^4.6.15",
 		"zod": "npm:zod@^3.24.1",

@@ -8,7 +8,7 @@ import {
 	ThreadId,
 	Uint,
 } from "../../types.ts";
-import { common } from "../common.ts";
+import { common, createPagination } from "../common.ts";
 
 export const MessageCreate = createRoute({
 	method: "post",
@@ -39,6 +39,25 @@ export const MessageCreate = createRoute({
 		},
 	},
 });
+
+export const MessageList2 = createPagination({
+	method: "get",
+	path: "/api/v2/threads/{thread_id}/messages",
+	summary: "Message list",
+	tags: ["message"],
+	pagination: {
+		id: MessageId,
+		ty: Message,
+	},
+	request: {
+		params: z.object({
+			thread_id: ThreadId,
+		}),
+	},
+	query: z.object({
+		// pinned: z.boolean().optional(),
+	}),
+})
 
 export const MessageList = createRoute({
 	method: "get",

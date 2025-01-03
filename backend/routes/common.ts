@@ -1,5 +1,6 @@
-import { createRoute, z } from "npm:@hono/zod-openapi";
+import { createRoute, RouteConfig, z } from "npm:@hono/zod-openapi";
 import { Permissions } from "../data.ts";
+import { Uint } from "../types.ts";
 
 export const common = {
 	429: {
@@ -64,3 +65,41 @@ export const common = {
 		},
 	},
 };
+
+type PaginationConfig = Omit<RouteConfig, "responses"> & {
+	pagination: {
+		id: z.ZodString,
+		ty: z.AnyZodObject
+	},
+	query?: z.AnyZodObject,
+}
+
+export const createPagination = (config: PaginationConfig) => createRoute({
+	...config,
+	request: {
+		...config.request,
+		query: z.object({
+			from: config.pagination.id.optional(),
+			to: config.pagination.id.optional(),
+			dir: z.enum(["f", "b"]),
+			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
+				Uint.min(1).max(100),
+			),
+		}).merge(config.query ?? z.object({})),
+	},
+	responses: {
+		...common,
+		200: {
+			description: "success",
+			content: {
+				"application/json": {
+					schema: z.object({
+						items: config.pagination.ty.array(),
+						total: Uint,
+						has_more: z.boolean(),
+					}),
+				},
+			},
+		},
+	},
+});

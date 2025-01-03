@@ -38,9 +38,21 @@ const App: Component = () => {
 	globalThis.client = client;
 	client.connect();
 
-	createEffect(() => roomId() && client.fetchRoom(roomId()!));
-	createEffect(() => threadId() && client.fetchThread(threadId()!));
-	createEffect(() => roomId() && client.fetchThreadsInRoom(roomId()!));
+	createEffect(async () => {
+		await (roomId() && client.fetchRoom(roomId()!));
+		roomId() && setRoom(client.rooms.get(roomId()!));
+	});
+	
+	createEffect(async () => {
+		await (threadId() && client.fetchThread(threadId()!));
+		threadId() && setThread(client.threads.get(threadId()!));
+	});
+	
+	createEffect(async () => {
+		await (roomId() && client.temp_fetchThreadsInRoom(roomId()!));
+		console.log("fetch threads", [...client.threads.values()])
+		setThreads([...client.threads.values()]);
+	});
 
 	const handleHashChange = () => setHash(location.hash.slice(1));
 	globalThis.addEventListener("hashchange", handleHashChange);
