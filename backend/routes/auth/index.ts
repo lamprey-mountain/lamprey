@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { db, discord, HonoEnv } from "globals";
+import { data, discord, HonoEnv } from "globals";
 import { uuidv7 } from "uuidv7";
 import { AuthDiscordFinish, AuthDiscordStart } from "./def.ts";
 import { UserFromDb } from "../../types/db.ts";
@@ -54,46 +54,46 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		return c.redirect(discord.buildUrl(state), 302);
 	});
 
-	app.openapi(AuthDiscordFinish, async (c) => {
-		const state = c.req.query("state");
-		const code = c.req.query("code");
-		if (!validStates.has(state)) return c.text("invalid state", 400);
-		if (!code) return c.text("missing code", 400);
-		validStates.delete(state);
-		const { access_token } = await discord.exchangeCodeForToken(code);
-		const { user: discordUser } = await discord.getUser(access_token);
-		console.log(discordUser);
-		let rowUser = db.prepareQuery("SELECT * FROM users WHERE discord_id = ?")
-			.firstEntry([discordUser.id]);
-		if (!rowUser) {
-			rowUser = db.prepareQuery(`
-        INSERT INTO users (user_id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
-        VALUES (:user_id, :parent_id, :name, :description, :status, :is_bot, :is_alias, :is_system, :can_fork, :discord_id)
-        RETURNING *
-      `).firstEntry({
-				user_id: uuidv7(),
-				parent_id: null,
-				name: discordUser.global_name ?? discordUser.username,
-				description: null,
-				status: null,
-				is_bot: false,
-				is_alias: false,
-				is_system: false,
-				can_fork: false,
-				discord_id: discordUser.id,
-			})!;
-		}
-		const user = UserFromDb.parse(rowUser);
-		const token = crypto.randomUUID();
-		db.prepareQuery(`
-      INSERT INTO sessions (session_id, user_id, token, status)
-      VALUES (?, ?, ?, ?)
-    `).execute([uuidv7(), user.id, token, 1]);
-		return c.html(`
-      <script>
-        localStorage.setItem("token", "${token}");
-        localStorage.setItem("user_id", "${user.id}");
-        location.href = "/";
-      </script>`);
-	});
+	// app.openapi(AuthDiscordFinish, async (c) => {
+	// 	const state = c.req.query("state");
+	// 	const code = c.req.query("code");
+	// 	if (!validStates.has(state)) return c.text("invalid state", 400);
+	// 	if (!code) return c.text("missing code", 400);
+	// 	validStates.delete(state);
+	// 	const { access_token } = await discord.exchangeCodeForToken(code);
+	// 	const { user: discordUser } = await discord.getUser(access_token);
+	// 	console.log(discordUser);
+	// 	let rowUser = db.prepareQuery("SELECT * FROM users WHERE discord_id = ?")
+	// 		.firstEntry([discordUser.id]);
+	// 	if (!rowUser) {
+	// 		rowUser = db.prepareQuery(`
+ //        INSERT INTO users (user_id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
+ //        VALUES (:user_id, :parent_id, :name, :description, :status, :is_bot, :is_alias, :is_system, :can_fork, :discord_id)
+ //        RETURNING *
+ //      `).firstEntry({
+	// 			user_id: uuidv7(),
+	// 			parent_id: null,
+	// 			name: discordUser.global_name ?? discordUser.username,
+	// 			description: null,
+	// 			status: null,
+	// 			is_bot: false,
+	// 			is_alias: false,
+	// 			is_system: false,
+	// 			can_fork: false,
+	// 			discord_id: discordUser.id,
+	// 		})!;
+	// 	}
+	// 	const user = UserFromDb.parse(rowUser);
+	// 	const token = crypto.randomUUID();
+	// 	db.prepareQuery(`
+ //      INSERT INTO sessions (session_id, user_id, token, status)
+ //      VALUES (?, ?, ?, ?)
+ //    `).execute([uuidv7(), user.id, token, 1]);
+	// 	return c.html(`
+ //      <script>
+ //        localStorage.setItem("token", "${token}");
+ //        localStorage.setItem("user_id", "${user.id}");
+ //        location.href = "/";
+ //      </script>`);
+	// });
 }

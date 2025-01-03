@@ -36,8 +36,35 @@ export const SessionUpdate = createRoute({
 	tags: ["sessions"],
 	request: {
 		params: z.object({
-			session_id: SessionId.or(z.literal("@me")),
+			session_id: SessionId,
 		}),
+		body: {
+			content: {
+				"application/json": {
+					schema: SessionPatch.pick({ name: true }),
+				},
+			},
+		},
+	},
+	responses: {
+		...common,
+		200: {
+			description: "success",
+			content: {
+				"application/json": {
+					schema: Session,
+				},
+			},
+		},
+	},
+});
+
+export const SessionUpdateSelf = createRoute({
+	method: "patch",
+	path: "/api/v1/sessions/@self",
+	summary: "Session update",
+	tags: ["sessions"],
+	request: {
 		body: {
 			content: {
 				"application/json": {
@@ -66,15 +93,39 @@ export const SessionDelete = createRoute({
 	tags: ["sessions"],
 	request: {
 		params: z.object({
-			session_id: SessionId.or(z.literal("@me")).or(z.literal("@all")),
+			session_id: SessionId,
 		}),
-		body: {
-			content: {
-				"application/json": {
-					schema: SessionPatch,
-				},
-			},
+	},
+	responses: {
+		...common,
+		204: {
+			description: "success",
 		},
+	},
+});
+
+export const SessionDeleteSelf = createRoute({
+	method: "delete",
+	path: "/api/v1/sessions/@self",
+	summary: "Session delete self",
+	tags: ["sessions"],
+	responses: {
+		...common,
+		204: {
+			description: "success",
+		},
+	},
+});
+
+export const SessionDeleteAll = createRoute({
+	method: "delete",
+	path: "/api/v1/sessions/@all",
+	summary: "Session delete all",
+	tags: ["sessions"],
+	request: {
+		params: z.object({
+			session_id: z.literal("@all"),
+		}),
 	},
 	responses: {
 		...common,
@@ -91,9 +142,27 @@ export const SessionGet = createRoute({
 	tags: ["sessions"],
 	request: {
 		params: z.object({
-			session_id: SessionId.or(z.literal("@me")),
+			session_id: SessionId,
 		}),
 	},
+	responses: {
+		...common,
+		200: {
+			description: "success",
+			content: {
+				"application/json": {
+					schema: Session,
+				},
+			},
+		},
+	},
+});
+
+export const SessionGetSelf = createRoute({
+	method: "get",
+	path: "/api/v1/sessions/@self",
+	summary: "Session get self",
+	tags: ["sessions"],
 	responses: {
 		...common,
 		200: {

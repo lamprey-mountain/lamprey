@@ -40,9 +40,9 @@ export const MessageCreate = createRoute({
 	},
 });
 
-export const MessageList2 = createPagination({
+export const MessageList = createPagination({
 	method: "get",
-	path: "/api/v2/threads/{thread_id}/messages",
+	path: "/api/v1/threads/{thread_id}/messages",
 	summary: "Message list",
 	tags: ["message"],
 	pagination: {
@@ -58,53 +58,6 @@ export const MessageList2 = createPagination({
 		// pinned: z.boolean().optional(),
 	}),
 })
-
-export const MessageList = createRoute({
-	method: "get",
-	path: "/api/v1/threads/{thread_id}/messages",
-	summary: "Message list",
-	tags: ["message"],
-	request: {
-		params: z.object({
-			thread_id: ThreadId,
-		}),
-		query: z.object({
-			after: MessageId.optional(),
-			before: MessageId.optional(),
-			// around: MessageId.optional(),
-			// pinned: z.boolean().optional(),
-			// limit: Uint.min(1).max(100).default(10),
-			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
-				Uint.min(1).max(100),
-			),
-		}),
-		// query: z.object({
-		// 	from: MessageId.optional(),
-		// 	to: MessageId.optional(),
-		// 	dir: z.enum(["f", "b"]),
-		// 	// pinned: z.boolean().optional(),
-		// 	// limit: Uint.min(1).max(100).default(10),
-		// 	limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
-		// 		Uint.min(1).max(100),
-		// 	),
-		// }),
-	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: z.object({
-						items: Message.array(),
-						total: Uint,
-						has_more: z.boolean(),
-					}),
-				},
-			},
-		},
-	},
-});
 
 export const MessageUpdate = createRoute({
 	method: "patch",
@@ -166,13 +119,6 @@ export const MessageGet = createRoute({
 			message_id: MessageId,
 			thread_id: ThreadId,
 		}),
-		query: z.object({
-			after: MessageId.optional(),
-			before: MessageId.optional(),
-			// around: MessageId.optional(),
-			// pinned: z.boolean().optional(),
-			limit: Uint.min(1).max(100).default(10),
-		}),
 	},
 	responses: {
 		...common,
@@ -180,11 +126,7 @@ export const MessageGet = createRoute({
 			description: "success",
 			content: {
 				"application/json": {
-					schema: z.object({
-						messages: Message.array(),
-						total: Uint,
-						has_more: z.boolean(),
-					}),
+					schema: Message,
 				},
 			},
 		},

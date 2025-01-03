@@ -1,5 +1,5 @@
 -- replace users with only members (ie. make users less "persistent") and accounts?
-CREATE TABLE users IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     parent_id TEXT,
     name TEXT,

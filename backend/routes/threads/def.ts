@@ -29,7 +29,7 @@ export const ThreadCreate = createRoute({
 	},
 });
 
-export const ThreadList2 = createPagination({
+export const ThreadList = createPagination({
 	method: "get",
 	path: "/api/v2/rooms/{room_id}/threads",
 	summary: "Thread list",
@@ -41,38 +41,6 @@ export const ThreadList2 = createPagination({
 	query: z.object({
 		// pinned: z.boolean().optional(),
 	}),
-});
-
-export const ThreadList = createRoute({
-	method: "get",
-	path: "/api/v1/rooms/{room_id}/threads",
-	summary: "Thread list",
-	tags: ["thread"],
-	request: {
-		query: z.object({
-			// pinned: z.boolean().optional(),
-			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
-				Uint.min(1).max(100)),
-			after: ThreadId.optional(),
-			before: ThreadId.optional(),
-			// around: ThreadId.optional(),
-		}),
-	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: z.object({
-						items: Thread.array(),
-						total: Uint,
-						has_more: z.boolean(),
-					}),
-				},
-			},
-		},
-	},
 });
 
 export const ThreadUpdate = createRoute({

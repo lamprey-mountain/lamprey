@@ -34,7 +34,7 @@ import { common } from "../common.ts";
 
 export const AuthPasswordSet = createRoute({
 	method: "put",
-	path: "/api/v1/users/@me/password",
+	path: "/api/v1/users/@self/password",
 	summary: "Auth password set",
 	tags: ["auth"],
 	request: {
@@ -58,7 +58,7 @@ export const AuthPasswordSet = createRoute({
 
 export const AuthPasswordDo = createRoute({
 	method: "post",
-	path: "/api/v1/users/@me/password",
+	path: "/api/v1/users/@self/password",
 	summary: "Auth password do",
 	tags: ["auth"],
 	request: {
@@ -82,7 +82,7 @@ export const AuthPasswordDo = createRoute({
 
 export const AuthTotpSet = createRoute({
 	method: "put",
-	path: "/api/v1/users/@me/totp",
+	path: "/api/v1/users/@self/totp",
 	summary: "Auth totp set",
 	tags: ["auth"],
 	request: {
@@ -106,7 +106,7 @@ export const AuthTotpSet = createRoute({
 
 export const AuthTotpDo = createRoute({
 	method: "post",
-	path: "/api/v1/users/@me/totp",
+	path: "/api/v1/users/@self/totp",
 	summary: "Auth totp do",
 	tags: ["auth"],
 	request: {

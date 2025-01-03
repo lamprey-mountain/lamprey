@@ -93,49 +93,14 @@ export const DmGet = createRoute({
 	},
 });
 
-export const MessageList2 = createPagination({
-	method: "get",
-	path: "/api/v2/rooms",
-	summary: "Room list",
-	tags: ["room"],
-	pagination: {
-		id: RoomId,
-		ty: Room,
-	},
-	query: z.object({
-		// pinned: z.boolean().optional(),
-	}),
-});
-
-export const RoomList = createRoute({
+export const RoomList = createPagination({
 	method: "get",
 	path: "/api/v1/rooms",
 	summary: "Room list",
 	tags: ["room"],
-	request: {
-		query: z.object({
-			after: RoomId.optional(),
-			before: RoomId.optional(),
-			around: RoomId.optional(),
-			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
-				Uint.min(1).max(100).default(10),
-			),
-		}),
-	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: z.object({
-						items: Room.array(),
-						total: Uint,
-						has_more: z.boolean(),
-					}),
-				},
-			},
-		},
+	pagination: {
+		ty: Room,
+		id: RoomId
 	},
 });
 

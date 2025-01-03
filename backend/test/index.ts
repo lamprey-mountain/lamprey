@@ -60,4 +60,5 @@ ws.onopen = () => {
 	test();
 };
 ws.onmessage = (ev) => console.log("ws message", JSON.parse(ev.data));
+ws.onerror = () => console.log("ws failed!");
 // ws.close();

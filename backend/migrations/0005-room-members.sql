@@ -1,4 +1,4 @@
-CREATE TABLE room_members IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS room_members (
     id TEXT PRIMARY KEY,
     user_id TEXT,
     room_id TEXT,

@@ -114,7 +114,7 @@ export class Timeline {
     if (dir === "b" && this.isAtBeginning) return this;
     if (dir === "f" && this.isAtEnd) return this;
     
-    const url = new URL(`/api/v2/threads/${this.thread_id}/messages`, this.client.baseUrl);
+    const url = new URL(`/api/v1/threads/${this.thread_id}/messages`, this.client.baseUrl);
     url.searchParams.set("dir", dir);
     url.searchParams.set("limit", limit.toString());
     const before = this.messages[0]?.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
@@ -407,7 +407,7 @@ export class Client {
   }
   
   public async temp_fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
-    const data = await this.http("GET", `/api/v2/rooms/${id}/threads?dir=f`);
+    const data = await this.http("GET", `/api/v1/rooms/${id}/threads?dir=f`);
     const threads = [];
     for (const t of data.items) {
 	    const existing = this.threads.get(t.id);

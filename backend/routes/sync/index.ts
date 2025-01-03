@@ -1,10 +1,8 @@
 import { OpenAPIHono, z } from "@hono/zod-openapi";
-import { db, events, HonoEnv } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { SyncInit } from "./def.ts";
 import { upgradeWebSocket } from "npm:hono/deno";
 import { MessageClient, MessageServer } from "../../types/sync.ts";
-import { User } from "../../types.ts";
-import { UserFromDb } from "../../types/db.ts";
 import { uuidv7 } from "uuidv7";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
@@ -37,11 +35,24 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			}, 1000 * 45);
 		}
 
-		const handle = (msg: z.infer<typeof MessageServer>) => {
+		function handle(msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
 			// if (state === "unauth") return;
 			ws.send(JSON.stringify(msg));
-		};
+		}
+
+		async function handleHello(token: string, _last_id?: string) {
+			const session = await data.sessionSelectByToken(token);
+			if (!session) return c.json({ error: "Invalid or expired token" }, 401);
+			// if (row.level as number < 1) return c.json({ error: "Unauthorized" }, 403);
+			user_id = session.user_id;
+			const user = await data.userSelect(user_id);
+			if (!user) {
+				throw new Error("user doesn't exist, but session does...!?");
+			}
+			state = "auth";
+			send({ type: "ready", user });
+		}
 
 		const middle = upgradeWebSocket(() => ({
 			onOpen(ev) {
@@ -66,25 +77,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 							send({ type: "error", error: "already authenticated" });
 							return;
 						}
-						const rowSession = db.prepareQuery(
-							"SELECT * FROM sessions WHERE token = ?",
-						).firstEntry([msg.token]);
-						if (!rowSession) {
-							return c.json({ error: "Invalid or expired token" }, 401);
-						}
-						// if (row.level as number < 1) return c.json({ error: "Unauthorized" }, 403);
-						user_id = rowSession.user_id as string;
-						const rowUser = db.prepareQuery(
-							"SELECT * FROM users WHERE id = ?",
-						).firstEntry([user_id]);
-						if (!rowUser) {
-							throw new Error("user doesn't exist, but session does...!?");
-						}
-						state = "auth";
-						send({
-							type: "ready",
-							user: User.parse(UserFromDb.parse(rowUser)),
-						});
+						handleHello(msg.token, msg.last_id);
 					} else if (msg.type === "pong") {
 						rescheduleHeartbeat();
 					}

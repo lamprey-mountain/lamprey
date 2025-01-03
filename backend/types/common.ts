@@ -145,7 +145,7 @@ export const MessageBase = z.object({
 	mentions_users: UserId.array(),
 	mentions_roles: RoleId.array(),
 	mentions_everyone: z.boolean(),
-	reply: MessageId.nullable(),
+	reply_id: MessageId.nullable(),
 	// resolve everything here?
 	// mentions_threads: ThreadId.array(),
 	// mentions_rooms: ThreadId.array(),
@@ -259,7 +259,7 @@ export const MessagePatch = Message.pick({
 	attachments: true,
 	embeds: true,
 	metadata: true,
-	reply: true,
+	reply_id: true,
 	nonce: true,
 }).partial();
 export const UserPatch = User.pick({

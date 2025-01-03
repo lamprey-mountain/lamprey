@@ -1,31 +1,31 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { withAuth } from "../../auth.ts";
-import { broadcast, db, HonoEnv, queries as q } from "globals";
+import { withAuth } from "../auth.ts";
+import { broadcast, data, HonoEnv } from "globals";
 import { uuidv4, uuidv7 } from "uuidv7";
 import { Invite, Room } from "../../types.ts";
 import { UUID_MAX, UUID_MIN } from "../../util.ts";
 import { InviteCreateRoom } from "./def.ts";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
-	app.openapi(withAuth(InviteCreateRoom), async (c) => {
-		const user_id = c.get("user_id");
-		const room_id = c.req.param("room_id");
-		const _patch = await c.req.json();
-		const row = db.prepareQuery(`
-    INSERT INTO invites (target_type, target_id, code, creator_id)
-    VALUES (?, ?, ?, ?)
-    RETURNING *
-    `).firstEntry([
-      "room",
-      room_id,
-      // nanoid(),
-      uuidv4(),
-      user_id,
-		])!;
-		const invite = Invite.parse(row);
-		// broadcast({ type: "upsert.invite", invite });
-		return c.json(invite, 201);
-	});
+	// app.openapi(withAuth(InviteCreateRoom), async (c) => {
+	// 	const user_id = c.get("user_id");
+	// 	const room_id = c.req.param("room_id");
+	// 	const _patch = await c.req.json();
+	// 	const row = db.prepareQuery(`
+ //    INSERT INTO invites (target_type, target_id, code, creator_id)
+ //    VALUES (?, ?, ?, ?)
+ //    RETURNING *
+ //    `).firstEntry([
+ //      "room",
+ //      room_id,
+ //      // nanoid(),
+ //      uuidv4(),
+ //      user_id,
+	// 	])!;
+	// 	const invite = Invite.parse(row);
+	// 	// broadcast({ type: "upsert.invite", invite });
+	// 	return c.json(invite, 201);
+	// });
 
 	// app.openapi(withAuth(RoomList), (c) => {
 	// 	const limit = parseInt(c.req.param("limit") ?? "10", 10);

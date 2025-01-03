@@ -75,8 +75,8 @@ export const RoomMemberUpdate = createRoute({
 
 export const RoomMemberLeave = createRoute({
 	method: "delete",
-	path: "/api/v1/rooms/{room_id}/members/@me",
-	summary: "Member leave",
+	path: "/api/v1/rooms/{room_id}/members/@self",
+	summary: "Member kick self",
 	description: "Leave room",
 	tags: ["member"],
 	request: {

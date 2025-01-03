@@ -8,11 +8,9 @@ import {
 	RoomList,
 	RoomUpdate,
 } from "./def.ts";
-import { withAuth } from "../../auth.ts";
+import { withAuth } from "../auth.ts";
 import { broadcast, HonoEnv, data } from "globals";
 import { uuidv7 } from "uuidv7";
-import { Room } from "../../types.ts";
-import { UUID_MAX, UUID_MIN } from "../../util.ts";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(RoomCreate), async (c) => {
@@ -23,21 +21,13 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 
 	app.openapi(withAuth(RoomList), async (c) => {
-		const limit = parseInt(c.req.param("limit") ?? "10", 10);
-		const after = c.req.param("after");
-		const before = c.req.param("before");
-		// const c = await db.connect();
-		const { rows: [count] } = await sal`
-			SELECT count(*) FROM rooms
-		`;
-		const rows = await sal`
-			SELECT * FROM rooms WHERE id > ${after ?? UUID_MIN} AND id < ${before ?? UUID_MAX} LIMIT ${limit + 1}",
-		`;
-		return c.json({
-			has_more: rows.length > limit,
-			total: count,
-			items: rows.slice(0, limit).map((i) => Room.parse(i)),
+		const rooms = await data.roomList({
+			limit: parseInt(c.req.query("limit") ?? "10", 10),
+			from: c.req.query("from"),
+			to: c.req.query("to"),
+			dir: c.req.query("dir") as "f" | "b",
 		});
+		return c.json(rooms, 200);
 	});
 
 	app.openapi(withAuth(RoomUpdate), async (c) => {

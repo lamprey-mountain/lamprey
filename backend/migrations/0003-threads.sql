@@ -1,4 +1,4 @@
-CREATE TABLE threads IF NOT EXISTS (
+CREATE TABLE IF NOT EXISTS threads (
     id TEXT PRIMARY KEY,
     room_id TEXT NOT NULL,
     name TEXT NOT NULL,

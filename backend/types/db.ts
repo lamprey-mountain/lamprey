@@ -18,9 +18,9 @@ import {
 } from "./common.ts";
 
 export const MessageFromDb = MessageBase.extend({
-	metadata: z.string().transform((i) =>
-		z.record(z.string(), z.any()).parse(JSON.parse(i))
-	),
+	// metadata: z.string().transform((i) =>
+	// 	z.record(z.string(), z.any()).parse(JSON.parse(i))
+	// ),
 	// resolve everything here?
 	mentions_users: UserId.array().default([]),
 	mentions_roles: RoleId.array().default([]),

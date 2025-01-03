@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { withAuth } from "../../auth.ts";
-import { broadcast, db, HonoEnv, queries as q } from "globals";
+import { withAuth } from "../auth.ts";
+import { broadcast, data, HonoEnv } from "globals";
 import { uuidv7 } from "uuidv7";
 import { Room } from "../../types.ts";
 import { UUID_MAX, UUID_MIN } from "../../util.ts";
