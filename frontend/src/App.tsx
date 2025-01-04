@@ -14,10 +14,10 @@ const App: Component = () => {
 	const [title, setTitle] = createSignal(document.title);
 	const [isReady, setIsReady] = createSignal(false);
 	const [roomId, setRoomId] = createSignal<string | undefined>(
-		"0194241c-51ca-71b4-a473-87afe8f0754b",
+		"01942ef7-3f8b-7537-80f2-f821870cdd8f"
 	);
 	const [threadId, setThreadId] = createSignal<string | undefined>(
-		"0194241c-51e5-77d6-884e-1208fc013c98",
+		"01942ef7-5bb2-7b36-b6de-e0b62387e3f8"
 	);
 
 	const [room, setRoom] = createSignal<Room>();

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS messages (
     -- order_id UUID NOT NULL,
     ordering INT NOT NULL,
     content TEXT NOT NULL,
-    metadata JSONB NOT NULL,
+    metadata JSONB,
     reply_id UUID,
     author_id UUID NOT NULL,
     FOREIGN KEY (thread_id) REFERENCES threads(id),

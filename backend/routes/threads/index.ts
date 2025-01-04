@@ -7,11 +7,11 @@ import { uuidv7 } from "uuidv7";
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(ThreadCreate), async (c) => {
 		const r = await c.req.json();
+		const user_id = c.get("user_id");
 		const room_id = c.req.param("room_id");
-		const perms = await data.resolvePermissions(c.get("user_id"), room_id);
-		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const perms = c.get("permissions");
 		if (!perms.has("ThreadCreate")) return c.json({ error: "permission denied" }, 403);
-		const thread = await data.threadInsert( uuidv7(), room_id, r);
+		const thread = await data.threadInsert(uuidv7(), user_id, room_id, r);
 		broadcast({ type: "upsert.thread", thread });
 		return c.json(thread, 201);
 	});
@@ -37,6 +37,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(ThreadUpdate), async (c) => {
 		const patch = await c.req.json();
 		const thread_id = c.req.param("thread_id");
+		const perms = c.get("permissions");
+		if (!perms.has("ThreadManage")) return c.json({ error: "forbidden" }, 403);
 		const thread = await data.threadUpdate(thread_id, patch);
 		if (!thread) return c.json({ error: "not found" }, 404);
 		broadcast({ type: "upsert.thread", thread });

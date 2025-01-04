@@ -20,6 +20,11 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const user_id = c.get("user_id");
 		const thread_id = c.req.param("thread_id");
 		const r = await c.req.json();
+		const perms = c.get("permissions");
+		if (!perms.has("MessageCreate")) return c.json({ error: "permission denied" }, 403);
+		if (r.attachments?.length || r.embeds?.length) {
+			if (!perms.has("MessageFilesEmbeds")) return c.json({ error: "permission denied" }, 403);
+		}
 		if (!r.content && !r.attachments?.length && !r.embeds?.length) {
 			return c.json({
 				error:
@@ -34,7 +39,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			author_id: user_id,
 			ordering: 0,
 		});
-		broadcast({ type: "upsert.message", message });
+		broadcast({ type: "upsert.message", message: { ...message, nonce: r.nonce } });
 		return c.json(message, 201);
 	});
 

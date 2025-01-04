@@ -1,5 +1,5 @@
 import { z } from "npm:@hono/zod-openapi";
-import { Permission } from "./permissions.ts";
+import { PermissionAssignable } from "./permissions.ts";
 export { Permission } from "./permissions.ts";
 
 export const Uint = z.number().int().nonnegative();
@@ -114,7 +114,7 @@ export const Role = z.object({
 	room_id: RoomId,
 	name: z.string().min(1).max(64),
 	description: z.string().max(2048).nullable(),
-	permissions: Permission.array(),
+	permissions: PermissionAssignable.array(),
 	// is_self_applicable: z.boolean(),
 	// is_mentionable: z.boolean(),
 }).openapi("Role");
@@ -135,7 +135,7 @@ export const UserBase = z.object({
 export const User = UserBase.openapi("User");
 
 export const MemberBase = z.object({
-	user_id: UserId,
+	user: UserBase,
 	room_id: RoomId,
 	membership: z.enum(["join", "ban", "ghost"]).default("join"),
 	override_name: z.string().min(2).max(64).nullable(),
@@ -155,7 +155,7 @@ export const MessageBase = z.object({
 	content: z.string().min(1).max(8192).nullable(),
 	attachments: Media.array().default([]),
 	embeds: Embed.array().default([]),
-	metadata: z.record(z.string(), z.any()),
+	metadata: z.record(z.string(), z.any()).nullable(),
 	mentions_users: UserId.array(),
 	mentions_roles: RoleId.array(),
 	mentions_everyone: z.boolean(),
@@ -163,6 +163,7 @@ export const MessageBase = z.object({
 	// resolve everything here?
 	// mentions_threads: ThreadId.array(),
 	// mentions_rooms: ThreadId.array(),
+	// author: Member, // TODO: future? how to represent users who have left?
 	author: User,
 	is_pinned: z.boolean(),
 });
@@ -183,6 +184,7 @@ export const Message = MessageBase
 export const ThreadBase = z.object({
 	id: ThreadId,
 	room_id: RoomId,
+	creator_id: UserId,
 	name: z.string().min(1).max(64),
 	description: z.string().min(1).max(2048).nullable(),
 	is_closed: z.boolean(),
@@ -196,15 +198,15 @@ export const ThreadBase = z.object({
 export const Thread = ThreadBase
 .openapi({
 	title: "Thread",
-	example: {
-		id: threadIdExample,
-		room_id: roomIdExample,
-		name: "talkin",
-		description: "i am quite warm an dunpleasant",
-		is_closed: false,
-		is_locked: false,
-		is_pinned: false,
-	},
+	// example: {
+	// 	id: threadIdExample,
+	// 	room_id: roomIdExample,
+	// 	name: "talkin",
+	// 	description: "i am quite warm an dunpleasant",
+	// 	is_closed: false,
+	// 	is_locked: false,
+	// 	is_pinned: false,
+	// },
 });
 
 // export const ThreadText = Thread.extend({

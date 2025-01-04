@@ -1,7 +1,6 @@
 import { z } from "npm:@hono/zod-openapi";
 
-export const Permission = z.enum([
-	"View",
+export const PermissionAssignable = z.enum([
 	"Admin",
 	"RoomManage",
 	"ThreadCreate",
@@ -19,4 +18,12 @@ export const Permission = z.enum([
 	"InviteManage",
 	"RoleManage",
 	"RoleApply",
-]).openapi("Permission");
+]).describe("permissions that can be assigned through a role").openapi("PermissionAssignable");
+
+export const PermissionSystem = z.enum([
+	"View",
+	"MessageEdit",
+]).describe("permissions calculated by the system that cannot be overridden").openapi("PermissionSystem");
+
+export const Permission = z.union([PermissionAssignable, PermissionSystem])
+	.openapi("Permission");

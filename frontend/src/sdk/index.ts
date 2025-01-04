@@ -49,6 +49,7 @@ export class Thread {
       ...content,
 			nonce,
       is_local: true,
+			author: this.client.user ?? {},
     });
     this.timelines.live.messages.push(msg);
     this.timelines.live.events.emit("append", [msg]);

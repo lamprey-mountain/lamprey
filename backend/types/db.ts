@@ -23,13 +23,14 @@ export const ThreadFromDb = ThreadBase.extend({
 	// is_closed: z.number().transform((i) => !!i),
 	// is_locked: z.number().transform((i) => !!i),
 	is_pinned: z.number().default(0).transform((i) => !!i), // TODO: impl pins
-});
+}).strip();
 
+// FIXME: not properly stripping db keys
 export const UserFromDb = UserBase.extend({
 	// is_bot: z.number().transform((i) => !!i),
 	// is_alias: z.number().transform((i) => !!i),
 	// is_system: z.number().transform((i) => !!i),
-});
+}).strip();
 
 export const MessageFromDb = MessageBase.extend({
 	// metadata: z.string().transform((i) =>
@@ -44,10 +45,11 @@ export const MessageFromDb = MessageBase.extend({
 	is_pinned: z.boolean().default(false),
 	nonce: z.undefined().transform((_) => null),
 	author: UserFromDb,
-});
+}).strip();
 
 export const MemberFromDb = MemberBase.extend({
+	user: UserFromDb,
 	override_name: z.string().min(2).max(64).nullable().default(null),
 	override_description: z.string().max(8192).nullable().default(null),
 	roles: Role.array().default([]),
-}).openapi("Member");
+}).strip();

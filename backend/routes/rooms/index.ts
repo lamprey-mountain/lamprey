@@ -17,9 +17,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const user_id = c.get("user_id");
 		const roomReq = await c.req.json();
 		const room = await data.roomInsert(uuidv7(), roomReq.name, roomReq.description);
-		await data.memberInsert({
+		await data.memberInsert(user_id, {
 			room_id: room.id,
-			user_id,
 			membership: "join",
 			override_name: null,
 			override_description: null,
@@ -50,8 +49,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(RoomUpdate), async (c) => {
 		const patch = await c.req.json();
 		const room_id = c.req.param("room_id");
-		const perms = await data.resolvePermissions(c.get("user_id"), room_id);
-		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const perms = c.get("permissions");
 		if (!perms.has("RoomManage")) return c.json({ error: "forbidden" }, 403);
 		const room = await data.roomUpdate(room_id, patch.name, patch.description);
 		if (!room) return c.json({ error: "not found after perms?" }, 500);
@@ -60,10 +58,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 
 	app.openapi(withAuth(RoomGet), async (c) => {
-		const user_id = c.get("user_id");
 		const room_id = c.req.param("room_id");
-		const perms = await data.resolvePermissions(user_id, room_id);
-		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const room = await data.roomSelect(room_id);
 		if (!room) return c.json({ error: "not found after perms?" }, 500);
 		return c.json(room, 200);

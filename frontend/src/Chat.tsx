@@ -43,11 +43,32 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useContext(chatctx)!;
 	
 	async function handleSubmit({ text }: { text: string }) {
-		if (text.startsWith("/thread")) {
-			const name = text.slice("/thread ".length);
-			await ctx.client.http("POST", `/api/v1/rooms/${ctx.roomId()}/threads`, {
-				name,
-			});
+		if (text.startsWith("/")) {
+			const [cmd, ...args] = text.slice(1).split(" ");
+			if (cmd === "thread") {
+				const name = text.slice("/thread ".length);
+				await ctx.client.http("POST", `/api/v1/rooms/${ctx.roomId()}/threads`, {
+					name,
+				});
+			} else if (cmd === "archive") {
+				await ctx.client.http("PATCH", `/api/v1/threads/${ctx.threadId()}`, {
+					is_closed: true,
+				});
+			} else if (cmd === "unarchive") {
+				await ctx.client.http("PATCH", `/api/v1/threads/${ctx.threadId()}`, {
+					is_closed: false,
+				});
+			} else if (cmd === "describe") {
+				const description = text.slice("/describe ".length);
+				await ctx.client.http("PATCH", `/api/v1/threads/${ctx.threadId()}`, {
+					description: description || null,
+				});
+			} else if (cmd === "describer") {
+				const description = text.slice("/describer ".length);
+				await ctx.client.http("PATCH", `/api/v1/rooms/${ctx.roomId()}`, {
+					description: description || null,
+				});
+			}
 			return;
 		}
 		props.thread.send({ content: text });
@@ -77,7 +98,11 @@ export const ChatMain = (props: ChatProps) => {
 	// translate-y-[8px]
 	return (
 		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[24px_1fr_0] relative">
-			<header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">Here is a header.</header>
+			<header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
+				{props.thread.data.name} / 
+				{props.thread.data.description ?? "(no description)" } /
+				<Show when={props.thread.data.is_closed}> (archived)</Show>
+			</header>
 			<list.List>{item => <TimelineItem item={item} />}</list.List>
 			<div class="absolute bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[138px] pr-[4px] max-h-50%">
 				<Editor onSubmit={handleSubmit} placeholder="send a message..." />
@@ -111,7 +136,10 @@ export const ChatNav = (props: ChatNavProps) => {
 											<li class="mt-1">
 												<button
 													class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-													classList={{ "bg-bg3": ctx.threadId() === thread.id }}
+													classList={{
+														"bg-bg3": ctx.threadId() === thread.id,
+														"text-sep": thread.data.is_closed,
+													}}
 													onClick={() => ctx.setThreadId(thread.id)}
 												>{thread.data.name}</button>
 											</li>

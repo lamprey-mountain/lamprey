@@ -47,7 +47,15 @@ export type HonoEnv = {
 	Variables: {
 		session_id: string;
 		user_id: string;
-		session_level: number;
+		// session_level: number;
+		room?: RoomT,
+		thread?: ThreadT,
+		message?: MessageT,
+		member?: MemberT,
+		member_self?: MemberT,
+		user?: UserT,
+		user_self?: UserT,
+		permissions: Permissions,
 	};
 };
 
@@ -72,18 +80,18 @@ type PaginateResponse<T> = {
 	items: Array<T>,
 }
 
-type RoomT = z.infer<typeof Room>;
-type ThreadT = z.infer<typeof Thread>;
-type SessionT = z.infer<typeof Session>;
-type MessageT = z.infer<typeof Message>;
-type UserT = z.infer<typeof User>;
-type UserPatchT = z.infer<typeof UserPatch>;
-type ThreadPatchT = z.infer<typeof ThreadPatch>;
-type MessagePatchT = z.infer<typeof MessagePatch>;
-type SessionPatchT = z.infer<typeof SessionPatch>;
-type MemberT = z.infer<typeof Member>;
-type RoleT = z.infer<typeof Role>;
-type PermissionT = z.infer<typeof Permission>;
+export type RoomT = z.infer<typeof Room>;
+export type ThreadT = z.infer<typeof Thread>;
+export type SessionT = z.infer<typeof Session>;
+export type MessageT = z.infer<typeof Message>;
+export type UserT = z.infer<typeof User>;
+export type UserPatchT = z.infer<typeof UserPatch>;
+export type ThreadPatchT = z.infer<typeof ThreadPatch>;
+export type MessagePatchT = z.infer<typeof MessagePatch>;
+export type SessionPatchT = z.infer<typeof SessionPatch>;
+export type MemberT = z.infer<typeof Member>;
+export type RoleT = z.infer<typeof Role>;
+export type PermissionT = z.infer<typeof Permission>;
 
 type UserPatchExtraT = {
 	parent_id?: string | null,
@@ -122,22 +130,24 @@ type Database = {
 	roomUpdate(id: string, name?: string | null, description?: string | null): Awaitable<RoomT | null>;
 	roomList(user_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<RoomT>>;
 	threadSelect(id: string): Awaitable<ThreadT | null>;
-	threadInsert(id: string, room_id: string, patch: Required<ThreadPatchT>): Awaitable<ThreadT>;
+	threadInsert(id: string, creator_id: string, room_id: string, patch: Required<ThreadPatchT>): Awaitable<ThreadT>;
 	threadUpdate(id: string, patch: ThreadPatchT): Awaitable<ThreadT | null>;
 	threadList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<ThreadT>>;
 	messageInsert(patch: MessagePatchT, extra: MessageExtraPatchT): Awaitable<MessageT>;
 	messageList(thread_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
-	memberInsert(base: Omit<MemberT, "roles">): Awaitable<MemberT>;
+	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
+	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
 	roleInsert(base: RoleT): Awaitable<RoleT>;
 	roleApplyInsert(role_id: string, user_id: string): Awaitable<void>;
-	resolvePermissions(user_id: string, room_id: string, thread_id?: string): Awaitable<Permissions>;
 }
 
-// possible alternative
-// const tx = new AsyncLocalStorage();
-// tx.run({}, () => {
-// 	tx.getStore()
+// app.use("/api/v1/*", async (c, next) => {
+// 	using q = await db.connect();
+// 	const tx = q.createTransaction(uuidv7());
+// 	c.set("tx", tx);
+// 	await next();
+// 	tx.rollback();
 // });
 
 export const data: Database = {
@@ -247,6 +257,7 @@ export const data: Database = {
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
 			SELECT count(*)::int FROM room_members WHERE room_members.user_id = ${user_id}
 		`;
+		await tx.rollback();
 		const rooms = rows
 			.slice(0, limit)
 			.map((i) => Room.parse(i));
@@ -263,29 +274,30 @@ export const data: Database = {
 		if (!d.rows[0]) return null;
 		return ThreadFromDb.parse(d.rows[0]);
 	},
-	async threadInsert(id, room_id, { name, description, is_closed, is_locked }) {
+	async threadInsert(id, creator_id, room_id, { name, description, is_closed, is_locked }) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-			INSERT INTO threads (id, room_id, name, description, is_closed, is_locked)
-			VALUES (${id}, ${room_id}, ${name}, ${description}, ${is_closed}, ${is_locked})
+			INSERT INTO threads (id, creator_id, room_id, name, description, is_closed, is_locked)
+			VALUES (${id}, ${creator_id}, ${room_id}, ${name}, ${description}, ${is_closed ?? false}, ${is_locked ?? false})
 			RETURNING *
 		`;
 		return ThreadFromDb.parse(d.rows[0]);
   },
 	async threadUpdate(id, { name, description, is_closed, is_locked }) {
 		using q = await db.connect();
-		const tx = q.createTransaction(uuidv7());
+		const tx = q.createTransaction("threadupdate" + uuidv7());
 		await tx.begin();
-		const thread = await data.threadSelect(id);
-		if (!thread) {
+		const { rows: [threadData] } = await tx.queryObject`SELECT * FROM threads WHERE id = ${id}`;
+		if (!threadData) {
 			await tx.rollback();
-			return null;			
+			return null;
 		}
+		const thread = ThreadFromDb.parse(threadData);
 		const d = await tx.queryObject`
 			UPDATE threads SET
 				name = ${name === undefined ? thread.name : name},
-				description = ${description === undefined ? thread.description : description}
-				is_locked = ${is_locked === undefined ? thread.is_locked : is_locked}
+				description = ${description === undefined ? thread.description : description},
+				is_locked = ${is_locked === undefined ? thread.is_locked : is_locked},
 				is_closed = ${is_closed === undefined ? thread.is_closed : is_closed}
 			WHERE id = ${id}
 			RETURNING *
@@ -307,6 +319,7 @@ export const data: Database = {
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
 			SELECT count(*)::int FROM threads WHERE room_id = ${room_id}
 		`;
+		await tx.rollback();
 		const threads = rows
 			.slice(0, limit)
 			.map((i) => ThreadFromDb.parse(i));
@@ -332,11 +345,25 @@ export const data: Database = {
   async messageInsert(patch, extra) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-	    INSERT INTO messages (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id)
-	    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, ${extra.ordering}, ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id})
-	    RETURNING *
+			WITH inserted AS (
+		    INSERT INTO messages (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id)
+		    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, ${extra.ordering}, ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id})
+				RETURNING *
+			)
+			SELECT inserted.*, row_to_json(users) AS author FROM inserted
+			JOIN users ON users.id = inserted.author_id
 		`;
 		return MessageFromDb.parse(d.rows[0]);
+  },
+  async messageSelect(thread_id, message_id) {
+		using q = await db.connect();
+		const { rows } = await q.queryObject`
+			SELECT msg.*, row_to_json(users) as author FROM messages AS msg
+			JOIN users ON users.id = msg.author_id
+			WHERE thread_id = ${thread_id} AND msg.id = ${message_id}
+		`;
+		if (!rows[0]) return null;
+		return MessageFromDb.parse(rows[0]);
   },
   async messageList(thread_id, { dir, from, to, limit }) {
 		const after = (dir === "f" ? from : to) ?? UUID_MIN;
@@ -353,6 +380,7 @@ export const data: Database = {
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
 			SELECT count(*)::int FROM messages_coalesced WHERE thread_id = ${thread_id}
 		`;
+		await tx.rollback();
 		const messages = rows
 			.slice(0, limit)
 			.map((i) => MessageFromDb.parse(i));
@@ -363,25 +391,28 @@ export const data: Database = {
 			items: messages,
 		};
   },
-  async memberInsert(base) {
+  async memberInsert(user_id, base) {
 		using q = await db.connect();
 		// TODO: merge queries?
 		await q.queryObject`
       INSERT INTO room_members (user_id, room_id, membership)
-			VALUES (${base.user_id}, ${base.room_id}, ${base.membership})
+			VALUES (${user_id}, ${base.room_id}, ${base.membership})
 			RETURNING *
 		`;
-		const d = await q.queryObject`
-      SELECT *, (SELECT coalesce(json_agg(roles.*), '[]') FROM role_instance JOIN roles ON role_instance.role_id = roles.id WHERE user_id = ${base.user_id}) AS roles
-      FROM room_members WHERE user_id = ${base.user_id} AND room_id = ${base.room_id}
-		`;
-		return MemberFromDb.parse(d.rows[0]);
+		return (await data.memberSelect(base.room_id, user_id))!;
   },
   async memberSelect(room_id, user_id) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      SELECT *, (SELECT coalesce(json_agg(roles.*), '[]') FROM role_instance JOIN roles ON role_instance.role_id = roles.id WHERE user_id = ${user_id}) AS roles
-      FROM room_members WHERE user_id = ${user_id} AND room_id = ${room_id}
+      SELECT members.*, row_to_json(users) as user,
+         (SELECT coalesce(json_agg(roles.*), '[]')
+	        FROM role_instance
+	        JOIN roles ON role_instance.role_id = roles.id
+	        WHERE user_id = ${user_id} AND room_id = ${room_id}
+	        ) AS roles
+      FROM room_members AS members
+      JOIN users ON users.id = members.user_id
+      WHERE members.user_id = ${user_id} AND room_id = ${room_id}
 		`;
 		if (!d.rows[0]) return null;
 		return MemberFromDb.parse(d.rows[0]);
@@ -402,11 +433,6 @@ export const data: Database = {
 			VALUES (${user_id}, ${role_id})
 		`;
   },
-	async resolvePermissions(user_id, room_id, _thread_id) {
-		const member = await data.memberSelect(user_id, room_id);
-		if (!member) return new Permissions();
-		return new Permissions([...member.roles.flatMap(i => i.permissions), "View"]);
-	},
 }
 
 class Permissions extends Set<PermissionT> {
@@ -414,4 +440,6 @@ class Permissions extends Set<PermissionT> {
 		if (super.has("Admin")) return true;
 		return super.has(perm);
 	}
+
+	static none = new Permissions();
 }

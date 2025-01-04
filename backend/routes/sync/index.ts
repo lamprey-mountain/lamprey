@@ -4,6 +4,7 @@ import { SyncInit } from "./def.ts";
 import { upgradeWebSocket } from "npm:hono/deno";
 import { MessageClient, MessageServer } from "../../types/sync.ts";
 import { uuidv7 } from "uuidv7";
+import { fetchDataAndPermissions } from "../auth.ts";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(SyncInit, async (c, next) => {
@@ -39,21 +40,19 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			if (state === "closed") return;
 			// if (state === "unauth") return;
 			// TODO: handle deletes
-			if (msg.type === "upsert.message") {
-				const thread = await data.threadSelect(msg.message.thread_id);
-				if (!thread) throw new Error("no thread?");
-				const perms = await data.resolvePermissions(user_id, thread.room_id);
-				if (!perms.has("View")) return;
+			// TODO: make this more efficient/less awful
+			if (msg.type === "upsert.session" && msg.session.user_id === user_id) {
+				ws.send(JSON.stringify(msg));
 			} else {
-				const room_id = msg.type === "upsert.room" ? msg.room.id
-					: msg.type === "upsert.thread" ? msg.thread.room_id
-					: null;
-				if (room_id) {
-					const perms = await data.resolvePermissions(user_id, room_id);
-					if (!perms.has("View")) return;
-				}
+				const { permissions: perms } = await fetchDataAndPermissions({
+					user_id_self: user_id,
+					message_id: msg.type === "upsert.message" ? msg.message.id :  msg.type === "delete.message" ? msg.id : undefined,
+					room_id: msg.type === "upsert.room" ? msg.room.id : undefined,
+					thread_id: msg.type === "upsert.thread" ? msg.thread.id : msg.type === "upsert.message" ? msg.message.thread_id : undefined,
+				});
+				if (!perms.has("View")) return;
+				ws.send(JSON.stringify(msg));
 			}
-			ws.send(JSON.stringify(msg));
 		}
 
 		async function handleHello(token: string, _last_id?: string) {
