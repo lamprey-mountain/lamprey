@@ -2,7 +2,7 @@
 import { DB } from "https://deno.land/x/sqlite@v3.9.1/mod.ts";
 import { MessageServer } from "./types/sync.ts";
 import { z } from "@hono/zod-openapi";
-import { Invite, Member, Message, MessagePatch, Permission, Role, Room, Session, SessionPatch, Thread, ThreadPatch, User, UserPatch } from "./types.ts";
+import { Invite, Member, Message, MessagePatch, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, User, UserPatch } from "./types.ts";
 // import { RoomFromDb } from "./types/db.ts";
 import EventEmitter from "events";
 export * as discord from "./oauth2.ts";
@@ -93,6 +93,7 @@ export type MemberT = z.infer<typeof Member>;
 export type RoleT = z.infer<typeof Role>;
 export type InviteT = z.infer<typeof Invite>;
 export type PermissionT = z.infer<typeof Permission>;
+export type RolePatchT = z.infer<typeof RolePatch>;
 
 type UserPatchExtraT = {
 	parent_id?: string | null,
@@ -114,6 +115,11 @@ type SessionInsertT = {
   user_id: string,
   token: string,
   status: number,
+}
+
+type RolePatchExtraT = {
+	id: string,
+	room_id: string,
 }
 
 type Database = {
@@ -140,12 +146,17 @@ type Database = {
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
 	memberList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MemberT>>;
-	roleInsert(base: RoleT): Awaitable<RoleT>;
 	roleApplyInsert(role_id: string, user_id: string): Awaitable<void>;
 	roleApplyDelete(role_id: string, user_id: string): Awaitable<void>;
 	inviteInsertRoom(room_id: string, creator_id: string, code: string): Awaitable<InviteT>;
 	inviteSelect(code: string): Awaitable<InviteT>;
+	inviteDelete(code: string): Awaitable<void>;
+	inviteList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<InviteT>>;
 	roleList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<RoleT>>;
+	roleInsert(patch: RolePatchT, extra: RolePatchExtraT): Awaitable<RoleT>;
+	roleDelete(room_id: string, role_id: string): Awaitable<void>;
+	roleSelect(room_id: string, role_id: string): Awaitable<RoleT | null>;
+	roleUpdate(room_id: string, role_id: string, patch: RolePatchT): Awaitable<RoleT | null>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -182,7 +193,7 @@ export const data: Database = {
 		using q = await db.connect();
 		const d = await q.queryObject`
       INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
-			VALUES (${id}, ${extra.parent_id}, ${patch.name}, ${patch.description}, ${patch.status}, ${patch.is_bot}, ${patch.is_alias}, ${extra.is_system}, ${extra.can_fork}, ${extra.discord_id})
+			VALUES (${id}, ${extra.parent_id}, ${patch.name}, ${patch.description}, ${patch.status}, ${patch.is_bot ?? false}, ${patch.is_alias ?? false}, ${extra.is_system ?? false}, ${extra.can_fork ?? false}, ${extra.discord_id})
 			RETURNING *
 		`;
 		return UserFromDb.parse(d.rows[0]);
@@ -242,15 +253,16 @@ export const data: Database = {
 		using q = await db.connect();
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
-		const room = await data.roomSelect(id);
-		if (!room) {
+		const { rows: [roomr] } = await tx.queryObject`SELECT * FROM rooms WHERE id = ${id}`;
+		if (!roomr) {
 			await tx.rollback();
 			return null;			
 		}
+		const room = Room.parse(roomr);
 		const d = await tx.queryObject`
 			UPDATE rooms SET
 				name = ${name === undefined ? room.name : name},
-				description = ${description === undefined ? room.description : description}
+				description = ${description === undefined ? room.description : description},
 			WHERE id = ${id}
 			RETURNING *
 		`;
@@ -273,14 +285,14 @@ export const data: Database = {
 			SELECT count(*)::int FROM room_members WHERE room_members.user_id = ${user_id}
 		`;
 		await tx.rollback();
-		const rooms = rows
+		const items = rows
 			.slice(0, limit)
 			.map((i) => Room.parse(i));
-		if (dir === "b") rooms.reverse();
+		if (dir === "b") items.reverse();
 		return {
 			has_more: rows.length > limit,
 			total: count,
-			items: rooms,
+			items,
 		};
   },
 	async threadSelect(id: string) {
@@ -422,11 +434,11 @@ export const data: Database = {
 		if (!d.rows[0]) return null;
 		return MemberFromDb.parse(d.rows[0]);
   },
-  async roleInsert(base) {
+  async roleInsert(base, extra) {
 		using q = await db.connect();
 		const d = await q.queryObject`
       INSERT INTO roles (id, room_id, name, description, permissions)
-			VALUES (${base.id}, ${base.room_id}, ${base.name}, ${base.description}, ${base.permissions})
+			VALUES (${extra.id}, ${extra.room_id}, ${base.name}, ${base.description}, ${base.permissions ?? []})
 			RETURNING *
 		`;
 		return Role.parse(d.rows[0]);
@@ -510,5 +522,66 @@ export const data: Database = {
 			total: count,
 			items,
 		};
+  },
+  async inviteDelete(code) {
+		using q = await db.connect();
+		await q.queryObject`DELETE FROM invites WHERE code = ${code}`;
+  },
+  async inviteList(room_id, { dir, from, to, limit }) {
+		const after = (dir === "f" ? from : to) ?? "";
+		const before = (dir === "f" ? to : from) ?? "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+		using q = await db.connect();
+		const tx = q.createTransaction(uuidv7());
+		await tx.begin();
+		const { rows } = await tx.queryObject`
+			SELECT * FROM invites
+			WHERE target_type = 'room' AND target_id = ${room_id} AND code::bytea > ${after} AND code::bytea < ${before}
+			ORDER BY (CASE WHEN ${dir} = 'f' THEN code::bytea END), code::bytea DESC LIMIT ${limit + 1}
+		`;
+		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
+			SELECT count(*)::int FROM invites WHERE target_type = 'room' AND target_id = ${room_id}
+		`;
+		await tx.rollback();
+		const items = rows
+			.slice(0, limit)
+			.map((i) => Invite.parse(i));
+		if (dir === "b") items.reverse();
+		return {
+			has_more: rows.length > limit,
+			total: count,
+			items,
+		};
+  },
+  async roleDelete(room_id, role_id) {
+		using q = await db.connect();
+		await q.queryObject`DELETE FROM roles WHERE room_id = ${room_id} AND id = ${role_id}`;
+  },
+  async roleSelect(room_id, role_id) {
+		using q = await db.connect();
+		const d = await q.queryObject`
+			SELECT * FROM roles WHERE room_id = ${room_id} AND id = ${role_id}
+		`;
+		return Role.parse(d.rows[0]);
+  },
+  async roleUpdate(room_id, role_id, patch) {
+		using q = await db.connect();
+		const tx = q.createTransaction(uuidv7());
+		await tx.begin();
+		const { rows: [roler] } = await tx.queryObject`SELECT * FROM roles WHERE room_id = ${room_id} AND id = ${role_id}`;
+		if (!roler) {
+			await tx.rollback();
+			return null;			
+		}
+		const role = Role.parse(roler);
+		const d = await tx.queryObject`
+			UPDATE rooms SET
+				name = ${patch.name === undefined ? role.name : patch.name},
+				description = ${patch.description === undefined ? role.description : patch.description},
+				permissions = ${patch.permissions === undefined ? role.permissions : patch.permissions}
+			WHERE room_id = ${room_id} AND id = ${role_id}
+			RETURNING *
+		`;
+		await tx.commit();
+		return Role.parse(d.rows[0]);
   },
 }

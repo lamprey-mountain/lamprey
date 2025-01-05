@@ -16,12 +16,14 @@ export default {
     	"fg2": "#eeeeee",
     	"fg3": "#dddddd",
     	"fg4": "#cccccc",
+    	"fg5": "#aaaaaa",
     },
     fontFamily: {
       sans: ["Atkinson Hyperlegible", "Inter", "system-ui", "Avenir", "Helvetica", "Arial", "sans-serif"],
     },
     boxShadow: {
       "arst": "3px 0 0 none inset",
+      "asdf": "2px 2px 3px",
     },
   },
   plugins: [],

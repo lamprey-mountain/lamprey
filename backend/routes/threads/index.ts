@@ -44,4 +44,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		broadcast({ type: "upsert.thread", thread });
 		return c.json(thread, 200);
 	});
+
+	// app.openapi(withAuth(ThreadBulkUpdate), async (c) => {});
+	// app.openapi(withAuth(ThreadAck), async (c) => {});
 }

@@ -36,41 +36,7 @@ export const UserUpdate = createRoute({
 	tags: ["user"],
 	request: {
 		params: z.object({
-			user_id: UserId,
-		}),
-		body: {
-			content: {
-				"application/json": {
-					schema: UserPatch.pick({
-						name: true,
-						description: true,
-						status: true,
-					}),
-				},
-			},
-		},
-	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: User,
-				},
-			},
-		},
-	},
-});
-
-export const UserUpdateSelf = createRoute({
-	method: "patch",
-	path: "/api/v1/users/@self",
-	summary: "User update self",
-	tags: ["user"],
-	request: {
-		params: z.object({
-			user_id: z.literal("@self"),
+			user_id: UserId.or(z.literal("@self")),
 		}),
 		body: {
 			content: {
@@ -104,22 +70,9 @@ export const UserDelete = createRoute({
 	tags: ["user"],
 	request: {
 		params: z.object({
-			user_id: UserId,
+			user_id: UserId.or(z.literal("@self")),
 		}),
 	},
-	responses: {
-		...common,
-		204: {
-			description: "success",
-		},
-	},
-});
-
-export const UserDeleteSelf = createRoute({
-	method: "delete",
-	path: "/api/v1/users/@self",
-	summary: "User delete self",
-	tags: ["user"],
 	responses: {
 		...common,
 		204: {
@@ -150,21 +103,3 @@ export const UserGet = createRoute({
 		},
 	},
 });
-
-// export const UserGetSelf = createRoute({
-// 	method: "get",
-// 	path: "/api/v1/users/@self",
-// 	summary: "User get self",
-// 	tags: ["user"],
-// 	responses: {
-// 		...common,
-// 		200: {
-// 			description: "success",
-// 			content: {
-// 				"application/json": {
-// 					schema: User,
-// 				},
-// 			},
-// 		},
-// 	},
-// });

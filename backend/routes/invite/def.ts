@@ -1,6 +1,6 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
 import { Invite, InviteCode, InvitePatch, RoomId, UserId } from "../../types.ts";
-import { createPagination } from "../common.ts";
+import { common, createPagination } from "../common.ts";
 
 export const InviteDelete = createRoute({
 	method: "delete",
@@ -11,15 +11,9 @@ export const InviteDelete = createRoute({
 		params: z.object({
 			invite_code: InviteCode,
 		}),
-		body: {
-			content: {
-				"application/json": {
-					schema: InvitePatch,
-				},
-			},
-		},
 	},
 	responses: {
+		...common,
 		204: {
 			description: "success",
 		},
@@ -37,6 +31,7 @@ export const InviteResolve = createRoute({
 		}),
 	},
 	responses: {
+		...common,
 		200: {
 			description: "success",
 			content: {
@@ -68,6 +63,7 @@ export const InviteUse = createRoute({
 		// 		// }
 		// 	},
 		// },
+		...common,
 		204: {
 			description: "success",
 		},
@@ -135,6 +131,7 @@ export const InviteCreateRoom = createRoute({
 		},
 	},
 	responses: {
+		...common,
 		201: {
 			description: "created",
 			content: {
@@ -164,32 +161,7 @@ export const InviteCreateUser = createRoute({
 		},
 	},
 	responses: {
-		201: {
-			description: "created",
-			content: {
-				"application/json": {
-					schema: Invite,
-				},
-			},
-		},
-	},
-});
-
-export const InviteCreateUserSelf = createRoute({
-	method: "post",
-	path: "/api/v1/users/@me/invites",
-	summary: "Invite create user",
-	tags: ["invite"],
-	request: {
-		body: {
-			content: {
-				"application/json": {
-					schema: InvitePatch,
-				},
-			},
-		},
-	},
-	responses: {
+		...common,
 		201: {
 			description: "created",
 			content: {

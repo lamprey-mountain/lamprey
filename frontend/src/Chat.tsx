@@ -14,32 +14,14 @@ import { TimelineItem } from "./Messages.tsx";
 // import createFetcher from "npm:openapi-fetch";
 
 import { chatctx } from "./context.ts";
-import { createList, TimelineItemT } from "./list.tsx";
-import { getTimestampFromUUID, Room, Thread, Timeline, TimelineSet } from "sdk";
+import { createList, SliceInfo, TimelineItemT, TimelineStatus } from "./list.tsx";
 import { ThreadT, RoomT } from "./types.ts";
+import { reconcile } from "solid-js/store";
 
 type ChatProps = {
 	thread: ThreadT,
 	room: RoomT,
 }
-
-// const Item = (props: { item: TimelineItemT }) => {
-// 	return (
-// 		<Switch>
-// 			<Match when={props.item.type === "editor"}>
-// 				<div class="sticky bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[142px] pr-[4px] max-h-50% translate-y-[8px]">
-// 					<Editor onSubmit={props.handleSubmit} placeholder="send a message..." />
-// 				</div>
-// 			</Match>
-// 			<Match when={props.item.type === "editor"}>
-// 				<div style="flex: 1" />
-// 			</Match>
-// 			<Match when={props.item.type === "message"}>
-// 				<TimelineItem msg={props.item.message} />
-// 			</Match>
-// 		</Switch>
-// 	)
-// }
 
 export const ChatMain = (props: ChatProps) => {
 	const ctx = useContext(chatctx)!;
@@ -80,34 +62,89 @@ export const ChatMain = (props: ChatProps) => {
 	// if (!ctx.data.timelines[props.thread.id]) {
 	// }
 
-	// const tls = new TimelineSet(ctx.client, props.thread.id);
-	// const tl = createTimeline(ctx.data, props.thread.id);
 	let paginating = false;
-	const tl = () => ctx.data.timelines[props.thread.id]?.list.find(i => i.is_at_end);
-	if (!tl()) {
+	const slice = () => ctx.data.slices[props.thread.id];
+	
+	if (!slice()) {
     ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
 	}
+
+  const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
+
+	createEffect(() => slice() && updateItems());
+	createEffect(() => console.log(slice()));
+	createEffect(() => console.log(items()));
+
+  function updateItems() {
+    const items: Array<TimelineItemT> = [];
+    items.push({
+      type: "info",
+      key: "info" + slice().is_at_beginning,
+      header: slice().is_at_beginning,
+      class: "header",
+    });
+    if (!slice().is_at_beginning) {
+      items.push({ type: "spacer", key: "space-begin" });
+    } else {
+      items.push({ type: "spacer", key: "space-begin" });
+    }
+    const messages = slice().messages;
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i]
+      items.push({
+        type: "message",
+        key: msg.id,
+        message: msg,
+        separate: true,
+        // separate: shouldSplit(messages[i], messages[i - 1]),
+      });
+      // if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
+      // items.push({
+      //   type: "message",
+      //   key: messages[i].id,
+      //   message: messages[i],
+      //   separate: true,
+      //   // separate: shouldSplit(messages[i], messages[i - 1]),
+      // });
+      // if (events[i].id === lastAck) {
+      //   items.push({
+      //     type: "unread-marker",
+      //     key: "unread-marker",
+      //   });
+      // }
+    }
+    if (slice().is_at_end) {
+      items.push({ type: "spacer-mini", key: "space-end-mini" });
+    } else {
+      items.push({ type: "spacer", key: "space-end" });
+    }
+    // items.push({ type: "editor", key: "editor" });
+    console.time("perf::updateItems");
+    setItems((old) => [...reconcile(items, { key: "key" })(old)]);
+    console.timeEnd("perf::updateItems");
+  }
 	
 	const list = createList({
-		items: () => tl()?.messages ?? [],
-		autoscroll: () => true,
+		items: () => items(),
+		autoscroll: () => slice()?.is_at_end,
     // topPos: () => tl.isAtBeginning() ? 1 : 2,
-    topPos: () => 1,
+    topPos: () => 0,
     // bottomPos: () => timel.isAtEnd() ? timel.items().length - 1 : timel.items().length - 2,
-    bottomPos: () => (tl()?.messages.length ?? 0) - 2,
+    bottomPos: () => (slice()?.messages.length ?? 0) - 2,
     onPaginate(dir) {
       if (paginating) return;
       paginating = true;
+      console.log({ dir })
       if (dir === "forwards") {
-	      ctx.dispatch({ do: "paginate", dir: "f", timeline: tl(), thread_id: props.thread.id });
+	      ctx.dispatch({ do: "paginate", dir: "f", thread_id: props.thread.id });
       } else {
-	      ctx.dispatch({ do: "paginate", dir: "b", timeline: tl(), thread_id: props.thread.id });
+	      ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
       }
       paginating = false;
       // tl.setIsAutoscrolling(tl.isAtEnd());
-    },
-	});
-	// createEffect(() => console.log(tl.items()));
+    }, 
+	}); 
 
 	// translate-y-[8px]
 	return (
@@ -117,71 +154,10 @@ export const ChatMain = (props: ChatProps) => {
 				{props.thread.description ?? "(no description)" } /
 				<Show when={props.thread.is_closed}> (archived)</Show>
 			</header>
-			<list.List>{item => <TimelineItem item={{ type: "message", message: item, key: item.id, separate: false }} />}</list.List>
+			<list.List>{item => <TimelineItem item={item} />}</list.List>
 			<div class="absolute bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[138px] pr-[4px] max-h-50%">
 				<Editor onSubmit={handleSubmit} placeholder="send a message..." />
 			</div>
 		</div>
-	);
-};
-
-export const ChatNav = () => {
-	const ctx = useContext(chatctx)!;
-	const v = ctx.data.view;
-	console.log(ctx, v)
-	const roomId = () => (v.view === "room" || v.view === "room-settings" || v.view === "thread") ? v.room.id : null;
-	const threadId = () => v.view === "thread" ? v.thread.id : null;
-	const isRoomSelected = (id: string) => roomId() === id;
-	return (
-		<nav class="w-64 bg-bg1 text-fg2 overflow-y-auto">
-			<ul class="p-1 flex flex-col">
-					<li class="mt-1">
-						<button
-							class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-							classList={{ "bg-bg3": v.view === "home" }}
-							onClick={() => ctx.dispatch({ do: "setView", to: { view: "home" } })}
-						>home</button>
-					</li>
-				<For each={Object.values(ctx.data.rooms)}>
-					{(room) => (
-						<li class="mt-1">
-							<button
-								class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-								classList={{ "bg-bg3": isRoomSelected(room.id) }}
-								onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
-							>{room.name}</button>
-							<Show when={isRoomSelected(room.id)}>
-								<ul class="ml-6">
-									<button
-										class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-										classList={{ "bg-bg3": v.view === "room" }}
-										onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
-									>home</button>
-									<button
-										class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-										classList={{ "bg-bg3": v.view === "room-settings" }}
-										onClick={() => ctx.dispatch({ do: "setView", to: { view: "room-settings", room }})}
-									>settings</button>
-									<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === roomId())}>
-										{(thread) => (
-											<li class="mt-1">
-												<button
-													class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-													classList={{
-														"bg-bg3": threadId() === thread.id,
-														"text-sep": thread.is_closed,
-													}}
-													onClick={() => ctx.dispatch({ do: "setView", to: { view: "thread", room, thread }})}
-												>{thread.name}</button>
-											</li>
-										)}
-									</For>
-								</ul>
-							</Show>
-						</li>
-					)}
-				</For>
-			</ul>
-		</nav>
 	);
 };

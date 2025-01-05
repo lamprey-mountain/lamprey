@@ -63,4 +63,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (!room) return c.json({ error: "not found" }, 404);
 		return c.json(room, 200);
 	});
+	
+	// app.openapi(withAuth(RoomAck), async (c) => {});
+	// app.openapi(withAuth(DmInitialize), async (c) => {});
+	// app.openapi(withAuth(DmGet), async (c) => {});
 }

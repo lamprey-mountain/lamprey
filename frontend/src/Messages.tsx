@@ -1,6 +1,6 @@
 // import { Tooltip } from "./Atoms.tsx";
 const Tooltip = (props) => props.children;
-import * as sdk from "sdk";
+import { getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
 	createSignal,
@@ -58,7 +58,7 @@ export const Message = (props: MessageProps) => {
 			</span>
 			<span class={BODY_CSS} ref={bodyEl!}>{props.message.content}</span>
 			<span class="invisible group-hover:visible text-fg4">
-				{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? sdk.getTimestampFromUUID(props.message.id) : new Date).toDateString()}
+				{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date).toDateString()}
 			</span>
 		</div>
 	);

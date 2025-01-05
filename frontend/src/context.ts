@@ -1,5 +1,5 @@
 import { Accessor, createContext, Setter } from "solid-js";
-import { Client, Room, Thread } from "sdk";
+import { Client } from "sdk";
 import { SetStoreFunction } from "solid-js/store";
 import { MessageT, RoomT, ThreadT, UserT } from "./types.ts";
 
@@ -25,13 +25,17 @@ export type Data = {
 	threads: Record<string, ThreadT>,
 	messages: Record<string, MessageT>,
 	timelines: Record<string, TimelineSet>,
+	slices: Record<string, Timeline & { parent: Timeline }>,
 	user: UserT | null,
+	menu: any | null,
 	view: View,
 }
 
 export type Action
 	= { do: "setView", to: View }
-	| { do: "paginate", thread_id: string, timeline?: Timeline, dir: "f" | "b" }
+	| { do: "paginate", thread_id: string, dir: "f" | "b" }
+	| { do: "goto", thread_id: string, event_id: string }
+	| { do: "menu", menu: any }
 
 export type ChatProps = {
 	client: Client;

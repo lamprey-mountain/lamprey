@@ -6,9 +6,9 @@ import { reconcile } from "solid-js/store";
 import { MessageT } from "./types.ts";
 import { Data, Timeline } from "./context.ts";
 
-type TimelineStatus = "loading" | "update" | "ready";
+export type TimelineStatus = "loading" | "update" | "ready";
 
-type SliceInfo = {
+export type SliceInfo = {
   start: number,
   end: number,
 };
