@@ -121,6 +121,13 @@ export const ChatNav = (props: ChatNavProps) => {
 	return (
 		<nav class="w-64 bg-bg1 text-fg2 overflow-y-auto">
 			<ul class="p-1 flex flex-col">
+					<li class="mt-1">
+						<button
+							class="px-1 py-0.25 w-full text-left hover:bg-bg4"
+							classList={{ "bg-bg3": !ctx.roomId() }}
+							onClick={() => ctx.setRoomId(undefined)}
+						>home</button>
+					</li>
 				<For each={props.rooms}>
 					{(room) => (
 						<li class="mt-1">
@@ -131,6 +138,16 @@ export const ChatNav = (props: ChatNavProps) => {
 							>{room.data.name}</button>
 							<Show when={ctx.roomId() === room.id}>
 								<ul class="ml-6">
+									<button
+										class="px-1 py-0.25 w-full text-left hover:bg-bg4"
+										classList={{ "bg-bg3": !ctx.threadId() }}
+										onClick={() => ctx.setThreadId(undefined)}
+									>home</button>
+									<button
+										class="px-1 py-0.25 w-full text-left hover:bg-bg4"
+										classList={{ "bg-bg3": ctx.threadId() === "settings" }}
+										onClick={() => ctx.setThreadId("settings")}
+									>settings</button>
 									<For each={props.threads.filter((i) => i.data.room_id === ctx.roomId())}>
 										{(thread) => (
 											<li class="mt-1">

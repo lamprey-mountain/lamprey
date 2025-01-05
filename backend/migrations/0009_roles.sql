@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS roles (
     FOREIGN KEY (room_id) REFERENCES rooms(id)
 );
 
-CREATE TABLE IF NOT EXISTS role_instance (
+CREATE TABLE IF NOT EXISTS roles_members (
     user_id UUID,
     role_id UUID,
     FOREIGN KEY (user_id) REFERENCES users(id),

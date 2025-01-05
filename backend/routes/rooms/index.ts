@@ -52,7 +52,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const perms = c.get("permissions");
 		if (!perms.has("RoomManage")) return c.json({ error: "forbidden" }, 403);
 		const room = await data.roomUpdate(room_id, patch.name, patch.description);
-		if (!room) return c.json({ error: "not found after perms?" }, 500);
+		if (!room) return c.json({ error: "not found" }, 404);
 		broadcast({ type: "upsert.room", room });
 		return c.json(room, 200);
 	});
@@ -60,7 +60,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(RoomGet), async (c) => {
 		const room_id = c.req.param("room_id");
 		const room = await data.roomSelect(room_id);
-		if (!room) return c.json({ error: "not found after perms?" }, 500);
+		if (!room) return c.json({ error: "not found" }, 404);
 		return c.json(room, 200);
 	});
 }

@@ -1,24 +1,21 @@
-import { Component, JSX, Show, untrack } from "solid-js";
+import { Component, JSX, Match, Show, Switch, untrack } from "solid-js";
 import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { ChatMain, ChatNav } from "./Chat.tsx";
 import { Client, Room, Thread } from "sdk";
 import { chatctx } from "./context.ts";
+import { RoomSettings } from "./Settings.tsx";
 
 const BASE_URL = "http://localhost:8000";
 // const TOKEN = "0a11b93f-ff19-4c56-9bd2-d25bede776de";
-const TOKEN = "abcdefg";
+const TOKEN = localStorage.getItem("token") ?? "abcdefg";
 
 const App: Component = () => {
 	const [hash, setHash] = createSignal(location.hash.slice(1));
 	const [title, setTitle] = createSignal(document.title);
 	const [isReady, setIsReady] = createSignal(false);
-	const [roomId, setRoomId] = createSignal<string | undefined>(
-		"01942ef7-3f8b-7537-80f2-f821870cdd8f"
-	);
-	const [threadId, setThreadId] = createSignal<string | undefined>(
-		"01942ef7-5bb2-7b36-b6de-e0b62387e3f8"
-	);
+	const [roomId, setRoomId] = createSignal<string | undefined>();
+	const [threadId, setThreadId] = createSignal<string | undefined>();
 
 	const [room, setRoom] = createSignal<Room>();
 	const [thread, setThread] = createSignal<Thread>();
@@ -35,8 +32,13 @@ const App: Component = () => {
 		roomId() && setRoom(client.rooms.get(roomId()!));
 		threadId() && setThread(client.threads.get(threadId()!));
 	});
-	globalThis.client = client;
 	client.connect();
+	globalThis.client = client;
+	
+	(async () => {
+		await client.temp_fetchRooms();
+		setRooms([...client.rooms.values()]);
+	})();
 
 	createEffect(async () => {
 		if (roomId() && !client.rooms.has(roomId()!)) await client.fetchRoom(roomId()!);
@@ -44,6 +46,7 @@ const App: Component = () => {
 	});
 	
 	createEffect(async () => {
+		if (threadId() === "settings") return;
 		if (threadId() && !client.threads.has(threadId()!)) await client.fetchThread(threadId()!);
 		if (threadId()) setThread(client.threads.get(threadId()!));
 	});
@@ -63,13 +66,56 @@ const App: Component = () => {
 	createEffect(() => location.hash = hash());
 	// createEffect(() => setTitle(parts.get(hash())?.title ?? "unknown"));
 
+	function createRoom() {
+		client.http("POST", "/api/v1/rooms", {
+			name: prompt("name?")
+		})
+	}
+	
+	function createThread() {
+		client.http("POST", `/api/v1/rooms/${roomId()}/threads`, {
+			name: prompt("name?")
+		})
+	}
+
+  function useInvite() {
+		client.http("POST", `/api/v1/invites/${prompt("invite code?")}`, {});
+  }
+	
+
+	// createEffect(() => console.log(thread()))
+	// createEffect(() => console.log(threadId()))
+
 	return (
 		<div id="root" class="flex h-screen font-sans">
 			<chatctx.Provider value={{ client, roomId, threadId, thread, room, setRoomId, setThreadId }}>
 				<ChatNav rooms={rooms()} threads={threads()} />
-				<Show when={thread()} fallback={<div>thread not found...</div>}>
-					<ChatMain thread={thread()!} />
-				</Show>
+				<Switch>
+					<Match when={room() && threadId() === undefined}>
+						<div class="flex-1 bg-bg2 text-fg2">
+							room home
+						</div>
+					</Match>
+					<Match when={threadId() === "settings"}>
+						<RoomSettings room={room()!} />
+					</Match>
+					<Match when={thread()}>
+						<ChatMain thread={thread()!} />
+					</Match>
+					<Match when={room()}>
+						<div class="flex-1 bg-bg2 text-fg2">
+							no thread selected<br />
+							<button onClick={createThread}>create thread</button><br />
+						</div>
+					</Match>
+					<Match when={true}>
+						<div class="flex-1 bg-bg2 text-fg2">
+							no room selected<br />
+							<button onClick={createRoom}>create room</button><br />
+							<button onClick={useInvite}>use invite</button><br />
+						</div>
+					</Match>
+				</Switch>
 			</chatctx.Provider>
 		</div>
 	);

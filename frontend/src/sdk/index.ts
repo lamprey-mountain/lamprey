@@ -419,6 +419,18 @@ export class Client {
 		this.events.emit("update");
     return threads;
   }
+  
+  public async temp_fetchRooms(): Promise<Array<Room>> {
+    const data = await this.http("GET", `/api/v1/rooms?dir=f`);
+    const rooms = [];
+    for (const t of data.items) {
+	    const room = new Room(this, t.id, t);
+	    this.rooms.set(t.id, room);
+	    rooms.push(room);
+    }
+		this.events.emit("update");
+    return rooms;
+  }
 }
 
 export function getTimestampFromUUID(uuid: string): Date {

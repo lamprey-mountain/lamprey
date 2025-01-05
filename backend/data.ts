@@ -2,7 +2,7 @@
 import { DB } from "https://deno.land/x/sqlite@v3.9.1/mod.ts";
 import { MessageServer } from "./types/sync.ts";
 import { z } from "@hono/zod-openapi";
-import { Member, Message, MessagePatch, Permission, Role, Room, Session, SessionPatch, Thread, ThreadPatch, User, UserPatch } from "./types.ts";
+import { Invite, Member, Message, MessagePatch, Permission, Role, Room, Session, SessionPatch, Thread, ThreadPatch, User, UserPatch } from "./types.ts";
 // import { RoomFromDb } from "./types/db.ts";
 import EventEmitter from "events";
 export * as discord from "./oauth2.ts";
@@ -91,6 +91,7 @@ export type MessagePatchT = z.infer<typeof MessagePatch>;
 export type SessionPatchT = z.infer<typeof SessionPatch>;
 export type MemberT = z.infer<typeof Member>;
 export type RoleT = z.infer<typeof Role>;
+export type InviteT = z.infer<typeof Invite>;
 export type PermissionT = z.infer<typeof Permission>;
 
 type UserPatchExtraT = {
@@ -140,6 +141,8 @@ type Database = {
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
 	roleInsert(base: RoleT): Awaitable<RoleT>;
 	roleApplyInsert(role_id: string, user_id: string): Awaitable<void>;
+	inviteInsertRoom(room_id: string, creator_id: string, code: string): Awaitable<InviteT>;
+	inviteSelect(code: string): Awaitable<InviteT>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -149,6 +152,15 @@ type Database = {
 // 	await next();
 // 	tx.rollback();
 // });
+
+export class Permissions extends Set<PermissionT> {
+	override has(perm: PermissionT) {
+		if (super.has("Admin")) return true;
+		return super.has(perm);
+	}
+
+	static none = new Permissions();
+}
 
 export const data: Database = {
 	async userSelect(id) {
@@ -166,8 +178,8 @@ export const data: Database = {
 	async userInsert(id, patch, extra) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork)
-			VALUES (${id}, ${extra.parent_id}, ${patch.name}, ${patch.description}, ${patch.status}, ${patch.is_bot}, ${patch.is_alias}, ${extra.is_system}, ${extra.can_fork})
+      INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
+			VALUES (${id}, ${extra.parent_id}, ${patch.name}, ${patch.description}, ${patch.status}, ${patch.is_bot}, ${patch.is_alias}, ${extra.is_system}, ${extra.can_fork}, ${extra.discord_id})
 			RETURNING *
 		`;
 		return UserFromDb.parse(d.rows[0]);
@@ -393,26 +405,16 @@ export const data: Database = {
   },
   async memberInsert(user_id, base) {
 		using q = await db.connect();
-		// TODO: merge queries?
 		await q.queryObject`
       INSERT INTO room_members (user_id, room_id, membership)
 			VALUES (${user_id}, ${base.room_id}, ${base.membership})
-			RETURNING *
 		`;
 		return (await data.memberSelect(base.room_id, user_id))!;
   },
   async memberSelect(room_id, user_id) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      SELECT members.*, row_to_json(users) as user,
-         (SELECT coalesce(json_agg(roles.*), '[]')
-	        FROM role_instance
-	        JOIN roles ON role_instance.role_id = roles.id
-	        WHERE user_id = ${user_id} AND room_id = ${room_id}
-	        ) AS roles
-      FROM room_members AS members
-      JOIN users ON users.id = members.user_id
-      WHERE members.user_id = ${user_id} AND room_id = ${room_id}
+      SELECT * FROM members_json WHERE user_id = ${user_id} AND room_id = ${room_id}
 		`;
 		if (!d.rows[0]) return null;
 		return MemberFromDb.parse(d.rows[0]);
@@ -429,17 +431,24 @@ export const data: Database = {
   async roleApplyInsert(role_id, user_id) {
 		using q = await db.connect();
 		await q.queryObject`
-      INSERT INTO role_instance (user_id, role_id)
+      INSERT INTO roles_members (user_id, role_id)
 			VALUES (${user_id}, ${role_id})
 		`;
   },
-}
-
-class Permissions extends Set<PermissionT> {
-	override has(perm: PermissionT) {
-		if (super.has("Admin")) return true;
-		return super.has(perm);
-	}
-
-	static none = new Permissions();
+  async inviteInsertRoom(room_id, creator_id, code) {
+		using q = await db.connect();
+		const d = await q.queryObject`
+      INSERT INTO invites (target_type, target_id, code, creator_id)
+			VALUES ('room', ${room_id}, ${code}, ${creator_id})
+			RETURNING *
+		`;
+		return Invite.parse(d.rows[0]);
+  },
+  async inviteSelect(code) {
+		using q = await db.connect();
+		const d = await q.queryObject`
+      SELECT * FROM invites WHERE code = ${code}
+		`;
+		return Invite.parse(d.rows[0]);
+  },
 }

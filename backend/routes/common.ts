@@ -63,6 +63,16 @@ export const common = {
 			},
 		},
 	},
+	501: {
+		description: "todo",
+		content: {
+			"application/json": {
+				schema: z.object({
+					error: z.string(),
+				}),
+			},
+		},
+	},
 };
 
 type PaginationConfig = Omit<RouteConfig, "responses"> & {

@@ -8,7 +8,7 @@ type ChatProps = {
 	room: Accessor<Room | undefined>;
 	thread: Accessor<Thread | undefined>;
 	setRoomId: Setter<string | undefined>;
-	setThreadId: Setter<string | undefined>;
+	setThreadId: Setter<string | "settings" | undefined>;
 };
 
 export const chatctx = createContext<ChatProps>();

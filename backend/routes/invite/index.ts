@@ -4,73 +4,33 @@ import { broadcast, data, HonoEnv } from "globals";
 import { uuidv4, uuidv7 } from "uuidv7";
 import { Invite, Room } from "../../types.ts";
 import { UUID_MAX, UUID_MIN } from "../../util.ts";
-import { InviteCreateRoom } from "./def.ts";
+import { InviteCreateRoom, InviteUse } from "./def.ts";
+import { nanoid } from "nanoid";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
-	// app.openapi(withAuth(InviteCreateRoom), async (c) => {
-	// 	const user_id = c.get("user_id");
-	// 	const room_id = c.req.param("room_id");
-	// 	const _patch = await c.req.json();
-	// 	const row = db.prepareQuery(`
- //    INSERT INTO invites (target_type, target_id, code, creator_id)
- //    VALUES (?, ?, ?, ?)
- //    RETURNING *
- //    `).firstEntry([
- //      "room",
- //      room_id,
- //      // nanoid(),
- //      uuidv4(),
- //      user_id,
-	// 	])!;
-	// 	const invite = Invite.parse(row);
-	// 	// broadcast({ type: "upsert.invite", invite });
-	// 	return c.json(invite, 201);
-	// });
-
-	// app.openapi(withAuth(RoomList), (c) => {
-	// 	const limit = parseInt(c.req.param("limit") ?? "10", 10);
-	// 	const after = c.req.param("after");
-	// 	const before = c.req.param("before");
-	// 	const [count] = db.prepareQuery(
-	// 		"SELECT count(*) FROM rooms",
-	// 	).first([])!;
-	// 	const rows = db.prepareQuery(
-	// 		"SELECT * FROM rooms WHERE id > ? AND id < ? LIMIT ?",
-	// 	)
-	// 		.allEntries([after ?? UUID_MIN, before ?? UUID_MAX, limit + 1]);
-	// 	return c.json({
-	// 		has_more: rows.length > limit,
-	// 		total: count,
-	// 		items: rows.slice(0, limit).map((i) => Room.parse(i)),
-	// 	});
-	// });
-
-	// app.openapi(withAuth(RoomUpdate), async (c) => {
-	// 	const patch = await c.req.json();
-	// 	const room_id = c.req.param("room_id");
-	// 	let row;
-	// 	db.transaction(() => {
-	// 		const old = q.roomSelect.firstEntry({ id: room_id });
-	// 		if (!old) return;
-	// 		row = q.roomUpdate.firstEntry({
-	// 			id: room_id,
-	// 			name: patch.name === undefined ? old.name : patch.name,
-	// 			description: patch.description === undefined
-	// 				? old.description
-	// 				: patch.description,
-	// 		});
-	// 	});
-	// 	if (!row) return c.json({ error: "not found" }, 404);
-	// 	const room = Room.parse(row);
-	// 	broadcast({ type: "upsert.room", room });
-	// 	return c.json(room, 200);
-	// });
-
-	// app.openapi(withAuth(RoomGet), (c) => {
-	// 	const room_id = c.req.param("room_id");
-	// 	const row = q.roomSelect.firstEntry({ id: room_id });
-	// 	if (!row) return c.json({ error: "not found" }, 404);
-	// 	const room = Room.parse(row);
-	// 	return c.json(room, 200);
-	// });
+	app.openapi(withAuth(InviteCreateRoom), async (c) => {
+		const user_id = c.get("user_id");
+		const room_id = c.req.param("room_id");
+		const perms = c.get("permissions");
+		if (!perms.has("InviteCreate")) return c.json({ error: "can't do that" }, 403);
+		const invite = await data.inviteInsertRoom(room_id, user_id, nanoid());
+		// broadcast({ type: "upsert.invite", invite });
+		return c.json(invite, 201);
+	});
+	
+	app.openapi(withAuth(InviteUse), async (c) => {
+		const user_id = c.get("user_id");
+		const invite_code = c.req.param("invite_code");
+		const invite = await data.inviteSelect(invite_code);
+		if (invite.target_type !== "room") return c.json({ error: "not yet implemented" }, 501);
+		if (await data.memberSelect(invite.target_id, user_id)) return c.json({ error: "already in room" }, 400);
+		const _member = await data.memberInsert(user_id, {
+			room_id: invite.target_id,
+			membership: "join",
+			override_name: null,
+			override_description: null
+		});
+		// broadcast({ type: "upsert.member", member });
+		return new Response(null, { status: 204 });
+	});
 }

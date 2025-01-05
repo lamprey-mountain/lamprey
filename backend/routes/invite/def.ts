@@ -59,14 +59,17 @@ export const InviteUse = createRoute({
 		}),
 	},
 	responses: {
-		200: {
+		// TODO: invite response schema?
+		// 200: {
+		// 	description: "success",
+		// 	content: {
+		// 		// "application/json": {
+		// 		//   schema: ,
+		// 		// }
+		// 	},
+		// },
+		204: {
 			description: "success",
-			content: {
-				// TODO: schema
-				// "application/json": {
-				//   schema: ,
-				// }
-			},
 		},
 	},
 });

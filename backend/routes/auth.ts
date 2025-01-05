@@ -1,5 +1,5 @@
 import { Context, Next } from "npm:hono";
-import { data, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT } from "globals";
+import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT } from "globals";
 import { RouteConfig, z } from "npm:@hono/zod-openapi";
 import { Permission } from "../types.ts";
 
@@ -107,14 +107,4 @@ export async function fetchDataAndPermissions(d: FetchDataRequest): Promise<Fetc
 	}
 	// console.log(r)
 	return r;
-}
-
-type PermissionT = z.infer<typeof Permission>;
-class Permissions extends Set<PermissionT> {
-	override has(perm: PermissionT) {
-		if (super.has("Admin")) return true;
-		return super.has(perm);
-	}
-
-	static none = new Permissions();
 }

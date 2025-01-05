@@ -66,14 +66,6 @@ END;
 
 CREATE TABLE config (key TEXT PRIMARY KEY, value ANY);
 
-CREATE TABLE invites (
-    target_type TEXT NOT NULL,
-    target_id TEXT NOT NULL,
-    code TEXT NOT NULL,
-    creator_id TEXT NOT NULL,
-    FOREIGN KEY (creator_id) REFERENCES users(id)
-) STRICT;
-
 INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork)
 VALUES ('01940be4-6ca5-7351-ac71-914f49f9824c', null, 'tezlm', null, null, false, false, false, true);
 INSERT INTO sessions (id, token, user_id, status) VALUES ('01940be4-b547-7b8e-b3f0-63900545a0f9', 'abcdefg', '01940be4-6ca5-7351-ac71-914f49f9824c', 1);

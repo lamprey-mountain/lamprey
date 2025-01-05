@@ -15,6 +15,7 @@
 		"frozen": false
 	},
 	"imports": {
+		"nanoid": "npm:nanoid@^5.0.9",
 		"uuidv7": "npm:uuidv7@^1.0.2",
 	},
 }
