@@ -1,8 +1,10 @@
 import { JSX } from "solid-js/jsx-runtime";
 import { For, on } from "solid-js";
 import { Accessor, createSignal, createEffect, onCleanup } from "solid-js";
-import { TimelineSet, Timeline, Message } from "sdk";
+import { TimelineSet, Message } from "sdk";
 import { reconcile } from "solid-js/store";
+import { MessageT } from "./types.ts";
+import { Data, Timeline } from "./context.ts";
 
 type TimelineStatus = "loading" | "update" | "ready";
 
@@ -23,7 +25,7 @@ export type TimelineItemT = { key: string, class?: string } & (
   { type: "spacer-mini" } |
   { type: "unread-marker" } |
   { type: "time-split" } |
-  { type: "message", message: Message, separate: boolean });
+  { type: "message", message: MessageT, separate: boolean });
 
 
 // export function shouldSplit(msg: Event, prev?: Event) {
@@ -33,177 +35,185 @@ export type TimelineItemT = { key: string, class?: string } & (
 //   return false;
 // }
 
-export function createTimeline(timelineSet: Accessor<TimelineSet>) {
-  const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
-  const [info, setInfo] = createSignal<SliceInfo | null>(null);
-  const [status, setStatus] = createSignal<TimelineStatus>("loading");
-  const [timeline, setTimeline] = createSignal<Timeline>(null as any);
-  const [isAtBeginning, setIsAtBeginning] = createSignal(true);
-  const [isAtEnd, setIsAtEnd] = createSignal(true);
-  const [isAutoscrolling, setIsAutoscrolling] = createSignal(true);
+// export function createTimeline(data: Data, dispatch: any, thread_id: string) {
+//   const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
+//   const [info, setInfo] = createSignal<SliceInfo | null>(null);
+//   const [status, setStatus] = createSignal<TimelineStatus>("loading");
+//   const [timeline, setTimeline] = createSignal<Timeline>(null as any);
+//   const [isAtBeginning, setIsAtBeginning] = createSignal(true);
+//   const [isAtEnd, setIsAtEnd] = createSignal(true);
+//   const [isAutoscrolling, setIsAutoscrolling] = createSignal(true);
 
-  function updateItems() {
-    const { start, end } = info()!;
-    const items: Array<TimelineItemT> = [];
-    items.push({
-      type: "info",
-      key: "info" + isAtBeginning(),
-      header: isAtBeginning(),
-      class: "header",
-    });
-    if (!isAtBeginning()) {
-      items.push({ type: "spacer", key: "space-begin" });
-    } else {
-      items.push({ type: "spacer", key: "space-begin" });
-    }
-    const messages = timeline().messages;
-    // const lastAck = timelineSet()?.thread.unreads?.last_ack;
+//   function updateItems() {
+//     const { start, end } = info()!;
+//     const items: Array<TimelineItemT> = [];
+//     items.push({
+//       type: "info",
+//       key: "info" + isAtBeginning(),
+//       header: isAtBeginning(),
+//       class: "header",
+//     });
+//     if (!isAtBeginning()) {
+//       items.push({ type: "spacer", key: "space-begin" });
+//     } else {
+//       items.push({ type: "spacer", key: "space-begin" });
+//     }
+//     const messages = timeline().messages;
+//     // const lastAck = timelineSet()?.thread.unreads?.last_ack;
 
-    for (let i = start; i < end; i++) {
-      const msg = messages[i]
-      items.push({
-        type: "message",
-        key: msg.id,
-        message: msg,
-        separate: true,
-        // separate: shouldSplit(messages[i], messages[i - 1]),
-      });
-      // if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
-      // items.push({
-      //   type: "message",
-      //   key: messages[i].id,
-      //   message: messages[i],
-      //   separate: true,
-      //   // separate: shouldSplit(messages[i], messages[i - 1]),
-      // });
-      // if (events[i].id === lastAck) {
-      //   items.push({
-      //     type: "unread-marker",
-      //     key: "unread-marker",
-      //   });
-      // }
-    }
-    if (isAtEnd()) {
-      items.push({ type: "spacer-mini", key: "space-end-mini" });
-    } else {
-      items.push({ type: "spacer", key: "space-end" });
-    }
-    // items.push({ type: "editor", key: "editor" });
-    console.time("perf::updateItems");
-    setItems((old) => [...reconcile(items, { key: "key" })(old)]);
-    console.timeEnd("perf::updateItems");
-  }
+//     for (let i = start; i < end; i++) {
+//       const msg = messages[i]
+//       items.push({
+//         type: "message",
+//         key: msg.id,
+//         message: msg,
+//         separate: true,
+//         // separate: shouldSplit(messages[i], messages[i - 1]),
+//       });
+//       // if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
+//       // items.push({
+//       //   type: "message",
+//       //   key: messages[i].id,
+//       //   message: messages[i],
+//       //   separate: true,
+//       //   // separate: shouldSplit(messages[i], messages[i - 1]),
+//       // });
+//       // if (events[i].id === lastAck) {
+//       //   items.push({
+//       //     type: "unread-marker",
+//       //     key: "unread-marker",
+//       //   });
+//       // }
+//     }
+//     if (isAtEnd()) {
+//       items.push({ type: "spacer-mini", key: "space-end-mini" });
+//     } else {
+//       items.push({ type: "spacer", key: "space-end" });
+//     }
+//     // items.push({ type: "editor", key: "editor" });
+//     console.time("perf::updateItems");
+//     setItems((old) => [...reconcile(items, { key: "key" })(old)]);
+//     console.timeEnd("perf::updateItems");
+//   }
 
-  async function init() {
-    console.log("init");
+//   async function init() {
+//     console.log("init");
     
-    setTimeline(timelineSet().live);
+//     const tl = data.timelines[thread_id].list.find(i => i.is_at_end);
+//     if (tl) {
+//       setTimeline(tl);
+//     } else {
+//       await dispatch({ do: "paginate", dir: "b", thread_id });
+//       setTimeline(data.timelines[thread_id].list.find(i => i.is_at_end)!);
+//     }
     
-    if (timeline().messages.length === 0) {
-      await timeline().paginate("b", 30);
-    }
+//     const totalEvents = timeline().messages.length;
+//     const newStart = Math.max(totalEvents - SLICE_COUNT, 0);
+//     const newEnd = Math.min(newStart + SLICE_COUNT, totalEvents);
+//     setInfo({ start: newStart, end: newEnd });
+//     // console.log({ totalEvents, ...info() });
+//     setIsAtBeginning(timeline().is_at_beginning && timeline().messages.length < SLICE_COUNT);
+//     setIsAtEnd(timeline().is_at_end);
+//     setIsAutoscrolling(isAtEnd());
+//     setStatus("update");
+//     updateItems();
+//     setStatus("ready");
+//   }
+
+//   async function backwards() {
+//     if (status() !== "ready") return;
+//     if (isAtBeginning()) return;
+//     console.log("timeline::backwards");
+
+//     setStatus("loading");
+//     const currentInfo = info()!;
+//     const currentLen = timeline().messages.length;
+//     if (currentInfo.start < SLICE_COUNT) {
+//       await dispatch({ do: "paginate", dir: "b", timeline: timeline(), thread_id });
+//     }
+//     const count = currentLen - timeline().messages.length;
+//     const newStart = Math.max(currentInfo.start + count - SLICE_COUNT / 2, 0);
+//     const newEnd = Math.min(newStart + SLICE_COUNT, timeline().messages.length);
+//     setInfo({ start: newStart, end: newEnd });
+//     setStatus("update");
+//     setIsAtBeginning(timeline().is_at_beginning && newStart === 0);
+//     setIsAtEnd(timeline().is_at_end && newEnd === timeline().messages.length - 1);
+//     updateItems();
+//     setStatus("ready");
+//   }
+
+//   async function forwards() {
+//     if (status() !== "ready") return;
+//     if (isAtEnd()) return;
+//     console.log("timeline::forwards");
+
+//     setStatus("loading");
+//     const currentInfo = info()!;
+//     const currentLen = timeline().messages.length;
+//     if (currentInfo.start < SLICE_COUNT) {
+//       await dispatch({ do: "paginate", dir: "f", timeline: timeline(), thread_id });
+//     }
+//     const count = currentLen - timeline().messages.length;
+//     const newEnd = Math.min(currentInfo.end + count + SLICE_COUNT / 2, timeline().messages.length);
+//     const newStart = Math.max(newEnd - SLICE_COUNT, 0);
+//     setInfo({ start: newStart, end: newEnd });
+//     setStatus("update");
+//     setIsAtBeginning(timeline().is_at_beginning && newStart === 0);
+//     setIsAtEnd(timeline().is_at_end && newEnd === timeline().messages.length - 1);
+//     updateItems();
+//     setStatus("ready");
+//   }
+
+//   // async function toEvent(_eventId: EventId) {
+//   //   throw new Error("todo!");
+//   // }
+
+//   // async function append(_event: Event) {
+//   async function append() {
+//     console.log("append", { status: status(), auto: isAutoscrolling(), timeline: timeline() });
     
-    const totalEvents = timeline().messages.length;
-    const newStart = Math.max(totalEvents - SLICE_COUNT, 0);
-    const newEnd = Math.min(newStart + SLICE_COUNT, totalEvents);
-    setInfo({ start: newStart, end: newEnd });
-    // console.log({ totalEvents, ...info() });
-    setIsAtBeginning(timeline().isAtBeginning && timeline().messages.length < SLICE_COUNT);
-    setIsAtEnd(timeline() === timelineSet().live);
-    setIsAutoscrolling(isAtEnd());
-    setStatus("update");
-    updateItems();
-    setStatus("ready");
-  }
+//     if (status() !== "ready") return;
+//     if (!isAutoscrolling()) return;
 
-  async function backwards() {
-    if (status() !== "ready") return;
-    if (isAtBeginning()) return;
-    console.log("timeline::backwards");
+//     const newEnd = timeline().messages.length;
+//     const newStart = Math.max(newEnd - SLICE_COUNT, 0);
+//     console.log({ start: newStart, end: newEnd });
+//     setInfo({ start: newStart, end: newEnd });
+//     setStatus("update");
+//     setIsAtBeginning(timeline().is_at_beginning  && newStart === 0);
+//     setIsAtEnd(timeline().is_at_end && newEnd === timeline().messages.length);
+//     updateItems();
+//     setStatus("ready");
+//   }
 
-    setStatus("loading");
-    const currentInfo = info()!;
-    const currentLen = timeline().messages.length;
-    const count = currentInfo.start < SLICE_COUNT ? (await timeline().paginate("b", PAGINATE_COUNT)).messages.length - currentLen : 0;
-    const newStart = Math.max(currentInfo.start + count - SLICE_COUNT / 2, 0);
-    const newEnd = Math.min(newStart + SLICE_COUNT, timeline().messages.length);
-    setInfo({ start: newStart, end: newEnd });
-    setStatus("update");
-    setIsAtBeginning(timeline().isAtBeginning && newStart === 0);
-    setIsAtEnd(timeline().isAtEnd && newEnd === timeline().messages.length - 1);
-    updateItems();
-    setStatus("ready");
-  }
-
-  async function forwards() {
-    if (status() !== "ready") return;
-    if (isAtEnd()) return;
-    console.log("timeline::forwards");
-
-    setStatus("loading");
-    const currentInfo = info()!;
-    const currentLen = timeline().messages.length;
-    const count = (await timeline().paginate("f", PAGINATE_COUNT)).messages.length - currentLen;
-    const newEnd = Math.min(currentInfo.end + count + SLICE_COUNT / 2, timeline().messages.length);
-    const newStart = Math.max(newEnd - SLICE_COUNT, 0);
-    setInfo({ start: newStart, end: newEnd });
-    setStatus("update");
-    setIsAtBeginning(timeline().isAtBeginning && newStart === 0);
-    setIsAtEnd(timeline().isAtEnd && newEnd === timeline().messages.length);
-    updateItems();
-    setStatus("ready");
-  }
-
-  // async function toEvent(_eventId: EventId) {
-  //   throw new Error("todo!");
-  // }
-
-  // async function append(_event: Event) {
-  async function append() {
-    console.log("append", { status: status(), auto: isAutoscrolling(), timeline: timeline() });
-    
-    if (status() !== "ready") return;
-    if (!isAutoscrolling()) return;
-
-    const newEnd = timeline().messages.length;
-    const newStart = Math.max(newEnd - SLICE_COUNT, 0);
-    console.log({ start: newStart, end: newEnd });
-    setInfo({ start: newStart, end: newEnd });
-    setStatus("update");
-    setIsAtBeginning(timeline().isAtBeginning && newStart === 0);
-    setIsAtEnd(timeline().isAtEnd && newEnd === timeline().messages.length);
-    updateItems();
-    setStatus("ready");
-  }
-
-  createEffect(on(timelineSet, init));
+//   // createEffect(on(timelineSet, init));
   
-  let oldTimeline: Timeline;
-  createEffect(() => {
-    timeline().events.on("append", append);
-    timeline().events.on("prepend", append);
-    oldTimeline?.events.off("append", append);
-    oldTimeline?.events.off("prepend", append);
-    oldTimeline = timeline();
-  });
+//   let oldTimeline: Timeline;
+//   createEffect(() => {
+//     timeline().events.on("append", append);
+//     timeline().events.on("prepend", append);
+//     oldTimeline?.events.off("append", append);
+//     oldTimeline?.events.off("prepend", append);
+//     oldTimeline = timeline();
+//   });
 
-  onCleanup(() => {
-    oldTimeline?.events.off("append", append);
-    oldTimeline?.events.off("prepend", append);
-  });
+//   onCleanup(() => {
+//     oldTimeline?.events.off("append", append);
+//     oldTimeline?.events.off("prepend", append);
+//   });
   
-  return {
-    items,
-    status,
-    backwards,
-    forwards,
-    // toEvent,
-    isAtBeginning,
-    isAtEnd,
-    isAutoscrolling,
-    setIsAutoscrolling,
-  }
-}
+//   return {
+//     items,
+//     status,
+//     backwards,
+//     forwards,
+//     // toEvent,
+//     isAtBeginning,
+//     isAtEnd,
+//     isAutoscrolling,
+//     setIsAutoscrolling,
+//   }
+// }
 
 const AUTOSCROLL_MARGIN = 5;
 const SCROLL_MARGIN = 100;

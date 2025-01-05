@@ -3,6 +3,7 @@ import EventEmitter from "event-emitter";
 
 // HACK: https://github.com/andywer/typed-emitter/issues/39
 import TypedEventEmitter, { EventMap } from "typed-emitter";
+import { Accessor, createSignal, Setter, untrack } from "solid-js";
 type TypedEmitter<T extends EventMap> = TypedEventEmitter.default<T>;
 
 export type MessageId = string;
@@ -19,7 +20,8 @@ export class Room {
   async fetch(): Promise<Room> {
     const data = await this.client.http("GET", `/api/v1/rooms/${this.id}`);
     const room = new Room(this.client, this.id, data);
-    this.client.rooms.set(this.id, room);
+    this.client.rooms.insert(room);
+		// this.client.events.emit("update");
     return room;
   }  
 }
@@ -39,7 +41,7 @@ export class Thread {
   async fetch(): Promise<Thread> {
     const data = await this.client.http("GET", `/api/v1/threads/${this.id}`);
     const thread = new Thread(this.client, this.id, data, this.timelines);
-    this.client.threads.set(this.id, thread);
+    this.client.rooms.insert(thread);
     return thread;
   }
 
@@ -73,6 +75,21 @@ export class Message {
     return new Message(this.client, this.thread_id, this.id, data);
   }
 }
+
+// export class User {
+//   constructor(
+//     public readonly client: Client,
+//     public readonly id: string,
+//     public readonly data: any,
+//   ) {}
+
+//   async fetch(): Promise<Room> {
+//     const data = await this.client.http("GET", `/api/v1/users/${this.id}`);
+//     const room = new User(this.client, this.id, data);
+//     this.client.rooms.set(this.id, room);
+//     return room;
+//   }
+// }
 
 export class TimelineSet {  
   public live: Timeline;
@@ -299,20 +316,76 @@ export class Timeline {
 type ClientEvents = {
   ready: () => void,
   close: () => void,
-  update: () => void,
+  update: (msg: any) => void,
+}
+
+export class Rooms extends Map<string, Accessor<Room>> {
+  public _setters: Map<string, Setter<Room>> = new Map();
+  
+  constructor(public readonly client: Client) {
+    super();
+  }
+
+  override get(id: string) {
+    const it = super.get(id);
+    if (it) return it;
+    const [get, set] = createSignal(new Room(this.client, id, {}));
+    super.set(id, get);
+    this._setters.set(id, set);
+    return get;
+  }
+
+  insert(room: Room) {
+    const update = this._setters.get(room.id);
+    if (update) return update(room);
+    const [get, set] = createSignal(room);
+    super.set(room.id, get);
+    this._setters.set(room.id, set);
+    return get;
+  }
+}
+
+export class Threads extends Map<string, Accessor<Thread>> {
+  public _setters: Map<string, Setter<Thread>> = new Map();
+  
+  constructor(public readonly client: Client) {
+    super();
+  }
+
+  override get(id: string) {
+    const it = super.get(id);
+    if (it) return it;
+    const [get, set] = createSignal(new Thread(this.client, id, {}));
+    super.set(id, get);
+    this._setters.set(id, set);
+    return get;
+  }
+  
+  insert(thread: Thread) {
+    const update = this._setters.get(thread.id);
+    if (update) return update(thread);
+    const [get, set] = createSignal(thread);
+    super.set(thread.id, get);
+    this._setters.set(thread.id, set);
+    return get;
+  }
 }
 
 export class Client {
 	private ws: WebSocket | undefined;
-	public rooms = new Map<string, Room>();
-	public threads = new Map<string, Thread>();
+	public rooms: Rooms;
+	public threads: Threads;
+	// public users = new Map<string, User>();
 	public user: any = null;
 	public events: TypedEmitter<ClientEvents> = new EventEmitter();
 
 	constructor(
 		private token: string,
 		public baseUrl: string,
-	) {}
+	) {
+	  this.rooms = new Rooms(this);
+	  this.threads = new Threads(this);
+	}
 
 	connect() {
 		this.ws = new WebSocket(`${this.baseUrl}/api/v1/sync`);
@@ -337,15 +410,14 @@ export class Client {
   		  this.user = msg.user;
   			this.events.emit("ready");
     	} else if (msg.type === "upsert.room") {
-    	  this.rooms.set(msg.room.id, new Room(this, msg.room.id, msg.room));
+    	  this.rooms.insert(new Room(this, msg.room.id, msg.room));
     	} else if (msg.type === "upsert.thread") {
     	  const existing = this.threads.get(msg.thread.id);
-    	  this.threads.set(msg.thread.id, new Thread(this, msg.thread.id, msg.thread, existing?.timelines));
+    	  this.threads.insert(new Thread(this, msg.thread.id, msg.thread, untrack(existing)?.timelines));
     	} else if (msg.type === "upsert.message") {
     	  const { thread_id } = msg.message;
-    	  if (!this.threads.has(thread_id)) this.threads.set(thread_id, new Thread(this, thread_id, {}));
     	  const message = new Message(this, thread_id, msg.message.id, msg.message);
-    	  const thread = this.threads.get(thread_id)!;
+    	  const thread = untrack(this.threads.get(thread_id));
     	  const { live } = thread.timelines;
     	  const messages = message.data.nonce ? [...live.messages.filter(i => i.data.nonce !== message.data.nonce), message] : [...live.messages, message];
     	  live.messages = messages;
@@ -354,7 +426,7 @@ export class Client {
     		console.warn("unknown message type", msg.type);
     		return;
     	}
-			this.events.emit("update");
+			this.events.emit("update", msg);
 		};
 	}
 
@@ -384,27 +456,18 @@ export class Client {
 		if (!req.ok) {
 			throw new Error(`request failed (${req.status}): ${await req.text()}`);
 		}
+		if (req.status === 204) {
+		  return null;
+		}
 		return req.json();
 	}
 
-  async fetchRoom(id: string): Promise<Room> {
-    const existing = this.rooms.get(id);
-    if (existing) return existing.fetch();
-    const data = await this.http("GET", `/api/v1/rooms/${id}`);
-    const room = new Room(this, id, data);
-    this.rooms.set(id, room);
-		this.events.emit("update");
-    return room;
+  fetchRoom(id: string): Promise<Room> {
+    return untrack(this.rooms.get(id)).fetch();
   }
   
-  async fetchThread(id: string): Promise<Thread> {
-    const existing = this.threads.get(id);
-    if (existing) return existing.fetch();
-    const data = await this.http("GET", `/api/v1/threads/${id}`);
-    const thread = new Thread(this, id, data);
-    this.threads.set(id, thread);
-		this.events.emit("update");
-    return thread;
+  fetchThread(id: string): Promise<Thread> {
+    return untrack(this.threads.get(id)).fetch();
   }
   
   public async temp_fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
@@ -412,11 +475,11 @@ export class Client {
     const threads = [];
     for (const t of data.items) {
 	    const existing = this.threads.get(t.id);
-	    const thread = new Thread(this, t.id, t, existing?.timelines);
-	    this.threads.set(t.id, thread);
+	    const thread = new Thread(this, t.id, t, untrack(existing)?.timelines);
+	    this.threads.insert(thread);
 	    threads.push(thread);
     }
-		this.events.emit("update");
+		// this.events.emit("update");
     return threads;
   }
   
@@ -425,10 +488,10 @@ export class Client {
     const rooms = [];
     for (const t of data.items) {
 	    const room = new Room(this, t.id, t);
-	    this.rooms.set(t.id, room);
+	    this.rooms.insert(room);
 	    rooms.push(room);
     }
-		this.events.emit("update");
+		// this.events.emit("update");
     return rooms;
   }
 }

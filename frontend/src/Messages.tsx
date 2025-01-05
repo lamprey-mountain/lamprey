@@ -10,6 +10,7 @@ import {
 	Switch,
 } from "solid-js";
 import { TimelineItemT } from "./list.tsx";
+import { MessageT } from "./types.ts";
 
 type UserProps = {
 	name: string;
@@ -30,32 +31,32 @@ const WRAPPER_CSS = "group grid grid-cols-[128px_auto_max-content] px-[8px] hove
 const BODY_CSS = "mx-[8px] overflow-hidden whitespace-pre-wrap";
 
 type MessageProps = {
-	message: sdk.Message;
+	message: MessageT;
 };
 
 export const Message = (props: MessageProps) => {
 	let bodyEl: HTMLSpanElement;
 
-	createEffect(async () => {
-		props.message.data; // make it react
-		// FIXME: flash of unhighlighted code on update
-		const hljs = await import("highlight.js");
-		for (const code of bodyEl.querySelectorAll("code[class*=language-]")) {
-			hljs.default.highlightElement(code);
-		}
-	});
+	// createEffect(async () => {
+	// 	props.message; // make it react
+	// 	// FIXME: flash of unhighlighted code on update
+	// 	const hljs = await import("highlight.js");
+	// 	for (const code of bodyEl.querySelectorAll("code[class*=language-]")) {
+	// 		hljs.default.highlightElement(code);
+	// 	}
+	// });
 
 	return (
 		<div class={WRAPPER_CSS}>
 			<span class="hover:underline cursor-pointer truncate text-right text-fg4">
 				<Tooltip
-					tip={() => <User name={props.message.data.author.name} />}
+					tip={() => <User name={props.message.author.name} />}
 					attrs={{ class: "" }}
 				>
-					{props.message.data.author.name}
+					{props.message.author.name}
 				</Tooltip>
 			</span>
-			<span class={BODY_CSS} ref={bodyEl!}>{props.message.data.content}</span>
+			<span class={BODY_CSS} ref={bodyEl!}>{props.message.content}</span>
 			<span class="invisible group-hover:visible text-fg4">
 				{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? sdk.getTimestampFromUUID(props.message.id) : new Date).toDateString()}
 			</span>

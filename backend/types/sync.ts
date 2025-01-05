@@ -1,5 +1,6 @@
 import { z } from "npm:@hono/zod-openapi";
 import {
+Member,
 	Message,
 	MessageId,
 	MessageVersionId,
@@ -30,11 +31,13 @@ export const MessageServer = z.union([
 	z.object({ type: z.literal("upsert.thread"), thread: Thread }),
 	z.object({ type: z.literal("upsert.message"), message: Message }),
 	z.object({ type: z.literal("upsert.user"), user: User }),
+	z.object({ type: z.literal("upsert.member"), member: Member }),
 	z.object({ type: z.literal("upsert.session"), session: Session }),
 	z.object({ type: z.literal("delete.message"), id: MessageId }),
 	z.object({ type: z.literal("delete.message_version"), id: MessageVersionId }),
 	z.object({ type: z.literal("delete.user"), id: UserId }),
 	z.object({ type: z.literal("delete.session"), id: SessionId }),
+	// z.object({ type: z.literal("delete.member"), id: MemberId }),
 ]);
 
 /*

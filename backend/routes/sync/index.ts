@@ -47,9 +47,10 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 				const { permissions: perms } = await fetchDataAndPermissions({
 					user_id_self: user_id,
 					message_id: msg.type === "upsert.message" ? msg.message.id :  msg.type === "delete.message" ? msg.id : undefined,
-					room_id: msg.type === "upsert.room" ? msg.room.id : undefined,
+					room_id: msg.type === "upsert.room" ? msg.room.id : msg.type === "upsert.member" ? msg.member.room_id : undefined,
 					thread_id: msg.type === "upsert.thread" ? msg.thread.id : msg.type === "upsert.message" ? msg.message.thread_id : undefined,
 				});
+				console.log(perms, msg)
 				if (!perms.has("View")) return;
 				ws.send(JSON.stringify(msg));
 			}

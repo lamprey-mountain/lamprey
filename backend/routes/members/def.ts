@@ -134,40 +134,40 @@ export const RoomMemberKick = createRoute({
 	},
 });
 
-// export const MemberRoleApply = createRoute({
-// 	method: "put",
-// 	path: "/api/v1/rooms/{room_id}/members/{member_id}/roles/{role_id}",
-// 	summary: "Member role apply",
-// 	tags: ["member"],
-// 	request: {
-// 		params: z.object({
-// 			room_id: RoomId,
-// 			member_id: MemberId,
-// 			role_id: RoleId,
-// 		}),
-// 	},
-// 	responses: {
-// 		204: {
-// 			description: "success",
-// 		},
-// 	},
-// });
+export const MemberRoleApply = createRoute({
+	method: "put",
+	path: "/api/v1/rooms/{room_id}/members/{user_id}/roles/{role_id}",
+	summary: "Member role apply",
+	tags: ["member"],
+	request: {
+		params: z.object({
+			room_id: RoomId,
+			user_id: UserId,
+			role_id: RoleId,
+		}),
+	},
+	responses: {
+		204: {
+			description: "success",
+		},
+	},
+});
 
-// export const MemberRoleRemove = createRoute({
-// 	method: "delete",
-// 	path: "/api/v1/rooms/{room_id}/members/{member_id}/roles/{role_id}",
-// 	summary: "Member role remove",
-// 	tags: ["member"],
-// 	request: {
-// 		params: z.object({
-// 			room_id: RoomId,
-// 			member_id: MemberId,
-// 			role_id: RoleId,
-// 		}),
-// 	},
-// 	responses: {
-// 		204: {
-// 			description: "success",
-// 		},
-// 	},
-// });
+export const MemberRoleRemove = createRoute({
+	method: "delete",
+	path: "/api/v1/rooms/{room_id}/members/{user_id}/roles/{role_id}",
+	summary: "Member role remove",
+	tags: ["member"],
+	request: {
+		params: z.object({
+			room_id: RoomId,
+			user_id: UserId,
+			role_id: RoleId,
+		}),
+	},
+	responses: {
+		204: {
+			description: "success",
+		},
+	},
+});

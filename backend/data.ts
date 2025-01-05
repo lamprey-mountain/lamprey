@@ -139,10 +139,13 @@ type Database = {
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
+	memberList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MemberT>>;
 	roleInsert(base: RoleT): Awaitable<RoleT>;
 	roleApplyInsert(role_id: string, user_id: string): Awaitable<void>;
+	roleApplyDelete(role_id: string, user_id: string): Awaitable<void>;
 	inviteInsertRoom(room_id: string, creator_id: string, code: string): Awaitable<InviteT>;
 	inviteSelect(code: string): Awaitable<InviteT>;
+	roleList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<RoleT>>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -435,6 +438,13 @@ export const data: Database = {
 			VALUES (${user_id}, ${role_id})
 		`;
   },
+  async roleApplyDelete(role_id, user_id) {
+		using q = await db.connect();
+		await q.queryObject`
+      DELETE FROM roles_members
+			WHERE user_id = ${user_id} AND role_id = ${role_id}
+		`;
+  },
   async inviteInsertRoom(room_id, creator_id, code) {
 		using q = await db.connect();
 		const d = await q.queryObject`
@@ -450,5 +460,55 @@ export const data: Database = {
       SELECT * FROM invites WHERE code = ${code}
 		`;
 		return Invite.parse(d.rows[0]);
+  },
+  async memberList(room_id, { dir, from, to, limit }) {
+		const after = (dir === "f" ? from : to) ?? UUID_MIN;
+		const before = (dir === "f" ? to : from) ?? UUID_MAX;
+		using q = await db.connect();
+		const tx = q.createTransaction(uuidv7());
+		await tx.begin();
+		const { rows } = await tx.queryObject`
+      SELECT * FROM members_json
+			WHERE room_id = ${room_id} AND user_id > ${after} AND user_id < ${before}
+			ORDER BY (CASE WHEN ${dir} = 'b' THEN user_id END) DESC, user_id LIMIT ${limit + 1}
+		`;
+		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
+			SELECT count(*)::int FROM members_json WHERE room_id = ${room_id}
+		`;
+		await tx.rollback();
+		const items = rows
+			.slice(0, limit)
+			.map((i) => Member.parse(i));
+		if (dir === "b") items.reverse();
+		return {
+			has_more: rows.length > limit,
+			total: count,
+			items,
+		};
+  },
+  async roleList(room_id, { dir, from, to, limit }) {
+		const after = (dir === "f" ? from : to) ?? UUID_MIN;
+		const before = (dir === "f" ? to : from) ?? UUID_MAX;
+		using q = await db.connect();
+		const tx = q.createTransaction(uuidv7());
+		await tx.begin();
+		const { rows } = await tx.queryObject`
+      SELECT * FROM roles
+			WHERE room_id = ${room_id} AND id > ${after} AND id < ${before}
+			ORDER BY (CASE WHEN ${dir} = 'b' THEN id END) DESC, id LIMIT ${limit + 1}
+		`;
+		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
+			SELECT count(*)::int FROM roles WHERE room_id = ${room_id}
+		`;
+		await tx.rollback();
+		const items = rows
+			.slice(0, limit)
+			.map((i) => Role.parse(i));
+		if (dir === "b") items.reverse();
+		return {
+			has_more: rows.length > limit,
+			total: count,
+			items,
+		};
   },
 }
