@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { broadcast, data, HonoEnv } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { withAuth } from "../auth.ts";
 import { UserCreate, UserDelete, UserGet, UserUpdate } from "./def.ts";
 import { uuidv7 } from "uuidv7";
@@ -14,7 +14,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			can_fork: false,
 			discord_id: null,
 		})
-		broadcast({ type: "upsert.user", user });
+		events.emit("global", { type: "upsert.user", user });
 		return c.json(user, 201);
 	});
 
@@ -24,7 +24,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const patch = await c.req.json();
 		const user = await data.userUpdate(user_id, patch, {});
 		if (!user) return c.json({ error: "not found" }, 404);
-		broadcast({ type: "upsert.user", user });
+		events.emit("global", { type: "upsert.user", user });
 		return c.json(user, 200);
 	});
 	
@@ -32,7 +32,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		let user_id = c.req.param("user_id");
 		if (user_id === "@self") user_id = c.get("user_id");
 		await data.userDelete(user_id);
-		broadcast({ type: "delete.user", id: user_id });
+		events.emit("global", { type: "delete.user", id: user_id });
 		return new Response(null, { status: 204 });
 	});
 	

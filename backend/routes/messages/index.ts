@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { broadcast, data, HonoEnv } from "globals";
+import { events, data, HonoEnv } from "globals";
 import {
 	MessageCreate,
 	MessageDelete,
@@ -39,7 +39,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			author_id: user_id,
 			ordering: 0,
 		});
-		broadcast({ type: "upsert.message", message: { ...message, nonce: r.nonce } });
+		events.emit("threads", thread_id, { type: "upsert.message", message: { ...message, nonce: r.nonce } });
 		return c.json(message, 201);
 	});
 

@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { withAuth } from "../auth.ts";
-import { broadcast, data, HonoEnv } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { uuidv7 } from "uuidv7";
 import { Room } from "../../types.ts";
 import { UUID_MAX, UUID_MIN } from "../../util.ts";
@@ -41,10 +41,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const room_id = c.req.param("room_id");
 		if (!perms.has("RoleApply")) return c.json({ error: "nope" }, 403);
 		await data.roleApplyInsert(role_id, user_id);
-		broadcast({
-			type: "upsert.member",
-			member: (await data.memberSelect(room_id, user_id))!,
-		});
+		const member = (await data.memberSelect(room_id, user_id))!;
+		events.emit("rooms", room_id, { type: "upsert.member", member });
 		return new Response(null, { status: 204 });
 	});
 	
@@ -56,10 +54,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const room_id = c.req.param("room_id");
 		if (!perms.has("RoleApply")) return c.json({ error: "nope" }, 403);
 		await data.roleApplyDelete(role_id, user_id);
-		broadcast({
-			type: "upsert.member",
-			member: (await data.memberSelect(room_id, user_id))!,
-		});
+		const member = (await data.memberSelect(room_id, user_id))!;
+		events.emit("rooms", room_id, { type: "upsert.member", member });
 		return new Response(null, { status: 204 });
 	});
 }

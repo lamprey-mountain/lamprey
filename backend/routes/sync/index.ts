@@ -4,7 +4,7 @@ import { SyncInit } from "./def.ts";
 import { upgradeWebSocket } from "npm:hono/deno";
 import { MessageClient, MessageServer } from "../../types/sync.ts";
 import { uuidv7 } from "uuidv7";
-import { fetchDataAndPermissions } from "../auth.ts";
+import { Permissions } from "globals";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(SyncInit, async (c, next) => {
@@ -44,16 +44,41 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			if (msg.type === "upsert.session" && msg.session.user_id === user_id) {
 				ws.send(JSON.stringify(msg));
 			} else {
-				const { permissions: perms } = await fetchDataAndPermissions({
-					user_id_self: user_id,
-					message_id: msg.type === "upsert.message" ? msg.message.id :  msg.type === "delete.message" ? msg.id : undefined,
-					room_id: msg.type === "upsert.room" ? msg.room.id : msg.type === "upsert.member" ? msg.member.room_id : undefined,
-					thread_id: msg.type === "upsert.thread" ? msg.thread.id : msg.type === "upsert.message" ? msg.message.thread_id : undefined,
-				});
+				let perms;
+				const room_id = ("room" in msg) ? msg.room.id : ("room_id" in msg) ? (msg.room_id as string) : null;
+				const thread_id = ("thread" in msg) ? msg.thread.id : ("thread_id" in msg) ? (msg.thread_id as string) : null;
+				if (thread_id) {
+					perms = await data.permissionReadThread(user_id, thread_id);
+				} else if (room_id) {
+					perms = await data.permissionReadRoom(user_id, room_id);
+				} else {
+					perms = Permissions.none;
+				}
+				
 				console.log(perms, msg)
 				if (!perms.has("View")) return;
 				ws.send(JSON.stringify(msg));
 			}
+		}
+		
+		async function handleRoom(room_id: string, msg: z.infer<typeof MessageServer>) {
+			if (state === "closed") return;
+			const perms = await data.permissionReadRoom(user_id, room_id);
+			if (!perms.has("View")) return;
+			ws.send(JSON.stringify(msg));
+		}
+		
+		async function handleThread(thread_id: string, msg: z.infer<typeof MessageServer>) {
+			if (state === "closed") return;
+			const perms = await data.permissionReadThread(user_id, thread_id);
+			if (!perms.has("View")) return;
+			ws.send(JSON.stringify(msg));
+		}
+		
+		function handleUsers(msg_user_id: string, msg: z.infer<typeof MessageServer>) {
+			if (state === "closed") return;
+			if (msg_user_id !== user_id) return;
+			ws.send(JSON.stringify(msg));
 		}
 
 		async function handleHello(token: string, _last_id?: string) {
@@ -74,12 +99,18 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 				console.log(`opened websocket ${id}`);
 				ws = ev.target as WebSocket;
 				state = "unauth";
-				events.on("sushi", handle);
+				events.on("global", handle);
+				events.on("rooms", handleRoom);
+				events.on("threads", handleThread);
+				events.on("users", handleUsers);
 				rescheduleHeartbeat();
 			},
 			onClose() {
 				console.log(`closed websocket ${id}`);
-				events.off("sushi", handle);
+				events.off("global", handle);
+				events.off("rooms", handleRoom);
+				events.off("threads", handleThread);
+				events.off("users", handleUsers);
 				state = "closed";
 			},
 			onMessage(event, ws) {

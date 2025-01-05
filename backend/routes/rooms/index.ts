@@ -9,7 +9,7 @@ import {
 	RoomUpdate,
 } from "./def.ts";
 import { withAuth } from "../auth.ts";
-import { broadcast, HonoEnv, data } from "globals";
+import { HonoEnv, data, events } from "globals";
 import { uuidv7 } from "uuidv7";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
@@ -24,14 +24,15 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			override_description: null,
 		});
 		const adminRole = await data.roleInsert({
-			id: uuidv7(),
-			room_id: room.id,
 			name: "admin",
 			description: null,
 			permissions: ["Admin"],
+		}, {
+			id: uuidv7(),
+			room_id: room.id,
 		});
 		await data.roleApplyInsert(adminRole.id, user_id);
-		broadcast({ type: "upsert.room", room });
+		events.emit("rooms", room.id, { type: "upsert.room", room });
 		return c.json(room, 201);
 	});
 
@@ -53,7 +54,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (!perms.has("RoomManage")) return c.json({ error: "forbidden" }, 403);
 		const room = await data.roomUpdate(room_id, patch.name, patch.description);
 		if (!room) return c.json({ error: "not found" }, 404);
-		broadcast({ type: "upsert.room", room });
+		events.emit("rooms", room.id, { type: "upsert.room", room });
 		return c.json(room, 200);
 	});
 

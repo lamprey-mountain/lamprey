@@ -37,11 +37,13 @@ const db = new Pool({
 type MsgServer = z.infer<typeof MessageServer>;
 
 type Events = {
-	sushi: (msg: MsgServer) => void;
+	global: (msg: MsgServer) => void;
+	rooms: (room_id: string, msg: MsgServer) => void;
+	threads: (thread_id: string, msg: MsgServer) => void;
+	users: (user_id: string, msg: MsgServer) => void;
 };
 
 export const events = new EventEmitter() as TypedEmitter<Events>;
-export const broadcast = (msg: MsgServer) => events.emit("sushi", msg);
 
 export type HonoEnv = {
 	Variables: {
@@ -157,6 +159,8 @@ type Database = {
 	roleDelete(room_id: string, role_id: string): Awaitable<void>;
 	roleSelect(room_id: string, role_id: string): Awaitable<RoleT | null>;
 	roleUpdate(room_id: string, role_id: string, patch: RolePatchT): Awaitable<RoleT | null>;
+	permissionReadRoom(user_id: string, room_id: string): Awaitable<Permissions>;
+	permissionReadThread(user_id: string, thread_id: string): Awaitable<Permissions>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -583,5 +587,21 @@ export const data: Database = {
 		`;
 		await tx.commit();
 		return Role.parse(d.rows[0]);
+  },
+  async permissionReadRoom(user_id, room_id) {
+		using q = await db.connect();
+  	const { rows } = await q.queryObject<{ permission: PermissionT }>`
+  		SELECT permission FROM member_permissions
+  		WHERE user_id = ${user_id} AND room_id = ${room_id}
+		`;
+		return new Permissions(rows.map(i => i.permission));
+  },
+  async permissionReadThread(user_id, thread_id) {
+		using q = await db.connect();
+  	const { rows } = await q.queryObject<{ permission: PermissionT }>`
+  		SELECT permission FROM member_permissions
+  		WHERE user_id = ${user_id} AND thread_id = ${thread_id}
+		`;
+		return new Permissions(rows.map(i => i.permission));
   },
 }

@@ -9,23 +9,22 @@ export type View
   | { view: "room-settings", room: RoomT }
   | { view: "thread", thread: ThreadT, room: RoomT }
 
-export type Timeline = {
-	messages: Array<MessageT>,
-	is_at_beginning: boolean,
-	is_at_end: boolean,
-	thread_id: string,
-}
+export type TimelineItem
+	= { type: "remote", message: MessageT }
+	| { type: "local",  message: MessageT }
+	| { type: "hole" }
 
-export type TimelineSet = {
-	list: Array<Timeline>
+type Slice = {
+	start: number,
+	end: number,
 }
 
 export type Data = {
 	rooms: Record<string, RoomT>,
 	threads: Record<string, ThreadT>,
 	messages: Record<string, MessageT>,
-	timelines: Record<string, TimelineSet>,
-	slices: Record<string, Timeline & { parent: Timeline }>,
+	timelines: Record<string, Array<TimelineItem>>,
+	slices: Record<string, Slice>,
 	user: UserT | null,
 	menu: any | null,
 	view: View,

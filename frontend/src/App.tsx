@@ -3,7 +3,7 @@ import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import { Dynamic, Portal } from "solid-js/web";
 import { ChatMain } from "./Chat.tsx";
 import { Client } from "sdk";
-import { Action, chatctx, Data, Timeline, View } from "./context.ts";
+import { Action, chatctx, Data,  View } from "./context.ts";
 import { RoomSettings } from "./Settings.tsx";
 import { createStore, reconcile } from "solid-js/store";
 import { MessageT, Pagination } from "./types.ts";
@@ -79,24 +79,20 @@ const App: Component = () => {
 			updateData("messages", msg.message.id, msg.message);
 			const { thread_id } = msg.message;
 			if (!data.timelines[thread_id]) {
-				const tl = {
-					is_at_beginning: false,
-					is_at_end: true,
-					thread_id: thread_id,
-					messages: [msg.message],
-				};
-				updateData("timelines", thread_id, { list: [tl] });
-				updateData("slices", thread_id, { ...tl, parent: tl });
+				updateData("timelines", thread_id, [{ type: "hole" }, { type: "remote", message: msg.message as MessageT }]);
+				updateData("slices", thread_id, { start: 0, end: 2 });
 			} else {
-				updateData("timelines", msg.message.thread_id, "list", (i) => i.is_at_end, "messages", (i) => [...i, msg.message]);
-				if (data.slices[thread_id].is_at_end) {
-					updateData("slices", thread_id, "messages", (msgs) => [...msgs, msg.message].slice(-SLICE_LEN));
+				updateData("timelines", msg.message.thread_id, (i) => [...i, { type: "remote" as const, message: msg.message }]);
+				if (data.slices[thread_id].end === data.timelines[thread_id].length - 1) {
+					const newEnd = data.timelines[thread_id].length + 1;
+					const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
+					updateData("slices", thread_id, { start: newStart, end: newEnd });
 				}
 			}
   	}
 	});
 	client.connect();
-	globalThis.client = client;
+	// globalThis.client = client;
 	
 	(async () => {
     const data = await client.http("GET", `/api/v1/rooms?dir=f`);
@@ -195,50 +191,52 @@ const App: Component = () => {
 				const slice = data.slices[thread_id];
 				console.log("paginate", { dir, thread_id, slice });
 				if (!slice) {
-			    const batch = await client.http("GET", `/api/v1/threads/${thread_id}/messages?dir=b&from=ffffffff-ffff-ffff-ffff-ffffffffffff`);
-		    	const tl: Timeline = {
-		    		is_at_beginning: !batch.has_more,
-		    		is_at_end: true,
-		    		thread_id,
-		    		messages: batch.items,
-		    	}
-		    	// TODO: is there a race condition here that might drop messages?
-					updateData("timelines", thread_id, { list: [tl] });
-					updateData("slices", thread_id, { ...tl, parent: tl });
+			    const batch = await client.http("GET", `/api/v1/threads/${thread_id}/messages?dir=b&from=ffffffff-ffff-ffff-ffff-ffffffffffff&limit=100`);
+					const tl = batch.items.map((i: MessageT) => ({ type: "remote" as const, message: i }));
+					if (batch.has_more) tl.unshift({ type: "hole" });
+					updateData("timelines", thread_id, tl);
+					updateData("slices", thread_id, { start: 0, end: tl.length + 1 });
 					return;
 				}
-				
-		    if (dir === "b" && slice.is_at_beginning) return;
-		    if (dir === "f" && slice.is_at_end) return;
 
-				const tl = slice.parent;
+				const tl = data.timelines[thread_id];
 				if (dir === "b") {
-					const firstIdx = tl.messages.findIndex(i => i.id === slice.messages[0]?.id);
-					if (firstIdx < PAGINATE_LEN && !tl.is_at_beginning) {
-				    await paginateTimeline(dir, thread_id, slice.parent);
-					}
-					
-					const newFirstIdx = tl.messages.findIndex(i => i.id === slice.messages[0]?.id);
-					console.log("paginate", { firstIdx, newFirstIdx });
-					const newStartIdx = Math.max(newFirstIdx - PAGINATE_LEN, 0);
-			    const newEndIdx = Math.min(newStartIdx + SLICE_LEN, tl.messages.length - 1);
-			    updateData("slices", thread_id, "is_at_beginning", tl.is_at_beginning && newStartIdx === 0);
-			    updateData("slices", thread_id, "is_at_end", tl.is_at_end && newEndIdx === tl.messages.length - 1);
-			    updateData("slices", thread_id, "messages", tl.messages.slice(newStartIdx, newEndIdx));
-				} else {
-					const lastIdx = tl.messages.findIndex(i => i.id === slice.messages.at(-1)?.id);
-					if (tl.messages.length - lastIdx < PAGINATE_LEN && !tl.is_at_end) {
-				    await paginateTimeline(dir, thread_id, slice.parent);
+					const startItem = tl[slice.start];
+					const nextItem = tl[slice.start + 1];
+					if (startItem.type === "hole") {
+				    const from = (nextItem as any)?.message.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
+						const batch = await client.http("GET", `/api/v1/threads/${thread_id}/messages?dir=b&limit=100&from=${from}`);
+						updateData("timelines", thread_id, i => [
+							...batch.has_more ? [{ type: "hole" }] : [],
+							...batch.items.map((j: MessageT) => ({ type: "remote", message: j })),
+							...i.slice(slice.start + 1),
+						]);
 					}
 
-					const newLastIdx = tl.messages.findIndex(i => i.id === slice.messages.at(-1)?.id);
-			    const newEndIdx = Math.min(newLastIdx + SLICE_LEN, tl.messages.length - 1);
-					const newStartIdx = Math.max(newEndIdx - PAGINATE_LEN, 0);
-			    updateData("slices", thread_id, "is_at_beginning", tl.is_at_beginning && newStartIdx === 0);
-			    updateData("slices", thread_id, "is_at_end", tl.is_at_end && newEndIdx === tl.messages.length - 1);
-			    updateData("slices", thread_id, "messages", tl.messages.slice(newStartIdx, newEndIdx));
+					const newTl = data.timelines[thread_id];
+					const newStart = Math.max(slice.start - PAGINATE_LEN, 0);
+			    const newEnd = Math.min(newStart + SLICE_LEN, newTl.length);
+					console.log({ start: newStart, end: newEnd });
+			    updateData("slices", thread_id, { start: newStart, end: newEnd });
+				} else {
+					const startItem = tl[slice.end - 1];
+					const nextItem = tl[slice.end - 2];
+					if (startItem.type === "hole") {
+				    const from = (nextItem as any)?.message.id ?? "00000000-0000-0000-0000-000000000000";
+						const batch = await client.http("GET", `/api/v1/threads/${thread_id}/messages?dir=f&limit=100&from=${from}`);
+						updateData("timelines", thread_id, i => [
+							...i.slice(0, slice.end - 1),
+							...batch.items.map((j: MessageT) => ({ type: "remote", message: j })),
+							...batch.has_more ? [{ type: "hole" }] : [],
+						]);
+					}
+
+					const newTl = data.timelines[thread_id];
+			    const newEnd = Math.min(slice.end + PAGINATE_LEN, newTl.length);
+					const newStart = Math.max(newEnd - SLICE_LEN, 0);
+					console.log({ start: newStart, end: newEnd });
+			    updateData("slices", thread_id, { start: newStart, end: newEnd });
 				}
-    
 				return;
 			}
 			case "menu": {
@@ -248,31 +246,6 @@ const App: Component = () => {
 		}
 	}
 
-	async function paginateTimeline(dir: "b" | "f", thread_id: string, tl: Timeline) {
-    if (dir === "b" && tl.is_at_beginning) return;
-    if (dir === "f" && tl.is_at_end) return;
-    
-    const url = new URL(`/api/v1/threads/${thread_id}/messages`, client.baseUrl);
-    url.searchParams.set("dir", dir);
-    url.searchParams.set("limit", "10");
-    const before = tl.messages[0]?.id ?? "ffffffff-ffff-ffff-ffff-ffffffffffff";
-    const after = tl.messages.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
-    if (dir === "f") {
-      url.searchParams.set("from", after);
-    } else {
-      url.searchParams.set("from", before);
-    }
-
-    const batch: Pagination<MessageT> = await client.httpDirect("GET", url.href)
-		if (dir === "f") {
-			updateData("timelines", thread_id, "list", (i) => i === tl, "messages", i => [...i, ...batch.items]);
-			updateData("timelines", thread_id, "list", (i) => i === tl, "is_at_end", !batch.has_more);
-		} else {
-			updateData("timelines", thread_id, "list", (i) => i === tl, "messages", i => [...batch.items, ...i]);
-			updateData("timelines", thread_id, "list", (i) => i === tl, "is_at_beginning", !batch.has_more);
-		}
-	}
-	
 	        // <For each={globals.dialogs}>
 	        //   {(dialog) => <Switch>
 	        //     <Match when={dialog.type === "media"}>

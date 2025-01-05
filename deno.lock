@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@hectorm/otpauth@*": "9.3.6",
     "npm:@deno/vite-plugin@1": "1.0.2_vite@6.0.6",
+    "npm:@floating-ui/dom@*": "1.6.12",
     "npm:@hono/zod-openapi@*": "0.18.3_hono@4.6.15_zod@3.24.1",
     "npm:@hono/zod-openapi@~0.18.3": "0.18.3_hono@4.6.15_zod@3.24.1",
     "npm:@scalar/hono-api-reference@*": "0.5.165_hono@4.6.15",
@@ -19,6 +20,7 @@
     "npm:prosemirror-model@^1.24.1": "1.24.1",
     "npm:prosemirror-state@^1.4.3": "1.4.3",
     "npm:prosemirror-view@^1.37.1": "1.37.1",
+    "npm:solid-floating-ui@*": "0.3.1_@floating-ui+dom@1.6.12_solid-js@1.9.3__seroval@1.1.1",
     "npm:solid-js@^1.9.3": "1.9.3_seroval@1.1.1",
     "npm:tailwindcss@*": "3.4.17_postcss@8.4.49",
     "npm:tailwindcss@^3.4.17": "3.4.17_postcss@8.4.49",
@@ -265,6 +267,22 @@
     },
     "@esbuild/win32-x64@0.24.2": {
       "integrity": "sha512-7VTgWzgMGvup6aSqDPLiW5zHaxYJGTO4OokMjIlrCtf+VpEL+cXKtCvg723iguPYI5oaUNdS+/V7OU2gvXVWEg=="
+    },
+    "@floating-ui/core@1.6.8": {
+      "integrity": "sha512-7XJ9cPU+yI2QeLS+FCSlqNFZJq8arvswefkZrYI1yQBbftw6FyrZOxYSh+9S7z7TpeWlRt9zJ5IhM1WIL334jA==",
+      "dependencies": [
+        "@floating-ui/utils"
+      ]
+    },
+    "@floating-ui/dom@1.6.12": {
+      "integrity": "sha512-NP83c0HjokcGVEMeoStg317VD9W7eDlGK7457dMBANbKA6GJZdc7rjujdgqzTaz93jkGgc5P/jeWbaCHnMNc+w==",
+      "dependencies": [
+        "@floating-ui/core",
+        "@floating-ui/utils"
+      ]
+    },
+    "@floating-ui/utils@0.2.8": {
+      "integrity": "sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig=="
     },
     "@hono/zod-openapi@0.18.3_hono@4.6.15_zod@3.24.1": {
       "integrity": "sha512-bNlRDODnp7P9Fs13ZPajEOt13G0XwXKfKRHMEFCphQsFiD1Y+twzHaglpNAhNcflzR1DQwHY92ZS06b4LTPbIQ==",
@@ -1139,6 +1157,13 @@
     "signal-exit@4.1.0": {
       "integrity": "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="
     },
+    "solid-floating-ui@0.3.1_@floating-ui+dom@1.6.12_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-o/QmGsWPS2Z3KidAxP0nDvN7alI7Kqy0kU+wd85Fz+au5SYcnYm7I6Fk3M60Za35azsPX0U+5fEtqfOuk6Ao0Q==",
+      "dependencies": [
+        "@floating-ui/dom",
+        "solid-js"
+      ]
+    },
     "solid-js@1.9.3_seroval@1.1.1": {
       "integrity": "sha512-5ba3taPoZGt9GY3YlsCB24kCg0Lv/rie/HTD4kG6h4daZZz7+yK02xn8Vx8dLYBc9i6Ps5JwAbEiqjmKaLB3Ag==",
       "dependencies": [
@@ -1519,8 +1544,10 @@
         ],
         "packageJson": {
           "dependencies": [
+            "npm:@floating-ui/dom@^1.6.12",
             "npm:autoprefixer@^10.4.20",
             "npm:postcss@^8.4.49",
+            "npm:solid-floating-ui@~0.3.1",
             "npm:tailwindcss@^3.4.17"
           ]
         }

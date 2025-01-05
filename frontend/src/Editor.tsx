@@ -115,7 +115,7 @@ export const Editor = (props: EditorProps) => {
 							return true;
 						},
 						"Enter": (state, dispatch) => {
-							const html = md(state.doc.textContent.trim()).trim();
+							const html = (md(state.doc.textContent.trim()) as string).trim();
 							// console.log({
 							//   text: state.doc.textContent,
 							//   html,
@@ -413,18 +413,18 @@ export const Editor = (props: EditorProps) => {
 				];
 
 				// function walk(node, preserveSpace = false) {
-				function walk(node, preserveSpace = true) {
+				function walk(node: HTMLElement, preserveSpace = true) {
 					// HACK: i don't know if some text should be pre formatted or not, so i assume not unless its in a pre
 					// but this might mangle text thats copied from within the app, since everything is preformatted
 					// DISABLED FOR NOW
 					node.childNodes.forEach((el) =>
-						walk(el, node.nodeName === "PRE" ? true : preserveSpace)
+						walk(el as HTMLElement, node.nodeName === "PRE" ? true : preserveSpace)
 					);
 					if (node.nodeType === Node.TEXT_NODE) {
 						if (preserveSpace) {
-							node.replaceWith(escape(node.textContent));
+							node.replaceWith(escape(node.textContent ?? ""));
 						} else {
-							node.replaceWith(escape(node.textContent.replace(/\s+/g, " ")));
+							node.replaceWith(escape((node.textContent ?? "").replace(/\s+/g, " ")));
 						}
 						return;
 					}

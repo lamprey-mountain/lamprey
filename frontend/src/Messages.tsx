@@ -1,5 +1,4 @@
 // import { Tooltip } from "./Atoms.tsx";
-const Tooltip = (props) => props.children;
 import { getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
@@ -7,10 +6,13 @@ import {
 	lazy,
 	Match,
 	onMount,
+	ParentProps,
 	Switch,
 } from "solid-js";
 import { TimelineItemT } from "./list.tsx";
 import { MessageT } from "./types.ts";
+
+const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
 
 type UserProps = {
 	name: string;
@@ -64,33 +66,35 @@ export const Message = (props: MessageProps) => {
 	);
 };
 
-export const TimelineItem = (props: { item: TimelineItemT }) => {
-	// console.log(props.item)
-	return (
-		<Switch>
-			<Match when={props.item.type === "message"}>
-				<li
-					class=""
-					classList={{
-						unread: props.item.message.unread,
-						"bg-[#67dc8222]": props.item.message.mention,
-						"shadow-arst": props.item.message.mention || props.item.message.unread,
-						"shadow-[#67dc82]": props.item.message.mention,
-						"shadow-[#3fa9c9]": props.item.message.unread,
-						"text-fg4": props.item.message.is_local,
-					}}
-				>
-					<Message message={props.item.message} />
+function getTimelineItem(item: TimelineItemT) {
+	switch(item.type) {
+		case "message": {
+			// unread: item.message.unread,
+			// "bg-[#67dc8222]": item.message.mention,
+			// "shadow-arst": item.message.mention || item.message.unread,
+			// "shadow-[#67dc82]": item.message.mention,
+			// "shadow-[#3fa9c9]": item.message.unread,
+			// "text-fg4": item.message.is_local,
+			return (
+				<li classList={{ }}>
+					<Message message={item.message} />
 				</li>
-			</Match>
-			<Match when={props.item.type === "spacer"}>
-				<li class="flex-1"><div class="h-24"></div></li>
-			</Match>
-			<Match when={props.item.type === "spacer-mini"}>
-				<li><div class="h-6"></div></li>
-			</Match>
-		</Switch>
-	)
+			);
+		}
+		case "info": {
+			return "todo: info/header"
+		}
+		case "spacer": {
+			return <li class="flex-1"><div class="h-24"></div></li>
+		}
+		case "spacer-mini": {
+			return <li><div class="h-8"></div></li>
+		}
+	}
+}
+
+export const TimelineItem = (props: { item: TimelineItemT }) => {
+	return (<>{getTimelineItem(props.item)}</>);
 
 	// <Match when={props.item.type === "unread-marker" && false}>
 	// 	<li class="text-[#3fa9c9] shadow-arst shadow-[#3fa9c9] shadow-[#3fa9c922]">

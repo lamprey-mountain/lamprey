@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { withAuth } from "../auth.ts";
-import { broadcast, data, HonoEnv } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { uuidv7 } from "uuidv7";
 import { Room } from "../../types.ts";
 import { UUID_MAX, UUID_MIN } from "../../util.ts";
@@ -27,6 +27,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			room_id,
 			id: uuidv7(),
 		});
+		events.emit("rooms", room_id, { type: "upsert.role", role });
 		return c.json(role, 201);
 	});
 	
@@ -38,6 +39,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const patch = await c.req.json();
 		const role = await data.roleUpdate(room_id, role_id, patch);
 		if (!role) return c.json({ error: "not found" }, 404);
+		events.emit("rooms", room_id, { type: "upsert.role", role });
 		return c.json(role, 200);
 	});
 	
@@ -47,6 +49,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const role_id = c.req.param("role_id");
 		const room_id = c.req.param("room_id");
 		await data.roleDelete(room_id, role_id);
+		events.emit("rooms", room_id, { type: "delete.role", id: role_id });
 		return new Response(null, { status: 204 });
 	});
 	

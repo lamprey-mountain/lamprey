@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { broadcast, data, HonoEnv } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { withAuth } from "../auth.ts";
 import { ThreadCreate, ThreadGet, ThreadList, ThreadUpdate } from "./def.ts";
 import { uuidv7 } from "uuidv7";
@@ -12,7 +12,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const perms = c.get("permissions");
 		if (!perms.has("ThreadCreate")) return c.json({ error: "permission denied" }, 403);
 		const thread = await data.threadInsert(uuidv7(), user_id, room_id, r);
-		broadcast({ type: "upsert.thread", thread });
+		events.emit("threads", thread.id, { type: "upsert.thread", thread });
 		return c.json(thread, 201);
 	});
 
@@ -41,7 +41,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (!perms.has("ThreadManage")) return c.json({ error: "forbidden" }, 403);
 		const thread = await data.threadUpdate(thread_id, patch);
 		if (!thread) return c.json({ error: "not found" }, 404);
-		broadcast({ type: "upsert.thread", thread });
+		events.emit("threads", thread_id, { type: "upsert.thread", thread });
 		return c.json(thread, 200);
 	});
 

@@ -37,7 +37,7 @@ export const MessageServer = z.union([
 	z.object({ type: z.literal("upsert.user"), user: User }),
 	z.object({ type: z.literal("upsert.member"), member: Member }),
 	z.object({ type: z.literal("upsert.session"), session: Session }),
-	z.object({ type: z.literal("upsert.role"), session: Role }),
+	z.object({ type: z.literal("upsert.role"), role: Role }),
 	z.object({ type: z.literal("upsert.invite"), invite: Invite }),
 	// z.object({ type: z.literal("create.ban"), ban: Role }),
 	z.object({ type: z.literal("delete.message"), id: MessageId }),

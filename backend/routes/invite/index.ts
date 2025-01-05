@@ -1,11 +1,9 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { fetchDataAndPermissions, withAuth } from "../auth.ts";
-import { broadcast, data, HonoEnv } from "globals";
-import { uuidv4, uuidv7 } from "uuidv7";
-import { Invite, Room } from "../../types.ts";
-import { UUID_MAX, UUID_MIN } from "../../util.ts";
+import { withAuth } from "../auth.ts";
+import { data, events, HonoEnv } from "globals";
 import { InviteCreateRoom, InviteDelete, InviteResolve, InviteRoomList, InviteUse } from "./def.ts";
-import { nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
+const nanoidInvite = customAlphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 12);
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(InviteCreateRoom), async (c) => {
@@ -13,8 +11,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const room_id = c.req.param("room_id");
 		const perms = c.get("permissions");
 		if (!perms.has("InviteCreate")) return c.json({ error: "can't do that" }, 403);
-		const invite = await data.inviteInsertRoom(room_id, user_id, nanoid());
-		broadcast({ type: "upsert.invite", invite });
+		const invite = await data.inviteInsertRoom(room_id, user_id, nanoidInvite());
+		events.emit("rooms", room_id,{ type: "upsert.invite", invite });
 		return c.json(invite, 201);
 	});
 	
@@ -30,7 +28,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			override_name: null,
 			override_description: null
 		});
-		broadcast({ type: "upsert.member", member });
+		events.emit("rooms", invite.target_id,{ type: "upsert.member", member });
 		return new Response(null, { status: 204 });
 	});
 	
@@ -52,18 +50,13 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 	
 	app.openapi(withAuth(InviteDelete), async (c) => {
-		console.log("invite delete")
 		const invite_code = c.req.param("invite_code")!;
 		const invite = await data.inviteSelect(invite_code);
-		console.log({ invite })
 		if (invite.target_type === "room") {
-			const d = await fetchDataAndPermissions({
-				user_id_self: c.get("user_id"),
-				room_id: invite.target_id,
-			});
-			if (!d.permissions.has("InviteManage")) return c.json({ error: "nope" }, 403);
+			const perms = await data.permissionReadRoom(c.get("user_id"), invite.target_id);
+			if (!perms.has("InviteManage")) return c.json({ error: "nope" }, 403);
 			await data.inviteDelete(invite_code);
-			broadcast({ type: "delete.invite", code: invite_code });
+			events.emit("rooms", invite.target_id, { type: "delete.invite", code: invite_code });
 			return new Response(null, { status: 204 });
 		} else {
 			return c.json({ error: "todo" }, 501);
