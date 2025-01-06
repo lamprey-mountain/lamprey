@@ -26,30 +26,7 @@ export const RoomMemberGet = createRoute({
 	request: {
 		params: z.object({
 			room_id: RoomId,
-			user_id: UserId,
-		}),
-	},
-	responses: {
-	  ...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: Member,
-				},
-			},
-		},
-	},
-});
-
-export const RoomMemberGetSelf = createRoute({
-	method: "get",
-	path: "/api/v1/rooms/{room_id}/members/@self",
-	summary: "Member get self",
-	tags: ["member"],
-	request: {
-		params: z.object({
-			room_id: RoomId,
+			user_id: UserId.or(z.literal("@self")),
 		}),
 	},
 	responses: {
@@ -96,25 +73,6 @@ export const RoomMemberUpdate = createRoute({
 	},
 });
 
-export const RoomMemberLeave = createRoute({
-	method: "delete",
-	path: "/api/v1/rooms/{room_id}/members/@self",
-	summary: "Member kick self",
-	description: "Leave room",
-	tags: ["member"],
-	request: {
-		params: z.object({
-			room_id: RoomId,
-		}),
-	},
-	responses: {
-	  ...common,
-		204: {
-			description: "success",
-		},
-	},
-});
-
 export const RoomMemberKick = createRoute({
 	method: "delete",
 	path: "/api/v1/rooms/{room_id}/members/{user_id}",
@@ -123,7 +81,7 @@ export const RoomMemberKick = createRoute({
 	request: {
 		params: z.object({
 			room_id: RoomId,
-			user_id: UserId,
+			user_id: UserId.or(z.literal("@self")),
 		}),
 	},
 	responses: {

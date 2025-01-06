@@ -9,15 +9,15 @@ export const RoomSettings = (props: { room: RoomT }) => {
   const [selectedTab, setSelectedTab] = createSignal("info");
   const ctx = useContext(chatctx)!;
   
-  const setName = () => {
+  const setName = async () => {
 		ctx.client.http("PATCH", `/api/v1/rooms/${props.room.id}`, {
-			name: prompt("name?")
+			name: await ctx.dispatch({ do: "modal.prompt", text: "name?" })
 		})
   }
   
-  const setDescription = () => {
+  const setDescription = async () => {
 		ctx.client.http("PATCH", `/api/v1/rooms/${props.room.id}`, {
-			description: prompt("description?")
+			description: await ctx.dispatch({ do: "modal.prompt", text: "description?" }),
 		})
   }
 
@@ -57,18 +57,18 @@ export const RoomSettings = (props: { room: RoomT }) => {
   	};
   });
 
-  const addRole = (user_id: string) => () => {
-  	const role_id = prompt("role id?");
+  const addRole = (user_id: string) => async () => {
+  	const role_id = await ctx.dispatch({ do: "modal.prompt", text: "role id?" });
 		ctx.client.http("PUT", `/api/v1/rooms/${props.room.id}/members/${user_id}/roles/${role_id}`);
   }
   
-  const removeRole = (user_id: string) => () => {
-  	const role_id = prompt("role id?");
+  const removeRole = (user_id: string) => async () => {
+  	const role_id = await ctx.dispatch({ do: "modal.prompt", text: "role id?" })
 		ctx.client.http("DELETE", `/api/v1/rooms/${props.room.id}/members/${user_id}/roles/${role_id}`);
   }
   
-  const createRole = () => {
-  	const name = prompt("role name?");
+  const createRole = async () => {
+  	const name = await ctx.dispatch({ do: "modal.prompt", text: "role name?" })
 		ctx.client.http("POST", `/api/v1/rooms/${props.room.id}/roles`, {
 			name,
 		});
@@ -129,6 +129,7 @@ export const RoomSettings = (props: { room: RoomT }) => {
 						<h2 class="text-lg">info</h2>
 						<div>room name: {props.room.name}</div>
 						<div>room description: {props.room.description}</div>
+						<div>room id: <code class="user-select-all">{props.room.id}</code></div>
 					  <button class={CLASS_BUTTON} onClick={setName}>set name</button><br />
 					  <button class={CLASS_BUTTON} onClick={setDescription}>set description</button><br />
 					</Match>
@@ -181,7 +182,7 @@ export const RoomSettings = (props: { room: RoomT }) => {
 											<div class="mr-1">{i.override_name ?? i.user.name}</div>
 											<div>
 												<For each={i.roles}>
-													{i => <button class="italic" onClick={() => alert(i.id)}>{i.name}</button>}
+													{i => <button class="italic" onClick={() => ctx.dispatch({ do: "modal.alert", text: i.id })}>{i.name}</button>}
 												</For>
 											</div>
 											<div class="flex-1"></div>

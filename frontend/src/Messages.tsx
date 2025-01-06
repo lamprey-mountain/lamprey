@@ -82,10 +82,21 @@ function getTimelineItem(item: TimelineItemT) {
 			);
 		}
 		case "info": {
-			return "todo: info/header"
+					// <header class="sticky top-[0] px-[144px] bg-bg3 mb-[8px] border-b-[1px] border-b-sep mt-[-8px]">
+					// <header class="shadow-foo shadow-[#0009] bg-bg1 p-2 text-cente">
+					// 	<p>more info here</p>
+					// </header>
+			return (
+				<li class="contents">
+					<header class="px-[144px] bg-bg3 mb-4">
+						<h1 class="text-xl">header</h1>
+						<p>more info here</p>
+					</header>
+				</li>
+			)
 		}
 		case "spacer": {
-			return <li class="flex-1"><div class="h-24"></div></li>
+			return <li class="flex-1"><div class="h-[800px]"></div></li>
 		}
 		case "spacer-mini": {
 			return <li><div class="h-8"></div></li>

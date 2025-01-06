@@ -47,3 +47,16 @@ CREATE OR REPLACE VIEW members_thread_permissions AS (
     JOIN roles ON roles_members.role_id = roles.id
     JOIN threads ON threads.room_id = roles.room_id
 );
+
+WITH room_member_permissions AS (
+    SELECT room_id, user_id, unnest(roles.permissions) AS permission
+    FROM roles_members
+    JOIN roles ON roles_members.role_id = roles.id
+    UNION ALL
+    SELECT room_id, user_id, 'View' AS permission
+    FROM room_members
+)
+SELECT r.*, threads.id AS thread_id
+FROM room_member_permissions AS r
+left JOIN threads ON threads.room_id = r.room_id
+where r.room_id = '019438e8-a66b-737a-a07a-aef35c43ac9b' and r.user_id = '019438e7-584f-793f-8c5e-739416e011ce'

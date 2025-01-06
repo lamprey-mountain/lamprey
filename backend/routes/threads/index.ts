@@ -10,6 +10,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const user_id = c.get("user_id");
 		const room_id = c.req.param("room_id");
 		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("ThreadCreate")) return c.json({ error: "permission denied" }, 403);
 		const thread = await data.threadInsert(uuidv7(), user_id, room_id, r);
 		events.emit("threads", thread.id, { type: "upsert.thread", thread });
@@ -17,6 +18,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 
 	app.openapi(withAuth(ThreadList), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const room_id = c.req.param("room_id")!;
 		const threads = await data.threadList(room_id, {
 			limit: parseInt(c.req.query("limit") ?? "10", 10),
@@ -28,6 +31,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 	
 	app.openapi(withAuth(ThreadGet), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const thread_id = c.req.param("thread_id");
 		const thread = await data.threadSelect(thread_id);
 		if (!thread) return c.json({ error: "not found" }, 404);
@@ -38,6 +43,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const patch = await c.req.json();
 		const thread_id = c.req.param("thread_id");
 		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("ThreadManage")) return c.json({ error: "forbidden" }, 403);
 		const thread = await data.threadUpdate(thread_id, patch);
 		if (!thread) return c.json({ error: "not found" }, 404);

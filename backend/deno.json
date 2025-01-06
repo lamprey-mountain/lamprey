@@ -11,4 +11,7 @@
 		"typed-emitter": "npm:typed-emitter",
 		"globals": "./data.ts",
 	},
+	"tasks": {
+		"serve": "deno serve --watch-hmr --env-file -A index.ts"
+	}
 }

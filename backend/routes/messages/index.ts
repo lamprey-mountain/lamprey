@@ -21,6 +21,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const thread_id = c.req.param("thread_id");
 		const r = await c.req.json();
 		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("MessageCreate")) return c.json({ error: "permission denied" }, 403);
 		if (r.attachments?.length || r.embeds?.length) {
 			if (!perms.has("MessageFilesEmbeds")) return c.json({ error: "permission denied" }, 403);
@@ -44,6 +45,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 
 	app.openapi(withAuth(MessageList), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const thread_id = c.req.param("thread_id")!;
 		const messages = await data.messageList(thread_id, {
 			limit: parseInt(c.req.query("limit") ?? "10", 10),

@@ -15,14 +15,13 @@ import { Pool, PoolClient, Transaction } from "postgres";
 import { uuidv7 } from "uuidv7";
 import { MemberFromDb, MessageFromDb, ThreadFromDb, UserFromDb } from "./types/db.ts";
 import { UUID_MAX, UUID_MIN } from "./util.ts";
-import { AsyncLocalStorage } from "node:async_hooks";
 
 const db = new Pool({
-	database: "chat",
-	hostname: "localhost",
-	port: 5432,
-	user: "chat",
-	password: "ce00eebd05027ca1",
+	database: Deno.env.get("PG_DATABASE")!,
+	hostname: Deno.env.get("PG_HOSTNAME")!,
+	port: Deno.env.get("PG_PORT")!,
+	user: Deno.env.get("PG_USER")!,
+	password: Deno.env.get("PG_PASSWORD")!,
 }, 8);
 
 {
@@ -147,6 +146,7 @@ type Database = {
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
+	memberDelete(room_id: string, user_id: string): Awaitable<void>;
 	memberList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MemberT>>;
 	roleApplyInsert(role_id: string, user_id: string): Awaitable<void>;
 	roleApplyDelete(role_id: string, user_id: string): Awaitable<void>;
@@ -266,7 +266,7 @@ export const data: Database = {
 		const d = await tx.queryObject`
 			UPDATE rooms SET
 				name = ${name === undefined ? room.name : name},
-				description = ${description === undefined ? room.description : description},
+				description = ${description === undefined ? room.description : description}
 			WHERE id = ${id}
 			RETURNING *
 		`;
@@ -591,7 +591,7 @@ export const data: Database = {
   async permissionReadRoom(user_id, room_id) {
 		using q = await db.connect();
   	const { rows } = await q.queryObject<{ permission: PermissionT }>`
-  		SELECT permission FROM member_permissions
+  		SELECT DISTINCT permission FROM room_member_permissions
   		WHERE user_id = ${user_id} AND room_id = ${room_id}
 		`;
 		return new Permissions(rows.map(i => i.permission));
@@ -599,9 +599,16 @@ export const data: Database = {
   async permissionReadThread(user_id, thread_id) {
 		using q = await db.connect();
   	const { rows } = await q.queryObject<{ permission: PermissionT }>`
-  		SELECT permission FROM member_permissions
+  		SELECT DISTINCT permission FROM thread_member_permissions
   		WHERE user_id = ${user_id} AND thread_id = ${thread_id}
 		`;
 		return new Permissions(rows.map(i => i.permission));
+  },
+  async memberDelete(room_id, user_id) {
+		using q = await db.connect();
+  	await q.queryObject<{ permission: PermissionT }>`
+  		DELETE FROM room_members
+  		WHERE user_id = ${user_id} AND room_id = ${room_id}
+		`;
   },
 }

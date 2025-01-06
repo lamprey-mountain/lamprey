@@ -54,6 +54,7 @@ export function Item(props: ParentProps<{ onClick?: (e: MouseEvent) => void }>) 
         onClick={(e) => {
           e.stopPropagation();
           props.onClick?.(e);
+          if (!props.onClick) ctx.dispatch({ do: "modal.alert", text: "todo" });
           ctx.dispatch({ do: "menu", menu: null });
         }}>
         {props.children}
@@ -68,22 +69,22 @@ export function Separator() {
 
 // the context menu for rooms
 export function RoomMenu() {
-      // <Item>mark as read</Item>
-      // <Item>copy link</Item>
-      // <RoomNotificationMenu />
-      // <Separator />
-      // <Submenu content={"edit"}>
-      //   <Item>info</Item>
-      //   <Item>invites</Item>
-      //   <Item>roles</Item>
-      //   <Item>members</Item>
-      // </Submenu>
-      // <Item>leave</Item>
-      // <Separator />
-      // <Item>copy id</Item>
-      // <Item>inspect</Item>
   return (
     <Menu>
+      <Item>mark as read</Item>
+      <Item>copy link</Item>
+      <RoomNotificationMenu />
+      <Separator />
+      <Submenu content={"edit"}>
+        <Item>info</Item>
+        <Item>invites</Item>
+        <Item>roles</Item>
+        <Item>members</Item>
+      </Submenu>
+      <Item>leave</Item>
+      <Separator />
+      <Item>copy id</Item>
+      <Item>inspect</Item>
     </Menu>
   )
 }

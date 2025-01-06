@@ -4,9 +4,12 @@
     "jsr:@hectorm/otpauth@*": "9.3.6",
     "npm:@deno/vite-plugin@1": "1.0.2_vite@6.0.6",
     "npm:@floating-ui/dom@*": "1.6.12",
+    "npm:@floating-ui/dom@^1.6.12": "1.6.12",
     "npm:@hono/zod-openapi@*": "0.18.3_hono@4.6.15_zod@3.24.1",
     "npm:@hono/zod-openapi@~0.18.3": "0.18.3_hono@4.6.15_zod@3.24.1",
     "npm:@scalar/hono-api-reference@*": "0.5.165_hono@4.6.15",
+    "npm:@solidjs/router@*": "0.15.2_solid-js@1.9.3__seroval@1.1.1",
+    "npm:@types/node@*": "22.5.4",
     "npm:autoprefixer@^10.4.20": "10.4.20_postcss@8.4.49",
     "npm:event-emitter@~0.3.5": "0.3.5",
     "npm:highlight.js@^11.11.1": "11.11.1",
@@ -21,6 +24,7 @@
     "npm:prosemirror-state@^1.4.3": "1.4.3",
     "npm:prosemirror-view@^1.37.1": "1.37.1",
     "npm:solid-floating-ui@*": "0.3.1_@floating-ui+dom@1.6.12_solid-js@1.9.3__seroval@1.1.1",
+    "npm:solid-floating-ui@~0.3.1": "0.3.1_@floating-ui+dom@1.6.12_solid-js@1.9.3__seroval@1.1.1",
     "npm:solid-js@^1.9.3": "1.9.3_seroval@1.1.1",
     "npm:tailwindcss@*": "3.4.17_postcss@8.4.49",
     "npm:tailwindcss@^3.4.17": "3.4.17_postcss@8.4.49",
@@ -429,6 +433,12 @@
         "@unhead/schema"
       ]
     },
+    "@solidjs/router@0.15.2_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-UWtliRvOnjfYMONQcTGwtf6BEud5QlF0oHC5L+kcSGYn0jARH5KzC3+3LLZ0al7oQo/5Rc50ssMswPuAuxFvAA==",
+      "dependencies": [
+        "solid-js"
+      ]
+    },
     "@types/babel__core@7.20.5": {
       "integrity": "sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==",
       "dependencies": [
@@ -460,6 +470,12 @@
     },
     "@types/estree@1.0.6": {
       "integrity": "sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw=="
+    },
+    "@types/node@22.5.4": {
+      "integrity": "sha512-FDuKUJQm/ju9fT/SeX/6+gBzoPzlVCzfzmGkwKvRHQVxi4BntVbyIwf6a4Xn62mrvndLiml6z/UBXIdEVjQLXg==",
+      "dependencies": [
+        "undici-types"
+      ]
     },
     "@unhead/schema@1.11.14": {
       "integrity": "sha512-V9W9u5tF1/+TiLqxu+Qvh1ShoMDkPEwHoEo4DKdDG6ko7YlbzFfDxV6el9JwCren45U/4Vy/4Xi7j8OH02wsiA==",
@@ -1287,6 +1303,9 @@
         "rxjs"
       ]
     },
+    "undici-types@6.19.8": {
+      "integrity": "sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw=="
+    },
     "update-browserslist-db@1.1.1_browserslist@4.24.3": {
       "integrity": "sha512-R8UzCaa9Az+38REPiJ1tXlImTJXlVfgHZsglwBD/k6nj76ctsH1E3q4doGrukiLQd3sGQYu56r5+lo5r94l29A==",
       "dependencies": [
@@ -1527,6 +1546,7 @@
         "dependencies": [
           "npm:@deno/vite-plugin@1",
           "npm:@floating-ui/dom@*",
+          "npm:@solidjs/router@*",
           "npm:event-emitter@~0.3.5",
           "npm:highlight.js@^11.11.1",
           "npm:marked@^15.0.4",

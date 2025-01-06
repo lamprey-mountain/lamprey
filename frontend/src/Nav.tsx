@@ -10,13 +10,13 @@ export const ChatNav = () => {
 	return (
 		<nav class="w-64 bg-bg1 text-fg2 overflow-y-auto">
 			<ul class="p-1 flex flex-col">
-					<li class="mt-1">
-						<button
-							class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-							classList={{ "bg-bg3": v.view === "home" }}
-							onClick={() => ctx.dispatch({ do: "setView", to: { view: "home" } })}
-						>home</button>
-					</li>
+				<li class="mt-1">
+					<button
+						class="px-1 py-0.25 w-full text-left hover:bg-bg4"
+						classList={{ "bg-bg3": v.view === "home" }}
+						onClick={() => ctx.dispatch({ do: "setView", to: { view: "home" } })}
+					>home</button>
+				</li>
 				<For each={Object.values(ctx.data.rooms)}>
 					{(room) => (
 						<li class="mt-1">

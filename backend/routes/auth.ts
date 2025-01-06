@@ -39,7 +39,6 @@ export const auth =
 			perms = Permissions.none;
 		}
 		
-		// console.log(r.permissions)
 		c.set("permissions", perms);
 		await next();
 	};

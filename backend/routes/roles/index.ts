@@ -8,6 +8,8 @@ import { RoleCreate, RoleDelete, RoleGet, RoleList, RoleListMembers, RoleUpdate,
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(RoleList), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const room_id = c.req.param("room_id")!;
 		const roles = await data.roleList(room_id, {
 			limit: parseInt(c.req.query("limit") ?? "10", 10),
@@ -20,6 +22,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 
 	app.openapi(withAuth(RoleCreate), async (c) => {
 		const perms = c.get("permissions")!;
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("RoleManage")) return c.json({ error: "nope" }, 403);
 		const room_id = c.req.param("room_id")!;
 		const r = await c.req.json();
@@ -33,6 +36,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	
 	app.openapi(withAuth(RoleUpdate), async (c) => {
 		const perms = c.get("permissions")!;
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("RoleManage")) return c.json({ error: "nope" }, 403);
 		const role_id = c.req.param("role_id");
 		const room_id = c.req.param("room_id");
@@ -45,6 +49,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	
 	app.openapi(withAuth(RoleDelete), async (c) => {
 		const perms = c.get("permissions")!;
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("RoleManage")) return c.json({ error: "nope" }, 403);
 		const role_id = c.req.param("role_id");
 		const room_id = c.req.param("room_id");
@@ -54,6 +59,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	});
 	
 	app.openapi(withAuth(RoleGet), async (c) => {
+		const perms = c.get("permissions")!;
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const role_id = c.req.param("role_id");
 		const room_id = c.req.param("room_id");
 		const role = await data.roleSelect(room_id, role_id);

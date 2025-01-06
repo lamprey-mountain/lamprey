@@ -68,17 +68,8 @@ export const ChatMain = (props: ChatProps) => {
 	const slice = () => ctx.data.slices[props.thread.id];
   const tl = () => ctx.data.timelines[props.thread.id];
 	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
-	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length - 1;
+	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
 	createEffect(() => updateItems());
-
-	createEffect(async () => {
-		if (!slice()) {
-      if (paginating) return;
-      paginating = true;
-      await ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
-      paginating = false;
-		}
-	});
 
   function updateItems() {
   	console.log("update items", slice())
@@ -87,19 +78,15 @@ export const ChatMain = (props: ChatProps) => {
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
     const items: Array<TimelineItemT> = [];
-    // items.push({
-    //   type: "info",
-    //   key: "info" + slice().is_at_beginning,
-    //   header: slice().is_at_beginning,
-    //   class: "header",
-    // });
-
-  	if (hasSpaceTop()) {
-      items.push({
-        type: "spacer",
-        key: "spacer-top",
-      });
-  	}
+    items.push({
+      type: "spacer",
+      key: "spacer-top",
+    });
+    items.push({
+      type: "info",
+      key: "info",
+      header: !hasSpaceTop(),
+    });
 
     for (let i = 0; i < rawItems.length; i++) {
       const msg = rawItems[i];
@@ -135,7 +122,7 @@ export const ChatMain = (props: ChatProps) => {
   	} else {
       items.push({
         type: "spacer-mini",
-        key: "spacer-bottom"
+        key: "spacer-bottom-mini"
       });
   	}
   	
@@ -147,7 +134,9 @@ export const ChatMain = (props: ChatProps) => {
 	const list = createList({
 		items: () => items(),
 		autoscroll: () => !hasSpaceBottom(),
-		topPos: () => hasSpaceTop() ? 1 : 0,
+		// topPos: () => hasSpaceTop() ? 1 : 0,
+		// topPos: () => hasSpaceTop() ? 1 : 2,
+		topPos: () => 2,
 		bottomPos: () => items().length - 2,
     async onPaginate(dir) {
       if (paginating) return;
@@ -159,11 +148,21 @@ export const ChatMain = (props: ChatProps) => {
       }
       paginating = false;
     }, 
-	}); 
+	});
+
+	createEffect(async () => {
+		if (!slice()) {
+      if (paginating) return;
+      paginating = true;
+      await ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
+      list.scrollTo(999999);
+      paginating = false;
+		}
+	});
 
 	// translate-y-[8px]
 	return (
-		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[24px_1fr_0] relative">
+		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[48px_1fr_0] relative">
 			<header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
 				{props.thread.name} / 
 				{props.thread.description ?? "(no description)" } /

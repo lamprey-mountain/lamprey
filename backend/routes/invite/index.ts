@@ -10,6 +10,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const user_id = c.get("user_id");
 		const room_id = c.req.param("room_id");
 		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		if (!perms.has("InviteCreate")) return c.json({ error: "can't do that" }, 403);
 		const invite = await data.inviteInsertRoom(room_id, user_id, nanoidInvite());
 		events.emit("rooms", room_id,{ type: "upsert.invite", invite });
@@ -28,11 +29,13 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			override_name: null,
 			override_description: null
 		});
-		events.emit("rooms", invite.target_id,{ type: "upsert.member", member });
+		events.emit("rooms", invite.target_id, { type: "upsert.member", member });
 		return new Response(null, { status: 204 });
 	});
 	
 	app.openapi(withAuth(InviteRoomList), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 		const room_id = c.req.param("room_id")!;
 		const invites = await data.inviteList(room_id, {
 			limit: parseInt(c.req.query("limit") ?? "10", 10),
@@ -54,6 +57,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		const invite = await data.inviteSelect(invite_code);
 		if (invite.target_type === "room") {
 			const perms = await data.permissionReadRoom(c.get("user_id"), invite.target_id);
+			if (!perms.has("View")) return c.json({ error: "not found" }, 404);
 			if (!perms.has("InviteManage")) return c.json({ error: "nope" }, 403);
 			await data.inviteDelete(invite_code);
 			events.emit("rooms", invite.target_id, { type: "delete.invite", code: invite_code });

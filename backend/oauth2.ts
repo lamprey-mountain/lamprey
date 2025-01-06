@@ -1,7 +1,6 @@
-import { uuidv7 } from "uuidv7";
-const CLIENT_ID = "1322383185480384542";
-const CLIENT_SECRET = "hsZbosWwans9HO7M8wHW5MO04bQNc1oj";
-const REDIRECT_URI = "http://localhost:8000/api/v1/auth/discord/redirect";
+const CLIENT_ID = Deno.env.get("DISCORD_CLIENT_ID")!;
+const CLIENT_SECRET = Deno.env.get("DISCORD_CLIENT_SECRET")!;
+const REDIRECT_URI = Deno.env.get("DISCORD_REDIRECT_URI")!;
 
 export function buildUrl(state: string): string {
 	const url = new URL("https://canary.discord.com/oauth2/authorize");

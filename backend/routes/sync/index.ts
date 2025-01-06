@@ -39,30 +39,16 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		async function handle(msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
 			// if (state === "unauth") return;
-			// TODO: handle deletes
-			// TODO: make this more efficient/less awful
-			if (msg.type === "upsert.session" && msg.session.user_id === user_id) {
-				ws.send(JSON.stringify(msg));
-			} else {
-				let perms;
-				const room_id = ("room" in msg) ? msg.room.id : ("room_id" in msg) ? (msg.room_id as string) : null;
-				const thread_id = ("thread" in msg) ? msg.thread.id : ("thread_id" in msg) ? (msg.thread_id as string) : null;
-				if (thread_id) {
-					perms = await data.permissionReadThread(user_id, thread_id);
-				} else if (room_id) {
-					perms = await data.permissionReadRoom(user_id, room_id);
-				} else {
-					perms = Permissions.none;
-				}
-				
-				console.log(perms, msg)
-				if (!perms.has("View")) return;
-				ws.send(JSON.stringify(msg));
-			}
+			ws.send(JSON.stringify(msg));
 		}
 		
 		async function handleRoom(room_id: string, msg: z.infer<typeof MessageServer>) {
+			console.log(state, msg)
 			if (state === "closed") return;
+			if (msg.type === "delete.member" && msg.user_id === user_id) {
+				ws.send(JSON.stringify(msg));
+				return;
+			}
 			const perms = await data.permissionReadRoom(user_id, room_id);
 			if (!perms.has("View")) return;
 			ws.send(JSON.stringify(msg));

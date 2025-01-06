@@ -23,5 +23,6 @@
 		"tailwindcss": "npm:tailwindcss",
 		"solid-floating-ui": "npm:solid-floating-ui",
 		"@floating-ui/dom": "npm:@floating-ui/dom",
+		"@solidjs/router": "npm:@solidjs/router",
 	},
 }
