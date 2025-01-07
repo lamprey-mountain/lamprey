@@ -1,13 +1,13 @@
-CREATE OR REPLACE VIEW members_json AS (
-    WITH roles_json AS (
-        SELECT room_id, user_id, json_agg(roles.*) AS roles
-        FROM roles_members
-        JOIN roles ON roles_members.role_id = roles.id
+CREATE OR REPLACE VIEW member_json AS (
+    WITH role_json AS (
+        SELECT room_id, user_id, json_agg(role.*) AS roles
+        FROM role_member
+        JOIN role ON role_member.role_id = role.id
         GROUP BY room_id, user_id
     )
-    SELECT room_members.*, row_to_json(users) AS user, coalesce(roles, '[]') as roles
-    FROM room_members
-    JOIN users ON users.id = room_members.user_id
-    LEFT JOIN roles_json ON roles_json.user_id = room_members.user_id
-     AND roles_json.room_id = room_members.room_id
+    SELECT room_member.*, row_to_json(usr) AS user, coalesce(roles, '[]') as roles
+    FROM room_member
+    JOIN usr ON usr.id = room_member.user_id
+    LEFT JOIN role_json ON role_json.user_id = room_member.user_id
+     AND role_json.room_id = room_member.room_id
 );

@@ -1,5 +1,5 @@
 import { Context, Next } from "npm:hono";
-import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT } from "globals";
+import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT, SessionStatus } from "globals";
 import { RouteConfig, z } from "npm:@hono/zod-openapi";
 import { Permission } from "../types.ts";
 
@@ -24,9 +24,11 @@ export const auth =
 		if (!authToken) return c.json({ error: "Missing authorization token" }, 401);
 		const session = await data.sessionSelectByToken(authToken);
 		if (!session) return c.json({ error: "Invalid or expired token" }, 401);
+		if (opts.strict && session.status === SessionStatus.Unauthorized) return c.json({ error: "Not yet authenticated" }, 403);
 		const { user_id } = session;
 		c.set("user_id", user_id);
 		c.set("session_id", session.id);
+		c.set("session_status", session.status);
 
 		const room_id = c.req.param("room_id");
 		const thread_id = c.req.param("thread_id");

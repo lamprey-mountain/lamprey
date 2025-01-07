@@ -29,6 +29,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			override_name: null,
 			override_description: null
 		});
+		await data.applyDefaultRoles(user_id, invite.target_id);
 		events.emit("rooms", invite.target_id, { type: "upsert.member", member });
 		return new Response(null, { status: 204 });
 	});

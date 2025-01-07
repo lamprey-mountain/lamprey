@@ -1,7 +1,7 @@
-import { Accessor, createContext, Setter } from "solid-js";
+import { createContext, useContext } from "solid-js";
 import { Client } from "sdk";
-import { SetStoreFunction } from "solid-js/store";
 import { InviteT, MemberT, MessageT, RoleT, RoomT, ThreadT, UserT } from "./types.ts";
+import type { EditorState } from "prosemirror-state";
 
 export type View
 	= { view: "home" }
@@ -19,6 +19,11 @@ type Slice = {
 	end: number,
 }
 
+type InputState = {
+	state: EditorState,
+	reply_id: string | null,
+}
+
 export type Data = {
 	rooms: Record<string, RoomT>,
 	room_members: Record<string, Record<string, MemberT>>,
@@ -30,15 +35,20 @@ export type Data = {
 	invites: Record<string, InviteT>,
 	users: Record<string, UserT>,
 	user: UserT | null,
+	edit_states: Record<string, InputState>,
 	modals: Array<any>,
 	menu: any | null,
 	view: View,
 }
 
-type Menu = any & {
+type Menu = {
 	x: number,
 	y: number,
-}
+} & (any
+| { type: "room", room: RoomT }
+| { type: "thread", thread: ThreadT }
+| { type: "message", message: MessageT }
+)
 
 export type Action
 	= { do: "setView", to: View }
@@ -50,11 +60,14 @@ export type Action
 	| { do: "modal.prompt", text: string }
 	| { do: "modal.alert", text: string }
 	| { do: "modal.confirm", text: string }
+	| { do: "editor.init", thread_id: string }
+	| { do: "editor.reply", thread_id: string, reply_id: string | null }
 
-export type ChatProps = {
+export type ChatCtx = {
 	client: Client;
 	data: Data,
 	dispatch: (action: Action) => Promise<any>,
 };
 
-export const chatctx = createContext<ChatProps>();
+export const chatctx = createContext<ChatCtx>();
+export const useCtx = () => useContext(chatctx)!;

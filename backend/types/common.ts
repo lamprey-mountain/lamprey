@@ -93,6 +93,7 @@ export const Room = z.object({
 		name: "inspirational quotes",
 		description:
 			"i expect i'll be able to solve a lot of my problems once my baby brain falls out and my adult brain grows in",
+		// default_roles: [],
 	},
 });
 
@@ -115,8 +116,9 @@ export const Role = z.object({
 	name: z.string().min(1).max(64),
 	description: z.string().max(2048).nullable(),
 	permissions: PermissionAssignable.array(),
-	// is_self_applicable: z.boolean(),
-	// is_mentionable: z.boolean(),
+	is_self_applicable: z.boolean(),
+	is_mentionable: z.boolean(),
+	is_default: z.boolean(),
 }).openapi("Role");
 
 export const UserBase = z.object({
@@ -146,16 +148,22 @@ export const MemberBase = z.object({
 
 export const Member = MemberBase.openapi("Member");
 
+export enum MessageType {
+	Default = 0,
+	ThreadUpdate = 1,
+}
+
 export const MessageBase = z.object({
+	type: z.nativeEnum(MessageType).describe("0 = default, 1 = thread update"),
 	id: MessageId,
 	thread_id: ThreadId,
 	version_id: MessageVersionId,
-	nonce: z.string().nullish().transform(i => i ?? null),
+	nonce: z.string().nullish().transform(i => i ?? null).describe("number only used once; for idempotency (not sending the same message twice) and local echo"),
 	ordering: Uint.describe("the order that this message appears in the room"),
 	content: z.string().min(1).max(8192).nullable(),
 	attachments: Media.array().default([]),
 	embeds: Embed.array().default([]),
-	metadata: z.record(z.string(), z.any()).nullable(),
+	metadata: z.record(z.string(), z.any()).nullable().describe("any arbitrary metadata you want to attach to a message. may have special meaning depending on type."),
 	mentions_users: UserId.array(),
 	mentions_roles: RoleId.array(),
 	mentions_everyone: z.boolean(),
@@ -165,6 +173,7 @@ export const MessageBase = z.object({
 	// mentions_rooms: ThreadId.array(),
 	// author: Member, // TODO: future? how to represent users who have left?
 	author: User,
+	override_name: z.string().nullable(),
 	is_pinned: z.boolean(),
 });
 
@@ -181,7 +190,12 @@ export const Message = MessageBase
 		// }
 	});
 
+export enum ThreadType {
+	Default = 0,
+}
+
 export const ThreadBase = z.object({
+	type: z.nativeEnum(ThreadType).describe("0 = default"),
 	id: ThreadId,
 	room_id: RoomId,
 	creator_id: UserId,
@@ -193,6 +207,11 @@ export const ThreadBase = z.object({
 	// is_wiki: z.boolean(), // editable by everyone
 	// is_private: z.boolean(),
 	// recipients: Member.array(),
+	// is_unread: z.boolean(),
+	// last_read_id: MessageId,
+	// last_message_id: MessageId,
+	// message_count: z.number(),
+	// mention_count: z.number(),
 })
 
 export const Thread = ThreadBase
@@ -231,7 +250,6 @@ export const Thread = ThreadBase
 export const Session = z.object({
 	id: SessionId,
 	user_id: UserId,
-	token: SessionToken,
 	status: Uint.max(2).describe(
 		"0 = unauthenticated, 1 = can do basic stuff, 2 = sudo mode",
 	),
@@ -254,6 +272,7 @@ export const Invite = z.object({
 	// uses: Uint,
 }).openapi("Invite");
 
+// export const RoomPatch = Room.pick({ name: true, description: true, default_roles: true }).partial();
 export const RoomPatch = Room.pick({ name: true, description: true }).partial();
 export const ThreadPatch = Thread.pick({
 	name: true,
@@ -268,6 +287,7 @@ export const MessagePatch = Message.pick({
 	metadata: true,
 	reply_id: true,
 	nonce: true,
+	override_name: true,
 }).partial();
 export const UserPatch = User.pick({
 	name: true,
@@ -282,6 +302,9 @@ export const RolePatch = Role.pick({
 	name: true,
 	description: true,
 	permissions: true,
+	is_self_applicable: true,
+	is_mentionable: true,
+	is_default: true,
 }).partial();
 // export const InvitePatch = Invite.pick({ expires_at: true, max_uses: true })
 // 	.partial();

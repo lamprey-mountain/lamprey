@@ -7,12 +7,23 @@ import {
 	Match,
 	onMount,
 	ParentProps,
+	Show,
 	Switch,
 } from "solid-js";
 import { TimelineItemT } from "./list.tsx";
-import { MessageT } from "./types.ts";
+import { MessageT, MessageType } from "./types.ts";
+import { marked } from "marked";
+// @ts-types="npm:@types/sanitize-html@^2.13.0"
+import sanitizeHtml from "npm:sanitize-html";
+import { useCtx } from "./context.ts";
 
 const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
+
+const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
+	transformTags: {
+		del: "s"
+	}
+}
 
 type UserProps = {
 	name: string;
@@ -30,13 +41,19 @@ const User = (props: UserProps) => {
 };
 
 const WRAPPER_CSS = "group grid grid-cols-[128px_auto_max-content] px-[8px] hover:bg-bg1/30";
-const BODY_CSS = "mx-[8px] overflow-hidden whitespace-pre-wrap";
+const BODY_CSS = "mx-[8px] overflow-hidden markdown";
 
 type MessageProps = {
 	message: MessageT;
 };
 
+const md = marked.use({
+	breaks: true,
+	gfm: true,
+});
+
 export const Message = (props: MessageProps) => {
+	const ctx = useCtx();
 	let bodyEl: HTMLSpanElement;
 
 	// createEffect(async () => {
@@ -48,22 +65,75 @@ export const Message = (props: MessageProps) => {
 	// 	}
 	// });
 
-	return (
-		<div class={WRAPPER_CSS}>
-			<span class="hover:underline cursor-pointer truncate text-right text-fg4">
-				<Tooltip
-					tip={() => <User name={props.message.author.name} />}
-					attrs={{ class: "" }}
-				>
-					{props.message.author.name}
-				</Tooltip>
-			</span>
-			<span class={BODY_CSS} ref={bodyEl!}>{props.message.content}</span>
-			<span class="invisible group-hover:visible text-fg4">
-				{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date).toDateString()}
-			</span>
-		</div>
-	);
+	function Reply(props: { reply: MessageT }) {
+		const name = props.reply.override_name ?? props.reply.author.name;
+		
+		return (
+			<>
+				<div class="mb-[-4px] text-xs text-fg5 text-right">{"\u21B1"}</div>
+				<div class="mb-[-4px] text-xs text-fg4 mx-[8px]">
+					<span class="text-fg5">{name}: </span>
+					{props.reply.content}
+				</div>
+				<div class="mb-[-4px]">
+				</div>
+			</>
+		)
+	}
+
+	function getComponent() {
+		const date = /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date();
+		const authorName = props.message.override_name ?? props.message.author.name;
+		if (props.message.type === MessageType.ThreadUpdate) {
+			const updates = [];
+			const listFormatter = new Intl.ListFormat();
+			const patch = props.message.metadata;
+			if (patch.name) updates.push(`set name to ${patch.name}`);
+			if (patch.description) updates.push(patch.description ? `set description to ${patch.description}` : "");
+			if (patch.is_locked) updates.push(patch.is_locked ? "locked thread" : "unlocked thread");
+			if (patch.is_closed) updates.push(patch.is_closed  ? "closed thread" : "unarchived thread");
+			return (
+				<div class={WRAPPER_CSS}>
+					<span class="text-fg4 text-right"></span>
+					<span class={BODY_CSS} ref={bodyEl!}>
+						<span class="hover:underline cursor-pointer">{authorName}</span>
+						{" "}updated the thread: {listFormatter.format(updates) || "did nothing"}
+					</span>
+					<span class="invisible group-hover:visible text-fg4">
+						{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date).toDateString()}
+					</span>
+				</div>
+			)
+		} else {
+			// console.log(md.parse(props.message.content!));
+			return (
+				<div class={props.message.reply_id ? `${WRAPPER_CSS} grid-rows-[auto_auto]` : WRAPPER_CSS}>
+					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
+						<Reply reply={ctx.data.messages[props.message.reply_id!]} />
+					</Show>
+					<span
+						class="hover:underline cursor-pointer truncate text-right"
+						classList={{
+							"text-[#9ca9db]": !!props.message.override_name,
+							"text-fg4": !props.message.override_name,
+					}}>
+						<Tooltip
+							tip={() => <User name={authorName} />}
+							attrs={{ class: "" }}
+						>
+							{authorName}
+						</Tooltip>
+					</span>
+					<Show when={props.message.content}>
+						<span class={BODY_CSS} ref={bodyEl!} innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
+					</Show>
+					<span class="invisible group-hover:visible text-fg4">{date.toDateString()}</span>
+				</div>
+			)
+		}
+	}
+
+	return <>{getComponent()}</>;
 };
 
 function getTimelineItem(item: TimelineItemT) {
@@ -76,7 +146,7 @@ function getTimelineItem(item: TimelineItemT) {
 			// "shadow-[#3fa9c9]": item.message.unread,
 			// "text-fg4": item.message.is_local,
 			return (
-				<li classList={{ }}>
+				<li data-message-id={item.message.id}>
 					<Message message={item.message} />
 				</li>
 			);

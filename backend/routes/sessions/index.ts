@@ -1,7 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { data, events, HonoEnv } from "globals";
+import { data, events, HonoEnv, SessionStatus } from "globals";
 import { withAuth } from "../auth.ts";
-import { SessionCreate, SessionDelete, SessionDeleteSelf, SessionGet, SessionGetSelf, SessionList } from "./def.ts";
+import { SessionCreate, SessionDelete, SessionGet, SessionList } from "./def.ts";
 import { uuidv4, uuidv7 } from "uuidv7";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
@@ -20,16 +20,15 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	//   throw "todo"
 	// });
 
-	app.openapi(withAuth(SessionDelete), async (c) => {
-		const session_id = c.req.param("session_id");
-		await data.sessionDelete(session_id)
-		events.emit("users", c.get("user_id"), { type: "delete.session", id: session_id });
-		return new Response(null, { status: 204 });
-	});
-	
-	app.openapi(withAuth(SessionDeleteSelf), async (c) => {
-		const session_id = c.get("session_id");
-		await data.sessionDelete(session_id)
+	app.openapi(withAuth(SessionDelete, { strict: false }), async (c) => {
+		let session_id = c.req.param("session_id");
+		if (session_id === "@self") session_id = c.get("session_id");
+		if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
+			return new Response(null, { status: 204 });
+		}
+		const session = await data.sessionSelect(session_id)
+		if (!session) return c.json({ error: "not found" }, 404);
+		if (session.user_id === c.get("user_id")) await data.sessionDelete(session_id)
 		events.emit("users", c.get("user_id"), { type: "delete.session", id: session_id });
 		return new Response(null, { status: 204 });
 	});
@@ -41,17 +40,13 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 	// 	return c.json({ sessions }, 200);
 	// });
 
-	app.openapi(withAuth(SessionGet), async (c) => {
-		const session = await data.sessionSelect(c.req.param("session_id"))
-		if (!session) return c.json({ error: "not found" }, 404);
-		if (session.user_id !== c.get("user_id")) {
+	app.openapi(withAuth(SessionGet, { strict: false }), async (c) => {
+		let session_id = c.req.param("session_id");
+		if (session_id === "@self") session_id = c.get("session_id");
+		if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
 			return c.json({ error: "not found" }, 404);
 		}
-		return c.json(session, 200);
-	});
-	
-	app.openapi(withAuth(SessionGetSelf), async (c) => {
-		const session = await data.sessionSelect(c.get("session_id"))
+		const session = await data.sessionSelect(c.get("session_id"));
 		if (!session) return c.json({ error: "not found" }, 404);
 		return c.json(session, 200);
 	});

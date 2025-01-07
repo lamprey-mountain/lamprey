@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "sqlite": "https://deno.land/x/sqlite@v3.9.1/mod.ts",
+  },
+  "tasks": {
+    "start": "deno run -A --env-file index.ts"
+  }
+}

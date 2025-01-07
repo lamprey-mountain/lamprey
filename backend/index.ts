@@ -70,4 +70,8 @@ app.get(
 	}),
 );
 
+app.post("/api/debug/csp", async (c) => {
+	console.log("csp violation!", await c.req.json());
+});
+
 export default app;

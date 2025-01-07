@@ -1,5 +1,5 @@
 -- replace users with only members (ie. make users less "persistent") and accounts?
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS usr (
     id UUID PRIMARY KEY,
     parent_id UUID,
     name TEXT,
@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS users (
     is_system BOOL NOT NULL,
     can_fork BOOL NOT NULL,
     discord_id TEXT,
-    FOREIGN KEY (parent_id) REFERENCES users(id)
+    FOREIGN KEY (parent_id) REFERENCES usr(id)
 );

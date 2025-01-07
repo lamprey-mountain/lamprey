@@ -19,7 +19,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			if (state === "closed") {
 				throw new Error("tried to send message to closed websocket");
 			}
-			console.log(`send websocket ${id}`, msg);
+			console.log(`send websocket ${id} ${msg.type}`);
 			ws.send(JSON.stringify(msg));
 		}
 
@@ -41,22 +41,46 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			// if (state === "unauth") return;
 			ws.send(JSON.stringify(msg));
 		}
+
+		const permCacheRoom = new Map<string, Permissions>();
+		const permCacheThread = new Map<string, Permissions>();
+
+		type Msg = z.infer<typeof MessageServer>;
 		
-		async function handleRoom(room_id: string, msg: z.infer<typeof MessageServer>) {
+		const poisonsCacheRoom = (m: Msg) => {
+			if (m.type === "upsert.invite") return false;
+			if (m.type === "upsert.room") return false;
+			if (m.type === "upsert.thread") return false; // may need to remove if private threads are impl'd?
+			if (m.type === "upsert.member" && m.member.user.id !== user_id) return false; // not sure how correct this is
+			return true;
+		};
+		
+		const poisonsCacheThread = (m: Msg) => {
+			if (m.type === "upsert.message") return false;
+			if (m.type === "delete.message") return false;
+			if (m.type === "delete.message_version") return false;
+			return true;
+		};
+		
+		async function handleRoom(room_id: string, msg: Msg) {
 			console.log(state, msg)
 			if (state === "closed") return;
 			if (msg.type === "delete.member" && msg.user_id === user_id) {
 				ws.send(JSON.stringify(msg));
 				return;
 			}
-			const perms = await data.permissionReadRoom(user_id, room_id);
+			if (poisonsCacheRoom(msg)) permCacheRoom.delete(room_id);
+			const perms = permCacheRoom.get(room_id) ?? await data.permissionReadRoom(user_id, room_id);
+			permCacheRoom.set(room_id, perms);
 			if (!perms.has("View")) return;
 			ws.send(JSON.stringify(msg));
 		}
 		
 		async function handleThread(thread_id: string, msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
-			const perms = await data.permissionReadThread(user_id, thread_id);
+			if (poisonsCacheThread(msg)) permCacheRoom.delete(thread_id);
+			const perms = permCacheThread.get(thread_id) ?? await data.permissionReadThread(user_id, thread_id);
+			permCacheThread.set(thread_id, perms);
 			if (!perms.has("View")) return;
 			ws.send(JSON.stringify(msg));
 		}
@@ -101,7 +125,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			},
 			onMessage(event, ws) {
 				try {
-					console.log(`recv websocket ${id}`, event.data);
+					// event.data is occasionally null, and i have no idea why
+					
 					const msg = MessageClient.parse(JSON.parse(event.data as string));
 					// console.log(`recv websocket ${id}`, msg);
 					if (msg.type === "hello") {
@@ -113,12 +138,23 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 					} else if (msg.type === "pong") {
 						rescheduleHeartbeat();
 					}
-				} catch (err) {
-					console.log(`websocket error ${id}`, err);
+				} catch (err: any) {
+					console.log(`websocket recv message error ${id}`, err);
+					if (ws.readyState === WebSocket.OPEN) {
+						ws.send(JSON.stringify({
+							type: "error",
+							error: err.format(),
+						}));
+					}
 					ws.close();
 					state = "closed";
 				}
 			},
+			onError(evt, ws) {
+      	console.log(`websocket error`, evt);
+      	ws.close();
+      	state = "closed";
+      },
 		}));
 
 		const r = await middle(c, next);

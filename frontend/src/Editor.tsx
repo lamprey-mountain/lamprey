@@ -1,12 +1,15 @@
 import { Command, EditorState, TextSelection } from "prosemirror-state";
-import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
-import { DOMParser, Schema, Slice } from "prosemirror-model";
+import { Decoration, DecorationAttrs, DecorationSet, EditorView } from "prosemirror-view";
+import { DOMParser, Schema } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { marked, Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
 
-const md = marked.use({ breaks: true });
+const md = marked.use({
+	breaks: true,
+	gfm: true,
+});
 
 const schema = new Schema({
 	nodes: {
@@ -53,14 +56,13 @@ const schema = new Schema({
 });
 
 type EditorProps = {
-	onSubmit: (_: { text: string; html: string }) => void;
 	placeholder?: string;
 	disabled?: boolean;
+	class?: string;
+	state: EditorState;
 };
 
-export const Editor = (props: EditorProps) => {
-	let editorEl: HTMLDivElement;
-
+export function createEditorState(onSubmit: (text: string) => void) {
 	function createWrap(wrap: string): Command {
 		const len = wrap.length;
 
@@ -91,62 +93,69 @@ export const Editor = (props: EditorProps) => {
 			return true;
 		};
 	}
+	
+	return EditorState.create({
+		schema,
+		plugins: [
+			history(),
+			keymap({
+				"Ctrl-z": undo,
+				"Ctrl-Shift-z": redo,
+				"Ctrl-y": redo,
+				"Ctrl-b": createWrap("**"),
+				"Ctrl-i": createWrap("*"),
+				"Ctrl-`": createWrap("`"),
+				"Ctrl-m": (state) => {
+					console.log(state.doc);
+					return false;
+				},
+				"Shift-Enter": (state, dispatch) => {
+					dispatch?.(state.tr.insertText("\n"));
+					return true;
+				},
+				"Enter": (state, dispatch) => {
+					// const html = (md(state.doc.textContent.trim()) as string).trim();
+					// console.log({
+					//   text: state.doc.textContent,
+					//   html,
+					// });
+					// FIXME: marked adds extra newlines
+					// i might need to write my own parser
+					// const res = onSubmit({
+					// 	text: state.doc.textContent.trim(),
+					// 	html,
+					// });
+					onSubmit(state.doc.textContent.trim());
+					// if (res !== false) dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+					// return !!res;
+					// HACK: i don't know what this is, but i don't like it
+					dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
+					return true;
+				},
+				"Backspace": (state, dispatch) => {
+					const sel = state.tr.selection;
+					if (sel.empty) {
+						const pos = sel.$anchor.pos - 1;
+						if (pos >= 0) {
+							dispatch?.(state.tr.deleteRange(pos, pos + 1));
+						}
+					} else {
+						dispatch?.(state.tr.deleteSelection());
+					}
+					return true;
+				},
+			}),
+		],
+	});
+}
+
+export const Editor = (props: EditorProps) => {
+	let editorEl: HTMLDivElement;
 
 	onMount(() => {
 		const view = new EditorView({ mount: editorEl }, {
 			domParser: DOMParser.fromSchema(schema),
-			state: EditorState.create({
-				schema,
-				plugins: [
-					history(),
-					keymap({
-						"Ctrl-z": undo,
-						"Ctrl-Shift-z": redo,
-						"Ctrl-y": redo,
-						"Ctrl-b": createWrap("**"),
-						"Ctrl-i": createWrap("*"),
-						"Ctrl-`": createWrap("`"),
-						"Ctrl-m": (state) => {
-							console.log(state.doc);
-							return false;
-						},
-						"Shift-Enter": (state, dispatch) => {
-							dispatch?.(state.tr.insertText("\n"));
-							return true;
-						},
-						"Enter": (state, dispatch) => {
-							const html = (md(state.doc.textContent.trim()) as string).trim();
-							// console.log({
-							//   text: state.doc.textContent,
-							//   html,
-							// });
-							// FIXME: marked adds extra newlines
-							// i might need to write my own parser
-							const res = props.onSubmit({
-								text: state.doc.textContent.trim(),
-								html,
-							});
-							// if (res !== false) dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
-							// return !!res;
-							// HACK: i don't know what this is, but i don't like it
-							dispatch?.(state.tr.deleteRange(0, state.doc.nodeSize - 2));
-							return true;
-						},
-						"Backspace": (state, dispatch) => {
-							const sel = state.tr.selection;
-							if (sel.empty) {
-								const pos = sel.$anchor.pos - 1;
-								if (pos >= 0) {
-									dispatch?.(state.tr.deleteRange(pos, pos + 1));
-								}
-							} else {
-								dispatch?.(state.tr.deleteSelection());
-							}
-							return true;
-						},
-					}),
-				],
-			}),
+			state: props.state,
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
@@ -157,195 +166,147 @@ export const Editor = (props: EditorProps) => {
 					]);
 				}
 
-				const decorations: Array<Decoration> = [];
-				let pos = 0;
-
-				// TODO(refactor): using marked for decorations is pretty brittle
-				function walk(ast: Token) {
+				function extraDecorations(ast: Token) {
 					switch (ast.type) {
-						case "paragraph":
-							ast.tokens?.forEach(walk);
-							return;
-						case "text": {
-							if ("tokens" in ast) {
-								ast.tokens?.forEach(walk);
-								return;
-							} else {
-								break;
-							}
-						}
 						case "heading": {
-							decorations.push(
-								Decoration.inline(pos + 1, pos + ast.depth + 1, {
-									class: "syn",
-								}),
-							);
-							decorations.push(
-								Decoration.inline(
-									pos + ast.depth + 1,
-									pos + ast.raw.length + 1,
-									{ class: "header" },
-								),
-							);
-							break;
+							return [{ attrs: { class: "text-fg5" }, start: 0, end: ast.depth }];
 						}
 						case "em": {
-							const end = pos + ast.raw.length + 1;
-							decorations.push(
-								Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
-							);
-							decorations.push(
-								Decoration.inline(pos + 2, end - 1, { nodeName: "em" }),
-							);
-							decorations.push(
-								Decoration.inline(end - 1, end, { class: "syn" }),
-							);
-							pos += 1;
-							ast.tokens?.forEach(walk);
-							pos += 1;
-							return;
-						}
-						case "strong": {
-							const end = pos + ast.raw.length + 1;
-							decorations.push(
-								Decoration.inline(pos + 1, pos + 3, { class: "syn" }),
-							);
-							decorations.push(
-								Decoration.inline(pos + 3, end - 2, { nodeName: "strong" }),
-							);
-							decorations.push(
-								Decoration.inline(end - 2, end, { class: "syn" }),
-							);
-							break;
+							return [
+								{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
+								{ attrs: { class: "italic" }, start: 1, end: ast.raw.length - 1 },
+								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+							];
 						}
 						case "link": {
 							if (ast.raw === ast.href) {
-								const hrefLen = ast.href.length;
-								decorations.push(
-									Decoration.inline(pos + 1, pos + hrefLen + 1, {
-										class: "link",
-									}),
-								);
+								return [{ attrs: { class: "text-[#b18cf3]" }, start: 0, end: ast.text.length }]
 							} else {
-								const textLen = ast.text.length;
-								const hrefLen = ast.href.length;
-								decorations.push(
-									Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
-								);
-								decorations.push(
-									Decoration.inline(pos + textLen + 2, pos + textLen + 4, {
-										class: "syn",
-									}),
-								);
-								decorations.push(
-									Decoration.inline(
-										pos + textLen + 4,
-										pos + textLen + hrefLen + 4,
-										{ class: "link" },
-									),
-								);
-								decorations.push(
-									Decoration.inline(
-										pos + textLen + hrefLen + 4,
-										pos + textLen + hrefLen + 5,
-										{ class: "syn" },
-									),
-								);
+								return [
+									{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
+									{ attrs: { class: "text-fg5" }, start: ast.text.length + 1, end: ast.text.length + 3 },
+									{ attrs: { class: "text-[#b18cf3]" }, start: ast.text.length + 3, end: ast.raw.length - 1 },
+									{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+								]
 							}
-							break;
 						}
-						// // @ts-ignore
-						// case "inlineKatex": {
-						//   const macroRegex = /\\\w+/gi;
-						//   const braceRegex = /\{\}/gi;
-						//   let match;
-						//   while (match = braceRegex.exec(ast.text)) {
-						//     decorations.push(Decoration.inline(pos + match.index + 2, pos + match.index + match[0].length + 2, { class: "syn" }));
-						//   }
-						//   while (match = macroRegex.exec(ast.text)) {
-						//     decorations.push(Decoration.inline(pos + match.index + 2, pos + match.index + match[0].length + 2, { class: "bold" }));
-						//   }
-						// }
-						case "codespan": {
-							const end = pos + ast.raw.length + 1;
-							decorations.push(
-								Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
-							);
-							decorations.push(
-								Decoration.inline(pos + 2, end - 1, { nodeName: "code" }),
-							);
-							decorations.push(
-								Decoration.inline(end - 1, end, { class: "syn" }),
-							);
-							break;
+						case "strong": {
+							return [
+								{ attrs: { class: "text-fg5" }, start: 0, end: 2 },
+								{ attrs: { class: "font-bold" }, start: 2, end: ast.raw.length - 2 },
+								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 2, end: ast.raw.length },
+							];
 						}
 						case "code": {
-							const end = pos + ast.raw.length + 1;
-							// FIXME: indented code blocks...
-							const syn = ast.raw.match(/(^`+)(.*)/);
-							if (!syn) break;
-							const synEndLen = ast.raw.match(/(`+\s*$)/)?.[0].length ?? 0;
-							const synLen = syn[1].length;
-							const codeLen = syn[2].length;
-							// syntax highlighting?
-							decorations.push(
-								Decoration.inline(pos + 1, pos + synLen + 1, { class: "syn" }),
-							);
-							decorations.push(
-								Decoration.inline(pos + synLen + codeLen + 2, end - synEndLen, {
-									nodeName: "pre",
-								}),
-							);
-							decorations.push(
-								Decoration.inline(end - synEndLen, end, { class: "syn" }),
-							);
-							break;
+							// does this work with indented code blocks?
+							const firstEnd = ast.raw.indexOf("\n");
+							return [
+								{ attrs: { class: "text-fg5" }, start: 0, end: firstEnd },
+								// { attrs: { nodeName: "pre" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
+								// { attrs: { class: "font-mono" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
+								{ attrs: { nodeName: "code" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
+								{ attrs: { class: "text-fg5" }, start: ast.text.length + firstEnd + 2, end: ast.raw.length },
+							];
 						}
-						case "blockquote": {
-							// // FIXME: breaks on multiline blockquotes "> foo\n> bar"
-							// const synLen = ast.raw.length - ast.text.length;
-							// decorations.push(Decoration.inline(pos, pos + synLen, { class: "syn" }));
-							// pos += synLen;
-							// ast.tokens?.forEach(walk);
+						case "codespan": {
+							return [
+								{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
+								{ attrs: { class: "px-[2px] bg-bg2", nodeName: "code" }, start: 1, end: ast.raw.length - 1 },
+								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+							];
+						}
+						// case "blockquote": {
+						// 	// // FIXME: breaks on multiline blockquotes "> foo\n> bar"
+						// 	// const synLen = ast.raw.length - ast.text.length;
+						// 	// decorations.push(Decoration.inline(pos, pos + synLen, { class: "syn" }));
+						// 	// pos += synLen;
+						// 	// ast.tokens?.forEach(walk);
 
-							// FIXME: format recursively using ast.tokens trickery or a better library
-							// console.log({ ast })
-							for (const line of ast.raw.split("\n")) {
-								// console.log({ pos, line })
-								if (line.startsWith(">")) {
-									decorations.push(
-										Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
-									);
-								}
-								pos += line.length + 1;
-								// ast.tokens?.forEach(walk);
-							}
-							return;
-						}
-						case "list": {
-							ast.items.forEach(walk);
-							return;
-						}
-						case "list_item": {
-							const endLen = ast.raw.match(/\n+$/)?.[0].length ?? 0;
-							const startLen = ast.raw.length - ast.text.length - endLen;
-							decorations.push(
-								Decoration.inline(pos, pos + startLen, { class: "syn" }),
-							);
-							pos += startLen;
-							ast.tokens?.forEach(walk);
-							pos += endLen;
-							return;
+						// 	// FIXME: format recursively using ast.tokens trickery or a better library
+						// 	// console.log({ ast })
+						// 	for (const line of ast.raw.split("\n")) {
+						// 		// console.log({ pos, line })
+						// 		if (line.startsWith(">")) {
+						// 			decorations.push(
+						// 				Decoration.inline(pos + 1, pos + 2, { class: "syn" }),
+						// 			);
+						// 		}
+						// 		pos += line.length + 1;
+						// 		// ast.tokens?.forEach(walk);
+						// 	}
+						// 	return;
+						// }
+						// case "list": {
+						// 	ast.items.forEach(walk);
+						// 	return;
+						// }
+						// case "list_item": {
+						// 	const endLen = ast.raw.match(/\n+$/)?.[0].length ?? 0;
+						// 	const startLen = ast.raw.length - ast.text.length - endLen;
+						// 	decorations.push(
+						// 		Decoration.inline(pos, pos + startLen, { class: "syn" }),
+						// 	);
+						// 	pos += startLen;
+						// 	ast.tokens?.forEach(walk);
+						// 	pos += endLen;
+						// 	return;
+						// }
+						default: {
+							return []
 						}
 					}
-					pos += ast.raw.length;
 				}
 
-				// console.log(md.lexer(state.doc.textContent));
-				md.lexer(state.doc.textContent).forEach(walk);
-				return DecorationSet.create(state.doc, decorations);
+				function getOffset(ty: string) {
+					switch (ty) {
+						case "strong": return 2;
+						case "em": return 1;
+						case "codespan": return 1;
+						default: return 0;
+					}
+				}
+
+				type A = { start: number, end: number, attrs: DecorationAttrs }
+				
+				function mapDecorations(ast: Token): { len: number, decorations: Array<A> } {
+					const decorations = [];
+					decorations.push(...extraDecorations(ast));
+					if ("tokens" in ast) {
+						decorations.push(...reduceDecorations(ast.tokens!, getOffset(ast.type)).decorations);
+					}
+					return {
+						decorations,
+						len: ast.raw.length
+					}
+				}
+
+				function reduceDecorations(tokens: Array<Token>, startPos = 0) {
+					return tokens.map(mapDecorations)
+						.reduce(({ pos, decorations }, i) => ({
+							pos: pos + i.len,
+							decorations: [
+								...decorations,
+								...i.decorations.map((j: A) => ({ start: j.start + pos, end: j.end + pos, attrs: j.attrs })),
+							],
+						}), { pos: startPos, decorations: [] as Array<A> });
+				}
+
+				/*
+				some nice colors from an old project
+				  --background-1: #24262b;
+  --background-2: #1e2024;
+  --background-3: #191b1d;
+  --background-4: #17181a;
+  --foreground-1: #eae8efcc;
+  --foreground-2: #eae8ef9f;
+  --foreground-link: #b18cf3;
+  --foreground-danger: #fa6261;
+*/
+
+				const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
+				return DecorationSet.create(state.doc, reduced.decorations.map(i => Decoration.inline(i.start, i.end, i.attrs)));
 			},
-			handlePaste(view, event, slice) {
+			handlePaste(view, _event, slice) {
 				// const files = event.clipboardData?.files ?? [];
 				// for (const file of files) props.onUpload?.(file);
 				const str = slice.content.textBetween(0, slice.size);
@@ -376,69 +337,70 @@ export const Editor = (props: EditorProps) => {
 				const tmp = document.createElement("x-html-import");
 				tmp.innerHTML = html;
 
-				const escape = (s: string) => s;
-				const replacements: Array<[string, (el: HTMLElement) => string]> = [
-					[
-						"b, bold, strong, [style*='font-weight:700']",
-						(el) => `**${el.textContent}**`,
-					],
-					[
-						"em, i, [style*='font-style:italic']",
-						(el) => `*${el.textContent}*`,
-					],
-					["a", (el) => `[${el.textContent}](${el.getAttribute("href")})`],
-					["code", (el) => `\`${el.textContent}\``],
-					...[1, 2, 3, 4, 5, 6].map((
-						level,
-					) => [
-						"h" + level,
-						(el: HTMLElement) => `${"#".repeat(level)} ${el.textContent}`,
-					]) as Array<any>,
-					[
-						"ul",
-						(el) =>
-							"\n" + [...el.children].map((i) =>
-								"- " + i.textContent
-							).join("\n") + "\n",
-					],
-					[
-						"ol",
-						(el) =>
-							"\n" + [...el.children].map((i, x) =>
-								(x + 1) + ". " + i.textContent
-							).join("\n") + "\n",
-					],
-					["blockquote", (el) => "\n> " + el.textContent + "\n\n"],
-					["br", () => "\n"],
-				];
+			  for (const node of tmp.querySelectorAll("script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " + ["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"].map(i => `[class*=${i}], [id*=${i}]`).join(", "))) {
+			    node.remove();
+			  }
 
-				// function walk(node, preserveSpace = false) {
-				function walk(node: HTMLElement, preserveSpace = true) {
-					// HACK: i don't know if some text should be pre formatted or not, so i assume not unless its in a pre
-					// but this might mangle text thats copied from within the app, since everything is preformatted
-					// DISABLED FOR NOW
-					node.childNodes.forEach((el) =>
-						walk(el as HTMLElement, node.nodeName === "PRE" ? true : preserveSpace)
-					);
-					if (node.nodeType === Node.TEXT_NODE) {
-						if (preserveSpace) {
-							node.replaceWith(escape(node.textContent ?? ""));
-						} else {
-							node.replaceWith(escape((node.textContent ?? "").replace(/\s+/g, " ")));
-						}
-						return;
-					}
-					for (const [match, fn] of replacements) {
-						if (node.matches(match)) {
-							node.replaceWith(fn(node));
-							break;
-						}
-					}
-				}
+		    function walk(n: Node): string {
+		    	console.log(n)
+			    if (n.nodeType === Node.COMMENT_NODE) return "";
+			    if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
+    
+			    // TODO: tables
+			    const c = [...n.childNodes];
+			    switch (n.nodeName) {
+			      case "BODY": case "MAIN": case "ARTICLE": case "HEADER": case "SECTION":
+			      case "DIV": case "TABLE": case "TBODY": case "THEAD": case "TR":
+			      case "TURBO-FRAME": case "TASK-LISTS": // github
+		      	case "X-HTML-IMPORT":
+			        return c.map(walk).join("");
+			      case "CENTER": case "SPAN": case "LI": case "TD": case "TH":
+			        return c.map(walk).join("");
+			      case "H1": return "\n\n# " + (n.textContent ?? "").trim() + "\n\n";
+			      case "H2": return "\n\n## " + (n.textContent ?? "").trim() + "\n\n";
+			      case "H3": return "\n\n### " + (n.textContent ?? "").trim() + "\n\n";
+			      case "H4": return "\n\n#### " + (n.textContent ?? "").trim() + "\n\n";
+			      case "H5": return "\n\n##### " + (n.textContent ?? "").trim() + "\n\n";
+			      case "H6": return "\n\n###### " + (n.textContent ?? "").trim() + "\n\n";
+			      case "P": return "\n\n" + c.map(walk).join("").trim() + "\n\n";
+			      case "B": case "BOLD": case "STRONG":
+			        return `**${c.map(walk).join("").trim()}**`;
+			      case "EM": case "I":
+			        return `*${c.map(walk).join("").trim()}*`;
+			      case "CODE":
+			        return `\`${c.map(walk).join("").trim()}\``;
+			      case "UL":
+			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map(i => `- ${i.trim()}`).join("\n")}\n`;
+			      case "OL":
+			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map((i, x) => `${x + 1}. ${i.trim()}`).join("\n")}\n`;
+			      case "A": {
+			      	const href = (n as Element).getAttribute("href");
+			      	const text = c.map(walk).join("").trim();
+			      	if (!text) return "\n";
+			      	if (!href) return text;
+			        return `[${text}](${href})`;
+			      }
+			      case "PRE": {
+			        const el = n as Element;
+			        const lang = el.getAttribute("lang") ?? el.getAttribute("language") ?? el.getAttribute("class")?.match(/\b(lang|language)-(.+)\b/)?.[2] ?? "";
+			        return `\n\n\`\`\`${lang}\n${n.textContent}\n\`\`\`\n\n`;
+			      }
+			      case "BLOCKQUOTE":
+			        return `\n\n${c.map(walk).join("").split("\n").map(i => `> ${i}`).join("\n")}\n\n`;
+			      // case "CITE":
+			      //   return n.textContent;
+			      default: {
+			        return n.textContent ?? "";
+			        // return `(??? ${n.nodeName} ???)`;
+			      }
+			    }
+			  }
 
-				walk(tmp);
-				console.log({ from: html, to: tmp.outerHTML });
-				return tmp.outerHTML;
+				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").trim();
+				console.log({ from: html, to: md });
+				const p = document.createElement("pre");
+				p.innerText = md;
+				return p.outerHTML;
 			},
 		});
 		view.focus();
@@ -454,7 +416,7 @@ export const Editor = (props: EditorProps) => {
 
 	return (
 		<div
-			class="bg-bg3 flex-1 border-[1px] border-sep px-[4px] whitespace-pre-wrap overflow-y-auto"
+			class={props.class + " bg-bg3 flex-1 border-[1px] border-sep px-[4px] whitespace-pre-wrap overflow-y-auto"}
 			classList={{ "bg-bg4": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}

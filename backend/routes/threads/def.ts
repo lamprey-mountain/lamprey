@@ -8,6 +8,9 @@ export const ThreadCreate = createRoute({
 	summary: "Thread create",
 	tags: ["thread"],
 	request: {
+		params: z.object({
+			room_id: RoomId,
+		}),
 		body: {
 			content: {
 				"application/json": {
@@ -34,6 +37,11 @@ export const ThreadList = createPagination({
 	path: "/api/v1/rooms/{room_id}/threads",
 	summary: "Thread list",
 	tags: ["thread"],
+	request: {
+		params: z.object({
+			room_id: RoomId,
+		}),
+	},
 	pagination: {
 		id: ThreadId,
 		ty: Thread,

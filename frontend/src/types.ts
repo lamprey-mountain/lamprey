@@ -16,13 +16,16 @@ export type ThreadT = {
 }
 
 export type MessageT = {
+	type: MessageType,
 	id: string,
 	thread_id: string,
 	version_id: string,
+	override_name: string | null,
 	reply_id: string | null,
 	nonce: string | null,
 	content: string | null,
 	author: UserT,
+	metadata: any,
 }
 
 export type UserT = {
@@ -60,4 +63,9 @@ export type Pagination<T> = {
 	count: number,
 	items: Array<T>,
 	has_more: boolean,
+}
+
+export enum MessageType {
+	Default = 0,
+	ThreadUpdate = 1,
 }

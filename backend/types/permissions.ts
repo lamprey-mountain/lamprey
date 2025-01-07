@@ -7,6 +7,7 @@ export const PermissionAssignable = z.enum([
 	"ThreadManage",
 	"ThreadDelete",
 	"MessageCreate",
+	"MessageMasquerade",
 	"MessageFilesEmbeds",
 	"MessagePin",
 	"MessageDelete",
@@ -19,6 +20,17 @@ export const PermissionAssignable = z.enum([
 	"RoleManage",
 	"RoleApply",
 ]).describe("permissions that can be assigned through a role").openapi("PermissionAssignable");
+
+// thread permissions?
+// "ThreadManage",
+// "ThreadDelete",
+// "MessageCreate",
+// "MessageFilesEmbeds",
+// "MessagePin",
+// "MessageDelete",
+// "MessageMassMention",
+// "ThreadMemberManage",
+// "ThreadMemberAdd",
 
 export const PermissionSystem = z.enum([
 	"View",

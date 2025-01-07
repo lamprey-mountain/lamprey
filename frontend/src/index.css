@@ -217,3 +217,32 @@
     /* }, */
   /* }, */
 /* } */
+
+.markdown s {
+	text-decoration: strikethrough;
+}
+
+.markdown ul, .markdown ol {
+	white-space: pre-wrap;
+}
+
+.markdown ul {
+	list-style: disc;
+}
+
+.markdown ol {
+	list-style: numbered;
+}
+
+.markdown ul, .markdown ol {
+	white-space: normal;
+}
+
+.markdown li, .markdown p {
+	white-space: pre-wrap;
+}
+
+.markdown a {
+	color: #b18cf3;
+	text-decoration: underline;
+}

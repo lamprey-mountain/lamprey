@@ -27,6 +27,9 @@ export const MessageClient = z.union([
 	z.object({ type: z.literal("pong") }),
 ]);
 
+// const MessageRoom = z.union([
+// ]);
+
 export const MessageServer = z.union([
 	z.object({ type: z.literal("ping") }),
 	z.object({ type: z.literal("ready"), user: User }),

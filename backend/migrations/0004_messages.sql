@@ -1,4 +1,5 @@
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE IF NOT EXISTS message (
+    type INT NOT NULL,
     id UUID NOT NULL,
     thread_id UUID NOT NULL,
     version_id UUID PRIMARY KEY,
@@ -8,7 +9,9 @@ CREATE TABLE IF NOT EXISTS messages (
     metadata JSONB,
     reply_id UUID,
     author_id UUID NOT NULL,
-    FOREIGN KEY (thread_id) REFERENCES threads(id),
-    FOREIGN KEY (author_id) REFERENCES users(id)
+    override_name TEXT,
+    -- deleted_at INT,
+    FOREIGN KEY (thread_id) REFERENCES thread(id),
+    FOREIGN KEY (author_id) REFERENCES usr(id)
     -- FOREIGN KEY (reply) REFERENCES messages(id)
 );

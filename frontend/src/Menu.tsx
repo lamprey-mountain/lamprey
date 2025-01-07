@@ -2,7 +2,8 @@ import { For, JSX, ParentProps, VoidProps, createSignal, useContext } from "soli
 import { Portal, Show } from "solid-js/web";
 import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
-import { chatctx } from "./context.ts";
+import { chatctx, useCtx } from "./context.ts";
+import { MessageT, RoomT, ThreadT } from "./types.ts";
 
 const CLASS_SUBTEXT = "text-fg5 text-sm mt-[-4px]";
 
@@ -68,7 +69,9 @@ export function Separator() {
 }
 
 // the context menu for rooms
-export function RoomMenu() {
+export function RoomMenu(props: { room: RoomT }) {
+  const copyId = () => navigator.clipboard.writeText(props.room.id);
+  
   return (
     <Menu>
       <Item>mark as read</Item>
@@ -83,7 +86,7 @@ export function RoomMenu() {
       </Submenu>
       <Item>leave</Item>
       <Separator />
-      <Item>copy id</Item>
+      <Item onClick={copyId}>copy id</Item>
       <Item>inspect</Item>
     </Menu>
   )
@@ -91,17 +94,17 @@ export function RoomMenu() {
 
 // the context menu for users
 export function UserMenu() {
-      // <Item>block</Item>
-      // <Item>dm</Item>
-      // <Separator />
-      // <Item>kick</Item>
-      // <Item>ban</Item>
-      // <Item>mute</Item>
-      // <Item>roles</Item>
-      // <Separator />
-      // <Item>copy id</Item>
   return (
     <Menu>
+      <Item>block</Item>
+      <Item>dm</Item>
+      <Separator />
+      <Item>kick</Item>
+      <Item>ban</Item>
+      <Item>mute</Item>
+      <Item>roles</Item>
+      <Separator />
+      <Item>copy id</Item>
     </Menu>
   )
 }
@@ -186,49 +189,54 @@ function RoomNotificationMenu() {
 }
 
 // the context menu for threads
-export function ThreadMenu() {
-      // <Item>mark as read</Item>
-      // <Item>copy link</Item>
-      // <ThreadNotificationMenu />
-      // <Separator />
-      // <Submenu content={"edit"}>
-      //   <Item>info</Item>
-      //   <Item>permissions</Item>
-      //   <Submenu content={"tags"}>
-      //     <Item>foo</Item>
-      //     <Item>bar</Item>
-      //     <Item>baz</Item>
-      //   </Submenu>
-      // </Submenu>
-      // <Item>pin</Item>
-      // <Item>close</Item>
-      // <Item>lock</Item>
-      // <Item>delete</Item>
-      // <Separator />
-      // <Item>copy id</Item>
-      // <Item>view source</Item>
+export function ThreadMenu(props: { thread: ThreadT }) {
+  const copyId = () => navigator.clipboard.writeText(props.thread.id);
+  
   return (
     <Menu>
+      <Item>mark as read</Item>
+      <Item>copy link</Item>
+      <ThreadNotificationMenu />
+      <Separator />
+      <Submenu content={"edit"}>
+        <Item>info</Item>
+        <Item>permissions</Item>
+        <Submenu content={"tags"}>
+          <Item>foo</Item>
+          <Item>bar</Item>
+          <Item>baz</Item>
+        </Submenu>
+      </Submenu>
+      <Item>pin</Item>
+      <Item>close</Item>
+      <Item>lock</Item>
+      <Item>delete</Item>
+      <Separator />
+      <Item onClick={copyId}>copy id</Item>
+      <Item>view source</Item>
     </Menu>
   )
 }
 
 // the context menu for messages
-export function MessageMenu() {
-      // <Item>mark unread</Item>
-      // {
-      //   // <Item>copy link</Item>
-      // }
-      // <Item>reply</Item>
-      // <Item>edit</Item>
-      // <Item>fork</Item>
-      // <Item>pin</Item>
-      // <Item>redact</Item>
-      // <Separator />
-      // <Item>copy id</Item>
-      // <Item>view source</Item>
+// should i have a separate one for bulk messages?
+export function MessageMenu(props: { message: MessageT }) {
+  const ctx = useCtx();
+  const copyId = () => navigator.clipboard.writeText(props.message.id);
+  const setReply = () => ctx.dispatch({ do: "editor.reply", thread_id: props.message.thread_id, reply_id: props.message.id });
+  
   return (
     <Menu>
+      <Item>mark unread</Item>
+      <Item>copy link</Item>
+      <Item onClick={setReply}>reply</Item>
+      <Item>edit</Item>
+      <Item>fork</Item>
+      <Item>pin</Item>
+      <Item>redact</Item>
+      <Separator />
+      <Item onClick={copyId}>copy id</Item>
+      <Item>view source</Item>
     </Menu>
   )
 }

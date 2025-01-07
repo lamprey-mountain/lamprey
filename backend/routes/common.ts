@@ -83,18 +83,18 @@ type PaginationConfig = Omit<RouteConfig, "responses"> & {
 	query?: z.AnyZodObject,
 }
 
-export const createPagination = (config: PaginationConfig) => createRoute({
+export const createPagination = ({ pagination, query, ...config }: PaginationConfig) => createRoute({
 	...config,
 	request: {
 		...config.request,
 		query: z.object({
-			from: config.pagination.id.optional(),
-			to: config.pagination.id.optional(),
+			from: pagination.id.optional(),
+			to: pagination.id.optional(),
 			dir: z.enum(["f", "b"]),
 			limit: z.string().default("10").transform((i) => parseInt(i, 10)).pipe(
 				Uint.min(1).max(100),
 			),
-		}).merge(config.query ?? z.object({})),
+		}).merge(query ?? z.object({})),
 	},
 	responses: {
 		...common,
@@ -103,7 +103,7 @@ export const createPagination = (config: PaginationConfig) => createRoute({
 			content: {
 				"application/json": {
 					schema: z.object({
-						items: config.pagination.ty.array(),
+						items: pagination.ty.array(),
 						total: Uint,
 						has_more: z.boolean(),
 					}),

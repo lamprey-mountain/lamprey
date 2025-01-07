@@ -1,5 +1,5 @@
-CREATE OR REPLACE VIEW messages_coalesced AS
+CREATE OR REPLACE VIEW message_coalesced AS
     SELECT *
     FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY id ORDER BY version_id DESC) AS row_num
-        FROM messages)
+        FROM message)
     WHERE row_num = 1;

@@ -1,5 +1,5 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
-import { Room, RoomId, Session, SessionId, SessionPatch } from "../../types.ts";
+import { Room, RoomId, Session, SessionId, SessionPatch, SessionToken } from "../../types.ts";
 import { common } from "../common.ts";
 
 export const SessionCreate = createRoute({
@@ -22,7 +22,9 @@ export const SessionCreate = createRoute({
 			description: "created",
 			content: {
 				"application/json": {
-					schema: Session,
+					schema: Session.extend({
+						token: SessionToken,
+					}),
 				},
 			},
 		},
@@ -93,38 +95,7 @@ export const SessionDelete = createRoute({
 	tags: ["sessions"],
 	request: {
 		params: z.object({
-			session_id: SessionId,
-		}),
-	},
-	responses: {
-		...common,
-		204: {
-			description: "success",
-		},
-	},
-});
-
-export const SessionDeleteSelf = createRoute({
-	method: "delete",
-	path: "/api/v1/sessions/@self",
-	summary: "Session delete self",
-	tags: ["sessions"],
-	responses: {
-		...common,
-		204: {
-			description: "success",
-		},
-	},
-});
-
-export const SessionDeleteAll = createRoute({
-	method: "delete",
-	path: "/api/v1/sessions/@all",
-	summary: "Session delete all",
-	tags: ["sessions"],
-	request: {
-		params: z.object({
-			session_id: z.literal("@all"),
+			session_id: SessionId.or(z.literal("@self")).or(z.literal("@all")),
 		}),
 	},
 	responses: {
@@ -142,27 +113,9 @@ export const SessionGet = createRoute({
 	tags: ["sessions"],
 	request: {
 		params: z.object({
-			session_id: SessionId,
+			session_id: SessionId.or(z.literal("@self")),
 		}),
 	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: Session,
-				},
-			},
-		},
-	},
-});
-
-export const SessionGetSelf = createRoute({
-	method: "get",
-	path: "/api/v1/sessions/@self",
-	summary: "Session get self",
-	tags: ["sessions"],
 	responses: {
 		...common,
 		200: {

@@ -1,8 +1,8 @@
-import { useContext, For, Show } from "solid-js";
-import { chatctx } from "./context.ts";
+import { For, Show } from "solid-js";
+import { useCtx } from "./context.ts";
 
 export const ChatNav = () => {
-	const ctx = useContext(chatctx)!;
+	const ctx = useCtx();
 	const v = ctx.data.view;
 	const roomId = () => (v.view === "room" || v.view === "room-settings" || v.view === "thread") ? v.room.id : null;
 	const threadId = () => v.view === "thread" ? v.thread.id : null;
@@ -24,7 +24,7 @@ export const ChatNav = () => {
 								class="px-1 py-0.25 w-full text-left hover:bg-bg4"
 								classList={{ "bg-bg3": isRoomSelected(room.id) }}
 								onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
-								onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "room", x: e.x, y: e.y }})}}
+								onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "room", x: e.x, y: e.y, room }})}}
 							>{room.name}</button>
 							<Show when={isRoomSelected(room.id)}>
 								<ul class="ml-6">
@@ -34,13 +34,6 @@ export const ChatNav = () => {
 											classList={{ "bg-bg3": v.view === "room" }}
 											onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
 										>home</button>
-									</li>
-									<li class="mt-1">
-										<button
-											class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-											classList={{ "bg-bg3": v.view === "room-settings" }}
-											onClick={() => ctx.dispatch({ do: "setView", to: { view: "room-settings", room }})}
-										>settings</button>
 									</li>
 									<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === roomId())}>
 										{(thread) => (
@@ -52,7 +45,7 @@ export const ChatNav = () => {
 														"text-sep": thread.is_closed,
 													}}
 													onClick={() => ctx.dispatch({ do: "setView", to: { view: "thread", room, thread }})}
-													onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "thread", x: e.x, y: e.y }})}}
+													onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "thread", x: e.x, y: e.y, thread }})}}
 												>{thread.name}</button>
 											</li>
 										)}

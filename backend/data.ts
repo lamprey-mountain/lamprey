@@ -1,17 +1,15 @@
 // TODO: rename this to globals.ts
-import { DB } from "https://deno.land/x/sqlite@v3.9.1/mod.ts";
 import { MessageServer } from "./types/sync.ts";
 import { z } from "@hono/zod-openapi";
-import { Invite, Member, Message, MessagePatch, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, User, UserPatch } from "./types.ts";
-// import { RoomFromDb } from "./types/db.ts";
-import EventEmitter from "events";
+import { Invite, Member, Message, MessagePatch, MessageType, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, ThreadType, User, UserPatch } from "./types.ts";
+import EventEmitter from "node:events";
 export * as discord from "./oauth2.ts";
 
 // HACK: https://github.com/andywer/typed-emitter/issues/39
 import TypedEventEmitter, { EventMap } from "typed-emitter";
 type TypedEmitter<T extends EventMap> = TypedEventEmitter.default<T>;
 
-import { Pool, PoolClient, Transaction } from "postgres";
+import { Pool } from "postgres";
 import { uuidv7 } from "uuidv7";
 import { MemberFromDb, MessageFromDb, ThreadFromDb, UserFromDb } from "./types/db.ts";
 import { UUID_MAX, UUID_MIN } from "./util.ts";
@@ -22,12 +20,21 @@ const db = new Pool({
 	port: Deno.env.get("PG_PORT")!,
 	user: Deno.env.get("PG_USER")!,
 	password: Deno.env.get("PG_PASSWORD")!,
+	controls: {
+		debug: {
+			notices: true,
+			queries: true,
+			queryInError: true,
+			results: true,
+		}
+	}
 }, 8);
 
 {
 	const migrations = [...Deno.readDirSync("migrations")].sort((a, b) => a.name > b.name ? 1 : -1)
 	using q = await db.connect();
 	for (const migration of migrations) {
+		console.log(`migrate ${migration.name}`);
 		const sql = await Deno.readTextFile(`migrations/${migration.name}`);
 		await q.queryObject(sql);
 	}
@@ -47,15 +54,8 @@ export const events = new EventEmitter() as TypedEmitter<Events>;
 export type HonoEnv = {
 	Variables: {
 		session_id: string;
+		session_status: number;
 		user_id: string;
-		// session_level: number;
-		room?: RoomT,
-		thread?: ThreadT,
-		message?: MessageT,
-		member?: MemberT,
-		member_self?: MemberT,
-		user?: UserT,
-		user_self?: UserT,
 		permissions: Permissions,
 	};
 };
@@ -103,11 +103,11 @@ type UserPatchExtraT = {
 	can_fork?: boolean,
 }
 
-type MessageExtraPatchT = {
+type MessagePatchExtraT = {
+  type: MessageType,
   id: string,
   thread_id: string,
   version_id: string,
-  ordering: number,
   author_id: string,
 }
 
@@ -124,7 +124,7 @@ type RolePatchExtraT = {
 }
 
 type Database = {
-	sessionInsert(patch: SessionInsertT): Awaitable<SessionT>;
+	sessionInsert(patch: SessionInsertT): Awaitable<SessionT & { token: string }>;
 	sessionSelect(id: string): Awaitable<SessionT | null>;
 	sessionSelectByToken(token: string): Awaitable<SessionT | null>;
 	sessionDelete(id: string): Awaitable<void>;
@@ -138,10 +138,10 @@ type Database = {
 	roomUpdate(id: string, name?: string | null, description?: string | null): Awaitable<RoomT | null>;
 	roomList(user_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<RoomT>>;
 	threadSelect(id: string): Awaitable<ThreadT | null>;
-	threadInsert(id: string, creator_id: string, room_id: string, patch: Required<ThreadPatchT>): Awaitable<ThreadT>;
+	threadInsert(id: string, creator_id: string, room_id: string, ttype: ThreadType, patch: Required<ThreadPatchT>): Awaitable<ThreadT>;
 	threadUpdate(id: string, patch: ThreadPatchT): Awaitable<ThreadT | null>;
 	threadList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<ThreadT>>;
-	messageInsert(patch: MessagePatchT, extra: MessageExtraPatchT): Awaitable<MessageT>;
+	messageInsert(patch: MessagePatchT, extra: MessagePatchExtraT): Awaitable<MessageT>;
 	messageList(thread_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
@@ -161,6 +161,7 @@ type Database = {
 	roleUpdate(room_id: string, role_id: string, patch: RolePatchT): Awaitable<RoleT | null>;
 	permissionReadRoom(user_id: string, room_id: string): Awaitable<Permissions>;
 	permissionReadThread(user_id: string, thread_id: string): Awaitable<Permissions>;
+	applyDefaultRoles(user_id: string, room_id: string): Awaitable<void>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -183,20 +184,20 @@ export class Permissions extends Set<PermissionT> {
 export const data: Database = {
 	async userSelect(id) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM users WHERE id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM usr WHERE id = ${id}`;
 		if (!d.rows[0]) return null;
 		return UserFromDb.parse(d.rows[0]);
 	},
 	async userSelectByDiscordId(id) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM users WHERE discord_id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM usr WHERE discord_id = ${id}`;
 		if (!d.rows[0]) return null;
 		return UserFromDb.parse(d.rows[0]);
 	},
 	async userInsert(id, patch, extra) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      INSERT INTO users (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
+      INSERT INTO usr (id, parent_id, name, description, status, is_bot, is_alias, is_system, can_fork, discord_id)
 			VALUES (${id}, ${extra.parent_id}, ${patch.name}, ${patch.description}, ${patch.status}, ${patch.is_bot ?? false}, ${patch.is_alias ?? false}, ${extra.is_system ?? false}, ${extra.can_fork ?? false}, ${extra.discord_id})
 			RETURNING *
 		`;
@@ -206,14 +207,14 @@ export const data: Database = {
 		using q = await db.connect();
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
-		const oldr = await tx.queryObject`SELECT * FROM users WHERE id = ${id}`;
+		const oldr = await tx.queryObject`SELECT * FROM usr WHERE id = ${id}`;
 		if (!oldr.rows[0]) {
 			await tx.rollback();
 			return null;			
 		}
 		const old = UserFromDb.parse(oldr.rows[0]);
 		const d = await tx.queryObject`
-			UPDATE users SET
+			UPDATE usr SET
 				name = ${patch.name === undefined ? old.name : patch.name},
 				description = ${patch.description === undefined ? old.description : patch.description},
 				status = ${patch.status === undefined ? old.status : patch.status},
@@ -230,26 +231,26 @@ export const data: Database = {
       VALUES (${patch.id}, ${patch.user_id}, ${patch.token}, ${patch.status})
 			RETURNING *
 		`;
-		return Session.parse(d.rows[0]);
+		return { ...Session.parse(d.rows[0]), token: patch.token };
 	},
 	async userDelete(id) {
 		using q = await db.connect();
-		await q.queryObject`DELETE FROM users WHERE id = ${id}`;
+		await q.queryObject`DELETE FROM usr WHERE id = ${id}`;
 	},
 	async sessionDelete(id) {
 		using q = await db.connect();
-		await q.queryObject`DELETE FROM users WHERE id = ${id}`;
+		await q.queryObject`DELETE FROM session WHERE id = ${id}`;
 	},
 	async roomSelect(id: string) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM rooms WHERE id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM room WHERE id = ${id}`;
 		if (!d.rows[0]) return null;
 		return Room.parse(d.rows[0]);
 	},
 	async roomInsert(id, name, description) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-			INSERT INTO rooms (id, name, description) VALUES (${id}, ${name}, ${description}) RETURNING *
+			INSERT INTO room (id, name, description) VALUES (${id}, ${name}, ${description}) RETURNING *
 		`;
 		return Room.parse(d.rows[0]);
   },
@@ -257,14 +258,14 @@ export const data: Database = {
 		using q = await db.connect();
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
-		const { rows: [roomr] } = await tx.queryObject`SELECT * FROM rooms WHERE id = ${id}`;
+		const { rows: [roomr] } = await tx.queryObject`SELECT * FROM room WHERE id = ${id}`;
 		if (!roomr) {
 			await tx.rollback();
 			return null;			
 		}
 		const room = Room.parse(roomr);
 		const d = await tx.queryObject`
-			UPDATE rooms SET
+			UPDATE room SET
 				name = ${name === undefined ? room.name : name},
 				description = ${description === undefined ? room.description : description}
 			WHERE id = ${id}
@@ -280,13 +281,13 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT rooms.* FROM room_members
-			JOIN rooms ON room_members.room_id = rooms.id
-			WHERE room_members.user_id = ${user_id} AND rooms.id > ${after} AND rooms.id < ${before}
-			ORDER BY (CASE WHEN ${dir} = 'f' THEN rooms.id END), rooms.id DESC LIMIT ${limit + 1}
+			SELECT room.* FROM room_member
+			JOIN room ON room_member.room_id = room.id
+			WHERE room_member.user_id = ${user_id} AND room.id > ${after} AND room.id < ${before}
+			ORDER BY (CASE WHEN ${dir} = 'f' THEN room.id END), room.id DESC LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM room_members WHERE room_members.user_id = ${user_id}
+			SELECT count(*)::int FROM room_member WHERE room_member.user_id = ${user_id}
 		`;
 		await tx.rollback();
 		const items = rows
@@ -301,15 +302,15 @@ export const data: Database = {
   },
 	async threadSelect(id: string) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM threads WHERE id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM thread WHERE id = ${id}`;
 		if (!d.rows[0]) return null;
 		return ThreadFromDb.parse(d.rows[0]);
 	},
-	async threadInsert(id, creator_id, room_id, { name, description, is_closed, is_locked }) {
+	async threadInsert(id, creator_id, room_id, ttype, { name, description, is_closed, is_locked }) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-			INSERT INTO threads (id, creator_id, room_id, name, description, is_closed, is_locked)
-			VALUES (${id}, ${creator_id}, ${room_id}, ${name}, ${description}, ${is_closed ?? false}, ${is_locked ?? false})
+			INSERT INTO thread (id, creator_id, room_id, name, description, is_closed, is_locked, type)
+			VALUES (${id}, ${creator_id}, ${room_id}, ${name}, ${description}, ${is_closed ?? false}, ${is_locked ?? false}, ${ttype})
 			RETURNING *
 		`;
 		return ThreadFromDb.parse(d.rows[0]);
@@ -318,14 +319,14 @@ export const data: Database = {
 		using q = await db.connect();
 		const tx = q.createTransaction("threadupdate" + uuidv7());
 		await tx.begin();
-		const { rows: [threadData] } = await tx.queryObject`SELECT * FROM threads WHERE id = ${id}`;
+		const { rows: [threadData] } = await tx.queryObject`SELECT * FROM thread WHERE id = ${id}`;
 		if (!threadData) {
 			await tx.rollback();
 			return null;
 		}
 		const thread = ThreadFromDb.parse(threadData);
 		const d = await tx.queryObject`
-			UPDATE threads SET
+			UPDATE thread SET
 				name = ${name === undefined ? thread.name : name},
 				description = ${description === undefined ? thread.description : description},
 				is_locked = ${is_locked === undefined ? thread.is_locked : is_locked},
@@ -343,12 +344,12 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT * FROM threads
+			SELECT * FROM thread
 			WHERE room_id = ${room_id} AND id > ${after} AND id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'F' THEN id END), id DESC LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM threads WHERE room_id = ${room_id}
+			SELECT count(*)::int FROM thread WHERE room_id = ${room_id}
 		`;
 		await tx.rollback();
 		const threads = rows
@@ -363,13 +364,13 @@ export const data: Database = {
   },
   async sessionSelect(id) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM sessions WHERE id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM session WHERE id = ${id}`;
 		if (!d.rows[0]) return null;
 		return Session.parse(d.rows[0]);
   },
   async sessionSelectByToken(token) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM sessions WHERE token = ${token}`;
+		const d = await q.queryObject`SELECT * FROM session WHERE token = ${token}`;
 		if (!d.rows[0]) return null;
 		return Session.parse(d.rows[0]);
   },
@@ -377,20 +378,20 @@ export const data: Database = {
 		using q = await db.connect();
 		const d = await q.queryObject`
 			WITH inserted AS (
-		    INSERT INTO messages (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id)
-		    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, ${extra.ordering}, ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id})
+		    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
+		    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, (SELECT coalesce(count, 0) FROM message_count WHERE thread_id = ${extra.thread_id}), ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id}, ${extra.type}, ${patch.override_name})
 				RETURNING *
 			)
-			SELECT inserted.*, row_to_json(users) AS author FROM inserted
-			JOIN users ON users.id = inserted.author_id
+			SELECT inserted.*, row_to_json(usr) AS author FROM inserted
+			JOIN usr ON usr.id = inserted.author_id
 		`;
 		return MessageFromDb.parse(d.rows[0]);
   },
   async messageSelect(thread_id, message_id) {
 		using q = await db.connect();
 		const { rows } = await q.queryObject`
-			SELECT msg.*, row_to_json(users) as author FROM messages AS msg
-			JOIN users ON users.id = msg.author_id
+			SELECT msg.*, row_to_json(usr) as author FROM message AS msg
+			JOIN usr ON usr.id = msg.author_id
 			WHERE thread_id = ${thread_id} AND msg.id = ${message_id}
 		`;
 		if (!rows[0]) return null;
@@ -403,13 +404,13 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT msg.*, row_to_json(users) as author FROM messages_coalesced AS msg
-			JOIN users ON users.id = msg.author_id
+			SELECT msg.*, row_to_json(usr) as author FROM message_coalesced AS msg
+			JOIN usr ON usr.id = msg.author_id
 			WHERE thread_id = ${thread_id} AND msg.id > ${after} AND msg.id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'b' THEN msg.id END) DESC, msg.id LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM messages_coalesced WHERE thread_id = ${thread_id}
+			SELECT count(*)::int FROM message_coalesced WHERE thread_id = ${thread_id}
 		`;
 		await tx.rollback();
 		const messages = rows
@@ -425,7 +426,7 @@ export const data: Database = {
   async memberInsert(user_id, base) {
 		using q = await db.connect();
 		await q.queryObject`
-      INSERT INTO room_members (user_id, room_id, membership)
+      INSERT INTO room_member (user_id, room_id, membership)
 			VALUES (${user_id}, ${base.room_id}, ${base.membership})
 		`;
 		return (await data.memberSelect(base.room_id, user_id))!;
@@ -433,7 +434,7 @@ export const data: Database = {
   async memberSelect(room_id, user_id) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      SELECT * FROM members_json WHERE user_id = ${user_id} AND room_id = ${room_id}
+      SELECT * FROM member_json WHERE user_id = ${user_id} AND room_id = ${room_id}
 		`;
 		if (!d.rows[0]) return null;
 		return MemberFromDb.parse(d.rows[0]);
@@ -441,8 +442,8 @@ export const data: Database = {
   async roleInsert(base, extra) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      INSERT INTO roles (id, room_id, name, description, permissions)
-			VALUES (${extra.id}, ${extra.room_id}, ${base.name}, ${base.description}, ${base.permissions ?? []})
+      INSERT INTO role (id, room_id, name, description, permissions, is_mentionable, is_self_applicable, is_default)
+			VALUES (${extra.id}, ${extra.room_id}, ${base.name}, ${base.description}, ${base.permissions ?? []}, ${base.is_mentionable ?? false}, ${base.is_self_applicable ?? false}, ${base.is_default ?? false})
 			RETURNING *
 		`;
 		return Role.parse(d.rows[0]);
@@ -450,21 +451,21 @@ export const data: Database = {
   async roleApplyInsert(role_id, user_id) {
 		using q = await db.connect();
 		await q.queryObject`
-      INSERT INTO roles_members (user_id, role_id)
+      INSERT INTO role_member (user_id, role_id)
 			VALUES (${user_id}, ${role_id})
 		`;
   },
   async roleApplyDelete(role_id, user_id) {
 		using q = await db.connect();
 		await q.queryObject`
-      DELETE FROM roles_members
+      DELETE FROM role_member
 			WHERE user_id = ${user_id} AND role_id = ${role_id}
 		`;
   },
   async inviteInsertRoom(room_id, creator_id, code) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      INSERT INTO invites (target_type, target_id, code, creator_id)
+      INSERT INTO invite (target_type, target_id, code, creator_id)
 			VALUES ('room', ${room_id}, ${code}, ${creator_id})
 			RETURNING *
 		`;
@@ -473,7 +474,7 @@ export const data: Database = {
   async inviteSelect(code) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-      SELECT * FROM invites WHERE code = ${code}
+      SELECT * FROM invite WHERE code = ${code}
 		`;
 		return Invite.parse(d.rows[0]);
   },
@@ -484,12 +485,12 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-      SELECT * FROM members_json
+      SELECT * FROM member_json
 			WHERE room_id = ${room_id} AND user_id > ${after} AND user_id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'b' THEN user_id END) DESC, user_id LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM members_json WHERE room_id = ${room_id}
+			SELECT count(*)::int FROM member_json WHERE room_id = ${room_id}
 		`;
 		await tx.rollback();
 		const items = rows
@@ -509,12 +510,12 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-      SELECT * FROM roles
+      SELECT * FROM role
 			WHERE room_id = ${room_id} AND id > ${after} AND id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'b' THEN id END) DESC, id LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM roles WHERE room_id = ${room_id}
+			SELECT count(*)::int FROM role WHERE room_id = ${room_id}
 		`;
 		await tx.rollback();
 		const items = rows
@@ -529,7 +530,7 @@ export const data: Database = {
   },
   async inviteDelete(code) {
 		using q = await db.connect();
-		await q.queryObject`DELETE FROM invites WHERE code = ${code}`;
+		await q.queryObject`DELETE FROM invite WHERE code = ${code}`;
   },
   async inviteList(room_id, { dir, from, to, limit }) {
 		const after = (dir === "f" ? from : to) ?? "";
@@ -538,12 +539,12 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT * FROM invites
+			SELECT * FROM invite
 			WHERE target_type = 'room' AND target_id = ${room_id} AND code::bytea > ${after} AND code::bytea < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'f' THEN code::bytea END), code::bytea DESC LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM invites WHERE target_type = 'room' AND target_id = ${room_id}
+			SELECT count(*)::int FROM invite WHERE target_type = 'room' AND target_id = ${room_id}
 		`;
 		await tx.rollback();
 		const items = rows
@@ -558,12 +559,12 @@ export const data: Database = {
   },
   async roleDelete(room_id, role_id) {
 		using q = await db.connect();
-		await q.queryObject`DELETE FROM roles WHERE room_id = ${room_id} AND id = ${role_id}`;
+		await q.queryObject`DELETE FROM role WHERE room_id = ${room_id} AND id = ${role_id}`;
   },
   async roleSelect(room_id, role_id) {
 		using q = await db.connect();
 		const d = await q.queryObject`
-			SELECT * FROM roles WHERE room_id = ${room_id} AND id = ${role_id}
+			SELECT * FROM role WHERE room_id = ${room_id} AND id = ${role_id}
 		`;
 		return Role.parse(d.rows[0]);
   },
@@ -571,17 +572,20 @@ export const data: Database = {
 		using q = await db.connect();
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
-		const { rows: [roler] } = await tx.queryObject`SELECT * FROM roles WHERE room_id = ${room_id} AND id = ${role_id}`;
+		const { rows: [roler] } = await tx.queryObject`SELECT * FROM role WHERE room_id = ${room_id} AND id = ${role_id}`;
 		if (!roler) {
 			await tx.rollback();
 			return null;			
 		}
 		const role = Role.parse(roler);
 		const d = await tx.queryObject`
-			UPDATE rooms SET
+			UPDATE role SET
 				name = ${patch.name === undefined ? role.name : patch.name},
 				description = ${patch.description === undefined ? role.description : patch.description},
-				permissions = ${patch.permissions === undefined ? role.permissions : patch.permissions}
+				permissions = ${patch.permissions === undefined ? role.permissions : patch.permissions},
+				is_mentionable = ${patch.is_mentionable === undefined ? role.is_mentionable : patch.is_mentionable},
+				is_self_applicable = ${patch.is_self_applicable === undefined ? role.is_self_applicable : patch.is_self_applicable},
+				is_default = ${patch.is_default === undefined ? role.is_default : patch.is_default}
 			WHERE room_id = ${room_id} AND id = ${role_id}
 			RETURNING *
 		`;
@@ -591,7 +595,7 @@ export const data: Database = {
   async permissionReadRoom(user_id, room_id) {
 		using q = await db.connect();
   	const { rows } = await q.queryObject<{ permission: PermissionT }>`
-  		SELECT DISTINCT permission FROM room_member_permissions
+  		SELECT DISTINCT permission FROM room_member_permission
   		WHERE user_id = ${user_id} AND room_id = ${room_id}
 		`;
 		return new Permissions(rows.map(i => i.permission));
@@ -599,7 +603,7 @@ export const data: Database = {
   async permissionReadThread(user_id, thread_id) {
 		using q = await db.connect();
   	const { rows } = await q.queryObject<{ permission: PermissionT }>`
-  		SELECT DISTINCT permission FROM thread_member_permissions
+  		SELECT DISTINCT permission FROM thread_member_permission
   		WHERE user_id = ${user_id} AND thread_id = ${thread_id}
 		`;
 		return new Permissions(rows.map(i => i.permission));
@@ -607,8 +611,16 @@ export const data: Database = {
   async memberDelete(room_id, user_id) {
 		using q = await db.connect();
   	await q.queryObject<{ permission: PermissionT }>`
-  		DELETE FROM room_members
+  		DELETE FROM room_member
   		WHERE user_id = ${user_id} AND room_id = ${room_id}
+		`;
+  },
+  async applyDefaultRoles(user_id, room_id) {
+		using q = await db.connect();
+  	await q.queryObject<{ permission: PermissionT }>`
+	  	INSERT INTO role_member (user_id, role_id)
+	  	SELECT ${user_id} as u, id FROM role
+	  	WHERE room_id = ${room_id} AND is_default = true;
 		`;
   },
 }

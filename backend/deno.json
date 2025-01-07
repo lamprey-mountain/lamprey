@@ -1,16 +1,14 @@
 {
 	"imports": {
-		// "pglite": "npm:@electric-sql/pglite@^0.2.15",
-    "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
 		"@hono/zod-openapi": "npm:@hono/zod-openapi@^0.18.3",
-		"hono": "npm:hono@^4.6.15",
-		"zod": "npm:zod@^3.24.1",
 		"bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
-		"otpauth": "jsr:@hectorm/otpauth",
-		"events": "node:events",
-		"typed-emitter": "npm:typed-emitter",
 		"globals": "./data.ts",
-	},
+		"hono": "npm:hono@^4.6.15",
+		"otpauth": "jsr:@hectorm/otpauth",
+		"typed-emitter": "npm:typed-emitter",
+		"zod": "npm:zod@^3.24.1",
+    "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
+  },
 	"tasks": {
 		"serve": "deno serve --watch-hmr --env-file -A index.ts"
 	}
