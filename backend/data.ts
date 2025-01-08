@@ -1,8 +1,9 @@
 // TODO: rename this to globals.ts
 import { MessageServer } from "./types/sync.ts";
 import { z } from "@hono/zod-openapi";
-import { Invite, Member, Message, MessagePatch, MessageType, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, ThreadType, User, UserPatch } from "./types.ts";
+import { Invite, Media, Member, Message, MessagePatch, MessageType, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, ThreadType, User, UserPatch } from "./types.ts";
 import EventEmitter from "node:events";
+// import { Client as S3Client } from "npm:minio";
 export * as discord from "./oauth2.ts";
 
 // HACK: https://github.com/andywer/typed-emitter/issues/39
@@ -38,6 +39,41 @@ const db = new Pool({
 		const sql = await Deno.readTextFile(`migrations/${migration.name}`);
 		await q.queryObject(sql);
 	}
+}
+
+import { S3Client } from "jsr:@bradenmacdonald/s3-lite-client";
+
+const s3 = new S3Client({
+	endPoint: Deno.env.get("S3_ENDPOINT")!,
+	useSSL: Deno.env.get("S3_USESSL")! === "false" ? false : true,
+	region: Deno.env.get("S3_REGION")!,
+	accessKey: Deno.env.get("S3_ACCESSKEY")!,
+	secretKey: Deno.env.get("S3_SECRETKEY")!,
+	bucket: Deno.env.get("S3_BUCKET")!,
+});
+
+const S3_PRESIGNED_DURATION = 60 * 60 * 24;
+
+type Blobs = {
+	presignedGetUrl(path: string): Promise<string>,
+	copyObject(from: string, to: string): Promise<void>,
+	deleteObject(path: string): Promise<void>,
+	putObject(path: string, data: ReadableStream): Promise<void>,
+}
+
+export const blobs: Blobs = {
+	presignedGetUrl(path) {
+		return s3.presignedGetObject(path, { expirySeconds: S3_PRESIGNED_DURATION });
+  },
+	async copyObject(from, to) {
+		await s3.copyObject({ sourceKey: from }, to);
+  },
+	async deleteObject(path) {
+		await s3.deleteObject(path);
+  },
+	async putObject(path, stream) {
+		await s3.putObject(path, stream);
+  },
 }
 
 type MsgServer = z.infer<typeof MessageServer>;
@@ -95,6 +131,7 @@ export type RoleT = z.infer<typeof Role>;
 export type InviteT = z.infer<typeof Invite>;
 export type PermissionT = z.infer<typeof Permission>;
 export type RolePatchT = z.infer<typeof RolePatch>;
+export type MediaT = z.infer<typeof Media>;
 
 type UserPatchExtraT = {
 	parent_id?: string | null,
@@ -137,10 +174,10 @@ type Database = {
 	roomInsert(id: string, name: string, description: string | null): Awaitable<RoomT>;
 	roomUpdate(id: string, name?: string | null, description?: string | null): Awaitable<RoomT | null>;
 	roomList(user_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<RoomT>>;
-	threadSelect(id: string): Awaitable<ThreadT | null>;
+	threadSelect(id: string, user_id: string): Awaitable<ThreadT | null>;
 	threadInsert(id: string, creator_id: string, room_id: string, ttype: ThreadType, patch: Required<ThreadPatchT>): Awaitable<ThreadT>;
-	threadUpdate(id: string, patch: ThreadPatchT): Awaitable<ThreadT | null>;
-	threadList(room_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<ThreadT>>;
+	threadUpdate(id: string, user_id: string, patch: ThreadPatchT): Awaitable<ThreadT | null>;
+	threadList(room_id: string, user_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<ThreadT>>;
 	messageInsert(patch: MessagePatchT, extra: MessagePatchExtraT): Awaitable<MessageT>;
 	messageList(thread_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
@@ -162,6 +199,11 @@ type Database = {
 	permissionReadRoom(user_id: string, room_id: string): Awaitable<Permissions>;
 	permissionReadThread(user_id: string, thread_id: string): Awaitable<Permissions>;
 	applyDefaultRoles(user_id: string, room_id: string): Awaitable<void>;
+	mediaInsert(user_id: string, media: MediaT): Awaitable<MediaT>;
+	mediaLinkInsert(media_id: string, thing_id: string): Awaitable<void>;
+	mediaLinkSelect(media_id: string): Awaitable<Array<string>>;
+	unreadMarkThread(user_id: string, thread_id: string): Awaitable<void>;
+	unreadMarkMessage(user_id: string, thread_id: string, version_id: string): Awaitable<void>;
 }
 
 // app.use("/api/v1/*", async (c, next) => {
@@ -300,56 +342,58 @@ export const data: Database = {
 			items,
 		};
   },
-	async threadSelect(id: string) {
+	async threadSelect(id: string, user_id: string) {
 		using q = await db.connect();
-		const d = await q.queryObject`SELECT * FROM thread WHERE id = ${id}`;
+		const d = await q.queryObject`SELECT * FROM thread_json WHERE id = ${id} and user_id = ${user_id}`;
 		if (!d.rows[0]) return null;
 		return ThreadFromDb.parse(d.rows[0]);
 	},
 	async threadInsert(id, creator_id, room_id, ttype, { name, description, is_closed, is_locked }) {
 		using q = await db.connect();
-		const d = await q.queryObject`
+		await q.queryObject`
 			INSERT INTO thread (id, creator_id, room_id, name, description, is_closed, is_locked, type)
 			VALUES (${id}, ${creator_id}, ${room_id}, ${name}, ${description}, ${is_closed ?? false}, ${is_locked ?? false}, ${ttype})
-			RETURNING *
+		`;
+		const d = await q.queryObject`
+			SELECT * FROM thread_json WHERE id = ${id} and user_id = ${creator_id}
 		`;
 		return ThreadFromDb.parse(d.rows[0]);
   },
-	async threadUpdate(id, { name, description, is_closed, is_locked }) {
+	async threadUpdate(id, user_id, { name, description, is_closed, is_locked }) {
 		using q = await db.connect();
 		const tx = q.createTransaction("threadupdate" + uuidv7());
 		await tx.begin();
-		const { rows: [threadData] } = await tx.queryObject`SELECT * FROM thread WHERE id = ${id}`;
+		const { rows: [threadData] } = await tx.queryObject`SELECT * FROM thread_json WHERE id = ${id} AND user_id = ${user_id}`;
 		if (!threadData) {
 			await tx.rollback();
 			return null;
 		}
 		const thread = ThreadFromDb.parse(threadData);
-		const d = await tx.queryObject`
+		await tx.queryObject`
 			UPDATE thread SET
 				name = ${name === undefined ? thread.name : name},
 				description = ${description === undefined ? thread.description : description},
 				is_locked = ${is_locked === undefined ? thread.is_locked : is_locked},
 				is_closed = ${is_closed === undefined ? thread.is_closed : is_closed}
 			WHERE id = ${id}
-			RETURNING *
 		`;
+		const { rows: [newThreadData] } = await tx.queryObject`SELECT * FROM thread_json WHERE id = ${id} AND user_id = ${user_id}`;
 		await tx.commit();
-		return ThreadFromDb.parse(d.rows[0]);
+		return ThreadFromDb.parse(newThreadData);
   },
-  async threadList(room_id, { dir, from, to, limit }) {
+  async threadList(room_id, user_id, { dir, from, to, limit }) {
 		const after = (dir === "f" ? from : to) ?? UUID_MIN;
 		const before = (dir === "f" ? to : from) ?? UUID_MAX;
 		using q = await db.connect();
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT * FROM thread
-			WHERE room_id = ${room_id} AND id > ${after} AND id < ${before}
+			SELECT * FROM thread_json
+			WHERE room_id = ${room_id} AND user_id = ${user_id} AND id > ${after} AND id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'F' THEN id END), id DESC LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
-			SELECT count(*)::int FROM thread WHERE room_id = ${room_id}
+			SELECT count(*)::int FROM thread_json WHERE room_id = ${room_id} AND user_id = ${user_id}
 		`;
 		await tx.rollback();
 		const threads = rows
@@ -376,22 +420,19 @@ export const data: Database = {
   },
   async messageInsert(patch, extra) {
 		using q = await db.connect();
+		await q.queryObject`
+	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
+	    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, (SELECT coalesce(count, 0) FROM message_count WHERE thread_id = ${extra.thread_id}), ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id}, ${extra.type}, ${patch.override_name}, ${patch.attachments?.map(i => i.id) ?? []})
+		`;
 		const d = await q.queryObject`
-			WITH inserted AS (
-		    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
-		    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, (SELECT coalesce(count, 0) FROM message_count WHERE thread_id = ${extra.thread_id}), ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id}, ${extra.type}, ${patch.override_name})
-				RETURNING *
-			)
-			SELECT inserted.*, row_to_json(usr) AS author FROM inserted
-			JOIN usr ON usr.id = inserted.author_id
+	    SELECT * FROM message_json WHERE id = ${extra.id}
 		`;
 		return MessageFromDb.parse(d.rows[0]);
   },
   async messageSelect(thread_id, message_id) {
 		using q = await db.connect();
 		const { rows } = await q.queryObject`
-			SELECT msg.*, row_to_json(usr) as author FROM message AS msg
-			JOIN usr ON usr.id = msg.author_id
+			SELECT * FROM message_json AS msg
 			WHERE thread_id = ${thread_id} AND msg.id = ${message_id}
 		`;
 		if (!rows[0]) return null;
@@ -404,8 +445,7 @@ export const data: Database = {
 		const tx = q.createTransaction(uuidv7());
 		await tx.begin();
 		const { rows } = await tx.queryObject`
-			SELECT msg.*, row_to_json(usr) as author FROM message_coalesced AS msg
-			JOIN usr ON usr.id = msg.author_id
+			SELECT * FROM message_json AS msg
 			WHERE thread_id = ${thread_id} AND msg.id > ${after} AND msg.id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'b' THEN msg.id END) DESC, msg.id LIMIT ${limit + 1}
 		`;
@@ -621,6 +661,46 @@ export const data: Database = {
 	  	INSERT INTO role_member (user_id, role_id)
 	  	SELECT ${user_id} as u, id FROM role
 	  	WHERE room_id = ${room_id} AND is_default = true;
+		`;
+  },
+  async mediaInsert(user_id, { id, url, source_url, thumbnail_url, filename, alt, size, mime, height, width, duration }) {
+		using q = await db.connect();
+  	const { rows: [media] } = await q.queryObject`
+	    INSERT INTO media (id, user_id, url, source_url, thumbnail_url, filename, alt, size, mime, height, width, duration)
+	    VALUES (${id}, ${user_id}, ${url}, ${source_url}, ${thumbnail_url}, ${filename}, ${alt}, ${size}, ${mime}, ${height}, ${width}, ${duration})
+	    RETURNING *
+		`;
+		return Media.parse(media);
+  },
+  async mediaLinkInsert(media_id, target_id) {
+		using q = await db.connect();
+  	await q.queryObject`
+	    INSERT INTO media_link (media_id, target_id)
+	    VALUES (${media_id}, ${target_id})
+	    RETURNING *
+		`;
+  },
+  async mediaLinkSelect(media_id) {
+		using q = await db.connect();
+  	const { rows } = await q.queryObject<{ target_id: string }>`
+	    SELECT target_id FROM media_link WHERE media_id = ${media_id}
+		`;
+		return rows.map(i => i.target_id) ?? [];
+  },
+  async unreadMarkThread(user_id, thread_id) {
+		using q = await db.connect();
+  	await q.queryObject`
+			INSERT INTO unread (thread_id, user_id, version_id)
+			VALUES (${thread_id}, ${user_id}, (SELECT max(version_id) FROM message WHERE thread_id = ${thread_id}))
+			ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET version_id = excluded.version_id;
+		`;
+  },
+  async unreadMarkMessage(user_id, thread_id, version_id) {
+		using q = await db.connect();
+  	await q.queryObject`
+			INSERT INTO unread (thread_id, user_id, version_id)
+			VALUES (${thread_id}, ${user_id}, ${version_id})
+			ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET version_id = excluded.version_id;
 		`;
   },
 }

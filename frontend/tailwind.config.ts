@@ -24,6 +24,7 @@ export default {
     boxShadow: {
       "arst": "3px 0 0 none inset",
       "asdf": "2px 2px 8px",
+      "asdf2": "0 2px 8px",
       "foo": "0 8px 16px inset, 0 -8px 16px inset",
     },
     animation: {

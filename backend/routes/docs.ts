@@ -8,6 +8,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
   	info: {
   		version: "0.0.1",
   		title: "My API",
+  		description: "work in progress docs",
   	},
   	// security: [{
   	//   type: "apiKey",

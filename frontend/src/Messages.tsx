@@ -3,6 +3,7 @@ import { getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
 	createSignal,
+	For,
 	lazy,
 	Match,
 	onMount,
@@ -11,7 +12,7 @@ import {
 	Switch,
 } from "solid-js";
 import { TimelineItemT } from "./list.tsx";
-import { MessageT, MessageType } from "./types.ts";
+import { AttachmentT, MessageT, MessageType, ThreadT } from "./types.ts";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
@@ -40,8 +41,8 @@ const User = (props: UserProps) => {
 	);
 };
 
-const WRAPPER_CSS = "group grid grid-cols-[128px_auto_max-content] px-[8px] hover:bg-bg1/30";
-const BODY_CSS = "mx-[8px] overflow-hidden markdown";
+const WRAPPER_CSS = "group grid grid-cols-[128px_1fr_max-content] px-[8px] hover:bg-bg1/30";
+const BODY_CSS = "overflow-hidden markdown max-w-[100%]";
 
 type MessageProps = {
 	message: MessageT;
@@ -54,7 +55,7 @@ const md = marked.use({
 
 export const Message = (props: MessageProps) => {
 	const ctx = useCtx();
-	let bodyEl: HTMLSpanElement;
+	let bodyEl: HTMLDivElement;
 
 	// createEffect(async () => {
 	// 	props.message; // make it react
@@ -81,6 +82,46 @@ export const Message = (props: MessageProps) => {
 		)
 	}
 
+	function getAttachment(a: AttachmentT) {
+		const b = a.mime.split("/")[0];
+		if (b === "image") {
+			return (
+				<div class="bg-bg3 p-[4px]">
+					<div class="max-h-[min(50vh,_500px)] max-w-[min(600px,_100%)]" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+						<img height={a.height!} width={a.width!} src={a.url} alt={a.alt ?? undefined} />
+					</div>
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="text-sm">{a.mime} - {a.size} bytes</div>
+				</div>
+			)
+		} else if (b === "video") {
+			return (
+				<div class="bg-bg3 p-[4px] self-start">
+					<div class="max-h-[min(50vh,_500px)] max-w-[min(600px,_100%)]" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+						<video height={a.height!} width={a.width!} src={a.url} controls />
+					</div>
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="text-sm">{a.mime} - {a.size} bytes</div>
+				</div>
+			)
+		} else if (b === "audio") {
+			return (
+				<div class="bg-bg3 p-[4px] self-start">
+					<audio src={a.url} controls />
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="text-sm">{a.mime} - {a.size} bytes</div>
+				</div>
+			)
+		} else {
+			return (
+				<div class="bg-bg3 p-[4px] self-start">
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="text-sm">{a.mime} - {a.size} bytes</div>
+				</div>
+			)
+		}
+	}
+
 	function getComponent() {
 		const date = /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date();
 		const authorName = props.message.override_name ?? props.message.author.name;
@@ -95,7 +136,7 @@ export const Message = (props: MessageProps) => {
 			return (
 				<div class={WRAPPER_CSS}>
 					<span class="text-fg4 text-right"></span>
-					<span class={BODY_CSS} ref={bodyEl!}>
+					<span class={BODY_CSS + " mx-[8px]"} ref={bodyEl!}>
 						<span class="hover:underline cursor-pointer">{authorName}</span>
 						{" "}updated the thread: {listFormatter.format(updates) || "did nothing"}
 					</span>
@@ -124,9 +165,12 @@ export const Message = (props: MessageProps) => {
 							{authorName}
 						</Tooltip>
 					</span>
-					<Show when={props.message.content}>
-						<span class={BODY_CSS} ref={bodyEl!} innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
-					</Show>
+					<div class="mx-[8px] flex flex-col items-start min-w-0">
+						<Show when={props.message.content}>
+							<div class={BODY_CSS} ref={bodyEl!} innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></div>
+						</Show>
+						<For each={props.message.attachments}>{att => getAttachment(att)}</For>
+					</div>
 					<span class="invisible group-hover:visible text-fg4">{date.toDateString()}</span>
 				</div>
 			)
@@ -136,7 +180,7 @@ export const Message = (props: MessageProps) => {
 	return <>{getComponent()}</>;
 };
 
-function getTimelineItem(item: TimelineItemT) {
+function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 	switch(item.type) {
 		case "message": {
 			// unread: item.message.unread,
@@ -158,9 +202,12 @@ function getTimelineItem(item: TimelineItemT) {
 					// </header>
 			return (
 				<li class="contents">
-					<header class="px-[144px] bg-bg3 mb-4">
-						<h1 class="text-xl">header</h1>
-						<p>more info here</p>
+					<header class="sticky z-10 top-[-8px] px-[144px] bg-bg3 mb-4 shadow-asdf2 shadow-bg2">
+						<h1 class="text-xl">{thread.name}</h1>
+						<p>
+							{thread.description ?? "(no description)" } /
+							<Show when={thread.is_closed}> (archived)</Show>
+						</p>
 					</header>
 				</li>
 			)
@@ -168,14 +215,17 @@ function getTimelineItem(item: TimelineItemT) {
 		case "spacer": {
 			return <li class="flex-1"><div class="h-[800px]"></div></li>
 		}
+		case "spacer-mini2": {
+			return <li class="flex-1"><div class="h-32"></div></li>
+		}
 		case "spacer-mini": {
 			return <li><div class="h-8"></div></li>
 		}
 	}
 }
 
-export const TimelineItem = (props: { item: TimelineItemT }) => {
-	return (<>{getTimelineItem(props.item)}</>);
+export const TimelineItem = (props: { thread: ThreadT, item: TimelineItemT }) => {
+	return (<>{getTimelineItem(props.thread, props.item)}</>);
 
 	// <Match when={props.item.type === "unread-marker" && false}>
 	// 	<li class="text-[#3fa9c9] shadow-arst shadow-[#3fa9c9] shadow-[#3fa9c922]">

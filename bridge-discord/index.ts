@@ -194,6 +194,21 @@ async function handleDiscord(msg: any) {
     if (dcHookIds.has(msg.d.webhook_id)) return;
     const thread_id = dtoc.get(msg.d.channel_id);
     if (!thread_id) return;
+    const attachments = [];
+    for (const a of msg.d.attachments) {
+      const blob = await fetch(a.url).then(r => r.blob());
+      const form = new FormData();
+      form.append("file", blob, a.filename);
+      const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
+  	    method: "POST",
+  	    headers: {
+  	      "Authorization": MY_TOKEN,
+  	    },
+  	    body: form,
+      });
+      const { media_id: id } = await upload.json();
+      attachments.push({ id });
+    }
     const reply_id_discord = msg.d.message_reference?.type === 0 ? msg.d.message_reference.message_id : null;
     const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
 	  const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages`, {
@@ -203,9 +218,10 @@ async function handleDiscord(msg: any) {
 	      "Authorization": MY_TOKEN,
 	    },
 	    body: JSON.stringify({
-    	  content: msg.d.content || "(no content?)",
+    	  content: msg.d.content || (attachments.length ? null : "(no content?)"),
     	  override_name: msg.d.member?.nick ?? msg.d.author.global_name ?? msg.d.author.username,
     	  reply_id,
+    	  attachments,
 	    }),
 	  });
 	  const d = await req.json();

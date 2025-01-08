@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS thread (
     description TEXT,
     is_closed BOOL NOT NULL,
     is_locked BOOL NOT NULL,
-    -- deleted_at INT,
+    deleted_at INT,
     FOREIGN KEY (room_id) REFERENCES room(id),
     FOREIGN KEY (creator_id) REFERENCES usr(id)
 );

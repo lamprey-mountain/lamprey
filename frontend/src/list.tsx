@@ -1,5 +1,5 @@
 import { JSX } from "solid-js/jsx-runtime";
-import { For, on } from "solid-js";
+import { For, on, onMount } from "solid-js";
 import { Accessor, createSignal, createEffect, onCleanup } from "solid-js";
 import { TimelineSet, Message } from "sdk";
 import { reconcile } from "solid-js/store";
@@ -23,6 +23,7 @@ export type TimelineItemT = { key: string, class?: string } & (
   { type: "editor" } |
   { type: "spacer" } |
   { type: "spacer-mini" } |
+  { type: "spacer-mini2" } |
   { type: "unread-marker" } |
   { type: "time-split" } |
   { type: "message", message: MessageT, separate: boolean });
@@ -238,7 +239,7 @@ export function createList<T>(options: {
   let shouldAutoscroll = false;
   
   const margin = 0;
-  const observer = new IntersectionObserver((entries) => {
+  const intersections = new IntersectionObserver((entries) => {
     const el = entries[0];
     // console.log("list::intersection", entries);
     if (el.target === topEl()) {
@@ -266,6 +267,14 @@ export function createList<T>(options: {
     rootMargin: `${margin}px 0px ${margin}px 0px`,
   });
 
+  const resizes = new ResizeObserver((_entries) => {
+    // NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
+    if (shouldAutoscroll) {
+      console.log("list::autoscroll");
+      wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
+    }
+  });
+
   function setRefs() {
     const children = [...wrapperEl()?.children ?? []] as Array<HTMLElement>;
     setTopEl(children[options.topPos?.() ?? 0]);
@@ -273,7 +282,8 @@ export function createList<T>(options: {
   }
 
   onCleanup(() => {
-    observer.disconnect();
+    intersections.disconnect();
+    resizes.disconnect();
   });
   
   return {
@@ -296,7 +306,7 @@ export function createList<T>(options: {
         if (!wrap || !anchorRef) return setRefs();
         if (shouldAutoscroll) {
           // console.log("list::autoscroll");
-          wrap.scrollBy({ top: 999999, behavior: "instant" });
+          wrap.scrollTo({ top: 999999, behavior: "instant" });
         } else {
           // FIXME: tons of reflow and jank
           // console.time("perf::forceReflow");
@@ -310,26 +320,29 @@ export function createList<T>(options: {
       
       createEffect(on(options.items, () => {
         queueMicrotask(reanchor);
-        // requestAnimationFrame(reanchor);
       }));
 
       createEffect(on(topEl, (topEl) => {
         if (!topEl) return;
-        if (topRef) observer.unobserve(topRef);
+        if (topRef) intersections.unobserve(topRef);
         topRef = topEl;
-        observer.observe(topEl);
+        intersections.observe(topEl);
       }));
 
       createEffect(on(bottomEl, (bottomEl) => {
         if (!bottomEl) return;
-        if (bottomRef) observer.unobserve(bottomRef);
+        if (bottomRef) intersections.unobserve(bottomRef);
         bottomRef = bottomEl;
-        observer.observe(bottomEl);
+        intersections.observe(bottomEl);
       }));
+
+      onMount(() => {
+        resizes.observe(wrapperEl()!);
+      });
       
       return (
         <ul
-          class="list-none py-[8px] flex flex-col overflow-y-auto [overflow-anchor:none]"
+          class="list-none py-[8px] flex flex-col overflow-y-auto"
           ref={setWrapperEl}
           onContextMenu={options.onContextMenu}
           onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}

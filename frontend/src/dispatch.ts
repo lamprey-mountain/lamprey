@@ -64,6 +64,7 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {	
   async function dispatch(action: Action) {
   	console.log("dispatch", action.do);
+  	queueMicrotask(() => console.log(ctx.data))
   	switch (action.do) {
   		case "setView": {
   			update("view", action.to);
@@ -234,80 +235,102 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		  update("thread_state", action.thread_id, "scroll_pos", action.pos);
   		  return;
   		}
+  		case "server": {
+  			const msg = action.msg;
+				if (msg.type === "ready") {
+					update("user", msg.user);
+				} else if (msg.type === "upsert.room") {
+					update("rooms", msg.room.id, msg.room);
+				} else if (msg.type === "upsert.thread") {
+					update("threads", msg.thread.id, msg.thread);
+				} else if (msg.type === "upsert.message") {
+					solidBatch(() => {
+						update("messages", msg.message.id, msg.message);
+						update("threads", msg.message.thread_id, "last_version_id", msg.message.version_id);
+						const { thread_id } = msg.message;
+						if (!ctx.data.timelines[thread_id]) {
+							update("timelines", thread_id, [{ type: "hole" }, {
+								type: "remote",
+								message: msg.message as MessageT,
+							}]);
+							update("slices", thread_id, { start: 0, end: 2 });
+						} else {
+							const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
+							update(
+								"timelines",
+								msg.message.thread_id,
+								(i) => [...i, { type: "remote" as const, message: msg.message }],
+							);
+							if (isAtEnd) {
+								const newEnd = ctx.data.timelines[thread_id].length;
+								const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
+								update("slices", thread_id, { start: newStart, end: newEnd });
+							}
+						}
+					});
+				} else if (msg.type === "upsert.role") {
+					const role: RoleT = msg.role;
+					const { room_id } = role;
+					if (!ctx.data.room_roles[room_id]) update("room_roles", room_id, {});
+					update("room_roles", room_id, role.id, role);
+				} else if (msg.type === "upsert.member") {
+					const member: MemberT = msg.member;
+					const { room_id } = member;
+					if (!ctx.data.room_members[room_id]) update("room_members", room_id, {});
+					update("users", member.user.id, member.user);
+					update("room_members", room_id, member.user.id, member);
+				} else if (msg.type === "upsert.invite") {
+					const invite: InviteT = msg.invite;
+					update("invites", invite.code, invite);
+				} else if (msg.type === "delete.member") {
+					const { user_id, room_id } = msg
+					update("room_members", room_id, produce((obj) => {
+						if (!obj) return;
+						delete obj[user_id];
+					}));
+					if (user_id === ctx.data.user?.id) {
+						update("rooms", produce((obj) => {
+							delete obj[room_id];
+						}));
+					}
+				} else if (msg.type === "delete.invite") {
+					const { code } = msg
+					update("invites", produce((obj) => {
+						delete obj[code];
+					}));
+				} else {
+					console.warn("unknown message", msg);
+				}
+  		  return;
+  		}
+			case "thread.mark_read": {
+				const { thread_id, version_id } = action;
+				if (version_id) {
+					await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/messages/${version_id}/ack`);
+					update("threads", thread_id, "last_read_id", version_id);
+				} else {
+					// should probably have the server return the actual last read id?
+					await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/ack`);
+					update("threads", thread_id, "last_read_id", ctx.data.threads[thread_id].last_version_id);
+				}
+  		  return;
+			}
   	}
   }
 
   return dispatch;
 }
 
-export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx, update: SetStoreFunction<Data>) {	
+export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {	
   return function(msg: any) {
 		console.log("recv", msg);
 		if (msg.type === "ping") {
 			ws.send(JSON.stringify({ type: "pong" }));
-		} else if (msg.type === "ready") {
-			update("user", msg.user);
-		} else if (msg.type === "upsert.room") {
-			update("rooms", msg.room.id, msg.room);
-		} else if (msg.type === "upsert.thread") {
-			update("threads", msg.thread.id, msg.thread);
-		} else if (msg.type === "upsert.message") {
-			solidBatch(() => {
-				update("messages", msg.message.id, msg.message);
-				const { thread_id } = msg.message;
-				if (!ctx.data.timelines[thread_id]) {
-					update("timelines", thread_id, [{ type: "hole" }, {
-						type: "remote",
-						message: msg.message as MessageT,
-					}]);
-					update("slices", thread_id, { start: 0, end: 2 });
-				} else {
-					const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
-					update(
-						"timelines",
-						msg.message.thread_id,
-						(i) => [...i, { type: "remote" as const, message: msg.message }],
-					);
-					if (isAtEnd) {
-						const newEnd = ctx.data.timelines[thread_id].length;
-						const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
-						update("slices", thread_id, { start: newStart, end: newEnd });
-					}
-				}
-			});
-		} else if (msg.type === "upsert.role") {
-			const role: RoleT = msg.role;
-			const { room_id } = role;
-			if (!ctx.data.room_roles[room_id]) update("room_roles", room_id, {});
-			update("room_roles", room_id, role.id, role);
-		} else if (msg.type === "upsert.member") {
-			const member: MemberT = msg.member;
-			const { room_id } = member;
-			if (!ctx.data.room_members[room_id]) update("room_members", room_id, {});
-			update("users", member.user.id, member.user);
-			update("room_members", room_id, member.user.id, member);
-		} else if (msg.type === "upsert.invite") {
-			const invite: InviteT = msg.invite;
-			update("invites", invite.code, invite);
-		} else if (msg.type === "delete.member") {
-			const { user_id, room_id } = msg
-			update("room_members", room_id, produce((obj) => {
-				if (!obj) return;
-				delete obj[user_id];
-			}));
-			if (user_id === ctx.data.user?.id) {
-				update("rooms", produce((obj) => {
-					delete obj[room_id];
-				}));
-			}
-		} else if (msg.type === "delete.invite") {
-			const { code } = msg
-			update("invites", produce((obj) => {
-				delete obj[code];
-			}));
 		} else {
-			console.warn("unknown message", msg);
-			return;
+			ctx.dispatch({
+				do: "server",
+				msg,
+			});
 		}
   }
 }

@@ -26,20 +26,36 @@ export const ChatMain = (props: ChatProps) => {
 	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
 	createEffect(on(() => (slice()?.start, slice()?.end), () => updateItems()));
 
+	let ackGraceTimeout: number | undefined;
+	let ackDebounceTimeout: number | undefined;
+
   function updateItems() {
   	console.log("update items", slice())
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
     const items: Array<TimelineItemT> = [];
-    items.push({
-      type: "spacer",
-      key: "spacer-top",
-    });
-    items.push({
-      type: "info",
-      key: "info",
-      header: !hasSpaceTop(),
-    });
+
+    if (hasSpaceTop()) {
+	    items.push({
+	      type: "info",
+	      key: "info",
+	      header: !hasSpaceTop(),
+	    });
+	    items.push({
+	      type: "spacer",
+	      key: "spacer-top",
+	    });
+    } else {
+	    items.push({
+	      type: "spacer-mini2",
+	      key: "spacer-top2",
+	    });
+	    items.push({
+	      type: "info",
+	      key: "info",
+	      header: !hasSpaceTop(),
+	    });
+    }
 
     for (let i = 0; i < rawItems.length; i++) {
       const msg = rawItems[i];
@@ -83,6 +99,19 @@ export const ChatMain = (props: ChatProps) => {
     console.time("perf::updateItems");
     setItems((old) => [...reconcile(items, { key: "key" })(old)]);
     console.timeEnd("perf::updateItems");
+
+    // TODO: move to context/dispatch for less hacks
+    clearTimeout(ackGraceTimeout);
+    ackGraceTimeout = setTimeout(() => {
+	    clearTimeout(ackDebounceTimeout);
+	    ackDebounceTimeout = setTimeout(() => {
+	    	ctx.dispatch({
+	    		do: "thread.mark_read",
+	    		thread_id: props.thread.id,
+	    		// version_id
+	    	});
+	    }, 800);
+    }, 200);
   }
 	
 	const list = createList({
@@ -103,10 +132,18 @@ export const ChatMain = (props: ChatProps) => {
       paginating = false;
     },
 	  onContextMenu(e: MouseEvent) {
+	  	e.stopPropagation();
 	  	const target = e.target as HTMLElement;
+	  	const media_el = target.closest("a, img, video, audio") as HTMLElement;
 	  	const message_el = target.closest("li[data-message-id]") as HTMLElement;
 	  	const message_id = message_el?.dataset.messageId;
-	  	if (!message_id) return;
+	  	if (!message_id || (media_el && message_el.contains(media_el))) {
+		  	ctx.dispatch({
+		  		do: "menu",
+					menu: null,
+		  	});
+	  		return;
+  		}
 	  	e.preventDefault();
 	  	ctx.dispatch({
 	  		do: "menu",
@@ -138,6 +175,9 @@ export const ChatMain = (props: ChatProps) => {
 	});
 
 	createEffect(on(() => props.thread, () => {
+		clearTimeout(ackGraceTimeout);
+		ackDebounceTimeout = undefined;
+		
 		// TODO: restore scroll position
 		queueMicrotask(() => {
 			const pos = ts().scroll_pos;
@@ -151,15 +191,13 @@ export const ChatMain = (props: ChatProps) => {
 	const reply = () => ctx.data.messages[ts().reply_id!];
 
 	// translate-y-[8px]
+	// <header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
+	// 	{props.thread.name} / 
+	// </header>
 	
 	return (
-		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[48px_1fr_0] relative">
-			<header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
-				{props.thread.name} / 
-				{props.thread.description ?? "(no description)" } /
-				<Show when={props.thread.is_closed}> (archived)</Show>
-			</header>
-			<list.List>{item => <TimelineItem item={item} />}</list.List>
+		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[1fr_0] relative">
+			<list.List>{item => <TimelineItem thread={props.thread} item={item} />}</list.List>
 			<div class="absolute bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[138px] pr-[4px] max-h-50% flex-col">
 				<Show when={ts().reply_id}>
 					<div class="bg-bg2 m-0 flex relative mb-[-1px]">

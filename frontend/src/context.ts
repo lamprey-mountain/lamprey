@@ -65,6 +65,8 @@ export type Action
 	| { do: "thread.init", thread_id: string }
 	| { do: "thread.reply", thread_id: string, reply_id: string | null }
 	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
+	| { do: "thread.mark_read", thread_id: string, version_id?: string }
+	| { do: "server", msg: any }
 
 export type ChatCtx = {
 	client: Client;

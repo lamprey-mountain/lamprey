@@ -13,6 +13,9 @@ export type ThreadT = {
 	is_closed: boolean,
 	is_locked: boolean,
 	is_pinned: boolean,
+	is_unread: boolean,
+	last_version_id: string,
+	last_read_id: string,
 }
 
 export type MessageT = {
@@ -26,6 +29,21 @@ export type MessageT = {
 	content: string | null,
 	author: UserT,
 	metadata: any,
+	attachments: Array<AttachmentT>,
+}
+
+export type AttachmentT = {
+	id: string,
+	filename: string,
+	url: string,
+	source_url: string | null,
+	thumbnail_url: string | null,
+	mime: string,
+	alt: string | null,
+	size: number,
+	height: number | null,
+	width: number | null,
+	duration: number | null,
 }
 
 export type UserT = {

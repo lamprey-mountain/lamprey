@@ -341,6 +341,7 @@ export const Editor = (props: EditorProps) => {
 			    node.remove();
 			  }
 
+			  // FIXME: don't mangle whitespace
 		    function walk(n: Node): string {
 		    	console.log(n)
 			    if (n.nodeType === Node.COMMENT_NODE) return "";
@@ -362,20 +363,20 @@ export const Editor = (props: EditorProps) => {
 			      case "H4": return "\n\n#### " + (n.textContent ?? "").trim() + "\n\n";
 			      case "H5": return "\n\n##### " + (n.textContent ?? "").trim() + "\n\n";
 			      case "H6": return "\n\n###### " + (n.textContent ?? "").trim() + "\n\n";
-			      case "P": return "\n\n" + c.map(walk).join("").trim() + "\n\n";
+			      case "P": return "\n\n" + c.map(walk).join("") + "\n\n";
 			      case "B": case "BOLD": case "STRONG":
-			        return `**${c.map(walk).join("").trim()}**`;
+			        return `**${c.map(walk).join("")}**`;
 			      case "EM": case "I":
-			        return `*${c.map(walk).join("").trim()}*`;
+			        return `*${c.map(walk).join("")}*`;
 			      case "CODE":
-			        return `\`${c.map(walk).join("").trim()}\``;
+			        return `\`${c.map(walk).join("")}\``;
 			      case "UL":
-			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map(i => `- ${i.trim()}`).join("\n")}\n`;
+			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map(i => `- ${i}`).join("\n")}\n`;
 			      case "OL":
-			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map((i, x) => `${x + 1}. ${i.trim()}`).join("\n")}\n`;
+			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map((i, x) => `${x + 1}. ${i}`).join("\n")}\n`;
 			      case "A": {
 			      	const href = (n as Element).getAttribute("href");
-			      	const text = c.map(walk).join("").trim();
+			      	const text = c.map(walk).join("");
 			      	if (!text) return "\n";
 			      	if (!href) return text;
 			        return `[${text}](${href})`;
@@ -396,7 +397,7 @@ export const Editor = (props: EditorProps) => {
 			    }
 			  }
 
-				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").trim();
+				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").replace(/^\n|\n$/g, "");
 				console.log({ from: html, to: md });
 				const p = document.createElement("pre");
 				p.innerText = md;

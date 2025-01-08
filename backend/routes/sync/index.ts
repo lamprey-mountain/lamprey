@@ -28,7 +28,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			clearTimeout(closeTimeout);
 			heartbeatTimeout = setTimeout(() => {
 				if (state === "closed") return;
-				ws.send(JSON.stringify({ type: "ping" }));
+				send({ type: "ping" });
 			}, 1000 * 30);
 			closeTimeout = setTimeout(() => {
 				if (state === "closed") return;
@@ -39,7 +39,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		async function handle(msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
 			// if (state === "unauth") return;
-			ws.send(JSON.stringify(msg));
+			send(msg);
 		}
 
 		const permCacheRoom = new Map<string, Permissions>();
@@ -66,14 +66,14 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			console.log(state, msg)
 			if (state === "closed") return;
 			if (msg.type === "delete.member" && msg.user_id === user_id) {
-				ws.send(JSON.stringify(msg));
+				send(msg);
 				return;
 			}
 			if (poisonsCacheRoom(msg)) permCacheRoom.delete(room_id);
 			const perms = permCacheRoom.get(room_id) ?? await data.permissionReadRoom(user_id, room_id);
 			permCacheRoom.set(room_id, perms);
 			if (!perms.has("View")) return;
-			ws.send(JSON.stringify(msg));
+			send(msg);
 		}
 		
 		async function handleThread(thread_id: string, msg: z.infer<typeof MessageServer>) {
@@ -82,18 +82,21 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			const perms = permCacheThread.get(thread_id) ?? await data.permissionReadThread(user_id, thread_id);
 			permCacheThread.set(thread_id, perms);
 			if (!perms.has("View")) return;
-			ws.send(JSON.stringify(msg));
+			send(msg);
 		}
 		
 		function handleUsers(msg_user_id: string, msg: z.infer<typeof MessageServer>) {
 			if (state === "closed") return;
 			if (msg_user_id !== user_id) return;
-			ws.send(JSON.stringify(msg));
+			send(msg);
 		}
 
 		async function handleHello(token: string, _last_id?: string) {
 			const session = await data.sessionSelectByToken(token);
-			if (!session) return c.json({ error: "Invalid or expired token" }, 401);
+			if (!session) {
+				send({ type: "error", error: "Invalid or expired token" });
+				return;
+			}
 			// if (row.level as number < 1) return c.json({ error: "Unauthorized" }, 403);
 			user_id = session.user_id;
 			const user = await data.userSelect(user_id);
@@ -123,10 +126,9 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 				events.off("users", handleUsers);
 				state = "closed";
 			},
-			onMessage(event, ws) {
+			onMessage(event, _ws) {
+				if (!event.data) return;
 				try {
-					// event.data is occasionally null, and i have no idea why
-					
 					const msg = MessageClient.parse(JSON.parse(event.data as string));
 					// console.log(`recv websocket ${id}`, msg);
 					if (msg.type === "hello") {
@@ -139,19 +141,19 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 						rescheduleHeartbeat();
 					}
 				} catch (err: any) {
-					console.log(`websocket recv message error ${id}`, err);
+					console.log(`websocket recv message error ${id}`);
 					if (ws.readyState === WebSocket.OPEN) {
-						ws.send(JSON.stringify({
+						send({
 							type: "error",
 							error: err.format(),
-						}));
+						});
 					}
 					ws.close();
 					state = "closed";
 				}
 			},
 			onError(evt, ws) {
-      	console.log(`websocket error`, evt);
+      	console.log(`websocket error`, (evt as ErrorEvent).message);
       	ws.close();
       	state = "closed";
       },

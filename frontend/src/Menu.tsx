@@ -266,11 +266,13 @@ function RoomNotificationMenu() {
 
 // the context menu for threads
 export function ThreadMenu(props: { thread: ThreadT }) {
+  const ctx = useCtx();
   const copyId = () => navigator.clipboard.writeText(props.thread.id);
+  const markRead = () => ctx.dispatch({ do: "thread.mark_read", thread_id: props.thread.id });
   
   return (
     <Menu>
-      <Item>mark as read</Item>
+      <Item onClick={markRead}>mark as read</Item>
       <Item>copy link</Item>
       <ThreadNotificationMenu />
       <Separator />
@@ -312,7 +314,7 @@ export function MessageMenu(props: { message: MessageT }) {
       <Item>redact</Item>
       <Separator />
       <Item onClick={copyId}>copy id</Item>
-      <Item>view source</Item>
+      <Item onClick={() => console.log(JSON.parse(JSON.stringify(props.message)))}>log to console</Item>
     </Menu>
   )
 }

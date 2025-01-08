@@ -242,7 +242,13 @@
 	white-space: pre-wrap;
 }
 
-.markdown a {
+.markdown pre {
+	overflow-x: auto;
+	background: #22282a;
+	padding: 4px;
+}
+
+a {
 	color: #b18cf3;
 	text-decoration: underline;
 }

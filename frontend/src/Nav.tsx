@@ -43,6 +43,7 @@ export const ChatNav = () => {
 													classList={{
 														"bg-bg3": threadId() === thread.id,
 														"text-sep": thread.is_closed,
+														"font-bold": thread.last_read_id !== thread.last_version_id,
 													}}
 													onClick={() => ctx.dispatch({ do: "setView", to: { view: "thread", room, thread }})}
 													onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "thread", x: e.x, y: e.y, thread }})}}

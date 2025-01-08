@@ -55,24 +55,25 @@ export const InviteCode = z.string().openapi({
 	example: "arstdhneio",
 });
 
-// TODO: media. how to implement this?
-export const Media = z.object({
+export const MediaBase = z.object({
 	id: MediaId,
 	filename: z.string().describe("The original filename"),
 	url: z.string().describe("A url to download this media from"),
-	source_url: z.string().optional().describe(
+	source_url: z.string().nullable().describe(
 		"The source url this media was downloaded from, if any",
 	),
-	thumbnail_url: z.string().optional().describe("A thumbnail"),
+	thumbnail_url: z.string().nullable().describe("A thumbnail"),
 	mime: z.string().describe("The mime type (file type)"),
-	alt: z.string().optional().describe(
+	alt: z.string().nullable().describe(
 		"Descriptive alt text, not entirely unlike a caption",
 	),
-	size: Uint.optional().describe("The size (in bytes)"),
-	height: z.number().positive().optional(),
-	width: z.number().positive().optional(),
-	duration: z.number().positive().optional(),
-}).openapi("Media");
+	size: Uint.describe("The size (in bytes)"),
+	height: z.number().positive().nullable(),
+	width: z.number().positive().nullable(),
+	duration: z.number().positive().nullable(),
+});
+
+export const Media = MediaBase.openapi("Media");
 
 export const Embed = z.object({
 	title: z.string().max(256).optional(),
@@ -80,6 +81,11 @@ export const Embed = z.object({
 	thumbnail: Media.optional(),
 	media: Media.array().optional(),
 });
+
+// export enum RoomType {
+// 	Default = 0,
+// 	Dm = 1,
+// }
 
 export const Room = z.object({
 	id: RoomId,
@@ -162,7 +168,7 @@ export const MessageBase = z.object({
 	ordering: Uint.describe("the order that this message appears in the room"),
 	content: z.string().min(1).max(8192).nullable(),
 	attachments: Media.array().default([]),
-	embeds: Embed.array().default([]),
+	// embeds: Embed.array().default([]),
 	metadata: z.record(z.string(), z.any()).nullable().describe("any arbitrary metadata you want to attach to a message. may have special meaning depending on type."),
 	mentions_users: UserId.array(),
 	mentions_roles: RoleId.array(),
@@ -207,10 +213,11 @@ export const ThreadBase = z.object({
 	// is_wiki: z.boolean(), // editable by everyone
 	// is_private: z.boolean(),
 	// recipients: Member.array(),
-	// is_unread: z.boolean(),
-	// last_read_id: MessageId,
-	// last_message_id: MessageId,
-	// message_count: z.number(),
+	// TODO: split out is_unread to be able to filter out blocked users server side?
+	is_unread: z.boolean(),
+	last_version_id: MessageId,
+	last_read_id: MessageId.nullable(),
+	message_count: z.number(),
 	// mention_count: z.number(),
 })
 
@@ -282,12 +289,13 @@ export const ThreadPatch = Thread.pick({
 }).partial();
 export const MessagePatch = Message.pick({
 	content: true,
-	attachments: true,
-	embeds: true,
+	// embeds: true,
 	metadata: true,
 	reply_id: true,
 	nonce: true,
 	override_name: true,
+}).extend({
+	attachments: z.object({ id: MediaId }).array(),
 }).partial();
 export const UserPatch = User.pick({
 	name: true,
