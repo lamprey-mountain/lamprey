@@ -116,9 +116,9 @@ export const Role = z.object({
 	name: z.string().min(1).max(64),
 	description: z.string().max(2048).nullable(),
 	permissions: PermissionAssignable.array(),
-	is_self_applicable: z.boolean(),
-	is_mentionable: z.boolean(),
-	is_default: z.boolean(),
+	is_self_applicable: z.boolean().describe("if members can add and remove this role to themselves"),
+	is_mentionable: z.boolean().describe("currently unused"),
+	is_default: z.boolean().describe("new members have this role by default"),
 }).openapi("Role");
 
 export const UserBase = z.object({

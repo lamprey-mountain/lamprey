@@ -23,9 +23,9 @@ const db = new Pool({
 	controls: {
 		debug: {
 			notices: true,
-			queries: true,
+			// queries: true,
 			queryInError: true,
-			results: true,
+			// results: true,
 		}
 	}
 }, 8);
@@ -217,7 +217,7 @@ export const data: Database = {
 			UPDATE usr SET
 				name = ${patch.name === undefined ? old.name : patch.name},
 				description = ${patch.description === undefined ? old.description : patch.description},
-				status = ${patch.status === undefined ? old.status : patch.status},
+				status = ${patch.status === undefined ? old.status : patch.status}
 			WHERE id = ${id}
 			RETURNING *
 		`;
@@ -235,7 +235,7 @@ export const data: Database = {
 	},
 	async userDelete(id) {
 		using q = await db.connect();
-		await q.queryObject`DELETE FROM usr WHERE id = ${id}`;
+		await q.queryObject`UPDATE usr SET deleted_at = ${Date.now()} WHERE id = ${id}`;
 	},
 	async sessionDelete(id) {
 		using q = await db.connect();

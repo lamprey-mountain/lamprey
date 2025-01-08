@@ -10,6 +10,7 @@ import setupSync from "./sync/index.ts";
 import setupMembers from "./members/index.ts";
 import setupInvite from "./invite/index.ts";
 import setupRoles from "./roles/index.ts";
+import setupDocs from "./docs.ts";
 
 export function setup(app: OpenAPIHono<HonoEnv>) {
 	setupRooms(app);
@@ -22,6 +23,7 @@ export function setup(app: OpenAPIHono<HonoEnv>) {
 	setupMembers(app);
 	setupInvite(app);
 	setupRoles(app);
+	setupDocs(app);
 
 	// stub for now, actually serve app later
 	app.get("/", (c) => {

@@ -1,4 +1,4 @@
-import { For, JSX, ParentProps, VoidProps, createSignal, useContext } from "solid-js";
+import { For, JSX, ParentProps, VoidProps, createSelector, createSignal, createUniqueId, useContext } from "solid-js";
 import { Portal, Show } from "solid-js/web";
 import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
@@ -7,11 +7,15 @@ import { MessageT, RoomT, ThreadT } from "./types.ts";
 
 const CLASS_SUBTEXT = "text-fg5 text-sm mt-[-4px]";
 
+const [preview, setPreview] = createSignal();
+const [vel, setVel] = createSignal(0);
+
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
   return (
     <menu
       class="bg-bg3 border-sep border-[1px] shadow-asdf shadow-bg1 text-fg4 overflow-hidden min-w-[128px]"
-      onmousedown={(e) => !props.submenu && e.stopPropagation()}
+      onMouseDown={(e) => !props.submenu && e.stopPropagation()}
+      onMouseLeave={() => setPreview()}
     >
       <ul>
         {props.children}
@@ -20,24 +24,74 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
   )
 }
 
+// TODO: move this out of global scope
+// TODO: use triangle to submenu corners instead of dot with x axis
+const pos: Array<[number, number]> = [];
+globalThis.addEventListener("mousemove", (e) => {
+  pos.push([e.x, e.y]);
+  if (pos.length > 5) pos.shift();
+  let vx = 0, vy = 0;
+  for (let i = 1; i < pos.length; i++) {
+    vx += pos[i - 1][0] - pos[i][0];
+    vy += pos[i - 1][1] - pos[i][1];
+  }
+  setVel((vx / Math.hypot(vx, vy)) || 0);
+});
+
 export function Submenu(props: ParentProps<{ content: JSX.Element, onClick?: (e: MouseEvent) => void }>) {
   const [itemEl, setItemEl] = createSignal<Element | undefined>();
   const [subEl, setSubEl] = createSignal<HTMLElement | undefined>();
+  const [hovered, setHovered] = createSignal(false);
+  
   const dims = useFloating(itemEl, subEl, {
     whileElementsMounted: autoUpdate,
     middleware: [flip()],
     placement: "right-start",
   });
+
+  const menuId = createUniqueId();
+  let timeout: number;
+
+  function handleMouseEnter() {
+    if (!preview()) setPreview(menuId);
+    let s = 1;
+    const attempt = () => {
+      const a = -vel() * (1 / s);
+      if (a <= 0.3) {
+        setPreview(menuId);
+      } else {
+        s += .01
+        timeout = setTimeout(attempt, a);
+      }
+    }
+    attempt();
+  }
   
+  
+  function handleMouseLeave() {
+    clearTimeout(timeout);
+  }
+  
+      // class="[&:hover>*]:visible"
   return (
-    <li class="[&:hover>*]:visible" ref={setItemEl}>
+    <li
+      ref={setItemEl}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <button
         class="border-none px-[8px] py-[2px] w-full text-left hover:bg-bg1/50"
         onClick={(e) => { e.stopPropagation(); props.onClick?.(e) }}
       >
         {props.content}
       </button>
-      <div ref={setSubEl} class="px-[8px] invisible" style={{ position: "fixed", left: `${dims.x}px`, top: `${dims.y}px` }}>
+      <div
+        ref={setSubEl}
+        class="px-[8px] w-max"
+        style={{ position: dims.strategy, left: `${dims.x}px`, top: `${dims.y}px`, visibility: hovered() || preview() === menuId ? "visible" : "hidden" }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
         <Menu submenu>
           {props.children}
         </Menu>
@@ -48,6 +102,25 @@ export function Submenu(props: ParentProps<{ content: JSX.Element, onClick?: (e:
 
 export function Item(props: ParentProps<{ onClick?: (e: MouseEvent) => void }>) {
 	const ctx = useContext(chatctx)!;
+
+  let timeout: number;
+  function handleMouseEnter() {
+    if (!preview()) setPreview();
+    const attempt = () => {
+      const a = -vel() * 20;
+      if (a <= 0) {
+        setPreview();
+      } else {
+        timeout = setTimeout(attempt, a);
+      }
+    }
+    attempt();
+  }
+  
+  function handleMouseLeave() {
+    clearTimeout(timeout);
+  }
+	
   return (
     <li>
       <button
@@ -57,7 +130,10 @@ export function Item(props: ParentProps<{ onClick?: (e: MouseEvent) => void }>) 
           props.onClick?.(e);
           if (!props.onClick) ctx.dispatch({ do: "modal.alert", text: "todo" });
           ctx.dispatch({ do: "menu", menu: null });
-        }}>
+        }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        >
         {props.children}
         </button>
     </li>
@@ -223,7 +299,7 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 export function MessageMenu(props: { message: MessageT }) {
   const ctx = useCtx();
   const copyId = () => navigator.clipboard.writeText(props.message.id);
-  const setReply = () => ctx.dispatch({ do: "editor.reply", thread_id: props.message.thread_id, reply_id: props.message.id });
+  const setReply = () => ctx.dispatch({ do: "thread.reply", thread_id: props.message.thread_id, reply_id: props.message.id });
   
   return (
     <Menu>

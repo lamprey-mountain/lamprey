@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, Show, useContext, } from "solid-js";
+import { createEffect, createSignal, on, onMount, Show, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
 import { TimelineItem } from "./Messages.tsx";
 // import type { paths } from "../../openapi.d.ts";
@@ -24,12 +24,10 @@ export const ChatMain = (props: ChatProps) => {
   const tl = () => ctx.data.timelines[props.thread.id];
 	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
 	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
-	createEffect(() => updateItems());
+	createEffect(on(() => (slice()?.start, slice()?.end), () => updateItems()));
 
   function updateItems() {
   	console.log("update items", slice())
-  	slice()?.start;
-  	slice()?.end;
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
     const items: Array<TimelineItemT> = [];
@@ -120,10 +118,17 @@ export const ChatMain = (props: ChatProps) => {
 				}
 	  	});
 	  },
+	  onScroll(pos) {
+	  	ctx.dispatch({
+	  		do: "thread.scroll_pos",
+	  		thread_id: props.thread.id,
+	  		pos,
+	  	});
+	  },
 	});
 
 	createEffect(async () => {
-		if (!slice()) {
+		if (slice()?.start === undefined) {
       if (paginating) return;
       paginating = true;
       await ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
@@ -134,13 +139,17 @@ export const ChatMain = (props: ChatProps) => {
 
 	createEffect(on(() => props.thread, () => {
 		// TODO: restore scroll position
-		queueMicrotask(() => list.scrollTo(999999));
+		queueMicrotask(() => {
+			const pos = ts().scroll_pos;
+			if (!pos) return list.scrollTo(999999);
+			list.scrollTo(pos);
+		});
 	}));
 
-	ctx.dispatch({ do: "editor.init", thread_id: props.thread.id });
-	const es = () => ctx.data.edit_states[props.thread.id];
-	const reply = () => ctx.data.messages[es().reply_id!];
-	
+	ctx.dispatch({ do: "thread.init", thread_id: props.thread.id });
+	const ts = () => ctx.data.thread_state[props.thread.id];
+	const reply = () => ctx.data.messages[ts().reply_id!];
+
 	// translate-y-[8px]
 	
 	return (
@@ -152,21 +161,21 @@ export const ChatMain = (props: ChatProps) => {
 			</header>
 			<list.List>{item => <TimelineItem item={item} />}</list.List>
 			<div class="absolute bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[138px] pr-[4px] max-h-50% flex-col">
-				<Show when={es().reply_id}>
+				<Show when={ts().reply_id}>
 					<div class="bg-bg2 m-0 flex relative mb-[-1px]">
 						<button
 							class={CLASS_BUTTON + " my-0 mr-[-1px] border-[1px] border-sep absolute right-[100%]"}
-							onClick={() => ctx.dispatch({ do: "editor.reply", thread_id: props.thread.id, reply_id: null })}
+							onClick={() => ctx.dispatch({ do: "thread.reply", thread_id: props.thread.id, reply_id: null })}
 						>
 							cancel
 						</button>
 						<div class="px-[4px] bg-bg1/80 flex-1 border-[1px] border-sep">
-							{es().reply_id}
+							{ts().reply_id}
 							replying to {reply()?.override_name ?? reply()?.author.name}: {reply()?.content}
 						</div>
 					</div>
 				</Show>
-				<Editor state={es().state} class="shadow-asdf shadow-[#1114]" placeholder="send a message..." />
+				<Editor state={ts().state} class="shadow-asdf shadow-[#1114]" placeholder="send a message..." />
 			</div>
 		</div>
 	);

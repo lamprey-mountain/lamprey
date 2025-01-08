@@ -20,7 +20,10 @@ const set = (key: string, value: string | null) => _set.execute([key, value]);
 const get = (key: string) => _get.firstEntry([key])?.value ?? null;
 
 function reconnectDiscord() {
-  dcws = new WebSocket(get("discordGatewayUrl") ?? `wss://gateway.discord.gg?v10&encoding=json`);
+  const url = new URL(get("discordGatewayUrl") ?? `wss://gateway.discord.gg`);
+  url.searchParams.set("v", "10");
+  url.searchParams.set("encoding", "json");
+  dcws = new WebSocket(url);
   dcws.addEventListener("message", (e) => {
     const msg = JSON.parse(e.data);
     if (msg.s) set("discordLastSeq", msg.s.toString());
@@ -120,8 +123,8 @@ const discordWebhooks = new Map([
   ["854134072322424832",  "https://canary.discord.com/api/webhooks/1325935866945863750/_2MCaaM9fWe6zuq_fovuzro4ylKTpknY94gLfhUnCM9CabpnL-jKqDIIlLiHU0MS_2gl?wait=true"], // spam
   ["849816400251584582",  "https://canary.discord.com/api/webhooks/1325935968544358491/hsDSoHrwdVQEua6nYpXRYcxAEbofMiGDUGLy4HSU6wLqkyXKKdmn141SieS0iKjmZLIj?wait=true"], // brake-cusine
   ["862392374331310100",  "https://canary.discord.com/api/webhooks/1325936011695358066/7pLkACUQtyq_hbI9xiI8f_4mGofXxqMEicyc1a49IduodXV1ufQ6ehceXYZ6m246tTxL?wait=true"], // motivational-quotes
-  ["1318306193248092271", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ??wait=true&thread_id=1318306193248092271"], // side projects
-  ["1320777240778113045", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ??wait=true&thread_id=1320777240778113045"], // discord if it was good
+  ["1318306193248092271", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ?wait=true&thread_id=1318306193248092271"], // side projects
+  ["1320777240778113045", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ?wait=true&thread_id=1320777240778113045"], // discord if it was good
   ["977802452076216360",  "https://canary.discord.com/api/webhooks/1325959282235146332/s60tkbc7JY_oN3yRYi5pS-jNlqacZWu4XgxasHbU1751KHuS7egpGuPWA7keA_F5BjSS?wait=true"], // testing
   ["663854113418641429",  "https://canary.discord.com/api/webhooks/1273279371469389918/pDd3SnaYZWN1Xhh4uc0IICWyUklpcIBHwXqx81JJm96L_XMc4Lg3wk5IGjGdu8MyY6Rk?wait=true"], // genprog
 ]);
@@ -171,6 +174,12 @@ async function handleChat(msg: any) {
     	  allowed_mentions: { replied_user: true },
     	  embeds,
 	    }),
+	  });
+	  console.log("webhook", req.status, {
+  	  content: message.content || "(no content?)",
+  	  username: message.override_name || message.author.name,
+  	  allowed_mentions: { replied_user: true },
+  	  embeds,
 	  });
 	  const d = await req.json();
     db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([message.id, d.id]);

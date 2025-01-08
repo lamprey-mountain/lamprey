@@ -53,10 +53,10 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
 	}
 	ctx.client.http("POST", `/api/v1/threads/${thread_id}/messages`, {
 		content: text,
-		reply_id: ctx.data.edit_states[thread_id].reply_id,
+		reply_id: ctx.data.thread_state[thread_id].reply_id,
 		nonce: uuidv7(),
 	});
-	ctx.dispatch({ do: "editor.reply", thread_id, reply_id: null });
+	ctx.dispatch({ do: "thread.reply", thread_id, reply_id: null });
 	// props.thread.send({ content: text });
 	// await new Promise(res => setTimeout(res, 1000));
 }
@@ -217,16 +217,21 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   			update("modals", i => [modal, ...i ?? []]);
   			return p.promise;
   		}
-  		case "editor.init": {
-  		  if (ctx.data.edit_states[action.thread_id]) return;
-  		  update("edit_states", action.thread_id, {
+  		case "thread.init": {
+  		  if (ctx.data.thread_state[action.thread_id]) return;
+  		  update("thread_state", action.thread_id, {
     		  state: createEditorState(text => handleSubmit(ctx, action.thread_id, text)),
     		  reply_id: null,
+    		  scroll_pos: null,
   		  });
   		  return;
   		}
-  		case "editor.reply": {
-  		  update("edit_states", action.thread_id, "reply_id", action.reply_id);
+  		case "thread.reply": {
+  		  update("thread_state", action.thread_id, "reply_id", action.reply_id);
+  		  return;
+  		}
+  		case "thread.scroll_pos": {
+  		  update("thread_state", action.thread_id, "scroll_pos", action.pos);
   		  return;
   		}
   	}
@@ -257,14 +262,13 @@ export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx, update: SetS
 					}]);
 					update("slices", thread_id, { start: 0, end: 2 });
 				} else {
+					const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
 					update(
 						"timelines",
 						msg.message.thread_id,
 						(i) => [...i, { type: "remote" as const, message: msg.message }],
 					);
-					if (
-						ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length - 1
-					) {
+					if (isAtEnd) {
 						const newEnd = ctx.data.timelines[thread_id].length;
 						const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
 						update("slices", thread_id, { start: newStart, end: newEnd });

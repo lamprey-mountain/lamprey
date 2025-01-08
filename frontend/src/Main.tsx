@@ -16,7 +16,7 @@ export const Main = () => {
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 	const menuFloating = useFloating(menuParentRef, menuRef, {
-		middleware: [shift({ mainAxis: true, crossAxis: true })],
+		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 		placement: "right-start",
 	});
 
@@ -139,27 +139,30 @@ export const Main = () => {
 				)}</For>
 				<Show when={ctx.data.menu}>
 					<div
-						ref={setMenuRef}
-						class="fixed overflow-y-auto max-h-[calc(100vh)] p-[8px] [scrollbar-width:none]"
-						style={{
-							top: `${menuFloating.y}px`,
-							left: `${menuFloating.x}px`,
-						}}
+						class="fixed pointer-events-none top-0 left-0 w-full h-full overflow-y-auto [scrollbar-width:none]"
 					>
-						<Switch>
-							<Match
-								when={ctx.data.menu.type === "room"}
-								children={<RoomMenu room={ctx.data.menu.room} />}
-							/>
-							<Match
-								when={ctx.data.menu.type === "thread"}
-								children={<ThreadMenu thread={ctx.data.menu.thread} />}
-							/>
-							<Match
-								when={ctx.data.menu.type === "message"}
-								children={<MessageMenu message={ctx.data.menu.message} />}
-							/>
-						</Switch>
+						<div
+							ref={setMenuRef}
+							class="absolute pointer-events-auto top-0 left-0 pb-[8px]"
+							style={{
+								translate: `${menuFloating.x}px ${menuFloating.y}px`,
+							}}
+						>
+							<Switch>
+								<Match
+									when={ctx.data.menu.type === "room"}
+									children={<RoomMenu room={ctx.data.menu.room} />}
+								/>
+								<Match
+									when={ctx.data.menu.type === "thread"}
+									children={<ThreadMenu thread={ctx.data.menu.thread} />}
+								/>
+								<Match
+									when={ctx.data.menu.type === "message"}
+									children={<MessageMenu message={ctx.data.menu.message} />}
+								/>
+							</Switch>
+						</div>
 					</div>
 				</Show>
 			</Portal>

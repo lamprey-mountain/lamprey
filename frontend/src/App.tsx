@@ -1,7 +1,7 @@
-import { Component, batch as solidBatch } from "solid-js";
+import { Component, Show, batch as solidBatch } from "solid-js";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { Client } from "sdk";
-import { ChatCtx, chatctx, Data } from "./context.ts";
+import { ChatCtx, chatctx, Data, useCtx } from "./context.ts";
 import { createStore, produce } from "solid-js/store";
 import { InviteT, MemberT, MessageT, RoleT } from "./types.ts";
 import { Main } from "./Main.tsx";
@@ -40,7 +40,7 @@ const App: Component = () => {
 		slices: {},
 		invites: {},
 		users: {},
-		edit_states: {},
+		thread_state: {},
 		modals: [],
 		user: null,
 		menu: null,
@@ -87,7 +87,9 @@ const App: Component = () => {
 	return (
 		<div id="root" class="flex h-screen font-sans">
 			<chatctx.Provider value={{ client, data, dispatch }}>
-				<Main />
+				<Show when={useCtx()}>
+					<Main />
+				</Show>
 			</chatctx.Provider>
 		</div>
 	);

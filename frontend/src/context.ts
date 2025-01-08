@@ -17,11 +17,13 @@ export type TimelineItem
 type Slice = {
 	start: number,
 	end: number,
+	// _: Symbol,
 }
 
-type InputState = {
+type ThreadState = {
 	state: EditorState,
 	reply_id: string | null,
+	scroll_pos: number | null,
 }
 
 export type Data = {
@@ -35,7 +37,7 @@ export type Data = {
 	invites: Record<string, InviteT>,
 	users: Record<string, UserT>,
 	user: UserT | null,
-	edit_states: Record<string, InputState>,
+	thread_state: Record<string, ThreadState>,
 	modals: Array<any>,
 	menu: any | null,
 	view: View,
@@ -60,8 +62,9 @@ export type Action
 	| { do: "modal.prompt", text: string }
 	| { do: "modal.alert", text: string }
 	| { do: "modal.confirm", text: string }
-	| { do: "editor.init", thread_id: string }
-	| { do: "editor.reply", thread_id: string, reply_id: string | null }
+	| { do: "thread.init", thread_id: string }
+	| { do: "thread.reply", thread_id: string, reply_id: string | null }
+	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
 
 export type ChatCtx = {
 	client: Client;
