@@ -50,6 +50,7 @@ export const MessageServer = z.union([
 	z.object({ type: z.literal("delete.role"), id: RoleId }),
 	z.object({ type: z.literal("delete.member"), room_id: RoomId, user_id: UserId }),
 	z.object({ type: z.literal("delete.invite"), code: InviteCode }),
+	z.object({ type: z.literal("webhook"), hook_id: z.string().uuid(), data: z.any() }),
 ]);
 
 /*

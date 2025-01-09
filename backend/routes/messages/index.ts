@@ -92,9 +92,70 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		return c.json(message, 200);
 	});
 	
-	// app.openapi(withAuth(MessageUpdate), async (c) => {});
-	// app.openapi(withAuth(MessageDelete), async (c) => {});
-	// app.openapi(withAuth(MessageGet), async (c) => {});
+	app.openapi(withAuth(MessageUpdate), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const thread_id = c.req.param("thread_id")!;
+		const message_id = c.req.param("message_id")!;
+		const user_id = c.get("user_id");
+		const message = await data.messageSelect(thread_id, message_id);
+		if (!message) return c.json({ error: "not found" }, 404);
+		if (message.type !== MessageType.Default) return c.json({ error: "invalid edit" }, 400);
+		if (message.author.id === user_id) perms.add("MessageEdit");
+		if (!perms.has("MessageEdit")) return c.json({ error: "missing permission" }, 403);
+		const r = await c.req.json();
+		if (r.attachments?.length || r.embeds?.length) {
+			if (!perms.has("MessageFilesEmbeds")) return c.json({ error: "permission denied" }, 403);
+		}
+		if (typeof r.override_name === "string") {
+			if (!perms.has("MessageMasquerade")) return c.json({ error: "permission denied" }, 403);
+		}
+		if (!r.content && !r.attachments?.length && !r.embeds?.length) {
+			return c.json({
+				error:
+					"at least one of content, attachments, or embeds must be defined",
+			}, 400);
+		}
+		const version_id = uuidv7();
+		if (r.attachments?.length) {
+			for (const att of r.attachments) {
+				const existing = await data.mediaLinkSelect(att.id);
+				if (existing.some(i => i !== message_id)) return c.json({ error: "cant reuse media" }, 400);
+			}
+			for (const att of r.attachments) {
+				await data.mediaLinkInsert(att.id, version_id);
+			}
+		}
+		const messageNew = await data.messageInsert(r, {
+			type: MessageType.Default,
+			id: message_id,
+			thread_id,
+			version_id,
+			author_id: user_id,
+		});
+		for (const a of messageNew.attachments) {
+			a.url = await blobs.presignedGetUrl(a.url);
+		}
+		events.emit("threads", thread_id, { type: "upsert.message", message: { ...messageNew, nonce: r.nonce } });
+		return c.json(messageNew, 200);
+	});
+	
+	app.openapi(withAuth(MessageDelete), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const thread_id = c.req.param("thread_id")!;
+		const message_id = c.req.param("message_id")!;
+		const user_id = c.get("user_id");
+		const message = await data.messageSelect(thread_id, message_id);
+		if (!message) return c.json({ error: "not found" }, 404);
+		if (message.type !== MessageType.Default) return c.json({ error: "invalid delete" }, 400);
+		if (message.author.id === user_id) perms.add("MessageDelete");
+		if (!perms.has("MessageDelete")) return c.json({ error: "missing permission" }, 403);
+		await data.messageDelete(thread_id, message_id);
+		events.emit("threads", thread_id, { type: "delete.message", id: message.id });
+		return new Response(null, { status: 204 });
+	});
+	
 	// app.openapi(withAuth(MessageVersionsList), async (c) => {});
 	// app.openapi(withAuth(MessageVersionsGet), async (c) => {});
 	// app.openapi(withAuth(MessageVersionsDelete), async (c) => {});

@@ -141,10 +141,14 @@ const guild_ids = new Map([
 ]);
 
 const dcHookIds = new Set(discordWebhooks.values().map(i => i.match(/webhooks\/([0-9]+)\//)?.[1]!));
+const seen = new Set();
+let lock;
 
 async function handleChat(msg: any) {
   console.log("chat:", msg.type);
-	if (msg.type === "upsert.message") {
+	if (msg.type === "webhook") {
+    console.log("webhook:", msg);
+	} else if (msg.type === "upsert.message") {
 	  const message: MessageT = msg.message;
 	  if (message.author.id === "01943cc1-62e0-7c0e-bb9b-a4ff42864d69") return;
 	  const channel_id = ctod.get(message.thread_id);
@@ -163,6 +167,8 @@ async function handleChat(msg: any) {
         description: `**[replying to ${reply.override_name || reply.author.name}](https://canary.discord.com/channels/${guild_ids.get(channel_id)}/${channel_id}/${discord_id})**\n${reply.content}`,
       }];
     }
+    const p = Promise.withResolvers();
+    lock = p.promise;
 	  const req = await fetch(discordWebhooks.get(channel_id)!, {
 	    method: "POST",
 	    headers: {
@@ -183,6 +189,7 @@ async function handleChat(msg: any) {
 	  });
 	  const d = await req.json();
     db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([message.id, d.id]);
+    p.resolve();
 	}
 }
 
@@ -191,7 +198,8 @@ async function handleDiscord(msg: any) {
   if (msg.t === "TYPING_START") {
     // console.log(msg)
   } else if (msg.t === "MESSAGE_CREATE") {
-    if (dcHookIds.has(msg.d.webhook_id)) return;
+    await lock;
+    if (db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])) return;
     const thread_id = dtoc.get(msg.d.channel_id);
     if (!thread_id) return;
     const attachments = [];
@@ -226,5 +234,7 @@ async function handleDiscord(msg: any) {
 	  });
 	  const d = await req.json();
     db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([d.id, msg.d.id]);
+  } else if (msg.t === "MESSAGE_UPDATE") {
+    console.log(msg.d);
   }
 }

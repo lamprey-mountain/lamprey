@@ -63,7 +63,7 @@ const App: Component = () => {
 	};
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
-	const handleMessage = createWebsocketHandler(ws, ctx, update);
+	const handleMessage = createWebsocketHandler(ws, ctx);
 
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });

@@ -9,65 +9,14 @@ import { uuidv7 } from "uuidv7";
 const SLICE_LEN = 100;
 const PAGINATE_LEN = 30;
 
-async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
-	if (text.startsWith("/")) {
-		const [cmd, ...args] = text.slice(1).split(" ");
-		const { room_id } = ctx.data.threads[thread_id];
-		if (cmd === "thread") {
-			const name = text.slice("/thread ".length);
-			await ctx.client.http("POST", `/api/v1/rooms/${room_id}/threads`, {
-				name,
-			});
-		} else if (cmd === "archive") {
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
-				is_closed: true,
-			});
-		} else if (cmd === "unarchive") {
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
-				is_closed: false,
-			});
-		} else if (cmd === "desc") {
-			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
-				description: description || null,
-			});
-		} else if (cmd === "name") {
-			const name = args.join(" ");
-			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
-				name,
-			});
-		} else if (cmd === "desc-room") {
-			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
-				description: description || null,
-			});
-		} else if (cmd === "name-room") {
-			const name = args.join(" ");
-			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
-				name,
-			});
-		}
-		return;
-	}
-	ctx.client.http("POST", `/api/v1/threads/${thread_id}/messages`, {
-		content: text,
-		reply_id: ctx.data.thread_state[thread_id].reply_id,
-		nonce: uuidv7(),
-	});
-	ctx.dispatch({ do: "thread.reply", thread_id, reply_id: null });
-	// props.thread.send({ content: text });
-	// await new Promise(res => setTimeout(res, 1000));
-}
-
-export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {	
+export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
+	let ackGraceTimeout: number | undefined;
+	let ackDebounceTimeout: number | undefined;
+	
   async function dispatch(action: Action) {
   	console.log("dispatch", action.do);
-  	queueMicrotask(() => console.log(ctx.data))
   	switch (action.do) {
   		case "setView": {
-  			update("view", action.to);
   			if ("room" in action.to) {
   				const room_id = action.to.room.id;
   				const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
@@ -83,6 +32,13 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   					}
   				}
   			}
+  			if (action.to.view === "thread") {
+  				const thread_id = action.to.thread.id;
+  				dispatch({ do: "thread.init", thread_id });
+					update("thread_state", thread_id, "read_marker_id", ctx.data.threads[thread_id].last_read_id);
+  			}
+  			ackDebounceTimeout = undefined; // make sure threads past the grace period get marked as read
+  			update("view", action.to);
   			return;
   		}
   		case "paginate": {
@@ -105,6 +61,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   					for (const msg of batch.items) {
   						update("messages", msg.id, msg);
   					}
+			    	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
   				});
   				return;
   			}
@@ -224,6 +181,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
     		  state: createEditorState(text => handleSubmit(ctx, action.thread_id, text)),
     		  reply_id: null,
     		  scroll_pos: null,
+					read_marker_id: null,
   		  });
   		  return;
   		}
@@ -245,29 +203,51 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					update("threads", msg.thread.id, msg.thread);
 				} else if (msg.type === "upsert.message") {
 					solidBatch(() => {
-						update("messages", msg.message.id, msg.message);
-						update("threads", msg.message.thread_id, "last_version_id", msg.message.version_id);
-						const { thread_id } = msg.message;
+						const { message } = msg;
+						const { id, version_id, thread_id } = message;
+						update("messages", id, message);
+						if (ctx.data.threads[thread_id]) {
+							update("threads", thread_id, "last_version_id", version_id);
+							if (id === version_id) {
+								update("threads", thread_id, "message_count", i => i + 1);
+							}
+						}
 						if (!ctx.data.timelines[thread_id]) {
 							update("timelines", thread_id, [{ type: "hole" }, {
 								type: "remote",
-								message: msg.message as MessageT,
+								message
 							}]);
 							update("slices", thread_id, { start: 0, end: 2 });
 						} else {
 							const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
-							update(
-								"timelines",
-								msg.message.thread_id,
-								(i) => [...i, { type: "remote" as const, message: msg.message }],
-							);
+							if (id === version_id) {
+								update(
+									"timelines",
+									message.thread_id,
+									(i) => [...i, { type: "remote" as const, message }],
+								);
+							} else {
+								update(
+									"timelines",
+									message.thread_id,
+									(i) => i.map(j => (j.type === "remote" && j.message.id === id) ? { type: "remote" as const, message } : j),
+								);
+							}
 							if (isAtEnd) {
 								const newEnd = ctx.data.timelines[thread_id].length;
 								const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
 								update("slices", thread_id, { start: newStart, end: newEnd });
 							}
 						}
+						if (ctx.data.view.view === "thread" && ctx.data.view.thread.id === thread_id) {
+							const tl = ctx.data.timelines[thread_id];
+							const isAtEnd = tl?.at(-1)?.type !== "hole" && ctx.data.slices[thread_id].end >= tl.length;
+							if (isAtEnd) {
+					    	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+							}
+						}
 					});
+					// TODO: message deletions
 				} else if (msg.type === "upsert.role") {
 					const role: RoleT = msg.role;
 					const { room_id } = role;
@@ -304,15 +284,24 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		  return;
   		}
 			case "thread.mark_read": {
-				const { thread_id, version_id } = action;
-				if (version_id) {
-					await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/messages/${version_id}/ack`);
-					update("threads", thread_id, "last_read_id", version_id);
-				} else {
-					// should probably have the server return the actual last read id?
-					await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/ack`);
-					update("threads", thread_id, "last_read_id", ctx.data.threads[thread_id].last_version_id);
+				const { thread_id, delay, also_local } = action;
+				// NOTE: may need separate timeouts per thread
+				clearTimeout(ackGraceTimeout);
+				clearTimeout(ackDebounceTimeout);
+				if (delay) {
+			    ackGraceTimeout = setTimeout(() => {
+				    ackDebounceTimeout = setTimeout(() => {
+				    	ctx.dispatch({ ...action, delay: false });
+				    }, 800);
+			    }, 200);
+			    return;
 				}
+		    
+				const version_id = action.version_id ?? ctx.data.threads[thread_id].last_version_id;
+				await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/messages/${version_id}/ack`);
+				update("threads", thread_id, "last_read_id", version_id);
+				const has_thread = !!ctx.data.thread_state[action.thread_id];
+				if (also_local && has_thread) update("thread_state", action.thread_id, "read_marker_id", version_id);
   		  return;
 			}
   	}
@@ -333,4 +322,56 @@ export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {
 			});
 		}
   }
+}
+
+async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
+	if (text.startsWith("/")) {
+		const [cmd, ...args] = text.slice(1).split(" ");
+		const { room_id } = ctx.data.threads[thread_id];
+		if (cmd === "thread") {
+			const name = text.slice("/thread ".length);
+			await ctx.client.http("POST", `/api/v1/rooms/${room_id}/threads`, {
+				name,
+			});
+		} else if (cmd === "archive") {
+			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+				is_closed: true,
+			});
+		} else if (cmd === "unarchive") {
+			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+				is_closed: false,
+			});
+		} else if (cmd === "desc") {
+			const description = args.join(" ");
+			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+				description: description || null,
+			});
+		} else if (cmd === "name") {
+			const name = args.join(" ");
+			if (!name) return;
+			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+				name,
+			});
+		} else if (cmd === "desc-room") {
+			const description = args.join(" ");
+			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
+				description: description || null,
+			});
+		} else if (cmd === "name-room") {
+			const name = args.join(" ");
+			if (!name) return;
+			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
+				name,
+			});
+		}
+		return;
+	}
+	ctx.client.http("POST", `/api/v1/threads/${thread_id}/messages`, {
+		content: text,
+		reply_id: ctx.data.thread_state[thread_id].reply_id,
+		nonce: uuidv7(),
+	});
+	ctx.dispatch({ do: "thread.reply", thread_id, reply_id: null });
+	// props.thread.send({ content: text });
+	// await new Promise(res => setTimeout(res, 1000));
 }

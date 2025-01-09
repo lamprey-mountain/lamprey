@@ -1,10 +1,9 @@
 import { JSX } from "solid-js/jsx-runtime";
 import { For, on, onMount } from "solid-js";
 import { Accessor, createSignal, createEffect, onCleanup } from "solid-js";
-import { TimelineSet, Message } from "sdk";
 import { reconcile } from "solid-js/store";
 import { MessageT } from "./types.ts";
-import { Data, Timeline } from "./context.ts";
+import { Data } from "./context.ts";
 
 export type TimelineStatus = "loading" | "update" | "ready";
 
@@ -27,7 +26,6 @@ export type TimelineItemT = { key: string, class?: string } & (
   { type: "unread-marker" } |
   { type: "time-split" } |
   { type: "message", message: MessageT, separate: boolean });
-
 
 // export function shouldSplit(msg: Event, prev?: Event) {
 //   if (!prev) return true;
@@ -303,6 +301,7 @@ export function createList<T>(options: {
       function reanchor() {
         const wrap = wrapperEl();
         // console.log("list::reanchor", wrap, anchorRef);
+        console.log(shouldAutoscroll)
         if (!wrap || !anchorRef) return setRefs();
         if (shouldAutoscroll) {
           // console.log("list::autoscroll");

@@ -16,6 +16,7 @@ export type ThreadT = {
 	is_unread: boolean,
 	last_version_id: string,
 	last_read_id: string,
+	message_count: number,
 }
 
 export type MessageT = {

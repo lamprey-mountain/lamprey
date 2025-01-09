@@ -24,6 +24,7 @@ type ThreadState = {
 	state: EditorState,
 	reply_id: string | null,
 	scroll_pos: number | null,
+	read_marker_id: string | null,
 }
 
 export type Data = {
@@ -65,7 +66,7 @@ export type Action
 	| { do: "thread.init", thread_id: string }
 	| { do: "thread.reply", thread_id: string, reply_id: string | null }
 	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
-	| { do: "thread.mark_read", thread_id: string, version_id?: string }
+	| { do: "thread.mark_read", thread_id: string, version_id?: string, delay?: boolean, also_local?: boolean }
 	| { do: "server", msg: any }
 
 export type ChatCtx = {

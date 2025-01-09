@@ -38,8 +38,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
   		},
   	],
   	servers: [
-  		{ url: "http://localhost:8000", description: "local dev" },
   		{ url: "https://chat.celery.eu.org", description: "production" },
+  		{ url: "http://localhost:8000", description: "local dev" },
   	],
   });
 

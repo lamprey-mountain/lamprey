@@ -72,7 +72,7 @@ export const Message = (props: MessageProps) => {
 		return (
 			<>
 				<div class="mb-[-4px] text-xs text-fg5 text-right">{"\u21B1"}</div>
-				<div class="mb-[-4px] text-xs text-fg4 mx-[8px]">
+				<div class="mb-[-4px] text-xs text-fg4 mx-[8px] truncate">
 					<span class="text-fg5">{name}: </span>
 					{props.reply.content}
 				</div>
@@ -167,7 +167,10 @@ export const Message = (props: MessageProps) => {
 					</span>
 					<div class="mx-[8px] flex flex-col items-start min-w-0">
 						<Show when={props.message.content}>
-							<div class={BODY_CSS} ref={bodyEl!} innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></div>
+							<div class={BODY_CSS} ref={bodyEl!}>
+								<span class="inline-block" innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
+								<Show when={props.message.id !== props.message.version_id}> <span class="text-fg5 text-sm">(edited)</span></Show>
+							</div>
 						</Show>
 						<For each={props.message.attachments}>{att => getAttachment(att)}</For>
 					</div>
@@ -221,19 +224,18 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "spacer-mini": {
 			return <li><div class="h-8"></div></li>
 		}
-	}
-}
-
-export const TimelineItem = (props: { thread: ThreadT, item: TimelineItemT }) => {
-	return (<>{getTimelineItem(props.thread, props.item)}</>);
-
+		case "unread-marker": {
+			return (
+				<li>
+					<div class={"group grid grid-cols-[128px_1fr_max-content] px-[8px] shadow-arst shadow-[#3fa9c9] bg-[#3fa9c922]"}>
+						<div></div>
+						<div class="mx-[8px] flex flex-col items-start min-w-0 text-[#3fa9c9]">new messages</div>
+						<div></div>
+					</div>
+				</li>
+			);
+		}
 	// <Match when={props.item.type === "unread-marker" && false}>
-	// 	<li class="text-[#3fa9c9] shadow-arst shadow-[#3fa9c9] shadow-[#3fa9c922]">
-	// 		<div class="grid grid-cols-[128px_auto_max-content] px-[8px]">
-	// 			<span class="sender">-----</span>
-	// 			<span class="body">new messages</span>
-	// 		</div>
-	// 	</li>
 	// </Match>
 	// <Match when={props.item.type === "unread-marker"}>
 	// 	<li classList={{ unreadMarker2: true }}>
@@ -242,6 +244,12 @@ export const TimelineItem = (props: { thread: ThreadT, item: TimelineItemT }) =>
 	// 		<hr />
 	// 	</li>
 	// </Match>
+	}
+}
+
+export const TimelineItem = (props: { thread: ThreadT, item: TimelineItemT }) => {
+	return (<>{getTimelineItem(props.thread, props.item)}</>);
+
 	// <Match when={props.item.type === "time-split" && false}>
 	// 	<li
 	// 		classList={{
@@ -270,24 +278,3 @@ export const TimelineItem = (props: { thread: ThreadT, item: TimelineItemT }) =>
 	// 	</li>
 	// </Match>
 }
-
-// export const Messages = (props: MessagesProps) => {
-// 	return (
-// 		<>
-// 			<ul class="flex flex-col justify-end py-[8px]" classList={{ "notime": props.notime }}>
-// 				{props.messages.map((i) => <TimelineItem msg={i} />)}
-// 			</ul>
-// 		</>
-// 	);
-// };
-
-// {props.message.type === "message_html"
-// 	? (
-// 		<span
-// 			class={BODY_CSS}
-// 			ref={bodyEl!}
-// 			innerHTML={props.message.body}
-// 		>
-// 		</span>
-// 	)
-// 	: <span class={BODY_CSS} ref={bodyEl!}>{props.message.body}</span>}

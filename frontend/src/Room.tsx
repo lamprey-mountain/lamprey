@@ -22,17 +22,17 @@ export const RoomHome = (props: { room: RoomT }) => {
 		ctx.client.http("DELETE", `/api/v1/rooms/${room_id}/members/@self`);
 	}
 	
-  const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
-  	if (value?.room_id !== room_id) value = undefined;
-  	if (value?.has_more === false) return value;
-  	const lastId = value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
-  	const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/threads?dir=f&from=${lastId}&limit=100`);
-  	return {
-  		...batch,
-  		items: [...value?.items ?? [], ...batch.items],
-  		room_id,
-  	};
-  });
+  // const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
+  // 	if (value?.room_id !== room_id) value = undefined;
+  // 	if (value?.has_more === false) return value;
+  // 	const lastId = value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
+  // 	const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/threads?dir=f&from=${lastId}&limit=100`);
+  // 	return {
+  // 		...batch,
+  // 		items: [...value?.items ?? [], ...batch.items],
+  // 		room_id,
+  // 	};
+  // });
 	
   // <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
   // TODO: use actual links instead of css styled divs
@@ -45,7 +45,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<button class={CLASS_BUTTON} onClick={() => ctx.dispatch({ do: "setView", to: { view: "room-settings", room: props.room }})}>settings</button><br />
 			<br />
 			<ul>
-	    	<For each={threads()?.items}>{thread => (
+	    	<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === props.room.id)}>{thread => (
 	      	<li>
 	      	<article class="contain-content bg-bg3 my-[8px] border-[1px] border-sep [contain:content] max-w-[800px]">
 		      	<header
@@ -58,7 +58,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			          <div class="text-fg2">Created at {getTimestampFromUUID(thread.id).toDateString()}</div>
 			        </div>
 			        <div class="self-start mt-[8px] text-fg2 cursor-pointer hover:text-fg1 hover:underline" onClick={() => ctx.dispatch({ do: "setView", to: { view: "thread", room: props.room, thread }})}>
-			          message count &bull; last msg {getTimestampFromUUID(thread.id).toDateString()}
+			          {thread.message_count} messages &bull; last msg {getTimestampFromUUID(thread.last_version_id ?? thread.id).toDateString()}
 		          	<Show when={thread.description}>
 		          		<br />
 				          {thread.description}
@@ -87,7 +87,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	    		</li>
 	    	)}</For>
 			</ul>
-			<button class={CLASS_BUTTON} onClick={fetchThreads}>load more</button><br />
 		</div>
 	);
+			// <button class={CLASS_BUTTON} onClick={() => fetchThreads()}>load more</button><br />
 }

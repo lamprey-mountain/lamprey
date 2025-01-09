@@ -139,7 +139,7 @@ export const Main = () => {
 				)}</For>
 				<Show when={ctx.data.menu}>
 					<div
-						class="fixed pointer-events-none top-0 left-0 w-full h-full overflow-y-auto [scrollbar-width:none]"
+						class="fixed pointer-events-none top-0 left-0 w-full h-full overflow-y-auto [scrollbar-width:none] z-30"
 					>
 						<div
 							ref={setMenuRef}
@@ -173,7 +173,7 @@ export const Main = () => {
 const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
 	return (
-		<div class="fixed top-0 left-0 w-full h-full grid place-items-center">
+		<div class="fixed top-0 left-0 w-full h-full grid place-items-center z-20">
 			<div class="absolute animate-popupbg w-full h-full" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
 			<div class="absolute">
 				<div class="absolute animate-popupbase bg-bg2 border-[1px] border-sep w-full h-full"></div>

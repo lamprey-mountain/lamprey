@@ -268,7 +268,9 @@ function RoomNotificationMenu() {
 export function ThreadMenu(props: { thread: ThreadT }) {
   const ctx = useCtx();
   const copyId = () => navigator.clipboard.writeText(props.thread.id);
-  const markRead = () => ctx.dispatch({ do: "thread.mark_read", thread_id: props.thread.id });
+  const markRead = () => {
+    ctx.dispatch({ do: "thread.mark_read", thread_id: props.thread.id, also_local: true });
+  }
   
   return (
     <Menu>
@@ -303,9 +305,17 @@ export function MessageMenu(props: { message: MessageT }) {
   const copyId = () => navigator.clipboard.writeText(props.message.id);
   const setReply = () => ctx.dispatch({ do: "thread.reply", thread_id: props.message.thread_id, reply_id: props.message.id });
   
+  function markUnread() {
+    const thread = ctx.data.timelines[props.message.thread_id];
+    const index = thread.findIndex(i => i.type === "remote" && i.message.id === props.message.id);
+    const next = thread[index - 1];
+    const next_id = next?.type === "remote" ? next.message.id : props.message.id;
+    ctx.dispatch({ do: "thread.mark_read", thread_id: props.message.thread_id, version_id: next_id, also_local: true });
+  }
+  
   return (
     <Menu>
-      <Item>mark unread</Item>
+      <Item onClick={markUnread}>mark unread</Item>
       <Item>copy link</Item>
       <Item onClick={setReply}>reply</Item>
       <Item>edit</Item>

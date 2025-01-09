@@ -181,6 +181,7 @@ type Database = {
 	messageInsert(patch: MessagePatchT, extra: MessagePatchExtraT): Awaitable<MessageT>;
 	messageList(thread_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
+	messageDelete(thread_id: string, message_id: string): Awaitable<void>;
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
 	memberDelete(room_id: string, user_id: string): Awaitable<void>;
@@ -429,11 +430,17 @@ export const data: Database = {
 		`;
 		return MessageFromDb.parse(d.rows[0]);
   },
+  async messageDelete(_thread_id, message_id) {
+		using q = await db.connect();
+		await q.queryObject`
+	    UPDATE message SET deleted_at = ${Date.now()} WHERE id = ${message_id}
+		`;
+  },
   async messageSelect(thread_id, message_id) {
 		using q = await db.connect();
 		const { rows } = await q.queryObject`
 			SELECT * FROM message_json AS msg
-			WHERE thread_id = ${thread_id} AND msg.id = ${message_id}
+			WHERE thread_id = ${thread_id} AND msg.id = ${message_id} AND deleted_at IS NULL
 		`;
 		if (!rows[0]) return null;
 		return MessageFromDb.parse(rows[0]);
@@ -446,7 +453,7 @@ export const data: Database = {
 		await tx.begin();
 		const { rows } = await tx.queryObject`
 			SELECT * FROM message_json AS msg
-			WHERE thread_id = ${thread_id} AND msg.id > ${after} AND msg.id < ${before}
+			WHERE thread_id = ${thread_id} AND deleted_at IS NULL AND msg.id > ${after} AND msg.id < ${before}
 			ORDER BY (CASE WHEN ${dir} = 'b' THEN msg.id END) DESC, msg.id LIMIT ${limit + 1}
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`

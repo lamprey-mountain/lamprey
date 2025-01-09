@@ -22,18 +22,20 @@ export const ChatMain = (props: ChatProps) => {
   const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
 	const slice = () => ctx.data.slices[props.thread.id];
   const tl = () => ctx.data.timelines[props.thread.id];
+	const ts = () => ctx.data.thread_state[props.thread.id];
+	const reply = () => ctx.data.messages[ts().reply_id!];
 	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
 	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
-	createEffect(on(() => (slice()?.start, slice()?.end), () => updateItems()));
 
-	let ackGraceTimeout: number | undefined;
-	let ackDebounceTimeout: number | undefined;
+	ctx.dispatch({ do: "thread.init", thread_id: props.thread.id });
+	createEffect(on(() => (slice()?.start, slice()?.end, ts().read_marker_id, tl()), () => updateItems()));
 
   function updateItems() {
-  	console.log("update items", slice())
+  	console.log("update items", slice(), tl())
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
     const items: Array<TimelineItemT> = [];
+    const { read_marker_id } = ts();
 
     if (hasSpaceTop()) {
 	    items.push({
@@ -62,7 +64,7 @@ export const ChatMain = (props: ChatProps) => {
       if (msg.type === "hole") continue;
       items.push({
         type: "message",
-        key: msg.message.id,
+        key: msg.message.version_id,
         message: msg.message,
         separate: true,
         // separate: shouldSplit(messages[i], messages[i - 1]),
@@ -75,12 +77,12 @@ export const ChatMain = (props: ChatProps) => {
       //   separate: true,
       //   // separate: shouldSplit(messages[i], messages[i - 1]),
       // });
-      // if (events[i].id === lastAck) {
-      //   items.push({
-      //     type: "unread-marker",
-      //     key: "unread-marker",
-      //   });
-      // }
+      if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
+        items.push({
+          type: "unread-marker",
+          key: "unread-marker",
+        });
+      }
     }
     
   	if (hasSpaceBottom()) {
@@ -99,19 +101,6 @@ export const ChatMain = (props: ChatProps) => {
     console.time("perf::updateItems");
     setItems((old) => [...reconcile(items, { key: "key" })(old)]);
     console.timeEnd("perf::updateItems");
-
-    // TODO: move to context/dispatch for less hacks
-    clearTimeout(ackGraceTimeout);
-    ackGraceTimeout = setTimeout(() => {
-	    clearTimeout(ackDebounceTimeout);
-	    ackDebounceTimeout = setTimeout(() => {
-	    	ctx.dispatch({
-	    		do: "thread.mark_read",
-	    		thread_id: props.thread.id,
-	    		// version_id
-	    	});
-	    }, 800);
-    }, 200);
   }
 	
 	const list = createList({
@@ -124,10 +113,15 @@ export const ChatMain = (props: ChatProps) => {
     async onPaginate(dir) {
       if (paginating) return;
       paginating = true;
+      const thread_id = props.thread.id;
       if (dir === "forwards") {
-	      await ctx.dispatch({ do: "paginate", dir: "f", thread_id: props.thread.id });
+	      await ctx.dispatch({ do: "paginate", dir: "f", thread_id });
+				const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
+				if (isAtEnd) {
+		    	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+				}
       } else {
-	      await ctx.dispatch({ do: "paginate", dir: "b", thread_id: props.thread.id });
+	      await ctx.dispatch({ do: "paginate", dir: "b", thread_id });
       }
       paginating = false;
     },
@@ -175,9 +169,6 @@ export const ChatMain = (props: ChatProps) => {
 	});
 
 	createEffect(on(() => props.thread, () => {
-		clearTimeout(ackGraceTimeout);
-		ackDebounceTimeout = undefined;
-		
 		// TODO: restore scroll position
 		queueMicrotask(() => {
 			const pos = ts().scroll_pos;
@@ -185,10 +176,6 @@ export const ChatMain = (props: ChatProps) => {
 			list.scrollTo(pos);
 		});
 	}));
-
-	ctx.dispatch({ do: "thread.init", thread_id: props.thread.id });
-	const ts = () => ctx.data.thread_state[props.thread.id];
-	const reply = () => ctx.data.messages[ts().reply_id!];
 
 	// translate-y-[8px]
 	// <header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
