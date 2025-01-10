@@ -12,6 +12,7 @@ let dcws: WebSocket;
 db.execute(`
   CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT);
   CREATE TABLE IF NOT EXISTS messages (chat_id TEXT, discord_id TEXT, PRIMARY KEY (chat_id, discord_id));
+  CREATE TABLE IF NOT EXISTS attachments (chat_id TEXT, discord_id TEXT, PRIMARY KEY (chat_id, discord_id));
 `);
 
 const _set = db.prepareQuery<[string, string | null]>("INSERT OR REPLACE INTO config VALUES (?, ?)")
@@ -189,6 +190,9 @@ async function handleChat(msg: any) {
 	  });
 	  const d = await req.json();
     db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([message.id, d.id]);
+    for (let i = 0; i < message.attachments.length; i++) {
+      db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([message.attachments[i].id, d.attachments[i].id]);
+    }
     p.resolve();
 	}
 }
@@ -199,9 +203,9 @@ async function handleDiscord(msg: any) {
     // console.log(msg)
   } else if (msg.t === "MESSAGE_CREATE") {
     await lock;
-    if (db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])) return;
     const thread_id = dtoc.get(msg.d.channel_id);
     if (!thread_id) return;
+    if (db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])) return;
     const attachments = [];
     for (const a of msg.d.attachments) {
       const blob = await fetch(a.url).then(r => r.blob());
@@ -215,6 +219,7 @@ async function handleDiscord(msg: any) {
   	    body: form,
       });
       const { media_id: id } = await upload.json();
+      db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([id, a.id]);
       attachments.push({ id });
     }
     const reply_id_discord = msg.d.message_reference?.type === 0 ? msg.d.message_reference.message_id : null;
@@ -235,6 +240,62 @@ async function handleDiscord(msg: any) {
 	  const d = await req.json();
     db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([d.id, msg.d.id]);
   } else if (msg.t === "MESSAGE_UPDATE") {
+    // await lock;
+    const message_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])?.chat_id ?? null;
+    if (!message_id) return;
+    const thread_id = dtoc.get(msg.d.channel_id);
+    if (!thread_id) return;
+    const attachments = [];
+    for (const a of msg.d.attachments) {
+      const existing = db.prepareQuery("SELECT * FROM attachments WHERE discord_id = ?").firstEntry([a.id]);
+      if (existing) {
+        attachments.push({ id: existing.chat_id });
+        continue;
+      } else {
+        const blob = await fetch(a.url).then(r => r.blob());
+        const form = new FormData();
+        form.append("file", blob, a.filename);
+        const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
+          method: "POST",
+          headers: {
+            "Authorization": MY_TOKEN,
+          },
+          body: form,
+        });
+        const { media_id: id } = await upload.json();
+        attachments.push({ id });
+      }
+    }
+    const reply_id_discord = msg.d.message_reference?.type === 0 ? msg.d.message_reference.message_id : null;
+    const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
+    const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages/${message_id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": MY_TOKEN,
+      },
+      body: JSON.stringify({
+    	  content: msg.d.content || (attachments.length ? null : "(no content?)"),
+    	  override_name: msg.d.member?.nick ?? msg.d.author.global_name ?? msg.d.author.username,
+    	  reply_id,
+    	  attachments,
+      }),
+    });
+    const d = await req.json();
     console.log(msg.d);
+    console.log(d);
+    console.log(attachments)
+  } else if (msg.t === "MESSAGE_DELETE") {
+    const thread_id = dtoc.get(msg.d.channel_id);
+    if (!thread_id) return;
+    const message_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])?.chat_id ?? null;
+    if (!message_id) return;
+    await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages/${message_id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": MY_TOKEN,
+      },
+    });
   }
 }

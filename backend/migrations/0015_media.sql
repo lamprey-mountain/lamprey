@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS media (
 CREATE TABLE IF NOT EXISTS media_link (
     media_id UUID,
     target_id UUID,
-    deleted_at INT,
-    PRIMARY KEY (media_id, target_id)
+    link_type INT NOT NULL,
+    deleted_at BIGINT,
+    PRIMARY KEY (media_id, target_id, link_type)
 );

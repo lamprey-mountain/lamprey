@@ -26,16 +26,16 @@ export const ChatNav = () => {
 								onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
 								onContextMenu={(e) => { e.stopPropagation(); if (e.shiftKey) return; e.preventDefault(); ctx.dispatch({ do: "menu", menu: { type: "room", x: e.x, y: e.y, room }})}}
 							>{room.name}</button>
-							<Show when={isRoomSelected(room.id)}>
+							<Show when={isRoomSelected(room.id) || true}>
 								<ul class="ml-6">
 									<li class="mt-1">
 										<button
 											class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-											classList={{ "bg-bg3": v.view === "room" }}
+											classList={{ "bg-bg3": v.view === "room" && v.room.id === room.id }}
 											onClick={() => ctx.dispatch({ do: "setView", to: { view: "room", room }})}
 										>home</button>
 									</li>
-									<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === roomId())}>
+									<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === room.id)}>
 										{(thread) => (
 											<li class="mt-1">
 												<button

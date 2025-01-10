@@ -31,7 +31,6 @@ export function setup(app: OpenAPIHono<HonoEnv>) {
 	app.get("/", (c) => {
 		return c.html(Deno.readTextFileSync("./index.html"));
 	});
-
 	
 	const hooks = new Map([
 		["da8eed9498f37713", "01943cc1-62e0-7c0e-bb9b-a4ff42864d69"],

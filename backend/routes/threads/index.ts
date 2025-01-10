@@ -79,8 +79,6 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		return c.json(thread, 200);
 	});
 
-	// app.openapi(withAuth(ThreadBulkUpdate), async (c) => {});
-	
 	app.openapi(withAuth(ThreadAck), async (c) => {
 		const user_id = c.get("user_id");
 		const thread_id = c.req.param("thread_id");

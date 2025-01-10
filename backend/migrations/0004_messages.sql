@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS message (
     -- embeds JSONB,
     author_id UUID NOT NULL,
     override_name TEXT,
-    deleted_at INT,
+    deleted_at BIGINT,
     FOREIGN KEY (thread_id) REFERENCES thread(id),
     FOREIGN KEY (author_id) REFERENCES usr(id)
     -- FOREIGN KEY (reply) REFERENCES messages(id)

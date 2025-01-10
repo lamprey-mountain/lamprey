@@ -6,6 +6,7 @@ export type MessageT = {
 	nonce: string | null,
 	content: string | null,
 	author: UserT,
+	attachments: Array<any>,
 	override_name: string | null,
 }
 

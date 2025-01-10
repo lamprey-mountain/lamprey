@@ -133,9 +133,9 @@ export const MessageGet = createRoute({
 	},
 });
 
-export const MessageVersionsList = createRoute({
+export const MessageVersionsList = createPagination({
 	method: "get",
-	path: "/api/v1/threads/{thread_id}/messages/{message_id}",
+	path: "/api/v1/threads/{thread_id}/messages/{message_id}/version",
 	summary: "Message versions list",
 	tags: ["message"],
 	request: {
@@ -143,16 +143,9 @@ export const MessageVersionsList = createRoute({
 			thread_id: MessageId,
 		}),
 	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: Message,
-				},
-			},
-		},
+	pagination: {
+		id: MessageId,
+		ty: Message,
 	},
 });
 

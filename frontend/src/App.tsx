@@ -7,6 +7,8 @@ import { InviteT, MemberT, MessageT, RoleT } from "./types.ts";
 import { Main } from "./Main.tsx";
 import { createDispatcher, createWebsocketHandler } from "./dispatch.ts";
 import { createReconnectingWS } from "@solid-primitives/websocket";
+// import { PGlite } from "@electric-sql/pglite";
+// global.PGlite = PGlite;
 
 const BASE_URL = "https://chat.celery.eu.org";
 // const TOKEN = "0a11b93f-ff19-4c56-9bd2-d25bede776de";

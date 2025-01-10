@@ -195,7 +195,6 @@ export const ChatMain = (props: ChatProps) => {
 							cancel
 						</button>
 						<div class="px-[4px] bg-bg1/80 flex-1 border-[1px] border-sep">
-							{ts().reply_id}
 							replying to {reply()?.override_name ?? reply()?.author.name}: {reply()?.content}
 						</div>
 					</div>

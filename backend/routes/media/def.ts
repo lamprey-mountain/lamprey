@@ -1,39 +1,37 @@
 import { createRoute, z } from "npm:@hono/zod-openapi";
-import { Media, MediaId } from "../../types.ts";
+import { Media, MediaCreateBody, MediaId, Uint } from "../../types.ts";
+import { common } from "../common.ts";
+
+const mediaUploadHeaders = z.object({
+	"Upload-Offset": z.string().describe("how much is already uploaded"),
+	"Upload-Length": z.string().describe("the total size of the upload"),
+});
 
 export const MediaCreate = createRoute({
 	method: "post",
 	path: "/api/v1/media",
 	summary: "Media create",
 	description:
-		"Create a new url to upload media to. Media should be PUT directly to the returned url, without any extra headers. Media not referenced/used in other api calls will be removed after a period of time.",
+		"Create a new url to upload media to. Use the media upload endpoint for actually uploading media. Media not referenced/used in other api calls will be removed after a period of time.",
 	tags: ["media"],
 	request: {
 		body: {
 			content: {
 				"application/json": {
-					schema: Media.pick({
-						filename: true,
-						source_url: true,
-						alt: true,
-						size: true,
-					}).extend({
-						source_url: z.string().optional().describe(
-							"The source url to download this media from. The returned url will not be writable if this is specified.",
-						),
-					}),
+					schema: MediaCreateBody,
 				},
 			},
 		},
 	},
 	responses: {
-		200: {
-			description: "success",
+		...common,
+		201: {
+			description: "created",
 			content: {
 				"application/json": {
 					schema: z.object({
 						media_id: MediaId,
-						upload_url: z.string().url(),
+						upload_url: z.string().url().nullable(),
 					}),
 				},
 			},
@@ -41,11 +39,51 @@ export const MediaCreate = createRoute({
 	},
 });
 
-export const MediaFinish = createRoute({
-	method: "put",
-	path: "/api/v1/media/{media_id}/finish",
-	summary: "Media finish",
-	description: "Finished uploading media, begin processing.",
+export const MediaUpload = createRoute({
+	method: "patch",
+	path: "/api/v1/media/{media_id}",
+	summary: "Media upload",
+	description: "Upload more data to the media.",
+	tags: ["media"],
+	request: {
+		params: z.object({
+			media_id: MediaId,
+		}),
+		body: {
+			content: {
+				"application/offset+octet-stream": {
+					schema: {}
+				},
+			},
+		},
+		headers: z.object({
+			"Content-Length": z.string(),
+			"Upload-Offset": z.string(),
+		}),
+	},
+	responses: {
+		...common,
+		200: {
+			description: "upload done",
+			content: {
+				"application/json": {
+					schema: Media,
+				},
+			},
+			headers: mediaUploadHeaders,
+		},
+		204: {
+			description: "upload appended",
+			headers: mediaUploadHeaders,
+		},
+	},
+});
+
+export const MediaCheck = createRoute({
+	method: "head",
+	path: "/api/v1/media/{media_id}",
+	summary: "Media check",
+	description: "Get info about the upload.",
 	tags: ["media"],
 	request: {
 		params: z.object({
@@ -53,8 +91,10 @@ export const MediaFinish = createRoute({
 		}),
 	},
 	responses: {
-		202: {
-			description: "processing",
+		...common,
+		204: {
+			description: "metadata",
+			headers: mediaUploadHeaders,
 		},
 	},
 });
@@ -63,7 +103,7 @@ export const MediaGet = createRoute({
 	method: "get",
 	path: "/api/v1/media/{media_id}",
 	summary: "Media get",
-	description: "Get Media",
+	description: "Get media (unrelated to media check)",
 	tags: ["media"],
 	request: {
 		params: z.object({
@@ -71,6 +111,7 @@ export const MediaGet = createRoute({
 		}),
 	},
 	responses: {
+		...common,
 		200: {
 			description: "success",
 			content: {
@@ -104,13 +145,11 @@ export const MediaClone = createRoute({
 		},
 	},
 	responses: {
-		200: {
+		201: {
 			description: "success",
 			content: {
 				"application/json": {
-					schema: z.object({
-						url: z.string().url(),
-					}),
+					schema: Media,
 				},
 			},
 		},

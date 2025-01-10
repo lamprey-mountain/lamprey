@@ -12,6 +12,6 @@ CREATE TABLE IF NOT EXISTS usr (
     is_system BOOL NOT NULL,
     can_fork BOOL NOT NULL,
     discord_id TEXT,
-    deleted_at INT,
+    deleted_at BIGINT,
     FOREIGN KEY (parent_id) REFERENCES usr(id)
 );

@@ -3081,9 +3081,12 @@
         ],
         "packageJson": {
           "dependencies": [
+            "npm:@electric-sql/pglite@~0.2.15",
             "npm:@floating-ui/dom@^1.6.12",
+            "npm:@sqlite.org/sqlite-wasm@^3.47.2-build1",
             "npm:autoprefixer@^10.4.20",
             "npm:postcss@^8.4.49",
+            "npm:sass@^1.83.1",
             "npm:solid-floating-ui@~0.3.1",
             "npm:tailwindcss@^3.4.17"
           ]

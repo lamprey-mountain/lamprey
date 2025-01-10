@@ -334,3 +334,16 @@ export const AuthorizationRequest = z.union([
 	z.object({ type: z.literal("password"), password: z.string() }),
 	z.object({ type: z.literal("totp"), code: z.string().regex(/^[0-9]{6}$/) }),
 ]);
+
+export const MediaCreateBody = Media.pick({
+	filename: true,
+	source_url: true,
+	size: true,
+}).extend({
+	alt: z.string().optional().describe(
+		"Descriptive alt text, not entirely unlike a caption",
+	),
+	source_url: z.string().optional().describe(
+		"TODO: The source url to download this media from. `upload_url` will be null iff this is specified.",
+	),
+}).openapi("MediaCreate");

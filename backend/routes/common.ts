@@ -53,6 +53,36 @@ export const common = {
 			},
 		},
 	},
+	409: {
+		description: "conflict",
+		content: {
+			"application/json": {
+				schema: z.object({
+					error: z.string(),
+				}),
+			},
+		},
+	},
+	413: {
+		description: "content too large",
+		content: {
+			"application/json": {
+				schema: z.object({
+					error: z.string(),
+				}),
+			},
+		},
+	},
+	415: {
+		description: "unsupported media type",
+		content: {
+			"application/json": {
+				schema: z.object({
+					error: z.string(),
+				}),
+			},
+		},
+	},
 	500: {
 		description: "internal error",
 		content: {

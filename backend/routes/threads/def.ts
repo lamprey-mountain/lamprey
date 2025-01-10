@@ -81,37 +81,6 @@ export const ThreadUpdate = createRoute({
 	},
 });
 
-export const ThreadBulkUpdate = createRoute({
-	method: "patch",
-	path: "/api/v1/threads",
-	summary: "Thread bulk update",
-	tags: ["thread"],
-	request: {
-		body: {
-			content: {
-				"application/json": {
-					schema: z.object({
-						threads: ThreadPatch.setKey("thread_id", ThreadId).array(),
-					}),
-				},
-			},
-		},
-	},
-	responses: {
-		...common,
-		200: {
-			description: "success",
-			content: {
-				"application/json": {
-					schema: z.object({
-						threads: Thread.array(),
-					}),
-				},
-			},
-		},
-	},
-});
-
 export const ThreadGet = createRoute({
 	method: "get",
 	path: "/api/v1/threads/{thread_id}",

@@ -146,6 +146,7 @@ type MessagePatchExtraT = {
   thread_id: string,
   version_id: string,
   author_id: string,
+  ordering?: number,
 }
 
 type SessionInsertT = {
@@ -159,6 +160,19 @@ type RolePatchExtraT = {
 	id: string,
 	room_id: string,
 }
+
+export enum MediaLinkType {
+	Message,
+	MessageVersion,
+}
+
+const MediaLink = z.object({
+	media_id: z.string(),
+	target_id: z.string(),
+	link_type: z.nativeEnum(MediaLinkType),
+});
+
+type MediaLinkT = z.infer<typeof MediaLink>;
 
 type Database = {
 	sessionInsert(patch: SessionInsertT): Awaitable<SessionT & { token: string }>;
@@ -182,6 +196,9 @@ type Database = {
 	messageList(thread_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
 	messageSelect(thread_id: string, message_id: string): Awaitable<MessageT | null>;
 	messageDelete(thread_id: string, message_id: string): Awaitable<void>;
+	versionSelect(thread_id: string, version_id: string): Awaitable<MessageT | null>;
+	versionDelete(thread_id: string, version_id: string): Awaitable<void>;
+	versionList(thread_id: string, message_id: string, paginate: PaginateRequest): Awaitable<PaginateResponse<MessageT>>;
 	memberInsert(user_id: string, base: Omit<MemberT, "user" | "roles">): Awaitable<MemberT>;
 	memberSelect(room_id: string, user_id: string): Awaitable<MemberT | null>;
 	memberDelete(room_id: string, user_id: string): Awaitable<void>;
@@ -201,8 +218,11 @@ type Database = {
 	permissionReadThread(user_id: string, thread_id: string): Awaitable<Permissions>;
 	applyDefaultRoles(user_id: string, room_id: string): Awaitable<void>;
 	mediaInsert(user_id: string, media: MediaT): Awaitable<MediaT>;
-	mediaLinkInsert(media_id: string, thing_id: string): Awaitable<void>;
-	mediaLinkSelect(media_id: string): Awaitable<Array<string>>;
+	mediaSelect(media_id: string): Awaitable<MediaT | null>;
+	mediaLinkInsert(media_id: string, thing_id: string, link_type: MediaLinkType): Awaitable<void>;
+	mediaLinkSelect(media_id: string): Awaitable<Array<MediaLinkT>>;
+	mediaLinkDelete(thing_id: string, link_type: MediaLinkType): Awaitable<void>;
+	mediaLinkDeleteAll(thing_id: string): Awaitable<void>;
 	unreadMarkThread(user_id: string, thread_id: string): Awaitable<void>;
 	unreadMarkMessage(user_id: string, thread_id: string, version_id: string): Awaitable<void>;
 }
@@ -423,7 +443,7 @@ export const data: Database = {
 		using q = await db.connect();
 		await q.queryObject`
 	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
-	    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, (SELECT coalesce(count, 0) FROM message_count WHERE thread_id = ${extra.thread_id}), ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id}, ${extra.type}, ${patch.override_name}, ${patch.attachments?.map(i => i.id) ?? []})
+	    VALUES (${extra.id}, ${extra.thread_id}, ${extra.version_id}, (SELECT coalesce(${extra.ordering}, max(ordering), 0) FROM message WHERE thread_id = ${extra.thread_id}), ${patch.content}, ${patch.metadata}, ${patch.reply_id}, ${extra.author_id}, ${extra.type}, ${patch.override_name}, ${patch.attachments?.map(i => i.id) ?? []})
 		`;
 		const d = await q.queryObject`
 	    SELECT * FROM message_json WHERE id = ${extra.id}
@@ -458,6 +478,46 @@ export const data: Database = {
 		`;
 		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
 			SELECT count(*)::int FROM message_coalesced WHERE thread_id = ${thread_id}
+		`;
+		await tx.rollback();
+		const messages = rows
+			.slice(0, limit)
+			.map((i) => MessageFromDb.parse(i));
+		if (dir === "b") messages.reverse();
+		return {
+			has_more: rows.length > limit,
+			total: count,
+			items: messages,
+		};
+  },
+  async versionDelete(_thread_id, version_id) {
+		using q = await db.connect();
+		await q.queryObject`
+	    UPDATE message SET deleted_at = ${Date.now()} WHERE version_id = ${version_id}
+		`;
+  },
+  async versionSelect(thread_id, version_id) {
+		using q = await db.connect();
+		const { rows } = await q.queryObject`
+			SELECT * FROM message_json_no_coalesce AS msg
+			WHERE thread_id = ${thread_id} AND msg.version_id = ${version_id} AND deleted_at IS NULL
+		`;
+		if (!rows[0]) return null;
+		return MessageFromDb.parse(rows[0]);
+  },
+  async versionList(thread_id, message_id, { dir, from, to, limit }) {
+		const after = (dir === "f" ? from : to) ?? UUID_MIN;
+		const before = (dir === "f" ? to : from) ?? UUID_MAX;
+		using q = await db.connect();
+		const tx = q.createTransaction(uuidv7());
+		await tx.begin();
+		const { rows } = await tx.queryObject`
+			SELECT * FROM message_json_no_coalesce AS msg
+			WHERE thread_id = ${thread_id} AND id = ${message_id} AND deleted_at IS NULL AND msg.id > ${after} AND msg.id < ${before}
+			ORDER BY (CASE WHEN ${dir} = 'b' THEN msg.id END) DESC, msg.id LIMIT ${limit + 1}
+		`;
+		const { rows: [{ count }] } = await tx.queryObject<{ count: number }>`
+			SELECT count(*)::int FROM message_json_no_coalesce WHERE thread_id = ${thread_id} AND id = ${message_id}
 		`;
 		await tx.rollback();
 		const messages = rows
@@ -679,20 +739,40 @@ export const data: Database = {
 		`;
 		return Media.parse(media);
   },
-  async mediaLinkInsert(media_id, target_id) {
+  async mediaSelect(media_id) {
+		using q = await db.connect();
+  	const { rows: [row] } = await q.queryObject`
+	    SELECT * FROM media WHERE id = ${media_id}
+		`;
+		if (!row) return null;
+		return Media.parse(row);
+  },
+  async mediaLinkInsert(media_id, target_id, link_type) {
 		using q = await db.connect();
   	await q.queryObject`
-	    INSERT INTO media_link (media_id, target_id)
-	    VALUES (${media_id}, ${target_id})
+	    INSERT INTO media_link (media_id, target_id, link_type)
+	    VALUES (${media_id}, ${target_id}, ${link_type})
 	    RETURNING *
 		`;
   },
   async mediaLinkSelect(media_id) {
 		using q = await db.connect();
   	const { rows } = await q.queryObject<{ target_id: string }>`
-	    SELECT target_id FROM media_link WHERE media_id = ${media_id}
+	    SELECT * FROM media_link WHERE media_id = ${media_id} AND deleted_at IS NULL
 		`;
-		return rows.map(i => i.target_id) ?? [];
+		return rows.map(i => MediaLink.parse(i));
+  },
+  async mediaLinkDelete(target_id, link_type) {
+		using q = await db.connect();
+  	await q.queryObject<{ target_id: string }>`
+	    UPDATE media_link SET deleted_at = ${Date.now()} WHERE target_id = ${target_id} AND link_type = ${link_type}
+		`;
+  },
+  async mediaLinkDeleteAll(target_id) {
+		using q = await db.connect();
+  	await q.queryObject<{ target_id: string }>`
+	    UPDATE media_link SET deleted_at = ${Date.now()} WHERE target_id = ${target_id}
+		`;
   },
   async unreadMarkThread(user_id, thread_id) {
 		using q = await db.connect();

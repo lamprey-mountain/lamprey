@@ -36,6 +36,11 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
   			description:
   				"discord auth is the only supported method for now, will add other auth methods later",
   		},
+  		{
+  			name: "media",
+  			description:
+  				"work in progress api. will probably come up with something less terrible later.",
+  		},
   	],
   	servers: [
   		{ url: "https://chat.celery.eu.org", description: "production" },

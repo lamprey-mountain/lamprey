@@ -16,6 +16,19 @@ export default defineConfig({
 		watch: {
 			// watching seems broken on my machine unfortunately
 			usePolling: true
-		}
-	}
+		},
+    // headers: {
+    //   'Cross-Origin-Opener-Policy': 'same-origin',
+    //   'Cross-Origin-Embedder-Policy': 'require-corp',
+    // },
+    // fs: {
+    // 	allow: [".", "../node_modules/.deno"],
+    // },
+	},
+  // optimizeDeps: {
+  //   exclude: ['@electric-sql/pglite'],
+  // },
+  // optimizeDeps: {
+  //   exclude: ['@sqlite.org/sqlite-wasm'],
+  // },
 });

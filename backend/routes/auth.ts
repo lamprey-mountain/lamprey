@@ -1,4 +1,4 @@
-import { Context, Next } from "npm:hono";
+import { Context, MiddlewareHandler, Next } from "npm:hono";
 import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT, SessionStatus } from "globals";
 import { RouteConfig, z } from "npm:@hono/zod-openapi";
 import { Permission } from "../types.ts";
@@ -11,8 +11,15 @@ export function withAuth<T extends RouteConfig>(
 	route: T,
 	opts: AuthOptions = { strict: true },
 ) {
+	return withMiddleware(route, auth(opts));
+}
+
+export function withMiddleware<T extends RouteConfig>(
+	route: T,
+	...middle: Array<MiddlewareHandler>
+) {
 	const m = route.middleware;
-	const middleware = [...Array.isArray(m) ? m : m ? [m] : [], auth(opts)];
+	const middleware = [...Array.isArray(m) ? m : m ? [m] : [], ...middle];
 	return { ...route, middleware } as T;
 }
 

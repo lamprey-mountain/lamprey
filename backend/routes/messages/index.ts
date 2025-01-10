@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { events, data, HonoEnv, blobs } from "globals";
+import { events, data, HonoEnv, blobs, MediaLinkType } from "globals";
 import {
 MessageAck,
 	MessageCreate,
@@ -13,9 +13,7 @@ MessageAck,
 } from "./def.ts";
 import { withAuth } from "../auth.ts";
 import { uuidv7 } from "uuidv7";
-import { MessageFromDb } from "../../types/db.ts";
-import { UUID_MAX, UUID_MIN } from "../../util.ts";
-import { Message, MessageType } from "../../types.ts";
+import { MessageType } from "../../types.ts";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(withAuth(MessageCreate), async (c) => {
@@ -44,7 +42,8 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 				if (existing.length) return c.json({ error: "cant reuse media" }, 400);
 			}
 			for (const att of r.attachments) {
-				await data.mediaLinkInsert(att.id, message_id);
+				await data.mediaLinkInsert(att.id, message_id, MediaLinkType.Message);
+				await data.mediaLinkInsert(att.id, message_id, MediaLinkType.MessageVersion);
 			}
 		}
 		const message = await data.messageInsert(r, {
@@ -120,10 +119,11 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (r.attachments?.length) {
 			for (const att of r.attachments) {
 				const existing = await data.mediaLinkSelect(att.id);
-				if (existing.some(i => i !== message_id)) return c.json({ error: "cant reuse media" }, 400);
+				const already_linked = existing.some(i => i.link_type === MediaLinkType.Message && i.target_id !== message_id);
+				if (already_linked) return c.json({ error: "cant reuse media" }, 400);
 			}
 			for (const att of r.attachments) {
-				await data.mediaLinkInsert(att.id, version_id);
+				await data.mediaLinkInsert(att.id, version_id, MediaLinkType.MessageVersion);
 			}
 		}
 		const messageNew = await data.messageInsert(r, {
@@ -132,6 +132,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			thread_id,
 			version_id,
 			author_id: user_id,
+			ordering: message.ordering,
 		});
 		for (const a of messageNew.attachments) {
 			a.url = await blobs.presignedGetUrl(a.url);
@@ -152,15 +153,60 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (message.author.id === user_id) perms.add("MessageDelete");
 		if (!perms.has("MessageDelete")) return c.json({ error: "missing permission" }, 403);
 		await data.messageDelete(thread_id, message_id);
+		await data.mediaLinkDeleteAll(message_id);
 		events.emit("threads", thread_id, { type: "delete.message", id: message.id });
 		return new Response(null, { status: 204 });
 	});
 	
-	// app.openapi(withAuth(MessageVersionsList), async (c) => {});
-	// app.openapi(withAuth(MessageVersionsGet), async (c) => {});
-	// app.openapi(withAuth(MessageVersionsDelete), async (c) => {});
+	app.openapi(withAuth(MessageVersionsList), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const thread_id = c.req.param("thread_id")!;
+		const message_id = c.req.param("message_id")!;
+		const messages = await data.versionList(thread_id, message_id, {
+			limit: parseInt(c.req.query("limit") ?? "10", 10),
+			from: c.req.query("from"),
+			to: c.req.query("to"),
+			dir: c.req.query("dir") as "f" | "b",
+		});
+		for (const m of messages.items) {
+			for (const a of m.attachments) {
+				a.url = await blobs.presignedGetUrl(a.url);
+			}
+		}
+		return c.json(messages, 200);
+	});
 	
-	// TODO: bulk ack?
+	app.openapi(withAuth(MessageVersionsGet), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const thread_id = c.req.param("thread_id")!;
+		const version_id = c.req.param("version_id")!;
+		const message = await data.versionSelect(thread_id, version_id);
+		if (!message) return c.json({ error: "not found" }, 404);
+		for (const a of message.attachments) {
+			a.url = await blobs.presignedGetUrl(a.url);
+		}
+		return c.json(message, 200);
+	});
+	
+	app.openapi(withAuth(MessageVersionsDelete), async (c) => {
+		const perms = c.get("permissions");
+		if (!perms.has("View")) return c.json({ error: "not found" }, 404);
+		const thread_id = c.req.param("thread_id")!;
+		const version_id = c.req.param("version_id")!;
+		const user_id = c.get("user_id");
+		const message = await data.versionSelect(thread_id, version_id);
+		if (!message) return c.json({ error: "not found" }, 404);
+		if (message.type !== MessageType.Default) return c.json({ error: "invalid delete" }, 400);
+		if (message.author.id === user_id) perms.add("MessageDelete");
+		if (!perms.has("MessageDelete")) return c.json({ error: "missing permission" }, 403);
+		await data.versionDelete(thread_id, version_id);
+		await data.mediaLinkDelete(version_id, MediaLinkType.MessageVersion);
+		events.emit("threads", thread_id, { type: "delete.message", id: message.id });
+		return new Response(null, { status: 204 });
+	});
+	
 	app.openapi(withAuth(MessageAck), async (c) => {
 		const user_id = c.get("user_id");
 		const thread_id = c.req.param("thread_id");
