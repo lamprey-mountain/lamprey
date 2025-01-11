@@ -79,8 +79,16 @@ export const MessageUpdate = createRoute({
 	},
 	responses: {
 		...common,
+		201: {
+			description: "edited",
+			content: {
+				"application/json": {
+					schema: Message,
+				},
+			},
+		},
 		200: {
-			description: "success",
+			description: "no change",
 			content: {
 				"application/json": {
 					schema: Message,

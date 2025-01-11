@@ -341,7 +341,7 @@ export function createList<T>(options: {
       
       return (
         <ul
-          class="list-none py-[8px] flex flex-col overflow-y-auto"
+          class="list"
           ref={setWrapperEl}
           onContextMenu={options.onContextMenu}
           onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}

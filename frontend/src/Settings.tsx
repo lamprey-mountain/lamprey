@@ -2,31 +2,27 @@ import { createResource, createSignal, For, Match, onCleanup, Show, Switch, Void
 import { useCtx } from "./context.ts";
 import { InviteT, MemberT, Pagination, RoleT, RoomT } from "./types.ts";
 
-const CLASS_BUTTON = "px-1 bg-bg3 hover:bg-bg4 my-0.5";
-const CLASS_BUTTON2 = `${CLASS_BUTTON} mx-1`;
-
 export const RoomSettings = (props: { room: RoomT }) => {
   const [selectedTab, setSelectedTab] = createSignal("info");
   
   return (
-		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[auto_1fr] grid-cols-[144px_1fr]">
-			<header class="col-span-2 bg-bg3 border-b-[1px] border-b-bg1 p-2">
+		<div class="settings">
+			<header>
 				room settings: {selectedTab()}
 			</header>
-			<nav class="bg-bg3 p-1">
+			<nav>
 				<ul>
 					<For each={["info", "invites", "roles", "members"]}>{tab =>
 						<li>
 							<button
 								onClick={() => setSelectedTab(tab)}
-								class="px-1 py-0.25 w-full text-left hover:bg-bg4"
-								classList={{ "bg-bg2": selectedTab() === tab }}
+								classList={{ "selected": selectedTab() === tab }}
 							>{tab}</button>
 						</li>
 					}</For>
 				</ul>
 			</nav>
-			<main class="p-1 overflow-auto">
+			<main>
 				<Switch>
 					<Match when={selectedTab() === "info"}>
 						<Info room={props.room} />
@@ -62,12 +58,12 @@ function Info(props: VoidProps<{ room: RoomT }>) {
   }
 	return (
 		<>
-			<h2 class="text-lg">info</h2>
+			<h2>info</h2>
 			<div>room name: {props.room.name}</div>
 			<div>room description: {props.room.description}</div>
-			<div>room id: <code class="user-select-all">{props.room.id}</code></div>
-		  <button class={CLASS_BUTTON} onClick={setName}>set name</button><br />
-		  <button class={CLASS_BUTTON} onClick={setDescription}>set description</button><br />
+			<div>room id: <code class="select-all">{props.room.id}</code></div>
+		  <button onClick={setName}>set name</button><br />
+		  <button onClick={setDescription}>set description</button><br />
 		</>
 	)
 }
@@ -99,16 +95,16 @@ function Roles(props: VoidProps<{ room: RoomT }>) {
 	
 	return (
 		<>
-			<h2 class="text-lg">roles</h2>
-			<button class={CLASS_BUTTON} onClick={fetchRoles}>fetch more</button><br />
-			<button class={CLASS_BUTTON} onClick={createRole}>create role</button><br />
+			<h2>roles</h2>
+			<button onClick={fetchRoles}>fetch more</button><br />
+			<button onClick={createRole}>create role</button><br />
 			<Show when={roles()}>
 				<ul>
 					<For each={roles()!.items}>{i => (
 						<li>
 							<details>
 								<summary>{i.name}</summary>
-								<button class={CLASS_BUTTON} onClick={deleteRole(i.id)}>delete role</button>
+								<button onClick={deleteRole(i.id)}>delete role</button>
 								<pre>{JSON.stringify(i, null, 2)}</pre>
 							</details>
 						</li>
@@ -151,22 +147,22 @@ function Members(props: VoidProps<{ room: RoomT }>) {
 
 	return (
 		<>
-			<h2 class="text-lg">members</h2>
-			<button class={CLASS_BUTTON} onClick={fetchMembers}>fetch more</button>
+			<h2>members</h2>
+			<button onClick={fetchMembers}>fetch more</button>
 			<Show when={members()}>
 				<ul>
 					<For each={members()!.items}>{i => (
 						<li>
-							<div class="flex">
-								<div class="mr-1">{i.override_name ?? i.user.name}</div>
+							<div style="display:flex">
+								<div style="margin-right:.25rem">{i.override_name ?? i.user.name}</div>
 								<div>
 									<For each={i.roles}>
-										{i => <button class="italic mx-1" onClick={() => ctx.dispatch({ do: "modal.alert", text: i.id })}>{i.name}</button>}
+										{i => <button class="spaced" onClick={() => ctx.dispatch({ do: "modal.alert", text: i.id })}>{i.name}</button>}
 									</For>
 								</div>
-								<div class="flex-1"></div>
-								<button class={CLASS_BUTTON2} onClick={addRole(i.user.id)}>add role</button>
-								<button class={CLASS_BUTTON2} onClick={removeRole(i.user.id)}>remove role</button>
+								<div style="flex:1"></div>
+								<button class="spaced" onClick={addRole(i.user.id)}>add role</button>
+								<button class="spaced" onClick={removeRole(i.user.id)}>remove role</button>
 							</div>
 							<details>
 								<summary>json</summary>
@@ -206,16 +202,16 @@ function Invites(props: VoidProps<{ room: RoomT }>) {
 
 	return (
 		<>
-			<h2 class="text-lg">invites</h2>
-		  <button class={CLASS_BUTTON} onClick={createInvite}>create invite</button><br />
-			<button class={CLASS_BUTTON} onClick={fetchInvites}>fetch more</button><br />
+			<h2>invites</h2>
+		  <button onClick={createInvite}>create invite</button><br />
+			<button onClick={fetchInvites}>fetch more</button><br />
 			<Show when={invites()}>
 				<ul>
 					<For each={invites()!.items}>{i => (
 						<li>
 							<details>
 								<summary>{i.code}</summary>
-								<button class={CLASS_BUTTON} onClick={() => deleteInvite(i.code)}>delete invite</button>
+								<button onClick={() => deleteInvite(i.code)}>delete invite</button>
 								<pre>{JSON.stringify(i, null, 2)}</pre>
 							</details>
 						</li>

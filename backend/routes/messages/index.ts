@@ -103,6 +103,9 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 		if (message.author.id === user_id) perms.add("MessageEdit");
 		if (!perms.has("MessageEdit")) return c.json({ error: "missing permission" }, 403);
 		const r = await c.req.json();
+		if (message.content === r.content && message.reply_id === r.reply_id && message.override_name === r.override_name && JSON.stringify(message.metadata) === JSON.stringify(r.metadata) && message.attachments.length === r.attachments.length && message.attachments.every((i, x) => i.id === r.attachments[x].id)) {
+			return c.json(message, 200);
+		}
 		if (r.attachments?.length || r.embeds?.length) {
 			if (!perms.has("MessageFilesEmbeds")) return c.json({ error: "permission denied" }, 403);
 		}
@@ -138,7 +141,7 @@ export default function setup(app: OpenAPIHono<HonoEnv>) {
 			a.url = await blobs.presignedGetUrl(a.url);
 		}
 		events.emit("threads", thread_id, { type: "upsert.message", message: { ...messageNew, nonce: r.nonce } });
-		return c.json(messageNew, 200);
+		return c.json(messageNew, 201);
 	});
 	
 	app.openapi(withAuth(MessageDelete), async (c) => {

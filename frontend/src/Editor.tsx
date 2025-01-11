@@ -159,7 +159,7 @@ export const Editor = (props: EditorProps) => {
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
-						<div class="absolute text-fg4">{/* @once */ props.placeholder}</div>
+						<div class="placeholder">{/* @once */ props.placeholder}</div>
 					) as HTMLDivElement;
 					return DecorationSet.create(state.doc, [
 						Decoration.widget(0, placeholder),
@@ -169,50 +169,50 @@ export const Editor = (props: EditorProps) => {
 				function extraDecorations(ast: Token) {
 					switch (ast.type) {
 						case "heading": {
-							return [{ attrs: { class: "text-fg5" }, start: 0, end: ast.depth }];
+							return [{ attrs: { class: "syn" }, start: 0, end: ast.depth }];
 						}
 						case "em": {
 							return [
-								{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
-								{ attrs: { class: "italic" }, start: 1, end: ast.raw.length - 1 },
-								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+								{ attrs: { class: "syn" }, start: 0, end: 1 },
+								{ attrs: { nodeName: "em" }, start: 1, end: ast.raw.length - 1 },
+								{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
 							];
 						}
 						case "link": {
 							if (ast.raw === ast.href) {
-								return [{ attrs: { class: "text-[#b18cf3]" }, start: 0, end: ast.text.length }]
+								return [{ attrs: { style: "color: var(--color-link)" }, start: 0, end: ast.text.length }]
 							} else {
 								return [
-									{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
-									{ attrs: { class: "text-fg5" }, start: ast.text.length + 1, end: ast.text.length + 3 },
-									{ attrs: { class: "text-[#b18cf3]" }, start: ast.text.length + 3, end: ast.raw.length - 1 },
-									{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+									{ attrs: { class: "syn" }, start: 0, end: 1 },
+									{ attrs: { class: "syn" }, start: ast.text.length + 1, end: ast.text.length + 3 },
+									{ attrs: { style: "color: var(--color-link)" }, start: ast.text.length + 3, end: ast.raw.length - 1 },
+									{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
 								]
 							}
 						}
 						case "strong": {
 							return [
-								{ attrs: { class: "text-fg5" }, start: 0, end: 2 },
-								{ attrs: { class: "font-bold" }, start: 2, end: ast.raw.length - 2 },
-								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 2, end: ast.raw.length },
+								{ attrs: { class: "syn" }, start: 0, end: 2 },
+								{ attrs: { nodeName: "b" }, start: 2, end: ast.raw.length - 2 },
+								{ attrs: { class: "syn" }, start: ast.raw.length - 2, end: ast.raw.length },
 							];
 						}
 						case "code": {
 							// does this work with indented code blocks?
 							const firstEnd = ast.raw.indexOf("\n");
 							return [
-								{ attrs: { class: "text-fg5" }, start: 0, end: firstEnd },
+								{ attrs: { class: "syn" }, start: 0, end: firstEnd },
 								// { attrs: { nodeName: "pre" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
 								// { attrs: { class: "font-mono" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
 								{ attrs: { nodeName: "code" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
-								{ attrs: { class: "text-fg5" }, start: ast.text.length + firstEnd + 2, end: ast.raw.length },
+								{ attrs: { class: "syn" }, start: ast.text.length + firstEnd + 2, end: ast.raw.length },
 							];
 						}
 						case "codespan": {
 							return [
-								{ attrs: { class: "text-fg5" }, start: 0, end: 1 },
-								{ attrs: { class: "px-[2px] bg-bg2", nodeName: "code" }, start: 1, end: ast.raw.length - 1 },
-								{ attrs: { class: "text-fg5" }, start: ast.raw.length - 1, end: ast.raw.length },
+								{ attrs: { class: "syn" }, start: 0, end: 1 },
+								{ attrs: { nodeName: "code" }, start: 1, end: ast.raw.length - 1 },
+								{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
 							];
 						}
 						// case "blockquote": {
@@ -417,8 +417,8 @@ export const Editor = (props: EditorProps) => {
 
 	return (
 		<div
-			class={props.class + " bg-bg3 flex-1 border-[1px] border-sep px-[4px] whitespace-pre-wrap overflow-y-auto"}
-			classList={{ "bg-bg4": props.disabled ?? false }}
+			class="editor"
+			classList={{ "disabled": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}
 		>

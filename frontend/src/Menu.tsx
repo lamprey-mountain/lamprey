@@ -5,15 +5,12 @@ import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { chatctx, useCtx } from "./context.ts";
 import { MessageT, RoomT, ThreadT } from "./types.ts";
 
-const CLASS_SUBTEXT = "text-fg5 text-sm mt-[-4px]";
-
 const [preview, setPreview] = createSignal();
 const [vel, setVel] = createSignal(0);
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
   return (
     <menu
-      class="bg-bg3 border-sep border-[1px] shadow-asdf shadow-bg1 text-fg4 overflow-hidden min-w-[128px]"
       onMouseDown={(e) => !props.submenu && e.stopPropagation()}
       onMouseLeave={() => setPreview()}
     >
@@ -72,7 +69,6 @@ export function Submenu(props: ParentProps<{ content: JSX.Element, onClick?: (e:
     clearTimeout(timeout);
   }
   
-      // class="[&:hover>*]:visible"
   return (
     <li
       ref={setItemEl}
@@ -80,14 +76,13 @@ export function Submenu(props: ParentProps<{ content: JSX.Element, onClick?: (e:
       onMouseLeave={handleMouseLeave}
     >
       <button
-        class="border-none px-[8px] py-[2px] w-full text-left hover:bg-bg1/50"
         onClick={(e) => { e.stopPropagation(); props.onClick?.(e) }}
       >
         {props.content}
       </button>
       <div
         ref={setSubEl}
-        class="px-[8px] w-max"
+        class="submenu"
         style={{ position: dims.strategy, left: `${dims.x}px`, top: `${dims.y}px`, visibility: hovered() || preview() === menuId ? "visible" : "hidden" }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -124,7 +119,6 @@ export function Item(props: ParentProps<{ onClick?: (e: MouseEvent) => void }>) 
   return (
     <li>
       <button
-        class="border-none px-[8px] py-[2px] w-full text-left hover:bg-bg1/50"
         onClick={(e) => {
           e.stopPropagation();
           props.onClick?.(e);
@@ -141,7 +135,7 @@ export function Item(props: ParentProps<{ onClick?: (e: MouseEvent) => void }>) 
 }
 
 export function Separator() {
-  return <li><hr class="border-none h-[1px] bg-bg4" /></li>
+  return <li><hr /></li>
 }
 
 // the context menu for rooms
@@ -191,19 +185,19 @@ function ThreadNotificationMenu() {
       <Submenu content={"notifications"}>
         <Item>
           <div>default</div>
-          <div class={CLASS_SUBTEXT}>Uses the room's default notification setting.</div>
+          <div class="subtext">Uses the room's default notification setting.</div>
         </Item>
         <Item>
           <div>everything</div>
-          <div class={CLASS_SUBTEXT}>You will be notified of all new messages in this thread.</div>
+          <div class="subtext">You will be notified of all new messages in this thread.</div>
         </Item>
         <Item>
           <div>watching</div>
-          <div class={CLASS_SUBTEXT}>Messages in this thread will show up in your inbox.</div>
+          <div class="subtext">Messages in this thread will show up in your inbox.</div>
         </Item>
         <Item>
           <div>mentions</div>
-          <div class={CLASS_SUBTEXT}>You will only be notified on @mention</div>
+          <div class="subtext">You will only be notified on @mention</div>
         </Item>
         <Separator />
         <Item>bookmark</Item>
@@ -233,23 +227,23 @@ function RoomNotificationMenu() {
       <Submenu content={"notifications"}>
         <Item>
           <div>default</div>
-          <div class={CLASS_SUBTEXT}>Uses your default notification setting.</div>
+          <div class="subtext">Uses your default notification setting.</div>
         </Item>
         <Item>
           <div>everything</div>
-          <div class={CLASS_SUBTEXT}>You will be notified for all messages.</div>
+          <div class="subtext">You will be notified for all messages.</div>
         </Item>
         <Item>
           <div>new threads</div>
-          <div class={CLASS_SUBTEXT}>You will be notified for new threads.</div>
+          <div class="subtext">You will be notified for new threads.</div>
         </Item>
         <Item>
           <div>watching</div>
-          <div class={CLASS_SUBTEXT}>Threads and messages mark this room unread.</div>
+          <div class="subtext">Threads and messages mark this room unread.</div>
         </Item>
         <Item>
           <div>mentions</div>
-          <div class={CLASS_SUBTEXT}>You will only be notified on @mention</div>
+          <div class="subtext">You will only be notified on @mention</div>
         </Item>
       </Submenu>
       <Submenu content={"mute"}>

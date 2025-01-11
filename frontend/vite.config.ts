@@ -2,11 +2,12 @@ import { defineConfig } from "vite";
 import deno from "@deno/vite-plugin";
 import solid from "vite-plugin-solid";
 import tailwindcss from "tailwindcss";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
+// import { nodePolyfills } from "vite-plugin-node-polyfills";
+import sass from "sass";
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [deno(), solid(), nodePolyfills()],
+	plugins: [deno(), solid()],
 	css: {
 		postcss: {
 			plugins: [tailwindcss()],

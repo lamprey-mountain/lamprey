@@ -3,7 +3,6 @@ import { Portal } from "solid-js/web";
 import { RoomMenu, ThreadMenu, MessageMenu } from "./Menu.tsx";
 import { ChatNav } from "./Nav.tsx";
 import { useCtx } from "./context.ts";
-import { CLASS_BUTTON } from "./styles.ts";
 import { ChatMain } from "./Chat.tsx";
 import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
@@ -57,21 +56,21 @@ export const Main = () => {
 		switch (ctx.data.view.view) {
 			case "home": {
 				return (
-					<div class="flex-1 bg-bg2 text-fg2 p-4 overflow-y-auto">
-						<h2 class="text-xl">home</h2>
+					<div class="home">
+						<h2>home</h2>
 						<p>work in progress. expect bugs and missing polish.</p>
-						<button class={CLASS_BUTTON} onClick={createRoom}>
+						<button onClick={createRoom}>
 							create room
 						</button>
 						<br />
-						<button class={CLASS_BUTTON} onClick={useInvite}>use invite</button>
+						<button onClick={useInvite}>use invite</button>
 						<br />
-						<a class={CLASS_BUTTON} href="/api/v1/auth/discord">
-							discord login
+						<a href="/api/v1/auth/discord">
+							<button>discord login</button>
 						</a>
 						<br />
-						<a class={CLASS_BUTTON} href="/api/docs">
-							api docs
+						<a href="/api/docs">
+							<button>api docs</button>
 						</a>
 						<br />
 					</div>
@@ -102,22 +101,22 @@ export const Main = () => {
 						<Match when={modal.type === "alert"}>
 							<Modal>
 								<p>{modal.text}</p>
-								<div class="h-0.5"></div>
-								<button onClick={() => ctx.dispatch({ do: "modal.close" })} class={CLASS_BUTTON}>okay!</button>
+								<div style="height: 8px"></div>
+								<button onClick={() => ctx.dispatch({ do: "modal.close" })}>okay!</button>
 							</Modal>
 						</Match>
 						<Match when={modal.type === "confirm"}>
 							<Modal>
 								<p>{modal.text}</p>
-								<div class="h-0.5"></div>
-								<button onClick={() => {modal.cont(true); ctx.dispatch({ do: "modal.close" })}} class={CLASS_BUTTON}>okay!</button>&nbsp;
-								<button onClick={() => {modal.cont(false); ctx.dispatch({ do: "modal.close" })}} class={CLASS_BUTTON}>nevermind...</button>
+								<div style="height: 8px"></div>
+								<button onClick={() => {modal.cont(true); ctx.dispatch({ do: "modal.close" })}}>okay!</button>&nbsp;
+								<button onClick={() => {modal.cont(false); ctx.dispatch({ do: "modal.close" })}}>nevermind...</button>
 							</Modal>
 						</Match>
 						<Match when={modal.type === "prompt"}>
 							<Modal>
 								<p>{modal.text}</p>
-								<div class="h-0.5"></div>
+								<div style="height: 8px"></div>
 								<form onSubmit={e => {
 									e.preventDefault();
 									const form = e.target as HTMLFormElement;
@@ -125,12 +124,11 @@ export const Main = () => {
 									modal.cont(input.value);
 									ctx.dispatch({ do: "modal.close" });
 								}}>
-									<input class="bg-bg3 border-[1px] border-sep" type="text" name="text" autofocus />
-									<div class="h-0.5"></div>
-									<input type="submit" class={CLASS_BUTTON} value="done!" />&nbsp;
+									<input type="text" name="text" autofocus />
+									<div style="height: 8px"></div>
+									<input type="submit">done!</input>{" "}
 									<button
 										onClick={() => {modal.cont(null); ctx.dispatch({ do: "modal.close" })}}
-										class={CLASS_BUTTON}
 									>nevermind...</button>
 								</form>
 							</Modal>
@@ -138,12 +136,10 @@ export const Main = () => {
 					</Switch>
 				)}</For>
 				<Show when={ctx.data.menu}>
-					<div
-						class="fixed pointer-events-none top-0 left-0 w-full h-full overflow-y-auto [scrollbar-width:none] z-30"
-					>
+					<div class="contextmenu">
 						<div
 							ref={setMenuRef}
-							class="absolute pointer-events-auto top-0 left-0 pb-[8px]"
+							class="inner"
 							style={{
 								translate: `${menuFloating.x}px ${menuFloating.y}px`,
 							}}
@@ -173,11 +169,11 @@ export const Main = () => {
 const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
 	return (
-		<div class="fixed top-0 left-0 w-full h-full grid place-items-center z-20">
-			<div class="absolute animate-popupbg w-full h-full" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
-			<div class="absolute">
-				<div class="absolute animate-popupbase bg-bg2 border-[1px] border-sep w-full h-full"></div>
-				<div class="animate-popupcont p-[8px] text-fg3 max-w-[500px] min-w-[100px] min-h-[50px]" role="dialog">
+		<div class="modal">
+			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
+			<div class="content">
+				<div class="base"></div>
+				<div class="inner" role="dialog">
 					{props.children}
 				</div>
 			</div>

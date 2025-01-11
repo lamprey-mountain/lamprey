@@ -182,6 +182,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
     		  reply_id: null,
     		  scroll_pos: null,
 					read_marker_id: null,
+					attachments: [],
   		  });
   		  return;
   		}

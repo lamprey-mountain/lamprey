@@ -1,6 +1,6 @@
 import { createContext, useContext } from "solid-js";
 import { Client } from "sdk";
-import { InviteT, MemberT, MessageT, RoleT, RoomT, ThreadT, UserT } from "./types.ts";
+import { AttachmentT, InviteT, MemberT, MessageT, RoleT, RoomT, ThreadT, UserT } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 
 export type View
@@ -25,6 +25,7 @@ type ThreadState = {
 	reply_id: string | null,
 	scroll_pos: number | null,
 	read_marker_id: string | null,
+	attachments: Array<AttachmentCreateT>,
 }
 
 export type Data = {
@@ -67,7 +68,12 @@ export type Action
 	| { do: "thread.reply", thread_id: string, reply_id: string | null }
 	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
 	| { do: "thread.mark_read", thread_id: string, version_id?: string, delay?: boolean, also_local?: boolean }
+	| { do: "thread.attachments", thread_id: string, attachments?: AttachmentCreateT }
 	| { do: "server", msg: any }
+
+export type AttachmentCreateT = {
+	id: string,
+}
 
 export type ChatCtx = {
 	client: Client;

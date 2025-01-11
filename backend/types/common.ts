@@ -62,7 +62,7 @@ export const MediaBase = z.object({
 	source_url: z.string().nullable().describe(
 		"The source url this media was downloaded from, if any",
 	),
-	thumbnail_url: z.string().nullable().describe("A thumbnail"),
+	thumbnail_url: z.string().nullable().describe("TODO: A url for a thumbnail, currently always null"),
 	mime: z.string().describe("The mime type (file type)"),
 	alt: z.string().nullable().describe(
 		"Descriptive alt text, not entirely unlike a caption",

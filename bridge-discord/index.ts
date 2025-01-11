@@ -1,5 +1,6 @@
 import { DiscordIntent, MessageT } from "./types.ts";
 import { DB } from "sqlite";
+import { portals } from "./config.ts";
 
 const db = new DB("data.db");
 const BASE_URL = Deno.env.get("BASE_URL")!;
@@ -11,7 +12,7 @@ let dcws: WebSocket;
 
 db.execute(`
   CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT);
-  CREATE TABLE IF NOT EXISTS messages (chat_id TEXT, discord_id TEXT, PRIMARY KEY (chat_id, discord_id));
+  CREATE TABLE IF NOT EXISTS messages (chat_id TEXT, discord_id TEXT, chat_thread_id TEXT, discord_channel_id TEXT, PRIMARY KEY (chat_id, discord_id));
   CREATE TABLE IF NOT EXISTS attachments (chat_id TEXT, discord_id TEXT, PRIMARY KEY (chat_id, discord_id));
 `);
 
@@ -103,47 +104,29 @@ function reconnectChat() {
   });
 }
 
+const dtoc = new Map(portals.map(i => [i.discord_channel_id, i.my_thread_id]));
+const ctod = new Map(portals.map(i => [i.my_thread_id, i.discord_channel_id]));
+const discordWebhooks = new Map(portals.map(i => [i.discord_channel_id, i.discord_webhook]));
+const guild_ids = new Map(portals.map(i => [i.discord_channel_id, i.discord_guild_id]));
+const locks = new Map<string, Promise<unknown>>();
+
+async function backfill(dcChannelId: string, from: string, to: string) {
+  const batch = await fetch(`https://canary.discord.com/api/v9/channels/${dcChannelId}/messages?after=${from}`, {
+    headers: {
+      "Authorization": "Bot " + DISCORD_TOKEN,
+    }
+  }).then(res => res.json());
+  console.log(batch);
+  for (const msg of batch) {
+    await handleDiscordMessage(msg);
+  }
+  if (batch.length && batch.at(-1).id !== to) {
+    await backfill(dcChannelId, batch.at(-1).id, to);
+  }
+}
+
 reconnectChat();
 reconnectDiscord();
-
-const dtoc = new Map([
-  ["777553502431084565",  "019438f6-bcb4-7d30-ba05-f55cfa4c61d2"], // inspirational-quotes
-  ["854134072322424832",  "0194391b-9765-7e45-bd7d-872b005c4d00"], // spam
-  ["849816400251584582",  "01943d75-ac89-7869-8112-bd6a5a09cab9"], // brake-cusine
-  ["862392374331310100",  "01943d75-c674-7c94-b90f-169b92f5e05a"], // motivational-quotes
-  ["1318306193248092271", "01943d75-e79b-74d6-93e1-1a1c48d49bfe"], // side projects
-  ["1320777240778113045", "01943d76-ad79-718f-9387-946138f8dfd1"], // discord if it was good
-  ["977802452076216360",  "019439e6-5c36-7914-ba30-008e46a1d67f"], // testing
-  ["663854113418641429",  "01943dcb-bb66-7210-9cda-77a1001881eb"], // genprog
-]);
-
-const ctod = new Map(dtoc.entries().map(([k, v]) => [v, k]));
-
-const discordWebhooks = new Map([
-  ["777553502431084565",  "https://canary.discord.com/api/webhooks/1325880931424407604/ms-qfq8J8l-RhUh2SyqaoaEjWEaF_IRoEm5_1MQ7EChs0j9UeD97IZmK6iIYi-onxAuU?wait=true"], // inspirational-quotes
-  ["854134072322424832",  "https://canary.discord.com/api/webhooks/1325935866945863750/_2MCaaM9fWe6zuq_fovuzro4ylKTpknY94gLfhUnCM9CabpnL-jKqDIIlLiHU0MS_2gl?wait=true"], // spam
-  ["849816400251584582",  "https://canary.discord.com/api/webhooks/1325935968544358491/hsDSoHrwdVQEua6nYpXRYcxAEbofMiGDUGLy4HSU6wLqkyXKKdmn141SieS0iKjmZLIj?wait=true"], // brake-cusine
-  ["862392374331310100",  "https://canary.discord.com/api/webhooks/1325936011695358066/7pLkACUQtyq_hbI9xiI8f_4mGofXxqMEicyc1a49IduodXV1ufQ6ehceXYZ6m246tTxL?wait=true"], // motivational-quotes
-  ["1318306193248092271", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ?wait=true&thread_id=1318306193248092271"], // side projects
-  ["1320777240778113045", "https://canary.discord.com/api/webhooks/1318871890671964200/8bdO2LoqmN2Sio1hXVbWB952D0MBH0k4aDmZw775M9izrNiwkVpjaN11XjXdj4Be48sQ?wait=true&thread_id=1320777240778113045"], // discord if it was good
-  ["977802452076216360",  "https://canary.discord.com/api/webhooks/1325959282235146332/s60tkbc7JY_oN3yRYi5pS-jNlqacZWu4XgxasHbU1751KHuS7egpGuPWA7keA_F5BjSS?wait=true"], // testing
-  ["663854113418641429",  "https://canary.discord.com/api/webhooks/1273279371469389918/pDd3SnaYZWN1Xhh4uc0IICWyUklpcIBHwXqx81JJm96L_XMc4Lg3wk5IGjGdu8MyY6Rk?wait=true"], // genprog
-]);
-
-const guild_ids = new Map([
-  ["777553502431084565",  "777553454063026226"], // inspirational-quotes
-  ["854134072322424832",  "777553454063026226"], // spam
-  ["849816400251584582",  "777553454063026226"], // brake-cusine
-  ["862392374331310100",  "777553454063026226"], // motivational-quotes
-  ["1318306193248092271", "777553454063026226"], // side projects
-  ["1320777240778113045", "777553454063026226"], // discord if it was good
-  ["977802452076216360",  "977802451585470474"], // testing
-  ["663854113418641429",  "391020510269669376"], // genprog
-]);
-
-const dcHookIds = new Set(discordWebhooks.values().map(i => i.match(/webhooks\/([0-9]+)\//)?.[1]!));
-const seen = new Set();
-let lock;
 
 async function handleChat(msg: any) {
   console.log("chat:", msg.type);
@@ -169,8 +152,9 @@ async function handleChat(msg: any) {
       }];
     }
     const p = Promise.withResolvers();
-    lock = p.promise;
-	  const req = await fetch(discordWebhooks.get(channel_id)!, {
+    locks.set(channel_id, p.promise);
+    const chat_id = discordWebhooks.get(channel_id)!;
+	  const req = await fetch(chat_id, {
 	    method: "POST",
 	    headers: {
 	      "Content-Type": "application/json",
@@ -189,58 +173,71 @@ async function handleChat(msg: any) {
   	  embeds,
 	  });
 	  const d = await req.json();
-    db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([message.id, d.id]);
+    db.prepareQuery("INSERT INTO messages (chat_id, discord_id, chat_thread_id, discord_channel_id) VALUES (?, ?, ?, ?)").execute([message.id, d.id, chat_id, d.channel_id]);
     for (let i = 0; i < message.attachments.length; i++) {
       db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([message.attachments[i].id, d.attachments[i].id]);
     }
-    p.resolve();
+    p.resolve(null);
 	}
 }
 
-async function handleDiscord(msg: any) {
-  console.log("discord:", msg.t);
-  if (msg.t === "TYPING_START") {
-    // console.log(msg)
-  } else if (msg.t === "MESSAGE_CREATE") {
-    await lock;
-    const thread_id = dtoc.get(msg.d.channel_id);
-    if (!thread_id) return;
-    if (db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])) return;
-    const attachments = [];
-    for (const a of msg.d.attachments) {
-      const blob = await fetch(a.url).then(r => r.blob());
-      const form = new FormData();
-      form.append("file", blob, a.filename);
-      const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
-  	    method: "POST",
-  	    headers: {
-  	      "Authorization": MY_TOKEN,
-  	    },
-  	    body: form,
-      });
-      const { media_id: id } = await upload.json();
-      db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([id, a.id]);
-      attachments.push({ id });
-    }
-    const reply_id_discord = msg.d.message_reference?.type === 0 ? msg.d.message_reference.message_id : null;
-    const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
-	  const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages`, {
+async function handleDiscordMessage(msg: any) {
+  const thread_id = dtoc.get(msg.channel_id);
+  if (!thread_id) return;
+  if (db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.id])) return;
+  const attachments = [];
+  for (const a of msg.attachments) {
+    const blob = await fetch(a.url).then(r => r.blob());
+    const form = new FormData();
+    form.append("file", blob, a.filename);
+    const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
 	    method: "POST",
 	    headers: {
-	      "Content-Type": "application/json",
 	      "Authorization": MY_TOKEN,
 	    },
-	    body: JSON.stringify({
-    	  content: msg.d.content || (attachments.length ? null : "(no content?)"),
-    	  override_name: msg.d.member?.nick ?? msg.d.author.global_name ?? msg.d.author.username,
-    	  reply_id,
-    	  attachments,
-	    }),
-	  });
-	  const d = await req.json();
-    db.prepareQuery("INSERT INTO messages (chat_id, discord_id) VALUES (?, ?)").execute([d.id, msg.d.id]);
+	    body: form,
+    });
+    const { media_id: id } = await upload.json();
+    db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([id, a.id]);
+    attachments.push({ id });
+  }
+  const reply_id_discord = msg.message_reference?.type === 0 ? msg.message_reference.message_id : null;
+  const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
+  const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": MY_TOKEN,
+    },
+    body: JSON.stringify({
+  	  content: msg.content || (attachments.length ? null : "(no content?)"),
+  	  override_name: msg.member?.nick ?? msg.author.global_name ?? msg.author.username,
+  	  reply_id,
+  	  attachments,
+    }),
+  });
+  const d = await req.json();
+  db.prepareQuery("INSERT INTO messages (chat_id, discord_id, chat_thread_id, discord_channel_id) VALUES (?, ?, ?, ?)").execute([d.id, msg.id, thread_id, msg.channel_id]);
+}
+
+const LAST_DC_ID: string = db.prepareQuery<[string]>("SELECT max(discord_id) FROM messages").first([])?.[0] ?? "";
+
+async function handleDiscord(msg: any) {
+  console.log("discord:", msg.t, msg.d);
+  if (msg.t === "GUILD_CREATE") {
+    for (const channel of msg.d.channels) {
+      if (dtoc.has(channel.id)) {
+        await locks.get(channel.id);
+        locks.set(channel.id, backfill(channel.id, LAST_DC_ID, channel.last_message_id));
+      }
+    }
+  } else if (msg.t === "TYPING_START") {
+    // console.log(msg)
+  } else if (msg.t === "MESSAGE_CREATE") {
+    await locks.get(msg.d.channel_id);
+    handleDiscordMessage(msg.d);
   } else if (msg.t === "MESSAGE_UPDATE") {
-    // await lock;
+    await locks.get(msg.d.channel_id);
     const message_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])?.chat_id ?? null;
     if (!message_id) return;
     const thread_id = dtoc.get(msg.d.channel_id);
@@ -286,6 +283,7 @@ async function handleDiscord(msg: any) {
     console.log(d);
     console.log(attachments)
   } else if (msg.t === "MESSAGE_DELETE") {
+    await locks.get(msg.d.channel_id);
     const thread_id = dtoc.get(msg.d.channel_id);
     if (!thread_id) return;
     const message_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])?.chat_id ?? null;

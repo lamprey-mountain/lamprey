@@ -10,8 +10,8 @@ import { createReconnectingWS } from "@solid-primitives/websocket";
 // import { PGlite } from "@electric-sql/pglite";
 // global.PGlite = PGlite;
 
-const BASE_URL = "https://chat.celery.eu.org";
 // const TOKEN = "0a11b93f-ff19-4c56-9bd2-d25bede776de";
+const BASE_URL = localStorage.getItem("base_url") ?? "https://chat.celery.eu.org";
 const TOKEN = localStorage.getItem("token")!;
 
 const SLICE_LEN = 100;
@@ -87,7 +87,7 @@ const App: Component = () => {
 	});
 
 	return (
-		<div id="root" class="flex h-screen font-sans">
+		<div id="root">
 			<chatctx.Provider value={{ client, data, dispatch }}>
 				<Show when={useCtx()}>
 					<Main />

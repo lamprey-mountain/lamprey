@@ -8,7 +8,6 @@ import { chatctx } from "./context.ts";
 import { createList, TimelineItemT } from "./list.tsx";
 import { ThreadT, RoomT } from "./types.ts";
 import { reconcile } from "solid-js/store";
-import { CLASS_BUTTON } from "./styles.ts";
 
 type ChatProps = {
 	thread: ThreadT,
@@ -183,23 +182,30 @@ export const ChatMain = (props: ChatProps) => {
 	// </header>
 	
 	return (
-		<div class="flex-1 bg-bg2 text-fg2 grid grid-rows-[1fr_0] relative">
+		<div class="chat">
 			<list.List>{item => <TimelineItem thread={props.thread} item={item} />}</list.List>
-			<div class="absolute bottom-0 w-full bg-gradient-to-t from-bg2 from-25% flex py-[4px] pl-[138px] pr-[4px] max-h-50% flex-col">
+			<div class="input">
 				<Show when={ts().reply_id}>
-					<div class="bg-bg2 m-0 flex relative mb-[-1px]">
+					<div class="reply">
 						<button
-							class={CLASS_BUTTON + " my-0 mr-[-1px] border-[1px] border-sep absolute right-[100%]"}
+							class="cancel"
 							onClick={() => ctx.dispatch({ do: "thread.reply", thread_id: props.thread.id, reply_id: null })}
 						>
 							cancel
 						</button>
-						<div class="px-[4px] bg-bg1/80 flex-1 border-[1px] border-sep">
+						<div class="info">
 							replying to {reply()?.override_name ?? reply()?.author.name}: {reply()?.content}
 						</div>
 					</div>
 				</Show>
-				<Editor state={ts().state} class="shadow-asdf shadow-[#1114]" placeholder="send a message..." />
+				<Show when={ts().attachments.length && false}>
+					<div class="attachments">
+						<div>foo</div>
+						<div>bar</div>
+						<div>baz</div>
+					</div>
+				</Show>
+				<Editor state={ts().state} placeholder="send a message..." />
 			</div>
 		</div>
 	);

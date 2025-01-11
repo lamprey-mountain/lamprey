@@ -41,9 +41,6 @@ const User = (props: UserProps) => {
 	);
 };
 
-const WRAPPER_CSS = "group grid grid-cols-[128px_1fr_max-content] px-[8px] hover:bg-bg1/30";
-const BODY_CSS = "overflow-hidden markdown max-w-[100%]";
-
 type MessageProps = {
 	message: MessageT;
 };
@@ -71,13 +68,12 @@ export const Message = (props: MessageProps) => {
 		
 		return (
 			<>
-				<div class="mb-[-4px] text-xs text-fg5 text-right">{"\u21B1"}</div>
-				<div class="mb-[-4px] text-xs text-fg4 mx-[8px] truncate">
-					<span class="text-fg5">{name}: </span>
+				<div class="reply arrow">{"\u21B1"}</div>
+				<div class="reply reply-content">
+					<span class="author">{name}: </span>
 					{props.reply.content}
 				</div>
-				<div class="mb-[-4px]">
-				</div>
+				<div class="reply"></div>
 			</>
 		)
 	}
@@ -86,38 +82,38 @@ export const Message = (props: MessageProps) => {
 		const b = a.mime.split("/")[0];
 		if (b === "image") {
 			return (
-				<div class="bg-bg3 p-[4px]">
-					<div class="max-h-[min(50vh,_500px)] max-w-[min(600px,_100%)]" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
-						<img height={a.height!} width={a.width!} src={a.url} alt={a.alt ?? undefined} />
+				<li>
+					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+						<img style={{ height: `${a.height}px`, width: `${a.width}px` }} src={a.url} alt={a.alt ?? undefined} />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="text-sm">{a.mime} - {a.size} bytes</div>
-				</div>
+					<div class="dim">{a.mime} - {a.size} bytes</div>
+				</li>
 			)
 		} else if (b === "video") {
 			return (
-				<div class="bg-bg3 p-[4px] self-start">
-					<div class="max-h-[min(50vh,_500px)] max-w-[min(600px,_100%)]" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+				<li>
+					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
 						<video height={a.height!} width={a.width!} src={a.url} controls />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="text-sm">{a.mime} - {a.size} bytes</div>
-				</div>
+					<div class="dim">{a.mime} - {a.size} bytes</div>
+				</li>
 			)
 		} else if (b === "audio") {
 			return (
-				<div class="bg-bg3 p-[4px] self-start">
+				<li>
 					<audio src={a.url} controls />
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="text-sm">{a.mime} - {a.size} bytes</div>
-				</div>
+					<div class="dim">{a.mime} - {a.size} bytes</div>
+				</li>
 			)
 		} else {
 			return (
-				<div class="bg-bg3 p-[4px] self-start">
+				<li>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="text-sm">{a.mime} - {a.size} bytes</div>
-				</div>
+					<div class="dim">{a.mime} - {a.size} bytes</div>
+				</li>
 			)
 		}
 	}
@@ -134,30 +130,30 @@ export const Message = (props: MessageProps) => {
 			if (patch.is_locked) updates.push(patch.is_locked ? "locked thread" : "unlocked thread");
 			if (patch.is_closed) updates.push(patch.is_closed  ? "closed thread" : "unarchived thread");
 			return (
-				<div class={WRAPPER_CSS}>
-					<span class="text-fg4 text-right"></span>
-					<span class={BODY_CSS + " mx-[8px]"} ref={bodyEl!}>
-						<span class="hover:underline cursor-pointer">{authorName}</span>
-						{" "}updated the thread: {listFormatter.format(updates) || "did nothing"}
-					</span>
-					<span class="invisible group-hover:visible text-fg4">
-						{(/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date).toDateString()}
+				<div class="message">
+					<span></span>
+					<div class="content">
+						<span class="body" ref={bodyEl!}>
+							<span class="author">{authorName}</span>
+							{" "}updated the thread: {listFormatter.format(updates) || "did nothing"}
+						</span>
+					</div>
+					<span class="timestamp">
+						{date.toDateString()}
 					</span>
 				</div>
 			)
 		} else {
 			// console.log(md.parse(props.message.content!));
 			return (
-				<div class={props.message.reply_id ? `${WRAPPER_CSS} grid-rows-[auto_auto]` : WRAPPER_CSS}>
+				<div class="message" classList={{ reply: !!props.message.reply_id }}>
 					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
 						<Reply reply={ctx.data.messages[props.message.reply_id!]} />
 					</Show>
 					<span
-						class="hover:underline cursor-pointer truncate text-right"
-						classList={{
-							"text-[#9ca9db]": !!props.message.override_name,
-							"text-fg4": !props.message.override_name,
-					}}>
+						class="author"
+						classList={{ "override-name": !!props.message.override_name }}
+					>
 						<Tooltip
 							tip={() => <User name={authorName} />}
 							attrs={{ class: "" }}
@@ -165,16 +161,18 @@ export const Message = (props: MessageProps) => {
 							{authorName}
 						</Tooltip>
 					</span>
-					<div class="mx-[8px] flex flex-col items-start min-w-0">
+					<div class="content">
 						<Show when={props.message.content}>
-							<div class={BODY_CSS} ref={bodyEl!}>
-								<span class="inline-block" innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
-								<Show when={props.message.id !== props.message.version_id}> <span class="text-fg5 text-sm">(edited)</span></Show>
+							<div class="body markdown" ref={bodyEl!}>
+								<span innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
+								<Show when={props.message.id !== props.message.version_id}> <span class="edited">(edited)</span></Show>
 							</div>
 						</Show>
-						<For each={props.message.attachments}>{att => getAttachment(att)}</For>
+						<ul class="attachments">
+							<For each={props.message.attachments}>{att => getAttachment(att)}</For>
+						</ul>
 					</div>
-					<span class="invisible group-hover:visible text-fg4">{date.toDateString()}</span>
+					<span class="timestamp">{date.toDateString()}</span>
 				</div>
 			)
 		}
@@ -204,9 +202,9 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 					// 	<p>more info here</p>
 					// </header>
 			return (
-				<li class="contents">
-					<header class="sticky z-10 top-[-8px] px-[144px] bg-bg3 mb-4 shadow-asdf2 shadow-bg2">
-						<h1 class="text-xl">{thread.name}</h1>
+				<li style="display:contents">
+					<header>
+						<h1>{thread.name}</h1>
 						<p>
 							{thread.description ?? "(no description)" } /
 							<Show when={thread.is_closed}> (archived)</Show>
@@ -216,20 +214,20 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			)
 		}
 		case "spacer": {
-			return <li class="flex-1"><div class="h-[800px]"></div></li>
+			return <li style="flex:1"><div style="height:800px"></div></li>
 		}
 		case "spacer-mini2": {
-			return <li class="flex-1"><div class="h-32"></div></li>
+			return <li style="flex:1"><div style="height:8rem"></div></li>
 		}
 		case "spacer-mini": {
-			return <li><div class="h-8"></div></li>
+			return <li><div style="height:2rem"></div></li>
 		}
 		case "unread-marker": {
 			return (
 				<li>
-					<div class={"group grid grid-cols-[128px_1fr_max-content] px-[8px] shadow-arst shadow-[#3fa9c9] bg-[#3fa9c922]"}>
+					<div class="message unread">
 						<div></div>
-						<div class="mx-[8px] flex flex-col items-start min-w-0 text-[#3fa9c9]">new messages</div>
+						<div class="content">new messages</div>
 						<div></div>
 					</div>
 				</li>
