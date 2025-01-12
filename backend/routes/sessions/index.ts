@@ -1,8 +1,9 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { data, events, HonoEnv, SessionStatus } from "globals";
+import { data, events, HonoEnv } from "globals";
 import { withAuth } from "../auth.ts";
 import { SessionCreate, SessionDelete, SessionGet, SessionList } from "./def.ts";
 import { uuidv4, uuidv7 } from "uuidv7";
+import { SessionStatus } from "../../types.ts";
 
 export default function setup(app: OpenAPIHono<HonoEnv>) {
 	app.openapi(SessionCreate, async (c) => {

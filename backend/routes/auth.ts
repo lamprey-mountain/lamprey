@@ -1,7 +1,7 @@
 import { Context, MiddlewareHandler, Next } from "npm:hono";
-import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT, SessionStatus } from "globals";
+import { data, Permissions, HonoEnv, MemberT, MessageT, RoomT, ThreadT, UserT } from "globals";
 import { RouteConfig, z } from "npm:@hono/zod-openapi";
-import { Permission } from "../types.ts";
+import { Permission, SessionStatus } from "../types.ts";
 
 type AuthOptions = {
 	strict: boolean;

@@ -254,12 +254,16 @@ export const Thread = ThreadBase
 //   call: z.null().describe("todo"),
 // });
 
+export enum SessionStatus {
+	Unauthorized = "Unauthorized",
+	Authorized = "Authorized",
+	Sudo = "Sudo",
+}
+
 export const Session = z.object({
 	id: SessionId,
 	user_id: UserId,
-	status: Uint.max(2).describe(
-		"0 = unauthenticated, 1 = can do basic stuff, 2 = sudo mode",
-	),
+	status: z.nativeEnum(SessionStatus),
 	name: z.string().nullable(),
 }).openapi("Session");
 

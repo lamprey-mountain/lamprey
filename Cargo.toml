@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+  "crate-*",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["tezlm"]
+description = "unnamed chat thing?"
+license = "MIT"

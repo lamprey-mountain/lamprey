@@ -1,7 +1,7 @@
 // TODO: rename this to globals.ts
 import { MessageServer } from "./types/sync.ts";
 import { z } from "@hono/zod-openapi";
-import { Invite, Media, Member, Message, MessagePatch, MessageType, Permission, Role, RolePatch, Room, Session, SessionPatch, Thread, ThreadPatch, ThreadType, User, UserPatch } from "./types.ts";
+import { Invite, Media, Member, Message, MessagePatch, MessageType, Permission, Role, RolePatch, Room, Session, SessionPatch, SessionStatus, Thread, ThreadPatch, ThreadType, User, UserPatch } from "./types.ts";
 import EventEmitter from "node:events";
 // import { Client as S3Client } from "npm:minio";
 export * as discord from "./oauth2.ts";
@@ -31,15 +31,15 @@ const db = new Pool({
 	}
 }, 8);
 
-{
-	const migrations = [...Deno.readDirSync("migrations")].sort((a, b) => a.name > b.name ? 1 : -1)
-	using q = await db.connect();
-	for (const migration of migrations) {
-		console.log(`migrate ${migration.name}`);
-		const sql = await Deno.readTextFile(`migrations/${migration.name}`);
-		await q.queryObject(sql);
-	}
-}
+// {
+// 	const migrations = [...Deno.readDirSync("migrations")].sort((a, b) => a.name > b.name ? 1 : -1)
+// 	using q = await db.connect();
+// 	for (const migration of migrations) {
+// 		console.log(`migrate ${migration.name}`);
+// 		const sql = await Deno.readTextFile(`migrations/${migration.name}`);
+// 		await q.queryObject(sql);
+// 	}
+// }
 
 import { S3Client } from "jsr:@bradenmacdonald/s3-lite-client";
 
@@ -90,17 +90,11 @@ export const events = new EventEmitter() as TypedEmitter<Events>;
 export type HonoEnv = {
 	Variables: {
 		session_id: string;
-		session_status: number;
+		session_status: SessionStatus;
 		user_id: string;
 		permissions: Permissions,
 	};
 };
-
-export enum SessionStatus {
-	Unauthorized = 0,
-	Default = 1,
-	Sudo = 2,
-}
 
 type Awaitable<T> = T | Promise<T>;
 
