@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use uuid7::Uuid;
+use uuid::Uuid;
 
 use super::{
-    Invite, InviteCode, Member, Message, MessageId, MessageVersionId, Role, RoleId, Room, RoomId,
+    Invite, InviteCode, RoomMember, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
     Session, SessionId, Thread, User, UserId,
 };
 
@@ -37,7 +37,7 @@ enum MessageServer {
     #[serde(rename = "upsert.user")]
     UpsertUser { user: User },
     #[serde(rename = "upsert.member")]
-    UpsertMember { member: Member },
+    UpsertMember { member: RoomMember },
     #[serde(rename = "upsert.session")]
     UpsertSession { session: Session },
     #[serde(rename = "upsert.role")]
@@ -47,7 +47,7 @@ enum MessageServer {
     #[serde(rename = "delete.message")]
     DeleteMessage { id: MessageId },
     #[serde(rename = "delete.message_version")]
-    DeleteMessageVersion { id: MessageVersionId },
+    DeleteMessageVersion { id: MessageVerId },
     #[serde(rename = "delete.user")]
     DeleteUser { id: UserId },
     #[serde(rename = "delete.session")]

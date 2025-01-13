@@ -48,6 +48,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.85"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f934833b4b7233644e5848f235df3f57ed8c80f1528a26c3dfa13d2147fa056"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atoi"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -134,6 +145,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-tempfile",
+ "async-trait",
  "axum",
  "crossbeam",
  "dashmap",
@@ -150,7 +162,6 @@ dependencies = [
  "utoipa-axum",
  "utoipa-scalar",
  "uuid",
- "uuid7",
 ]
 
 [[package]]
@@ -459,12 +470,6 @@ checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
-
-[[package]]
-name = "fstr"
-version = "0.2.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59fd8999da11407ccf70cbe696eb7f819b85429d83ee3c6eb2f514b1751d246b"
 
 [[package]]
 name = "futures-channel"
@@ -2039,18 +2044,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "uuid7"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1191ed4cd2c6a2e1d16a617f0e70649eafd68178633042d31c631eb6b47dc316"
-dependencies = [
- "fstr",
- "rand",
- "rand_chacha",
- "serde",
 ]
 
 [[package]]

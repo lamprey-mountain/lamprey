@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use url::Url;
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Media {
     pub id: MediaId,
 
@@ -25,11 +25,21 @@ pub struct Media {
     pub alt: Option<String>,
 
     /// The size (in bytes)
-    pub size: Option<u64>,
+    #[sqlx(try_from = "i64")]
+    // FIXME: use unsigned integers instead of signed integers
+    pub size: Option<i64>,
 
-    pub height: Option<u64>,
-    pub width: Option<u64>,
-    pub duration: Option<u64>,
+    #[sqlx(try_from = "i64")]
+    // FIXME: use unsigned integers instead of signed integers
+    pub height: Option<i64>,
+    
+    #[sqlx(try_from = "i64")]
+    // FIXME: use unsigned integers instead of signed integers
+    pub width: Option<i64>,
+    
+    #[sqlx(try_from = "i64")]
+    // FIXME: use unsigned integers instead of signed integers
+    pub duration: Option<i64>,
 }
 
 #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, Clone)]
@@ -56,6 +66,7 @@ pub struct MediaCreated {
 }
 
 use async_tempfile::TempFile;
+use uuid::Uuid;
 
 use super::{ids::MediaId, UserId};
 
@@ -63,4 +74,22 @@ pub struct MediaUpload {
     pub create: MediaCreate,
 	pub user_id: UserId,
 	pub temp_file: TempFile,
+}
+
+#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+pub struct MediaRef {
+    pub id: MediaId,
+}
+
+#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+pub enum MediaLinkType {
+	Message,
+	MessageVersion,
+}
+
+#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+pub struct MediaLink {
+	pub media_id: MediaId,
+	pub target_id: Uuid,
+	pub link_type: MediaLinkType,
 }

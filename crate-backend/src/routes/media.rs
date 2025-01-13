@@ -1,7 +1,7 @@
 use axum::{body::Body, extract::{Path, Request, State}, http::{HeaderMap, HeaderName, StatusCode}, routing::{patch, post}, Json, Router};
 use tokio::io::AsyncSeekExt;
 use url::Url;
-use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{error::Error, types::{Media, MediaCreate, MediaCreated, MediaId, MediaUpload}, ServerState};
 
@@ -9,6 +9,8 @@ use super::util::Auth;
 
 const MAX_SIZE: u64 = 1024 * 1024 * 16;
 
+/// Media create
+/// 
 /// Create a new url to upload media to. Use the media upload endpoint for actually uploading media. Media not referenced/used in other api calls will be removed after a period of time.
 #[utoipa::path(
     post,
@@ -49,7 +51,7 @@ pub async fn media_create(
     Ok((StatusCode::CREATED, res_headers, Json(res)))
 }
 
-/// Upload media
+/// Media upload
 #[utoipa::path(
     patch,
     path = "/media/{id}",
@@ -187,5 +189,6 @@ pub async fn media_upload(
 
 pub fn routes() -> OpenApiRouter<ServerState> {
     OpenApiRouter::new()
-        .routes(utoipa_axum::routes!(media_create, media_upload))
+        .routes(routes!(media_create))
+        .routes(routes!(media_upload))
 }

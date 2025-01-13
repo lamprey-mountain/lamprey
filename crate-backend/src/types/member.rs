@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::{Role, RoomId, User};
+use super::{Role, RoleId, RoomId, User, UserId};
 
 #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
-pub struct Member {
+pub struct RoomMember {
     pub user: User,
     pub room_id: RoomId,
     pub membership: Membership,
@@ -12,6 +12,17 @@ pub struct Member {
     pub override_description: Option<String>,
     // override_avatar: z.string().url().or(z.literal("")),
     pub roles: Vec<Role>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RoomMemberPut {
+    pub user_id: UserId,
+    pub room_id: RoomId,
+    pub membership: Membership,
+    pub override_name: Option<String>,
+    pub override_description: Option<String>,
+    // override_avatar: z.string().url().or(z.literal("")),
+    pub roles: Vec<RoleId>,
 }
 
 // #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ToSchema, Serialize, Deserialize, sqlx::Type)]

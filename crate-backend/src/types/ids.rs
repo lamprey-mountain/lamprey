@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+pub trait Identifier: From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord {}
+
 macro_rules! genid {
     ($name:ident, $example:expr) => {
         #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, ToSchema, Serialize, Deserialize, sqlx::Type)]
@@ -34,6 +36,8 @@ macro_rules! genid {
                 self.into()
             }
         }
+
+        impl Identifier for $name {}
     }
 }
 
@@ -47,3 +51,4 @@ genid!(UserId,       "00000000-0000-0000-0000-00000000user");
 genid!(RoleId,       "00000000-0000-0000-0000-00000000role");
 genid!(MediaId,      "00000000-0000-0000-0000-0000000media");
 genid!(SessionId,    "00000000-0000-0000-0000-00000session");
+// genid!(AuditLogEntryId, "00000000-0000-0000-0000-0auditlogent");

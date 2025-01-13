@@ -1,9 +1,203 @@
-trait MessageService {
-    fn create() {}
-    fn get() {}
-    fn delete() {}
-    fn list() {}
-    fn get_version() {}
-    fn delete_version() {}
-    fn list_version() {}
+use async_trait::async_trait;
+use uuid::Uuid;
+
+use crate::error::Result;
+use crate::types::{
+    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId, RolePatch, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId, UserPatch
+};
+
+pub mod postgres;
+
+pub trait Data:
+    DataRoom
+    + DataRoomMember
+    + DataRole
+    + DataRoleMember
+    + DataPermission
+    + DataInvite
+    + DataMedia
+    + DataMessage
+    + DataSession
+    + DataThread
+    + DataUnread
+    + DataUser
+    + Send
+{
+}
+
+#[async_trait]
+pub trait DataRoom {
+    async fn room_create(&self, create: RoomCreate) -> Result<Room>;
+    async fn room_get(&self, id: RoomId) -> Result<Room>;
+    async fn room_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<RoomId>,
+    ) -> Result<PaginationResponse<Room>>;
+    async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
+}
+
+#[async_trait]
+pub trait DataRoomMember {
+    async fn room_member_put(&self, put: RoomMemberPut) -> Result<()>;
+    async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataRole {
+    async fn role_create(&self, create: RoleCreate) -> Result<Role>;
+	async fn role_list(&self, room_id: RoomId, paginate: PaginationQuery<RoleId>) -> Result<PaginationResponse<Role>>;
+	async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
+	async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
+	async fn role_update(&self, room_id: RoomId, role_id: RoleId, patch: RolePatch) -> Result<Role>;
+}
+
+#[async_trait]
+pub trait DataRoleMember {
+    async fn role_member_put(&self, user_id: UserId, role_id: RoleId)
+        -> Result<()>;
+    async fn role_member_delete(&self, user_id: UserId, role_id: RoleId)
+        -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataPermission {
+    async fn permission_room_get(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+    ) -> Result<Permissions>;
+    async fn permission_thread_get(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+    ) -> Result<Permissions>;
+}
+
+#[async_trait]
+pub trait DataInvite {
+	async fn invite_insert_room(&self, room_id: RoomId, creator_id: UserId, code: InviteCode) -> Result<Invite>;
+	async fn invite_select(&self, code: InviteCode) -> Result<Invite>;
+	async fn invite_delete(&self, code: InviteCode) -> Result<()>;
+	// TODO async fn inviteList(room_id: RoomId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+}
+
+#[async_trait]
+pub trait DataMedia {
+    async fn media_insert(&self, user_id: UserId, media: Media) -> Result<Media>;
+    
+    async fn media_select(&self, media_id: MediaId) -> Result<Media>;
+    
+    async fn media_link_insert(
+        &self,
+        media_id: MediaId,
+        thing_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()>;
+    
+    async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
+    
+    async fn media_link_delete(
+        &self,
+        thing_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()>;
+    
+    async fn media_link_delete_all(&self, thing_id: Uuid) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataMessage {
+    async fn message_create(&self, create: MessageCreate) -> Result<MessageId>;
+    async fn message_update(&self, message_id: MessageId, create: MessageCreate) -> Result<MessageVerId>;
+    async fn message_get(
+        &self,
+        thread_id: ThreadId,
+        id: MessageId,
+    ) -> Result<Message>;
+    async fn message_list(
+        &self,
+        thread_id: ThreadId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
+    async fn message_delete(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+    ) -> Result<()>;
+    async fn message_version_get(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    ) -> Result<Message>;
+    async fn message_version_delete(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    ) -> Result<()>;
+    async fn message_version_list(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        pagination: PaginationQuery<MessageVerId>,
+    ) -> Result<PaginationResponse<Message>>;
+}
+
+#[async_trait]
+pub trait DataSession {
+    async fn session_create(&self, create: ThreadCreate) -> Result<SessionId>;
+    async fn session_get(&self, id: SessionId) -> Result<Session>;
+    async fn session_get_by_token(&self, token: &str) -> Result<Session>;
+    async fn session_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<SessionId>,
+    ) -> Result<PaginationResponse<Session>>;
+    async fn session_delete(&self, id: SessionId) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataThread {
+    async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId>;
+    async fn thread_get(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+    ) -> Result<Thread>;
+    async fn thread_list(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+        pagination: PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>>;
+    async fn thread_update(
+        &self,
+        id: ThreadId,
+        patch: ThreadPatch,
+    ) -> Result<ThreadVerId>;
+}
+
+#[async_trait]
+pub trait DataUnread {
+    async fn unread_mark_thread(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+    ) -> Result<MessageVerId>;
+    async fn unread_mark_message(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        version_id: MessageVerId,
+    ) -> Result<MessageVerId>;
+}
+
+#[async_trait]
+pub trait DataUser {
+    async fn user_insert(&self, id: UserId, patch: UserCreate) -> Result<UserId>;
+    async fn user_update(&self, id: UserId, patch: UserPatch) -> Result<User>;
+    async fn user_delete(&self, id: UserId) -> Result<()>;
+    async fn user_get(&self, id: UserId) -> Result<User>;
 }

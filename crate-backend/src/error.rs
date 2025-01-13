@@ -13,6 +13,10 @@ pub enum Error {
     UnauthSession,
     #[error("not found")]
     NotFound,
+    #[error("forbidden")]
+    MissingPermissions,
+    #[error("bad request: {0}")]
+    BadStatic(&'static str),
     #[error("too big :(")]
     TooBig,
     #[error("internal error: {0}")]
@@ -51,10 +55,12 @@ impl Error {
         match self {
             Error::NotFound => StatusCode::NOT_FOUND,
             Error::BadHeader => StatusCode::BAD_REQUEST,
+            Error::BadStatic(_) => StatusCode::BAD_REQUEST,
             Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::MissingAuthHeader => StatusCode::UNAUTHORIZED,
             Error::UnauthSession => StatusCode::UNAUTHORIZED,
             Error::TooBig => StatusCode::PAYLOAD_TOO_LARGE,
+            Error::MissingPermissions => StatusCode::FORBIDDEN,
             Error::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::CantOverwrite => StatusCode::CONFLICT,
             Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -67,3 +73,5 @@ impl IntoResponse for Error {
         (self.get_status(), Json(json!({ "error": self.to_string() }))).into_response()
     }
 }
+
+pub type Result<T> = std::result::Result<T, Error>;

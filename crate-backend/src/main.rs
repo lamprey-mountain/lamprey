@@ -5,6 +5,7 @@ use axum::{
     response::Html, routing::get, Json
 };
 use dashmap::DashMap;
+use data::{postgres::Postgres, Data};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tracing_subscriber::EnvFilter;
 use types::{MediaId, MediaUpload};
@@ -12,7 +13,7 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable as _};
 
-// pub mod data;
+pub mod data;
 pub mod types;
 pub mod error;
 mod routes;
@@ -26,7 +27,7 @@ mod routes;
         types::Thread,
         types::ThreadPatch,
         types::Message,
-        types::Member,
+        types::RoomMember,
         types::Role,
     ))
 )]
@@ -47,6 +48,12 @@ impl ServerState {
             uploads: Arc::new(DashMap::new()),
             pool,
         }
+    }
+
+    fn data(&self) -> Box<dyn Data> {
+        Box::new(Postgres {
+            pool: self.pool.clone(),
+        })
     }
 }
 
