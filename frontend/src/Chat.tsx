@@ -66,6 +66,7 @@ export const ChatMain = (props: ChatProps) => {
         key: msg.message.version_id,
         message: msg.message,
         separate: true,
+        is_local: msg.type === "local",
         // separate: shouldSplit(messages[i], messages[i - 1]),
       });
       // if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
@@ -108,7 +109,9 @@ export const ChatMain = (props: ChatProps) => {
 		// topPos: () => hasSpaceTop() ? 1 : 0,
 		// topPos: () => hasSpaceTop() ? 1 : 2,
 		topPos: () => 2,
-		bottomPos: () => items().length - 2,
+		// HACK: local and remote messages have different keys (same with edits) which messes with scrolling
+		// i should really find a better way to do this
+		bottomPos: () => items().length - 3,
     async onPaginate(dir) {
       if (paginating) return;
       paginating = true;

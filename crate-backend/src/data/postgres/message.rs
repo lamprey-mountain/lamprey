@@ -23,6 +23,8 @@ impl DataMessage for Postgres {
             .iter()
             .map(|i| i.into_inner())
             .collect();
+        dbg!(&create);
+        dbg!(&atts);
         query!(r#"
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, $10)
@@ -90,7 +92,7 @@ impl DataMessage for Postgres {
             left JOIN att_json ON att_json.version_id = msg.version_id
                  WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL
         "#, thread_id.into_inner(), id.into_inner()).fetch_one(&mut *conn).await?;
-        Ok(row.into())
+        Ok(dbg!(row).into())
     }
 
     async fn message_list(

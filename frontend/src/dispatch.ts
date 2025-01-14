@@ -1,6 +1,6 @@
 import { produce, SetStoreFunction } from "solid-js/store";
 import { Action, Data } from "./context.ts";
-import { InviteT, MemberT, MessageT, RoleT } from "./types.ts";
+import { InviteT, MemberT, MessageT, MessageType, RoleT } from "./types.ts";
 import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "./context.ts";
 import { createEditorState } from "./Editor.tsx";
@@ -178,7 +178,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		case "thread.init": {
   		  if (ctx.data.thread_state[action.thread_id]) return;
   		  update("thread_state", action.thread_id, {
-    		  state: createEditorState(text => handleSubmit(ctx, action.thread_id, text)),
+    		  state: createEditorState(text => handleSubmit(ctx, action.thread_id, text, update)),
     		  reply_id: null,
     		  scroll_pos: null,
 					read_marker_id: null,
@@ -205,7 +205,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				} else if (msg.type === "UpsertMessage") {
 					solidBatch(() => {
 						const { message } = msg;
-						const { id, version_id, thread_id } = message;
+						const { id, version_id, thread_id, nonce } = message;
 						update("messages", id, message);
 						if (ctx.data.threads[thread_id]) {
 							update("threads", thread_id, "last_version_id", version_id);
@@ -220,13 +220,24 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 							}]);
 							update("slices", thread_id, { start: 0, end: 2 });
 						} else {
-							const isAtEnd = ctx.data.slices[thread_id].end === ctx.data.timelines[thread_id].length;
+							const tl = ctx.data.timelines[thread_id];
+							const isAtEnd = ctx.data.slices[thread_id].end === tl.length;
 							if (id === version_id) {
-								update(
-									"timelines",
-									message.thread_id,
-									(i) => [...i, { type: "remote" as const, message }],
-								);
+								const idx = tl.findIndex(i => i.type === "local" && i.message.nonce === nonce);
+								console.log({ idx })
+								if (idx === -1) {
+									update(
+										"timelines",
+										message.thread_id,
+										(i) => [...i, { type: "remote" as const, message }],
+									);
+								} else {
+									update(
+										"timelines",
+										message.thread_id,
+										(i) => [...i.slice(0, idx), { type: "remote" as const, message }, ...i.slice(idx + 1)],
+									);
+								}
 							} else {
 								update(
 									"timelines",
@@ -325,7 +336,7 @@ export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {
   }
 }
 
-async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
+async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, update: SetStoreFunction<Data>) {
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
 		const { room_id } = ctx.data.threads[thread_id];
@@ -367,10 +378,37 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
 		}
 		return;
 	}
+	const reply_id = ctx.data.thread_state[thread_id].reply_id;
+	const nonce = uuidv7();
 	ctx.client.http("POST", `/api/v1/thread/${thread_id}/message`, {
 		content: text,
-		reply_id: ctx.data.thread_state[thread_id].reply_id,
-		nonce: uuidv7(),
+		reply_id,
+		nonce,
+	});
+	const localMessage: MessageT = {
+		type: MessageType.Default,
+		id: nonce,
+		thread_id,
+		version_id: nonce,
+		override_name: null,
+		reply_id,
+		nonce,
+		content: text,
+		author: ctx.data.user!,
+		metadata: null,
+		attachments: [],
+	};
+	solidBatch(() => {
+		const slice = ctx.data.slices[thread_id];
+		update(
+			"timelines",
+			thread_id,
+			(i) => [...i, { type: "local" as const, message: localMessage }],
+		);
+		update("slices", thread_id, { start: slice.start + 1, end: slice.end + 1 });
+		// for (const msg of batch.items) {
+		// 	update("messages", msg.id, msg);
+		// }
 	});
 	ctx.dispatch({ do: "thread.reply", thread_id, reply_id: null });
 	// props.thread.send({ content: text });

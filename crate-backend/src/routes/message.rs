@@ -43,13 +43,15 @@ async fn message_create(
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
     // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
-    if json.content.is_none() && json.attachments.is_empty() {
+    if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
         ));
     }
     let attachment_ids: Vec<_> = json.attachments.into_iter().map(|r| r.id).collect();
+    dbg!(&attachment_ids);
     for id in &attachment_ids {
+        data.media_select(*id).await?;
         let existing = data.media_link_select(*id).await?;
         if !existing.is_empty() {
             return Err(Error::BadStatic("cant reuse media"));
@@ -78,6 +80,7 @@ async fn message_create(
     for media in &mut message.attachments {
         media.url = s.presign(media.id).await?;
     }
+    message.nonce = json.nonce;
     s.sushi.send(MessageServer::UpsertMessage {
         message: message.clone(),
     })?;
@@ -196,6 +199,7 @@ async fn message_edit(
                 .collect()
         });
     for id in &attachment_ids {
+        data.media_select(*id).await?;
         let existing = data.media_link_select(*id).await?;
         let has_link = existing.iter().any(|i| {
             i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()

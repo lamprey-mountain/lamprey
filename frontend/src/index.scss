@@ -109,6 +109,7 @@ h3 {
 button {
 	padding: 0 .25rem;
 	background: $bg3;
+	cursor: pointer;
 	
 	&:hover {
 		background: $bg4;
@@ -507,6 +508,10 @@ em {
 		& > .body {
 			overflow: hidden;
 			max-width: 100%;
+
+			&.local {
+				color: $fg5;
+			}
 		}
 
 		& .edited {

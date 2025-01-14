@@ -43,6 +43,7 @@ const User = (props: UserProps) => {
 
 type MessageProps = {
 	message: MessageT;
+	is_local: boolean;
 };
 
 const md = marked.use({
@@ -163,7 +164,7 @@ export const Message = (props: MessageProps) => {
 					</span>
 					<div class="content">
 						<Show when={props.message.content}>
-							<div class="body markdown" ref={bodyEl!}>
+							<div class="body markdown" classList={{ local: props.is_local }} ref={bodyEl!}>
 								<span innerHTML={sanitizeHtml(md.parse(props.message.content!) as string, sanitizeHtmlOptions).trim()}></span>
 								<Show when={props.message.id !== props.message.version_id}> <span class="edited">(edited)</span></Show>
 							</div>
@@ -192,7 +193,7 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			// "text-fg4": item.message.is_local,
 			return (
 				<li data-message-id={item.message.id}>
-					<Message message={item.message} />
+					<Message message={item.message} is_local={item.is_local} />
 				</li>
 			);
 		}
@@ -221,6 +222,9 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		}
 		case "spacer-mini": {
 			return <li><div style="height:2rem"></div></li>
+		}
+		case "anchor": {
+			return <li class="anchor"></li>
 		}
 		case "unread-marker": {
 			return (

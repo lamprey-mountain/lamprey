@@ -139,17 +139,24 @@ async fn media_upload(
                 },
             )
             .await?;
-        let up = s
+        dbg!("made it");
+        let size = up.create.size;
+        drop(up);
+        dbg!("made it");
+        s
             .uploads
             .remove(&media_id)
             .expect("it was there a few milliseconds ago")
             .1;
-        drop(up.temp_file);
-        tokio::fs::remove_file(p).await?;
+        dbg!("made it");
+        // FIXME: this line hangs the server (deadlock?)
+        // tokio::fs::remove_file(p).await?;
         media.url = s.presign(media.id).await?;
+        dbg!("made it");
         let mut headers = HeaderMap::new();
         headers.insert("upload-offset", end_size.into());
-        headers.insert("upload-length", up.create.size.into());
+        headers.insert("upload-length", size.into());
+        dbg!("made it");
         Ok((StatusCode::OK, headers, Json(Some(media))))
     } else {
         let mut headers = HeaderMap::new();

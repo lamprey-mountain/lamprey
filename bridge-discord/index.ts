@@ -201,13 +201,16 @@ async function handleDiscordMessage(msg: any) {
       }),
     });
     const { media_id: id, upload_url } = await upload.json();
-    await fetch(upload_url, {
+    const b = await fetch(upload_url, {
       method: "PATCH",
       headers: {
         "Authorization": MY_TOKEN,
+        "upload-offset": "0",
       },
       body: blob,
     });
+    console.log(b)
+    console.log(await b.text())
     db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([id, a.id]);
     attachments.push({ id });
   }
@@ -233,7 +236,8 @@ async function handleDiscordMessage(msg: any) {
 const LAST_DC_ID: string = db.prepareQuery<[string]>("SELECT max(discord_id) FROM messages").first([])?.[0] ?? "";
 
 async function handleDiscord(msg: any) {
-  console.log("discord:", msg.t, msg.d);
+  // console.log("discord:", msg.t, msg.d);
+  console.log("discord:", msg.t);
   if (msg.t === "GUILD_CREATE") {
     for (const channel of msg.d.channels) {
       if (dtoc.has(channel.id)) {
@@ -276,6 +280,7 @@ async function handleDiscord(msg: any) {
           method: "PATCH",
           headers: {
             "Authorization": MY_TOKEN,
+            "upload-offset": "0",
           },
           body: blob,
         });

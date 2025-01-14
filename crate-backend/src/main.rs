@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use axum::{response::Html, routing::get, Json};
+use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -64,12 +64,13 @@ impl ServerState {
     }
 
     async fn presign(&self, media_id: MediaId) -> Result<String> {
-        Ok(self
-            .blobs
-            .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
-            .await?
-            .uri()
-            .to_string())
+        // Ok(self
+        //     .blobs
+        //     .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
+        //     .await?
+        //     .uri()
+        //     .to_string())
+        Ok(format!("https://chat-files.celery.eu.org/{media_id}"))
     }
 }
 
@@ -110,7 +111,8 @@ async fn main() -> Result<()> {
             get(|| async { Html(Scalar::with_url("/scalar", api1).to_html()) }),
         )
         .layer(CorsLayer::very_permissive())
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 16));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
     axum::serve(listener, router).await?;
     Ok(())

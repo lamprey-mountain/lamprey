@@ -25,7 +25,8 @@ export type TimelineItemT = { key: string, class?: string } & (
   { type: "spacer-mini2" } |
   { type: "unread-marker" } |
   { type: "time-split" } |
-  { type: "message", message: MessageT, separate: boolean });
+  { type: "anchor" } |
+  { type: "message", message: MessageT, separate: boolean, is_local: boolean });
 
 // export function shouldSplit(msg: Event, prev?: Event) {
 //   if (!prev) return true;

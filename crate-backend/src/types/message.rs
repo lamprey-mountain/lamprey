@@ -53,6 +53,7 @@ pub struct MessageCreateRequest {
     pub metadata: Option<serde_json::Value>,
     pub reply_id: Option<MessageId>,
     pub override_name: Option<String>, // temp?
+    pub nonce: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]

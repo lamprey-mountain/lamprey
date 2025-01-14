@@ -87,7 +87,7 @@ pub struct MediaRef {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "message_link_type")]
+#[sqlx(type_name = "media_link_type")]
 pub enum MediaLinkType {
     Message,
     MessageVersion,
