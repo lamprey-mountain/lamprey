@@ -36,7 +36,7 @@ async fn message_create(
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
     let user_id = session.user_id;
-    let perms = dbg!(data.permission_thread_get(user_id, thread_id).await?);
+    let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {

@@ -83,15 +83,15 @@ function reconnectChat() {
   myws = new WebSocket(`${BASE_URL}/api/v1/sync`);
   myws.addEventListener("open", () => {
   	console.log("chat opened");
-  	myws.send(JSON.stringify({ type: "hello", token: MY_TOKEN }));
+  	myws.send(JSON.stringify({ type: "Hello", token: MY_TOKEN }));
   });
 
   myws.addEventListener("message", (e) => {
   	const msg = JSON.parse(e.data);
 	
-  	if (msg.type === "ping") {
-  		myws.send(JSON.stringify({ type: "pong" }));
-  	} else if (msg.type === "ready") {
+  	if (msg.type === "Ping") {
+  		myws.send(JSON.stringify({ type: "Pong" }));
+  	} else if (msg.type === "Ready") {
   		console.log("chat auth", msg.user.name);
 		} else {
 		  handleChat(msg)
@@ -130,9 +130,9 @@ reconnectDiscord();
 
 async function handleChat(msg: any) {
   console.log("chat:", msg.type);
-	if (msg.type === "webhook") {
+	if (msg.type === "Webhook") {
     console.log("webhook:", msg);
-	} else if (msg.type === "upsert.message") {
+	} else if (msg.type === "UpsertMessage") {
 	  const message: MessageT = msg.message;
 	  if (message.author.id === "01943cc1-62e0-7c0e-bb9b-a4ff42864d69") return;
 	  const channel_id = ctod.get(message.thread_id);
@@ -141,9 +141,10 @@ async function handleChat(msg: any) {
     let embeds;
     if (reply_ids) {
       const { discord_id, chat_id } = reply_ids as any;
-  	  const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${message.thread_id}/messages/${chat_id}`, {
+  	  const req = await fetch(`https://chat.celery.eu.org/api/v1/thread/${message.thread_id}/message/${chat_id}`, {
   	    headers: {
   	      "Authorization": MY_TOKEN,
+          "content-type": "application/json",
 	      }
       });
       const reply: MessageT = await req.json();
@@ -188,22 +189,31 @@ async function handleDiscordMessage(msg: any) {
   const attachments = [];
   for (const a of msg.attachments) {
     const blob = await fetch(a.url).then(r => r.blob());
-    const form = new FormData();
-    form.append("file", blob, a.filename);
-    const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
-	    method: "POST",
-	    headers: {
-	      "Authorization": MY_TOKEN,
-	    },
-	    body: form,
+    const upload = await fetch("https://chat.celery.eu.org/api/v1/media", {
+      method: "POST",
+      headers: {
+        "Authorization": MY_TOKEN,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        filename: a.filename,
+        size: blob.size,
+      }),
     });
-    const { media_id: id } = await upload.json();
+    const { media_id: id, upload_url } = await upload.json();
+    await fetch(upload_url, {
+      method: "PATCH",
+      headers: {
+        "Authorization": MY_TOKEN,
+      },
+      body: blob,
+    });
     db.prepareQuery("INSERT INTO attachments (chat_id, discord_id) VALUES (?, ?)").execute([id, a.id]);
     attachments.push({ id });
   }
   const reply_id_discord = msg.message_reference?.type === 0 ? msg.message_reference.message_id : null;
   const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
-  const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages`, {
+  const req = await fetch(`https://chat.celery.eu.org/api/v1/thread/${thread_id}/message`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -250,22 +260,31 @@ async function handleDiscord(msg: any) {
         continue;
       } else {
         const blob = await fetch(a.url).then(r => r.blob());
-        const form = new FormData();
-        form.append("file", blob, a.filename);
-        const upload = await fetch("https://chat.celery.eu.org/api/v1/_temp_media/upload", {
+        const upload = await fetch("https://chat.celery.eu.org/api/v1/media", {
           method: "POST",
           headers: {
             "Authorization": MY_TOKEN,
+            "content-type": "application/json",
           },
-          body: form,
+          body: JSON.stringify({
+            filename: a.filename,
+            size: blob.size,
+          }),
         });
-        const { media_id: id } = await upload.json();
+        const { media_id: id, upload_url } = await upload.json();
+        await fetch(upload_url, {
+          method: "PATCH",
+          headers: {
+            "Authorization": MY_TOKEN,
+          },
+          body: blob,
+        });
         attachments.push({ id });
       }
     }
     const reply_id_discord = msg.d.message_reference?.type === 0 ? msg.d.message_reference.message_id : null;
     const reply_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([reply_id_discord])?.chat_id ?? null;
-    const req = await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages/${message_id}`, {
+    const req = await fetch(`https://chat.celery.eu.org/api/v1/thread/${thread_id}/message/${message_id}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -288,7 +307,7 @@ async function handleDiscord(msg: any) {
     if (!thread_id) return;
     const message_id = db.prepareQuery("SELECT * FROM messages WHERE discord_id = ?").firstEntry([msg.d.id])?.chat_id ?? null;
     if (!message_id) return;
-    await fetch(`https://chat.celery.eu.org/api/v1/threads/${thread_id}/messages/${message_id}`, {
+    await fetch(`https://chat.celery.eu.org/api/v1/thread/${thread_id}/message/${message_id}`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
