@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, Acquire};
+use sqlx::{query, query_as};
 use tracing::info;
 use uuid::Uuid;
 
@@ -63,18 +63,16 @@ impl DataMedia for Postgres {
         link_type: MediaLinkType,
     ) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
-        let links = query_as!(
-            MediaLink,
+        query!(
             r#"
     	    INSERT INTO media_link (media_id, target_id, link_type)
     	    VALUES ($1, $2, $3)
-    	    RETURNING media_id, target_id, link_type as "link_type: _"
         "#,
             media_id.into_inner(),
             target_id,
             link_type as _
         )
-        .fetch_all(&mut *conn)
+        .execute(&mut *conn)
         .await?;
         Ok(())
     }

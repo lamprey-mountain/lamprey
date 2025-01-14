@@ -85,17 +85,17 @@ async fn main() -> Result<()> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(5))
-        .connect("postgres://chat:ce00eebd05027ca1@localhost:5432/chat")
+        .connect(&std::env::var("PG_URL").expect("missing env var"))
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     let blobs_builder = opendal::services::S3::default()
-        .bucket("chat-files")
-        .endpoint("https://s4.celery.eu.org")
-        .region("garage")
-        .access_key_id("GKd087b108e26a93db4bc07ac5")
-        .secret_access_key("0447ebcbb6b3e21306a0b278687bd7a6ffcd04097fd3dbd18a5250c92664eeab");
+        .bucket(&std::env::var("S3_BUCKET").expect("missing env var"))
+        .endpoint(&std::env::var("S3_ENDPOINT").expect("missing env var"))
+        .region(&std::env::var("S3_REGION").expect("missing env var"))
+        .access_key_id(&std::env::var("S3_ACCESS_KEY_ID").expect("missing env var"))
+        .secret_access_key(&std::env::var("S3_SECRET_ACCESS_KEY").expect("missing env var"));
     let blobs = opendal::Operator::new(blobs_builder).unwrap().finish();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())

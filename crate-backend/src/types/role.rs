@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use super::{Permission, RoleId, RoomId};
+use super::{Permission, RoleId, RoleVerId, RoomId};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type,
 )]
 pub struct Role {
     pub id: RoleId,
+    pub version_id: RoleVerId,
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,

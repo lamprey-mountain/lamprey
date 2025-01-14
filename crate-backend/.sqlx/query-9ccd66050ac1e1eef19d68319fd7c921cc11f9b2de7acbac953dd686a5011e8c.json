@@ -1,0 +1,103 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            )\n        select\n            msg.type as \"message_type: MessageType\",\n            msg.id,\n            msg.thread_id, \n            msg.version_id,\n            msg.ordering,\n            msg.content,\n            msg.metadata,\n            msg.reply_id,\n            msg.override_name,\n            row_to_json(usr) as \"author!: serde_json::Value\",\n            coalesce(att_json.attachments, '[]'::json) as \"attachments!: serde_json::Value\",\n            false as \"is_pinned!\"\n        from message as msg\n        join usr on usr.id = msg.author_id\n        left join att_json on att_json.version_id = msg.version_id\n        where thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n          and msg.id > $3 AND msg.id < $4\n\t\torder by (CASE WHEN $5 = 'F' THEN msg.version_id END), msg.version_id DESC LIMIT $6\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_type: MessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "ThreadUpdate"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "thread_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "ordering",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "reply_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "author!: serde_json::Value",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 10,
+        "name": "attachments!: serde_json::Value",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 11,
+        "name": "is_pinned!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "9ccd66050ac1e1eef19d68319fd7c921cc11f9b2de7acbac953dd686a5011e8c"
+}

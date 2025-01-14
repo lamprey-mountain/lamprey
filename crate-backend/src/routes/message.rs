@@ -18,8 +18,6 @@ use crate::{
 use super::util::Auth;
 use crate::error::Result;
 
-// FIXME: sign urls
-
 /// Create a message
 #[utoipa::path(
     post,

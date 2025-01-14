@@ -1,0 +1,105 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, version_id, room_id, name, description, permissions as \"permissions: _\", is_mentionable, is_self_applicable, is_default\n            FROM role\n            WHERE room_id = $1 AND id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "permissions: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "RoomManage",
+                      "ThreadCreate",
+                      "ThreadManage",
+                      "ThreadDelete",
+                      "MessageCreate",
+                      "MessageFilesEmbeds",
+                      "MessagePin",
+                      "MessageDelete",
+                      "MessageMassMention",
+                      "MemberKick",
+                      "MemberBan",
+                      "MemberManage",
+                      "InviteCreate",
+                      "InviteManage",
+                      "RoleManage",
+                      "RoleApply",
+                      "View",
+                      "MessageEdit"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_self_applicable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "is_default",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4b067b803f6d951cf3827569c445a466875b85355b0222f9ae66f06679ee90c5"
+}

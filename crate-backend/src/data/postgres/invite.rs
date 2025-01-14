@@ -11,16 +11,18 @@ use super::Postgres;
 impl DataInvite for Postgres {
     async fn invite_insert_room(
         &self,
-        room_id: RoomId,
-        creator_id: UserId,
-        code: InviteCode,
+        _room_id: RoomId,
+        _creator_id: UserId,
+        _code: InviteCode,
     ) -> Result<Invite> {
         todo!()
     }
-    async fn invite_select(&self, code: InviteCode) -> Result<Invite> {
+    
+    async fn invite_select(&self, _code: InviteCode) -> Result<Invite> {
         todo!()
     }
-    async fn invite_delete(&self, code: InviteCode) -> Result<()> {
+    
+    async fn invite_delete(&self, _code: InviteCode) -> Result<()> {
         todo!()
     }
 }

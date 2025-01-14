@@ -3,11 +3,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
-    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate,
-    RoleId, RolePatch, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session,
-    SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId,
-    UserPatch,
+    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId, UserPatch, UserVerId
 };
 
 pub mod postgres;
@@ -32,13 +28,13 @@ pub trait Data:
 #[async_trait]
 pub trait DataRoom {
     async fn room_create(&self, create: RoomCreate) -> Result<Room>;
-    async fn room_get(&self, id: RoomId) -> Result<Room>;
+    async fn room_get(&self, room_id: RoomId) -> Result<Room>;
     async fn room_list(
         &self,
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
-    async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
+    async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
 }
 
 #[async_trait]
@@ -58,7 +54,7 @@ pub trait DataRole {
     async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
     async fn role_update(&self, room_id: RoomId, role_id: RoleId, patch: RolePatch)
-        -> Result<Role>;
+        -> Result<RoleVerId>;
 }
 
 #[async_trait]
@@ -87,7 +83,9 @@ pub trait DataInvite {
     ) -> Result<Invite>;
     async fn invite_select(&self, code: InviteCode) -> Result<Invite>;
     async fn invite_delete(&self, code: InviteCode) -> Result<()>;
-    // TODO async fn inviteList(room_id: RoomId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+    // TODO: invite listing
+    // async fn invite_list_room(room_id: RoomId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+    // async fn invite_list_user(user_id: UserId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
 }
 
 #[async_trait]
@@ -119,7 +117,7 @@ pub trait DataMessage {
         message_id: MessageId,
         create: MessageCreate,
     ) -> Result<MessageVerId>;
-    async fn message_get(&self, thread_id: ThreadId, id: MessageId) -> Result<Message>;
+    async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message>;
     async fn message_list(
         &self,
         thread_id: ThreadId,
@@ -148,15 +146,15 @@ pub trait DataMessage {
 
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(&self, create: ThreadCreate) -> Result<SessionId>;
-    async fn session_get(&self, id: SessionId) -> Result<Session>;
+    async fn session_create(&self, user_id: UserId, name: Option<String>) -> Result<Session>;
+    async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: &str) -> Result<Session>;
     async fn session_list(
         &self,
         user_id: UserId,
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>>;
-    async fn session_delete(&self, id: SessionId) -> Result<()>;
+    async fn session_delete(&self, session_id: SessionId) -> Result<()>;
 }
 
 #[async_trait]
@@ -189,8 +187,8 @@ pub trait DataUnread {
 
 #[async_trait]
 pub trait DataUser {
-    async fn user_insert(&self, id: UserId, patch: UserCreate) -> Result<UserId>;
-    async fn user_update(&self, id: UserId, patch: UserPatch) -> Result<User>;
-    async fn user_delete(&self, id: UserId) -> Result<()>;
-    async fn user_get(&self, id: UserId) -> Result<User>;
+    async fn user_create(&self, user_id: UserId, patch: UserCreate) -> Result<User>;
+    async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
+    async fn user_delete(&self, user_id: UserId) -> Result<()>;
+    async fn user_get(&self, user_id: UserId) -> Result<User>;
 }

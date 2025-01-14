@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    INSERT INTO room_member (user_id, room_id, membership)\n    \t    VALUES ($1, $2, $3)\n        ",
+  "query": "\n    \t    INSERT INTO media_link (media_id, target_id, link_type)\n    \t    VALUES ($1, $2, $3)\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -9,11 +9,11 @@
         "Uuid",
         {
           "Custom": {
-            "name": "membership",
+            "name": "media_link_type",
             "kind": {
               "Enum": [
-                "Join",
-                "Ban"
+                "Message",
+                "MessageVersion"
               ]
             }
           }
@@ -22,5 +22,5 @@
     },
     "nullable": []
   },
-  "hash": "c47545b3fbf279a536a5a55180ab35308218035b677dc42c6cb9a53491c5629b"
+  "hash": "40f46277b3c719535fe0054903212d38f510998b331f07da8420d53615cea7f0"
 }

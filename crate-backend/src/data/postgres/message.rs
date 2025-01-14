@@ -196,16 +196,54 @@ impl DataMessage for Postgres {
         message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<Message> {
-        todo!()
+        let mut conn = self.pool.acquire().await?;
+        let row = query_as!(MessageRow, r#"
+            with
+            att_unnest as (select version_id, unnest(attachments) as media_id from message),
+            att_json as (
+                select version_id, json_agg(row_to_json(media)) as attachments
+                from att_unnest
+                join media on att_unnest.media_id = media.id
+                group by att_unnest.version_id
+            )
+            SELECT
+                msg.type as "message_type: MessageType",
+                msg.id,
+                msg.thread_id, 
+                msg.version_id,
+                msg.ordering,
+                msg.content,
+                msg.metadata,
+                msg.reply_id,
+                msg.override_name,
+                false as "is_pinned!",
+                row_to_json(usr) as "author!",
+                coalesce(att_json.attachments, '[]'::json) as "attachments!"
+            FROM message AS msg
+            JOIN usr ON usr.id = msg.author_id
+            left JOIN att_json ON att_json.version_id = msg.version_id
+                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL
+        "#, thread_id.into_inner(), message_id.into_inner(), version_id.into_inner()).fetch_one(&mut *conn).await?;
+        Ok(row.into())
     }
 
     async fn message_version_delete(
         &self,
-        thread_id: ThreadId,
+        _thread_id: ThreadId,
         message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()> {
-        todo!()
+        let mut conn = self.pool.acquire().await?;
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        query!(
+            "UPDATE message SET deleted_at = $3 WHERE id = $1 AND version_id = $2",
+            message_id.into_inner(),
+            version_id.into_inner(),
+            now
+        )
+        .execute(&mut *conn)
+        .await?;
+        Ok(())
     }
 
     async fn message_version_list(
@@ -214,6 +252,72 @@ impl DataMessage for Postgres {
         message_id: MessageId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>> {
-        todo!()
+        let p: Pagination<_> = pagination.try_into()?;
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let items = query_as!(
+            MessageRow,
+            r#"
+            with
+            att_unnest as (select version_id, unnest(attachments) as media_id from message),
+            att_json as (
+                select version_id, json_agg(row_to_json(media)) as attachments
+                from att_unnest
+                join media on att_unnest.media_id = media.id
+                group by att_unnest.version_id
+            )
+        select
+            msg.type as "message_type: MessageType",
+            msg.id,
+            msg.thread_id, 
+            msg.version_id,
+            msg.ordering,
+            msg.content,
+            msg.metadata,
+            msg.reply_id,
+            msg.override_name,
+            row_to_json(usr) as "author!: serde_json::Value",
+            coalesce(att_json.attachments, '[]'::json) as "attachments!: serde_json::Value",
+            false as "is_pinned!"
+        from message as msg
+        join usr on usr.id = msg.author_id
+        left join att_json on att_json.version_id = msg.version_id
+        where thread_id = $1 and msg.id = $2 and msg.deleted_at is null
+          and msg.id > $3 AND msg.id < $4
+		order by (CASE WHEN $5 = 'F' THEN msg.version_id END), msg.version_id DESC LIMIT $6
+            "#,
+            thread_id.into_inner(),
+            message_id.into_inner(),
+            p.after.into_inner(),
+            p.before.into_inner(),
+            p.dir.to_string(),
+            (p.limit + 1) as i32
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        let total = query_scalar!(
+            r#"
+            select count(*) from message where thread_id = $1 and id = $2
+            "#,
+            thread_id.into_inner(),
+            message_id.into_inner(),
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.rollback().await?;
+        let has_more = items.len() > p.limit as usize;
+        let mut items: Vec<_> = items
+            .into_iter()
+            .take(p.limit as usize)
+            .map(Into::into)
+            .collect();
+        if p.dir == PaginationDirection::B {
+            items.reverse();
+        }
+        Ok(PaginationResponse {
+            items,
+            total: total.unwrap_or(0) as u64,
+            has_more,
+        })
     }
 }

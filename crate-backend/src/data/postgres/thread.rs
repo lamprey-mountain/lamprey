@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, Executor, PgExecutor};
+use sqlx::{query, query_as, query_scalar, Acquire, PgExecutor};
 use tracing::info;
 use uuid::Uuid;
 

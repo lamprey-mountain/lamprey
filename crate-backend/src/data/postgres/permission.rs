@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sqlx::{query_scalar, Acquire};
+use sqlx::query_scalar;
 
 use crate::error::Result;
 use crate::types::{Permission, Permissions, RoomId, ThreadId, UserId};

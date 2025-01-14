@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE message SET deleted_at = $3 WHERE id = $1 AND version_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b2140991b0b25a848141c6c611eb3250683c1fb01caf3a55f5fa227b7c4843f5"
+}
