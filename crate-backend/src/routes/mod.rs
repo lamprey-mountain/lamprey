@@ -2,10 +2,10 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
 
-mod util;
+mod message;
 mod room;
 mod thread;
-mod message;
+mod util;
 // mod invite;
 // mod role;
 mod media;
@@ -25,7 +25,7 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .merge(media::routes())
         // .merge(member::routes())
         .merge(sync::routes())
-        // .merge(user::routes())
-        // .merge(session::routes())
-        // .merge(auth::routes())
+    // .merge(user::routes())
+    // .merge(session::routes())
+    // .merge(auth::routes())
 }

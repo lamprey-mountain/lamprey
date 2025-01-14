@@ -2,7 +2,10 @@ use std::result::Result;
 
 use uuid::Uuid;
 
-use crate::{error::Error, types::{Identifier, PaginationDirection, PaginationQuery}};
+use crate::{
+    error::Error,
+    types::{Identifier, PaginationDirection, PaginationQuery},
+};
 
 #[derive(Debug)]
 pub struct Pagination<I> {

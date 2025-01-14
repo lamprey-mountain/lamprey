@@ -2,14 +2,10 @@ use async_trait::async_trait;
 use sqlx::{query, Acquire};
 use tracing::info;
 
-use crate::error::{Error, Result};
-use crate::types::{
-    RoomId, RoomMemberPut, UserId
-};
+use crate::error::Result;
+use crate::types::{RoomId, RoomMemberPut, UserId};
 
-use crate::data::
-    DataRoomMember
-;
+use crate::data::DataRoomMember;
 
 use super::Postgres;
 

@@ -1,12 +1,9 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
+use sqlx::{query_as, Acquire};
 use tracing::info;
-use uuid::Uuid;
 
-use crate::error::{Error, Result};
-use crate::types::{
-    RoleId, UserId
-};
+use crate::error::Result;
+use crate::types::{RoleId, UserId};
 
 use crate::data::DataRoleMember;
 
@@ -31,8 +28,7 @@ impl DataRoleMember for Postgres {
         Ok(())
     }
 
-    async fn role_member_delete(&self, user_id: UserId, role_id: RoleId)
-        -> Result<()> {
+    async fn role_member_delete(&self, user_id: UserId, role_id: RoleId) -> Result<()> {
         todo!()
     }
 }

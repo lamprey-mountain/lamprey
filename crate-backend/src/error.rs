@@ -90,13 +90,22 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        (self.get_status(), Json(json!({ "error": self.to_string() }))).into_response()
+        (
+            self.get_status(),
+            Json(json!({ "error": self.to_string() })),
+        )
+            .into_response()
     }
 }
 
 impl From<Error> for Message {
     fn from(val: Error) -> Self {
-        Message::text(serde_json::to_string(&MessageServer::Error { error: val.to_string() }).expect("error should always be able to be serialized"))
+        Message::text(
+            serde_json::to_string(&MessageServer::Error {
+                error: val.to_string(),
+            })
+            .expect("error should always be able to be serialized"),
+        )
     }
 }
 

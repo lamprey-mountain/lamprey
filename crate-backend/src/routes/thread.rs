@@ -3,12 +3,16 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    types::{MessageCreate, MessageServer, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest, ThreadId, ThreadPatch},
+    types::{
+        MessageCreate, MessageServer, MessageType, MessageVerId, PaginationQuery,
+        PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest,
+        ThreadId, ThreadPatch,
+    },
     ServerState,
 };
 
@@ -57,9 +61,12 @@ async fn thread_create(
         metadata: None,
         reply_id: None,
         override_name: None,
-    }).await?;
+    })
+    .await?;
     let thread = data.thread_get(thread_id, user_id).await?;
-    s.sushi.send(MessageServer::UpsertThread { thread: thread.clone() })?;
+    s.sushi.send(MessageServer::UpsertThread {
+        thread: thread.clone(),
+    })?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
@@ -124,7 +131,7 @@ async fn thread_list(
     )
 )]
 async fn thread_update(
-    Path((thread_id, )): Path<(ThreadId,)>,
+    Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
     Json(json): Json<ThreadPatch>,
@@ -140,7 +147,9 @@ async fn thread_update(
     perms.ensure(Permission::RoomManage)?;
     data.thread_update(thread_id, user_id, json).await?;
     let thread = data.thread_get(thread_id, user_id).await?;
-    s.sushi.send(MessageServer::UpsertThread { thread: thread.clone() })?;
+    s.sushi.send(MessageServer::UpsertThread {
+        thread: thread.clone(),
+    })?;
     Ok(Json(thread))
 }
 
@@ -155,7 +164,7 @@ struct AckRes {
 }
 
 /// ack thread
-/// 
+///
 /// mark a thread as read (or unread)
 #[utoipa::path(
     put,
@@ -169,7 +178,7 @@ struct AckRes {
     )
 )]
 async fn thread_ack(
-    Path((thread_id, )): Path<(ThreadId, )>,
+    Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
     Json(json): Json<AckReq>,
@@ -182,7 +191,6 @@ async fn thread_ack(
     data.unread_put(user_id, thread_id, version_id).await?;
     Ok(Json(AckRes { version_id }))
 }
-
 
 pub fn routes() -> OpenApiRouter<ServerState> {
     OpenApiRouter::new()

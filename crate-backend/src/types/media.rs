@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use url::Url;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type,
+)]
 pub struct Media {
     pub id: MediaId,
 
@@ -32,11 +34,11 @@ pub struct Media {
     #[sqlx(try_from = "i64")]
     // FIXME: use unsigned integers instead of signed integers
     pub height: Option<i64>,
-    
+
     #[sqlx(try_from = "i64")]
     // FIXME: use unsigned integers instead of signed integers
     pub width: Option<i64>,
-    
+
     #[sqlx(try_from = "i64")]
     // FIXME: use unsigned integers instead of signed integers
     pub duration: Option<i64>,
@@ -52,7 +54,7 @@ pub struct MediaCreate {
 
     /// A url to download this media from
     pub url: Option<Url>,
-    
+
     /// The size (in bytes)
     pub size: u64,
 
@@ -62,10 +64,10 @@ pub struct MediaCreate {
 
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaCreated {
-	pub media_id: MediaId,
-	
+    pub media_id: MediaId,
+
     /// A url to download your media to
-	pub upload_url: Option<Url>,
+    pub upload_url: Option<Url>,
 }
 
 use async_tempfile::TempFile;
@@ -75,8 +77,8 @@ use super::{ids::MediaId, UserId};
 
 pub struct MediaUpload {
     pub create: MediaCreate,
-	pub user_id: UserId,
-	pub temp_file: TempFile,
+    pub user_id: UserId,
+    pub temp_file: TempFile,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
@@ -87,13 +89,13 @@ pub struct MediaRef {
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "message_link_type")]
 pub enum MediaLinkType {
-	Message,
-	MessageVersion,
+    Message,
+    MessageVersion,
 }
 
 #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaLink {
-	pub media_id: MediaId,
-	pub target_id: Uuid,
-	pub link_type: MediaLinkType,
+    pub media_id: MediaId,
+    pub target_id: Uuid,
+    pub link_type: MediaLinkType,
 }

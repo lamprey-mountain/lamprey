@@ -23,12 +23,12 @@ pub struct Thread {
     // recipients: Member.array(),
     // #[serde(flatten)]
     // info: ThreadInfo,
-	// TODO: split out is_unread to be able to filter out blocked users server side?
-	pub is_unread: bool,
-	pub last_version_id: MessageId,
-	pub last_read_id: Option<MessageId>,
-	pub message_count: u64,
-	// mention_count: z.number(),
+    // TODO: split out is_unread to be able to filter out blocked users server side?
+    pub is_unread: bool,
+    pub last_version_id: MessageId,
+    pub last_read_id: Option<MessageId>,
+    pub message_count: u64,
+    // mention_count: z.number(),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -41,10 +41,10 @@ pub struct ThreadRow {
     pub is_closed: bool,
     pub is_locked: bool,
     pub is_pinned: bool,
-	pub is_unread: bool,
-	pub last_version_id: MessageId,
-	pub last_read_id: Option<Uuid>,
-	pub message_count: i64,
+    pub is_unread: bool,
+    pub last_version_id: MessageId,
+    pub last_read_id: Option<Uuid>,
+    pub message_count: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]

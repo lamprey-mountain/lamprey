@@ -1,12 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
+use sqlx::{query_as, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
-use crate::types::{
-    PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RoomId
-};
+use crate::error::Result;
+use crate::types::{PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RoomId};
 
 use crate::data::DataRole;
 
@@ -28,19 +26,28 @@ impl DataRole for Postgres {
         Ok(role)
     }
 
-    async fn role_list(&self,room_id: RoomId, paginate: PaginationQuery<RoleId>) -> Result<PaginationResponse<Role>> {
+    async fn role_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<RoleId>,
+    ) -> Result<PaginationResponse<Role>> {
         todo!()
     }
 
-    async fn role_delete(&self,room_id: RoomId, role_id: RoleId) -> Result<()> {
+    async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
         todo!()
     }
 
-    async fn role_select(&self,room_id: RoomId, role_id: RoleId) -> Result<Role> {
+    async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
         todo!()
     }
 
-    async fn role_update(&self,room_id: RoomId, role_id: RoleId, patch: crate::types::RolePatch) -> Result<Role> {
+    async fn role_update(
+        &self,
+        room_id: RoomId,
+        role_id: RoleId,
+        patch: crate::types::RolePatch,
+    ) -> Result<Role> {
         todo!()
     }
 }

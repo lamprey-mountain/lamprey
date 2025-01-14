@@ -88,7 +88,10 @@ impl MessagePatch {
         self.content.as_ref().is_none_or(|c| c == &other.content)
             && self.metadata.as_ref().is_none_or(|m| m == &other.metadata)
             && self.reply_id.is_none_or(|r| r == other.reply_id)
-            && self.override_name.as_ref().is_none_or(|o| o == &other.override_name)
+            && self
+                .override_name
+                .as_ref()
+                .is_none_or(|o| o == &other.override_name)
             && self.attachments.as_ref().is_none_or(|a| {
                 a.len() == other.attachments.len()
                     && a.iter().zip(&other.attachments).all(|(a, b)| a.id == b.id)
@@ -115,7 +118,8 @@ impl From<MessageRow> for Message {
             nonce: None,
             ordering: row.ordering,
             content: row.content,
-            attachments: serde_json::from_value(row.attachments).expect("invalid data in database!"),
+            attachments: serde_json::from_value(row.attachments)
+                .expect("invalid data in database!"),
             metadata: row.metadata,
             reply_id: row.reply_id.map(Into::into),
             override_name: row.override_name,

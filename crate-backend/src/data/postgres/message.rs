@@ -5,14 +5,11 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    Message, MessageCreate, MessageId,
-    MessageRow, MessageType, MessageVerId, PaginationDirection, PaginationQuery,
-    PaginationResponse, ThreadId,
+    Message, MessageCreate, MessageId, MessageRow, MessageType, MessageVerId, PaginationDirection,
+    PaginationQuery, PaginationResponse, ThreadId,
 };
 
-use crate::data::
-    DataMessage
-;
+use crate::data::DataMessage;
 
 use super::{Pagination, Postgres};
 
@@ -183,7 +180,8 @@ impl DataMessage for Postgres {
     async fn message_delete(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
-        query!("UPDATE message SET deleted_at = $2 WHERE id = $1",
+        query!(
+            "UPDATE message SET deleted_at = $2 WHERE id = $1",
             message_id.into_inner(),
             now
         )

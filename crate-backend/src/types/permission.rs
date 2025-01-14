@@ -1,5 +1,5 @@
-use std::iter::FromIterator;
 use std::collections::HashSet;
+use std::iter::FromIterator;
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -38,26 +38,24 @@ pub struct Permissions {
 
 impl Permissions {
     pub fn empty() -> Permissions {
-        Permissions {
-            p: HashSet::new(),
-        }
+        Permissions { p: HashSet::new() }
     }
 
     #[inline]
     pub fn add(&mut self, perm: Permission) {
         self.p.insert(perm);
     }
-    
+
     #[inline]
     pub fn remove(&mut self, perm: Permission) {
         self.p.remove(&perm);
     }
-    
+
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
         self.p.contains(&perm) || self.p.contains(&Permission::Admin)
     }
-    
+
     pub fn ensure(&self, perm: Permission) -> Result<()> {
         if self.has(perm) {
             Ok(())
@@ -65,7 +63,7 @@ impl Permissions {
             Err(Error::MissingPermissions)
         }
     }
-    
+
     pub fn ensure_view(&self) -> Result<()> {
         if self.has(Permission::View) {
             Ok(())
@@ -77,7 +75,9 @@ impl Permissions {
 
 impl FromIterator<Permission> for Permissions {
     fn from_iter<T: IntoIterator<Item = Permission>>(iter: T) -> Self {
-        Permissions { p: iter.into_iter().collect() }
+        Permissions {
+            p: iter.into_iter().collect(),
+        }
     }
 }
 

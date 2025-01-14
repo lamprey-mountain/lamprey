@@ -1,11 +1,12 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
+use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId
+    PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId, RoomPatch,
+    RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;

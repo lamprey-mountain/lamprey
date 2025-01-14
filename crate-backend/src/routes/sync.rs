@@ -172,8 +172,14 @@ async fn handle_sushi(
             AuthCheck::Custom(*id == user_id)
         }
         MessageServer::DeleteSession { id: _ } => todo!(),
-        MessageServer::DeleteRole { room_id, role_id: _ } => AuthCheck::Room(*room_id),
-        MessageServer::DeleteMember { room_id, user_id: _ } => AuthCheck::Room(*room_id),
+        MessageServer::DeleteRole {
+            room_id,
+            role_id: _,
+        } => AuthCheck::Room(*room_id),
+        MessageServer::DeleteMember {
+            room_id,
+            user_id: _,
+        } => AuthCheck::Room(*room_id),
         MessageServer::DeleteInvite { code: _ } => todo!(),
         MessageServer::Webhook {
             hook_id: _,

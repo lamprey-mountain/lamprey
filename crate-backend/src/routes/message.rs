@@ -8,7 +8,9 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Error,
     types::{
-        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch, MessageServer, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, ThreadId
+        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch,
+        MessageServer, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission,
+        ThreadId,
     },
     ServerState,
 };
@@ -36,27 +38,25 @@ async fn message_create(
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
     let user_id = session.user_id;
-    let perms = dbg!(data.permission_thread_get(user_id,thread_id).await? );
+    let perms = dbg!(data.permission_thread_get(user_id, thread_id).await?);
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
     // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
-	if json.content.is_none() && json.attachments.is_empty() {
-		return Err(Error::BadStatic("at least one of content, attachments, or embeds must be defined"));
-	}
-    let attachment_ids: Vec<_> = json
-        .attachments
-        .into_iter()
-        .map(|r| r.id)
-        .collect();
-	for id in &attachment_ids {
-	    let existing = data.media_link_select(*id).await?;
-	    if !existing.is_empty() {
-	        return Err(Error::BadStatic("cant reuse media"));
-	    }
-	}
+    if json.content.is_none() && json.attachments.is_empty() {
+        return Err(Error::BadStatic(
+            "at least one of content, attachments, or embeds must be defined",
+        ));
+    }
+    let attachment_ids: Vec<_> = json.attachments.into_iter().map(|r| r.id).collect();
+    for id in &attachment_ids {
+        let existing = data.media_link_select(*id).await?;
+        if !existing.is_empty() {
+            return Err(Error::BadStatic("cant reuse media"));
+        }
+    }
     let message_id = data
         .message_create(MessageCreate {
             thread_id,
@@ -70,15 +70,19 @@ async fn message_create(
         })
         .await?;
     let message_uuid = message_id.into_inner();
-	for id in &attachment_ids {
-	    data.media_link_insert(*id, message_uuid, MediaLinkType::Message).await?;
-	    data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion).await?;
-	}
+    for id in &attachment_ids {
+        data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
+            .await?;
+        data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
+            .await?;
+    }
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
         media.url = s.presign(media.id).await?;
     }
-    s.sushi.send(MessageServer::UpsertMessage { message: message.clone() })?;
+    s.sushi.send(MessageServer::UpsertMessage {
+        message: message.clone(),
+    })?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -172,9 +176,11 @@ async fn message_edit(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
-	if json.content.is_none() && json.attachments.as_ref().is_some_and(|a| a.is_empty()) {
-		return Err(Error::BadStatic("at least one of content, attachments, or embeds must be defined"));
-	}
+    if json.content.is_none() && json.attachments.as_ref().is_some_and(|a| a.is_empty()) {
+        return Err(Error::BadStatic(
+            "at least one of content, attachments, or embeds must be defined",
+        ));
+    }
     if !json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
@@ -191,34 +197,45 @@ async fn message_edit(
                 .map(|media| media.id)
                 .collect()
         });
-	for id in &attachment_ids {
-	    let existing = data.media_link_select(*id).await?;
-	    let has_link = existing.iter().any(|i| i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner());
-	    if !has_link {
-	        return Err(Error::BadStatic("cant reuse media"));
-	    }
-	}
+    for id in &attachment_ids {
+        let existing = data.media_link_select(*id).await?;
+        let has_link = existing.iter().any(|i| {
+            i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
+        });
+        if !has_link {
+            return Err(Error::BadStatic("cant reuse media"));
+        }
+    }
     let version_id = data
-        .message_update(thread_id, message_id, MessageCreate {
+        .message_update(
             thread_id,
-            content: json.content.unwrap_or(message.content),
-            attachment_ids: attachment_ids.clone(),
-            author_id: user_id,
-            message_type: MessageType::Default,
-            metadata: json.metadata.unwrap_or(message.metadata),
-            reply_id: json.reply_id.unwrap_or(message.reply_id),
-            override_name: json.override_name.unwrap_or(message.override_name),
-        })
+            message_id,
+            MessageCreate {
+                thread_id,
+                content: json.content.unwrap_or(message.content),
+                attachment_ids: attachment_ids.clone(),
+                author_id: user_id,
+                message_type: MessageType::Default,
+                metadata: json.metadata.unwrap_or(message.metadata),
+                reply_id: json.reply_id.unwrap_or(message.reply_id),
+                override_name: json.override_name.unwrap_or(message.override_name),
+            },
+        )
         .await?;
     let version_uuid = version_id.into_inner();
-	for id in &attachment_ids {
-	    data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion).await?;
-	}
-    let mut message = data.message_version_get(thread_id, message_id, version_id).await?;
+    for id in &attachment_ids {
+        data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
+            .await?;
+    }
+    let mut message = data
+        .message_version_get(thread_id, message_id, version_id)
+        .await?;
     for media in &mut message.attachments {
         media.url = s.presign(media.id).await?;
     }
-    s.sushi.send(MessageServer::UpsertMessage { message: message.clone() })?;
+    s.sushi.send(MessageServer::UpsertMessage {
+        message: message.clone(),
+    })?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -254,8 +271,11 @@ async fn message_delete(
     perms.ensure(Permission::MessageDelete)?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
-    s.sushi.send(MessageServer::DeleteMessage { thread_id, message_id })?;
-	Ok(StatusCode::NO_CONTENT)
+    s.sushi.send(MessageServer::DeleteMessage {
+        thread_id,
+        message_id,
+    })?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// list message versions
@@ -313,7 +333,9 @@ async fn message_version_get(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut message = data.message_version_get(thread_id, message_id, version_id).await?;
+    let mut message = data
+        .message_version_get(thread_id, message_id, version_id)
+        .await?;
     for media in &mut message.attachments {
         media.url = s.presign(media.id).await?;
     }
@@ -343,7 +365,9 @@ async fn message_version_delete(
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let message = data.message_version_get(thread_id, message_id, version_id).await?;
+    let message = data
+        .message_version_get(thread_id, message_id, version_id)
+        .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
@@ -351,7 +375,8 @@ async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    data.message_version_delete(thread_id, message_id, version_id).await?;
+    data.message_version_delete(thread_id, message_id, version_id)
+        .await?;
     Ok(Json(()))
 }
 

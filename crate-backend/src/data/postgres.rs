@@ -9,18 +9,18 @@ pub struct Postgres {
 
 impl Data for Postgres {}
 
-mod util;
-mod room;
-mod room_member;
+mod invite;
+mod media;
+mod message;
+mod permission;
 mod role;
 mod role_member;
-mod thread;
-mod message;
-mod unread;
-mod permission;
-mod media;
-mod invite;
-mod user;
+mod room;
+mod room_member;
 mod session;
+mod thread;
+mod unread;
+mod user;
+mod util;
 
 pub use util::Pagination;

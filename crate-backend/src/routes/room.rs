@@ -8,7 +8,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        Membership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch
+        Membership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate,
+        Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch,
     },
     ServerState,
 };
@@ -39,17 +40,20 @@ async fn room_create(
         roles: vec![],
     })
     .await?;
-    let role = data.role_create(RoleCreate {
-        room_id,
-        name: "admin".to_owned(),
-        description: None,
-        permissions: vec![Permission::Admin],
-        is_self_applicable: false,
-        is_mentionable: false,
-        is_default: false,
-    }).await?;
+    let role = data
+        .role_create(RoleCreate {
+            room_id,
+            name: "admin".to_owned(),
+            description: None,
+            permissions: vec![Permission::Admin],
+            is_self_applicable: false,
+            is_mentionable: false,
+            is_default: false,
+        })
+        .await?;
     data.role_member_put(user_id, role.id).await?;
-    s.sushi.send(MessageServer::UpsertRoom { room: room.clone() })?;
+    s.sushi
+        .send(MessageServer::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
 
@@ -109,7 +113,7 @@ async fn room_list(
     )
 )]
 async fn room_edit(
-    Path((room_id, )): Path<(RoomId,)>,
+    Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
     Json(json): Json<RoomPatch>,
@@ -196,7 +200,7 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .routes(routes!(room_get))
         .routes(routes!(room_list))
         .routes(routes!(room_edit))
-        // .routes(routes!(room_ack))
-        // .routes(routes!(dm_init))
-        // .routes(routes!(dm_get))
+    // .routes(routes!(room_ack))
+    // .routes(routes!(dm_init))
+    // .routes(routes!(dm_get))
 }

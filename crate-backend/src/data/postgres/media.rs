@@ -1,22 +1,14 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
+use sqlx::{query, query_as, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
-use crate::types::{
-    Identifier, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId,
-    MessageType, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse,
-    Permission, Role, RoleCreate, RoleId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch,
-    RoomVerId, Thread, ThreadCreate, ThreadId, UserId,
-};
+use crate::error::Result;
+use crate::types::{Media, MediaId, MediaLink, MediaLinkType, UserId};
 
-use crate::data::{
-    DataMedia, DataMessage, DataPermission, DataRole, DataRoleMember, DataRoom, DataRoomMember,
-    DataThread, DataUnread,
-};
+use crate::data::DataMedia;
 
-use super::{Pagination, Postgres};
+use super::Postgres;
 
 #[async_trait]
 impl DataMedia for Postgres {
@@ -117,12 +109,9 @@ impl DataMedia for Postgres {
 
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
-        query!(
-            "DELETE FROM media_link WHERE target_id = $1",
-            target_id
-        )
-        .execute(&mut *conn)
-        .await?;
+        query!("DELETE FROM media_link WHERE target_id = $1", target_id)
+            .execute(&mut *conn)
+            .await?;
         Ok(())
     }
 }

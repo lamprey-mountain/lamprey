@@ -1,26 +1,16 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
-use tracing::info;
-use uuid::Uuid;
+use sqlx::{query_scalar, Acquire};
 
-use crate::error::{Error, Result};
-use crate::types::{
-    Identifier, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageType, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, Permission, Permissions, Role, RoleCreate, RoleId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Thread, ThreadCreate, ThreadId, UserId
-};
+use crate::error::Result;
+use crate::types::{Permission, Permissions, RoomId, ThreadId, UserId};
 
-use crate::data::{
-    DataMedia, DataMessage, DataPermission, DataRole, DataRoleMember, DataRoom, DataRoomMember, DataThread, DataUnread
-};
+use crate::data::DataPermission;
 
-use super::{Pagination, Postgres};
+use super::Postgres;
 
 #[async_trait]
 impl DataPermission for Postgres {
-    async fn permission_room_get(
-        &self,
-        user_id: UserId,
-        room_id: RoomId,
-    ) -> Result<Permissions> {
+    async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
         let mut conn = self.pool.acquire().await?;
         let perms = query_scalar!(
             r#"
