@@ -1,0 +1,139 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO role (id, room_id, name, description, permissions, is_mentionable, is_self_applicable, is_default)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id, room_id, name, description, permissions as \"permissions: _\", is_mentionable, is_self_applicable, is_default\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "RoomManage",
+                      "ThreadCreate",
+                      "ThreadManage",
+                      "ThreadDelete",
+                      "MessageCreate",
+                      "MessageFilesEmbeds",
+                      "MessagePin",
+                      "MessageDelete",
+                      "MessageMassMention",
+                      "MemberKick",
+                      "MemberBan",
+                      "MemberManage",
+                      "InviteCreate",
+                      "InviteManage",
+                      "RoleManage",
+                      "RoleApply",
+                      "View",
+                      "MessageEdit"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_self_applicable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_default",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "RoomManage",
+                      "ThreadCreate",
+                      "ThreadManage",
+                      "ThreadDelete",
+                      "MessageCreate",
+                      "MessageFilesEmbeds",
+                      "MessagePin",
+                      "MessageDelete",
+                      "MessageMassMention",
+                      "MemberKick",
+                      "MemberBan",
+                      "MemberManage",
+                      "InviteCreate",
+                      "InviteManage",
+                      "RoleManage",
+                      "RoleApply",
+                      "View",
+                      "MessageEdit"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7f16050c8b528569806ecce5c34b3eb3c5ec9b7684f2e1d55ae53da5c5af6c8d"
+}

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use url::Url;
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
 pub struct Media {
     pub id: MediaId,
 
@@ -27,7 +27,7 @@ pub struct Media {
     /// The size (in bytes)
     #[sqlx(try_from = "i64")]
     // FIXME: use unsigned integers instead of signed integers
-    pub size: Option<i64>,
+    pub size: i64,
 
     #[sqlx(try_from = "i64")]
     // FIXME: use unsigned integers instead of signed integers
@@ -42,22 +42,25 @@ pub struct Media {
     pub duration: Option<i64>,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaCreate {
     /// The original filename
     pub filename: String,
 
+    /// Descriptive alt text, not entirely unlike a caption
+    pub alt: Option<String>,
+
     /// A url to download this media from
-    pub url: String,
+    pub url: Option<Url>,
     
     /// The size (in bytes)
-    pub size: Option<u64>,
+    pub size: u64,
 
     /// TODO: The source url this media was downloaded from, if any
     pub source_url: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaCreated {
 	pub media_id: MediaId,
 	
@@ -76,12 +79,13 @@ pub struct MediaUpload {
 	pub temp_file: TempFile,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaRef {
     pub id: MediaId,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "message_link_type")]
 pub enum MediaLinkType {
 	Message,
 	MessageVersion,

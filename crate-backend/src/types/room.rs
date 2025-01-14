@@ -5,7 +5,7 @@ use uuid::Uuid;
 use super::ids::RoomId;
 
 /// A room
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 pub struct Room {
     /// A unique identifier for this room
     #[schema(read_only)]
@@ -25,7 +25,7 @@ pub struct Room {
 }
 
 /// Data required to create a room
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct RoomCreate {
     #[schema(write_only)]
     pub name: String,
@@ -35,7 +35,7 @@ pub struct RoomCreate {
 }
 
 /// An update to a room
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct RoomPatch {
     #[schema(write_only)]
     pub name: Option<String>,

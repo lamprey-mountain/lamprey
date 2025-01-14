@@ -8,7 +8,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Error,
     types::{
-        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, ThreadId
+        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch, MessageServer, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, ThreadId
     },
     ServerState,
 };
@@ -28,7 +28,7 @@ use crate::error::Result;
         (status = CREATED, description = "Create message success", body = Message),
     )
 )]
-pub async fn message_create(
+async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -36,13 +36,13 @@ pub async fn message_create(
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
     let user_id = session.user_id;
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = dbg!(data.permission_thread_get(user_id,thread_id).await? );
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
-    // TODO: everyone can set override_name, but it's meant to be temporary
+    // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
 	if json.content.is_none() && json.attachments.is_empty() {
 		return Err(Error::BadStatic("at least one of content, attachments, or embeds must be defined"));
 	}
@@ -74,10 +74,11 @@ pub async fn message_create(
 	    data.media_link_insert(*id, message_uuid, MediaLinkType::Message).await?;
 	    data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion).await?;
 	}
-    let message = data.message_get(thread_id, message_id).await?;
-    // events.emit("threads", thread.id, { type: "upsert.message", message });
-    // events.emit("threads", thread.id, { type: "upsert.thread", thread });
-    // events.emit("rooms", room.id, { type: "upsert.room", room });
+    let mut message = data.message_get(thread_id, message_id).await?;
+    for media in &mut message.attachments {
+        media.url = s.presign(media.id).await?;
+    }
+    s.sushi.send(MessageServer::UpsertMessage { message: message.clone() })?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -91,7 +92,7 @@ pub async fn message_create(
         (status = OK, description = "List thread messages success"),
     )
 )]
-pub async fn message_list(
+async fn message_list(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(session): Auth,
@@ -101,7 +102,12 @@ pub async fn message_list(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let res = data.message_list(thread_id, q).await?;
+    let mut res = data.message_list(thread_id, q).await?;
+    for message in &mut res.items {
+        for media in &mut message.attachments {
+            media.url = s.presign(media.id).await?;
+        }
+    }
     Ok(Json(res))
 }
 
@@ -118,7 +124,7 @@ pub async fn message_list(
         (status = OK, description = "List thread messages success"),
     )
 )]
-pub async fn message_get(
+async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -127,8 +133,11 @@ pub async fn message_get(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let res = data.message_get(thread_id, message_id).await?;
-    Ok(Json(res))
+    let mut message = data.message_get(thread_id, message_id).await?;
+    for media in &mut message.attachments {
+        media.url = s.presign(media.id).await?;
+    }
+    Ok(Json(message))
 }
 
 /// edit a message
@@ -145,7 +154,7 @@ pub async fn message_get(
         (status = NOT_MODIFIED, description = "no change"),
     )
 )]
-pub async fn message_edit(
+async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -156,7 +165,7 @@ pub async fn message_edit(
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
-    if message.message_type != MessageType::Default {
+    if message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant edit that message"));
     }
     if message.author.id == user_id {
@@ -190,7 +199,7 @@ pub async fn message_edit(
 	    }
 	}
     let version_id = data
-        .message_update(message_id, MessageCreate {
+        .message_update(thread_id, message_id, MessageCreate {
             thread_id,
             content: json.content.unwrap_or(message.content),
             attachment_ids: attachment_ids.clone(),
@@ -205,10 +214,11 @@ pub async fn message_edit(
 	for id in &attachment_ids {
 	    data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion).await?;
 	}
-    let message = data.message_version_get(thread_id, message_id, version_id).await?;
-    // events.emit("threads", thread.id, { type: "upsert.message", message });
-    // events.emit("threads", thread.id, { type: "upsert.thread", thread });
-    // events.emit("rooms", room.id, { type: "upsert.room", room });
+    let mut message = data.message_version_get(thread_id, message_id, version_id).await?;
+    for media in &mut message.attachments {
+        media.url = s.presign(media.id).await?;
+    }
+    s.sushi.send(MessageServer::UpsertMessage { message: message.clone() })?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -225,7 +235,7 @@ pub async fn message_edit(
         (status = NO_CONTENT, description = "delete message success"),
     )
 )]
-pub async fn message_delete(
+async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -235,7 +245,7 @@ pub async fn message_delete(
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
-    if message.message_type != MessageType::Default {
+    if message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
     if message.author.id == user_id {
@@ -244,7 +254,7 @@ pub async fn message_delete(
     perms.ensure(Permission::MessageDelete)?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
-	// events.emit("threads", thread_id, { type: "delete.message", id: message.id });
+    s.sushi.send(MessageServer::DeleteMessage { thread_id, message_id })?;
 	Ok(StatusCode::NO_CONTENT)
 }
 
@@ -261,7 +271,7 @@ pub async fn message_delete(
         (status = OK, description = "success"),
     )
 )]
-pub async fn message_version_list(
+async fn message_version_list(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     Auth(session): Auth,
@@ -271,7 +281,12 @@ pub async fn message_version_list(
     let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let res = data.message_version_list(thread_id, message_id, q).await?;
+    let mut res = data.message_version_list(thread_id, message_id, q).await?;
+    for message in &mut res.items {
+        for media in &mut message.attachments {
+            media.url = s.presign(media.id).await?;
+        }
+    }
     Ok(Json(res))
 }
 
@@ -289,7 +304,7 @@ pub async fn message_version_list(
         (status = OK, description = "success"),
     )
 )]
-pub async fn message_version_get(
+async fn message_version_get(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -298,8 +313,11 @@ pub async fn message_version_get(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let res = data.message_version_get(thread_id, message_id, version_id).await?;
-    Ok(Json(res))
+    let mut message = data.message_version_get(thread_id, message_id, version_id).await?;
+    for media in &mut message.attachments {
+        media.url = s.presign(media.id).await?;
+    }
+    Ok(Json(message))
 }
 
 /// delete message version
@@ -316,7 +334,7 @@ pub async fn message_version_get(
         (status = NO_CONTENT, description = "delete message success"),
     )
 )]
-pub async fn message_version_delete(
+async fn message_version_delete(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -333,8 +351,8 @@ pub async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let res = data.message_version_delete(thread_id, message_id, version_id).await?;
-    Ok(Json(res))
+    data.message_version_delete(thread_id, message_id, version_id).await?;
+    Ok(Json(()))
 }
 
 pub fn routes() -> OpenApiRouter<ServerState> {

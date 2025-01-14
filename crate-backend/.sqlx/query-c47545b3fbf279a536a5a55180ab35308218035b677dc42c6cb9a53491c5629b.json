@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    INSERT INTO room_member (user_id, room_id, membership)\n    \t    VALUES ($1, $2, $3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c47545b3fbf279a536a5a55180ab35308218035b677dc42c6cb9a53491c5629b"
+}

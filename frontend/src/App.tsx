@@ -29,7 +29,10 @@ const App: Component = () => {
 	});
 	ws.addEventListener("open", (e) => {
 		console.log("opened");
-		ws.send(JSON.stringify({ type: "hello", token: TOKEN }));
+		ws.send(JSON.stringify({ type: "Hello", token: TOKEN }));
+	});
+	ws.addEventListener("error", (e) => {
+		console.error(e);
 	});
 
 	const [data, update] = createStore<Data>({
@@ -52,7 +55,7 @@ const App: Component = () => {
 	const client = new Client(TOKEN, BASE_URL);
 
 	(async () => {
-		const data = await client.http("GET", `/api/v1/rooms?dir=f&limit=100`);
+		const data = await client.http("GET", `/api/v1/room?dir=f&limit=100`);
 		for (const room of data.items) {
 			update("rooms", room.id, room);
 		}

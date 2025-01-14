@@ -21,7 +21,7 @@ export const Main = () => {
 
 	async function createRoom() {
   	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
-		ctx.client.http("POST", "/api/v1/rooms", {
+		ctx.client.http("POST", "/api/v1/room", {
 			name,
 		});
 	}

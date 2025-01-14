@@ -5,12 +5,10 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result};
 use crate::types::{
-    Identifier, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageType, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Thread, ThreadCreate, ThreadId, UserId
+    PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId
 };
 
-use crate::data::{
-    DataMedia, DataMessage, DataPermission, DataRole, DataRoleMember, DataRoom, DataRoomMember, DataThread, DataUnread
-};
+use crate::data::DataRoom;
 
 use super::{Pagination, Postgres};
 
@@ -58,7 +56,7 @@ impl DataRoom for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let rooms = query_as!(
+        let items = query_as!(
             Room,
             "
         	SELECT room.id, room.version_id, room.name, room.description FROM room_member
@@ -81,8 +79,8 @@ impl DataRoom for Postgres {
         .fetch_one(&mut *tx)
         .await?;
         tx.rollback().await?;
-        let has_more = rooms.len() > p.limit as usize;
-        let mut items: Vec<_> = rooms.into_iter().take(p.limit as usize).collect();
+        let has_more = items.len() > p.limit as usize;
+        let mut items: Vec<_> = items.into_iter().take(p.limit as usize).collect();
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
@@ -94,6 +92,25 @@ impl DataRoom for Postgres {
     }
 
     async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
-        todo!()
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let room = query_as!(
+            Room,
+            "SELECT id, version_id, name, description FROM room WHERE id = $1",
+            id.into_inner()
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        let version_id = RoomVerId(Uuid::now_v7());
+        query!(
+            "UPDATE room SET version_id = $2, name = $3, description = $4 WHERE id = $1",
+            id.into_inner(),
+            version_id.into_inner(),
+            patch.name.unwrap_or(room.name),
+            patch.description.unwrap_or(room.description),
+        )
+        .execute(&mut *tx)
+        .await?;
+        Ok(version_id)
     }
 }

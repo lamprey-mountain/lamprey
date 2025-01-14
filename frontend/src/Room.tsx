@@ -12,21 +12,21 @@ export const RoomHome = (props: { room: RoomT }) => {
 	
 	async function createThread(room_id: string) {
   	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
-		ctx.client.http("POST", `/api/v1/rooms/${room_id}/threads`, {
+		ctx.client.http("POST", `/api/v1/room/${room_id}/threads`, {
 			name
 		});
 	}
 	
 	async function leaveRoom(room_id: string) {
   	if (!await ctx.dispatch({ do: "modal.confirm", text: "are you sure you want to leave?" })) return;
-		ctx.client.http("DELETE", `/api/v1/rooms/${room_id}/members/@self`);
+		ctx.client.http("DELETE", `/api/v1/room/${room_id}/members/@self`);
 	}
 	
   // const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
   // 	if (value?.room_id !== room_id) value = undefined;
   // 	if (value?.has_more === false) return value;
   // 	const lastId = value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
-  // 	const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/threads?dir=f&from=${lastId}&limit=100`);
+  // 	const batch = await ctx.client.http("GET", `/api/v1/room/${room_id}/threads?dir=f&from=${lastId}&limit=100`);
   // 	return {
   // 		...batch,
   // 		items: [...value?.items ?? [], ...batch.items],

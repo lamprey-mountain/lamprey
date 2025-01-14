@@ -1,16 +1,15 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgPool};
+use sqlx::{query, Acquire};
 use tracing::info;
-use uuid::Uuid;
 
 use crate::error::{Error, Result};
 use crate::types::{
-    Identifier, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageType, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Thread, ThreadCreate, ThreadId, UserId
+    RoomId, RoomMemberPut, UserId
 };
 
-use crate::data::{
-    DataMedia, DataMessage, DataPermission, DataRole, DataRoleMember, DataRoom, DataRoomMember, DataThread, DataUnread
-};
+use crate::data::
+    DataRoomMember
+;
 
 use super::Postgres;
 

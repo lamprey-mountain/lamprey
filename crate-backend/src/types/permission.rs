@@ -31,6 +31,7 @@ pub enum Permission {
     MessageEdit,
 }
 
+#[derive(Debug, Clone)]
 pub struct Permissions {
     p: HashSet<Permission>,
 }
@@ -54,7 +55,7 @@ impl Permissions {
     
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
-        self.p.contains(&perm)
+        self.p.contains(&perm) || self.p.contains(&Permission::Admin)
     }
     
     pub fn ensure(&self, perm: Permission) -> Result<()> {

@@ -25,7 +25,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   				if (roomThreadCount === 0) {
   					const data = await ctx.client.http(
   						"GET",
-  						`/api/v1/rooms/${room_id}/threads?dir=f`,
+  						`/api/v1/room/${room_id}/thread?dir=f`,
   					);
   					for (const item of data.items) {
   						update("threads", item.id, item);
@@ -48,7 +48,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   			if (!slice) {
   				const batch = await ctx.client.http(
   					"GET",
-  					`/api/v1/threads/${thread_id}/messages?dir=b&from=ffffffff-ffff-ffff-ffff-ffffffffffff&limit=100`,
+  					`/api/v1/thread/${thread_id}/message?dir=b&from=ffffffff-ffff-ffff-ffff-ffffffffffff&limit=100`,
   				);
   				const tl = batch.items.map((i: MessageT) => ({
   					type: "remote" as const,
@@ -77,7 +77,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   						"ffffffff-ffff-ffff-ffff-ffffffffffff";
   					const batch = await ctx.client.http(
   						"GET",
-  						`/api/v1/threads/${thread_id}/messages?dir=b&limit=100&from=${from}`,
+  						`/api/v1/thread/${thread_id}/message?dir=b&limit=100&from=${from}`,
   					);
   					solidBatch(() => {
   						update("timelines", thread_id, (i) => [
@@ -109,7 +109,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   						"00000000-0000-0000-0000-000000000000";
   					const batch = await ctx.client.http(
   						"GET",
-  						`/api/v1/threads/${thread_id}/messages?dir=f&limit=100&from=${from}`,
+  						`/api/v1/thread/${thread_id}/message?dir=f&limit=100&from=${from}`,
   					);
   					solidBatch(() => {
   						update("timelines", thread_id, (i) => [
@@ -196,13 +196,13 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		}
   		case "server": {
   			const msg = action.msg;
-				if (msg.type === "ready") {
+				if (msg.type === "Ready") {
 					update("user", msg.user);
-				} else if (msg.type === "upsert.room") {
+				} else if (msg.type === "UpsertRoom") {
 					update("rooms", msg.room.id, msg.room);
-				} else if (msg.type === "upsert.thread") {
+				} else if (msg.type === "UpsertThread") {
 					update("threads", msg.thread.id, msg.thread);
-				} else if (msg.type === "upsert.message") {
+				} else if (msg.type === "UpsertMessage") {
 					solidBatch(() => {
 						const { message } = msg;
 						const { id, version_id, thread_id } = message;
@@ -249,21 +249,21 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						}
 					});
 					// TODO: message deletions
-				} else if (msg.type === "upsert.role") {
+				} else if (msg.type === "UpsertRole") {
 					const role: RoleT = msg.role;
 					const { room_id } = role;
 					if (!ctx.data.room_roles[room_id]) update("room_roles", room_id, {});
 					update("room_roles", room_id, role.id, role);
-				} else if (msg.type === "upsert.member") {
+				} else if (msg.type === "UpsertMember") {
 					const member: MemberT = msg.member;
 					const { room_id } = member;
 					if (!ctx.data.room_members[room_id]) update("room_members", room_id, {});
 					update("users", member.user.id, member.user);
 					update("room_members", room_id, member.user.id, member);
-				} else if (msg.type === "upsert.invite") {
+				} else if (msg.type === "UpsertInvite") {
 					const invite: InviteT = msg.invite;
 					update("invites", invite.code, invite);
-				} else if (msg.type === "delete.member") {
+				} else if (msg.type === "DeleteMember") {
 					const { user_id, room_id } = msg
 					update("room_members", room_id, produce((obj) => {
 						if (!obj) return;
@@ -274,7 +274,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 							delete obj[room_id];
 						}));
 					}
-				} else if (msg.type === "delete.invite") {
+				} else if (msg.type === "DeleteInvite") {
 					const { code } = msg
 					update("invites", produce((obj) => {
 						delete obj[code];
@@ -299,7 +299,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				}
 		    
 				const version_id = action.version_id ?? ctx.data.threads[thread_id].last_version_id;
-				await ctx.client.http("PUT", `/api/v1/threads/${thread_id}/messages/${version_id}/ack`);
+				await ctx.client.http("PUT", `/api/v1/thread/${thread_id}/ack`, { version_id });
 				update("threads", thread_id, "last_read_id", version_id);
 				const has_thread = !!ctx.data.thread_state[action.thread_id];
 				if (also_local && has_thread) update("thread_state", action.thread_id, "read_marker_id", version_id);
@@ -314,8 +314,8 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {	
   return function(msg: any) {
 		console.log("recv", msg);
-		if (msg.type === "ping") {
-			ws.send(JSON.stringify({ type: "pong" }));
+		if (msg.type === "Ping") {
+			ws.send(JSON.stringify({ type: "Pong" }));
 		} else {
 			ctx.dispatch({
 				do: "server",
@@ -331,43 +331,43 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string) {
 		const { room_id } = ctx.data.threads[thread_id];
 		if (cmd === "thread") {
 			const name = text.slice("/thread ".length);
-			await ctx.client.http("POST", `/api/v1/rooms/${room_id}/threads`, {
+			await ctx.client.http("POST", `/api/v1/room/${room_id}/thread`, {
 				name,
 			});
 		} else if (cmd === "archive") {
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
 				is_closed: true,
 			});
 		} else if (cmd === "unarchive") {
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
 				is_closed: false,
 			});
 		} else if (cmd === "desc") {
 			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
 				description: description || null,
 			});
 		} else if (cmd === "name") {
 			const name = args.join(" ");
 			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/threads/${thread_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
 				name,
 			});
 		} else if (cmd === "desc-room") {
 			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/room/${room_id}`, {
 				description: description || null,
 			});
 		} else if (cmd === "name-room") {
 			const name = args.join(" ");
 			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/rooms/${room_id}`, {
+			await ctx.client.http("PATCH", `/api/v1/room/${room_id}`, {
 				name,
 			});
 		}
 		return;
 	}
-	ctx.client.http("POST", `/api/v1/threads/${thread_id}/messages`, {
+	ctx.client.http("POST", `/api/v1/thread/${thread_id}/message`, {
 		content: text,
 		reply_id: ctx.data.thread_state[thread_id].reply_id,
 		nonce: uuidv7(),

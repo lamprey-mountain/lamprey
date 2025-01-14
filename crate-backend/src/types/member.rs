@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 use super::{Role, RoleId, RoomId, User, UserId};
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct RoomMember {
     pub user: User,
     pub room_id: RoomId,
@@ -14,7 +14,7 @@ pub struct RoomMember {
     pub roles: Vec<Role>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomMemberPut {
     pub user_id: UserId,
     pub room_id: RoomId,

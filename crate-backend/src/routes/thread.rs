@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    types::{MessageCreate, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest, ThreadId, ThreadPatch},
+    types::{MessageCreate, MessageServer, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest, ThreadId, ThreadPatch},
     ServerState,
 };
 
@@ -26,7 +26,7 @@ use crate::error::Result;
         (status = CREATED, description = "Create thread success", body = Thread),
     )
 )]
-pub async fn thread_create(
+async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -59,15 +59,13 @@ pub async fn thread_create(
         override_name: None,
     }).await?;
     let thread = data.thread_get(thread_id, user_id).await?;
-    // events.emit("threads", thread.id, { type: "upsert.thread", thread });
-    // events.emit("threads", thread.id, { type: "upsert.message", message });
-    // events.emit("rooms", room.id, { type: "upsert.room", room });
+    s.sushi.send(MessageServer::UpsertThread { thread: thread.clone() })?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
 /// Get a thread
 #[utoipa::path(
-    post,
+    get,
     path = "/thread/{thread_id}",
     params(("thread_id", description = "Thread id")),
     tags = ["thread"],
@@ -75,7 +73,7 @@ pub async fn thread_create(
         (status = OK, description = "Get thread success", body = Thread),
     )
 )]
-pub async fn thread_get(
+async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -98,7 +96,7 @@ pub async fn thread_get(
         (status = OK, description = "List room threads success"),
     )
 )]
-pub async fn thread_list(
+async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
     Auth(session): Auth,
@@ -125,7 +123,7 @@ pub async fn thread_list(
         (status = NOT_MODIFIED, description = "no change"),
     )
 )]
-pub async fn thread_update(
+async fn thread_update(
     Path((thread_id, )): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -140,18 +138,19 @@ pub async fn thread_update(
         perms.add(Permission::RoomManage);
     }
     perms.ensure(Permission::RoomManage)?;
-    data.thread_update(thread_id, json).await?;
+    data.thread_update(thread_id, user_id, json).await?;
     let thread = data.thread_get(thread_id, user_id).await?;
+    s.sushi.send(MessageServer::UpsertThread { thread: thread.clone() })?;
     Ok(Json(thread))
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct AckReq {
-    version_id: Option<MessageVerId>,
+struct AckReq {
+    version_id: MessageVerId,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct AckRes {
+struct AckRes {
     version_id: MessageVerId,
 }
 
@@ -169,7 +168,7 @@ pub struct AckRes {
         (status = OK, description = "success"),
     )
 )]
-pub async fn thread_ack(
+async fn thread_ack(
     Path((thread_id, )): Path<(ThreadId, )>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -177,13 +176,10 @@ pub async fn thread_ack(
 ) -> Result<Json<AckRes>> {
     let user_id = session.user_id;
     let data = s.data();
+    let version_id = json.version_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let version_id = if let Some(ver_id) = json.version_id {
-        data.unread_mark_message(user_id, thread_id, ver_id).await?
-    } else {
-        data.unread_mark_thread(user_id, thread_id).await?
-    };
+    data.unread_put(user_id, thread_id, version_id).await?;
     Ok(Json(AckRes { version_id }))
 }
 

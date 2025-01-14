@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    SELECT media_id, target_id, link_type as \"link_type: _\"\n    \t    FROM media_link\n    \t    WHERE media_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "media_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "target_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "link_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "media_link_type",
+            "kind": {
+              "Enum": [
+                "Message",
+                "MessageVersion"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "543aafc2f60fc0b72f4c6b433d08717bf13d3ced299e214d31616d267470d0f0"
+}

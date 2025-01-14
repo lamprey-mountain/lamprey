@@ -91,7 +91,7 @@ pub trait DataMedia {
     async fn media_link_insert(
         &self,
         media_id: MediaId,
-        thing_id: Uuid,
+        target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
     
@@ -99,17 +99,17 @@ pub trait DataMedia {
     
     async fn media_link_delete(
         &self,
-        thing_id: Uuid,
+        target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
     
-    async fn media_link_delete_all(&self, thing_id: Uuid) -> Result<()>;
+    async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
 }
 
 #[async_trait]
 pub trait DataMessage {
     async fn message_create(&self, create: MessageCreate) -> Result<MessageId>;
-    async fn message_update(&self, message_id: MessageId, create: MessageCreate) -> Result<MessageVerId>;
+    async fn message_update(&self, thread_id: ThreadId, message_id: MessageId, create: MessageCreate) -> Result<MessageVerId>;
     async fn message_get(
         &self,
         thread_id: ThreadId,
@@ -174,24 +174,20 @@ pub trait DataThread {
     ) -> Result<PaginationResponse<Thread>>;
     async fn thread_update(
         &self,
-        id: ThreadId,
+        thread_id: ThreadId,
+        user_id: UserId,
         patch: ThreadPatch,
     ) -> Result<ThreadVerId>;
 }
 
 #[async_trait]
 pub trait DataUnread {
-    async fn unread_mark_thread(
-        &self,
-        user_id: UserId,
-        thread_id: ThreadId,
-    ) -> Result<MessageVerId>;
-    async fn unread_mark_message(
+    async fn unread_put(
         &self,
         user_id: UserId,
         thread_id: ThreadId,
         version_id: MessageVerId,
-    ) -> Result<MessageVerId>;
+    ) -> Result<()>;
 }
 
 #[async_trait]

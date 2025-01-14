@@ -8,8 +8,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        Membership, PaginationQuery, PaginationResponse, Permission,
-        RoleCreate, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch,
+        Membership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch
     },
     ServerState,
 };
@@ -22,7 +21,7 @@ use super::util::Auth;
     path = "/room",
     tags = ["room"],
 )]
-pub async fn room_create(
+async fn room_create(
     Auth(session): Auth,
     State(s): State<ServerState>,
     Json(json): Json<RoomCreate>,
@@ -50,7 +49,7 @@ pub async fn room_create(
         is_default: false,
     }).await?;
     data.role_member_put(user_id, role.id).await?;
-    // events.emit("rooms", room.id, { type: "upsert.room", room });
+    s.sushi.send(MessageServer::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
 
@@ -64,7 +63,7 @@ pub async fn room_create(
         (status = 200, description = "Get room success", body = Room),
     )
 )]
-pub async fn room_get(
+async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -86,7 +85,7 @@ pub async fn room_get(
         (status = 200, description = "Paginate room success", body = PaginationResponse<Room>),
     )
 )]
-pub async fn room_list(
+async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -109,7 +108,7 @@ pub async fn room_list(
         (status = NOT_MODIFIED, description = "no change"),
     )
 )]
-pub async fn room_edit(
+async fn room_edit(
     Path((room_id, )): Path<(RoomId,)>,
     Auth(session): Auth,
     State(s): State<ServerState>,
@@ -140,7 +139,7 @@ pub async fn room_edit(
 //         (status = NO_CONTENT, description = "success"),
 //     )
 // )]
-// pub async fn room_ack(
+// async fn room_ack(
 //     Path((room_id,)): Path<(RoomId,)>,
 //     Auth(session): Auth,
 //     State(s): State<ServerState>,
@@ -162,7 +161,7 @@ pub async fn room_edit(
 //         (status = OK, description = "already exists"),
 //     )
 // )]
-// pub async fn dm_initialize(
+// async fn dm_initialize(
 //     Path((user_id, )): Path<(UserId,)>,
 //     Auth(session): Auth,
 //     State(s): State<ServerState>,
@@ -183,7 +182,7 @@ pub async fn room_edit(
 //         (status = OK, description = "already exists"),
 //     )
 // )]
-// pub async fn dm_get(
+// async fn dm_get(
 //     Path((user_id, )): Path<(UserId,)>,
 //     Auth(session): Auth,
 //     State(s): State<ServerState>,

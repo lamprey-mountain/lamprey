@@ -3,11 +3,11 @@ use utoipa::ToSchema;
 
 use super::{ids::SessionId, UserId};
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 #[schema(examples("super_secret_session_token"))]
 pub struct SessionToken(String);
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 pub struct Session {
     #[schema(read_only)]
     pub id: SessionId,
@@ -21,7 +21,7 @@ pub struct Session {
     pub name: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 pub struct SessionCreate {
     #[schema(write_only)]
     pub user_id: UserId,
@@ -30,7 +30,7 @@ pub struct SessionCreate {
     pub name: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 pub struct SessionPatch {
     #[schema(write_only, required = false)]
     pub name: Option<Option<String>>,

@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 use super::{Media, MediaId, MediaRef, MessageId, MessageVerId, ThreadId, User, UserId};
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct Message {
     #[serde(rename = "type")]
     pub message_type: MessageType,
@@ -29,7 +29,23 @@ pub struct Message {
     pub is_pinned: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
+pub struct MessageRow {
+    pub message_type: MessageType,
+    pub id: MessageId,
+    pub thread_id: ThreadId,
+    pub version_id: MessageVerId,
+    pub ordering: i32,
+    pub content: Option<String>,
+    pub attachments: serde_json::Value,
+    pub metadata: Option<serde_json::Value>,
+    pub reply_id: Option<uuid::Uuid>,
+    pub override_name: Option<String>, // temp?
+    pub author: serde_json::Value,
+    pub is_pinned: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MessageCreateRequest {
     pub content: Option<String>,
     #[serde(default)]
@@ -39,7 +55,7 @@ pub struct MessageCreateRequest {
     pub override_name: Option<String>, // temp?
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MessagePatch {
     pub content: Option<Option<String>>,
     pub attachments: Option<Vec<MediaRef>>,
@@ -48,7 +64,7 @@ pub struct MessagePatch {
     pub override_name: Option<Option<String>>, // temp?
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageCreate {
     pub message_type: MessageType,
     pub thread_id: ThreadId,
@@ -85,6 +101,26 @@ impl MessageType {
         match self {
             MessageType::Default => true,
             MessageType::ThreadUpdate => false,
+        }
+    }
+}
+
+impl From<MessageRow> for Message {
+    fn from(row: MessageRow) -> Self {
+        Message {
+            id: row.id,
+            message_type: row.message_type,
+            thread_id: row.thread_id,
+            version_id: row.version_id,
+            nonce: None,
+            ordering: row.ordering,
+            content: row.content,
+            attachments: serde_json::from_value(row.attachments).expect("invalid data in database!"),
+            metadata: row.metadata,
+            reply_id: row.reply_id.map(Into::into),
+            override_name: row.override_name,
+            author: serde_json::from_value(row.author).expect("invalid data in database!"),
+            is_pinned: row.is_pinned,
         }
     }
 }

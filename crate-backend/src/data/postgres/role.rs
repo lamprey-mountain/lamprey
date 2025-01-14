@@ -5,12 +5,10 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result};
 use crate::types::{
-    Identifier, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageType, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Thread, ThreadCreate, ThreadId, UserId
+    PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RoomId
 };
 
-use crate::data::{
-    DataMedia, DataMessage, DataPermission, DataRole, DataRoleMember, DataRoom, DataRoomMember, DataThread, DataUnread
-};
+use crate::data::DataRole;
 
 use super::Postgres;
 

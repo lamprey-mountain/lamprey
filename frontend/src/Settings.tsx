@@ -46,13 +46,13 @@ function Info(props: VoidProps<{ room: RoomT }>) {
   const ctx = useCtx();
   
   const setName = async () => {
-		ctx.client.http("PATCH", `/api/v1/rooms/${props.room.id}`, {
+		ctx.client.http("PATCH", `/api/v1/room/${props.room.id}`, {
 			name: await ctx.dispatch({ do: "modal.prompt", text: "name?" })
 		})
   }
   
   const setDescription = async () => {
-		ctx.client.http("PATCH", `/api/v1/rooms/${props.room.id}`, {
+		ctx.client.http("PATCH", `/api/v1/room/${props.room.id}`, {
 			description: await ctx.dispatch({ do: "modal.prompt", text: "description?" }),
 		})
   }
@@ -75,7 +75,7 @@ function Roles(props: VoidProps<{ room: RoomT }>) {
   	if (value?.room_id !== room_id) value = undefined;
   	if (value?.has_more === false) return value;
   	const lastId = value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
-		const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/roles?dir=f&from=${lastId}&limit=100`);
+		const batch = await ctx.client.http("GET", `/api/v1/room/${room_id}/roles?dir=f&from=${lastId}&limit=100`);
   	return {
   		...batch,
   		items: [...value?.items ?? [], ...batch.items],
@@ -84,13 +84,13 @@ function Roles(props: VoidProps<{ room: RoomT }>) {
     
   const createRole = async () => {
   	const name = await ctx.dispatch({ do: "modal.prompt", text: "role name?" })
-		ctx.client.http("POST", `/api/v1/rooms/${props.room.id}/roles`, {
+		ctx.client.http("POST", `/api/v1/room/${props.room.id}/roles`, {
 			name,
 		});
   }
 
   const deleteRole = (role_id: string) => () => {
-		ctx.client.http("DELETE", `/api/v1/rooms/${props.room.id}/roles/${role_id}`);
+		ctx.client.http("DELETE", `/api/v1/room/${props.room.id}/roles/${role_id}`);
   }
 	
 	return (
@@ -122,7 +122,7 @@ function Members(props: VoidProps<{ room: RoomT }>) {
   	if (value?.room_id !== room_id) value = undefined;
   	if (value?.has_more === false) return value;
   	const lastId = value?.items.at(-1)?.user.id ?? "00000000-0000-0000-0000-000000000000";
-		const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/members?dir=f&from=${lastId}&limit=100`);
+		const batch = await ctx.client.http("GET", `/api/v1/room/${room_id}/members?dir=f&from=${lastId}&limit=100`);
   	return {
   		...batch,
   		items: [...value?.items ?? [], ...batch.items],
@@ -131,12 +131,12 @@ function Members(props: VoidProps<{ room: RoomT }>) {
 
   const addRole = (user_id: string) => async () => {
   	const role_id = await ctx.dispatch({ do: "modal.prompt", text: "role id?" });
-		ctx.client.http("PUT", `/api/v1/rooms/${props.room.id}/members/${user_id}/roles/${role_id}`);
+		ctx.client.http("PUT", `/api/v1/room/${props.room.id}/members/${user_id}/roles/${role_id}`);
   }
   
   const removeRole = (user_id: string) => async () => {
   	const role_id = await ctx.dispatch({ do: "modal.prompt", text: "role id?" })
-		ctx.client.http("DELETE", `/api/v1/rooms/${props.room.id}/members/${user_id}/roles/${role_id}`);
+		ctx.client.http("DELETE", `/api/v1/room/${props.room.id}/members/${user_id}/roles/${role_id}`);
   }
 
   const obs = new IntersectionObserver((ents) => {
@@ -185,7 +185,7 @@ function Invites(props: VoidProps<{ room: RoomT }>) {
   	if (value?.room_id !== room_id) value = undefined;
   	if (value?.has_more === false) return value;
   	const lastId = value?.items.at(-1)?.code ?? "";
-		const batch = await ctx.client.http("GET", `/api/v1/rooms/${room_id}/invites?dir=f&from=${lastId}&limit=100`);
+		const batch = await ctx.client.http("GET", `/api/v1/room/${room_id}/invites?dir=f&from=${lastId}&limit=100`);
   	return {
   		...batch,
   		items: [...value?.items ?? [], ...batch.items],
@@ -193,7 +193,7 @@ function Invites(props: VoidProps<{ room: RoomT }>) {
   });
 
   const createInvite = () => {
-		ctx.client.http("POST", `/api/v1/rooms/${props.room.id}/invites`, {});
+		ctx.client.http("POST", `/api/v1/room/${props.room.id}/invites`, {});
   }
   
   const deleteInvite = (code: string) => {

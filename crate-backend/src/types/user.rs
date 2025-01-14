@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 
 use super::UserId;
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
 pub struct User {
     pub id: UserId,
     pub parent_id: Option<UserId>,
@@ -17,7 +17,7 @@ pub struct User {
     pub is_system: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
 pub struct UserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
@@ -28,7 +28,7 @@ pub struct UserCreate {
     pub is_system: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
 pub struct UserCreateRequest {
     pub name: String,
     pub description: Option<String>,
@@ -37,7 +37,7 @@ pub struct UserCreateRequest {
     pub is_alias: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type)]
 pub struct UserPatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,

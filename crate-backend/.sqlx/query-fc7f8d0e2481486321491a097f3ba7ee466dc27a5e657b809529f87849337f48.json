@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM media_link WHERE target_id = $1 AND link_type = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "media_link_type",
+            "kind": {
+              "Enum": [
+                "Message",
+                "MessageVersion"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fc7f8d0e2481486321491a097f3ba7ee466dc27a5e657b809529f87849337f48"
+}

@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH perms AS (\n                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission\n                FROM room_member AS m\n                JOIN role_member AS r ON r.user_id = m.user_id\n                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id\n                UNION\n                SELECT room_id, user_id, 'View' AS permission\n                FROM room_member\n            )\n            SELECT permission as \"permission!: Permission\"\n            FROM perms\n            WHERE user_id = $1 AND room_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "permission!: Permission",
+        "type_info": {
+          "Custom": {
+            "name": "permission",
+            "kind": {
+              "Enum": [
+                "Admin",
+                "RoomManage",
+                "ThreadCreate",
+                "ThreadManage",
+                "ThreadDelete",
+                "MessageCreate",
+                "MessageFilesEmbeds",
+                "MessagePin",
+                "MessageDelete",
+                "MessageMassMention",
+                "MemberKick",
+                "MemberBan",
+                "MemberManage",
+                "InviteCreate",
+                "InviteManage",
+                "RoleManage",
+                "RoleApply",
+                "View",
+                "MessageEdit"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "788ad49728dd784c993b5bb2f4735adb7d61d69fa63264be78dcd9319dd0c17d"
+}

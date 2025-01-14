@@ -20,7 +20,7 @@ impl FromRequestParts<ServerState> for Auth {
     type Rejection = Error;
 
     async fn from_request_parts(parts: &mut Parts, state: &ServerState) -> Result<Self, Self::Rejection> {
-        let auth = parts.headers.get("authorization").ok_or(Error::MissingAuthHeader)?.to_str()?.to_string();
+        let auth = parts.headers.get("authorization").ok_or(Error::MissingAuth)?.to_str()?.to_string();
         let mut conn = DatabaseConnection::from_request_parts(parts, state).await?;
         let session = query_as!(Session, r#"SELECT id, user_id, token, status AS "status: _", name FROM session WHERE token = $1"#, auth)
             .fetch_one(&mut *conn.0)

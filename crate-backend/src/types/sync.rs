@@ -3,8 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::{
-    Invite, InviteCode, RoomMember, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    Session, SessionId, Thread, User, UserId,
+    Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId
 };
 
 #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
@@ -19,48 +18,52 @@ pub enum MessageClient {
     Pong,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum MessageServer {
-    #[serde(rename = "ping")]
+pub enum MessageServer {
     Ping {},
-    #[serde(rename = "ready")]
     Ready { user: User },
-    #[serde(rename = "error")]
     Error { error: String },
-    #[serde(rename = "upsert.room")]
     UpsertRoom { room: Room },
-    #[serde(rename = "upsert.thread")]
     UpsertThread { thread: Thread },
-    #[serde(rename = "upsert.message")]
     UpsertMessage { message: Message },
-    #[serde(rename = "upsert.user")]
     UpsertUser { user: User },
-    #[serde(rename = "upsert.member")]
     UpsertMember { member: RoomMember },
-    #[serde(rename = "upsert.session")]
     UpsertSession { session: Session },
-    #[serde(rename = "upsert.role")]
     UpsertRole { role: Role },
-    #[serde(rename = "upsert.invite")]
     UpsertInvite { invite: Invite },
-    #[serde(rename = "delete.message")]
-    DeleteMessage { id: MessageId },
-    #[serde(rename = "delete.message_version")]
-    DeleteMessageVersion { id: MessageVerId },
-    #[serde(rename = "delete.user")]
+    DeleteMessage { thread_id: ThreadId, message_id: MessageId },
+    DeleteMessageVersion { thread_id: ThreadId, message_id: MessageId, version_id: MessageVerId },
     DeleteUser { id: UserId },
-    #[serde(rename = "delete.session")]
     DeleteSession { id: SessionId },
-    #[serde(rename = "delete.role")]
-    DeleteRole { id: RoleId },
-    #[serde(rename = "delete.member")]
+    DeleteRole { room_id: RoomId, role_id: RoleId },
     DeleteMember { room_id: RoomId, user_id: UserId },
-    #[serde(rename = "delete.invite")]
     DeleteInvite { code: InviteCode },
-    #[serde(rename = "webhook")]
     Webhook {
         hook_id: Uuid,
         data: serde_json::Value,
     },
+}
+
+// /// messages specific to a user
+// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+// #[serde(tag = "type")]
+// enum MessageUser {}
+
+// /// messages specific to a thread
+// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+// #[serde(tag = "type")]
+// enum MessageThread {}
+
+// /// messages specific to a room
+// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+// #[serde(tag = "type")]
+// enum MessageRoom {}
+
+type WsMessage = axum::extract::ws::Message;
+
+impl From<MessageServer> for WsMessage {
+    fn from(value: MessageServer) -> Self {
+        WsMessage::text(serde_json::to_string(&value).expect("servermessage should always be able to be serialized"))
+    }
 }

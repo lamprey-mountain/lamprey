@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n\t\t\tINSERT INTO unread (thread_id, user_id, version_id)\n\t\t\tVALUES ($1, $2, $3)\n\t\t\tON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET version_id = excluded.version_id;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a3f449be0b1202a2b7a06fa8d08a854b0493e1b7b41a00185a3751ba2f9d3096"
+}

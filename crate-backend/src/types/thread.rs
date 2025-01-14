@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use super::{MessageId, RoomId, ThreadId, UserId};
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct Thread {
-    // 	type: z.nativeEnum(ThreadType).describe("0 = default"),
+    // pub thread_type: ThreadType,
     pub id: ThreadId,
     pub room_id: RoomId,
     pub creator_id: UserId,
@@ -26,12 +27,27 @@ pub struct Thread {
 	pub is_unread: bool,
 	pub last_version_id: MessageId,
 	pub last_read_id: Option<MessageId>,
-	#[sqlx(try_from = "i64")]
 	pub message_count: u64,
 	// mention_count: z.number(),
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ThreadRow {
+    pub id: ThreadId,
+    pub room_id: RoomId,
+    pub creator_id: UserId,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_closed: bool,
+    pub is_locked: bool,
+    pub is_pinned: bool,
+	pub is_unread: bool,
+	pub last_version_id: MessageId,
+	pub last_read_id: Option<Uuid>,
+	pub message_count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct ThreadCreateRequest {
     #[schema(max_length = 1, min_length = 64)]
     pub name: String,
@@ -42,7 +58,7 @@ pub struct ThreadCreateRequest {
     pub is_pinned: Option<bool>,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThreadCreate {
     pub room_id: RoomId,
     pub creator_id: UserId,
@@ -53,7 +69,7 @@ pub struct ThreadCreate {
     pub is_pinned: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct ThreadPatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
@@ -62,7 +78,7 @@ pub struct ThreadPatch {
     pub is_pinned: Option<bool>,
 }
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ThreadInfo {
     Foo { a: u64 },
@@ -74,3 +90,22 @@ pub enum ThreadInfo {
 // pub enum ThreadType {
 // 	Default,
 // }
+
+impl From<ThreadRow> for Thread {
+    fn from(row: ThreadRow) -> Self {
+        Thread {
+            id: row.id,
+            room_id: row.room_id,
+            creator_id: row.creator_id,
+            name: row.name,
+            description: row.description,
+            is_closed: row.is_closed,
+            is_locked: row.is_locked,
+            is_pinned: row.is_pinned,
+            is_unread: row.is_unread,
+            last_version_id: row.last_version_id,
+            last_read_id: row.last_read_id.map(Into::into),
+            message_count: row.message_count.try_into().expect("count is negative?"),
+        }
+    }
+}
