@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::query_scalar;
 
 use crate::error::Result;
-use crate::types::{Permission, Permissions, RoomId, ThreadId, UserId};
+use crate::types::{DbPermission, Permissions, RoomId, ThreadId, UserId};
 
 use crate::data::DataPermission;
 
@@ -23,7 +23,7 @@ impl DataPermission for Postgres {
                 SELECT room_id, user_id, 'View' AS permission
                 FROM room_member
             )
-            SELECT permission as "permission!: Permission"
+            SELECT permission as "permission!: DbPermission"
             FROM perms
             WHERE user_id = $1 AND room_id = $2
         "#,
@@ -32,10 +32,10 @@ impl DataPermission for Postgres {
         )
         .fetch_all(&mut *conn)
         .await?;
-        Ok(perms.into_iter().collect())
+        Ok(perms.into_iter().map(Into::into).collect())
     }
 
-    // TODO: thread overwrites? or would that be overkill?
+    // TODO: thread overwrites
     async fn permission_thread_get(
         &self,
         user_id: UserId,

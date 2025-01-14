@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, RoomId, Thread, ThreadCreate,
-    ThreadId, ThreadPatch, ThreadRow, ThreadVerId, UserId,
+    ThreadId, ThreadPatch, DbThread, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;
@@ -19,7 +19,7 @@ async fn thread_get_with_executor(
     user_id: UserId,
 ) -> Result<Thread> {
     let row = query_as!(
-        ThreadRow,
+        DbThread,
         r#"
         with last_id as (
             select thread_id, max(version_id) as last_version_id from message group by thread_id
@@ -103,7 +103,7 @@ impl DataThread for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let items = query_as!(
-            ThreadRow,
+            DbThread,
             r#"
         with last_id as (
             select thread_id, max(version_id) as last_version_id from message group by thread_id

@@ -87,6 +87,15 @@ async fn worker(s: ServerState, mut ws: WebSocket) {
     }
 }
 
+type WsMessage = axum::extract::ws::Message;
+
+fn serialize(msg: &MessageServer) -> WsMessage {
+    WsMessage::text(
+        serde_json::to_string(msg)
+            .expect("server messages should always be able to be serialized"),
+    )
+}
+
 async fn handle_message(
     ws_msg: Message,
     ws: &mut WebSocket,
@@ -106,7 +115,7 @@ async fn handle_message(
                     //     return Err(Error::UnauthSession)
                     // }
                     let user = data.user_get(session.user_id).await?;
-                    ws.send(MessageServer::Ready { user }.into()).await?;
+                    ws.send(serialize(&MessageServer::Ready { user })).await?;
                     *state = ClientState::Authenticated { session };
                 }
                 MessageClient::Pong => {
@@ -200,7 +209,7 @@ async fn handle_sushi(
         AuthCheck::Custom(b) => b,
     };
     if should_send {
-        ws.send(msg.into()).await?;
+        ws.send(serialize(&msg)).await?;
     }
     Ok(())
 }
@@ -209,7 +218,7 @@ async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket) -> bool {
     match timeout {
         Timeout::Ping(_) => {
             let ping = MessageServer::Ping {};
-            let _ = ws.send(ping.into()).await;
+            let _ = ws.send(serialize(&ping)).await;
             *timeout = Timeout::Close(Instant::now() + Duration::from_secs(10));
             true
         }

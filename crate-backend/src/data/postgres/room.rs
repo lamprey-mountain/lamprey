@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId, RoomPatch,
-    RoomVerId, UserId,
+    DbRoom, RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;
@@ -19,7 +19,7 @@ impl DataRoom for Postgres {
         let mut conn = self.pool.acquire().await?;
         let room_id = Uuid::now_v7();
         let room = query_as!(
-            Room,
+            DbRoom,
             "
     	    INSERT INTO room (id, version_id, name, description)
     	    VALUES ($1, $2, $3, $4)
@@ -33,20 +33,20 @@ impl DataRoom for Postgres {
         .fetch_one(&mut *conn)
         .await?;
         info!("inserted room");
-        Ok(room)
+        Ok(room.into())
     }
 
     async fn room_get(&self, id: RoomId) -> Result<Room> {
         let id: Uuid = id.into();
         let mut conn = self.pool.acquire().await?;
         let room = query_as!(
-            Room,
+            DbRoom,
             "SELECT id, version_id, name, description FROM room WHERE id = $1",
             id
         )
         .fetch_one(&mut *conn)
         .await?;
-        Ok(room)
+        Ok(room.into())
     }
 
     async fn room_list(
@@ -58,7 +58,7 @@ impl DataRoom for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let items = query_as!(
-            Room,
+            DbRoom,
             "
         	SELECT room.id, room.version_id, room.name, room.description FROM room_member
         	JOIN room ON room_member.room_id = room.id
@@ -81,7 +81,11 @@ impl DataRoom for Postgres {
         .await?;
         tx.rollback().await?;
         let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items.into_iter().take(p.limit as usize).collect();
+        let mut items: Vec<_> = items
+            .into_iter()
+            .take(p.limit as usize)
+            .map(Into::into)
+            .collect();
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
@@ -96,7 +100,7 @@ impl DataRoom for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let room = query_as!(
-            Room,
+            DbRoom,
             "SELECT id, version_id, name, description FROM room WHERE id = $1",
             id.into_inner()
         )

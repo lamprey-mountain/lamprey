@@ -45,6 +45,8 @@ pub enum Error {
     SqlxMigrate(#[from] sqlx::migrate::MigrateError),
     #[error("tracing subscriber error: {0}")]
     TracingSubscriber(#[from] tracing::subscriber::SetGlobalDefaultError),
+    #[error("not yet implemented...")]
+    Unimplemented,
 }
 
 impl From<sqlx::Error> for Error {
@@ -84,6 +86,7 @@ impl Error {
             Error::Opendal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SqlxMigrate(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::TracingSubscriber(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
         }
     }
 }

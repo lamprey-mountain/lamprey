@@ -5,8 +5,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    Message, MessageCreate, MessageId, MessageRow, MessageType, MessageVerId, PaginationDirection,
-    PaginationQuery, PaginationResponse, ThreadId,
+    DbMessage, DbMessageType, Message, MessageCreate, MessageId, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadId
 };
 
 use crate::data::DataMessage;
@@ -23,12 +22,11 @@ impl DataMessage for Postgres {
             .iter()
             .map(|i| i.into_inner())
             .collect();
-        dbg!(&create);
-        dbg!(&atts);
+        let message_type: DbMessageType = create.message_type.into();
         query!(r#"
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, $10)
-        "#, message_id, create.thread_id.into_inner(), message_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), create.message_type as _, create.override_name, &atts)
+        "#, message_id, create.thread_id.into_inner(), message_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), message_type as _, create.override_name, &atts)
         .execute(&mut *conn)
         .await?;
         info!("insert message");
@@ -48,10 +46,22 @@ impl DataMessage for Postgres {
             .iter()
             .map(|i| i.into_inner())
             .collect();
+        let message_type: DbMessageType = create.message_type.into();
         query!(r#"
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, $10)
-        "#, message_id.into_inner(), create.thread_id.into_inner(), ver_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), create.message_type as _, create.override_name, &atts)
+        "#,
+            message_id.into_inner(),
+            create.thread_id.into_inner(),
+            ver_id,
+            create.content,
+            create.metadata,
+            create.reply_id.map(|i| i.into_inner()),
+            create.author_id.into_inner(),
+            message_type as _,
+            create.override_name,
+            &atts,
+        )
         .execute(&mut *conn)
         .await?;
         Ok(ver_id.into())
@@ -59,7 +69,7 @@ impl DataMessage for Postgres {
 
     async fn message_get(&self, thread_id: ThreadId, id: MessageId) -> Result<Message> {
         let mut conn = self.pool.acquire().await?;
-        let row = query_as!(MessageRow, r#"
+        let row = query_as!(DbMessage, r#"
             with
             att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
@@ -75,7 +85,7 @@ impl DataMessage for Postgres {
                 where row_num = 1
             )
             SELECT
-                msg.type as "message_type: MessageType",
+                msg.type as "message_type: DbMessageType",
                 msg.id,
                 msg.thread_id, 
                 msg.version_id,
@@ -92,7 +102,7 @@ impl DataMessage for Postgres {
             left JOIN att_json ON att_json.version_id = msg.version_id
                  WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL
         "#, thread_id.into_inner(), id.into_inner()).fetch_one(&mut *conn).await?;
-        Ok(dbg!(row).into())
+        Ok(row.into())
     }
 
     async fn message_list(
@@ -104,7 +114,7 @@ impl DataMessage for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let items = query_as!(
-            MessageRow,
+            DbMessage,
             r#"
             with
             att_unnest as (select version_id, unnest(attachments) as media_id from message),
@@ -121,7 +131,7 @@ impl DataMessage for Postgres {
                 where row_num = 1
             )
         select
-            msg.type as "message_type: MessageType",
+            msg.type as "message_type: DbMessageType",
             msg.id,
             msg.thread_id, 
             msg.version_id,
@@ -199,7 +209,7 @@ impl DataMessage for Postgres {
         version_id: MessageVerId,
     ) -> Result<Message> {
         let mut conn = self.pool.acquire().await?;
-        let row = query_as!(MessageRow, r#"
+        let row = query_as!(DbMessage, r#"
             with
             att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
@@ -209,7 +219,7 @@ impl DataMessage for Postgres {
                 group by att_unnest.version_id
             )
             SELECT
-                msg.type as "message_type: MessageType",
+                msg.type as "message_type: DbMessageType",
                 msg.id,
                 msg.thread_id, 
                 msg.version_id,
@@ -258,7 +268,7 @@ impl DataMessage for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let items = query_as!(
-            MessageRow,
+            DbMessage,
             r#"
             with
             att_unnest as (select version_id, unnest(attachments) as media_id from message),
@@ -269,7 +279,7 @@ impl DataMessage for Postgres {
                 group by att_unnest.version_id
             )
         select
-            msg.type as "message_type: MessageType",
+            msg.type as "message_type: DbMessageType",
             msg.id,
             msg.thread_id, 
             msg.version_id,

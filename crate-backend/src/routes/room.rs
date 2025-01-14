@@ -8,7 +8,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        Membership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate,
+        RoomMembership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate,
         Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch,
     },
     ServerState,
@@ -34,7 +34,7 @@ async fn room_create(
     data.room_member_put(RoomMemberPut {
         user_id,
         room_id,
-        membership: Membership::Join,
+        membership: RoomMembership::Join,
         override_name: None,
         override_description: None,
         roles: vec![],

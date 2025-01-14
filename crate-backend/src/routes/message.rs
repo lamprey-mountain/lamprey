@@ -170,7 +170,7 @@ async fn message_edit(
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
-    if message.message_type.is_deletable() {
+    if !message.message_type.is_editable() {
         return Err(Error::BadStatic("cant edit that message"));
     }
     if message.author.id == user_id {
@@ -264,7 +264,7 @@ async fn message_delete(
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
-    if message.message_type.is_deletable() {
+    if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
     if message.author.id == user_id {

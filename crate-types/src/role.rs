@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Role {
     pub id: RoleId,
     pub version_id: RoleVerId,
@@ -18,11 +19,9 @@ pub struct Role {
     pub is_default: bool,
 }
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type,
-)]
-pub struct RoleCreate {
-    pub room_id: RoomId,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoleCreateRequest {
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<Permission>,
@@ -31,9 +30,8 @@ pub struct RoleCreate {
     pub is_default: bool,
 }
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::FromRow, sqlx::Type,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RolePatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,

@@ -3,7 +3,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use super::util::Auth;
 
 /// Role create
@@ -22,7 +22,7 @@ pub async fn role_create(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role update
@@ -43,7 +43,7 @@ pub async fn role_update(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role delete
@@ -63,7 +63,7 @@ pub async fn role_delete(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role get
@@ -83,7 +83,7 @@ pub async fn role_get(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role list
@@ -102,7 +102,7 @@ pub async fn role_list(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role list members
@@ -122,7 +122,7 @@ pub async fn role_member_list(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role member apply
@@ -143,7 +143,7 @@ pub async fn role_member_add(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Role member remove
@@ -164,17 +164,17 @@ pub async fn role_member_remove(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<ServerState> {
     OpenApiRouter::new()
-        // .routes(routes!(role_create))
-        // .routes(routes!(role_update))
-        // .routes(routes!(role_delete))
-        // .routes(routes!(role_get))
-        // .routes(routes!(role_list))
-        // .routes(routes!(role_member_list))
-        // .routes(routes!(role_member_add))
-        // .routes(routes!(role_member_remove))
+        .routes(routes!(role_create))
+        .routes(routes!(role_update))
+        .routes(routes!(role_delete))
+        .routes(routes!(role_get))
+        .routes(routes!(role_list))
+        .routes(routes!(role_member_list))
+        .routes(routes!(role_member_add))
+        .routes(routes!(role_member_remove))
 }

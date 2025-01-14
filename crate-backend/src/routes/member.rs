@@ -3,7 +3,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use super::util::Auth;
 
 /// Room member list
@@ -22,7 +22,7 @@ pub async fn room_member_list(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Room member get
@@ -42,7 +42,7 @@ pub async fn room_member_get(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Room member update
@@ -62,7 +62,7 @@ pub async fn room_member_update(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 /// Room member delete (kick/leave)
@@ -82,7 +82,7 @@ pub async fn room_member_delete(
     Auth(session): Auth,
     State(s): State<ServerState>,
 ) -> Result<Json<()>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<ServerState> {

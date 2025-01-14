@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            WITH perms AS (\n                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission\n                FROM room_member AS m\n                JOIN role_member AS r ON r.user_id = m.user_id\n                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id\n                UNION\n                SELECT room_id, user_id, 'View' AS permission\n                FROM room_member\n            )\n            SELECT permission as \"permission!: Permission\"\n            FROM perms\n            WHERE user_id = $1 AND room_id = $2\n        ",
+  "query": "\n            WITH perms AS (\n                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission\n                FROM room_member AS m\n                JOIN role_member AS r ON r.user_id = m.user_id\n                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id\n                UNION\n                SELECT room_id, user_id, 'View' AS permission\n                FROM room_member\n            )\n            SELECT permission as \"permission!: DbPermission\"\n            FROM perms\n            WHERE user_id = $1 AND room_id = $2\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "permission!: Permission",
+        "name": "permission!: DbPermission",
         "type_info": {
           "Custom": {
             "name": "permission",
@@ -46,5 +46,5 @@
       null
     ]
   },
-  "hash": "788ad49728dd784c993b5bb2f4735adb7d61d69fa63264be78dcd9319dd0c17d"
+  "hash": "77f0e9a57423e51a20c50881c0a13616939f83506c673d629f4a13b7e03857e5"
 }

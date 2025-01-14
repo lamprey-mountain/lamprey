@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            )\n            SELECT\n                msg.type as \"message_type: MessageType\",\n                msg.id,\n                msg.thread_id, \n                msg.version_id,\n                msg.ordering,\n                msg.content,\n                msg.metadata,\n                msg.reply_id,\n                msg.override_name,\n                false as \"is_pinned!\",\n                row_to_json(usr) as \"author!\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\n            FROM message AS msg\n            JOIN usr ON usr.id = msg.author_id\n            left JOIN att_json ON att_json.version_id = msg.version_id\n                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL\n        ",
+  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            )\n            SELECT\n                msg.type as \"message_type: DbMessageType\",\n                msg.id,\n                msg.thread_id, \n                msg.version_id,\n                msg.ordering,\n                msg.content,\n                msg.metadata,\n                msg.reply_id,\n                msg.override_name,\n                false as \"is_pinned!\",\n                row_to_json(usr) as \"author!\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\n            FROM message AS msg\n            JOIN usr ON usr.id = msg.author_id\n            left JOIN att_json ON att_json.version_id = msg.version_id\n                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "message_type: MessageType",
+        "name": "message_type: DbMessageType",
         "type_info": {
           "Custom": {
             "name": "message_type",
@@ -96,5 +96,5 @@
       null
     ]
   },
-  "hash": "e7af27baf0efc251435e6cbf3301fc01f841b5d146cace74a6051906c3510275"
+  "hash": "b8bd135a02142805a87ef387766d613aa0f455833c5945608a7c223e941d0db1"
 }

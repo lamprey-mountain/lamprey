@@ -132,10 +132,10 @@ async fn media_upload(
                     source_url: None,
                     thumbnail_url: None,
                     mime,
-                    size: up.create.size as i64,
-                    height: meta.height.map(|i| i as i64),
-                    width: meta.width.map(|i| i as i64),
-                    duration: meta.duration.map(|i| i as i64),
+                    size: up.create.size,
+                    height: meta.height,
+                    width: meta.width,
+                    duration: meta.duration,
                 },
             )
             .await?;

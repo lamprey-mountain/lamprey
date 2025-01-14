@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 use super::{
     Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
     Session, SessionId, Thread, ThreadId, User, UserId,
 };
 
-#[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageClient {
     Hello {
@@ -19,7 +22,8 @@ pub enum MessageClient {
     Pong,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageServer {
     Ping {},
@@ -99,14 +103,3 @@ pub enum MessageServer {
 // #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 // #[serde(tag = "type")]
 // enum MessageRoom {}
-
-type WsMessage = axum::extract::ws::Message;
-
-impl From<MessageServer> for WsMessage {
-    fn from(value: MessageServer) -> Self {
-        WsMessage::text(
-            serde_json::to_string(&value)
-                .expect("servermessage should always be able to be serialized"),
-        )
-    }
-}

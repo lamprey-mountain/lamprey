@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query_as, Acquire};
+use sqlx::{query, query_as, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch, RoleVerId, RoomId};
+use crate::types::{DbPermission, DbRole, PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch, RoleVerId, RoomId};
 
 use crate::data::DataRole;
 
@@ -15,15 +15,16 @@ impl DataRole for Postgres {
     async fn role_create(&self, create: RoleCreate) -> Result<Role> {
         let mut conn = self.pool.acquire().await?;
         let role_id = Uuid::now_v7();
-        let role = query_as!(Role, r#"
+        let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
+        let role = query_as!(DbRole, r#"
             INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, is_default)
             VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
-        "#, role_id, create.room_id.into_inner(), create.name, create.description, create.permissions as _, create.is_mentionable, create.is_self_applicable, create.is_default)
+        "#, role_id, create.room_id.into_inner(), create.name, create.description, perms as _, create.is_mentionable, create.is_self_applicable, create.is_default)
     	    .fetch_one(&mut *conn)
         	.await?;
         info!("inserted role");
-        Ok(role)
+        Ok(role.into())
     }
 
     async fn role_list(
@@ -40,14 +41,14 @@ impl DataRole for Postgres {
 
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
         let mut conn = self.pool.acquire().await?;
-        let role = query_as!(Role, r#"
+        let role = query_as!(DbRole, r#"
             SELECT id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
             FROM role
             WHERE room_id = $1 AND id = $2
         "#, room_id.into_inner(), role_id.into_inner())
     	    .fetch_one(&mut *conn)
         	.await?;
-        Ok(role)
+        Ok(role.into())
     }
 
     async fn role_update(
@@ -58,7 +59,8 @@ impl DataRole for Postgres {
     ) -> Result<RoleVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let role = query_as!(Role, r#"
+        let perms = patch.permissions.map(|p| p.into_iter().map(Into::into).collect());
+        let role = query_as!(DbRole, r#"
             SELECT id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
             FROM role
             WHERE room_id = $1 AND id = $2
@@ -66,7 +68,7 @@ impl DataRole for Postgres {
     	    .fetch_one(&mut *tx)
         	.await?;
         let version_id = RoleVerId(Uuid::now_v7());
-        query_as!(Role, r#"
+        query!(r#"
             UPDATE role SET
                 version_id = $2,
                 name = $3,
@@ -81,12 +83,12 @@ impl DataRole for Postgres {
         version_id.into_inner(),
         patch.name.unwrap_or(role.name),
         patch.description.unwrap_or(role.description),
-        patch.permissions.unwrap_or(role.permissions) as _,
+        perms.unwrap_or(role.permissions) as _,
         patch.is_mentionable.unwrap_or(role.is_mentionable),
         patch.is_self_applicable.unwrap_or(role.is_self_applicable),
         patch.is_default.unwrap_or(role.is_default),
         )
-    	    .fetch_one(&mut *tx)
+    	    .execute(&mut *tx)
         	.await?;
         Ok(version_id)
     }

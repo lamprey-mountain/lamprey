@@ -1,35 +1,9 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use types::Permission;
 
 use crate::error::{Error, Result};
-
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
-#[sqlx(type_name = "permission")]
-pub enum Permission {
-    Admin,
-    RoomManage,
-    ThreadCreate,
-    ThreadManage,
-    ThreadDelete,
-    MessageCreate,
-    MessageFilesEmbeds,
-    MessagePin,
-    MessageDelete,
-    MessageMassMention,
-    MemberKick,
-    MemberBan,
-    MemberManage,
-    InviteCreate,
-    InviteManage,
-    RoleManage,
-    RoleApply,
-
-    View,
-    MessageEdit,
-}
 
 #[derive(Debug, Clone)]
 pub struct Permissions {

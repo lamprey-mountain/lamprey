@@ -1,8 +1,9 @@
 use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 pub trait Identifier:
     From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord
@@ -20,13 +21,10 @@ macro_rules! genid {
             Eq,
             PartialOrd,
             Ord,
-            ToSchema,
             Serialize,
             Deserialize,
-            sqlx::Type,
         )]
-        #[schema(examples($example))]
-        #[sqlx(transparent)]
+        #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples($example)))]
         pub struct $name(pub Uuid);
 
         impl Display for $name {

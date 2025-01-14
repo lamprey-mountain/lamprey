@@ -4,7 +4,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{Media, MediaId, MediaLink, MediaLinkType, UserId};
+use crate::types::{Media, MediaId, MediaLink, MediaLinkType, MediaRow, UserId};
 
 use crate::data::DataMedia;
 
@@ -14,8 +14,12 @@ use super::Postgres;
 impl DataMedia for Postgres {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<Media> {
         let mut conn = self.pool.acquire().await?;
+        let size: i64 = media.size.try_into().expect("too big!");
+        let height: Option<i64> = media.height.map(|i| i.try_into().expect("too big!"));
+        let width: Option<i64> = media.width.map(|i| i.try_into().expect("too big!"));
+        let duration: Option<i64> = media.duration.map(|i| i.try_into().expect("too big!"));
         let media = query_as!(
-            Media,
+            MediaRow,
             "
     	    INSERT INTO media (id, user_id, url, source_url, thumbnail_url, filename, alt, size, mime, height, width, duration)
     	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -28,22 +32,22 @@ impl DataMedia for Postgres {
             media.thumbnail_url,
             media.filename,
             media.alt,
-            media.size,
+            size,
             media.mime,
-            media.height,
-            media.width,
-            media.duration,
+            height,
+            width,
+            duration,
         )
         .fetch_one(&mut *conn)
         .await?;
         info!("inserted media");
-        Ok(media)
+        Ok(media.into())
     }
 
     async fn media_select(&self, media_id: MediaId) -> Result<Media> {
         let mut conn = self.pool.acquire().await?;
         let media = query_as!(
-            Media,
+            MediaRow,
             "
     	    SELECT id, url, source_url, thumbnail_url, filename, alt, size, mime, height, width, duration
     	    FROM media
@@ -53,7 +57,7 @@ impl DataMedia for Postgres {
         )
         .fetch_one(&mut *conn)
         .await?;
-        Ok(media)
+        Ok(media.into())
     }
 
     async fn media_link_insert(

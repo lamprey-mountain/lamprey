@@ -3,7 +3,7 @@ use sqlx::{query, query_as, Acquire};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{User, UserCreate, UserId, UserPatch, UserRow, UserVerId};
+use crate::types::{User, UserCreate, UserId, UserPatch, DbUser, UserVerId};
 
 use crate::data::DataUser;
 
@@ -14,7 +14,7 @@ impl DataUser for Postgres {
     async fn user_create(&self, user_id: UserId, patch: UserCreate) -> Result<User> {
         let mut conn = self.pool.acquire().await?;
         let row = query_as!(
-            UserRow,
+            DbUser,
             r#"
             INSERT INTO usr (id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -39,7 +39,7 @@ impl DataUser for Postgres {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let user = query_as!(
-            UserRow,
+            DbUser,
             "
             SELECT id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system
             FROM usr WHERE id = $1
@@ -74,7 +74,7 @@ impl DataUser for Postgres {
     async fn user_get(&self, id: UserId) -> Result<User> {
         let mut conn = self.pool.acquire().await?;
         let row = query_as!(
-            UserRow,
+            DbUser,
             r#"
             SELECT id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system
             FROM usr WHERE id = $1

@@ -1,0 +1,13 @@
+[package]
+name = "crate-bridge-discord"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+
+[dependencies]
+reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
+serde = "1.0.217"
+serde_json = "1.0.135"
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
