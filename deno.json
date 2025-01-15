@@ -1,5 +1,5 @@
 {
-  "workspace": ["frontend", "backend", "bridge-discord"],
+  "workspace": ["frontend", "backend"],
 	"compilerOptions": {
 		"strict": true,
 		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],

@@ -84,7 +84,7 @@ export const Message = (props: MessageProps) => {
 		if (b === "image") {
 			return (
 				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+					<div class="media" style={{ "aspect-ratio": `${a.height} / ${a.width}` }}>
 						<img style={{ height: `${a.height}px`, width: `${a.width}px` }} src={a.url} alt={a.alt ?? undefined} />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
@@ -94,7 +94,7 @@ export const Message = (props: MessageProps) => {
 		} else if (b === "video") {
 			return (
 				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+					<div class="media" style={{ "aspect-ratio": `${a.height} / ${a.width}` }}>
 						<video height={a.height!} width={a.width!} src={a.url} controls />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
