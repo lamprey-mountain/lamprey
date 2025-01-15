@@ -49,7 +49,6 @@ async fn message_create(
         ));
     }
     let attachment_ids: Vec<_> = json.attachments.into_iter().map(|r| r.id).collect();
-    dbg!(&attachment_ids);
     for id in &attachment_ids {
         data.media_select(*id).await?;
         let existing = data.media_link_select(*id).await?;
