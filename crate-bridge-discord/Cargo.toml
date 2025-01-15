@@ -1,5 +1,5 @@
 [package]
-name = "crate-bridge-discord"
+name = "bridge-discord"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,7 +7,19 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
+anyhow = "1.0.95"
+async-trait = "0.1.85"
+dashmap = "6.1.0"
+dotenvy = "0.15.7"
 reqwest = { version = "0.12.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 serde = "1.0.217"
 serde_json = "1.0.135"
-tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+serenity = "0.12.4"
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread"] }
+tokio-tungstenite = { version = "0.26.1", features = ["rustls-tls-webpki-roots"] }
+toml_edit = { version = "0.22.22", features = ["serde"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+types = { version = "0.1.0", path = "../crate-types" }
+uuid = "1.12.0"

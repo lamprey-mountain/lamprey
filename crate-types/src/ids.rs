@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use std::str::FromStr;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -26,7 +27,7 @@ macro_rules! genid {
         )]
         #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples($example)))]
         pub struct $name(pub Uuid);
-
+        
         impl Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)
@@ -48,6 +49,14 @@ macro_rules! genid {
         impl $name {
             pub fn into_inner(self) -> Uuid {
                 self.into()
+            }
+        }
+
+        impl FromStr for $name {
+            type Err = <Uuid as FromStr>::Err;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(s.parse()?))
             }
         }
 

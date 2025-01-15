@@ -24,6 +24,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Secrets and local data
+.env
+data.db
+data.db-shm
+data.db-wal
+config.toml
 
 # Added by cargo
 

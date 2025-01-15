@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "56403de5c7e3a3408c4e2c30e5751aadf7a8febf02d7ce001e9f2305c3787aa3"
+}

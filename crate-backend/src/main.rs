@@ -86,7 +86,7 @@ async fn main() -> Result<()> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(5))
-        .connect(&std::env::var("PG_URL").expect("missing env var"))
+        .connect(&std::env::var("DATABASE_URL").expect("missing env var"))
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
