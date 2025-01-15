@@ -8,9 +8,9 @@ use discord::Discord;
 use tokio::sync::mpsc;
 use tracing_subscriber::EnvFilter;
 
-mod data;
 mod chat;
 mod common;
+mod data;
 mod discord;
 
 #[tokio::main]

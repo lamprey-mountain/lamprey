@@ -5,17 +5,19 @@ use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild, Http, MessagePagination, Ready, Webhook
+        EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild, Http,
+        MessagePagination, Ready, Webhook,
     },
-    model::prelude::{
-        ChannelId, GuildId, Message, MessageId, MessageUpdateEvent,
-    },
+    model::prelude::{ChannelId, GuildId, Message, MessageId, MessageUpdateEvent},
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
-use crate::{common::{Globals, GlobalsTrait, Portal, PortalMessage}, data::Data};
+use crate::{
+    common::{Globals, GlobalsTrait, Portal, PortalMessage},
+    data::Data,
+};
 
 struct GlobalsKey;
 
@@ -35,7 +37,8 @@ impl EventHandler for Handler {
         info!("discord guild create");
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
-        for ch in guild.channels.values() {
+        let chans = guild.channels.values().chain(&guild.threads);
+        for ch in chans {
             let Some(config) = globals.config.portal_by_discord_id(ch.id) else {
                 continue;
             };
@@ -43,13 +46,21 @@ impl EventHandler for Handler {
                 .portals
                 .entry(config.my_thread_id)
                 .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
-            let last_id = globals.get_last_message_dc(ch.id).await.unwrap().map(|m| m.discord_id);
+            let last_id = globals
+                .get_last_message_dc(ch.id)
+                .await
+                .unwrap()
+                .map(|m| m.discord_id);
             let Some(last_id) = last_id else {
                 continue;
             };
             let mut p = MessagePagination::After(last_id);
             loop {
-                let msgs = ctx.http().get_messages(ch.id, Some(p), Some(100)).await.unwrap();
+                let msgs = ctx
+                    .http()
+                    .get_messages(ch.id, Some(p), Some(100))
+                    .await
+                    .unwrap();
                 if msgs.is_empty() {
                     break;
                 }
@@ -67,7 +78,10 @@ impl EventHandler for Handler {
         info!("discord message create");
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(message.channel_id, PortalMessage::DiscordMessageCreate { message });
+        globals.portal_send_dc(
+            message.channel_id,
+            PortalMessage::DiscordMessageCreate { message },
+        );
     }
 
     async fn message_update(
@@ -80,7 +94,10 @@ impl EventHandler for Handler {
         info!("discord message update");
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(event.channel_id, PortalMessage::DiscordMessageUpdate { update: event });
+        globals.portal_send_dc(
+            event.channel_id,
+            PortalMessage::DiscordMessageUpdate { update: event },
+        );
     }
 
     async fn message_delete(
@@ -93,7 +110,12 @@ impl EventHandler for Handler {
         info!("discord message delete");
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(channel_id, PortalMessage::DiscordMessageDelete { message_id: deleted_message_id });
+        globals.portal_send_dc(
+            channel_id,
+            PortalMessage::DiscordMessageDelete {
+                message_id: deleted_message_id,
+            },
+        );
     }
 
     async fn message_delete_bulk(
@@ -107,7 +129,10 @@ impl EventHandler for Handler {
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
         for message_id in multiple_deleted_messages_ids {
-            globals.portal_send_dc(channel_id, PortalMessage::DiscordMessageDelete { message_id });
+            globals.portal_send_dc(
+                channel_id,
+                PortalMessage::DiscordMessageDelete { message_id },
+            );
         }
     }
 
@@ -138,6 +163,7 @@ pub enum DiscordMessage {
     WebhookMessageDelete {
         url: String,
         message_id: MessageId,
+        thread_id: Option<ChannelId>,
         response: oneshot::Sender<()>,
     },
 }
@@ -159,15 +185,15 @@ impl Discord {
             .type_map_insert::<GlobalsKey>(self.globals.clone())
             .await?;
         let http = client.http.clone();
-        
+
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
                 let _ = self.handle(msg, &http).await;
             }
         });
-        
+
         client.start().await?;
-        
+
         Ok(())
     }
 
@@ -179,19 +205,32 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
-                let msg = hook.execute(&http, true, payload).await?.expect("wait should return message");
+                let msg = hook
+                    .execute(&http, true, payload)
+                    .await?
+                    .expect("wait should return message");
                 response.send(msg).unwrap();
             }
-            DiscordMessage::WebhookMessageEdit { url, message_id, payload, response } => {
+            DiscordMessage::WebhookMessageEdit {
+                url,
+                message_id,
+                payload,
+                response,
+            } => {
                 let hook = self.get_hook(url, http).await?;
                 let msg = hook.edit_message(&http, message_id, payload).await?;
                 response.send(msg).unwrap();
-            },
-            DiscordMessage::WebhookMessageDelete { url, message_id, response } => {
+            }
+            DiscordMessage::WebhookMessageDelete {
+                url,
+                thread_id,
+                message_id,
+                response,
+            } => {
                 let hook = self.get_hook(url, http).await?;
-                hook.delete_message(&http, None, message_id).await?;
+                hook.delete_message(&http, thread_id, message_id).await?;
                 response.send(()).unwrap();
-            },
+            }
         }
         Ok(())
     }
@@ -199,9 +238,7 @@ impl Discord {
     async fn get_hook(&mut self, url: String, http: &Http) -> Result<RefMut<String, Webhook>> {
         let hook = match self.hooks.entry(url.clone()) {
             dashmap::Entry::Occupied(hook) => hook.into_ref(),
-            dashmap::Entry::Vacant(vacant) => {
-                vacant.insert(Webhook::from_url(&http, &url).await?)
-            }
+            dashmap::Entry::Vacant(vacant) => vacant.insert(Webhook::from_url(&http, &url).await?),
         };
         Ok(hook)
     }

@@ -38,9 +38,10 @@ pub struct Config {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ConfigPortal {
-    pub discord_channel_id: DcChannelId,
-    pub discord_guild_id: DcGuildId,
     pub my_thread_id: ThreadId,
+    pub discord_guild_id: DcGuildId,
+    pub discord_channel_id: DcChannelId,
+    pub discord_thread_id: Option<DcChannelId>,
     pub discord_webhook: String,
 }
 
@@ -137,7 +138,7 @@ impl Portal {
                 }
                 let (send, recv) = tokio::sync::oneshot::channel();
                 if let Some(edit) = existing {
-                    let payload = EditWebhookMessage::new()
+                    let mut payload = EditWebhookMessage::new()
                         .content(message.content.as_deref().unwrap_or("(no content?)"))
                         .allowed_mentions(
                             CreateAllowedMentions::new()
@@ -146,6 +147,9 @@ impl Portal {
                                 .all_users(false),
                         )
                         .embeds(embeds);
+                    if let Some(dc_tid) = self.config.discord_thread_id {
+                        payload = payload.in_thread(dc_tid);
+                    }
                     self.globals
                         .dc_chan
                         .send(DiscordMessage::WebhookMessageEdit {
@@ -156,7 +160,7 @@ impl Portal {
                         })
                         .await?;
                 } else {
-                    let payload = ExecuteWebhook::new()
+                    let mut payload = ExecuteWebhook::new()
                         .username(message.override_name.unwrap_or(message.author.name))
                         .content(message.content.as_deref().unwrap_or("(no content?)"))
                         .allowed_mentions(
@@ -166,6 +170,9 @@ impl Portal {
                                 .all_users(false),
                         )
                         .embeds(embeds);
+                    if let Some(dc_tid) = self.config.discord_thread_id {
+                        payload = payload.in_thread(dc_tid);
+                    }
                     self.globals
                         .dc_chan
                         .send(DiscordMessage::WebhookExecute {
@@ -203,7 +210,8 @@ impl Portal {
                     .send(DiscordMessage::WebhookMessageDelete {
                         url: self.config.discord_webhook.clone(),
                         message_id: existing.discord_id,
-                        response: send
+                        thread_id: self.config.discord_thread_id,
+                        response: send,
                     })
                     .await?;
                 recv.await?;
