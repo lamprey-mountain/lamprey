@@ -1,10 +1,10 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use serenity::futures::{SinkExt as _, StreamExt};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
-use tracing::info;
+use tracing::{info, warn};
 use types::{
     MediaCreated, MessageClient, MessageCreateRequest, MessageId, MessageServer, ThreadId, UserId,
 };
@@ -53,15 +53,6 @@ impl Unnamed {
 
     pub async fn connect(mut self) -> Result<()> {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
-        let (mut client, _) =
-            tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await?;
-        let hello = types::MessageClient::Hello {
-            token: token.clone(),
-            last_id: None,
-        };
-        client
-            .send(Message::text(serde_json::to_string(&hello)?))
-            .await?;
         // let mut h = HeaderMap::new();
         // h.insert("authorization", (&token).try_into().unwrap());
         // h.insert("content-type", "application/json".try_into().unwrap());
@@ -72,46 +63,62 @@ impl Unnamed {
                 let _ = handle(msg, &t2).await;
             }
         });
-        while let Some(Ok(msg)) = client.next().await {
-            let Message::Text(text) = msg else { continue };
-            let msg: MessageServer = serde_json::from_str(&text)?;
-            match msg {
-                MessageServer::Ping {} => {
-                    client
-                        .send(Message::text(serde_json::to_string(&MessageClient::Pong)?))
-                        .await?;
-                }
-                MessageServer::Ready { user } => {
-                    info!("chat ready {}", user.name);
-                }
-                MessageServer::UpsertThread { thread: _ } => {
-                    info!("chat upsert thread");
-                    // TODO: what to do here?
-                }
-                MessageServer::UpsertMessage { message } => {
-                    info!("chat upsert message");
-                    if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
-                        continue;
+        loop {
+            let Ok((mut client, _)) =
+                tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await else {
+                warn!("websocket failed to connect, retrying in 1 second...");
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                continue;
+            };
+            let hello = types::MessageClient::Hello {
+                token: token.clone(),
+                last_id: None,
+            };
+            client
+                .send(Message::text(serde_json::to_string(&hello)?))
+                .await?;
+            while let Some(Ok(msg)) = client.next().await {
+                let Message::Text(text) = msg else { continue };
+                let msg: MessageServer = serde_json::from_str(&text)?;
+                match msg {
+                    MessageServer::Ping {} => {
+                        client
+                            .send(Message::text(serde_json::to_string(&MessageClient::Pong)?))
+                            .await?;
                     }
-                    self.globals.portal_send(
-                        message.thread_id,
-                        PortalMessage::UnnamedMessageUpsert { message },
-                    );
-                }
-                MessageServer::DeleteMessage {
-                    thread_id,
-                    message_id,
-                } => {
-                    info!("chat delete message");
-                    self.globals.portal_send(
+                    MessageServer::Ready { user } => {
+                        info!("chat ready {}", user.name);
+                    }
+                    MessageServer::UpsertThread { thread: _ } => {
+                        info!("chat upsert thread");
+                        // TODO: what to do here?
+                    }
+                    MessageServer::UpsertMessage { message } => {
+                        info!("chat upsert message");
+                        if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+                            continue;
+                        }
+                        self.globals.portal_send(
+                            message.thread_id,
+                            PortalMessage::UnnamedMessageUpsert { message },
+                        );
+                    }
+                    MessageServer::DeleteMessage {
                         thread_id,
-                        PortalMessage::UnnamedMessageDelete { message_id },
-                    );
+                        message_id,
+                    } => {
+                        info!("chat delete message");
+                        self.globals.portal_send(
+                            thread_id,
+                            PortalMessage::UnnamedMessageDelete { message_id },
+                        );
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
+            warn!("websocket disconnected, reconnecting in 1 second...");
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
-        Ok(())
     }
 }
 
