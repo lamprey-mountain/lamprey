@@ -5,6 +5,8 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { marked, Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
+// @ts-types="npm:@types/sanitize-html@^2.13.0"
+import sanitizeHtml from "npm:sanitize-html";
 
 const md = marked.use({
 	breaks: true,
@@ -335,8 +337,8 @@ export const Editor = (props: EditorProps) => {
 				return true;
 			},
 			transformPastedHTML(html) {
-				const tmp = document.createElement("x-html-import");
-				tmp.innerHTML = html;
+				const parser = new globalThis.DOMParser();
+				const tmp = parser.parseFromString("html", "text/html");
 
 			  for (const node of tmp.querySelectorAll("script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " + ["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"].map(i => `[class*=${i}], [id*=${i}]`).join(", "))) {
 			    node.remove();
