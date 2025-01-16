@@ -80,6 +80,10 @@ impl From<AttachmentMetadata> for AttachmentMetadataRow {
 pub trait Data {
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
+    async fn get_attachment(
+        &self,
+        media_id: MediaId,
+    ) -> Result<Option<AttachmentMetadata>>;
     async fn get_attachment_dc(
         &self,
         attachment_id: DcAttachmentId,
@@ -132,6 +136,25 @@ impl Data for Globals {
         let row = query_as!(
             AttachmentMetadataRow,
             "SELECT * FROM attachment WHERE discord_id = ?",
+            b1
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        let meta = match row {
+            Some(row) => Some(row.try_into()?),
+            None => None,
+        };
+        Ok(meta)
+    }
+    
+    async fn get_attachment(
+        &self,
+        media_id: MediaId,
+    ) -> Result<Option<AttachmentMetadata>> {
+        let b1 = media_id.to_string();
+        let row = query_as!(
+            AttachmentMetadataRow,
+            "SELECT * FROM attachment WHERE chat_id = ?",
             b1
         )
         .fetch_optional(&self.pool)

@@ -4,7 +4,9 @@ use anyhow::Result;
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::CreateAllowedMentions;
+use serenity::all::CreateAttachment;
 use serenity::all::CreateEmbed;
+use serenity::all::EditAttachments;
 use serenity::all::EditWebhookMessage;
 use serenity::all::{
     ChannelId as DcChannelId, GuildId as DcGuildId, Message as DcMessage, MessageId as DcMessageId,
@@ -138,6 +140,17 @@ impl Portal {
                 }
                 let (send, recv) = tokio::sync::oneshot::channel();
                 if let Some(edit) = existing {
+                    let mut files = EditAttachments::new();
+                    for media in &message.attachments {
+                        let existing = self.globals.get_attachment(media.id.to_owned()).await?;
+                        if let Some(existing) = existing {
+                            files = files.keep(existing.discord_id);
+                        } else {
+                            let bytes = reqwest::get(media.url.to_owned()).await?.error_for_status()?.bytes().await?;
+                            files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
+                        }
+                    }
+                    // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
                     let mut payload = EditWebhookMessage::new()
                         .content(message.content.as_deref().unwrap_or("(no content?)"))
                         .allowed_mentions(
@@ -146,7 +159,8 @@ impl Portal {
                                 .all_roles(false)
                                 .all_users(false),
                         )
-                        .embeds(embeds);
+                        .embeds(embeds)
+                        .attachments(files);
                     if let Some(dc_tid) = self.config.discord_thread_id {
                         payload = payload.in_thread(dc_tid);
                     }
@@ -160,6 +174,11 @@ impl Portal {
                         })
                         .await?;
                 } else {
+                    let mut files = vec![];
+                    for media in &message.attachments {
+                        let bytes = reqwest::get(media.url.to_owned()).await?.error_for_status()?.bytes().await?;
+                        files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
+                    }
                     let mut payload = ExecuteWebhook::new()
                         .username(message.override_name.unwrap_or(message.author.name))
                         .content(message.content.as_deref().unwrap_or("(no content?)"))
@@ -169,6 +188,7 @@ impl Portal {
                                 .all_roles(false)
                                 .all_users(false),
                         )
+                        .add_files(files)
                         .embeds(embeds);
                     if let Some(dc_tid) = self.config.discord_thread_id {
                         payload = payload.in_thread(dc_tid);
