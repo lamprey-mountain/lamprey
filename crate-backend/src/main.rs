@@ -63,14 +63,16 @@ impl ServerState {
         &self.blobs
     }
 
-    async fn presign(&self, media_id: MediaId) -> Result<String> {
+    async fn presign(&self, url: &str) -> Result<String> {
         // Ok(self
         //     .blobs
         //     .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
         //     .await?
         //     .uri()
         //     .to_string())
-        Ok(format!("https://chat-files.celery.eu.org/{media_id}"))
+        // HACK: temporary thing for better caching
+        // TODO: i should use serviceworkers to cache while ignoring signature params
+        Ok(format!("https://chat-files.celery.eu.org/{url}"))
     }
 }
 

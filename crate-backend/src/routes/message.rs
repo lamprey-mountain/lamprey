@@ -77,7 +77,7 @@ async fn message_create(
     }
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(media.id).await?;
+        media.url = s.presign(&media.url).await?;
     }
     message.nonce = json.nonce;
     s.sushi.send(MessageServer::UpsertMessage {
@@ -109,7 +109,7 @@ async fn message_list(
     let mut res = data.message_list(thread_id, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(media.id).await?;
+            media.url = s.presign(&media.url).await?;
         }
     }
     Ok(Json(res))
@@ -139,7 +139,7 @@ async fn message_get(
     perms.ensure_view()?;
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(media.id).await?;
+        media.url = s.presign(&media.url).await?;
     }
     Ok(Json(message))
 }
@@ -232,7 +232,7 @@ async fn message_edit(
         .message_version_get(thread_id, message_id, version_id)
         .await?;
     for media in &mut message.attachments {
-        media.url = s.presign(media.id).await?;
+        media.url = s.presign(&media.url).await?;
     }
     s.sushi.send(MessageServer::UpsertMessage {
         message: message.clone(),
@@ -305,7 +305,7 @@ async fn message_version_list(
     let mut res = data.message_version_list(thread_id, message_id, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(media.id).await?;
+            media.url = s.presign(&media.url).await?;
         }
     }
     Ok(Json(res))
@@ -338,7 +338,7 @@ async fn message_version_get(
         .message_version_get(thread_id, message_id, version_id)
         .await?;
     for media in &mut message.attachments {
-        media.url = s.presign(media.id).await?;
+        media.url = s.presign(&media.url).await?;
     }
     Ok(Json(message))
 }

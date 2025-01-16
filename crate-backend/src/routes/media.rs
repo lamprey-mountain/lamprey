@@ -128,7 +128,7 @@ async fn media_upload(
                     alt: up.create.alt.clone(),
                     id: media_id,
                     filename: up.create.filename.clone(),
-                    url: media_id.to_string(),
+                    url: format!("{media_id}"),
                     source_url: None,
                     thumbnail_url: None,
                     mime,
@@ -144,11 +144,8 @@ async fn media_upload(
         s
             .uploads
             .remove(&media_id)
-            .expect("it was there a few milliseconds ago")
-            .1;
-        // FIXME: this line hangs the server (deadlock?)
-        // tokio::fs::remove_file(p).await?;
-        media.url = s.presign(media.id).await?;
+            .expect("it was there a few milliseconds ago");
+        media.url = s.presign(&media.url).await?;
         let mut headers = HeaderMap::new();
         headers.insert("upload-offset", end_size.into());
         headers.insert("upload-length", size.into());
@@ -178,7 +175,7 @@ async fn media_get(
     State(s): State<ServerState>,
 ) -> Result<Json<Media>> {
     let mut media = s.data().media_select(media_id).await?;
-    media.url = s.presign(media.id).await?;
+    media.url = s.presign(&media.url).await?;
     Ok(Json(media))
 }
 
