@@ -115,10 +115,12 @@ async fn media_upload(
         Err(Error::TooBig)
     } else if end_size == up.create.size {
         let p = up.temp_file.file_path().to_owned();
-        let bytes = tokio::fs::read(&p).await?;
-        let meta = get_metadata(&p).await?;
-        let mime = get_mime_type(&p).await?;
-        s.blobs().write(&media_id.to_string(), bytes).await?;
+        let upload_s3 = async {
+            let bytes = tokio::fs::read(&p).await?;
+            s.blobs().write(&media_id.to_string(), bytes).await?;
+            Ok(())
+        };
+        let (meta, mime, _) = tokio::try_join!(get_metadata(&p), get_mime_type(&p), upload_s3)?;
         let user_id = session.user_id;
         let mut media = s
             .data()
@@ -177,6 +179,36 @@ async fn media_get(
     let mut media = s.data().media_select(media_id).await?;
     media.url = s.presign(&media.url).await?;
     Ok(Json(media))
+}
+
+/// media head
+#[utoipa::path(
+    head,
+    path = "/media/{media_id}",
+    tags = ["media"],
+    params(("media_id", description = "Media id")),
+    responses(
+        (status = NO_CONTENT, description = "no content"),
+    )
+)]
+async fn media_check(
+    Path((media_id,)): Path<(MediaId,)>,
+    Auth(session): Auth,
+    State(s): State<ServerState>,
+) -> Result<(StatusCode, HeaderMap)> {
+    if let Some(up) = s.uploads.get_mut(&media_id) {
+        if up.user_id == session.user_id {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
+            headers.insert("upload-length", up.create.size.into());
+            return Ok((StatusCode::NO_CONTENT, headers))
+        }
+    }
+    let media = s.data().media_select(media_id).await?;
+    let mut headers = HeaderMap::new();
+    headers.insert("upload-offset", media.size.into());
+    headers.insert("upload-length", media.size.into());
+    Ok((StatusCode::NO_CONTENT, headers))
 }
 
 // 	app.openAPIRegistry.registerPath(MediaCheck);
@@ -287,4 +319,5 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .routes(routes!(media_create))
         .routes(routes!(media_upload))
         .routes(routes!(media_get))
+        .routes(routes!(media_check))
 }
