@@ -178,7 +178,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		case "thread.init": {
   		  if (ctx.data.thread_state[action.thread_id]) return;
   		  update("thread_state", action.thread_id, {
-    		  state: createEditorState(text => handleSubmit(ctx, action.thread_id, text, update)),
+    		  editor_state: createEditorState(text => handleSubmit(ctx, action.thread_id, text, update)),
     		  reply_id: null,
     		  scroll_pos: null,
 					read_marker_id: null,
@@ -194,6 +194,10 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		  update("thread_state", action.thread_id, "scroll_pos", action.pos);
   		  return;
   		}
+			case "thread.attachments": {
+  		  update("thread_state", action.thread_id, "attachments", action.attachments);
+  		  return;
+			}
   		case "server": {
   			const msg = action.msg;
 				if (msg.type === "Ready") {
@@ -378,12 +382,14 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 		}
 		return;
 	}
-	const reply_id = ctx.data.thread_state[thread_id].reply_id;
+	const ts = ctx.data.thread_state[thread_id];
+	const reply_id = ts.reply_id;
 	const nonce = uuidv7();
 	ctx.client.http("POST", `/api/v1/thread/${thread_id}/message`, {
 		content: text,
 		reply_id,
 		nonce,
+		attachments: ts.attachments,
 	});
 	const localMessage: MessageT = {
 		type: MessageType.Default,
@@ -396,7 +402,7 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 		content: text,
 		author: ctx.data.user!,
 		metadata: null,
-		attachments: [],
+		attachments: ts.attachments,
 	};
 	solidBatch(() => {
 		const slice = ctx.data.slices[thread_id];
@@ -406,11 +412,9 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 			(i) => [...i, { type: "local" as const, message: localMessage }],
 		);
 		update("slices", thread_id, { start: slice.start + 1, end: slice.end + 1 });
-		// for (const msg of batch.items) {
-		// 	update("messages", msg.id, msg);
-		// }
+		// TODO: is this necessary?
+		// update("messages", msg.id, msg);
+		update("thread_state", thread_id, "reply_id", null);
+		update("thread_state", thread_id, "attachments", []);
 	});
-	ctx.dispatch({ do: "thread.reply", thread_id, reply_id: null });
-	// props.thread.send({ content: text });
-	// await new Promise(res => setTimeout(res, 1000));
 }

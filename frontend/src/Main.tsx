@@ -33,8 +33,8 @@ export const Main = () => {
 	
 	createEffect(() => {
 		// force solid to track these properties
-		ctx.data.menu?.x;
-		ctx.data.menu?.y;
+		ctx?.data.menu?.x;
+		ctx?.data.menu?.y;
 
 		setMenuParentRef({
 			getBoundingClientRect(): ClientRectObject {
@@ -90,78 +90,81 @@ export const Main = () => {
 			}
 		}
 	}  
-  
+
+  // HACK: wrap in Show since ctx might be null during hmr
   return (
     <>
-			<ChatNav />
-			{getComponent()}
-			<Portal>
-				<For each={ctx.data.modals}>{(modal) => (
-					<Switch>
-						<Match when={modal.type === "alert"}>
-							<Modal>
-								<p>{modal.text}</p>
-								<div style="height: 8px"></div>
-								<button onClick={() => ctx.dispatch({ do: "modal.close" })}>okay!</button>
-							</Modal>
-						</Match>
-						<Match when={modal.type === "confirm"}>
-							<Modal>
-								<p>{modal.text}</p>
-								<div style="height: 8px"></div>
-								<button onClick={() => {modal.cont(true); ctx.dispatch({ do: "modal.close" })}}>okay!</button>&nbsp;
-								<button onClick={() => {modal.cont(false); ctx.dispatch({ do: "modal.close" })}}>nevermind...</button>
-							</Modal>
-						</Match>
-						<Match when={modal.type === "prompt"}>
-							<Modal>
-								<p>{modal.text}</p>
-								<div style="height: 8px"></div>
-								<form onSubmit={e => {
-									e.preventDefault();
-									const form = e.target as HTMLFormElement;
-									const input = form.elements.namedItem("text") as HTMLInputElement;
-									modal.cont(input.value);
-									ctx.dispatch({ do: "modal.close" });
-								}}>
-									<input type="text" name="text" autofocus />
+	    <Show when={useCtx()}>
+				<ChatNav />
+				{getComponent()}
+				<Portal>
+					<For each={ctx.data.modals}>{(modal) => (
+						<Switch>
+							<Match when={modal.type === "alert"}>
+								<Modal>
+									<p>{modal.text}</p>
 									<div style="height: 8px"></div>
-									<input type="submit">done!</input>{" "}
-									<button
-										onClick={() => {modal.cont(null); ctx.dispatch({ do: "modal.close" })}}
-									>nevermind...</button>
-								</form>
-							</Modal>
-						</Match>
-					</Switch>
-				)}</For>
-				<Show when={ctx.data.menu}>
-					<div class="contextmenu">
-						<div
-							ref={setMenuRef}
-							class="inner"
-							style={{
-								translate: `${menuFloating.x}px ${menuFloating.y}px`,
-							}}
-						>
-							<Switch>
-								<Match
-									when={ctx.data.menu.type === "room"}
-									children={<RoomMenu room={ctx.data.menu.room} />}
-								/>
-								<Match
-									when={ctx.data.menu.type === "thread"}
-									children={<ThreadMenu thread={ctx.data.menu.thread} />}
-								/>
-								<Match
-									when={ctx.data.menu.type === "message"}
-									children={<MessageMenu message={ctx.data.menu.message} />}
-								/>
-							</Switch>
+									<button onClick={() => ctx.dispatch({ do: "modal.close" })}>okay!</button>
+								</Modal>
+							</Match>
+							<Match when={modal.type === "confirm"}>
+								<Modal>
+									<p>{modal.text}</p>
+									<div style="height: 8px"></div>
+									<button onClick={() => {modal.cont(true); ctx.dispatch({ do: "modal.close" })}}>okay!</button>&nbsp;
+									<button onClick={() => {modal.cont(false); ctx.dispatch({ do: "modal.close" })}}>nevermind...</button>
+								</Modal>
+							</Match>
+							<Match when={modal.type === "prompt"}>
+								<Modal>
+									<p>{modal.text}</p>
+									<div style="height: 8px"></div>
+									<form onSubmit={e => {
+										e.preventDefault();
+										const form = e.target as HTMLFormElement;
+										const input = form.elements.namedItem("text") as HTMLInputElement;
+										modal.cont(input.value);
+										ctx.dispatch({ do: "modal.close" });
+									}}>
+										<input type="text" name="text" autofocus />
+										<div style="height: 8px"></div>
+										<input type="submit">done!</input>{" "}
+										<button
+											onClick={() => {modal.cont(null); ctx.dispatch({ do: "modal.close" })}}
+										>nevermind...</button>
+									</form>
+								</Modal>
+							</Match>
+						</Switch>
+					)}</For>
+					<Show when={ctx.data.menu}>
+						<div class="contextmenu">
+							<div
+								ref={setMenuRef}
+								class="inner"
+								style={{
+									translate: `${menuFloating.x}px ${menuFloating.y}px`,
+								}}
+							>
+								<Switch>
+									<Match
+										when={ctx.data.menu.type === "room"}
+										children={<RoomMenu room={ctx.data.menu.room} />}
+									/>
+									<Match
+										when={ctx.data.menu.type === "thread"}
+										children={<ThreadMenu thread={ctx.data.menu.thread} />}
+									/>
+									<Match
+										when={ctx.data.menu.type === "message"}
+										children={<MessageMenu message={ctx.data.menu.message} />}
+									/>
+								</Switch>
+							</div>
 						</div>
-					</div>
-				</Show>
-			</Portal>
+					</Show>
+				</Portal>
+	    </Show>
     </>
   )
 }

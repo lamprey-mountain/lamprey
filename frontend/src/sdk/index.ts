@@ -380,7 +380,7 @@ export class Client {
 	// public events: TypedEmitter<ClientEvents> = new EventEmitter();
 
 	constructor(
-		private token: string,
+		public token: string,
 		public baseUrl: string,
 	) {
 	  // this.rooms = new Rooms(this);

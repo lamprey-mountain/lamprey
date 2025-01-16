@@ -2,7 +2,7 @@
   "workspace": ["frontend", "backend"],
 	"compilerOptions": {
 		"strict": true,
-		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],
+		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns", "webworker"],
 		"jsx": "react-jsx",
 		"jsxImportSource": "solid-js"
 	},

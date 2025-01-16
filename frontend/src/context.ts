@@ -21,11 +21,11 @@ type Slice = {
 }
 
 type ThreadState = {
-	state: EditorState,
+	editor_state: EditorState,
 	reply_id: string | null,
 	scroll_pos: number | null,
 	read_marker_id: string | null,
-	attachments: Array<AttachmentCreateT>,
+	attachments: Array<AttachmentT>,
 }
 
 export type Data = {
@@ -68,11 +68,12 @@ export type Action
 	| { do: "thread.reply", thread_id: string, reply_id: string | null }
 	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
 	| { do: "thread.mark_read", thread_id: string, version_id?: string, delay?: boolean, also_local?: boolean }
-	| { do: "thread.attachments", thread_id: string, attachments?: AttachmentCreateT }
+	| { do: "thread.attachments", thread_id: string, attachments: Array<AttachmentT> }
 	| { do: "server", msg: any }
 
 export type AttachmentCreateT = {
 	id: string,
+	// file: File,
 }
 
 export type ChatCtx = {

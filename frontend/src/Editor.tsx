@@ -60,6 +60,7 @@ type EditorProps = {
 	disabled?: boolean;
 	class?: string;
 	state: EditorState;
+	onUpload?: (file: File) => void;
 };
 
 export function createEditorState(onSubmit: (text: string) => void) {
@@ -306,9 +307,9 @@ export const Editor = (props: EditorProps) => {
 				const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
 				return DecorationSet.create(state.doc, reduced.decorations.map(i => Decoration.inline(i.start, i.end, i.attrs)));
 			},
-			handlePaste(view, _event, slice) {
-				// const files = event.clipboardData?.files ?? [];
-				// for (const file of files) props.onUpload?.(file);
+			handlePaste(view, event, slice) {
+				const files = event.clipboardData?.files ?? [];
+				for (const file of files) props.onUpload?.(file);
 				const str = slice.content.textBetween(0, slice.size);
 				const tr = view.state.tr;
 				if (/^(https?:\/\/|mailto:)\S+$/i.test(str) && !tr.selection.empty) {

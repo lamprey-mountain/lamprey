@@ -1,4 +1,4 @@
-import { createEffect, createSignal, on, onMount, Show, useContext, } from "solid-js";
+import { createEffect, createSignal, For, on, onMount, Show, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
 import { TimelineItem } from "./Messages.tsx";
 // import type { paths } from "../../openapi.d.ts";
@@ -179,11 +179,45 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	}));
 
+	// TODO: handle this with onSubmit if possible
+	async function handleUpload(f: File) {
+		console.log(f);
+		const { media_id, upload_url } = await ctx.client.http("POST", "/api/v1/media", {
+			filename: f.name,
+			size: f.size,
+		});
+		const r = await fetch(upload_url, {
+			method: "PATCH",
+			headers: {
+				authorization: ctx.client.token,
+				"upload-offset": "0",
+			},
+			body: f,
+		});
+		if (!r.ok) {
+			ctx.dispatch({ do: "modal.alert", text: "failed to upload: " + await r.text() });
+			return;
+		}
+		const json = await r.json();
+		ctx.dispatch({
+			do: "thread.attachments",
+			thread_id: props.thread.id,
+			attachments: [...ts().attachments, json],
+		});
+		console.log(ts().attachments);
+	}
+
 	// translate-y-[8px]
 	// <header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
 	// 	{props.thread.name} / 
 	// </header>
-	
+	const byteFmt = Intl.NumberFormat("en", {
+	  notation: "compact",
+	  style: "unit",
+	  unit: "byte",
+	  unitDisplay: "narrow",
+	});
+
 	return (
 		<div class="chat">
 			<list.List>{item => <TimelineItem thread={props.thread} item={item} />}</list.List>
@@ -201,14 +235,14 @@ export const ChatMain = (props: ChatProps) => {
 						</div>
 					</div>
 				</Show>
-				<Show when={ts().attachments.length && false}>
-					<div class="attachments">
-						<div>foo</div>
-						<div>bar</div>
-						<div>baz</div>
-					</div>
+				<Show when={ts().attachments.length}>
+					<ul class="attachments">
+						<For each={ts().attachments}>{media => (
+							<li>{media.filename} {byteFmt.format(media.size)}</li>
+						)}</For>
+					</ul>
 				</Show>
-				<Editor state={ts().state} placeholder="send a message..." />
+				<Editor state={ts().editor_state} onUpload={handleUpload} placeholder="send a message..." />
 			</div>
 		</div>
 	);
