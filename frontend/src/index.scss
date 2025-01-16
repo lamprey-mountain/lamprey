@@ -213,7 +213,7 @@ button {
 
 		& header {
 			position: sticky;
-			z-index: 10;
+			z-index: 1;
 			top: -8px;
 			padding: 0 144px;
 			background: $bg3;
@@ -283,11 +283,10 @@ a {
 	height: 100%;
 	display: grid;
 	place-items: center;
-	z-index: 20;
 	
 	& > .bg {
 		position: absolute;
-		animation: popupbg 120ms linear forwards;
+		animation: popup-bg 120ms linear forwards;
 		width: 100%;
 		height: 100%;
 	}
@@ -315,7 +314,7 @@ a {
 	}
 }
 
-@keyframes popupbg {
+@keyframes popup-bg {
   from { background-color: #1110; }
   to { background-color: #111a; }
 }
@@ -339,7 +338,7 @@ a {
 	height: 100%;
 	overflow-y: auto;
 	scrollbar-width: none;
-	z-index: 30;
+	z-index: 1;
 
 	& > .inner {
 		position: absolute;
@@ -469,7 +468,8 @@ em {
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
-		text-align: right;
+		align-self: start;
+		justify-self: end;
 		color: $fg4;
 
 		&:hover {
@@ -558,4 +558,63 @@ em {
 .dim {
 	color: $fg5;
 	font-size: .8rem;
+}
+
+.tooltip {
+	position: absolute;
+	top: 0;
+	left: 0;
+	
+	& > .base {
+		position: absolute;
+		background-color: $bg2;
+		border: solid 1px $sep;
+		animation: popup-base 150ms cubic-bezier(.42,1.31,.52,1.09) forwards;
+		width: 100%;
+		height: 100%;
+	}
+	
+	& > .inner {
+		padding: 8px;
+		color: $fg3;
+		animation: popup-content 100ms cubic-bezier(.33,1.05,.39,.92) forwards;
+		max-width: 500px;
+		min-width: 100px;
+		min-height: 50px;
+	}
+	
+	&.interactive {
+	  /* TODO: make safe area use a variable */
+	  /* (and use more variables in general) */
+	  padding: 32px;
+	  margin: -32px;
+
+		& > .base {
+		  height: calc(100% - 64px);
+		  width: calc(100% - 64px);
+		}
+	}
+
+	&:not(.animate) {
+		& > .base {
+			animation-duration: 0s;
+		}
+		
+		& > .inner {
+			animation-duration: 0s;
+		}
+	}
+}
+
+#overlay {
+	position: fixed;
+	z-index: 1;
+}
+
+.tooltip .user {
+	min-width: 200px;
+}
+
+.has-tooltip {
+	all: inherit;
 }

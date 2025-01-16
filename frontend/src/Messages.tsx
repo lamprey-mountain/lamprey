@@ -1,24 +1,38 @@
 // import { Tooltip } from "./Atoms.tsx";
 import { getTimestampFromUUID } from "sdk";
 import {
+Accessor,
 	createEffect,
+	createRoot,
 	createSignal,
 	For,
 	lazy,
 	Match,
+	onCleanup,
 	onMount,
 	ParentProps,
 	Show,
 	Switch,
 } from "solid-js";
-import { TimelineItemT } from "./list.tsx";
-import { AttachmentT, MessageT, MessageType, ThreadT } from "./types.ts";
+import { AttachmentT, MessageT, MessageType, ThreadT, UserT } from "./types.ts";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
 import { useCtx } from "./context.ts";
+import { tooltip } from "./Tooltip.tsx";
 
-const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
+// const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
+
+export type TimelineItemT = { key: string, class?: string } & (
+  { type: "info", header: boolean } |
+  { type: "editor" } |
+  { type: "spacer" } |
+  { type: "spacer-mini" } |
+  { type: "spacer-mini2" } |
+  { type: "unread-marker" } |
+  { type: "time-split" } |
+  { type: "anchor" } |
+  { type: "message", message: MessageT, separate: boolean, is_local: boolean });
 
 const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	transformTags: {
@@ -26,17 +40,19 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	}
 }
 
-type UserProps = {
-	name: string;
+type UserPopupProps = {
+	user: UserT;
 };
 
-const User = (props: UserProps) => {
+const UserTooltip = (props: UserPopupProps) => {
+	// TODO: click to view full profile
 	return (
-		<div>
-			<h3>{props.name}</h3>
-			<p>some info here</p>
-			<p>more stuff</p>
-			<p>click to view full profile</p>
+		<div class="user">
+			<h3>{props.user.name}</h3>
+			<Show when={props.user.description} fallback={<p><em>no description</em></p>}>
+				<p>{props.user.description}</p>
+			</Show>
+			<code>{props.user.id}</code>
 		</div>
 	);
 };
@@ -81,6 +97,18 @@ export const Message = (props: MessageProps) => {
 
 	function getAttachment(a: AttachmentT) {
 		const b = a.mime.split("/")[0];
+		const byteFmt = Intl.NumberFormat("en", {
+		  notation: "compact",
+		  style: "unit",
+		  unit: "byte",
+		  unitDisplay: "narrow",
+		});
+
+		const [ty] = a.mime.split(";");
+		// const [ty, paramsRaw] = a.mime.split(";");
+		// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
+		// console.log({ ty, params });
+		
 		if (b === "image") {
 			return (
 				<li>
@@ -88,7 +116,7 @@ export const Message = (props: MessageProps) => {
 						<img style={{ height: `${a.height}px`, width: `${a.width}px` }} src={a.url} alt={a.alt ?? undefined} />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{a.mime} - {a.size} bytes</div>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 				</li>
 			)
 		} else if (b === "video") {
@@ -98,7 +126,7 @@ export const Message = (props: MessageProps) => {
 						<video height={a.height!} width={a.width!} src={a.url} controls />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{a.mime} - {a.size} bytes</div>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 				</li>
 			)
 		} else if (b === "audio") {
@@ -106,14 +134,14 @@ export const Message = (props: MessageProps) => {
 				<li>
 					<audio src={a.url} controls />
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{a.mime} - {a.size} bytes</div>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 				</li>
 			)
 		} else {
 			return (
 				<li>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{a.mime} - {a.size} bytes</div>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 				</li>
 			)
 		}
@@ -146,6 +174,7 @@ export const Message = (props: MessageProps) => {
 			)
 		} else {
 			// console.log(md.parse(props.message.content!));
+			// IDEA: make usernames sticky? so when scrolling, you can see who sent a certain message
 			return (
 				<div class="message" classList={{ reply: !!props.message.reply_id }}>
 					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
@@ -153,14 +182,12 @@ export const Message = (props: MessageProps) => {
 					</Show>
 					<span
 						class="author"
-						classList={{ "override-name": !!props.message.override_name }}
-					>
-						<Tooltip
-							tip={() => <User name={authorName} />}
-							attrs={{ class: "" }}
-						>
-							{authorName}
-						</Tooltip>
+						classList={{ "override-name": !!props.message.override_name }}>
+						{tooltip(
+							{ placement: "right-start", animGroup: "message-user" },
+							<UserTooltip user={props.message.author} />,
+							authorName,
+						)}
 					</span>
 					<div class="content">
 						<Show when={props.message.content}>

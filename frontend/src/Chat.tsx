@@ -1,11 +1,11 @@
 import { createEffect, createSignal, For, on, onMount, Show, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
-import { TimelineItem } from "./Messages.tsx";
+import { TimelineItemT, TimelineItem } from "./Messages.tsx";
 // import type { paths } from "../../openapi.d.ts";
 // import createFetcher from "npm:openapi-fetch";
 
 import { chatctx } from "./context.ts";
-import { createList, TimelineItemT } from "./list.tsx";
+import { createList } from "./list.tsx";
 import { ThreadT, RoomT } from "./types.ts";
 import { reconcile } from "solid-js/store";
 
@@ -33,25 +33,25 @@ export const ChatMain = (props: ChatProps) => {
   	console.log("update items", slice(), tl())
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
-    const items: Array<TimelineItemT> = [];
+    const newItems: Array<TimelineItemT> = [];
     const { read_marker_id } = ts();
 
     if (hasSpaceTop()) {
-	    items.push({
+	    newItems.push({
 	      type: "info",
 	      key: "info",
 	      header: !hasSpaceTop(),
 	    });
-	    items.push({
+	    newItems.push({
 	      type: "spacer",
 	      key: "spacer-top",
 	    });
     } else {
-	    items.push({
+	    newItems.push({
 	      type: "spacer-mini2",
 	      key: "spacer-top2",
 	    });
-	    items.push({
+	    newItems.push({
 	      type: "info",
 	      key: "info",
 	      header: !hasSpaceTop(),
@@ -61,7 +61,7 @@ export const ChatMain = (props: ChatProps) => {
     for (let i = 0; i < rawItems.length; i++) {
       const msg = rawItems[i];
       if (msg.type === "hole") continue;
-      items.push({
+      newItems.push({
         type: "message",
         key: msg.message.version_id,
         message: msg.message,
@@ -78,7 +78,7 @@ export const ChatMain = (props: ChatProps) => {
       //   // separate: shouldSplit(messages[i], messages[i - 1]),
       // });
       if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
-        items.push({
+        newItems.push({
           type: "unread-marker",
           key: "unread-marker",
         });
@@ -86,20 +86,21 @@ export const ChatMain = (props: ChatProps) => {
     }
     
   	if (hasSpaceBottom()) {
-      items.push({
+      newItems.push({
         type: "spacer",
         key: "spacer-bottom"
       });
   	} else {
-      items.push({
+      newItems.push({
         type: "spacer-mini",
         key: "spacer-bottom-mini"
       });
   	}
   	
-  	console.log("new items", items);
+  	console.log("old items", items());
+  	console.log("new items", newItems);
     console.time("perf::updateItems");
-    setItems((old) => [...reconcile(items, { key: "key" })(old)]);
+    setItems((old) => [...reconcile(newItems, { key: "key" })(old)]);
     console.timeEnd("perf::updateItems");
   }
 	
@@ -111,7 +112,9 @@ export const ChatMain = (props: ChatProps) => {
 		topPos: () => 2,
 		// HACK: local and remote messages have different keys (same with edits) which messes with scrolling
 		// i should really find a better way to do this
-		bottomPos: () => items().length - 3,
+		// FIXME: doesn't work when element is an unread marker
+		// bottomPos: () => items().length - 3,
+		bottomPos: () => items().findLastIndex(i => i.type === "message"),
     async onPaginate(dir) {
       if (paginating) return;
       paginating = true;

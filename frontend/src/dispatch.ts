@@ -340,6 +340,8 @@ export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {
   }
 }
 
+// FIXME: show when messages fail to send
+// TODO: implement a retry queue
 async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, update: SetStoreFunction<Data>) {
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
@@ -383,6 +385,7 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 		return;
 	}
 	const ts = ctx.data.thread_state[thread_id];
+	if (text.length === 0 && ts.attachments.length === 0) return false;
 	const reply_id = ts.reply_id;
 	const nonce = uuidv7();
 	ctx.client.http("POST", `/api/v1/thread/${thread_id}/message`, {

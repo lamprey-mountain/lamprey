@@ -17,17 +17,6 @@ const SLICE_COUNT = 100;
 // const PAGINATE_COUNT = SLICE_COUNT * 3;
 const PAGINATE_COUNT = SLICE_COUNT;
 
-export type TimelineItemT = { key: string, class?: string } & (
-  { type: "info", header: boolean } |
-  { type: "editor" } |
-  { type: "spacer" } |
-  { type: "spacer-mini" } |
-  { type: "spacer-mini2" } |
-  { type: "unread-marker" } |
-  { type: "time-split" } |
-  { type: "anchor" } |
-  { type: "message", message: MessageT, separate: boolean, is_local: boolean });
-
 // export function shouldSplit(msg: Event, prev?: Event) {
 //   if (!prev) return true;
 //   if (msg.sender !== prev.sender) return true;
@@ -309,9 +298,9 @@ export function createList<T>(options: {
           wrap.scrollTo({ top: 999999, behavior: "instant" });
         } else {
           // FIXME: tons of reflow and jank
-          // console.time("perf::forceReflow");
+          console.time("perf::forceReflow");
           const currentRect = anchorRef.getBoundingClientRect();
-          // console.timeEnd("perf::forceReflow");
+          console.timeEnd("perf::forceReflow");
           const diff = (currentRect.y - anchorRect.y) + (currentRect.height - anchorRect.height);
           wrapperEl()?.scrollBy(0, diff);
         }

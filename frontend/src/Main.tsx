@@ -97,7 +97,7 @@ export const Main = () => {
 	    <Show when={useCtx()}>
 				<ChatNav />
 				{getComponent()}
-				<Portal>
+				<Portal mount={document.getElementById("overlay")!}>
 					<For each={ctx.data.modals}>{(modal) => (
 						<Switch>
 							<Match when={modal.type === "alert"}>
