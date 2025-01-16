@@ -293,6 +293,7 @@ export function createList<T>(options: {
         // console.log("list::reanchor", wrap, anchorRef);
         console.log(shouldAutoscroll)
         if (!wrap || !anchorRef) return setRefs();
+        console.time("perf::reanchor");
         if (shouldAutoscroll) {
           // console.log("list::autoscroll");
           wrap.scrollTo({ top: 999999, behavior: "instant" });
@@ -305,6 +306,7 @@ export function createList<T>(options: {
           wrapperEl()?.scrollBy(0, diff);
         }
         setRefs();
+        console.timeEnd("perf::reanchor");
       }
       
       createEffect(on(options.items, () => {

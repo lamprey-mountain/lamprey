@@ -17,19 +17,22 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   	console.log("dispatch", action.do);
   	switch (action.do) {
   		case "setView": {
+  			console.time("setView");
   			if ("room" in action.to) {
   				const room_id = action.to.room.id;
   				const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
   					i.room_id === room_id
   				).length;
   				if (roomThreadCount === 0) {
-  					const data = await ctx.client.http(
-  						"GET",
-  						`/api/v1/room/${room_id}/thread?dir=f`,
-  					);
-  					for (const item of data.items) {
-  						update("threads", item.id, item);
-  					}
+  					(async () => {
+	  					const data = await ctx.client.http(
+	  						"GET",
+	  						`/api/v1/room/${room_id}/thread?dir=f`,
+	  					);
+	  					for (const item of data.items) {
+	  						update("threads", item.id, item);
+	  					}
+  					})();
   				}
   			}
   			if (action.to.view === "thread") {
@@ -39,6 +42,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   			}
   			ackDebounceTimeout = undefined; // make sure threads past the grace period get marked as read
   			update("view", action.to);
+  			console.timeEnd("setView");
   			return;
   		}
   		case "paginate": {
@@ -207,6 +211,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				} else if (msg.type === "UpsertThread") {
 					update("threads", msg.thread.id, msg.thread);
 				} else if (msg.type === "UpsertMessage") {
+					console.time("UpsertMessage");
 					solidBatch(() => {
 						const { message } = msg;
 						const { id, version_id, thread_id, nonce } = message;
@@ -263,6 +268,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 							}
 						}
 					});
+					console.timeEnd("UpsertMessage");
 					// TODO: message deletions
 				} else if (msg.type === "UpsertRole") {
 					const role: RoleT = msg.role;

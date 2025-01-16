@@ -28,6 +28,7 @@ type ThreadState = {
 	attachments: Array<AttachmentT>,
 }
 
+// TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
 	rooms: Record<string, RoomT>,
 	room_members: Record<string, Record<string, MemberT>>,

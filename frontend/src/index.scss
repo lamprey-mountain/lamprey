@@ -18,7 +18,7 @@
 	--color-fg4: #cccccc;
 	--color-fg5: #aaaaaa;
 	--color-bg1: 12, 16, 18;
-	--color-bg2: #171c1f;
+	--color-bg2: 23, 28, 31;
 	--color-bg3: #22292c;
 	--color-bg4: #303a3d;
 	--color-sep: #374345;
@@ -38,7 +38,7 @@ $fg3: var(--color-fg3);
 $fg4: var(--color-fg4);
 $fg5: var(--color-fg5);
 $bg1: rgb(var(--color-bg1));
-$bg2: var(--color-bg2);
+$bg2: rgb(var(--color-bg2));
 $bg3: var(--color-bg3);
 $bg4: var(--color-bg4);
 $sep: var(--color-sep);
@@ -70,6 +70,7 @@ $sep: var(--color-sep);
 	
 	& button {
 		width: 100%;
+		padding: 2px 4px;
 		background: none;
 
 		&:hover {
@@ -170,13 +171,15 @@ button {
 	color: $fg2;
 	display: grid;
 	grid-template-rows: 1fr 0;
-	position: relative;
+	contain: strict;
 
 	& > .input {
 		position: absolute;
 		bottom: 0;
 		width: 100%;
 		background: linear-gradient(to top, $bg2 25%, transparent);
+		background: -webkit-linear-gradient(to top, $bg2 25%, transparent);
+		background-blend-mode: screen;
 		display: flex;
 		padding: 4px;
 		padding-left: 138px;
@@ -209,15 +212,14 @@ button {
 	}
 
 	& > .list {
-		padding: 8px 0;
 
 		& header {
 			position: sticky;
 			z-index: 1;
-			top: -8px;
+			top: 0;
 			padding: 0 144px;
 			background: $bg3;
-			margin-bottom: 4;
+			margin-bottom: 4px;
 			box-shadow: 0 2px 8px $bg2;
 		}
 	}
@@ -469,7 +471,7 @@ em {
 		overflow: hidden;
 		white-space: nowrap;
 		align-self: start;
-		justify-self: end;
+		text-align: right;
 		color: $fg4;
 
 		&:hover {
@@ -529,11 +531,15 @@ em {
 				& .media {
 					max-height: min(50vh, 500px);
 					max-width: min(600px, 100%);
-					display: block;
+					contain: content;
+					
+					& > .spacer {
+						position: absolute;
+					}
 
-					& > * {
-						max-width: 100%;
+					& img, video {
 						max-height: 100%;
+						max-width: 100%;
 					}
 				}
 			}
@@ -586,12 +592,12 @@ em {
 	&.interactive {
 	  /* TODO: make safe area use a variable */
 	  /* (and use more variables in general) */
-	  padding: 32px;
-	  margin: -32px;
+	  padding: 8px;
+	  margin: -8px;
 
 		& > .base {
-		  height: calc(100% - 64px);
-		  width: calc(100% - 64px);
+		  height: calc(100% - 16px);
+		  width: calc(100% - 16px);
 		}
 	}
 
@@ -613,8 +619,4 @@ em {
 
 .tooltip .user {
 	min-width: 200px;
-}
-
-.has-tooltip {
-	all: inherit;
 }

@@ -112,8 +112,9 @@ export const Message = (props: MessageProps) => {
 		if (b === "image") {
 			return (
 				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.height} / ${a.width}` }}>
-						<img style={{ height: `${a.height}px`, width: `${a.width}px` }} src={a.url} alt={a.alt ?? undefined} />
+					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+						<div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
+						<img src={a.url} alt={a.alt ?? undefined} />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
 					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
@@ -122,7 +123,8 @@ export const Message = (props: MessageProps) => {
 		} else if (b === "video") {
 			return (
 				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.height} / ${a.width}` }}>
+					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+						<div class="spacer"></div>
 						<video height={a.height!} width={a.width!} src={a.url} controls />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
@@ -180,15 +182,15 @@ export const Message = (props: MessageProps) => {
 					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
 						<Reply reply={ctx.data.messages[props.message.reply_id!]} />
 					</Show>
-					<span
-						class="author"
-						classList={{ "override-name": !!props.message.override_name }}>
 						{tooltip(
-							{ placement: "right-start", animGroup: "message-user" },
+							{ placement: "right-start", animGroup: "message-user", interactive: true },
 							<UserTooltip user={props.message.author} />,
-							authorName,
+							<span
+								class="author"
+								classList={{ "override-name": !!props.message.override_name }}>
+							{authorName}
+							</span>
 						)}
-					</span>
 					<div class="content">
 						<Show when={props.message.content}>
 							<div class="body markdown" classList={{ local: props.is_local }} ref={bodyEl!}>

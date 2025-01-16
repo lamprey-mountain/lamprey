@@ -1,4 +1,4 @@
-import { ValidComponent, ParentProps, createSignal, Show, JSX, Accessor } from "solid-js";
+import { ValidComponent, ParentProps, createSignal, Show, JSX, Accessor, onCleanup } from "solid-js";
 import { Dynamic, Portal } from "solid-js/web";
 import { shift, offset, autoUpdate, flip, Placement } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
@@ -23,10 +23,11 @@ type TooltipAnimState = {
 
 const tooltipAnimSuppress = new Map<string, TooltipAnimState>();
 
-export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: JSX.Element) {
+// TODO: only use one tooltip + event listener instead of per element
+export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: HTMLElement) {
   const [contentEl, setContentEl] = createSignal<HTMLDivElement>();
   const [tipEl, setTipEl] = createSignal<HTMLDivElement>();
-  const [title, setTitle] = createSignal(getTitle());
+  // const [title, setTitle] = createSignal(getTitle());
   const [visible, setVisible] = createSignal(false);
   const [animate, setAnimate] = createSignal(false);
   let popupRemoveTimeout: number;
@@ -52,19 +53,19 @@ export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: JSX.Elem
       const s = tooltipAnimSuppress.get(props.animGroup)!;
       console.log(s);
       setAnimate(s.shouldAnim);
+      s.shouldAnim = false;
       clearTimeout(s.timeout);
     }
     setVisible(true);
-    setTitle("");
+    wrap.title = "";
   }
   
   function hideTip() {
     // TODO: exit animations? might be too much
-    setTitle(getTitle());
+    wrap.title = getTitle();
     setVisible(false);
     if (props.animGroup) {
       const s = tooltipAnimSuppress.get(props.animGroup)!;
-      s.shouldAnim = false;
       s.timeout = setTimeout(() => {
         s.shouldAnim = true;
       }, 500);
@@ -93,20 +94,21 @@ export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: JSX.Elem
     whileElementsMounted: autoUpdate,
     strategy: "fixed",
     placement: props.placement,
-    middleware: [shift({ padding: 8 }), offset({ mainAxis: 8 }), flip()],
+    middleware: [shift({ padding: 8 }), offset({ mainAxis: 4 }), flip()],
+  });
+
+  wrap.addEventListener("mouseenter", showTip);
+  wrap.addEventListener("mouseleave", considerHidingTip);
+  setContentEl(wrap);
+
+  onCleanup(() => {
+    wrap.addEventListener("mouseenter", showTip);
+    wrap.addEventListener("mouseleave", considerHidingTip);
   });
   
   return (
     <>
-      <Dynamic
-        component={props.component ?? "span"}
-        classList={{ "has-tooltip": true }}
-        ref={setContentEl!}
-        title={title()}
-        onMouseEnter={showTip}
-        onMouseLeave={considerHidingTip}
-        {...props.attrs}
-      >{wrap}</Dynamic>
+      {wrap}
       <Show when={visible()}>
         <Portal mount={overlayEl}>
           <div

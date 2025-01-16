@@ -115,9 +115,10 @@ async fn media_upload(
         Err(Error::TooBig)
     } else if end_size == up.create.size {
         let p = up.temp_file.file_path().to_owned();
+        let url = format!("media/{media_id}");
         let upload_s3 = async {
             let bytes = tokio::fs::read(&p).await?;
-            s.blobs().write(&media_id.to_string(), bytes).await?;
+            s.blobs().write(&url, bytes).await?;
             Ok(())
         };
         let (meta, mime, _) = tokio::try_join!(get_metadata(&p), get_mime_type(&p), upload_s3)?;
@@ -130,7 +131,7 @@ async fn media_upload(
                     alt: up.create.alt.clone(),
                     id: media_id,
                     filename: up.create.filename.clone(),
-                    url: format!("{media_id}"),
+                    url,
                     source_url: None,
                     thumbnail_url: None,
                     mime,
@@ -302,8 +303,8 @@ async fn get_metadata(file: &std::path::Path) -> Result<Metadata> {
         .find(|i| i.disposition.default == 1 && i.width.is_some())
         .or_else(|| json.streams.iter().find(|i| i.width.is_some()));
     Ok(Metadata {
-        height: dims.and_then(|i| i.width),
-        width: dims.and_then(|i| i.height),
+        height: dims.and_then(|i| i.height),
+        width: dims.and_then(|i| i.width),
         duration: duration.map(|i| i as u64),
     })
 }

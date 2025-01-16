@@ -338,7 +338,7 @@ export const Editor = (props: EditorProps) => {
 			},
 			transformPastedHTML(html) {
 				const parser = new globalThis.DOMParser();
-				const tmp = parser.parseFromString("html", "text/html");
+				const tmp = parser.parseFromString(html, "text/html");
 
 			  for (const node of tmp.querySelectorAll("script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " + ["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"].map(i => `[class*=${i}], [id*=${i}]`).join(", "))) {
 			    node.remove();
@@ -346,13 +346,13 @@ export const Editor = (props: EditorProps) => {
 
 			  // FIXME: don't mangle whitespace
 		    function walk(n: Node): string {
-		    	console.log(n)
 			    if (n.nodeType === Node.COMMENT_NODE) return "";
 			    if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
-    
+			    
 			    // TODO: tables
 			    const c = [...n.childNodes];
 			    switch (n.nodeName) {
+			    	case "#document": case "HTML":
 			      case "BODY": case "MAIN": case "ARTICLE": case "HEADER": case "SECTION":
 			      case "DIV": case "TABLE": case "TBODY": case "THEAD": case "TR":
 			      case "TURBO-FRAME": case "TASK-LISTS": // github
