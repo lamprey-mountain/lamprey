@@ -162,7 +162,7 @@ export const Editor = (props: EditorProps) => {
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
-						<div class="placeholder">{/* @once */ props.placeholder}</div>
+						<div class="placeholder" aria-hidden="true">{/* @once */ props.placeholder}</div>
 					) as HTMLDivElement;
 					return DecorationSet.create(state.doc, [
 						Decoration.widget(0, placeholder),
@@ -424,6 +424,9 @@ export const Editor = (props: EditorProps) => {
 			classList={{ "disabled": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}
+			aria-placeholder={props.placeholder}
+			role="textbox"
+			aria-label="chat input"
 		>
 		</div>
 	);

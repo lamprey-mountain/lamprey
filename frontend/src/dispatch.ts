@@ -130,6 +130,11 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   					});
   				}
 
+  				// PERF: indexOf 115ms
+  				// PERF: reanchor 95.1ms
+  				// PERF: getting stuff from store? 362ms
+  				// PERF: setstore: 808ms
+  				// PERF: set scroll position: 76.6ms
   				const newTl = ctx.data.timelines[thread_id];
   				const newOff = newTl.indexOf(nextItem) - slice.end - 1;
   				const newEnd = Math.min(

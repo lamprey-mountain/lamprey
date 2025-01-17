@@ -1,5 +1,5 @@
 /* @refresh reload */
-import "./index.scss";
+import "./styles/index.scss";
 import { render } from "solid-js/web";
 import App from "./App.tsx";
 // import serviceWorkerPath from "./sw.ts?worker&url";

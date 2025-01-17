@@ -117,6 +117,7 @@ export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: HTMLElem
             onFocusOut={handleFocusOff}
             ref={setTipEl}
             style={{
+              position: pos.strategy,
               translate: `${pos.x}px ${pos.y}px`,
               visibility: visible() ? "visible" : "hidden",
             }}

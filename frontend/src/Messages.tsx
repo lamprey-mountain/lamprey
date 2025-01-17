@@ -82,13 +82,13 @@ export const Message = (props: MessageProps) => {
 
 	function Reply(props: { reply: MessageT }) {
 		const name = props.reply.override_name ?? props.reply.author.name;
-		
+		const content = props.reply.content ?? `${props.reply.attachments.length} attachment(s)`;
 		return (
 			<>
 				<div class="reply arrow">{"\u21B1"}</div>
 				<div class="reply reply-content">
 					<span class="author">{name}: </span>
-					{props.reply.content}
+					{content}
 				</div>
 				<div class="reply"></div>
 			</>
@@ -110,11 +110,11 @@ export const Message = (props: MessageProps) => {
 		// console.log({ ty, params });
 		
 		if (b === "image") {
+						// <div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
 			return (
 				<li>
 					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
-						<div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
-						<img src={a.url} alt={a.alt ?? undefined} />
+						<img src={a.url} alt={a.alt ?? undefined} style={{ height: `${a.height}px`, width: `${a.width}px` }} />
 					</div>
 					<a download={a.filename} href={a.url}>download {a.filename}</a>
 					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
@@ -161,7 +161,7 @@ export const Message = (props: MessageProps) => {
 			if (patch.is_locked) updates.push(patch.is_locked ? "locked thread" : "unlocked thread");
 			if (patch.is_closed) updates.push(patch.is_closed  ? "closed thread" : "unarchived thread");
 			return (
-				<div class="message">
+				<>
 					<span></span>
 					<div class="content">
 						<span class="body" ref={bodyEl!}>
@@ -172,24 +172,26 @@ export const Message = (props: MessageProps) => {
 					<span class="timestamp">
 						{date.toDateString()}
 					</span>
-				</div>
+				</>
 			)
 		} else {
 			// console.log(md.parse(props.message.content!));
 			// IDEA: make usernames sticky? so when scrolling, you can see who sent a certain message
 			return (
-				<div class="message" classList={{ reply: !!props.message.reply_id }}>
+				<>
 					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
 						<Reply reply={ctx.data.messages[props.message.reply_id!]} />
 					</Show>
 						{tooltip(
 							{ placement: "right-start", animGroup: "message-user", interactive: true },
 							<UserTooltip user={props.message.author} />,
-							<span
-								class="author"
-								classList={{ "override-name": !!props.message.override_name }}>
-							{authorName}
-							</span>
+							<div class="author-wrap">
+								<div
+									class="author"
+									classList={{ "override-name": !!props.message.override_name }}>
+								{authorName}
+								</div>
+							</div>
 						)}
 					<div class="content">
 						<Show when={props.message.content}>
@@ -203,7 +205,7 @@ export const Message = (props: MessageProps) => {
 						</ul>
 					</div>
 					<span class="timestamp">{date.toDateString()}</span>
-				</div>
+				</>
 			)
 		}
 	}
@@ -221,7 +223,7 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			// "shadow-[#3fa9c9]": item.message.unread,
 			// "text-fg4": item.message.is_local,
 			return (
-				<li data-message-id={item.message.id}>
+				<li class="message" data-message-id={item.message.id}>
 					<Message message={item.message} is_local={item.is_local} />
 				</li>
 			);
@@ -232,7 +234,7 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 					// 	<p>more info here</p>
 					// </header>
 			return (
-				<li style="display:contents">
+				<li class="header">
 					<header>
 						<h1>{thread.name}</h1>
 						<p>
@@ -244,25 +246,23 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			)
 		}
 		case "spacer": {
-			return <li style="flex:1"><div style="height:800px"></div></li>
+			return <li class="spacer"><div style="flex:1;height:800px;grid-column:span 3"></div></li>
 		}
 		case "spacer-mini2": {
-			return <li style="flex:1"><div style="height:8rem"></div></li>
+			return <li class="spacer"><div style="flex:1;height:8rem;grid-column:span 3"></div></li>
 		}
 		case "spacer-mini": {
-			return <li><div style="height:2rem"></div></li>
+			return <li class="spacer"><div style="height:2rem;grid-column:span 3"></div></li>
 		}
 		case "anchor": {
 			return <li class="anchor"></li>
 		}
 		case "unread-marker": {
 			return (
-				<li>
-					<div class="message unread">
-						<div></div>
-						<div class="content">new messages</div>
-						<div></div>
-					</div>
+				<li class="unread-marker">
+					<div></div>
+					<div class="content">new messages</div>
+					<div></div>
 				</li>
 			);
 		}

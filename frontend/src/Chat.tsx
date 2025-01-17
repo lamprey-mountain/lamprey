@@ -107,14 +107,8 @@ export const ChatMain = (props: ChatProps) => {
 	const list = createList({
 		items: () => items(),
 		autoscroll: () => !hasSpaceBottom(),
-		// topPos: () => hasSpaceTop() ? 1 : 0,
-		// topPos: () => hasSpaceTop() ? 1 : 2,
-		topPos: () => 2,
-		// HACK: local and remote messages have different keys (same with edits) which messes with scrolling
-		// i should really find a better way to do this
-		// FIXME: doesn't work when element is an unread marker
-		// bottomPos: () => items().length - 3,
-		bottomPos: () => items().findLastIndex(i => i.type === "message"),
+		topQuery: ".message > .content",
+		bottomQuery: ":nth-last-child(1 of .message) > .content",
     async onPaginate(dir) {
       if (paginating) return;
       paginating = true;
