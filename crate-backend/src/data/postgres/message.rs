@@ -145,7 +145,7 @@ impl DataMessage for Postgres {
         left join att_json on att_json.version_id = msg.version_id
         where thread_id = $1 and msg.deleted_at is null
           and msg.id > $2 AND msg.id < $3
-		order by (CASE WHEN $4 = 'F' THEN msg.id END), msg.id DESC LIMIT $5
+		order by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5
             "#,
             thread_id.into_inner(),
             p.after.into_inner(),
@@ -290,7 +290,7 @@ impl DataMessage for Postgres {
         left join att_json on att_json.version_id = msg.version_id
         where thread_id = $1 and msg.id = $2 and msg.deleted_at is null
           and msg.id > $3 AND msg.id < $4
-		order by (CASE WHEN $5 = 'F' THEN msg.version_id END), msg.version_id DESC LIMIT $6
+		order by (CASE WHEN $5 = 'f' THEN msg.version_id END), msg.version_id DESC LIMIT $6
             "#,
             thread_id.into_inner(),
             message_id.into_inner(),

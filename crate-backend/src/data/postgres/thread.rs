@@ -136,7 +136,7 @@ impl DataThread for Postgres {
         full outer join usr on true
         left join unread on usr.id = unread.user_id and thread.id = unread.thread_id
 		where room_id = $1 AND user_id = $2 AND thread.id > $3 AND thread.id < $4
-		order by (CASE WHEN $5 = 'F' THEN thread.id END), thread.id DESC LIMIT $6
+		order by (CASE WHEN $5 = 'f' THEN thread.id END), thread.id DESC LIMIT $6
             "#,
             room_id.into_inner(),
             user_id.into_inner(),
