@@ -8,8 +8,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        RoomMembership, MessageServer, PaginationQuery, PaginationResponse, Permission, RoleCreate,
-        Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch,
+        MessageServer, PaginationQuery, PaginationResponse, Permission,
+        Room, RoomCreate, RoomId, RoomPatch,
     },
     ServerState,
 };
@@ -22,36 +22,13 @@ use super::util::Auth;
     path = "/room",
     tags = ["room"],
 )]
+#[axum::debug_handler]
 async fn room_create(
     Auth(session): Auth,
     State(s): State<ServerState>,
     Json(json): Json<RoomCreate>,
 ) -> Result<(StatusCode, Json<Room>)> {
-    let data = s.data();
-    let room = data.room_create(json).await?;
-    let user_id = session.user_id;
-    let room_id = room.id;
-    data.room_member_put(RoomMemberPut {
-        user_id,
-        room_id,
-        membership: RoomMembership::Join,
-        override_name: None,
-        override_description: None,
-        roles: vec![],
-    })
-    .await?;
-    let role = data
-        .role_create(RoleCreate {
-            room_id,
-            name: "admin".to_owned(),
-            description: None,
-            permissions: vec![Permission::Admin],
-            is_self_applicable: false,
-            is_mentionable: false,
-            is_default: false,
-        })
-        .await?;
-    data.role_member_put(user_id, role.id).await?;
+    let room = s.services().create_room(json, session.user_id).await?;
     s.sushi
         .send(MessageServer::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))

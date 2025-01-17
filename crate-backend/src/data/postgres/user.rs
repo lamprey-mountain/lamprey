@@ -12,7 +12,6 @@ use super::Postgres;
 #[async_trait]
 impl DataUser for Postgres {
     async fn user_create(&self, user_id: UserId, patch: UserCreate) -> Result<User> {
-        let mut conn = self.pool.acquire().await?;
         let row = query_as!(
             DbUser,
             r#"
@@ -30,7 +29,7 @@ impl DataUser for Postgres {
             patch.is_alias,
             patch.is_system,
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         Ok(row.into())
     }
@@ -63,16 +62,14 @@ impl DataUser for Postgres {
     }
     
     async fn user_delete(&self, user_id: UserId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
         query!("UPDATE usr SET deleted_at = $2 WHERE id = $1", user_id.into_inner(), now)
-            .execute(&mut *conn)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
     
     async fn user_get(&self, id: UserId) -> Result<User> {
-        let mut conn = self.pool.acquire().await?;
         let row = query_as!(
             DbUser,
             r#"
@@ -81,7 +78,7 @@ impl DataUser for Postgres {
         "#,
             id.into_inner()
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         Ok(row.into())
     }

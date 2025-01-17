@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sqlx::{query, query_as, Acquire};
 use tracing::info;
+use types::UserId;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -13,7 +14,6 @@ use super::Postgres;
 #[async_trait]
 impl DataRole for Postgres {
     async fn role_create(&self, create: RoleCreate) -> Result<Role> {
-        let mut conn = self.pool.acquire().await?;
         let role_id = Uuid::now_v7();
         let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
         let role = query_as!(DbRole, r#"
@@ -21,7 +21,7 @@ impl DataRole for Postgres {
             VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
         "#, role_id, create.room_id.into_inner(), create.name, create.description, perms as _, create.is_mentionable, create.is_self_applicable, create.is_default)
-    	    .fetch_one(&mut *conn)
+    	    .fetch_one(&self.pool)
         	.await?;
         info!("inserted role");
         Ok(role.into())
@@ -40,13 +40,12 @@ impl DataRole for Postgres {
     }
 
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
-        let mut conn = self.pool.acquire().await?;
         let role = query_as!(DbRole, r#"
             SELECT id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
             FROM role
             WHERE room_id = $1 AND id = $2
         "#, room_id.into_inner(), role_id.into_inner())
-    	    .fetch_one(&mut *conn)
+    	    .fetch_one(&self.pool)
         	.await?;
         Ok(role.into())
     }
@@ -91,5 +90,16 @@ impl DataRole for Postgres {
     	    .execute(&mut *tx)
         	.await?;
         Ok(version_id)
+    }
+
+    async fn role_apply_default(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        query!("
+    	  	INSERT INTO role_member (user_id, role_id)
+    	  	SELECT $2 as u, id FROM role
+    	  	WHERE room_id = $1 AND is_default = true
+        ", room_id.into_inner(), user_id.into_inner())
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

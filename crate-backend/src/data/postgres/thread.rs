@@ -65,7 +65,6 @@ async fn thread_get_with_executor(
 #[async_trait]
 impl DataThread for Postgres {
     async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId> {
-        let mut conn = self.pool.acquire().await?;
         let thread_id = Uuid::now_v7();
         query!(
             "
@@ -80,7 +79,7 @@ impl DataThread for Postgres {
             create.is_closed,
             create.is_locked,
         )
-        .execute(&mut *conn)
+        .execute(&self.pool)
         .await?;
         info!("inserted thread");
         Ok(ThreadId(thread_id))

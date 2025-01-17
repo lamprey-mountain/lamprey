@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::types::{DbSession, PaginationDirection, PaginationQuery, PaginationResponse, Session, SessionId, UserId};
 
 use crate::data::DataSession;
@@ -13,7 +13,6 @@ use super::{Pagination, Postgres};
 impl DataSession for Postgres {
     async fn session_create(&self, user_id: UserId, name: Option<String>) -> Result<Session> {
         let session_id = Uuid::now_v7();
-        let mut conn = self.pool.acquire().await?;
         let token = Uuid::new_v4(); // TODO: is this secure enough
         let session = query_as!(
             DbSession,
@@ -26,40 +25,30 @@ impl DataSession for Postgres {
             token.to_string(),
             name,
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         Ok(session.into())
     }
 
     async fn session_get(&self, id: SessionId) -> Result<Session> {
-        let mut conn = self.pool.acquire().await?;
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE id = $1"#,
             id.into_inner()
         )
-        .fetch_one(&mut *conn)
-        .await
-        .map_err(|err| match err.into() {
-            Error::NotFound => Error::MissingAuth,
-            other => other,
-        })?;
+        .fetch_one(&self.pool)
+        .await?;
         Ok(session.into())
     }
 
     async fn session_get_by_token(&self, token: &str) -> Result<Session> {
-        let mut conn = self.pool.acquire().await?;
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE token = $1"#,
             token
         )
-            .fetch_one(&mut *conn)
-            .await
-            .map_err(|err| match err.into() {
-                Error::NotFound => Error::MissingAuth,
-                other => other,
-            })?;
+            .fetch_one(&self.pool)
+            .await?;
         Ok(session.into())
     }
 
@@ -105,9 +94,8 @@ impl DataSession for Postgres {
     }
 
     async fn session_delete(&self, session_id: SessionId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         query!(r#"DELETE FROM session WHERE id = $1"#, session_id.into_inner())
-            .execute(&mut *conn)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }

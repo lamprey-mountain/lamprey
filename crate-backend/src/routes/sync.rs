@@ -91,8 +91,7 @@ type WsMessage = axum::extract::ws::Message;
 
 fn serialize(msg: &MessageServer) -> WsMessage {
     WsMessage::text(
-        serde_json::to_string(msg)
-            .expect("server messages should always be able to be serialized"),
+        serde_json::to_string(msg).expect("server messages should always be able to be serialized"),
     )
 }
 
@@ -110,7 +109,13 @@ async fn handle_message(
                 // TODO: resuming
                 MessageClient::Hello { token, last_id: _ } => {
                     let data = s.data();
-                    let session = data.session_get_by_token(&token).await?;
+                    let session =
+                        data.session_get_by_token(&token).await.map_err(|err| {
+                            match err.into() {
+                                Error::NotFound => Error::MissingAuth,
+                                other => other,
+                            }
+                        })?;
                     // if session.status == SessionStatus::Unauthorized {
                     //     return Err(Error::UnauthSession)
                     // }

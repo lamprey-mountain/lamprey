@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
+use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
@@ -16,6 +17,7 @@ pub mod data;
 pub mod error;
 mod routes;
 pub mod types;
+pub mod services;
 
 use error::Result;
 
@@ -57,6 +59,10 @@ impl ServerState {
         Box::new(Postgres {
             pool: self.pool.clone(),
         })
+    }
+
+    fn services(&self) -> Services {
+        Services::new(self.data())
     }
 
     fn blobs(&self) -> &opendal::Operator {

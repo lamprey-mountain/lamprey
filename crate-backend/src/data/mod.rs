@@ -22,6 +22,7 @@ pub trait Data:
     + DataUnread
     + DataUser
     + Send
+    + Sync
 {
 }
 
@@ -55,6 +56,7 @@ pub trait DataRole {
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
     async fn role_update(&self, room_id: RoomId, role_id: RoleId, patch: RolePatch)
         -> Result<RoleVerId>;
+    async fn role_apply_default(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
 }
 
 #[async_trait]

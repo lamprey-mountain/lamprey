@@ -35,7 +35,14 @@ impl FromRequestParts<ServerState> for Auth {
             .ok_or(Error::MissingAuth)?
             .to_str()?
             .to_string();
-        let session = s.data().session_get_by_token(&auth).await?;
+        let session =
+            s.data()
+                .session_get_by_token(&auth)
+                .await
+                .map_err(|err| match err.into() {
+                    Error::NotFound => Error::MissingAuth,
+                    other => other,
+                })?;
         if session.status == SessionStatus::Unauthorized {
             return Err(Error::UnauthSession);
         }

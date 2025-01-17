@@ -13,7 +13,6 @@ use super::Postgres;
 #[async_trait]
 impl DataMedia for Postgres {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<Media> {
-        let mut conn = self.pool.acquire().await?;
         let size: i64 = media.size.try_into().expect("too big!");
         let height: Option<i64> = media.height.map(|i| i.try_into().expect("too big!"));
         let width: Option<i64> = media.width.map(|i| i.try_into().expect("too big!"));
@@ -38,14 +37,13 @@ impl DataMedia for Postgres {
             width,
             duration,
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         info!("inserted media");
         Ok(media.into())
     }
 
     async fn media_select(&self, media_id: MediaId) -> Result<Media> {
-        let mut conn = self.pool.acquire().await?;
         let media = query_as!(
             MediaRow,
             "
@@ -55,7 +53,7 @@ impl DataMedia for Postgres {
         ",
             media_id.into_inner(),
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         Ok(media.into())
     }
@@ -66,7 +64,6 @@ impl DataMedia for Postgres {
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         query!(
             r#"
     	    INSERT INTO media_link (media_id, target_id, link_type)
@@ -76,13 +73,12 @@ impl DataMedia for Postgres {
             target_id,
             link_type as _
         )
-        .execute(&mut *conn)
+        .execute(&self.pool)
         .await?;
         Ok(())
     }
 
     async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>> {
-        let mut conn = self.pool.acquire().await?;
         let links = query_as!(
             MediaLink,
             r#"
@@ -92,27 +88,25 @@ impl DataMedia for Postgres {
         "#,
             media_id.into_inner(),
         )
-        .fetch_all(&mut *conn)
+        .fetch_all(&self.pool)
         .await?;
         Ok(links)
     }
 
     async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         query!(
             "DELETE FROM media_link WHERE target_id = $1 AND link_type = $2",
             target_id,
             link_type as _
         )
-        .execute(&mut *conn)
+        .execute(&self.pool)
         .await?;
         Ok(())
     }
 
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         query!("DELETE FROM media_link WHERE target_id = $1", target_id)
-            .execute(&mut *conn)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }

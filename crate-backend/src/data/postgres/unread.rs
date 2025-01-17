@@ -16,7 +16,6 @@ impl DataUnread for Postgres {
         thread_id: ThreadId,
         version_id: MessageVerId,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
         query!(
             r#"
 			INSERT INTO unread (thread_id, user_id, version_id)
@@ -27,7 +26,7 @@ impl DataUnread for Postgres {
             user_id.into_inner(),
             version_id.into_inner()
         )
-        .execute(&mut *conn)
+        .execute(&self.pool)
         .await?;
         Ok(())
     }
