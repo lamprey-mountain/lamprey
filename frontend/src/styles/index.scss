@@ -293,10 +293,15 @@ li, p {
 	white-space: pre-wrap;
 }
 
+pre, code {
+	background-color: #22282a;
+	font-family: var(--font-mono);
+}
+
 pre {
 	overflow-x: auto;
-	background-color: #22282a;
 	padding: 4px;
+	white-space: pre;
 }
 
 a {
