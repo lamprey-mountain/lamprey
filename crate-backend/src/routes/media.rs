@@ -116,12 +116,17 @@ async fn media_upload(
     } else if end_size == up.create.size {
         let p = up.temp_file.file_path().to_owned();
         let url = format!("media/{media_id}");
+        let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
         let upload_s3 = async {
             let bytes = tokio::fs::read(&p).await?;
-            s.blobs().write(&url, bytes).await?;
-            Ok(())
+            s.blobs()
+                .write_with(&url, bytes)
+                .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                .content_type(&mime)
+                .await?;
+            Result::Ok(())
         };
-        let (meta, mime, _) = tokio::try_join!(get_metadata(&p), get_mime_type(&p), upload_s3)?;
+        upload_s3.await?;
         let user_id = session.user_id;
         let mut media = s
             .data()
