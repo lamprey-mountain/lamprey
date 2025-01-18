@@ -9,3 +9,9 @@ $bg3: rgb(var(--color-bg3));
 $bg4: rgb(var(--color-bg4));
 $sep: rgb(var(--color-sep));
 $link: rgb(var(--color-link));
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}

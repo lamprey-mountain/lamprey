@@ -34,21 +34,23 @@
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	color: var(--color-fg);
-	background: var(--color-bg);
+	background-color: var(--color-bg);
 }
 
 ::selection {
-	background: #3fa9c988;
+	background-color: #3fa9c988;
 }
 
 #root {
 	display: flex;
 	height: 100vh;
+	background-color: $bg2;
+	color: $fg2;
 }
 
 #root > nav {
 	width: 16rem;
-	background: $bg1;
+	background-color: $bg1;
 	color: $fg2;
 	overflow-y: auto;
 
@@ -62,17 +64,20 @@
 		margin-top: .025rem;
 	}
 	
-	& button {
+	& a {
+		display: block;
 		width: 100%;
 		padding: 2px 4px;
-		background: none;
+		background-color: none;
+		text-decoration: none;
+		color: inherit;
 
-		&.selected {
-			background: $bg3;
+		&.active {
+			background-color: $bg3;
 		}
 		
 		&:hover, &:focus {
-			background: $bg4;
+			background-color: $bg4;
 		}
 
 		&.closed {
@@ -103,17 +108,17 @@ h3 {
 
 button {
 	padding: 0 .25rem;
-	background: $bg3;
+	background-color: $bg3;
 	cursor: pointer;
 	
 	&:hover, &:focus {
-		background: $bg4;
+		background-color: $bg4;
 	}
 }
 
 .home {
 	flex: 1;
-	background: $bg2;
+	background-color: $bg2;
 	color: $fg2;
 	padding: 1rem;
 	overflow-y: auto;
@@ -125,14 +130,14 @@ button {
 
 .room-home {
 	flex: 1;
-	background: $bg2;
+	background-color: $bg2;
 	color: $fg2;
 	padding: 1rem;
 	overflow-y: auto;
 
 	& .thread {
 		contain: content;
-		background: $bg3;
+		background-color: $bg3;
 		margin: 8px 0;
 		border: solid 1px $sep;
 		max-width: 800px;
@@ -143,6 +148,33 @@ button {
 			padding: 4px 8px;
 			cursor: pointer;
 			border-bottom: solid 1px $sep;
+
+			& > .top {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+
+				& > .icon {
+					background-color: $bg4;
+					height: 16px;
+					width: 16px;
+					border-radius: 50%;
+				}
+
+				& > .spacer {
+					@include truncate;
+					flex: 1;
+				}
+
+				/* TODO: use actual <time> */
+				& > .time {
+					color: $fg3;
+				}
+			}
+
+			& > .bottom {
+				/* self-start mt-[8px] text-fg2 cursor-pointer hover:text-fg1 hover:underline */
+			}
 		}
 
 		& > .preview > details {
@@ -160,7 +192,7 @@ button {
 
 .chat {
 	flex: 1;
-	background: $bg2;
+	background-color: $bg2;
 	color: $fg2;
 	display: grid;
 	grid-template-rows: 1fr 0;
@@ -178,14 +210,14 @@ button {
 		flex-direction: column;
 
 		& > .reply {
-			background: $bg2;
+			background-color: $bg2;
 			display: flex;
 			position: relative;
 			margin-bottom: -1px;
 
 			& > .info {
 				padding: 0 4px;
-				background: rgba(var(--color-bg1), .8);
+				background-color: rgba(var(--color-bg1), .8);
 				flex: 1;
 				border: solid 1px $sep;
 			}
@@ -216,19 +248,23 @@ button {
 			z-index: 1;
 			top: 0;
 			padding: 0 144px;
-			background: $bg3;
+			background-color: $bg3;
 			margin-bottom: 4px;
 			box-shadow: 0 2px 8px $bg2;
 		}
 
 		& > li {
 			display: contents;
+			
+			&:not(.message) > * {
+				overflow-anchor: none;
+			}
 		}
 	}
 }
 
 .editor {
-	background: $bg3;
+	background-color: $bg3;
 	flex: 1;
 	border: solid 1px $sep;
 	padding: 0 4px;
@@ -236,7 +272,7 @@ button {
 	overflow-y: auto;
 
 	&.disabled {
-		background: $bg4;
+		background-color: $bg4;
 	}
 
 	& .placeholder {
@@ -259,7 +295,7 @@ li, p {
 
 pre {
 	overflow-x: auto;
-	background: #22282a;
+	background-color: #22282a;
 	padding: 4px;
 }
 
@@ -352,7 +388,7 @@ a {
 }
 
 menu {
-	background: $bg3;
+	background-color: $bg3;
 	border: solid 1px $sep;
 	box-shadow: 2px 2px 8px $bg1;
 	color: $fg4;
@@ -366,7 +402,7 @@ menu {
 		text-align: left;
 		
 		&:hover, &:focus {
-			background: rgba(var(--color-bg1), .5);
+			background-color: rgba(var(--color-bg1), .5);
 		}
 	}
 
@@ -384,18 +420,18 @@ menu {
 	& hr {
 		border: none;
 		height: 1px;
-		background: $bg4;
+		background-color: $bg4;
 	}
 }
 
 input[type=text] {
-	background: $bg3;
+	background-color: $bg3;
 	border: solid 1px $sep;
 }
 
 .settings {
 	flex: 1;
-	background: $bg2;
+	background-color: $bg2;
 	color: $fg2;
 	display: grid;
 	grid-template-rows: auto 1fr;
@@ -403,25 +439,25 @@ input[type=text] {
 
 	& > header {
 		grid-column: span 2 / span 2;
-		background: $bg3;
+		background-color: $bg3;
 		border-bottom: solid 1px $sep;
 		padding: .5rem;
 	}
 
 	& > nav {
-		background: $bg3;
+		background-color: $bg3;
 		padding: .25rem;
 		
 		& button {
 			width: 100%;
-			background: none;
+			background-color: none;
 
 			&:hover, &:focus {
-				background: $bg4;
+				background-color: $bg4;
 			}
 
 			&.selected {
-				background: $bg3;
+				background-color: $bg3;
 			}
 		}
 	}
@@ -447,7 +483,7 @@ em {
 .message {
 	&:hover {
 		& > * {
-			background: rgba(var(--color-bg1), .3);
+			background-color: rgba(var(--color-bg1), .3);
 		}
 
 		& > .timestamp {
@@ -473,10 +509,8 @@ em {
 	}
 	
 	& .author {
+		@include truncate;
 		cursor: pointer;
-		text-overflow: ellipsis;
-		overflow: hidden;
-		white-space: nowrap;
 		color: $fg4;
 
 		&:hover, &:focus {
@@ -498,9 +532,7 @@ em {
 		}
 		
 		&.reply-content {
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
+			@include truncate;
 		}
 	}
 
@@ -529,9 +561,10 @@ em {
 			display: flex;
 
 			& > li {
-				background: $bg3;
+				background-color: $bg3;
 				padding: 4px;
 				
+				/* FIXME: media resizes/jumps around on load */
 				& .media {
 					max-height: min(50vh, 500px);
 					max-width: min(600px, 100%);
@@ -558,7 +591,7 @@ em {
 
 	&.unread {
 		box-shadow: 3px 0 0 inset #3fa9c9;
-		background: #3fa9c922;
+		background-color: #3fa9c922;
 
 		& > .content {
 			color: #3fa9c9;

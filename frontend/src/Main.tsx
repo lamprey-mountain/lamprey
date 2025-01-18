@@ -8,6 +8,7 @@ import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
+import { Router, Route } from "@solidjs/router";
 
 export const Main = () => {
   const ctx = useCtx();
@@ -19,18 +20,6 @@ export const Main = () => {
 		placement: "right-start",
 	});
 
-	async function createRoom() {
-  	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
-		ctx.client.http("POST", "/api/v1/room", {
-			name,
-		});
-	}
-
-	async function useInvite() {
-  	const code = await ctx.dispatch({ do: "modal.prompt", text: "invite code?" });
-		ctx.client.http("POST", `/api/v1/invites/${code}`, {});
-	}
-	
 	createEffect(() => {
 		// force solid to track these properties
 		ctx?.data.menu?.x;
@@ -52,51 +41,90 @@ export const Main = () => {
 		});
 	});
 
-	function getComponent() {
-		switch (ctx.data.view.view) {
-			case "home": {
-				return (
-					<div class="home">
-						<h2>home</h2>
-						<p>work in progress. expect bugs and missing polish.</p>
-						<button onClick={createRoom}>
-							create room
-						</button>
-						<br />
-						<button onClick={useInvite}>use invite</button>
-						<br />
-						<a href="/api/v1/auth/discord">
-							<button>discord login</button>
-						</a>
-						<br />
-						<a href="/api/docs">
-							<button>api docs</button>
-						</a>
-						<br />
-					</div>
-				);
-			}
-			case "room": {
-				return <RoomHome room={ctx.data.view.room} />;
-			}
-			case "room-settings": {
-				const room = ctx.data.view.room;
-				return <RoomSettings room={room} />;
-			}
-			case "thread": {
-				const room = ctx.data.view.room;
-				const thread = ctx.data.view.thread;
-				return <ChatMain room={room} thread={thread} />;
-			}
-		}
-	}  
+	// function getComponent() {
+	// 	switch (ctx.data.view.view) {
+	// 		case "home": {
+	// 		}
+	// 		case "room": {
+	// 			return <RoomHome room={ctx.data.view.room} />;
+	// 		}
+	// 		case "room-settings": {
+	// 			const room = ctx.data.view.room;
+	// 			return <RoomSettings room={room} />;
+	// 		}
+	// 		case "thread": {
+	// 			const room = ctx.data.view.room;
+	// 			const thread = ctx.data.view.thread;
+	// 			return <ChatMain room={room} thread={thread} />;
+	// 		}
+	// 	}
+	// }
 
   // HACK: wrap in Show since ctx might be null during hmr
+  // this router is extremely messy - i'm not sure if i'm going to keep it or if i'll roll my own
   return (
     <>
 	    <Show when={useCtx()}>
-				<ChatNav />
-				{getComponent()}
+		    <Router>
+			    <Route path="/" component={() =>
+			    	<>
+							<ChatNav />
+				    	<Home />
+			    	</>
+			    } />
+			    <Route path="/room/:room_id" component={(p) => {
+			    	const room = () => ctx.data.rooms[p.params.room_id];
+			    	return (
+					    <>
+								<ChatNav />
+								<Show when={room()}>
+							    <RoomHome room={room()} />
+								</Show>
+					    </>
+			    	)
+			    }}/>
+			    <Route path="/room/:room_id/settings" component={(p) => {
+			    	const room = () => ctx.data.rooms[p.params.room_id];
+			    	return (
+					    <>
+								<ChatNav />
+								<Show when={room()}>
+							    <RoomSettings room={room()} />
+								</Show>
+					    </>
+				    )
+			    }} />
+			    <Route path="/thread/:thread_id" component={(p) => {
+			    	const thread = () => ctx.data.threads[p.params.thread_id];
+			    	const room = () => ctx.data.rooms[thread()?.room_id];
+
+						createEffect(() => {
+							if (!ctx.data.rooms[thread()?.room_id]) {
+								ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id })
+							}
+						});
+						
+						createEffect(() => {
+							if (!ctx.data.threads[p.params.thread_id]) {
+								ctx.dispatch({ do: "fetch.thread", thread_id: p.params.thread_id })
+							}
+						});
+			    	
+			    	return (
+					    <>
+								<ChatNav />
+								<Show when={room() && thread()}>
+							    <ChatMain room={room()} thread={thread()} />
+								</Show>
+					    </>
+			    	)
+			    }}/>
+			    <Route path="*404" component={() => 
+					  <div style="padding:8px">
+							not found
+						</div>
+					} />
+		    </Router>
 				<Portal mount={document.getElementById("overlay")!}>
 					<For each={ctx.data.modals}>{(modal) => (
 						<Switch>
@@ -180,6 +208,44 @@ const Modal = (props: ParentProps) => {
 					{props.children}
 				</div>
 			</div>
+		</div>
+	);
+}
+
+const Home = () => {
+	const ctx = useCtx();
+
+	async function createRoom() {
+  	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
+		ctx.client.http("POST", "/api/v1/room", {
+			name,
+		});
+	}
+
+	async function useInvite() {
+  	const code = await ctx.dispatch({ do: "modal.prompt", text: "invite code?" });
+		ctx.client.http("POST", `/api/v1/invites/${code}`, {});
+	}
+	
+
+	return (
+		<div class="home">
+			<h2>home</h2>
+			<p>work in progress. expect bugs and missing polish.</p>
+			<button onClick={createRoom}>
+				create room
+			</button>
+			<br />
+			<button onClick={useInvite}>use invite</button>
+			<br />
+			<a href="/api/v1/auth/discord">
+				<button>discord login</button>
+			</a>
+			<br />
+			<a href="/api/docs">
+				<button>api docs</button>
+			</a>
+			<br />
 		</div>
 	);
 }

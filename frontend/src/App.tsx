@@ -7,6 +7,7 @@ import { InviteT, MemberT, MessageT, RoleT } from "./types.ts";
 import { Main } from "./Main.tsx";
 import { createDispatcher, createWebsocketHandler } from "./dispatch.ts";
 import { createReconnectingWS } from "@solid-primitives/websocket";
+import { Router, Route, useLocation } from "@solidjs/router";
 // import { PGlite } from "@electric-sql/pglite";
 // global.PGlite = PGlite;
 
@@ -18,7 +19,7 @@ const SLICE_LEN = 100;
 const PAGINATE_LEN = 30;
 
 const App: Component = () => {
-	const [hash, setHash] = createSignal(location.hash.slice(1));
+	// const [hash, setHash] = createSignal(location.hash.slice(1));
 	const [title, setTitle] = createSignal(document.title);
 
 	const ws = createReconnectingWS(`${BASE_URL}/api/v1/sync`);
@@ -74,15 +75,15 @@ const App: Component = () => {
 		dispatch({ do: "menu", menu: null });
 	};
 
-	const handleHashChange = () => setHash(location.hash.slice(1));
-	globalThis.addEventListener("hashchange", handleHashChange);
+	// const handleHashChange = () => setHash(location.hash.slice(1));
+	// globalThis.addEventListener("hashchange", handleHashChange);
 	globalThis.addEventListener("click", handleClick);
 	onCleanup(() => {
-		globalThis.removeEventListener("hashchange", handleHashChange);
+		// globalThis.removeEventListener("hashchange", handleHashChange);
 		globalThis.removeEventListener("click", handleClick);
 	});
 	createEffect(() => document.title = title());
-	createEffect(() => location.hash = hash());
+	// createEffect(() => location.hash = hash());
 	// createEffect(() => setTitle(parts.get(hash())?.title ?? "unknown"));
 
 	globalThis.addEventListener("keydown", e => {
@@ -92,9 +93,7 @@ const App: Component = () => {
 	return (
 		<div id="root">
 			<chatctx.Provider value={{ client, data, dispatch }}>
-				<Show when={useCtx()}>
-					<Main />
-				</Show>
+				<Main />
 			</chatctx.Provider>
 		</div>
 	);

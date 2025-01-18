@@ -1,10 +1,10 @@
-import { createEffect, createSignal, For, on, onMount, Show, useContext, } from "solid-js";
+import { createEffect, createSignal, For, on, onMount, Show, untrack, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
 import { TimelineItemT, TimelineItem } from "./Messages.tsx";
 // import type { paths } from "../../openapi.d.ts";
 // import createFetcher from "npm:openapi-fetch";
 
-import { chatctx } from "./context.ts";
+import { chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { ThreadT, RoomT } from "./types.ts";
 import { reconcile } from "solid-js/store";
@@ -21,39 +21,52 @@ export const ChatMain = (props: ChatProps) => {
   const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
 	const slice = () => ctx.data.slices[props.thread.id];
   const tl = () => ctx.data.timelines[props.thread.id];
-	const ts = () => ctx.data.thread_state[props.thread.id];
-	const reply = () => ctx.data.messages[ts().reply_id!];
+	const ts = () => ctx.data.thread_state[props.thread.id] as ThreadState | undefined;
+	const reply = () => ctx.data.messages[ts()?.reply_id!];
 	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
 	const hasSpaceBottom = () => tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
 
-	ctx.dispatch({ do: "thread.init", thread_id: props.thread.id });
-	createEffect(on(() => (slice()?.start, slice()?.end, ts().read_marker_id, tl()), () => updateItems()));
+	const thread_id = props.thread.id;
+	const read_id = props.thread.last_read_id;
+	ctx.dispatch({ do: "thread.init", thread_id, read_id });
+	
+	createEffect(() => {
+		const thread_id = props.thread.id;
+		const read_id = props.thread.last_read_id;
+		ctx.dispatch({ do: "thread.init", thread_id, read_id });
+	});
+
+	createEffect(on(() => (slice()?.start, slice()?.end, ts()?.read_marker_id, tl()), () => updateItems()));
 
   function updateItems() {
-  	console.log("update items", slice(), tl())
+  	console.log("update items", {
+  		slice: untrack(slice),
+  		tl: untrack(tl),
+  		ts: untrack(ts),
+  	});
   	if (!slice()) return;
     const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
     const newItems: Array<TimelineItemT> = [];
-    const { read_marker_id } = ts();
+    const { read_marker_id } = ts()!;
 
     if (hasSpaceTop()) {
-	    newItems.push({
-	      type: "info",
-	      key: "info",
-	      header: !hasSpaceTop(),
-	    });
+	    // newItems.push({
+	    //   type: "info",
+	    //   id: "info",
+	    //   header: !hasSpaceTop(),
+	    // });
 	    newItems.push({
 	      type: "spacer",
-	      key: "spacer-top",
+	      id: "spacer-top",
 	    });
     } else {
 	    newItems.push({
 	      type: "spacer-mini2",
-	      key: "spacer-top2",
+	      id: "spacer-top2",
 	    });
 	    newItems.push({
 	      type: "info",
-	      key: "info",
+	      id: "info",
 	      header: !hasSpaceTop(),
 	    });
     }
@@ -63,7 +76,7 @@ export const ChatMain = (props: ChatProps) => {
       if (msg.type === "hole") continue;
       newItems.push({
         type: "message",
-        key: msg.message.version_id,
+        id: msg.message.version_id,
         message: msg.message,
         separate: true,
         is_local: msg.type === "local",
@@ -72,7 +85,7 @@ export const ChatMain = (props: ChatProps) => {
       // if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
       // items.push({
       //   type: "message",
-      //   key: messages[i].id,
+      //   id: messages[i].id,
       //   message: messages[i],
       //   separate: true,
       //   // separate: shouldSplit(messages[i], messages[i - 1]),
@@ -80,7 +93,7 @@ export const ChatMain = (props: ChatProps) => {
       if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
         newItems.push({
           type: "unread-marker",
-          key: "unread-marker",
+          id: "unread-marker",
         });
       }
     }
@@ -88,20 +101,25 @@ export const ChatMain = (props: ChatProps) => {
   	if (hasSpaceBottom()) {
       newItems.push({
         type: "spacer",
-        key: "spacer-bottom"
+        id: "spacer-bottom"
       });
   	} else {
       newItems.push({
         type: "spacer-mini",
-        key: "spacer-bottom-mini"
+        id: "spacer-bottom-mini"
       });
   	}
-  	
-  	console.log("old items", items());
+
+  	const old = untrack(items)
   	console.log("new items", newItems);
     console.time("perf::updateItems");
-    setItems((old) => [...reconcile(newItems, { key: "key" })(old)]);
+    setItems((old) => [...reconcile(newItems)(old)]);
     console.timeEnd("perf::updateItems");
+  	console.log("update items", {
+  		old,
+	  	new: newItems,
+	  	diff: untrack(items).filter((i, x) => i !== old[x]),
+	  });
   }
 	
 	const list = createList({
@@ -122,6 +140,7 @@ export const ChatMain = (props: ChatProps) => {
       } else {
 	      await ctx.dispatch({ do: "paginate", dir: "b", thread_id });
       }
+      // setTimeout(() => paginating = false, 1000);
       paginating = false;
     },
 	  onContextMenu(e: MouseEvent) {
@@ -170,7 +189,7 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(() => props.thread, () => {
 		// TODO: restore scroll position
 		queueMicrotask(() => {
-			const pos = ts().scroll_pos;
+			const pos = ts()!.scroll_pos;
 			if (!pos) return list.scrollTo(999999);
 			list.scrollTo(pos);
 		});
@@ -199,9 +218,9 @@ export const ChatMain = (props: ChatProps) => {
 		ctx.dispatch({
 			do: "thread.attachments",
 			thread_id: props.thread.id,
-			attachments: [...ts().attachments, json],
+			attachments: [...ts()!.attachments, json],
 		});
-		console.log(ts().attachments);
+		console.log(ts()!.attachments);
 	}
 
 	// translate-y-[8px]
@@ -219,7 +238,7 @@ export const ChatMain = (props: ChatProps) => {
 		<div class="chat">
 			<list.List>{item => <TimelineItem thread={props.thread} item={item} />}</list.List>
 			<div class="input">
-				<Show when={ts().reply_id}>
+				<Show when={ts()?.reply_id}>
 					<div class="reply">
 						<button
 							class="cancel"
@@ -232,14 +251,14 @@ export const ChatMain = (props: ChatProps) => {
 						</div>
 					</div>
 				</Show>
-				<Show when={ts().attachments.length}>
+				<Show when={ts()?.attachments.length}>
 					<ul class="attachments">
-						<For each={ts().attachments}>{media => (
+						<For each={ts()!.attachments}>{media => (
 							<li>{media.filename} {byteFmt.format(media.size)}</li>
 						)}</For>
 					</ul>
 				</Show>
-				<Editor state={ts().editor_state} onUpload={handleUpload} placeholder="send a message..." />
+				<Editor state={ts()!.editor_state} onUpload={handleUpload} placeholder="send a message..." />
 			</div>
 		</div>
 	);

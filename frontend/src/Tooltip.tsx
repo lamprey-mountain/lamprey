@@ -51,7 +51,7 @@ export function tooltip(props: TooltipProps, tip: ValidComponent, wrap: HTMLElem
     if (visible()) return;
     if (props.animGroup) {
       const s = tooltipAnimSuppress.get(props.animGroup)!;
-      console.log(s);
+      // console.log(s);
       setAnimate(s.shouldAnim);
       s.shouldAnim = false;
       clearTimeout(s.timeout);

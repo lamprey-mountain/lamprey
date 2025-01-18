@@ -23,7 +23,7 @@ import { tooltip } from "./Tooltip.tsx";
 
 // const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
 
-export type TimelineItemT = { key: string, class?: string } & (
+export type TimelineItemT = { id: string, class?: string } & (
   { type: "info", header: boolean } |
   { type: "editor" } |
   { type: "spacer" } |
