@@ -358,15 +358,17 @@ setTimeout(() => {
 				return;
 			}
 	  	case "fetch.room_threads": {
-					const data = await ctx.client.http(
-						"GET",
-						`/api/v1/room/${action.room_id}/thread?dir=f`,
-					);
-					solidBatch(() => {
-						for (const item of data.items) {
-							update("threads", item.id, item);
-						}
-					});
+	  		// TODO: paginate
+				const data = await ctx.client.http(
+					"GET",
+					`/api/v1/room/${action.room_id}/thread?dir=f&limit=100`,
+				);
+				solidBatch(() => {
+					for (const item of data.items) {
+						update("threads", item.id, item);
+					}
+				});
+				return;
 	  	}
   	}
   }

@@ -5,19 +5,19 @@ import { Message } from "./Messages.tsx";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 
-const CLASS_BUTTON = "px-1 bg-bg3 hover:bg-bg4 my-0.5";
-
 export const RoomHome = (props: { room: RoomT }) => {
   const ctx = useContext(chatctx)!;
 	const room_id = () => props.room.id;
 
 	createEffect(() => {
-		const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
-			i.room_id === room_id()
-		).length;
-		if (roomThreadCount === 0) {
-			ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() })
-		}
+		// TODO: cache
+		// const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
+		// 	i.room_id === room_id()
+		// ).length;
+		// if (roomThreadCount === 0) {
+		// 	ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() })
+		// }
+		ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() })
 	});
 	
 	async function createThread(room_id: string) {
