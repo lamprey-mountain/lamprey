@@ -85,7 +85,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   						`/api/v1/thread/${thread_id}/message?dir=b&limit=100&from=${from}`,
   					);
   				}
-setTimeout(() => {
 					solidBatch(() => {
 						if (batch) {
 							update("timelines", thread_id, (i) => [
@@ -108,7 +107,6 @@ setTimeout(() => {
 	  				console.log({ start: newStart, end: newEnd });
 	  				update("slices", thread_id, { start: newStart, end: newEnd });
 					});
-					}, 400);
   			} else {
     			console.log(slice.start, slice.end, [...tl]);
   				const startItem = tl[slice.end - 1];
