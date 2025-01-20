@@ -202,6 +202,15 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   		  });
   		  return;
   		}
+  	// 	case "thread.init": {
+  	// 	  update("thread_state", action.thread_id, {
+   //  		  editor_state: createEditorState(text => handleSubmit(ctx, action.thread_id, text, update)),
+   //  		  reply_id: null,
+   //  		  scroll_pos: null,
+			// 		read_marker_id: action.read_id ?? null,
+			// 		attachments: [],
+  	// 	  });
+			// }
   		case "thread.reply": {
   		  update("thread_state", action.thread_id, "reply_id", action.reply_id);
   		  return;

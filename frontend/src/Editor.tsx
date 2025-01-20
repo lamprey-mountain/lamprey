@@ -415,6 +415,10 @@ export const Editor = (props: EditorProps) => {
 			});
 			// if (props.disabled)
 		});
+		createEffect(() => {
+			console.log("new state", props.state)
+			view.updateState(props.state);
+		});
 		onCleanup(() => view.destroy());
 	});
 

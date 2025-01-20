@@ -1,12 +1,12 @@
 import { createEffect, createSignal, For, on, onMount, Show, untrack, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
-import { TimelineItemT, TimelineItem } from "./Messages.tsx";
+import { TimelineItemT, TimelineItem, getAttachment } from "./Messages.tsx";
 // import type { paths } from "../../openapi.d.ts";
 // import createFetcher from "npm:openapi-fetch";
 
 import { chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
-import { ThreadT, RoomT } from "./types.ts";
+import { ThreadT, RoomT, AttachmentT } from "./types.ts";
 import { reconcile } from "solid-js/store";
 
 type ChatProps = {
@@ -35,6 +35,9 @@ export const ChatMain = (props: ChatProps) => {
 		const read_id = props.thread.last_read_id;
 		ctx.dispatch({ do: "thread.init", thread_id, read_id });
 	});
+	createEffect(() => {
+		console.log(props.thread.id);
+	});
 
 	createEffect(on(() => (slice()?.start, slice()?.end, ts()?.read_marker_id, tl()), () => updateItems()));
 
@@ -50,11 +53,11 @@ export const ChatMain = (props: ChatProps) => {
     const { read_marker_id } = ts()!;
 
     if (hasSpaceTop()) {
-	    // newItems.push({
-	    //   type: "info",
-	    //   id: "info",
-	    //   header: !hasSpaceTop(),
-	    // });
+	    newItems.push({
+	      type: "info",
+	      id: "info",
+	      header: !hasSpaceTop(),
+	    });
 	    newItems.push({
 	      type: "spacer",
 	      id: "spacer-top",
@@ -223,17 +226,18 @@ export const ChatMain = (props: ChatProps) => {
 		console.log(ts()!.attachments);
 	}
 
+	function removeAttachment(id: string) {
+		ctx.dispatch({
+			do: "thread.attachments",
+			thread_id: props.thread.id,
+			attachments: [...ts()!.attachments].filter(i => i.id !== id),
+		});
+	}
+
 	// translate-y-[8px]
 	// <header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
 	// 	{props.thread.name} / 
 	// </header>
-	const byteFmt = Intl.NumberFormat("en", {
-	  notation: "compact",
-	  style: "unit",
-	  unit: "byte",
-	  unitDisplay: "narrow",
-	});
-
 	return (
 		<div class="chat">
 			<list.List>{item => <TimelineItem thread={props.thread} item={item} />}</list.List>
@@ -254,12 +258,18 @@ export const ChatMain = (props: ChatProps) => {
 				<Show when={ts()?.attachments.length}>
 					<ul class="attachments">
 						<For each={ts()!.attachments}>{media => (
-							<li>{media.filename} {byteFmt.format(media.size)}</li>
+							<li onClick={() => removeAttachment(media.id)}>{getAttachment(media)}</li>
 						)}</For>
 					</ul>
 				</Show>
-				<Editor state={ts()!.editor_state} onUpload={handleUpload} placeholder="send a message..." />
+				<Show when={ts()}>
+					<Editor state={ts()!.editor_state} onUpload={handleUpload} placeholder="send a message..." />
+				</Show>
 			</div>
 		</div>
 	);
 };
+
+type MediaPreviewProps = {
+	media: AttachmentT;
+}

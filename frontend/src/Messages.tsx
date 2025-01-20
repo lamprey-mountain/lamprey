@@ -67,6 +67,75 @@ const md = marked.use({
 	gfm: true,
 });
 
+export function getAttachment(a: AttachmentT) {
+	const b = a.mime.split("/")[0];
+	const byteFmt = Intl.NumberFormat("en", {
+	  notation: "compact",
+	  style: "unit",
+	  unit: "byte",
+	  unitDisplay: "narrow",
+	});
+
+	const [ty] = a.mime.split(";");
+	// const [ty, paramsRaw] = a.mime.split(";");
+	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
+	// console.log({ ty, params });
+	
+	if (b === "image") {
+					// <div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
+		return (
+			<li>
+				<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+					<img src={a.url} alt={a.alt ?? undefined} style={{ height: `${a.height}px`, width: `${a.width}px` }} />
+				</div>
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		)
+	} else if (b === "video") {
+		return (
+			<li>
+				<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
+					<div class="spacer"></div>
+					<video height={a.height!} width={a.width!} src={a.url} controls />
+				</div>
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		)
+	} else if (b === "audio") {
+		return (
+			<li>
+				<audio src={a.url} controls />
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		)
+	} else {
+		return (
+			<li>
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		)
+	}
+}
+
+function Reply(props: { reply: MessageT }) {
+	const name = props.reply.override_name ?? props.reply.author.name;
+	const content = props.reply.content ?? `${props.reply.attachments.length} attachment(s)`;
+	return (
+		<>
+			<div class="reply arrow">{"\u21B1"}</div>
+			<div class="reply reply-content">
+				<span class="author">{name}: </span>
+				{content}
+			</div>
+			<div class="reply"></div>
+		</>
+	)
+}
+
 export const Message = (props: MessageProps) => {
 	const ctx = useCtx();
 	let bodyEl: HTMLDivElement;
@@ -79,75 +148,6 @@ export const Message = (props: MessageProps) => {
 	// 		hljs.default.highlightElement(code);
 	// 	}
 	// });
-
-	function Reply(props: { reply: MessageT }) {
-		const name = props.reply.override_name ?? props.reply.author.name;
-		const content = props.reply.content ?? `${props.reply.attachments.length} attachment(s)`;
-		return (
-			<>
-				<div class="reply arrow">{"\u21B1"}</div>
-				<div class="reply reply-content">
-					<span class="author">{name}: </span>
-					{content}
-				</div>
-				<div class="reply"></div>
-			</>
-		)
-	}
-
-	function getAttachment(a: AttachmentT) {
-		const b = a.mime.split("/")[0];
-		const byteFmt = Intl.NumberFormat("en", {
-		  notation: "compact",
-		  style: "unit",
-		  unit: "byte",
-		  unitDisplay: "narrow",
-		});
-
-		const [ty] = a.mime.split(";");
-		// const [ty, paramsRaw] = a.mime.split(";");
-		// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
-		// console.log({ ty, params });
-		
-		if (b === "image") {
-						// <div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
-			return (
-				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
-						<img src={a.url} alt={a.alt ?? undefined} style={{ height: `${a.height}px`, width: `${a.width}px` }} />
-					</div>
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</li>
-			)
-		} else if (b === "video") {
-			return (
-				<li>
-					<div class="media" style={{ "aspect-ratio": `${a.width} / ${a.height}` }}>
-						<div class="spacer"></div>
-						<video height={a.height!} width={a.width!} src={a.url} controls />
-					</div>
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</li>
-			)
-		} else if (b === "audio") {
-			return (
-				<li>
-					<audio src={a.url} controls />
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</li>
-			)
-		} else {
-			return (
-				<li>
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</li>
-			)
-		}
-	}
 
 	function getComponent() {
 		const date = /^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(props.message.id) ? getTimestampFromUUID(props.message.id) : new Date();
@@ -177,22 +177,29 @@ export const Message = (props: MessageProps) => {
 		} else {
 			// console.log(md.parse(props.message.content!));
 			// IDEA: make usernames sticky? so when scrolling, you can see who sent a certain message
+						// {tooltip(
+						// 	{ placement: "right-start", animGroup: "message-user", interactive: true },
+						// 	<UserTooltip user={props.message.author} />,
+						// 	<div class="author-wrap">
+						// 		<div
+						// 			class="author"
+						// 			classList={{ "override-name": !!props.message.override_name }}>
+						// 		{authorName}
+						// 		</div>
+						// 	</div>
+						// )}
 			return (
 				<>
 					<Show when={props.message.reply_id && ctx.data.messages[props.message.reply_id!]}>
 						<Reply reply={ctx.data.messages[props.message.reply_id!]} />
 					</Show>
-						{tooltip(
-							{ placement: "right-start", animGroup: "message-user", interactive: true },
-							<UserTooltip user={props.message.author} />,
-							<div class="author-wrap">
-								<div
-									class="author"
-									classList={{ "override-name": !!props.message.override_name }}>
-								{authorName}
-								</div>
-							</div>
-						)}
+					<div class="author-wrap">
+						<div
+							class="author"
+							classList={{ "override-name": !!props.message.override_name }}>
+						{authorName}
+						</div>
+					</div>
 					<div class="content">
 						<Show when={props.message.content}>
 							<div class="body markdown" classList={{ local: props.is_local }} ref={bodyEl!}>
@@ -222,8 +229,15 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			// "shadow-[#67dc82]": item.message.mention,
 			// "shadow-[#3fa9c9]": item.message.unread,
 			// "text-fg4": item.message.is_local,
+			const ctx = useCtx();
 			return (
-				<li class="message" data-message-id={item.message.id}>
+				<li
+					class="message"
+					classList={{
+						"selected": item.message.id === ctx.data.thread_state[thread.id]?.reply_id,
+					}}
+					data-message-id={item.message.id}
+				>
 					<Message message={item.message} is_local={item.is_local} />
 				</li>
 			);
@@ -260,9 +274,7 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "unread-marker": {
 			return (
 				<li class="unread-marker">
-					<div></div>
 					<div class="content">new messages</div>
-					<div></div>
 				</li>
 			);
 		}

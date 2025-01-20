@@ -99,7 +99,7 @@ export const Main = () => {
 			    	const room = () => ctx.data.rooms[thread()?.room_id];
 
 						createEffect(() => {
-							if (!ctx.data.rooms[thread()?.room_id]) {
+							if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
 								ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id })
 							}
 						});

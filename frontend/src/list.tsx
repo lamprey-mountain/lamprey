@@ -65,8 +65,6 @@ export function createList<T>(options: {
         } else {
           shouldAutoscroll = false;
         }
-      } else {
-        console.warn("list::unknownIntersectionEntry");
       }
     }
   }, {

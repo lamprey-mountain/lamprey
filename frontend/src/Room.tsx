@@ -48,13 +48,13 @@ export const RoomHome = (props: { room: RoomT }) => {
 	
   // <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
   // TODO: use actual links instead of css styled divs
+  // TODO: <A href={`/room/${props.room.id}/settings`}>settings</A>
 	return (
 		<div class="room-home">
 			<h2>{props.room.name}</h2>
 			<p>{props.room.description}</p>
 			<button onClick={() => createThread(room_id())}>create thread</button><br />
 			<button onClick={() => leaveRoom(room_id())}>leave room</button><br />
-			<A href={`/room/${props.room.id}/settings`}>settings</A>
 			<br />
 			<ul>
 	    	<For each={Object.values(ctx.data.threads).filter((i) => i.room_id === props.room.id)}>{thread => (
