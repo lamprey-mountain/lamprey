@@ -1,4 +1,5 @@
-use types::{Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId};
+use serde::Deserialize;
+use types::{Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId};
 use uuid::Uuid;
 
 pub struct DbRoom {
@@ -410,3 +411,47 @@ impl From<RoomMembership> for DbRoomMembership {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum UserIdReq {
+    #[serde(deserialize_with = "const_self")]
+    UserSelf,
+    UserId(UserId),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum SessionIdReq {
+    #[serde(deserialize_with = "const_self")]
+    SessionSelf,
+    // #[serde(deserialize_with = "const_all")]
+    // SessionAll,
+    SessionId(SessionId),
+}
+
+fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    enum Helper {
+        #[serde(rename = "@self")]
+        Variant,
+    }
+    
+    Helper::deserialize(deserializer).map(|_| ())
+}
+
+// fn const_all<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+// where
+//     D: serde::Deserializer<'de>,
+// {
+//     #[derive(Deserialize)]
+//     enum Helper {
+//         #[serde(rename = "@all")]
+//         Variant,
+//     }
+    
+//     Helper::deserialize(deserializer).map(|_| ())
+// }

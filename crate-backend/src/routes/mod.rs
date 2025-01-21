@@ -11,8 +11,8 @@ mod util;
 mod media;
 // mod member;
 mod sync;
-// mod user;
-// mod session;
+mod user;
+mod session;
 // mod auth;
 
 pub fn routes() -> OpenApiRouter<ServerState> {
@@ -25,7 +25,7 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .merge(media::routes())
         // .merge(member::routes())
         .merge(sync::routes())
-    // .merge(user::routes())
-    // .merge(session::routes())
+        .merge(user::routes())
+        .merge(session::routes())
     // .merge(auth::routes())
 }

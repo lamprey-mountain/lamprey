@@ -11,7 +11,8 @@ use super::Postgres;
 
 #[async_trait]
 impl DataUser for Postgres {
-    async fn user_create(&self, user_id: UserId, patch: UserCreate) -> Result<User> {
+    async fn user_create(&self, patch: UserCreate) -> Result<User> {
+        let user_id = Uuid::now_v7();
         let row = query_as!(
             DbUser,
             r#"
@@ -19,8 +20,8 @@ impl DataUser for Postgres {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system
         "#,
-            user_id.into_inner(),
-            user_id.into_inner(),
+            user_id,
+            user_id,
             patch.parent_id.map(|i| i.into_inner()),
             patch.name,
             patch.description,
