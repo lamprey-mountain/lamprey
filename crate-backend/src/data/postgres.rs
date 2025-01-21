@@ -22,5 +22,6 @@ mod thread;
 mod unread;
 mod user;
 mod util;
+mod search;
 
 pub use util::Pagination;

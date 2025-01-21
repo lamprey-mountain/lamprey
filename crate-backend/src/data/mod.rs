@@ -1,9 +1,14 @@
 use async_trait::async_trait;
+use types::SearchMessageRequest;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId, UserPatch, UserVerId
+    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
+    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate,
+    RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId,
+    Session, SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate,
+    UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -21,6 +26,7 @@ pub trait Data:
     + DataThread
     + DataUnread
     + DataUser
+    + DataSearch
     + Send
     + Sync
 {
@@ -54,8 +60,12 @@ pub trait DataRole {
     ) -> Result<PaginationResponse<Role>>;
     async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
-    async fn role_update(&self, room_id: RoomId, role_id: RoleId, patch: RolePatch)
-        -> Result<RoleVerId>;
+    async fn role_update(
+        &self,
+        room_id: RoomId,
+        role_id: RoleId,
+        patch: RolePatch,
+    ) -> Result<RoleVerId>;
     async fn role_apply_default(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
 }
 
@@ -193,4 +203,14 @@ pub trait DataUser {
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
+}
+
+#[async_trait]
+pub trait DataSearch {
+    async fn search_message(
+        &self,
+        user_id: UserId,
+        query: SearchMessageRequest,
+        paginate: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
 }

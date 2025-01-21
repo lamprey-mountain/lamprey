@@ -8,6 +8,7 @@ use tokio::{
     io::{AsyncSeekExt, AsyncWriteExt},
     process::Command,
 };
+use tracing::debug;
 use url::Url;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -93,6 +94,7 @@ async fn media_upload(
     if up.user_id != session.user_id {
         return Err(Error::NotFound);
     }
+    debug!("continue upload for {}, file {:?}", media_id, up.temp_file.file_path());
     let stat = up.temp_file.metadata().await?;
     let current_size = stat.len();
     let current_off: u64 = headers
@@ -117,12 +119,14 @@ async fn media_upload(
         let p = up.temp_file.file_path().to_owned();
         let url = format!("media/{media_id}");
         let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
+        debug!("finish upload for {}, mime {}", media_id, mime);
         let upload_s3 = async {
             let bytes = tokio::fs::read(&p).await?;
             s.blobs()
                 .write_with(&url, bytes)
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-                .content_type(&mime)
+                // FIXME: sometimes this fails with "failed to parse header"
+                // .content_type(&mime)
                 .await?;
             Result::Ok(())
         };

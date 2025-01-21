@@ -14,6 +14,7 @@ mod sync;
 mod user;
 mod session;
 // mod auth;
+mod search;
 
 pub fn routes() -> OpenApiRouter<ServerState> {
     OpenApiRouter::new()
@@ -28,4 +29,5 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .merge(user::routes())
         .merge(session::routes())
     // .merge(auth::routes())
+        .merge(search::routes())
 }

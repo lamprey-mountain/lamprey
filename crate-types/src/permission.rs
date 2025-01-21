@@ -24,6 +24,10 @@ pub enum Permission {
     RoleManage,
     RoleApply,
 
+    // unsure about these or how they interact with other perms
+    // ThreadForward,
+    // MessageMove,
+
     View,
     MessageEdit,
 }

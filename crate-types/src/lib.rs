@@ -11,6 +11,7 @@ pub mod session;
 pub mod sync;
 pub mod thread;
 pub mod user;
+pub mod search;
 
 pub use ids::*;
 pub use invite::*;
@@ -25,3 +26,4 @@ pub use session::*;
 pub use sync::*;
 pub use thread::*;
 pub use user::*;
+pub use search::*;
