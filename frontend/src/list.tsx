@@ -1,12 +1,18 @@
 import { JSX } from "solid-js/jsx-runtime";
 import { For, on, onMount } from "solid-js";
-import { Accessor, createSignal, createEffect, createComputed, onCleanup } from "solid-js";
+import {
+	Accessor,
+	createComputed,
+	createEffect,
+	createSignal,
+	onCleanup,
+} from "solid-js";
 
 export type TimelineStatus = "loading" | "update" | "ready";
 
 export type SliceInfo = {
-  start: number,
-  end: number,
+	start: number;
+	end: number;
 };
 
 // TODO: dynamically calculate how many events are needed
@@ -25,148 +31,153 @@ export type SliceInfo = {
 // }
 
 export function createList<T>(options: {
-  items: Accessor<Array<T>>,
-  autoscroll?: Accessor<boolean>,
-  // topPos?: Accessor<number>,
-  // bottomPos?: Accessor<number>,
-  topQuery: string,
-  bottomQuery: string,
-  onPaginate?: (dir: "forwards" | "backwards") => void,
-  onScroll?: (pos: number) => void,
-  onContextMenu?: (e: MouseEvent) => void,
+	items: Accessor<Array<T>>;
+	autoscroll?: Accessor<boolean>;
+	// topPos?: Accessor<number>,
+	// bottomPos?: Accessor<number>,
+	topQuery: string;
+	bottomQuery: string;
+	onPaginate?: (dir: "forwards" | "backwards") => void;
+	onScroll?: (pos: number) => void;
+	onContextMenu?: (e: MouseEvent) => void;
 }) {
-  const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
-  const [topEl, setTopEl] = createSignal<HTMLElement>();
-  const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
-  let topRef: HTMLElement | undefined;
-  let bottomRef: HTMLElement | undefined;
-  let anchorRef: Element;
-  let anchorRect: DOMRect;
-  let shouldAutoscroll = false;
-  
-  const margin = 0;
-  const intersections = new IntersectionObserver((entries) => {
-    // PERF: run intersection callback takes too long
-    console.log("list::intersection", entries);
-    for (const el of entries) {
-      if (el.target === topEl()) {
-        if (el.isIntersecting) {
-          anchorRef = el.target;
-          options.onPaginate?.("backwards");
-        }
-      } else if (entries[0].target === bottomEl()) {
-        if (el.isIntersecting) {
-          shouldAutoscroll = options.autoscroll?.() || false;
-          anchorRef = el.target;
-          options.onPaginate?.("forwards");
-        } else {
-          shouldAutoscroll = false;
-        }
-      }
-    }
-  }, {
-    rootMargin: `${margin}px 0px ${margin}px 0px`,
-  });
+	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
+	const [topEl, setTopEl] = createSignal<HTMLElement>();
+	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
+	let topRef: HTMLElement | undefined;
+	let bottomRef: HTMLElement | undefined;
+	let anchorRef: Element;
+	let anchorRect: DOMRect;
+	let shouldAutoscroll = false;
 
-  const resizes = new ResizeObserver((_entries) => {
-    // NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
-    if (shouldAutoscroll) {
-      console.log("list::autoscroll");
-      wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
-    }
-  });
+	const margin = 0;
+	const intersections = new IntersectionObserver((entries) => {
+		// PERF: run intersection callback takes too long
+		console.log("list::intersection", entries);
+		for (const el of entries) {
+			if (el.target === topEl()) {
+				if (el.isIntersecting) {
+					anchorRef = el.target;
+					options.onPaginate?.("backwards");
+				}
+			} else if (entries[0].target === bottomEl()) {
+				if (el.isIntersecting) {
+					shouldAutoscroll = options.autoscroll?.() || false;
+					anchorRef = el.target;
+					options.onPaginate?.("forwards");
+				} else {
+					shouldAutoscroll = false;
+				}
+			}
+		}
+	}, {
+		rootMargin: `${margin}px 0px ${margin}px 0px`,
+	});
 
-  function setRefs() {
-    const newTopEl = wrapperEl()!.querySelector(options.topQuery)! as HTMLElement;
-    const newBottomEl = wrapperEl()!.querySelector(options.bottomQuery)! as HTMLElement;
-    setTopEl(newTopEl);
-    setBottomEl(newBottomEl);
-    console.log("setRefs", {
-      newTopEl,
-      newBottomEl,
-    });
-  }
+	const resizes = new ResizeObserver((_entries) => {
+		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
+		if (shouldAutoscroll) {
+			console.log("list::autoscroll");
+			wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
+		}
+	});
 
-  onCleanup(() => {
-    intersections.disconnect();
-    resizes.disconnect();
-  });
-  
-  return {
-    scrollBy(pos: number, smooth = false) {
-      wrapperEl()?.scrollBy({
-        top: pos,
-        behavior: smooth ? "smooth" : "instant",
-      });
-    },
-    scrollTo(pos: number, smooth = false) {
-      wrapperEl()?.scrollTo({
-        top: pos,
-        behavior: smooth ? "smooth" : "instant",
-      });
-    },
-    List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
-      function reanchor() {
-        const wrap = wrapperEl();
-        // console.log("list::reanchor", wrap, anchorRef);
-        console.log(shouldAutoscroll)
-        if (!wrap || !anchorRef) return setRefs();
-        console.time("perf::reanchor");
-        if (shouldAutoscroll) {
-          // console.log("list::autoscroll");
-          wrap.scrollTo({ top: 999999, behavior: "instant" });
-        } else {
-          // FIXME: tons of reflow and jank
-          console.time("perf::forceReflow");
-          const currentRect = anchorRef.getBoundingClientRect();
-          console.timeEnd("perf::forceReflow");
-          const diff = (currentRect.y - anchorRect.y) + (currentRect.height - anchorRect.height);
-          console.log("forcereflow", { diff, currentRect, anchorRect });
-          wrapperEl()?.scrollBy(0, diff);
-        }
-        setRefs();
-        console.timeEnd("perf::reanchor");
-      }
+	function setRefs() {
+		const newTopEl = wrapperEl()!.querySelector(
+			options.topQuery,
+		)! as HTMLElement;
+		const newBottomEl = wrapperEl()!.querySelector(
+			options.bottomQuery,
+		)! as HTMLElement;
+		setTopEl(newTopEl);
+		setBottomEl(newBottomEl);
+		console.log("setRefs", {
+			newTopEl,
+			newBottomEl,
+		});
+	}
 
-      createComputed(on(options.items, () => {
-        anchorRect = anchorRef?.getBoundingClientRect();
-      }));
-      
-      createEffect(on(options.items, () => {
-        queueMicrotask(reanchor);
-        // reanchor()
-      }));
+	onCleanup(() => {
+		intersections.disconnect();
+		resizes.disconnect();
+	});
 
-      createEffect(on(topEl, (topEl) => {
-        if (!topEl) return;
-        if (topRef) intersections.unobserve(topRef);
-        topRef = topEl;
-        intersections.observe(topEl);
-      }));
+	return {
+		scrollBy(pos: number, smooth = false) {
+			wrapperEl()?.scrollBy({
+				top: pos,
+				behavior: smooth ? "smooth" : "instant",
+			});
+		},
+		scrollTo(pos: number, smooth = false) {
+			wrapperEl()?.scrollTo({
+				top: pos,
+				behavior: smooth ? "smooth" : "instant",
+			});
+		},
+		List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
+			function reanchor() {
+				const wrap = wrapperEl();
+				// console.log("list::reanchor", wrap, anchorRef);
+				console.log(shouldAutoscroll);
+				if (!wrap || !anchorRef) return setRefs();
+				console.time("perf::reanchor");
+				if (shouldAutoscroll) {
+					// console.log("list::autoscroll");
+					wrap.scrollTo({ top: 999999, behavior: "instant" });
+				} else {
+					// FIXME: tons of reflow and jank
+					console.time("perf::forceReflow");
+					const currentRect = anchorRef.getBoundingClientRect();
+					console.timeEnd("perf::forceReflow");
+					const diff = (currentRect.y - anchorRect.y) +
+						(currentRect.height - anchorRect.height);
+					console.log("forcereflow", { diff, currentRect, anchorRect });
+					wrapperEl()?.scrollBy(0, diff);
+				}
+				setRefs();
+				console.timeEnd("perf::reanchor");
+			}
 
-      createEffect(on(bottomEl, (bottomEl) => {
-        if (!bottomEl) return;
-        if (bottomRef) intersections.unobserve(bottomRef);
-        bottomRef = bottomEl;
-        intersections.observe(bottomEl);
-      }));
+			createComputed(on(options.items, () => {
+				anchorRect = anchorRef?.getBoundingClientRect();
+			}));
 
-      onMount(() => {
-        resizes.observe(wrapperEl()!);
-      });
-      
-          // onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}
-      return (
-        <ul
-          class="list"
-          ref={setWrapperEl}
-          onContextMenu={options.onContextMenu}
-        >
-          <For each={options.items()}>
-            {(item, idx) => props.children(item, idx)}
-          </For>
-        </ul>
-      );
-    },
-  };
+			createEffect(on(options.items, () => {
+				queueMicrotask(reanchor);
+				// reanchor()
+			}));
+
+			createEffect(on(topEl, (topEl) => {
+				if (!topEl) return;
+				if (topRef) intersections.unobserve(topRef);
+				topRef = topEl;
+				intersections.observe(topEl);
+			}));
+
+			createEffect(on(bottomEl, (bottomEl) => {
+				if (!bottomEl) return;
+				if (bottomRef) intersections.unobserve(bottomRef);
+				bottomRef = bottomEl;
+				intersections.observe(bottomEl);
+			}));
+
+			onMount(() => {
+				resizes.observe(wrapperEl()!);
+			});
+
+			// onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}
+			return (
+				<ul
+					class="list"
+					ref={setWrapperEl}
+					onContextMenu={options.onContextMenu}
+				>
+					<For each={options.items()}>
+						{(item, idx) => props.children(item, idx)}
+					</For>
+				</ul>
+			);
+		},
+	};
 }

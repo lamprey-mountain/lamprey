@@ -1,10 +1,12 @@
-{"dependencies": {
-    "@electric-sql/pglite": "^0.2.15",
-    "@floating-ui/dom": "^1.6.12",
-    "@sqlite.org/sqlite-wasm": "^3.47.2-build1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "sass": "^1.83.1",
-    "solid-floating-ui": "^0.3.1",
-    "tailwindcss": "^3.4.17"
-  }}
+{
+	"dependencies": {
+		"@electric-sql/pglite": "^0.2.15",
+		"@floating-ui/dom": "^1.6.12",
+		"@sqlite.org/sqlite-wasm": "^3.47.2-build1",
+		"autoprefixer": "^10.4.20",
+		"postcss": "^8.4.49",
+		"sass": "^1.83.1",
+		"solid-floating-ui": "^0.3.1",
+		"tailwindcss": "^3.4.17"
+	}
+}

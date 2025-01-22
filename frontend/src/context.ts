@@ -80,33 +80,33 @@ type Modal =
 	};
 
 export type Action = // = { do: "setView", to: View }
-| { do: "paginate"; thread_id: string; dir: "f" | "b" }
-| { do: "goto"; thread_id: string; event_id: string }
-| { do: "menu"; menu: Menu | null }
-// | { do: "modal.open", modal: any }
-| { do: "modal.close" }
-| { do: "modal.alert"; text: string }
-| { do: "modal.prompt"; text: string; cont: (text?: string) => void }
-| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
-| { do: "thread.init"; thread_id: string; read_id?: string }
-| { do: "thread.reply"; thread_id: string; reply_id: string | null }
-| { do: "thread.scroll_pos"; thread_id: string; pos: number | null }
-| {
-	do: "thread.mark_read";
-	thread_id: string;
-	version_id?: string;
-	delay?: boolean;
-	also_local?: boolean;
-}
-| {
-	do: "thread.attachments";
-	thread_id: string;
-	attachments: Array<AttachmentT>;
-}
-| { do: "fetch.room"; room_id: string }
-| { do: "fetch.thread"; thread_id: string }
-| { do: "fetch.room_threads"; room_id: string }
-| { do: "server"; msg: types.MessageServer };
+	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
+	| { do: "goto"; thread_id: string; event_id: string }
+	| { do: "menu"; menu: Menu | null }
+	// | { do: "modal.open", modal: any }
+	| { do: "modal.close" }
+	| { do: "modal.alert"; text: string }
+	| { do: "modal.prompt"; text: string; cont: (text?: string) => void }
+	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
+	| { do: "thread.init"; thread_id: string; read_id?: string }
+	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
+	| { do: "thread.scroll_pos"; thread_id: string; pos: number | null }
+	| {
+		do: "thread.mark_read";
+		thread_id: string;
+		version_id?: string;
+		delay?: boolean;
+		also_local?: boolean;
+	}
+	| {
+		do: "thread.attachments";
+		thread_id: string;
+		attachments: Array<AttachmentT>;
+	}
+	| { do: "fetch.room"; room_id: string }
+	| { do: "fetch.thread"; thread_id: string }
+	| { do: "fetch.room_threads"; room_id: string }
+	| { do: "server"; msg: types.MessageServer };
 
 export type AttachmentCreateT = {
 	id: string;

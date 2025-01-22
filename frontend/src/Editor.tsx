@@ -1,5 +1,10 @@
 import { Command, EditorState, TextSelection } from "prosemirror-state";
-import { Decoration, DecorationAttrs, DecorationSet, EditorView } from "prosemirror-view";
+import {
+	Decoration,
+	DecorationAttrs,
+	DecorationSet,
+	EditorView,
+} from "prosemirror-view";
 import { DOMParser, Schema } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
@@ -94,7 +99,7 @@ export function createEditorState(onSubmit: (text: string) => void) {
 			return true;
 		};
 	}
-	
+
 	return EditorState.create({
 		schema,
 		plugins: [
@@ -160,7 +165,9 @@ export const Editor = (props: EditorProps) => {
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
-						<div class="placeholder" aria-hidden="true">{/* @once */ props.placeholder}</div>
+						<div class="placeholder" aria-hidden="true">
+							{/* @once */ props.placeholder}
+						</div>
 					) as HTMLDivElement;
 					return DecorationSet.create(state.doc, [
 						Decoration.widget(0, placeholder),
@@ -175,27 +182,55 @@ export const Editor = (props: EditorProps) => {
 						case "em": {
 							return [
 								{ attrs: { class: "syn" }, start: 0, end: 1 },
-								{ attrs: { nodeName: "em" }, start: 1, end: ast.raw.length - 1 },
-								{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
+								{
+									attrs: { nodeName: "em" },
+									start: 1,
+									end: ast.raw.length - 1,
+								},
+								{
+									attrs: { class: "syn" },
+									start: ast.raw.length - 1,
+									end: ast.raw.length,
+								},
 							];
 						}
 						case "link": {
 							if (ast.raw === ast.href) {
-								return [{ attrs: { style: "color: var(--color-link)" }, start: 0, end: ast.text.length }]
+								return [{
+									attrs: { style: "color: var(--color-link)" },
+									start: 0,
+									end: ast.text.length,
+								}];
 							} else {
 								return [
 									{ attrs: { class: "syn" }, start: 0, end: 1 },
-									{ attrs: { class: "syn" }, start: ast.text.length + 1, end: ast.text.length + 3 },
-									{ attrs: { style: "color: var(--color-link)" }, start: ast.text.length + 3, end: ast.raw.length - 1 },
-									{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
-								]
+									{
+										attrs: { class: "syn" },
+										start: ast.text.length + 1,
+										end: ast.text.length + 3,
+									},
+									{
+										attrs: { style: "color: var(--color-link)" },
+										start: ast.text.length + 3,
+										end: ast.raw.length - 1,
+									},
+									{
+										attrs: { class: "syn" },
+										start: ast.raw.length - 1,
+										end: ast.raw.length,
+									},
+								];
 							}
 						}
 						case "strong": {
 							return [
 								{ attrs: { class: "syn" }, start: 0, end: 2 },
 								{ attrs: { nodeName: "b" }, start: 2, end: ast.raw.length - 2 },
-								{ attrs: { class: "syn" }, start: ast.raw.length - 2, end: ast.raw.length },
+								{
+									attrs: { class: "syn" },
+									start: ast.raw.length - 2,
+									end: ast.raw.length,
+								},
 							];
 						}
 						case "code": {
@@ -205,15 +240,31 @@ export const Editor = (props: EditorProps) => {
 								{ attrs: { class: "syn" }, start: 0, end: firstEnd },
 								// { attrs: { nodeName: "pre" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
 								// { attrs: { class: "font-mono" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
-								{ attrs: { nodeName: "code" }, start: firstEnd + 1, end: ast.text.length + firstEnd + 1 },
-								{ attrs: { class: "syn" }, start: ast.text.length + firstEnd + 2, end: ast.raw.length },
+								{
+									attrs: { nodeName: "code" },
+									start: firstEnd + 1,
+									end: ast.text.length + firstEnd + 1,
+								},
+								{
+									attrs: { class: "syn" },
+									start: ast.text.length + firstEnd + 2,
+									end: ast.raw.length,
+								},
 							];
 						}
 						case "codespan": {
 							return [
 								{ attrs: { class: "syn" }, start: 0, end: 1 },
-								{ attrs: { nodeName: "code" }, start: 1, end: ast.raw.length - 1 },
-								{ attrs: { class: "syn" }, start: ast.raw.length - 1, end: ast.raw.length },
+								{
+									attrs: { nodeName: "code" },
+									start: 1,
+									end: ast.raw.length - 1,
+								},
+								{
+									attrs: { class: "syn" },
+									start: ast.raw.length - 1,
+									end: ast.raw.length,
+								},
 							];
 						}
 						// case "blockquote": {
@@ -253,32 +304,41 @@ export const Editor = (props: EditorProps) => {
 						// 	return;
 						// }
 						default: {
-							return []
+							return [];
 						}
 					}
 				}
 
 				function getOffset(ty: string) {
 					switch (ty) {
-						case "strong": return 2;
-						case "em": return 1;
-						case "codespan": return 1;
-						default: return 0;
+						case "strong":
+							return 2;
+						case "em":
+							return 1;
+						case "codespan":
+							return 1;
+						default:
+							return 0;
 					}
 				}
 
-				type A = { start: number, end: number, attrs: DecorationAttrs }
-				
-				function mapDecorations(ast: Token): { len: number, decorations: Array<A> } {
+				type A = { start: number; end: number; attrs: DecorationAttrs };
+
+				function mapDecorations(
+					ast: Token,
+				): { len: number; decorations: Array<A> } {
 					const decorations = [];
 					decorations.push(...extraDecorations(ast));
 					if ("tokens" in ast) {
-						decorations.push(...reduceDecorations(ast.tokens!, getOffset(ast.type)).decorations);
+						decorations.push(
+							...reduceDecorations(ast.tokens!, getOffset(ast.type))
+								.decorations,
+						);
 					}
 					return {
 						decorations,
-						len: ast.raw.length
-					}
+						len: ast.raw.length,
+					};
 				}
 
 				function reduceDecorations(tokens: Array<Token>, startPos = 0) {
@@ -287,7 +347,11 @@ export const Editor = (props: EditorProps) => {
 							pos: pos + i.len,
 							decorations: [
 								...decorations,
-								...i.decorations.map((j: A) => ({ start: j.start + pos, end: j.end + pos, attrs: j.attrs })),
+								...i.decorations.map((j: A) => ({
+									start: j.start + pos,
+									end: j.end + pos,
+									attrs: j.attrs,
+								})),
 							],
 						}), { pos: startPos, decorations: [] as Array<A> });
 				}
@@ -302,10 +366,15 @@ export const Editor = (props: EditorProps) => {
   --foreground-2: #eae8ef9f;
   --foreground-link: #b18cf3;
   --foreground-danger: #fa6261;
-*/
+				*/
 
 				const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
-				return DecorationSet.create(state.doc, reduced.decorations.map(i => Decoration.inline(i.start, i.end, i.attrs)));
+				return DecorationSet.create(
+					state.doc,
+					reduced.decorations.map((i) =>
+						Decoration.inline(i.start, i.end, i.attrs)
+					),
+				);
 			},
 			handlePaste(view, event, slice) {
 				const files = event.clipboardData?.files ?? [];
@@ -338,67 +407,114 @@ export const Editor = (props: EditorProps) => {
 				const parser = new globalThis.DOMParser();
 				const tmp = parser.parseFromString(html, "text/html");
 
-			  for (const node of tmp.querySelectorAll("script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " + ["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"].map(i => `[class*=${i}], [id*=${i}]`).join(", "))) {
-			    node.remove();
-			  }
+				for (
+					const node of tmp.querySelectorAll(
+						"script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " +
+							["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"]
+								.map((i) => `[class*=${i}], [id*=${i}]`).join(", "),
+					)
+				) {
+					node.remove();
+				}
 
-			  // FIXME: don't mangle whitespace
-		    function walk(n: Node): string {
-			    if (n.nodeType === Node.COMMENT_NODE) return "";
-			    if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
-			    
-			    // TODO: tables
-			    const c = [...n.childNodes];
-			    switch (n.nodeName) {
-			    	case "#document": case "HTML":
-			      case "BODY": case "MAIN": case "ARTICLE": case "HEADER": case "SECTION":
-			      case "DIV": case "TABLE": case "TBODY": case "THEAD": case "TR":
-			      case "TURBO-FRAME": case "TASK-LISTS": // github
-		      	case "X-HTML-IMPORT":
-			        return c.map(walk).join("");
-			      case "CENTER": case "SPAN": case "LI": case "TD": case "TH":
-			        return c.map(walk).join("");
-			      case "H1": return "\n\n# " + (n.textContent ?? "").trim() + "\n\n";
-			      case "H2": return "\n\n## " + (n.textContent ?? "").trim() + "\n\n";
-			      case "H3": return "\n\n### " + (n.textContent ?? "").trim() + "\n\n";
-			      case "H4": return "\n\n#### " + (n.textContent ?? "").trim() + "\n\n";
-			      case "H5": return "\n\n##### " + (n.textContent ?? "").trim() + "\n\n";
-			      case "H6": return "\n\n###### " + (n.textContent ?? "").trim() + "\n\n";
-			      case "P": return "\n\n" + c.map(walk).join("") + "\n\n";
-			      case "B": case "BOLD": case "STRONG":
-			        return `**${c.map(walk).join("")}**`;
-			      case "EM": case "I":
-			        return `*${c.map(walk).join("")}*`;
-			      case "CODE":
-			        return `\`${c.map(walk).join("")}\``;
-			      case "UL":
-			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map(i => `- ${i}`).join("\n")}\n`;
-			      case "OL":
-			        return `\n${c.filter(i => i.nodeName === "LI").map(walk).map((i, x) => `${x + 1}. ${i}`).join("\n")}\n`;
-			      case "A": {
-			      	const href = (n as Element).getAttribute("href");
-			      	const text = c.map(walk).join("");
-			      	if (!text) return "\n";
-			      	if (!href) return text;
-			        return `[${text}](${href})`;
-			      }
-			      case "PRE": {
-			        const el = n as Element;
-			        const lang = el.getAttribute("lang") ?? el.getAttribute("language") ?? el.getAttribute("class")?.match(/\b(lang|language)-(.+)\b/)?.[2] ?? "";
-			        return `\n\n\`\`\`${lang}\n${n.textContent}\n\`\`\`\n\n`;
-			      }
-			      case "BLOCKQUOTE":
-			        return `\n\n${c.map(walk).join("").split("\n").map(i => `> ${i}`).join("\n")}\n\n`;
-			      // case "CITE":
-			      //   return n.textContent;
-			      default: {
-			        return n.textContent ?? "";
-			        // return `(??? ${n.nodeName} ???)`;
-			      }
-			    }
-			  }
+				// FIXME: don't mangle whitespace
+				function walk(n: Node): string {
+					if (n.nodeType === Node.COMMENT_NODE) return "";
+					if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
 
-				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").replace(/^\n|\n$/g, "");
+					// TODO: tables
+					const c = [...n.childNodes];
+					switch (n.nodeName) {
+						case "#document":
+						case "HTML":
+						case "BODY":
+						case "MAIN":
+						case "ARTICLE":
+						case "HEADER":
+						case "SECTION":
+						case "DIV":
+						case "TABLE":
+						case "TBODY":
+						case "THEAD":
+						case "TR":
+						case "TURBO-FRAME":
+						case "TASK-LISTS": // github
+						case "X-HTML-IMPORT":
+							return c.map(walk).join("");
+						case "CENTER":
+						case "SPAN":
+						case "LI":
+						case "TD":
+						case "TH":
+							return c.map(walk).join("");
+						case "H1":
+							return "\n\n# " + (n.textContent ?? "").trim() + "\n\n";
+						case "H2":
+							return "\n\n## " + (n.textContent ?? "").trim() + "\n\n";
+						case "H3":
+							return "\n\n### " + (n.textContent ?? "").trim() + "\n\n";
+						case "H4":
+							return "\n\n#### " + (n.textContent ?? "").trim() + "\n\n";
+						case "H5":
+							return "\n\n##### " + (n.textContent ?? "").trim() + "\n\n";
+						case "H6":
+							return "\n\n###### " + (n.textContent ?? "").trim() + "\n\n";
+						case "P":
+							return "\n\n" + c.map(walk).join("") + "\n\n";
+						case "B":
+						case "BOLD":
+						case "STRONG":
+							return `**${c.map(walk).join("")}**`;
+						case "EM":
+						case "I":
+							return `*${c.map(walk).join("")}*`;
+						case "CODE":
+							return `\`${c.map(walk).join("")}\``;
+						case "UL":
+							return `\n${
+								c.filter((i) => i.nodeName === "LI").map(walk).map((i) =>
+									`- ${i}`
+								).join("\n")
+							}\n`;
+						case "OL":
+							return `\n${
+								c.filter((i) => i.nodeName === "LI").map(walk).map((i, x) =>
+									`${x + 1}. ${i}`
+								).join("\n")
+							}\n`;
+						case "A": {
+							const href = (n as Element).getAttribute("href");
+							const text = c.map(walk).join("");
+							if (!text) return "\n";
+							if (!href) return text;
+							return `[${text}](${href})`;
+						}
+						case "PRE": {
+							const el = n as Element;
+							const lang = el.getAttribute("lang") ??
+								el.getAttribute("language") ??
+								el.getAttribute("class")?.match(/\b(lang|language)-(.+)\b/)
+									?.[2] ??
+								"";
+							return `\n\n\`\`\`${lang}\n${n.textContent}\n\`\`\`\n\n`;
+						}
+						case "BLOCKQUOTE":
+							return `\n\n${
+								c.map(walk).join("").split("\n").map((i) => `> ${i}`).join("\n")
+							}\n\n`;
+						// case "CITE":
+						//   return n.textContent;
+						default: {
+							return n.textContent ?? "";
+							// return `(??? ${n.nodeName} ???)`;
+						}
+					}
+				}
+
+				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").replace(
+					/^\n|\n$/g,
+					"",
+				);
 				console.log({ from: html, to: md });
 				const p = document.createElement("pre");
 				p.innerText = md;
@@ -414,7 +530,7 @@ export const Editor = (props: EditorProps) => {
 			// if (props.disabled)
 		});
 		createEffect(() => {
-			console.log("new state", props.state)
+			console.log("new state", props.state);
 			view.updateState(props.state);
 		});
 		onCleanup(() => view.destroy());

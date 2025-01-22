@@ -1,11 +1,12 @@
-import { Component, onCleanup  } from "solid-js";
+import { Component, onCleanup } from "solid-js";
 import { ChatCtx, chatctx, Data } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
 import { createDispatcher } from "./dispatch.ts";
 import { createClient } from "sdk";
 
-const BASE_URL = localStorage.getItem("base_url") ?? "https://chat.celery.eu.org";
+const BASE_URL = localStorage.getItem("base_url") ??
+	"https://chat.celery.eu.org";
 const TOKEN = localStorage.getItem("token")!;
 
 const App: Component = () => {
@@ -46,8 +47,8 @@ const App: Component = () => {
 				query: {
 					dir: "f",
 					limit: 100,
-				}
-			}
+				},
+			},
 		});
 		if (error) {
 			console.error(error);
@@ -61,7 +62,9 @@ const App: Component = () => {
 	const ctx: ChatCtx = {
 		client,
 		data,
-		dispatch: () => { throw new Error("oh no!"); }
+		dispatch: () => {
+			throw new Error("oh no!");
+		},
 	};
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
@@ -69,7 +72,7 @@ const App: Component = () => {
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
 	};
-	
+
 	const handleKeypress = (e: KeyboardEvent) => {
 		if (e.key === "Escape") dispatch({ do: "modal.close" });
 	};

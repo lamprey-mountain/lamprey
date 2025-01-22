@@ -23,12 +23,12 @@
 // //     this.client.rooms.insert(room);
 // // 		// this.client.events.emit("update");
 // //     return room;
-// //   }  
+// //   }
 // // }
 
 // // export class Thread {
 // //   public readonly timelines: TimelineSet;
-  
+
 // //   constructor(
 // //     public readonly client: Client,
 // //     public readonly id: string,
@@ -37,7 +37,7 @@
 // //   ) {
 // //     this.timelines = timelines ?? new TimelineSet(client, this.id);
 // //   }
-  
+
 // //   async fetch(): Promise<Thread> {
 // //     const data = await this.client.http("GET", `/api/v1/threads/${this.id}`);
 // //     const thread = new Thread(this.client, this.id, data, this.timelines);
@@ -91,11 +91,11 @@
 // //   }
 // // }
 
-// // export class TimelineSet {  
+// // export class TimelineSet {
 // //   public live: Timeline;
 // //   public timelines = new Set<Timeline>();
 // //   public map = new Map<MessageId, Timeline>();
-  
+
 // //   constructor(
 // //     public readonly client: Client,
 // //     public readonly thread_id: ThreadId,
@@ -116,7 +116,7 @@
 // // export class Timeline {
 // //   public events: TypedEmitter<TimelineEvents> = new EventEmitter();
 // //   private lock: Promise<void> = Promise.resolve();
-  
+
 // //   constructor(
 // //     public readonly client: Client,
 // //     public readonly thread_id: ThreadId,
@@ -131,7 +131,7 @@
 // //     await this.lock;
 // //     if (dir === "b" && this.isAtBeginning) return this;
 // //     if (dir === "f" && this.isAtEnd) return this;
-    
+
 // //     const url = new URL(`/api/v1/threads/${this.thread_id}/messages`, this.client.baseUrl);
 // //     url.searchParams.set("dir", dir);
 // //     url.searchParams.set("limit", limit.toString());
@@ -142,7 +142,7 @@
 // //     } else {
 // //       url.searchParams.set("from", before);
 // //     }
-    
+
 // //     const prom = this.client.httpDirect("GET", url.href);
 // //     this.lock = prom;
 // // 		const data = await prom;
@@ -158,7 +158,7 @@
 // // 		}
 // // 		// TODO: merge timelines
 // // 		return this;
-		
+
 // //     //   const events = data.chunk.map(intoEvent(room));
 // //     //   if (data.prev_batch) {
 // //     //     this.prevBatch = data.prev_batch;
@@ -223,7 +223,7 @@
 // // //     const other = timelines.timelineMap.get(event.id);
 // // //     if (!other) continue;
 // // //     if (tl === other) continue;
-    
+
 // // //     other._eventList.unshift(...events.slice(0, idx));
 // // //     other.isAtBeginning = tl.isAtBeginning;
 
@@ -234,14 +234,14 @@
 // // //     tl.emit("timelineReplace", other);
 // // //     tl = other;
 // // //   }
-  
+
 // // //   return tl;
 // // // }
 
 // // // abstract class TimelineSet {
 // // //   abstract timelines: Set<Timeline>;
 // // //   abstract timelineMap: Map<EventId, Timeline>;
-  
+
 // // //   merge(events: Array<Event>): Timeline | null {
 // // //     for (const event of events) {
 // // //       const tl = this.timelineMap.get(event.id);
@@ -258,7 +258,7 @@
 // // //   public live: ThreadTimeline;
 // // //   timelines: Set<ThreadTimeline> = new Set();
 // // //   timelineMap: Map<EventId, ThreadTimeline> = new Map();
-  
+
 // // //   constructor(public thread: Thread) {
 // // //     super();
 // // //     this.live = new ThreadTimeline(this, thread);
@@ -321,7 +321,7 @@
 
 // // export class Rooms extends Map<string, Accessor<Room>> {
 // //   public _setters: Map<string, Setter<Room>> = new Map();
-  
+
 // //   constructor(public readonly client: Client) {
 // //     super();
 // //   }
@@ -347,7 +347,7 @@
 
 // // export class Threads extends Map<string, Accessor<Thread>> {
 // //   public _setters: Map<string, Setter<Thread>> = new Map();
-  
+
 // //   constructor(public readonly client: Client) {
 // //     super();
 // //   }
@@ -360,7 +360,7 @@
 // //     this._setters.set(id, set);
 // //     return get;
 // //   }
-  
+
 // //   insert(thread: Thread) {
 // //     const update = this._setters.get(thread.id);
 // //     if (update) return update(thread);
@@ -438,7 +438,7 @@
 // 		console.log(`${method} ${url}`);
 // 		return this.httpDirect(method, `${this.baseUrl}${url}`, body);
 // 	}
-	
+
 // 	async httpDirect(
 // 		method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 // 		url: string,
@@ -465,11 +465,11 @@
 //   // fetchRoom(id: string): Promise<Room> {
 //   //   return untrack(this.rooms.get(id)).fetch();
 //   // }
-  
+
 //   // fetchThread(id: string): Promise<Thread> {
 //   //   return untrack(this.threads.get(id)).fetch();
 //   // }
-  
+
 //   // public async temp_fetchThreadsInRoom(id: string): Promise<Array<Thread>> {
 //   //   const data = await this.http("GET", `/api/v1/rooms/${id}/threads?dir=f`);
 //   //   const threads = [];
@@ -482,7 +482,7 @@
 // 		// // this.events.emit("update");
 //   //   return threads;
 //   // }
-  
+
 //   // public async temp_fetchRooms(): Promise<Array<Room>> {
 //   //   const data = await this.http("GET", `/api/v1/rooms?dir=f`);
 //   //   const rooms = [];

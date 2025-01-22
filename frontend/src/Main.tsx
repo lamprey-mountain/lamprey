@@ -1,6 +1,14 @@
-import { For, Switch, Match, Show, ParentProps, createEffect, createSignal } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Match,
+	ParentProps,
+	Show,
+	Switch,
+} from "solid-js";
 import { Portal } from "solid-js/web";
-import { RoomMenu, ThreadMenu, MessageMenu } from "./Menu.tsx";
+import { MessageMenu, RoomMenu, ThreadMenu } from "./Menu.tsx";
 import { ChatNav } from "./Nav.tsx";
 import { useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
@@ -8,10 +16,10 @@ import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { Router, Route, A } from "@solidjs/router";
+import { A, Route, Router } from "@solidjs/router";
 
 export const Main = () => {
-  const ctx = useCtx();
+	const ctx = useCtx();
 
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
@@ -60,111 +68,156 @@ export const Main = () => {
 	// 	}
 	// }
 
-  // HACK: wrap in Show since ctx might be null during hmr
-  // this router is extremely messy - i'm not sure if i'm going to keep it or if i'll roll my own
-  return (
-    <>
-	    <Show when={useCtx()}>
-		    <Router>
-			    <Route path="/" component={() =>
-			    	<>
-							<ChatNav />
-				    	<Home />
-			    	</>
-			    } />
-			    <Route path="/room/:room_id" component={(p) => {
-			    	const room = () => ctx.data.rooms[p.params.room_id];
-			    	return (
-					    <>
+	// HACK: wrap in Show since ctx might be null during hmr
+	// this router is extremely messy - i'm not sure if i'm going to keep it or if i'll roll my own
+	return (
+		<>
+			<Show when={useCtx()}>
+				<Router>
+					<Route
+						path="/"
+						component={() => (
+							<>
 								<ChatNav />
-								<Show when={room()}>
-							    <RoomHome room={room()} />
-								</Show>
-					    </>
-			    	)
-			    }}/>
-			    <Route path="/room/:room_id/settings" component={(p) => {
-			    	const room = () => ctx.data.rooms[p.params.room_id];
-			    	return (
-					    <>
-								<ChatNav />
-								<Show when={room()}>
-							    <RoomSettings room={room()} />
-								</Show>
-					    </>
-				    )
-			    }} />
-			    <Route path="/thread/:thread_id" component={(p) => {
-			    	const thread = () => ctx.data.threads[p.params.thread_id];
-			    	const room = () => ctx.data.rooms[thread()?.room_id];
+								<Home />
+							</>
+						)}
+					/>
+					<Route
+						path="/room/:room_id"
+						component={(p) => {
+							const room = () => ctx.data.rooms[p.params.room_id];
+							return (
+								<>
+									<ChatNav />
+									<Show when={room()}>
+										<RoomHome room={room()} />
+									</Show>
+								</>
+							);
+						}}
+					/>
+					<Route
+						path="/room/:room_id/settings"
+						component={(p) => {
+							const room = () => ctx.data.rooms[p.params.room_id];
+							return (
+								<>
+									<ChatNav />
+									<Show when={room()}>
+										<RoomSettings room={room()} />
+									</Show>
+								</>
+							);
+						}}
+					/>
+					<Route
+						path="/thread/:thread_id"
+						component={(p) => {
+							const thread = () => ctx.data.threads[p.params.thread_id];
+							const room = () => ctx.data.rooms[thread()?.room_id];
 
-						createEffect(() => {
-							if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
-								ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id })
-							}
-						});
-						
-						createEffect(() => {
-							if (!ctx.data.threads[p.params.thread_id]) {
-								ctx.dispatch({ do: "fetch.thread", thread_id: p.params.thread_id })
-							}
-						});
-			    	
-			    	return (
-					    <>
-								<ChatNav />
-								<Show when={room() && thread()}>
-							    <ChatMain room={room()} thread={thread()} />
-								</Show>
-					    </>
-			    	)
-			    }}/>
-			    <Route path="*404" component={() => 
-					  <div style="padding:8px">
-							not found
-						</div>
-					} />
-		    </Router>
+							createEffect(() => {
+								if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
+									ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id });
+								}
+							});
+
+							createEffect(() => {
+								if (!ctx.data.threads[p.params.thread_id]) {
+									ctx.dispatch({
+										do: "fetch.thread",
+										thread_id: p.params.thread_id,
+									});
+								}
+							});
+
+							return (
+								<>
+									<ChatNav />
+									<Show when={room() && thread()}>
+										<ChatMain room={room()} thread={thread()} />
+									</Show>
+								</>
+							);
+						}}
+					/>
+					<Route
+						path="*404"
+						component={() => (
+							<div style="padding:8px">
+								not found
+							</div>
+						)}
+					/>
+				</Router>
 				<Portal mount={document.getElementById("overlay")!}>
-					<For each={ctx.data.modals}>{(modal) => (
-						<Switch>
-							<Match when={modal.type === "alert"}>
-								<Modal>
-									<p>{modal.text}</p>
-									<div style="height: 8px"></div>
-									<button onClick={() => ctx.dispatch({ do: "modal.close" })}>okay!</button>
-								</Modal>
-							</Match>
-							<Match when={modal.type === "confirm"}>
-								<Modal>
-									<p>{modal.text}</p>
-									<div style="height: 8px"></div>
-									<button onClick={() => {modal.cont(true); ctx.dispatch({ do: "modal.close" })}}>okay!</button>&nbsp;
-									<button onClick={() => {modal.cont(false); ctx.dispatch({ do: "modal.close" })}}>nevermind...</button>
-								</Modal>
-							</Match>
-							<Match when={modal.type === "prompt"}>
-								<Modal>
-									<p>{modal.text}</p>
-									<div style="height: 8px"></div>
-									<form onSubmit={e => {
-										e.preventDefault();
-										const form = e.target as HTMLFormElement;
-										const input = form.elements.namedItem("text") as HTMLInputElement;
-										modal.cont(input.value);
-										ctx.dispatch({ do: "modal.close" });
-									}}>
-										<input type="text" name="text" autofocus />
+					<For each={ctx.data.modals}>
+						{(modal) => (
+							<Switch>
+								<Match when={modal.type === "alert"}>
+									<Modal>
+										<p>{modal.text}</p>
 										<div style="height: 8px"></div>
-										<input type="submit">done!</input>{" "}
+										<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
+											okay!
+										</button>
+									</Modal>
+								</Match>
+								<Match when={modal.type === "confirm"}>
+									<Modal>
+										<p>{modal.text}</p>
+										<div style="height: 8px"></div>
 										<button
-											onClick={() => {modal.cont(null); ctx.dispatch({ do: "modal.close" })}}
-										>nevermind...</button>
-									</form>
-								</Modal>
-							</Match>
-						</Switch>
-					)}</For>
+											onClick={() => {
+												modal.cont(true);
+												ctx.dispatch({ do: "modal.close" });
+											}}
+										>
+											okay!
+										</button>&nbsp;
+										<button
+											onClick={() => {
+												modal.cont(false);
+												ctx.dispatch({ do: "modal.close" });
+											}}
+										>
+											nevermind...
+										</button>
+									</Modal>
+								</Match>
+								<Match when={modal.type === "prompt"}>
+									<Modal>
+										<p>{modal.text}</p>
+										<div style="height: 8px"></div>
+										<form
+											onSubmit={(e) => {
+												e.preventDefault();
+												const form = e.target as HTMLFormElement;
+												const input = form.elements.namedItem(
+													"text",
+												) as HTMLInputElement;
+												modal.cont(input.value);
+												ctx.dispatch({ do: "modal.close" });
+											}}
+										>
+											<input type="text" name="text" autofocus />
+											<div style="height: 8px"></div>
+											<input type="submit">done!</input>{" "}
+											<button
+												onClick={() => {
+													modal.cont(null);
+													ctx.dispatch({ do: "modal.close" });
+												}}
+											>
+												nevermind...
+											</button>
+										</form>
+									</Modal>
+								</Match>
+							</Switch>
+						)}
+					</For>
 					<Show when={ctx.data.menu}>
 						<div class="contextmenu">
 							<div
@@ -192,10 +245,10 @@ export const Main = () => {
 						</div>
 					</Show>
 				</Portal>
-	    </Show>
-    </>
-  )
-}
+			</Show>
+		</>
+	);
+};
 
 const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -210,23 +263,25 @@ const Modal = (props: ParentProps) => {
 			</div>
 		</div>
 	);
-}
+};
 
 const Home = () => {
 	const ctx = useCtx();
 
 	async function createRoom() {
-  	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
+		const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
 		ctx.client.http("POST", "/api/v1/room", {
 			name,
 		});
 	}
 
 	async function useInvite() {
-  	const code = await ctx.dispatch({ do: "modal.prompt", text: "invite code?" });
+		const code = await ctx.dispatch({
+			do: "modal.prompt",
+			text: "invite code?",
+		});
 		ctx.client.http("POST", `/api/v1/invites/${code}`, {});
 	}
-	
 
 	return (
 		<div class="home">
@@ -244,4 +299,4 @@ const Home = () => {
 			<br />
 		</div>
 	);
-}
+};

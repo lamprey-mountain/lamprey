@@ -1,5 +1,5 @@
 {
-  "workspace": ["frontend", "ts-sdk"],
+	"workspace": ["frontend", "ts-sdk"],
 	"compilerOptions": {
 		"strict": true,
 		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns", "webworker"],
@@ -11,12 +11,12 @@
 	},
 	"lock": {
 		"path": "./deno.lock",
-  	// frozen lockfile has too many issues for now?
+		// frozen lockfile has too many issues for now?
 		"frozen": false
 	},
 	"imports": {
 		"nanoid": "npm:nanoid@^5.0.9",
 		"uuidv7": "npm:uuidv7@^1.0.2",
-		"sdk": "./ts-sdk/index.ts",
-	},
+		"sdk": "./ts-sdk/index.ts"
+	}
 }
