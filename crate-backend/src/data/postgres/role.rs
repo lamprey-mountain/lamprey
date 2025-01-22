@@ -95,6 +95,7 @@ impl DataRole for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         Ok(version_id)
     }
 

@@ -2,7 +2,7 @@ import { createEffect, For, Show, useContext } from "solid-js";
 import { RoomT } from "./types.ts";
 import { chatctx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
-import { useNavigate } from "@solidjs/router";
+import { A, useNavigate } from "@solidjs/router";
 
 export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useContext(chatctx)!;
@@ -60,8 +60,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 	// });
 
 	// <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
-	// TODO: use actual links instead of css styled divs
-	// TODO: <A href={`/room/${props.room.id}/settings`}>settings</A>
 	return (
 		<div class="room-home">
 			<h2>{props.room.name}</h2>
@@ -70,6 +68,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<br />
 			<button onClick={() => leaveRoom(room_id())}>leave room</button>
 			<br />
+			<A href={`/room/${props.room.id}/settings`}>settings</A>
 			<br />
 			<ul>
 				<For

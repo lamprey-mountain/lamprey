@@ -116,6 +116,7 @@ impl DataRoom for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         Ok(version_id)
     }
 }

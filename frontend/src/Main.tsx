@@ -98,14 +98,14 @@ export const Main = () => {
 						}}
 					/>
 					<Route
-						path="/room/:room_id/settings"
+						path="/room/:room_id/settings/:page?"
 						component={(p) => {
 							const room = () => ctx.data.rooms[p.params.room_id];
 							return (
 								<>
 									<ChatNav />
 									<Show when={room()}>
-										<RoomSettings room={room()} />
+										<RoomSettings room={room()} page={p.params.page} />
 									</Show>
 								</>
 							);
@@ -308,7 +308,7 @@ const Home = () => {
 			<br />
 			<A target="_self" href="/api/v1/auth/discord">discord login</A>
 			<br />
-			<A href="/api/docs">api docs</A>
+			<A target="_self" href="/api/docs">api docs</A>
 			<br />
 		</div>
 	);

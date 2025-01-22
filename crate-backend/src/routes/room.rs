@@ -103,9 +103,10 @@ async fn room_edit(
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
-    // let room = data.room_get(room_id).await?;
     data.room_update(room_id, json).await?;
     let room = data.room_get(room_id).await?;
+    s.sushi
+        .send(MessageServer::UpsertRoom { room: room.clone() })?;
     Ok(Json(room))
 }
 

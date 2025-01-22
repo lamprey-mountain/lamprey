@@ -1,55 +1,44 @@
-import {
-	createResource,
-	createSignal,
-	For,
-	Match,
-	onCleanup,
-	Show,
-	Switch,
-	VoidProps,
-} from "solid-js";
+import { createResource, For, onCleanup, Show, VoidProps } from "solid-js";
 import { useCtx } from "./context.ts";
 import { InviteT, MemberT, Pagination, RoleT, RoomT } from "./types.ts";
+import { A } from "@solidjs/router";
+import { Dynamic } from "solid-js/web";
 
-export const RoomSettings = (props: { room: RoomT }) => {
-	const [selectedTab, setSelectedTab] = createSignal("info");
+const tabs = [
+	{ name: "info", path: "", component: Info },
+	// TODO: { name: "invites", path: "invites", component: Invites },
+	// TODO: { name: "roles", path: "roles", component: Roles },
+	// TODO: { name: "members", path: "members", component: Members },
+];
+
+export const RoomSettings = (props: { room: RoomT; page: string }) => {
+	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
 
 	return (
 		<div class="settings">
 			<header>
-				room settings: {selectedTab()}
+				room settings: {currentTab()?.name}
 			</header>
 			<nav>
 				<ul>
-					<For each={["info", "invites", "roles", "members"]}>
+					<For each={tabs}>
 						{(tab) => (
 							<li>
-								<button
-									onClick={() => setSelectedTab(tab)}
-									classList={{ "selected": selectedTab() === tab }}
-								>
-									{tab}
-								</button>
+								<A href={`/room/${props.room.id}/settings/${tab.path}`}>
+									{tab.name}
+								</A>
 							</li>
 						)}
 					</For>
 				</ul>
 			</nav>
 			<main>
-				<Switch>
-					<Match when={selectedTab() === "info"}>
-						<Info room={props.room} />
-					</Match>
-					<Match when={selectedTab() === "invites"}>
-						<Invites room={props.room} />
-					</Match>
-					<Match when={selectedTab() === "roles"}>
-						<Roles room={props.room} />
-					</Match>
-					<Match when={selectedTab() === "members"}>
-						<Members room={props.room} />
-					</Match>
-				</Switch>
+				<Show when={currentTab()} fallback="unknown page">
+					<Dynamic
+						component={currentTab()?.component}
+						room={props.room}
+					/>
+				</Show>
 			</main>
 		</div>
 	);
@@ -58,18 +47,31 @@ export const RoomSettings = (props: { room: RoomT }) => {
 function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 
-	const setName = async () => {
-		ctx.client.http("PATCH", `/api/v1/room/${props.room.id}`, {
-			name: await ctx.dispatch({ do: "modal.prompt", text: "name?" }),
+	const setName = () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "name?",
+			cont(name) {
+				if (!name) return;
+				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+					params: { path: { room_id: props.room.id } },
+					body: { name },
+				});
+			},
 		});
 	};
 
-	const setDescription = async () => {
-		ctx.client.http("PATCH", `/api/v1/room/${props.room.id}`, {
-			description: await ctx.dispatch({
-				do: "modal.prompt",
-				text: "description?",
-			}),
+	const setDescription = () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "description?",
+			cont(description) {
+				if (typeof description !== "string") return;
+				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+					params: { path: { room_id: props.room.id } },
+					body: { description },
+				});
+			},
 		});
 	};
 	return (

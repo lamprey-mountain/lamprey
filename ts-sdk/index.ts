@@ -47,6 +47,10 @@ export function createClient(opts: ClientOptions): Client {
 			ws.send(JSON.stringify({ type: "Hello", token: opts.token }));
 		});
 
+		ws.addEventListener("close", () => {
+			setTimeout(setupWebsocket, 1000);
+		});
+		
 		ws.addEventListener("error", (e) => {
 			console.error(e);
 			setTimeout(setupWebsocket, 1000);
