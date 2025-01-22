@@ -146,8 +146,13 @@ impl Portal {
                         if let Some(existing) = existing {
                             files = files.keep(existing.discord_id);
                         } else {
-                            let bytes = reqwest::get(media.url.to_owned()).await?.error_for_status()?.bytes().await?;
-                            files = files.add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
+                            let bytes = reqwest::get(media.url.to_owned())
+                                .await?
+                                .error_for_status()?
+                                .bytes()
+                                .await?;
+                            files = files
+                                .add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                         }
                     }
                     // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
@@ -176,7 +181,11 @@ impl Portal {
                 } else {
                     let mut files = vec![];
                     for media in &message.attachments {
-                        let bytes = reqwest::get(media.url.to_owned()).await?.error_for_status()?.bytes().await?;
+                        let bytes = reqwest::get(media.url.to_owned())
+                            .await?
+                            .error_for_status()?
+                            .bytes()
+                            .await?;
                         files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                     }
                     let mut payload = ExecuteWebhook::new()

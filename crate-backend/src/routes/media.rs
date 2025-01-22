@@ -96,7 +96,11 @@ async fn media_upload(
     if up.user_id != session.user_id {
         return Err(Error::NotFound);
     }
-    debug!("continue upload for {}, file {:?}", media_id, up.temp_file.file_path());
+    debug!(
+        "continue upload for {}, file {:?}",
+        media_id,
+        up.temp_file.file_path()
+    );
     let stat = up.temp_file.metadata().await?;
     let current_size = stat.len();
     let current_off: u64 = headers
@@ -155,8 +159,7 @@ async fn media_upload(
             .await?;
         let size = up.create.size;
         drop(up);
-        s
-            .uploads
+        s.uploads
             .remove(&media_id)
             .expect("it was there a few milliseconds ago");
         media.url = s.presign(&media.url).await?;
@@ -213,7 +216,7 @@ async fn media_check(
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
             headers.insert("upload-length", up.create.size.into());
-            return Ok((StatusCode::NO_CONTENT, headers))
+            return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
     let media = s.data().media_select(media_id).await?;

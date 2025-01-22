@@ -27,7 +27,6 @@ pub enum Permission {
     // unsure about these or how they interact with other perms
     // ThreadForward,
     // MessageMove,
-
     View,
     MessageEdit,
 }

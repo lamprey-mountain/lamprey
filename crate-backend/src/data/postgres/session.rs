@@ -4,7 +4,10 @@ use types::SessionStatus;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{DbSession, DbSessionStatus, PaginationDirection, PaginationQuery, PaginationResponse, Session, SessionId, UserId};
+use crate::types::{
+    DbSession, DbSessionStatus, PaginationDirection, PaginationQuery, PaginationResponse, Session,
+    SessionId, UserId,
+};
 
 use crate::data::DataSession;
 
@@ -52,7 +55,7 @@ impl DataSession for Postgres {
             .await?;
         Ok(session.into())
     }
-    
+
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
         let status: DbSessionStatus = status.into();
         query!(
@@ -60,8 +63,8 @@ impl DataSession for Postgres {
             session_id.into_inner(),
             status as _,
         )
-            .execute(&self.pool)
-            .await?;
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -84,9 +87,10 @@ impl DataSession for Postgres {
             p.after.into_inner(),
             p.before.into_inner(),
             p.dir.to_string(),
-            (p.limit + 1) as i32)
-            .fetch_all(&mut *tx)
-            .await?;
+            (p.limit + 1) as i32
+        )
+        .fetch_all(&mut *tx)
+        .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM session WHERE user_id = $1",
             user_id.into_inner()
@@ -95,7 +99,11 @@ impl DataSession for Postgres {
         .await?;
         tx.rollback().await?;
         let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items.into_iter().take(p.limit as usize).map(Into::into).collect();
+        let mut items: Vec<_> = items
+            .into_iter()
+            .take(p.limit as usize)
+            .map(Into::into)
+            .collect();
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
@@ -107,9 +115,12 @@ impl DataSession for Postgres {
     }
 
     async fn session_delete(&self, session_id: SessionId) -> Result<()> {
-        query!(r#"DELETE FROM session WHERE id = $1"#, session_id.into_inner())
-            .execute(&self.pool)
-            .await?;
+        query!(
+            r#"DELETE FROM session WHERE id = $1"#,
+            session_id.into_inner()
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

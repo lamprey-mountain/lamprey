@@ -10,8 +10,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::types::{UserCreate, UserIdReq};
 use crate::ServerState;
 
-use crate::error::{Error, Result};
 use super::util::Auth;
+use crate::error::{Error, Result};
 
 /// User create
 #[utoipa::path(
@@ -29,15 +29,17 @@ pub async fn user_create(
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(session.user_id);
     let data = s.data();
-    let user = data.user_create(UserCreate {
-        parent_id,
-        name: body.name,
-        description: body.description,
-        status: body.status,
-        is_bot: body.is_bot,
-        is_alias: body.is_alias,
-        is_system: false,
-    }).await?;
+    let user = data
+        .user_create(UserCreate {
+            parent_id,
+            name: body.name,
+            description: body.description,
+            status: body.status,
+            is_bot: body.is_bot,
+            is_alias: body.is_alias,
+            is_system: false,
+        })
+        .await?;
     Ok((StatusCode::CREATED, Json(user)))
 }
 
@@ -53,7 +55,7 @@ pub async fn user_create(
 // )]
 // pub async fn user_list(
 //     Auth(session): Auth,
-    // State(s): State<Arc<ServerState>>,
+// State(s): State<Arc<ServerState>>,
 // ) -> Result<Json<()>> {
 //     todo!()
 // }
@@ -86,7 +88,8 @@ pub async fn user_update(
     let data = s.data();
     data.user_update(user_id, body).await?;
     let user = data.user_get(user_id).await?;
-    s.sushi.send(MessageServer::UpsertUser { user: user.clone() })?;
+    s.sushi
+        .send(MessageServer::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
 }
 

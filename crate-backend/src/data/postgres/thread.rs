@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, RoomId, Thread, ThreadCreate,
-    ThreadId, ThreadPatch, DbThread, ThreadVerId, UserId,
+    DbThread, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, Thread,
+    ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;

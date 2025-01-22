@@ -3,7 +3,7 @@ use sqlx::{query, query_as, Acquire};
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{User, UserCreate, UserId, UserPatch, DbUser, UserVerId};
+use crate::types::{DbUser, User, UserCreate, UserId, UserPatch, UserVerId};
 
 use crate::data::DataUser;
 
@@ -34,7 +34,7 @@ impl DataUser for Postgres {
         .await?;
         Ok(row.into())
     }
-    
+
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
@@ -61,15 +61,19 @@ impl DataUser for Postgres {
         .await?;
         Ok(version_id)
     }
-    
+
     async fn user_delete(&self, user_id: UserId) -> Result<()> {
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
-        query!("UPDATE usr SET deleted_at = $2 WHERE id = $1", user_id.into_inner(), now)
-            .execute(&self.pool)
-            .await?;
+        query!(
+            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+            user_id.into_inner(),
+            now
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
-    
+
     async fn user_get(&self, id: UserId) -> Result<User> {
         let row = query_as!(
             DbUser,
@@ -83,7 +87,7 @@ impl DataUser for Postgres {
         .await?;
         Ok(row.into())
     }
-    
+
     async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User> {
         let row = query_as!(
             DbUser,
@@ -97,7 +101,7 @@ impl DataUser for Postgres {
         .await?;
         Ok(row.into())
     }
-    
+
     async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()> {
         query!(
             "UPDATE usr SET discord_id = $2 WHERE id = $1",

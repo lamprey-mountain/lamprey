@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use types::{Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, UserId};
 
+use crate::error::Result;
 use crate::ServerState;
 use crate::{data::Data, types::RoleCreate};
-use crate::error::Result;
 
 mod oauth2;
 

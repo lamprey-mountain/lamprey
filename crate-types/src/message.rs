@@ -84,7 +84,7 @@ impl MessageType {
             MessageType::ThreadUpdate => false,
         }
     }
-    
+
     pub fn is_editable(&self) -> bool {
         match self {
             MessageType::Default => true,

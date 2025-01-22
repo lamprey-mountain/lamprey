@@ -1,5 +1,9 @@
 use serde::Deserialize;
-use types::{Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId};
+use types::{
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
+    RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus,
+    SessionToken, Thread, ThreadId, User, UserId, UserVerId,
+};
 use uuid::Uuid;
 
 pub struct DbRoom {
@@ -329,9 +333,15 @@ impl From<MediaRow> for Media {
             mime: row.mime,
             alt: row.alt,
             size: row.size.try_into().expect("database has negative size"),
-            height: row.height.map(|i| i.try_into().expect("database has negative height")),
-            width: row.width.map(|i| i.try_into().expect("database has negative width")),
-            duration: row.duration.map(|i| i.try_into().expect("database has negative duration")),
+            height: row
+                .height
+                .map(|i| i.try_into().expect("database has negative height")),
+            width: row
+                .width
+                .map(|i| i.try_into().expect("database has negative width")),
+            duration: row
+                .duration
+                .map(|i| i.try_into().expect("database has negative duration")),
         }
     }
 }
@@ -449,7 +459,7 @@ where
         #[serde(rename = "@self")]
         Variant,
     }
-    
+
     Helper::deserialize(deserializer).map(|_| ())
 }
 
@@ -462,6 +472,6 @@ where
 //         #[serde(rename = "@all")]
 //         Variant,
 //     }
-    
+
 //     Helper::deserialize(deserializer).map(|_| ())
 // }

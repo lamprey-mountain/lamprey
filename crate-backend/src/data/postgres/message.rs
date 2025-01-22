@@ -5,7 +5,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbMessage, DbMessageType, Message, MessageCreate, MessageId, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadId
+    DbMessage, DbMessageType, Message, MessageCreate, MessageId, MessageVerId, PaginationDirection,
+    PaginationQuery, PaginationResponse, ThreadId,
 };
 
 use crate::data::DataMessage;

@@ -9,8 +9,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::types::SessionIdReq;
 use crate::ServerState;
 
-use crate::error::{Error, Result};
 use super::util::Auth;
+use crate::error::{Error, Result};
 
 // /// Session create
 // #[utoipa::path(
@@ -86,17 +86,18 @@ pub async fn session_delete(
         SessionIdReq::SessionSelf => session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
-	// if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
-	// 	return new Response(null, { status: 204 });
-	// }
-	let data = s.data();
-	let target_session = data.session_get(session_id).await?;
+    // if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
+    // 	return new Response(null, { status: 204 });
+    // }
+    let data = s.data();
+    let target_session = data.session_get(session_id).await?;
     if target_session.user_id != session.user_id {
         return Err(Error::NotFound);
     }
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(session_id).await?;
-    s.sushi.send(types::MessageServer::DeleteSession { id: session_id })?;
+    s.sushi
+        .send(types::MessageServer::DeleteSession { id: session_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -121,12 +122,12 @@ pub async fn session_get(
         SessionIdReq::SessionSelf => session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
-	// if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
-	// 	return c.json({ error: "not found" }, 404);
-	// }
-	let data = s.data();
-	let session = data.session_get(session_id).await?;
-	Ok(Json(session))
+    // if (c.get("session_status") === SessionStatus.Unauthorized && session_id !== c.get("session_id")) {
+    // 	return c.json({ error: "not found" }, 404);
+    // }
+    let data = s.data();
+    let session = data.session_get(session_id).await?;
+    Ok(Json(session))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

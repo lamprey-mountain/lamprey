@@ -8,7 +8,11 @@ use utoipa::ToSchema;
 use super::{ids::SessionId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("super_secret_session_token")))]
+#[cfg_attr(
+    feature = "utoipa",
+    derive(ToSchema),
+    schema(examples("super_secret_session_token"))
+)]
 pub struct SessionToken(String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

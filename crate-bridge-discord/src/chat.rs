@@ -65,7 +65,8 @@ impl Unnamed {
         });
         loop {
             let Ok((mut client, _)) =
-                tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await else {
+                tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await
+            else {
                 warn!("websocket failed to connect, retrying in 1 second...");
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 continue;
@@ -95,7 +96,9 @@ impl Unnamed {
                     }
                     MessageServer::UpsertMessage { message } => {
                         info!("chat upsert message");
-                        if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+                        if message.author.id
+                            == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69"))
+                        {
                             continue;
                         }
                         self.globals.portal_send(

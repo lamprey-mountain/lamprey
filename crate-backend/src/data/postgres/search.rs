@@ -1,11 +1,13 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, Acquire};
-use types::{Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse, SearchMessageRequest};
-use uuid::Uuid;
+use sqlx::{query_as, Acquire};
+use types::{
+    Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
+    SearchMessageRequest,
+};
 
 use crate::data::postgres::Pagination;
 use crate::error::Result;
-use crate::types::{DbMessage, DbMessageType, DbUser, User, UserCreate, UserId, UserPatch, UserVerId};
+use crate::types::{DbMessage, DbMessageType, UserId};
 
 use crate::data::DataSearch;
 
@@ -22,7 +24,7 @@ impl DataSearch for Postgres {
         let p: Pagination<MessageId> = paginate.try_into()?;
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let items = query_as!( 
+        let items = query_as!(
             DbMessage,
             r#"
             with
@@ -75,21 +77,21 @@ impl DataSearch for Postgres {
         )
         .fetch_all(&mut *tx)
         .await?;
-    // TODO: get (approx?) total?
-    tx.rollback().await?;
-    let has_more = items.len() > p.limit as usize;
-    let mut items: Vec<_> = items
-        .into_iter()
-        .take(p.limit as usize)
-        .map(Into::into)
-        .collect();
-    if p.dir == PaginationDirection::B {
-        items.reverse();
-    }
-    Ok(PaginationResponse {
-        items,
-        total: 0,
-        has_more,
-    })
+        // TODO: get (approx?) total?
+        tx.rollback().await?;
+        let has_more = items.len() > p.limit as usize;
+        let mut items: Vec<_> = items
+            .into_iter()
+            .take(p.limit as usize)
+            .map(Into::into)
+            .collect();
+        if p.dir == PaginationDirection::B {
+            items.reverse();
+        }
+        Ok(PaginationResponse {
+            items,
+            total: 0,
+            has_more,
+        })
     }
 }

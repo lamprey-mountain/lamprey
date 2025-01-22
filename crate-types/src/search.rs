@@ -10,20 +10,19 @@ use utoipa::ToSchema;
 pub struct SearchMessageRequest {
     /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
     pub query: String,
-
     // TODO: fancier searching
     // #[serde(default)]
     // /// Only return messages in these rooms. Defaults to all rooms.
     // room_id: Vec<RoomId>,
-    
+
     // #[serde(default)]
     // /// Only return messages in these threads. Defaults to all threads.
     // thread_id: Vec<ThreadId>,
-    
+
     // #[serde(default)]
     // /// Only return messages from these users. Defaults to all threads.
     // user_id: Vec<UserId>,
-    
+
     // #[serde(default)]
     // /// Only return messages that have these features. Defaults to returning all messages.
     // features: Vec<SearchMessageFeatures>,
@@ -41,7 +40,7 @@ pub enum SearchMessageOrder {
     #[default]
     /// Return the newest matching messages first
     Newest,
-    
+
     /// Return the most relevant matching messages first
     Relevance,
 }
@@ -51,25 +50,25 @@ pub enum SearchMessageOrder {
 pub enum SearchMessageFeatures {
     /// Has attachment of any type
     Attachment,
-    
+
     /// Has attachment of type image/*
     Image,
-    
+
     /// Has attachment of type audio/*
     Audio,
-    
+
     /// Has attachment of type video/*
     Video,
-    
+
     /// Has a hyperlink
     Link,
-    
+
     /// Is pinned
     Pinned,
 
     /// Include messages from ignored users. By default these are filtered out.
     Ignored,
-    
+
     /// Include messages from ignored users. By default these are filtered out. Implicitly includes `Ignored`.
     Blocked,
 

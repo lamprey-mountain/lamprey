@@ -5,7 +5,10 @@ use types::UserId;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{DbPermission, DbRole, PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch, RoleVerId, RoomId};
+use crate::types::{
+    DbPermission, DbRole, PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch,
+    RoleVerId, RoomId,
+};
 
 use crate::data::DataRole;
 
@@ -58,7 +61,9 @@ impl DataRole for Postgres {
     ) -> Result<RoleVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let perms = patch.permissions.map(|p| p.into_iter().map(Into::into).collect());
+        let perms = patch
+            .permissions
+            .map(|p| p.into_iter().map(Into::into).collect());
         let role = query_as!(DbRole, r#"
             SELECT id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
             FROM role
@@ -67,7 +72,8 @@ impl DataRole for Postgres {
     	    .fetch_one(&mut *tx)
         	.await?;
         let version_id = RoleVerId(Uuid::now_v7());
-        query!(r#"
+        query!(
+            r#"
             UPDATE role SET
                 version_id = $2,
                 name = $3,
@@ -78,26 +84,30 @@ impl DataRole for Postgres {
                 is_default = $8
             WHERE id = $1
         "#,
-        role_id.into_inner(),
-        version_id.into_inner(),
-        patch.name.unwrap_or(role.name),
-        patch.description.unwrap_or(role.description),
-        perms.unwrap_or(role.permissions) as _,
-        patch.is_mentionable.unwrap_or(role.is_mentionable),
-        patch.is_self_applicable.unwrap_or(role.is_self_applicable),
-        patch.is_default.unwrap_or(role.is_default),
+            role_id.into_inner(),
+            version_id.into_inner(),
+            patch.name.unwrap_or(role.name),
+            patch.description.unwrap_or(role.description),
+            perms.unwrap_or(role.permissions) as _,
+            patch.is_mentionable.unwrap_or(role.is_mentionable),
+            patch.is_self_applicable.unwrap_or(role.is_self_applicable),
+            patch.is_default.unwrap_or(role.is_default),
         )
-    	    .execute(&mut *tx)
-        	.await?;
+        .execute(&mut *tx)
+        .await?;
         Ok(version_id)
     }
 
     async fn role_apply_default(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
-        query!("
+        query!(
+            "
     	  	INSERT INTO role_member (user_id, role_id)
     	  	SELECT $2 as u, id FROM role
     	  	WHERE room_id = $1 AND is_default = true
-        ", room_id.into_inner(), user_id.into_inner())
+        ",
+            room_id.into_inner(),
+            user_id.into_inner()
+        )
         .execute(&self.pool)
         .await?;
         Ok(())

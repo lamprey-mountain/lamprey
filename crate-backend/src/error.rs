@@ -93,7 +93,11 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        error!("Response error: status {}, message {:?}", self.get_status(), self);
+        error!(
+            "Response error: status {}, message {:?}",
+            self.get_status(),
+            self
+        );
         (
             self.get_status(),
             Json(json!({ "error": self.to_string() })),

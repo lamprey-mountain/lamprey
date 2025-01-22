@@ -1,7 +1,7 @@
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use std::fmt::Display;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -14,20 +14,11 @@ pub trait Identifier:
 macro_rules! genid {
     ($name:ident, $example:expr) => {
         #[derive(
-            Debug,
-            Clone,
-            Copy,
-            Hash,
-            PartialEq,
-            Eq,
-            PartialOrd,
-            Ord,
-            Serialize,
-            Deserialize,
+            Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
         )]
         #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples($example)))]
         pub struct $name(pub Uuid);
-        
+
         impl Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{}", self.0)

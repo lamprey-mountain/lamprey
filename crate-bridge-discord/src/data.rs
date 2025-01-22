@@ -80,10 +80,7 @@ impl From<AttachmentMetadata> for AttachmentMetadataRow {
 pub trait Data {
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
-    async fn get_attachment(
-        &self,
-        media_id: MediaId,
-    ) -> Result<Option<AttachmentMetadata>>;
+    async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>>;
     async fn get_attachment_dc(
         &self,
         attachment_id: DcAttachmentId,
@@ -146,11 +143,8 @@ impl Data for Globals {
         };
         Ok(meta)
     }
-    
-    async fn get_attachment(
-        &self,
-        media_id: MediaId,
-    ) -> Result<Option<AttachmentMetadata>> {
+
+    async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>> {
         let b1 = media_id.to_string();
         let row = query_as!(
             AttachmentMetadataRow,

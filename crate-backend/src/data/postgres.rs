@@ -17,11 +17,11 @@ mod role;
 mod role_member;
 mod room;
 mod room_member;
+mod search;
 mod session;
 mod thread;
 mod unread;
 mod user;
 mod util;
-mod search;
 
 pub use util::Pagination;

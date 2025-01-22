@@ -210,7 +210,7 @@ pub trait DataUser {
 
 // #[async_trait]
 // pub trait DataAuth {
-//     // DataAuth 
+//     // DataAuth
 //     async fn auth_put(&self, patch: UserCreate) -> Result<User>;
 // }
 

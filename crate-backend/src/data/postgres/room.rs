@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId, RoomPatch,
-    DbRoom, RoomVerId, UserId,
+    DbRoom, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;

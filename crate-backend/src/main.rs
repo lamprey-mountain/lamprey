@@ -19,8 +19,8 @@ use utoipa_scalar::{Scalar, Servable as _};
 pub mod data;
 pub mod error;
 mod routes;
-pub mod types;
 pub mod services;
+pub mod types;
 
 use error::Result;
 use uuid::Uuid;
@@ -41,11 +41,11 @@ struct ApiDoc;
 pub struct ServerState {
     // should this be global?
     pub config: Config,
-    
-    // TODO: move some of these into the db? or use something like redis? 
+
+    // TODO: move some of these into the db? or use something like redis?
     pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
     pub valid_oauth2_states: Arc<DashSet<Uuid>>,
-    
+
     // this is fine probably
     pub sushi: Sender<MessageServer>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
         .extract()?;
 
     debug!("Starting with config: {:#?}", config);
-    
+
     let sub = tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_str(&config.rust_log)?)
         .finish();

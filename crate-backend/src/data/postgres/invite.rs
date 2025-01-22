@@ -17,11 +17,11 @@ impl DataInvite for Postgres {
     ) -> Result<Invite> {
         todo!()
     }
-    
+
     async fn invite_select(&self, _code: InviteCode) -> Result<Invite> {
         todo!()
     }
-    
+
     async fn invite_delete(&self, _code: InviteCode) -> Result<()> {
         todo!()
     }

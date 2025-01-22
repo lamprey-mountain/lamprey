@@ -39,7 +39,6 @@ pub struct DiscordAuth {
 
     // /// ISO8601 timestamp when the access token expires
     // expires: String,
-    
     /// the user who has authorized, if the user has authorized with the identify scope
     ///
     /// i'm assuming that `user` always exists for now
@@ -89,7 +88,7 @@ impl Services {
         .expect("invalid url?");
         Ok(url.to_string())
     }
-    
+
     pub async fn oauth_exchange_code_for_token(&self, code: String) -> Result<OauthTokenResponse> {
         let client = reqwest::Client::new();
 

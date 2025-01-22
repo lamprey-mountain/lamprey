@@ -1,19 +1,15 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
-use axum::http::StatusCode;
+use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use serde::Deserialize;
-use types::{MessageId, MessageServer, PaginationQuery, RoomId, SearchMessageRequest, UserCreateRequest, UserId, UserPatch};
-use utoipa::ToSchema;
+use types::{MessageId, PaginationQuery, SearchMessageRequest};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::{UserCreate, UserIdReq};
 use crate::ServerState;
 
-use crate::error::{Error, Result};
 use super::util::Auth;
+use crate::error::Result;
 
 /// Search messages
 #[utoipa::path(
@@ -36,6 +32,5 @@ pub async fn search_messages(
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new()
-        .routes(routes!(search_messages))
+    OpenApiRouter::new().routes(routes!(search_messages))
 }

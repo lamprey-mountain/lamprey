@@ -10,8 +10,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        MessageServer, PaginationQuery, PaginationResponse, Permission,
-        Room, RoomCreate, RoomId, RoomPatch,
+        MessageServer, PaginationQuery, PaginationResponse, Permission, Room, RoomCreate, RoomId,
+        RoomPatch,
     },
     ServerState,
 };

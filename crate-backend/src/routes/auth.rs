@@ -1,23 +1,18 @@
 use std::sync::Arc;
 
 use axum::extract::Query;
+use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse};
-use axum::{extract::State, Json};
-use base64::Engine;
-use headers::authorization::Credentials;
-use headers::HeaderMapExt;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::debug;
-use types::{SessionCreate, SessionStatus};
-use url::Url;
+use types::SessionStatus;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::types::UserCreate;
 use crate::ServerState;
 
-use super::util::Auth;
 use crate::error::{Error, Result};
 
 // const validStates = new Set();
@@ -90,7 +85,11 @@ pub async fn auth_discord_redirect(
     let dc = srv.oauth_get_user(auth.access_token).await?;
     debug!("new discord user {:?}", dc);
     let data = s.data();
-    let user = match s.data().temp_user_get_by_discord_id(dc.user.id.clone()).await {
+    let user = match s
+        .data()
+        .temp_user_get_by_discord_id(dc.user.id.clone())
+        .await
+    {
         Ok(user) => user,
         Err(Error::NotFound) => {
             let user = data
@@ -120,7 +119,9 @@ pub async fn auth_discord_redirect(
            localStorage.setItem("user_id", "{}");
            location.href = "/";
          </script>
-    "#, s.token, user.id)))
+    "#,
+        s.token, user.id
+    )))
 }
 
 // /// Auth discord logout

@@ -12,11 +12,11 @@ mod util;
 // mod role;
 mod media;
 // mod member;
-mod sync;
-mod user;
-mod session;
 mod auth;
 mod search;
+mod session;
+mod sync;
+mod user;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
