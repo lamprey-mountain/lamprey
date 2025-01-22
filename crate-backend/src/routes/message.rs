@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    Json,
+    extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, Json
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -27,7 +25,7 @@ use crate::error::Result;
     params(("thread_id", description = "Thread id")),
     tags = ["message"],
     responses(
-        (status = CREATED, description = "Create message success", body = Message),
+        (status = CREATED, body = Message, description = "Create message success"),
     )
 )]
 async fn message_create(
@@ -35,7 +33,7 @@ async fn message_create(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreateRequest>,
-) -> Result<(StatusCode, Json<Message>)> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
@@ -92,10 +90,10 @@ async fn message_create(
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message",
-    params(("thread_id", description = "Thread id")),
+    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
     tags = ["message"],
     responses(
-        (status = OK, description = "List thread messages success"),
+        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     )
 )]
 async fn message_list(
@@ -103,7 +101,7 @@ async fn message_list(
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<PaginationResponse<Message>>> {
+) -> Result<impl IntoResponse> {
     let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
@@ -127,14 +125,14 @@ async fn message_list(
     ),
     tags = ["message"],
     responses(
-        (status = OK, description = "List thread messages success"),
+        (status = OK, body = Message, description = "List thread messages success"),
     )
 )]
 async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<Message>> {
+) -> Result<impl IntoResponse> {
     let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
@@ -286,6 +284,7 @@ async fn message_delete(
     get,
     path = "/thread/{thread_id}/message/{message_id}/version",
     params(
+        PaginationQuery<MessageVerId>,
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id")
     ),

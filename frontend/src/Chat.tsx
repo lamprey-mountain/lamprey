@@ -1,8 +1,6 @@
-import { createEffect, createSignal, For, on, onMount, Show, untrack, useContext, } from "solid-js";
+import { createEffect, createSignal, For, on, Show, untrack, useContext, } from "solid-js";
 import Editor from "./Editor.tsx";
 import { TimelineItemT, TimelineItem, getAttachment } from "./Messages.tsx";
-// import type { paths } from "../../openapi.d.ts";
-// import createFetcher from "npm:openapi-fetch";
 
 import { chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
@@ -201,14 +199,21 @@ export const ChatMain = (props: ChatProps) => {
 	// TODO: handle this with onSubmit if possible
 	async function handleUpload(f: File) {
 		console.log(f);
-		const { media_id, upload_url } = await ctx.client.http("POST", "/api/v1/media", {
-			filename: f.name,
-			size: f.size,
+		const { data, error } = await ctx.client.http.POST("/api/v1/media", {
+			body: {
+				filename: f.name,
+				size: f.size,
+			},
 		});
-		const r = await fetch(upload_url, {
+		if (error) {
+			ctx.dispatch({ do: "modal.alert", text: "failed to upload: " + error });
+			return;
+		}
+		const { upload_url } = data;
+		const r = await fetch(upload_url!, {
 			method: "PATCH",
 			headers: {
-				authorization: ctx.client.token,
+				"authorization": ctx.client.opts.token,
 				"upload-offset": "0",
 			},
 			body: f,

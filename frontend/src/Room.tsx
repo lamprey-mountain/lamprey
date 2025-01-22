@@ -1,9 +1,8 @@
-import { createEffect, createResource, For, Show, useContext } from "solid-js";
-import { MemberT, Pagination, RoomT, ThreadT } from "./types.ts";
+import { createEffect, For, Show, useContext } from "solid-js";
+import { RoomT } from "./types.ts";
 import { chatctx } from "./context.ts";
-import { Message } from "./Messages.tsx";
 import { getTimestampFromUUID } from "sdk";
-import { A, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 
 export const RoomHome = (props: { room: RoomT }) => {
   const ctx = useContext(chatctx)!;
@@ -20,16 +19,28 @@ export const RoomHome = (props: { room: RoomT }) => {
 		ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() })
 	});
 	
-	async function createThread(room_id: string) {
-  	const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
-		ctx.client.http("POST", `/api/v1/room/${room_id}/thread`, {
-			name
-		});
+	function createThread(room_id: string) {
+  	ctx.dispatch({
+  		do: "modal.prompt",
+  		text: "name?",
+	  	cont(name) {
+	  		if (!name) return;
+				ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
+					params: {
+						path: { room_id },
+					},
+					body: { name },
+				});
+	  	}
+	  });
 	}
 	
-	async function leaveRoom(room_id: string) {
-  	if (!await ctx.dispatch({ do: "modal.confirm", text: "are you sure you want to leave?" })) return;
-		ctx.client.http("DELETE", `/api/v1/room/${room_id}/member/@self`);
+	function leaveRoom(_room_id: string) {
+  	ctx.dispatch({ do: "modal.confirm", text: "are you sure you want to leave?",
+  		cont() {
+				// TODO: ctx.client.http("DELETE", `/api/v1/room/${room_id}/member/@self`);
+  		}
+  	});
 	}
 
 	const nav = useNavigate();

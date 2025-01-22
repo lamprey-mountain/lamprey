@@ -1,5 +1,5 @@
-import { ValidComponent, ParentProps, createSignal, Show, JSX, Accessor, onCleanup } from "solid-js";
-import { Dynamic, Portal } from "solid-js/web";
+import { ValidComponent, createSignal, Show, onCleanup } from "solid-js";
+import { Portal } from "solid-js/web";
 import { shift, offset, autoUpdate, flip, Placement } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 

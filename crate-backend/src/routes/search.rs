@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::{MessageId, PaginationQuery, SearchMessageRequest};
+use types::{Message, MessageId, PaginationQuery, PaginationResponse, SearchMessageRequest};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
@@ -17,7 +17,7 @@ use crate::error::Result;
     path = "/search/message",
     tags = ["search"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
 )]
 pub async fn search_messages(

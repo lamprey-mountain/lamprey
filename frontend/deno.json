@@ -18,7 +18,6 @@
 		"prosemirror-model": "npm:prosemirror-model@^1.24.1",
 		"prosemirror-state": "npm:prosemirror-state@^1.4.3",
 		"prosemirror-view": "npm:prosemirror-view@^1.37.1",
-		"sdk": "./src/sdk/index.ts",
 		"solid-floating-ui": "npm:solid-floating-ui",
 		"solid-js": "npm:solid-js@^1.9.3",
 		"tailwindcss": "npm:tailwindcss",

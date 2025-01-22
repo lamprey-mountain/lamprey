@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use super::Identifier;
 
@@ -14,6 +14,52 @@ pub struct PaginationQuery<I: Identifier> {
     pub to: Option<I>,
     pub dir: Option<PaginationDirection>,
     pub limit: Option<u16>,
+}
+
+// unfortunately, utoipa has issues with nested generics (Option<I>)
+// TODO: better documentation generation
+#[cfg(feature = "utoipa")]
+impl<I: Identifier> IntoParams for PaginationQuery<I> {
+    fn into_params(
+        parameter_in_provider: impl Fn() -> Option<utoipa::openapi::path::ParameterIn>,
+    ) -> Vec<utoipa::openapi::path::Parameter> {
+        use utoipa::openapi::{path::ParameterBuilder, ObjectBuilder};
+        let ident = ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::String)
+            .build();
+        let limit = ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .minimum(Some(0))
+            .maximum(Some(100))
+            .default(Some(10.into()))
+            .build();
+        let dir = ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::String)
+            .enum_values(Some(["b", "f"]))
+            .build();
+        vec![
+            ParameterBuilder::new()
+                .name("from")
+                .parameter_in(parameter_in_provider().unwrap_or_default())
+                .schema(Some(ident.clone()))
+                .build(),
+            ParameterBuilder::new()
+                .name("to")
+                .parameter_in(parameter_in_provider().unwrap_or_default())
+                .schema(Some(ident))
+                .build(),
+            ParameterBuilder::new()
+                .name("dir")
+                .parameter_in(parameter_in_provider().unwrap_or_default())
+                .schema(Some(dir))
+                .build(),
+            ParameterBuilder::new()
+                .name("limit")
+                .parameter_in(parameter_in_provider().unwrap_or_default())
+                .schema(Some(limit))
+                .build(),
+        ]
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, PartialEq, Eq)]

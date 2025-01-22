@@ -4,6 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use types::Session;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::SessionIdReq;
@@ -110,7 +111,7 @@ pub async fn session_delete(
     ),
     tags = ["session"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = Session, description = "success"),
     )
 )]
 pub async fn session_get(

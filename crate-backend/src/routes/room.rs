@@ -64,6 +64,7 @@ async fn room_get(
     get,
     path = "/room",
     tags = ["room"],
+    params(PaginationQuery<RoomId>),
     responses(
         (status = 200, description = "Paginate room success", body = PaginationResponse<Room>),
     )

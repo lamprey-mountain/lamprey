@@ -1,9 +1,6 @@
 import { JSX } from "solid-js/jsx-runtime";
 import { For, on, onMount } from "solid-js";
 import { Accessor, createSignal, createEffect, createComputed, onCleanup } from "solid-js";
-import { reconcile } from "solid-js/store";
-import { MessageT } from "./types.ts";
-import { Data } from "./context.ts";
 
 export type TimelineStatus = "loading" | "update" | "ready";
 
@@ -13,12 +10,12 @@ export type SliceInfo = {
 };
 
 // TODO: dynamically calculate how many events are needed
-const SLICE_COUNT = 100;
+// const SLICE_COUNT = 100;
 // const PAGINATE_COUNT = SLICE_COUNT * 3;
-const PAGINATE_COUNT = SLICE_COUNT;
-const AUTOSCROLL_MARGIN = 5;
-const SCROLL_MARGIN = 100;
-const PAGINATE_MARGIN = SCROLL_MARGIN + 50;
+// const PAGINATE_COUNT = SLICE_COUNT;
+// const AUTOSCROLL_MARGIN = 5;
+// const SCROLL_MARGIN = 100;
+// const PAGINATE_MARGIN = SCROLL_MARGIN + 50;
 
 // export function shouldSplit(msg: Event, prev?: Event) {
 //   if (!prev) return true;

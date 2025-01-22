@@ -1,7 +1,6 @@
-import { For, JSX, ParentProps, VoidProps, createSelector, createSignal, createUniqueId, useContext } from "solid-js";
-import { Portal, Show } from "solid-js/web";
+import { JSX, ParentProps, createSignal, createUniqueId, useContext } from "solid-js";
 import { useFloating } from "solid-floating-ui";
-import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "./context.ts";
 import { MessageT, RoomT, ThreadT } from "./types.ts";
 
@@ -24,7 +23,7 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 // TODO: move this out of global scope
 // TODO: use triangle to submenu corners instead of dot with x axis
 const pos: Array<[number, number]> = [];
-globalThis.addEventListener("mousemove", (e) => {
+globalThis.addEventListener("mousemove", (e: MouseEvent) => {
   pos.push([e.x, e.y]);
   if (pos.length > 5) pos.shift();
   let vx = 0, vy = 0;

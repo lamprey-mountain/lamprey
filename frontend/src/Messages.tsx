@@ -1,25 +1,11 @@
 // import { Tooltip } from "./Atoms.tsx";
 import { getTimestampFromUUID } from "sdk";
-import {
-Accessor,
-	createEffect,
-	createRoot,
-	createSignal,
-	For,
-	lazy,
-	Match,
-	onCleanup,
-	onMount,
-	ParentProps,
-	Show,
-	Switch,
-} from "solid-js";
+import { For, Show } from "solid-js";
 import { AttachmentT, MessageT, MessageType, ThreadT, UserT } from "./types.ts";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
 import { useCtx } from "./context.ts";
-import { tooltip } from "./Tooltip.tsx";
 
 // const Tooltip = (props: ParentProps<{ tip: any, attrs: any }>) => props.children;
 
@@ -44,18 +30,18 @@ type UserPopupProps = {
 	user: UserT;
 };
 
-const UserTooltip = (props: UserPopupProps) => {
-	// TODO: click to view full profile
-	return (
-		<div class="user">
-			<h3>{props.user.name}</h3>
-			<Show when={props.user.description} fallback={<p><em>no description</em></p>}>
-				<p>{props.user.description}</p>
-			</Show>
-			<code>{props.user.id}</code>
-		</div>
-	);
-};
+// const UserTooltip = (props: UserPopupProps) => {
+// 	// TODO: click to view full profile
+// 	return (
+// 		<div class="user">
+// 			<h3>{props.user.name}</h3>
+// 			<Show when={props.user.description} fallback={<p><em>no description</em></p>}>
+// 				<p>{props.user.description}</p>
+// 			</Show>
+// 			<code>{props.user.id}</code>
+// 		</div>
+// 	);
+// };
 
 type MessageProps = {
 	message: MessageT;
@@ -155,7 +141,7 @@ export const Message = (props: MessageProps) => {
 		if (props.message.type === MessageType.ThreadUpdate) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
-			const patch = props.message.metadata;
+			const patch = props.message.metadata as any;
 			if (patch.name) updates.push(`set name to ${patch.name}`);
 			if (patch.description) updates.push(patch.description ? `set description to ${patch.description}` : "");
 			if (patch.is_locked) updates.push(patch.is_locked ? "locked thread" : "unlocked thread");

@@ -1,6 +1,15 @@
 import { createContext, useContext } from "solid-js";
-import { Client } from "sdk";
-import { AttachmentT, InviteT, MemberT, MessageT, RoleT, RoomT, ThreadT, UserT } from "./types.ts";
+import { Client, types } from "sdk";
+import {
+	AttachmentT,
+	InviteT,
+	MemberT,
+	MessageT,
+	RoleT,
+	RoomT,
+	ThreadT,
+	UserT,
+} from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 
 // export type View
@@ -9,81 +18,105 @@ import type { EditorState } from "prosemirror-state";
 //   | { view: "room-settings", room: RoomT }
 //   | { view: "thread", thread: ThreadT, room: RoomT }
 
-export type TimelineItem
-	= { type: "remote", message: MessageT }
-	| { type: "local",  message: MessageT }
-	| { type: "hole" }
+export type TimelineItem =
+	| { type: "remote"; message: MessageT }
+	| { type: "local"; message: MessageT }
+	| { type: "hole" };
 
 type Slice = {
-	start: number,
-	end: number,
+	start: number;
+	end: number;
 	// _: Symbol,
-}
+};
 
 export type ThreadState = {
-	editor_state: EditorState,
-	reply_id: string | null,
-	scroll_pos: number | null,
-	read_marker_id: string | null,
-	attachments: Array<AttachmentT>,
-}
+	editor_state: EditorState;
+	reply_id: string | null;
+	scroll_pos: number | null;
+	read_marker_id: string | null;
+	attachments: Array<AttachmentT>;
+};
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
-	rooms: Record<string, RoomT>,
-	room_members: Record<string, Record<string, MemberT>>,
-	room_roles: Record<string, Record<string, RoleT>>,
-	threads: Record<string, ThreadT>,
-	messages: Record<string, MessageT>,
-	timelines: Record<string, Array<TimelineItem>>,
-	slices: Record<string, Slice>,
-	invites: Record<string, InviteT>,
-	users: Record<string, UserT>,
-	user: UserT | null,
-	thread_state: Record<string, ThreadState>,
-	modals: Array<any>,
-	menu: any | null,
+	rooms: Record<string, RoomT>;
+	room_members: Record<string, Record<string, MemberT>>;
+	room_roles: Record<string, Record<string, RoleT>>;
+	threads: Record<string, ThreadT>;
+	messages: Record<string, MessageT>;
+	timelines: Record<string, Array<TimelineItem>>;
+	slices: Record<string, Slice>;
+	invites: Record<string, InviteT>;
+	users: Record<string, UserT>;
+	user: UserT | null;
+	thread_state: Record<string, ThreadState>;
+	modals: Array<Modal>;
+	menu: Menu | null;
 	// view: View,
+};
+
+type Menu =
+	& {
+		x: number;
+		y: number;
+	}
+	& (
+		| { type: "room"; room: RoomT }
+		| { type: "thread"; thread: ThreadT }
+		| { type: "message"; message: MessageT }
+	);
+
+type Modal =
+	| { type: "alert"; text: string }
+	| {
+		type: "confirm";
+		text: string;
+		cont: (confirmed: boolean) => void;
+	}
+	| {
+		type: "prompt";
+		text: string;
+		cont: (text?: string) => void;
+	};
+
+export type Action = // = { do: "setView", to: View }
+| { do: "paginate"; thread_id: string; dir: "f" | "b" }
+| { do: "goto"; thread_id: string; event_id: string }
+| { do: "menu"; menu: Menu | null }
+// | { do: "modal.open", modal: any }
+| { do: "modal.close" }
+| { do: "modal.alert"; text: string }
+| { do: "modal.prompt"; text: string; cont: (text?: string) => void }
+| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
+| { do: "thread.init"; thread_id: string; read_id?: string }
+| { do: "thread.reply"; thread_id: string; reply_id: string | null }
+| { do: "thread.scroll_pos"; thread_id: string; pos: number | null }
+| {
+	do: "thread.mark_read";
+	thread_id: string;
+	version_id?: string;
+	delay?: boolean;
+	also_local?: boolean;
 }
-
-type Menu = {
-	x: number,
-	y: number,
-} & (any
-| { type: "room", room: RoomT }
-| { type: "thread", thread: ThreadT }
-| { type: "message", message: MessageT }
-)
-
-export type Action
-	// = { do: "setView", to: View }
-	= { do: "paginate", thread_id: string, dir: "f" | "b" }
-	| { do: "goto", thread_id: string, event_id: string }
-	| { do: "menu", menu: Menu }
-	// | { do: "modal.open", modal: any }
-	| { do: "modal.close" }
-	| { do: "modal.prompt", text: string }
-	| { do: "modal.alert", text: string }
-	| { do: "modal.confirm", text: string }
-	| { do: "thread.init", thread_id: string, read_id?: string }
-	| { do: "thread.reply", thread_id: string, reply_id: string | null }
-	| { do: "thread.scroll_pos", thread_id: string, pos: number | null }
-	| { do: "thread.mark_read", thread_id: string, version_id?: string, delay?: boolean, also_local?: boolean }
-	| { do: "thread.attachments", thread_id: string, attachments: Array<AttachmentT> }
-	| { do: "fetch.room", room_id: string }
-	| { do: "fetch.thread", thread_id: string }
-	| { do: "fetch.room_threads", room_id: string }
-	| { do: "server", msg: any }
+| {
+	do: "thread.attachments";
+	thread_id: string;
+	attachments: Array<AttachmentT>;
+}
+| { do: "fetch.room"; room_id: string }
+| { do: "fetch.thread"; thread_id: string }
+| { do: "fetch.room_threads"; room_id: string }
+| { do: "server"; msg: types.MessageServer };
 
 export type AttachmentCreateT = {
-	id: string,
+	id: string;
 	// file: File,
-}
+};
 
 export type ChatCtx = {
 	client: Client;
-	data: Data,
-	dispatch: (action: Action) => Promise<any>,
+	data: Data;
+	dispatch: (action: Action) => Promise<void>;
 };
 
 export const chatctx = createContext<ChatCtx>();

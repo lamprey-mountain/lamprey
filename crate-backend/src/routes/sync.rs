@@ -21,7 +21,7 @@ use crate::error::{Error, Result};
 #[utoipa::path(
     get,
     path = "/sync",
-    tags = ["invite"],
+    tags = ["sync"],
     responses(
         (status = UPGRADE_REQUIRED, description = "success"),
     )

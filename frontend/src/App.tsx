@@ -1,40 +1,28 @@
-import { Component, Show, batch as solidBatch } from "solid-js";
-import { createEffect, createSignal, onCleanup } from "solid-js";
-import { Client } from "sdk";
-import { ChatCtx, chatctx, Data, useCtx } from "./context.ts";
-import { createStore, produce } from "solid-js/store";
-import { InviteT, MemberT, MessageT, RoleT } from "./types.ts";
+import { Component, onCleanup  } from "solid-js";
+import { ChatCtx, chatctx, Data } from "./context.ts";
+import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
-import { createDispatcher, createWebsocketHandler } from "./dispatch.ts";
-import { createReconnectingWS } from "@solid-primitives/websocket";
-import { Router, Route, useLocation } from "@solidjs/router";
-// import { PGlite } from "@electric-sql/pglite";
-// global.PGlite = PGlite;
+import { createDispatcher } from "./dispatch.ts";
+import { createClient } from "sdk";
 
-// const TOKEN = "0a11b93f-ff19-4c56-9bd2-d25bede776de";
 const BASE_URL = localStorage.getItem("base_url") ?? "https://chat.celery.eu.org";
 const TOKEN = localStorage.getItem("token")!;
 
-const SLICE_LEN = 100;
-const PAGINATE_LEN = 30;
-
 const App: Component = () => {
-	// const [hash, setHash] = createSignal(location.hash.slice(1));
-	const [title, setTitle] = createSignal(document.title);
+	const client = createClient({
+		baseUrl: BASE_URL,
+		token: TOKEN,
+		onMessage(msg) {
+			console.log("recv", msg);
+			ctx.dispatch({
+				do: "server",
+				msg,
+			});
+		},
+	});
 
-	const ws = createReconnectingWS(`${BASE_URL}/api/v1/sync`);
-	onCleanup(() => ws.close());
-	// const state = createWSState(ws);
-	ws.addEventListener("message", (e) => {
-		handleMessage(JSON.parse(e.data));
-	});
-	ws.addEventListener("open", (e) => {
-		console.log("opened");
-		ws.send(JSON.stringify({ type: "Hello", token: TOKEN }));
-	});
-	ws.addEventListener("error", (e) => {
-		console.error(e);
-	});
+	client.start();
+	onCleanup(() => client.stop());
 
 	const [data, update] = createStore<Data>({
 		rooms: {},
@@ -52,10 +40,19 @@ const App: Component = () => {
 		menu: null,
 	});
 
-	const client = new Client(TOKEN, BASE_URL);
-
 	(async () => {
-		const data = await client.http("GET", `/api/v1/room?dir=f&limit=100`);
+		const { data, error } = await client.http.GET("/api/v1/room", {
+			params: {
+				query: {
+					dir: "f",
+					limit: 100,
+				}
+			}
+		});
+		if (error) {
+			console.error(error);
+			return;
+		}
 		for (const room of data.items) {
 			update("rooms", room.id, room);
 		}
@@ -68,25 +65,20 @@ const App: Component = () => {
 	};
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
-	const handleMessage = createWebsocketHandler(ws, ctx);
 
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
 	};
-
-	// const handleHashChange = () => setHash(location.hash.slice(1));
-	// globalThis.addEventListener("hashchange", handleHashChange);
-	globalThis.addEventListener("click", handleClick);
-	onCleanup(() => {
-		// globalThis.removeEventListener("hashchange", handleHashChange);
-		globalThis.removeEventListener("click", handleClick);
-	});
-	createEffect(() => document.title = title());
-	// createEffect(() => location.hash = hash());
-	// createEffect(() => setTitle(parts.get(hash())?.title ?? "unknown"));
-
-	globalThis.addEventListener("keydown", e => {
+	
+	const handleKeypress = (e: KeyboardEvent) => {
 		if (e.key === "Escape") dispatch({ do: "modal.close" });
+	};
+
+	globalThis.addEventListener("click", handleClick);
+	globalThis.addEventListener("keydown", handleKeypress);
+	onCleanup(() => {
+		globalThis.removeEventListener("click", handleClick);
+		globalThis.removeEventListener("keydown", handleKeypress);
 	});
 
 	return (

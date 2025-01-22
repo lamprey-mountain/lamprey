@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    Json,
+    extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, Json
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -29,7 +27,7 @@ use crate::error::Result;
     params(("room_id", description = "Room id")),
     tags = ["thread"],
     responses(
-        (status = CREATED, description = "Create thread success", body = Thread),
+        (status = CREATED, body = Thread, description = "Create thread success"),
     )
 )]
 async fn thread_create(
@@ -37,7 +35,7 @@ async fn thread_create(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadCreateRequest>,
-) -> Result<(StatusCode, Json<Thread>)> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let user_id = session.user_id;
     let perms = data.permission_room_get(user_id, room_id).await?;
@@ -79,14 +77,14 @@ async fn thread_create(
     params(("thread_id", description = "Thread id")),
     tags = ["thread"],
     responses(
-        (status = OK, description = "Get thread success", body = Thread),
+        (status = OK, body = Thread, description = "Get thread success"),
     )
 )]
 async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<(StatusCode, Json<Thread>)> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
@@ -99,10 +97,10 @@ async fn thread_get(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread",
-    params(("id", description = "Room id")),
+    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
     tags = ["thread"],
     responses(
-        (status = OK, description = "List room threads success"),
+        (status = OK, body = PaginationResponse<Thread>, description = "List room threads success"),
     )
 )]
 async fn thread_list(
@@ -110,7 +108,7 @@ async fn thread_list(
     Query(q): Query<PaginationQuery<ThreadId>>,
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<PaginationResponse<Thread>>> {
+) -> Result<impl IntoResponse> {
     let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_room_get(user_id, room_id).await?;
@@ -128,8 +126,8 @@ async fn thread_list(
     ),
     tags = ["thread"],
     responses(
-        (status = OK, description = "edit message success"),
-        (status = NOT_MODIFIED, description = "no change"),
+        (status = OK, body = Thread, description = "edit message success"),
+        (status = NOT_MODIFIED, body = Thread, description = "no change"),
     )
 )]
 async fn thread_update(
@@ -137,7 +135,7 @@ async fn thread_update(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadPatch>,
-) -> Result<Json<Thread>> {
+) -> Result<impl IntoResponse> {
     let user_id = session.user_id;
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;

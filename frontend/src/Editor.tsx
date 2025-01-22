@@ -5,8 +5,6 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { marked, Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
-// @ts-types="npm:@types/sanitize-html@^2.13.0"
-import sanitizeHtml from "npm:sanitize-html";
 
 const md = marked.use({
 	breaks: true,

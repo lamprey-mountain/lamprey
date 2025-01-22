@@ -50,11 +50,18 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   			const slice = ctx.data.slices[thread_id];
   			console.log("paginate", { dir, thread_id, slice });
   			if (!slice) {
-  				const batch = await ctx.client.http(
-  					"GET",
-  					`/api/v1/thread/${thread_id}/message?dir=b&from=ffffffff-ffff-ffff-ffff-ffffffffffff&limit=100`,
-  				);
-  				const tl = batch.items.map((i: MessageT) => ({
+  				const { data: batch, error } = await ctx.client.http.GET("/api/v1/thread/{thread_id}/message", {
+  					params: {
+  						path: { thread_id },
+  						query: {
+  							dir: "b",
+  							from: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+  							limit: 100,
+  						},
+  					}
+  				});
+  				if (error) throw error;
+  				const tl: Array<TimelineItem> = batch.items.map((i: MessageT) => ({
   					type: "remote" as const,
   					message: i,
   				}));
@@ -80,10 +87,18 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   				if (startItem?.type === "hole") {
   					const from = nextItem.type === "remote" ? nextItem.message.id :
   						"ffffffff-ffff-ffff-ffff-ffffffffffff";
-  					batch = await ctx.client.http(
-  						"GET",
-  						`/api/v1/thread/${thread_id}/message?dir=b&limit=100&from=${from}`,
-  					);
+  					const {data, error} = await ctx.client.http.GET("/api/v1/thread/{thread_id}/message", {
+  						params: {
+  							path: { thread_id },
+	  						query: {
+	  							dir: "b",
+	  							limit: 100,
+	  							from,
+	  						},
+  						},
+  					});
+  					if (error) throw error;
+  					batch = data;
   				}
 					solidBatch(() => {
 						if (batch) {
@@ -115,10 +130,18 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   				if (startItem.type === "hole") {
   					const from = nextItem.type === "remote" ? nextItem.message.id :
   						"00000000-0000-0000-0000-000000000000";
-  					batch = await ctx.client.http(
-  						"GET",
-  						`/api/v1/thread/${thread_id}/message?dir=f&limit=100&from=${from}`,
-  					);
+  					const {data, error} = await ctx.client.http.GET("/api/v1/thread/{thread_id}/message", {
+  						params: {
+  							path: { thread_id },
+	  						query: {
+	  							dir: "f",
+	  							limit: 100,
+	  							from,
+	  						},
+  						},
+  					});
+  					if (error) throw error;
+  					batch = data;
   				}
 
   				// PERF: indexOf 115ms
@@ -172,24 +195,22 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   			return;
   		}
   		case "modal.confirm": {
-  			const p = Promise.withResolvers();
   			const modal = {
-  				type: "confirm",
+  				type: "confirm" as const,
   				text: action.text,
-  				cont: p.resolve,
+  				cont: action.cont,
   			};
-  			update("modals", i => [modal, ...i ?? []]);
-  			return p.promise;
+  			update("modals", i => [modal, ...i]);
+  			return;
   		}
   		case "modal.prompt": {
-  			const p = Promise.withResolvers();
   			const modal = {
-  				type: "prompt",
+  				type: "prompt" as const,
   				text: action.text,
-  				cont: p.resolve,
+  				cont: action.cont,
   			};
-  			update("modals", i => [modal, ...i ?? []]);
-  			return p.promise;
+  			update("modals", i => [modal, ...i]);
+  			return;
   		}
   		case "thread.init": {
   		  if (ctx.data.thread_state[action.thread_id]) return;
@@ -342,34 +363,43 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				}
 		    
 				const version_id = action.version_id ?? ctx.data.threads[thread_id].last_version_id;
-				await ctx.client.http("PUT", `/api/v1/thread/${thread_id}/ack`, { version_id });
+				await ctx.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
+					params: { path: { thread_id }},
+					body: { version_id },
+				});
 				update("threads", thread_id, "last_read_id", version_id);
 				const has_thread = !!ctx.data.thread_state[action.thread_id];
 				if (also_local && has_thread) update("thread_state", action.thread_id, "read_marker_id", version_id);
   		  return;
 			}
 	  	case "fetch.room": {
-				const data = await ctx.client.http(
-					"GET",
-					`/api/v1/room/${action.room_id}`,
-				);
+	  		const { data, error } = await ctx.client.http.GET("/api/v1/room/{room_id}", {
+	  			params: { path: { room_id: action.room_id }},
+	  		});
+	  		if (error) throw error;
 				update("rooms", action.room_id, data);
 				return;
 			}
 	  	case "fetch.thread": {
-				const data = await ctx.client.http(
-					"GET",
-					`/api/v1/thread/${action.thread_id}`,
-				);
+	  		const { data, error } = await ctx.client.http.GET("/api/v1/thread/{thread_id}", {
+	  			params: { path: { thread_id: action.thread_id }},
+	  		});
+	  		if (error) throw error;
 				update("threads", action.thread_id, data);
 				return;
 			}
 	  	case "fetch.room_threads": {
 	  		// TODO: paginate
-				const data = await ctx.client.http(
-					"GET",
-					`/api/v1/room/${action.room_id}/thread?dir=f&limit=100`,
-				);
+				const { data, error } = await ctx.client.http.GET("/api/v1/room/{room_id}/thread", {
+					params: {
+						path: { room_id: action.room_id },
+						query: {
+							dir: "f",
+							limit: 100,
+						},
+					}
+				});
+				if (error) throw error;
 				solidBatch(() => {
 					for (const item of data.items) {
 						update("threads", item.id, item);
@@ -383,20 +413,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
   return dispatch;
 }
 
-export function createWebsocketHandler(ws: WebSocket, ctx: ChatCtx) {	
-  return function(msg: any) {
-		if (msg.type === "Ping") {
-			ws.send(JSON.stringify({ type: "Pong" }));
-		} else {
-			console.log("recv", msg);
-			ctx.dispatch({
-				do: "server",
-				msg,
-			});
-		}
-  }
-}
-
 // FIXME: show when messages fail to send
 // TODO: implement a retry queue
 async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, update: SetStoreFunction<Data>) {
@@ -405,38 +421,53 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 		const { room_id } = ctx.data.threads[thread_id];
 		if (cmd === "thread") {
 			const name = text.slice("/thread ".length);
-			await ctx.client.http("POST", `/api/v1/room/${room_id}/thread`, {
-				name,
+			await ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
+				params: { path: { room_id }},
+				body: { name },
 			});
 		} else if (cmd === "archive") {
-			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
-				is_closed: true,
+			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+				params: { path: { thread_id }},
+				body: {
+					is_closed: true,
+				},
 			});
 		} else if (cmd === "unarchive") {
-			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
-				is_closed: false,
+			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+				params: { path: { thread_id }},
+				body: {
+					is_closed: false,
+				},
 			});
 		} else if (cmd === "desc") {
 			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
-				description: description || null,
+			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+				params: { path: { thread_id }},
+				body: {
+					description: description || null,
+				},
 			});
 		} else if (cmd === "name") {
 			const name = args.join(" ");
 			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/thread/${thread_id}`, {
-				name,
+			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+				params: { path: { thread_id }},
+				body: { name },
 			});
 		} else if (cmd === "desc-room") {
 			const description = args.join(" ");
-			await ctx.client.http("PATCH", `/api/v1/room/${room_id}`, {
-				description: description || null,
+			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+				params: { path: { room_id }},
+				body: {
+					description: description || null,
+				},
 			});
 		} else if (cmd === "name-room") {
 			const name = args.join(" ");
 			if (!name) return;
-			await ctx.client.http("PATCH", `/api/v1/room/${room_id}`, {
-				name,
+			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+				params: { path: { room_id }},
+				body: { name },
 			});
 		}
 		return;
@@ -445,11 +476,16 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 	if (text.length === 0 && ts.attachments.length === 0) return false;
 	const reply_id = ts.reply_id;
 	const nonce = uuidv7();
-	ctx.client.http("POST", `/api/v1/thread/${thread_id}/message`, {
-		content: text,
-		reply_id,
-		nonce,
-		attachments: ts.attachments,
+	ctx.client.http.POST("/api/v1/thread/{thread_id}/message", {
+		params: {
+			path: { thread_id }
+		},
+		body: {
+			content: text,
+			reply_id,
+			nonce,
+			attachments: ts.attachments,
+		}
 	});
 	const localMessage: MessageT = {
 		type: MessageType.Default,
@@ -463,6 +499,8 @@ async function handleSubmit(ctx: ChatCtx, thread_id: string, text: string, updat
 		author: ctx.data.user!,
 		metadata: null,
 		attachments: ts.attachments,
+		is_pinned: false,
+		ordering: 0,
 	};
 	solidBatch(() => {
 		const slice = ctx.data.slices[thread_id];

@@ -6,8 +6,15 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(not(feature = "utoipa"))]
 pub trait Identifier:
     From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord
+{
+}
+
+#[cfg(feature = "utoipa")]
+pub trait Identifier:
+    From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord + ToSchema
 {
 }
 
