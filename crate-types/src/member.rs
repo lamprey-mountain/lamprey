@@ -36,3 +36,33 @@ pub enum RoomMembership {
     Join,
     Ban,
 }
+
+// === future stuff ===
+
+struct RoomMemberPut2 {
+    pub user_id: UserId,
+    pub room_id: RoomId,
+    pub version_id: RoomMemberVersionId,
+    pub version_from: UserId, // who updated this member
+    pub state: RoomMembership,
+}
+
+enum RoomMemberState {
+    /// joined
+    Join {
+        override_name: Option<String>,
+        override_description: Option<String>,
+        override_avatar: Option<String>,
+        roles: Vec<RoleId>,
+    },
+    
+    /// kicked or left, can still view messages up until then, can rejoin
+    Left {
+        reason: Option<String>,
+    },
+    
+    /// banned, can still view messages up until they were banned
+    Ban {
+        reason: Option<String>,
+    },
+}
