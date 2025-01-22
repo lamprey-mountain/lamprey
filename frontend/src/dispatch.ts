@@ -1,5 +1,5 @@
-import { produce, SetStoreFunction } from "solid-js/store";
-import { Action, Data, TimelineItem } from "./context.ts";
+import { produce, reconcile, SetStoreFunction } from "solid-js/store";
+import { Action, Data, Slice, TimelineItem } from "./context.ts";
 import {
 	InviteT,
 	MemberT,
@@ -12,65 +12,158 @@ import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "./context.ts";
 import { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
+import { TimelineItemT } from "./Messages.tsx";
 
-const SLICE_LEN = 100;
 const PAGINATE_LEN = 30;
+
+type RenderTimelineParams = {
+	items: Array<TimelineItem>;
+	slice: Slice;
+	read_marker_id: string | null;
+	has_before: boolean;
+	has_after: boolean;
+};
+
+function renderTimeline(
+	{ items, slice, read_marker_id, has_before, has_after }: RenderTimelineParams,
+): Array<TimelineItemT> {
+	const rawItems = items.slice(slice.start, slice.end) ?? [];
+	const newItems: Array<TimelineItemT> = [];
+	console.log("renderTimeline", {
+		items,
+		slice,
+		rawItems,
+	});
+
+	if (rawItems.length === 0) throw new Error("no items");
+
+	if (has_before) {
+		newItems.push({
+			type: "info",
+			id: "info",
+			header: false,
+		});
+		newItems.push({
+			type: "spacer",
+			id: "spacer-top",
+		});
+	} else {
+		newItems.push({
+			type: "spacer-mini2",
+			id: "spacer-top2",
+		});
+		newItems.push({
+			type: "info",
+			id: "info",
+			header: true,
+		});
+	}
+
+	for (let i = 0; i < rawItems.length; i++) {
+		const msg = rawItems[i];
+		if (msg.type === "hole") continue;
+		newItems.push({
+			type: "message",
+			id: msg.message.version_id,
+			message: msg.message,
+			separate: true,
+			is_local: msg.type === "local",
+			// separate: shouldSplit(messages[i], messages[i - 1]),
+		});
+		// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
+		// items.push({
+		//   type: "message",
+		//   id: messages[i].id,
+		//   message: messages[i],
+		//   separate: true,
+		//   // separate: shouldSplit(messages[i], messages[i - 1]),
+		// });
+		if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
+			newItems.push({
+				type: "unread-marker",
+				id: "unread-marker",
+			});
+		}
+	}
+
+	if (has_after) {
+		newItems.push({
+			type: "spacer",
+			id: "spacer-bottom",
+		});
+	} else {
+		newItems.push({
+			type: "spacer-mini",
+			id: "spacer-bottom-mini",
+		});
+	}
+
+	return newItems;
+}
+
+function calculateSlice(old: Slice | undefined, off: number, len: number, dir: "b" | "f"): Slice {
+	// messages are approx. 32 px high, show 3 pages of messages
+	const SLICE_LEN = Math.ceil(globalThis.innerHeight / 32) * 3;
+	
+	// scroll a page at a time
+	const PAGINATE_LEN = Math.ceil(globalThis.innerHeight / 32);
+
+	console.log({ old, off, len, dir });
+
+	if (!old) {
+		const end = len;
+		const start = Math.max(end - SLICE_LEN, 0);
+		return { start, end };
+	} else if (dir == "b") {
+		const start = Math.max(old.start + off - PAGINATE_LEN, 0);
+		const end = Math.min(start + SLICE_LEN, len);
+		return { start, end };
+	} else {
+		const end = Math.min(old.end + off + PAGINATE_LEN, len);
+		const start = Math.max(end - SLICE_LEN, 0);
+		return { start, end }
+	}
+}
 
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
 
+	async function fetchMessages(
+		thread_id: string,
+		from: string,
+		dir: "b" | "f",
+	) {
+		const { data, error } = await ctx.client.http.GET(
+			"/api/v1/thread/{thread_id}/message",
+			{
+				params: {
+					path: { thread_id },
+					query: {
+						dir,
+						from,
+						limit: 100,
+					},
+				},
+			},
+		);
+		if (error) throw error;
+		return data;
+	}
+
 	async function dispatch(action: Action) {
 		console.log("dispatch", action.do);
 		switch (action.do) {
-			// case "setView": {
-			// 	console.time("setView");
-			// 	if ("room" in action.to) {
-			// 		const room_id = action.to.room.id;
-			// 		const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
-			// 			i.room_id === room_id
-			// 		).length;
-			// 		if (roomThreadCount === 0) {
-			// 			(async () => {
-			// 				const data = await ctx.client.http(
-			// 					"GET",
-			// 					`/api/v1/room/${room_id}/thread?dir=f`,
-			// 				);
-			// 				for (const item of data.items) {
-			// 					update("threads", item.id, item);
-			// 				}
-			// 			})();
-			// 		}
-			// 	}
-			// 	if (action.to.view === "thread") {
-			// 		const thread_id = action.to.thread.id;
-			// 		dispatch({ do: "thread.init", thread_id });
-			// 	update("thread_state", thread_id, "read_marker_id", ctx.data.threads[thread_id].last_read_id);
-			// 	}
-			// 	ackDebounceTimeout = undefined; // make sure threads past the grace period get marked as read
-			// 	update("view", action.to);
-			// 	console.timeEnd("setView");
-			// 	return;
-			// }
 			case "paginate": {
 				const { dir, thread_id } = action;
-				const slice = ctx.data.slices[thread_id];
-				console.log("paginate", { dir, thread_id, slice });
-				if (!slice) {
-					const { data: batch, error } = await ctx.client.http.GET(
-						"/api/v1/thread/{thread_id}/message",
-						{
-							params: {
-								path: { thread_id },
-								query: {
-									dir: "b",
-									from: "ffffffff-ffff-ffff-ffff-ffffffffffff",
-									limit: 100,
-								},
-							},
-						},
-					);
-					if (error) throw error;
+				const oldSlice = ctx.data.slices[thread_id] as Slice | undefined;
+				console.log("paginate", { dir, thread_id, oldSlice });
+
+				// fetch items
+				let offset: number = 0;
+				if (!oldSlice) {
+					const from = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+					const batch = await fetchMessages(thread_id, from, dir);
 					const tl: Array<TimelineItem> = batch.items.map((i: MessageT) => ({
 						type: "remote" as const,
 						message: i,
@@ -82,119 +175,94 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						for (const msg of batch.items) {
 							update("messages", msg.id, msg);
 						}
+						offset = batch.items.length;
 						// ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 					});
-					return;
-				}
-
-				const tl = ctx.data.timelines[thread_id];
-				// console.log({ tl, slice })
-				if (tl.length < 2) return; // needs startitem and nextitem
-				if (dir === "b") {
-					const startItem = tl[slice.start];
-					const nextItem = tl[slice.start + 1];
-					let batch: Pagination<MessageT> | undefined;
-					if (startItem?.type === "hole") {
-						const from = nextItem.type === "remote"
-							? nextItem.message.id
-							: "ffffffff-ffff-ffff-ffff-ffffffffffff";
-						const { data, error } = await ctx.client.http.GET(
-							"/api/v1/thread/{thread_id}/message",
-							{
-								params: {
-									path: { thread_id },
-									query: {
-										dir: "b",
-										limit: 100,
-										from,
-									},
-								},
-							},
-						);
-						if (error) throw error;
-						batch = data;
-					}
-					solidBatch(() => {
-						if (batch) {
-							update("timelines", thread_id, (i) =>
-								[
-									...batch.has_more ? [{ type: "hole" }] : [],
-									...batch.items.map((j: MessageT) => ({
-										type: "remote",
-										message: j,
-									})),
-									...i.slice(slice.start + 1),
-								] as Array<TimelineItem>);
-							for (const msg of batch.items) {
-								update("messages", msg.id, msg);
-							}
-						}
-
-						const newTl = ctx.data.timelines[thread_id];
-						const newOff = newTl.indexOf(nextItem) - slice.start;
-						const newStart = Math.max(slice.start + newOff - PAGINATE_LEN, 0);
-						const newEnd = Math.min(newStart + SLICE_LEN, newTl.length);
-						console.log({ start: newStart, end: newEnd });
-						update("slices", thread_id, { start: newStart, end: newEnd });
-					});
 				} else {
-					console.log(slice.start, slice.end, [...tl]);
-					const startItem = tl[slice.end - 1];
-					const nextItem = tl[slice.end - 2];
-					let batch: Pagination<MessageT> | undefined;
-					if (startItem.type === "hole") {
-						const from = nextItem.type === "remote"
-							? nextItem.message.id
-							: "00000000-0000-0000-0000-000000000000";
-						const { data, error } = await ctx.client.http.GET(
-							"/api/v1/thread/{thread_id}/message",
-							{
-								params: {
-									path: { thread_id },
-									query: {
-										dir: "f",
-										limit: 100,
-										from,
-									},
-								},
-							},
-						);
-						if (error) throw error;
-						batch = data;
-					}
-
-					// PERF: indexOf 115ms
-					// PERF: reanchor 95.1ms
-					// PERF: getting stuff from store? 362ms
-					// PERF: setstore: 808ms
-					// PERF: set scroll position: 76.6ms
-					solidBatch(() => {
-						if (batch) {
-							update("timelines", thread_id, (i) =>
-								[
-									...i.slice(0, slice.end - 1),
-									...batch.items.map((j: MessageT) => ({
-										type: "remote",
-										message: j,
-									})),
-									...batch.has_more ? [{ type: "hole" }] : [],
-								] as Array<TimelineItem>);
-							for (const msg of batch.items) {
-								update("messages", msg.id, msg);
+					const tl = ctx.data.timelines[thread_id];
+					// console.log({ tl, slice })
+					if (tl.length < 2) return; // needs startitem and nextitem
+					if (dir === "b") {
+						const startItem = tl[oldSlice.start];
+						const nextItem = tl[oldSlice.start + 1];
+						let batch: Pagination<MessageT> | undefined;
+						if (startItem?.type === "hole") {
+							const from = nextItem.type === "remote"
+								? nextItem.message.id
+								: "ffffffff-ffff-ffff-ffff-ffffffffffff";
+							batch = await fetchMessages(thread_id, from, dir);
+						}
+						solidBatch(() => {
+							if (batch) {
+								update("timelines", thread_id, (i) =>
+									[
+										...batch.has_more ? [{ type: "hole" }] : [],
+										...batch.items.map((j: MessageT) => ({
+											type: "remote",
+											message: j,
+										})),
+										...i.slice(oldSlice.start + 1),
+									] as Array<TimelineItem>);
+								for (const msg of batch.items) {
+									update("messages", msg.id, msg);
+								}
+								offset = batch.items.length;
 							}
+						});
+					} else {
+						console.log(oldSlice.start, oldSlice.end, [...tl]);
+						const startItem = tl[oldSlice.end - 1];
+						const nextItem = tl[oldSlice.end - 2];
+						let batch: Pagination<MessageT> | undefined;
+						if (startItem.type === "hole") {
+							const from = nextItem.type === "remote"
+								? nextItem.message.id
+								: "00000000-0000-0000-0000-000000000000";
+							batch = await fetchMessages(thread_id, from, dir);
 						}
 
-						const newTl = ctx.data.timelines[thread_id];
-						const newOff = newTl.indexOf(nextItem) - slice.end - 1;
-						const newEnd = Math.min(
-							slice.end + newOff + PAGINATE_LEN,
-							newTl.length,
-						);
-						const newStart = Math.max(newEnd - SLICE_LEN, 0);
-						console.log({ start: newStart, end: newEnd });
-						update("slices", thread_id, { start: newStart, end: newEnd });
-					});
+						// PERF: indexOf 115ms
+						// PERF: reanchor 95.1ms
+						// PERF: getting stuff from store? 362ms
+						// PERF: setstore: 808ms
+						// PERF: set scroll position: 76.6ms
+						solidBatch(() => {
+							if (batch) {
+								update("timelines", thread_id, (i) =>
+									[
+										...i.slice(0, oldSlice.end - 1),
+										...batch.items.map((j: MessageT) => ({
+											type: "remote",
+											message: j,
+										})),
+										...batch.has_more ? [{ type: "hole" }] : [],
+									] as Array<TimelineItem>);
+								for (const msg of batch.items) {
+									update("messages", msg.id, msg);
+								}
+								
+								offset = batch.items.length;
+							}
+						});
+					}
 				}
+
+				solidBatch(() => {
+					const tl = ctx.data.timelines[thread_id];
+					const slice = calculateSlice(oldSlice, offset, tl.length, dir);
+					update("slices", thread_id, slice);
+					
+					const { read_marker_id } = ctx.data.thread_state[thread_id];
+					const newItems = renderTimeline({
+						items: tl,
+						slice,
+						read_marker_id,
+						has_before: tl.at(0)?.type === "hole",
+						has_after: tl.at(-1)?.type === "hole",
+					});
+					update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+				});
+				
 				return;
 			}
 			case "menu": {
@@ -288,42 +356,37 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						const { message } = msg;
 						const { id, version_id, thread_id, nonce } = message;
 						update("messages", id, message);
+						
 						if (ctx.data.threads[thread_id]) {
 							update("threads", thread_id, "last_version_id", version_id);
 							if (id === version_id) {
 								update("threads", thread_id, "message_count", (i) => i + 1);
 							}
 						}
+						
 						if (!ctx.data.timelines[thread_id]) {
 							update("timelines", thread_id, [{ type: "hole" }, {
 								type: "remote",
 								message,
 							}]);
-							update("slices", thread_id, { start: 0, end: 2 });
 						} else {
 							const tl = ctx.data.timelines[thread_id];
-							const isAtEnd = ctx.data.slices[thread_id].end === tl.length;
+							const item = { type: "remote" as const, message };
 							if (id === version_id) {
 								const idx = tl.findIndex((i) =>
 									i.type === "local" && i.message.nonce === nonce
 								);
-								console.log({ idx });
 								if (idx === -1) {
 									update(
 										"timelines",
 										message.thread_id,
-										(i) => [...i, { type: "remote" as const, message }],
+										(i) => [...i, item],
 									);
 								} else {
 									update(
 										"timelines",
 										message.thread_id,
-										(
-											i,
-										) => [...i.slice(0, idx), {
-											type: "remote" as const,
-											message,
-										}, ...i.slice(idx + 1)],
+										(i) => [...i.slice(0, idx), item, ...i.slice(idx + 1)],
 									);
 								}
 							} else {
@@ -333,17 +396,13 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 									(i) =>
 										i.map((j) =>
 											(j.type === "remote" && j.message.id === id)
-												? { type: "remote" as const, message }
+												? item
 												: j
 										),
 								);
 							}
-							if (isAtEnd) {
-								const newEnd = ctx.data.timelines[thread_id].length;
-								const newStart = Math.max(newEnd - PAGINATE_LEN, 0);
-								update("slices", thread_id, { start: newStart, end: newEnd });
-							}
 						}
+						
 						// TODO: make this work again?
 						// if (ctx.data.view.view === "thread" && ctx.data.view.thread.id === thread_id) {
 						// 	const tl = ctx.data.timelines[thread_id];
@@ -352,6 +411,27 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						//    	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 						// 	}
 						// }
+
+						solidBatch(() => {
+							const tl = ctx.data.timelines[thread_id];
+							// FIXME: only autoscroll if actually at end of scrollable
+							const isAtEnd = ctx.data.slices[thread_id]?.end === tl.length - 1;
+							if (!isAtEnd) return;
+							
+							const oldSlice = ctx.data.slices[thread_id];
+							const slice = calculateSlice(oldSlice, 1, tl.length, "f");
+							update("slices", thread_id, slice);
+							
+							const { read_marker_id } = ctx.data.thread_state[thread_id];
+							const newItems = renderTimeline({
+								items: tl,
+								slice,
+								read_marker_id,
+								has_before: tl.at(0)?.type === "hole",
+								has_after: tl.at(-1)?.type === "hole",
+							});
+							update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+						});
 					});
 					console.timeEnd("UpsertMessage");
 					// TODO: message deletions
@@ -579,16 +659,32 @@ async function handleSubmit(
 		ordering: 0,
 	};
 	solidBatch(() => {
-		const slice = ctx.data.slices[thread_id];
 		update(
 			"timelines",
 			thread_id,
 			(i) => [...i, { type: "local" as const, message: localMessage }],
 		);
-		update("slices", thread_id, { start: slice.start + 1, end: slice.end + 1 });
 		// TODO: is this necessary?
 		// update("messages", msg.id, msg);
 		update("thread_state", thread_id, "reply_id", null);
 		update("thread_state", thread_id, "attachments", []);
+		
+		const tl = ctx.data.timelines[thread_id];
+		
+		// FIXME: only autoscroll if actually at end of scrollable
+		const isAtEnd = ctx.data.slices[thread_id].end === tl.length - 1;
+		if (!isAtEnd) return;
+		
+		const oldSlice = ctx.data.slices[thread_id];
+		const slice = calculateSlice(oldSlice, 1, tl.length, "f");
+		const { read_marker_id } = ctx.data.thread_state[thread_id];
+		const newItems = renderTimeline({
+			items: tl,
+			slice,
+			read_marker_id,
+			has_before: tl.at(0)?.type === "hole",
+			has_after: tl.at(-1)?.type === "hole",
+		});
+		update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
 	});
 }

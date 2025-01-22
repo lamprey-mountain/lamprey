@@ -11,22 +11,16 @@ import {
 	UserT,
 } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
-
-// export type View
-// 	= { view: "home" }
-//   | { view: "room", room: RoomT }
-//   | { view: "room-settings", room: RoomT }
-//   | { view: "thread", thread: ThreadT, room: RoomT }
+import { TimelineItemT } from "./Messages.tsx";
 
 export type TimelineItem =
 	| { type: "remote"; message: MessageT }
 	| { type: "local"; message: MessageT }
 	| { type: "hole" };
 
-type Slice = {
+export type Slice = {
 	start: number;
 	end: number;
-	// _: Symbol,
 };
 
 export type ThreadState = {
@@ -35,6 +29,7 @@ export type ThreadState = {
 	scroll_pos: number | null;
 	read_marker_id: string | null;
 	attachments: Array<AttachmentT>;
+	timeline: Array<TimelineItemT>;
 };
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
@@ -52,7 +47,6 @@ export type Data = {
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	menu: Menu | null;
-	// view: View,
 };
 
 type Menu =
@@ -79,7 +73,7 @@ type Modal =
 		cont: (text?: string) => void;
 	};
 
-export type Action = // = { do: "setView", to: View }
+export type Action =
 	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
 	| { do: "goto"; thread_id: string; event_id: string }
 	| { do: "menu"; menu: Menu | null }

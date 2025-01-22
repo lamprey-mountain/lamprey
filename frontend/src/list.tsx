@@ -30,6 +30,9 @@ export type SliceInfo = {
 //   return false;
 // }
 
+// /** A list that retains its scroll position when items are added/removed */
+// export function StableList() {}
+
 export function createList<T>(options: {
 	items: Accessor<Array<T>>;
 	autoscroll?: Accessor<boolean>;

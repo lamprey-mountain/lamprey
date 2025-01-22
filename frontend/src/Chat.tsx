@@ -24,7 +24,6 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useContext(chatctx)!;
 
 	let paginating = false;
-	const [items, setItems] = createSignal<Array<TimelineItemT>>([]);
 	const slice = () => ctx.data.slices[props.thread.id];
 	const tl = () => ctx.data.timelines[props.thread.id];
 	const ts = () =>
@@ -34,112 +33,17 @@ export const ChatMain = (props: ChatProps) => {
 	const hasSpaceBottom = () =>
 		tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
 
-	const thread_id = props.thread.id;
-	const read_id = props.thread.last_read_id;
-	ctx.dispatch({ do: "thread.init", thread_id, read_id });
-
-	createEffect(() => {
+	function init() {
 		const thread_id = props.thread.id;
 		const read_id = props.thread.last_read_id;
 		ctx.dispatch({ do: "thread.init", thread_id, read_id });
-	});
-	createEffect(() => {
-		console.log(props.thread.id);
-	});
-
-	createEffect(
-		on(
-			() => (slice()?.start, slice()?.end, ts()?.read_marker_id, tl()),
-			() => updateItems(),
-		),
-	);
-
-	function updateItems() {
-		console.log("update items", {
-			slice: untrack(slice),
-			tl: untrack(tl),
-			ts: untrack(ts),
-		});
-		if (!slice()) return;
-		const rawItems = tl()?.slice(slice().start, slice().end) ?? [];
-		const newItems: Array<TimelineItemT> = [];
-		const { read_marker_id } = ts()!;
-
-		if (hasSpaceTop()) {
-			newItems.push({
-				type: "info",
-				id: "info",
-				header: !hasSpaceTop(),
-			});
-			newItems.push({
-				type: "spacer",
-				id: "spacer-top",
-			});
-		} else {
-			newItems.push({
-				type: "spacer-mini2",
-				id: "spacer-top2",
-			});
-			newItems.push({
-				type: "info",
-				id: "info",
-				header: !hasSpaceTop(),
-			});
-		}
-
-		for (let i = 0; i < rawItems.length; i++) {
-			const msg = rawItems[i];
-			if (msg.type === "hole") continue;
-			newItems.push({
-				type: "message",
-				id: msg.message.version_id,
-				message: msg.message,
-				separate: true,
-				is_local: msg.type === "local",
-				// separate: shouldSplit(messages[i], messages[i - 1]),
-			});
-			// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
-			// items.push({
-			//   type: "message",
-			//   id: messages[i].id,
-			//   message: messages[i],
-			//   separate: true,
-			//   // separate: shouldSplit(messages[i], messages[i - 1]),
-			// });
-			if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
-				newItems.push({
-					type: "unread-marker",
-					id: "unread-marker",
-				});
-			}
-		}
-
-		if (hasSpaceBottom()) {
-			newItems.push({
-				type: "spacer",
-				id: "spacer-bottom",
-			});
-		} else {
-			newItems.push({
-				type: "spacer-mini",
-				id: "spacer-bottom-mini",
-			});
-		}
-
-		const old = untrack(items);
-		console.log("new items", newItems);
-		console.time("perf::updateItems");
-		setItems((old) => [...reconcile(newItems)(old)]);
-		console.timeEnd("perf::updateItems");
-		console.log("update items", {
-			old,
-			new: newItems,
-			diff: untrack(items).filter((i, x) => i !== old[x]),
-		});
 	}
 
+	init();
+	createEffect(init);
+
 	const list = createList({
-		items: () => items(),
+		items: () => ts()?.timeline ?? [],
 		autoscroll: () => !hasSpaceBottom(),
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
