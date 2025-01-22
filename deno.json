@@ -1,5 +1,5 @@
 {
-  "workspace": ["frontend", "backend"],
+  "workspace": ["frontend"],
 	"compilerOptions": {
 		"strict": true,
 		"lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns", "webworker"],
