@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::PaginationKey;
+
 #[cfg(not(feature = "utoipa"))]
 pub trait Identifier:
     From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord
@@ -17,6 +19,8 @@ pub trait Identifier:
     From<Uuid> + Into<Uuid> + Display + Clone + Copy + PartialEq + Eq + PartialOrd + Ord + ToSchema
 {
 }
+
+impl<T: Identifier> PaginationKey for T {}
 
 macro_rules! genid {
     ($name:ident, $example:expr) => {

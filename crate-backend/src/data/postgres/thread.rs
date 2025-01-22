@@ -16,7 +16,7 @@ use super::{Pagination, Postgres};
 async fn thread_get_with_executor(
     exec: impl PgExecutor<'_>,
     thread_id: ThreadId,
-    user_id: UserId,
+    user_id: Option<UserId>,
 ) -> Result<Thread> {
     let row = query_as!(
         DbThread,
@@ -55,7 +55,7 @@ async fn thread_get_with_executor(
         where thread.id = $1 and usr.id = $2
     "#,
         thread_id.into_inner(),
-        user_id.into_inner()
+        user_id.map(|id| id.into_inner())
     )
     .fetch_one(exec)
     .await?;
@@ -86,7 +86,7 @@ impl DataThread for Postgres {
     }
 
     /// get a thread, panics if there are no messages
-    async fn thread_get(&self, thread_id: ThreadId, user_id: UserId) -> Result<Thread> {
+    async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
         let mut conn = self.pool.acquire().await?;
         let thread = thread_get_with_executor(&mut *conn, thread_id, user_id).await?;
         Ok(thread)
@@ -178,7 +178,7 @@ impl DataThread for Postgres {
     ) -> Result<ThreadVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let thread = thread_get_with_executor(&mut *tx, thread_id, user_id).await?;
+        let thread = thread_get_with_executor(&mut *tx, thread_id, Some(user_id)).await?;
         let version_id = ThreadVerId(Uuid::now_v7());
         query!(
             r#"

@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-use super::Identifier;
+pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct PaginationQuery<I: Identifier> {
-    pub from: Option<I>,
-    pub to: Option<I>,
+pub struct PaginationQuery<K: PaginationKey> {
+    pub from: Option<K>,
+    pub to: Option<K>,
     pub dir: Option<PaginationDirection>,
     pub limit: Option<u16>,
 }
@@ -19,7 +19,7 @@ pub struct PaginationQuery<I: Identifier> {
 // unfortunately, utoipa has issues with nested generics (Option<I>)
 // TODO: better documentation generation
 #[cfg(feature = "utoipa")]
-impl<I: Identifier> IntoParams for PaginationQuery<I> {
+impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
     fn into_params(
         parameter_in_provider: impl Fn() -> Option<utoipa::openapi::path::ParameterIn>,
     ) -> Vec<utoipa::openapi::path::Parameter> {

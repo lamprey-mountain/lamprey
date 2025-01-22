@@ -1,11 +1,10 @@
 use serde::Deserialize;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
-    RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus,
-    SessionToken, Thread, ThreadId, User, UserId, UserVerId,
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId
 };
 use uuid::Uuid;
 
+#[derive(Deserialize)]
 pub struct DbRoom {
     pub id: Uuid,
     pub version_id: Uuid,
@@ -13,6 +12,7 @@ pub struct DbRoom {
     pub description: Option<String>,
 }
 
+#[derive(Deserialize)]
 pub struct DbUser {
     pub id: UserId,
     pub version_id: UserVerId,
@@ -80,6 +80,7 @@ impl From<DbRoom> for Room {
     }
 }
 
+#[derive(Deserialize)]
 pub struct DbThread {
     pub id: ThreadId,
     pub room_id: RoomId,
@@ -475,3 +476,14 @@ where
 
 //     Helper::deserialize(deserializer).map(|_| ())
 // }
+
+pub struct DbInvite {
+    pub code: String,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub creator_id: Uuid,
+    pub max_uses: Option<i32>,
+    pub uses: i32,
+    pub created_at: time::PrimitiveDateTime,
+    pub expires_at: Option<time::PrimitiveDateTime>,
+}

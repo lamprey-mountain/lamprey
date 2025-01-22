@@ -63,7 +63,7 @@ async fn thread_create(
         override_name: None,
     })
     .await?;
-    let thread = data.thread_get(thread_id, user_id).await?;
+    let thread = data.thread_get(thread_id, Some(user_id)).await?;
     s.sushi.send(MessageServer::UpsertThread {
         thread: thread.clone(),
     })?;
@@ -89,7 +89,7 @@ async fn thread_get(
     let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let thread = data.thread_get(thread_id, user_id).await?;
+    let thread = data.thread_get(thread_id, Some(user_id)).await?;
     Ok((StatusCode::OK, Json(thread)))
 }
 
@@ -140,13 +140,13 @@ async fn thread_update(
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let thread = data.thread_get(thread_id, user_id).await?;
+    let thread = data.thread_get(thread_id, Some(user_id)).await?;
     if thread.creator_id == user_id {
         perms.add(Permission::RoomManage);
     }
     perms.ensure(Permission::RoomManage)?;
     data.thread_update(thread_id, user_id, json).await?;
-    let thread = data.thread_get(thread_id, user_id).await?;
+    let thread = data.thread_get(thread_id, Some(user_id)).await?;
     s.sushi.send(MessageServer::UpsertThread {
         thread: thread.clone(),
     })?;

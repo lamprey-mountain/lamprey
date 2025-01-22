@@ -1,14 +1,14 @@
 use async_trait::async_trait;
-use types::{SearchMessageRequest, SessionStatus};
+use types::{InviteWithMetadata, SearchMessageRequest, SessionStatus};
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    Invite, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
-    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate,
-    RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId,
-    Session, SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate,
-    UserId, UserPatch, UserVerId,
+    InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId,
+    MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId,
+    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session,
+    SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId,
+    UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -92,8 +92,8 @@ pub trait DataInvite {
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
-    ) -> Result<Invite>;
-    async fn invite_select(&self, code: InviteCode) -> Result<Invite>;
+    ) -> Result<InviteWithMetadata>;
+    async fn invite_select(&self, code: InviteCode) -> Result<InviteWithMetadata>;
     async fn invite_delete(&self, code: InviteCode) -> Result<()>;
     // TODO: invite listing
     // async fn invite_list_room(room_id: RoomId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
@@ -173,7 +173,7 @@ pub trait DataSession {
 #[async_trait]
 pub trait DataThread {
     async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId>;
-    async fn thread_get(&self, thread_id: ThreadId, user_id: UserId) -> Result<Thread>;
+    async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread>;
     async fn thread_list(
         &self,
         user_id: UserId,

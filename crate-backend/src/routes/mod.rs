@@ -8,7 +8,7 @@ mod message;
 mod room;
 mod thread;
 mod util;
-// mod invite;
+mod invite;
 // mod role;
 mod media;
 // mod member;
@@ -23,7 +23,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(room::routes())
         .merge(thread::routes())
         .merge(message::routes())
-        // .merge(invite::routes())
+        .merge(invite::routes())
         // .merge(role::routes())
         .merge(media::routes())
         // .merge(member::routes())
