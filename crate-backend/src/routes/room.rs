@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -25,7 +27,7 @@ use super::util::Auth;
 #[axum::debug_handler]
 async fn room_create(
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<(StatusCode, Json<Room>)> {
     let room = s.services().create_room(json, session.user_id).await?;
@@ -47,7 +49,7 @@ async fn room_create(
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Room>> {
     let data = s.data();
     let user_id = session.user_id;
@@ -69,7 +71,7 @@ async fn room_get(
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Room>>> {
     let data = s.data();
     let res = data.room_list(session.user_id, q).await?;
@@ -92,7 +94,7 @@ async fn room_list(
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
 ) -> Result<Json<Room>> {
     let user_id = session.user_id;
@@ -171,7 +173,7 @@ async fn room_edit(
 //     todo!()
 // }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
         .routes(routes!(room_get))

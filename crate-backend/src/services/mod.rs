@@ -1,16 +1,22 @@
+use std::sync::Arc;
+
 use types::{Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, UserId};
 
+use crate::ServerState;
 use crate::{data::Data, types::RoleCreate};
 use crate::error::Result;
 
+mod oauth2;
+
 pub struct Services {
+    state: Arc<ServerState>,
     data: Box<dyn Data>,
 }
 
 #[allow(async_fn_in_trait)]
 impl Services {
-    pub fn new(data: Box<dyn Data>) -> Self {
-        Self { data }
+    pub fn new(state: Arc<ServerState>, data: Box<dyn Data>) -> Self {
+        Self { state, data }
     }
 
     pub async fn create_room(&self, create: RoomCreate, creator: UserId) -> Result<Room> {

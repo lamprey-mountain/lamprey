@@ -50,7 +50,6 @@ const App: Component = () => {
 		modals: [],
 		user: null,
 		menu: null,
-		view: { view: "home" },
 	});
 
 	const client = new Client(TOKEN, BASE_URL);

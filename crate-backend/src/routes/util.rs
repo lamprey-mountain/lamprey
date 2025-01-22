@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{extract::FromRequestParts, http::request::Parts};
 
 use crate::{
@@ -22,12 +24,12 @@ pub struct Auth(pub Session);
 //     }
 // }
 
-impl FromRequestParts<ServerState> for Auth {
+impl FromRequestParts<Arc<ServerState>> for Auth {
     type Rejection = Error;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        s: &ServerState,
+        s: &Arc<ServerState>,
     ) -> Result<Self, Self::Rejection> {
         let auth = parts
             .headers

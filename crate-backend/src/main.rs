@@ -1,12 +1,15 @@
-use std::{sync::Arc, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use data::{postgres::Postgres, Data};
+use figment::providers::{Env, Format, Toml};
+use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tracing::debug;
 use tracing_subscriber::EnvFilter;
 use types::{MediaId, MediaUpload, MessageServer};
 use utoipa::OpenApi;
@@ -20,6 +23,7 @@ pub mod types;
 pub mod services;
 
 use error::Result;
+use uuid::Uuid;
 
 #[derive(OpenApi)]
 #[openapi(components(schemas(
@@ -34,20 +38,27 @@ use error::Result;
 )))]
 struct ApiDoc;
 
-#[derive(Clone)]
-struct ServerState {
-    uploads: Arc<DashMap<MediaId, MediaUpload>>,
+pub struct ServerState {
+    // should this be global?
+    pub config: Config,
+    
+    // TODO: move some of these into the db? or use something like redis? 
+    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
+    pub valid_oauth2_states: Arc<DashSet<Uuid>>,
+    
     // this is fine probably
-    sushi: Sender<MessageServer>,
+    pub sushi: Sender<MessageServer>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
-    pool: PgPool,
-    blobs: opendal::Operator,
+    pub pool: PgPool,
+    pub blobs: opendal::Operator,
 }
 
 impl ServerState {
-    fn new(pool: PgPool, blobs: opendal::Operator) -> Self {
+    fn new(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
         Self {
+            config,
             uploads: Arc::new(DashMap::new()),
+            valid_oauth2_states: Arc::new(DashSet::new()),
             pool,
             sushi: tokio::sync::broadcast::channel(100).0,
             // channel_user: Arc::new(DashMap::new()),
@@ -61,8 +72,8 @@ impl ServerState {
         })
     }
 
-    fn services(&self) -> Services {
-        Services::new(self.data())
+    fn services(self: &Arc<Self>) -> Services {
+        Services::new(self.clone(), self.data())
     }
 
     fn blobs(&self) -> &opendal::Operator {
@@ -82,34 +93,65 @@ impl ServerState {
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct Config {
+    rust_log: String,
+    database_url: String,
+    s3: ConfigS3,
+    discord: ConfigDiscord,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigS3 {
+    bucket: String,
+    endpoint: String,
+    region: String,
+    access_key_id: String,
+    secret_access_key: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigDiscord {
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
+    let config: Config = figment::Figment::new()
+        .merge(Toml::file("config.toml"))
+        .merge(Env::raw().only(&["RUST_LOG"]))
+        .extract()?;
+
+    debug!("Starting with config: {:#?}", config);
+    
     let sub = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(EnvFilter::from_str(&config.rust_log)?)
         .finish();
     tracing::subscriber::set_global_default(sub)?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(5))
-        .connect(&std::env::var("DATABASE_URL").expect("missing env var"))
+        .connect(&config.database_url)
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     let blobs_builder = opendal::services::S3::default()
-        .bucket(&std::env::var("S3_BUCKET").expect("missing env var"))
-        .endpoint(&std::env::var("S3_ENDPOINT").expect("missing env var"))
-        .region(&std::env::var("S3_REGION").expect("missing env var"))
-        .access_key_id(&std::env::var("S3_ACCESS_KEY_ID").expect("missing env var"))
-        .secret_access_key(&std::env::var("S3_SECRET_ACCESS_KEY").expect("missing env var"));
+        .bucket(&config.s3.bucket)
+        .endpoint(&config.s3.endpoint)
+        .region(&config.s3.region)
+        .access_key_id(&config.s3.access_key_id)
+        .secret_access_key(&config.s3.secret_access_key);
     let blobs = opendal::Operator::new(blobs_builder).unwrap().finish();
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
-        .with_state(ServerState::new(pool, blobs))
+        .with_state(Arc::new(ServerState::new(config, pool, blobs)))
         .split_for_parts();
     let api1 = api.clone();
     let router = router

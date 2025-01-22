@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     body::Bytes,
     extract::{Path, State},
@@ -35,7 +37,7 @@ const MAX_SIZE: u64 = 1024 * 1024 * 16;
 )]
 async fn media_create(
     Auth(session): Auth,
-    State(state): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
 ) -> Result<(StatusCode, HeaderMap, Json<MediaCreated>)> {
     if r.size > MAX_SIZE {
@@ -52,7 +54,7 @@ async fn media_create(
         ))
         .expect("somehow constructed invalid url"),
     );
-    state.uploads.insert(
+    s.uploads.insert(
         media_id,
         MediaUpload {
             create: r.clone(),
@@ -86,7 +88,7 @@ async fn media_create(
 async fn media_upload(
     Path((media_id,)): Path<(MediaId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, HeaderMap, Json<Option<Media>>)> {
@@ -184,7 +186,7 @@ async fn media_upload(
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
     Auth(_session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Media>> {
     let mut media = s.data().media_select(media_id).await?;
     media.url = s.presign(&media.url).await?;
@@ -204,7 +206,7 @@ async fn media_get(
 async fn media_check(
     Path((media_id,)): Path<(MediaId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, HeaderMap)> {
     if let Some(up) = s.uploads.get_mut(&media_id) {
         if up.user_id == session.user_id {
@@ -324,7 +326,7 @@ async fn get_mime_type(file: &std::path::Path) -> Result<String> {
     Ok(mime)
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(media_create))
         .routes(routes!(media_upload))

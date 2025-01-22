@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
@@ -13,10 +15,10 @@ mod media;
 mod sync;
 mod user;
 mod session;
-// mod auth;
+mod auth;
 mod search;
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(room::routes())
         .merge(thread::routes())
@@ -28,6 +30,6 @@ pub fn routes() -> OpenApiRouter<ServerState> {
         .merge(sync::routes())
         .merge(user::routes())
         .merge(session::routes())
-    // .merge(auth::routes())
+        .merge(auth::routes())
         .merge(search::routes())
 }

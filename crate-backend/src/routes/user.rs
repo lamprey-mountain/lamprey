@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -22,7 +24,7 @@ use super::util::Auth;
 )]
 pub async fn user_create(
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(session.user_id);
@@ -51,7 +53,7 @@ pub async fn user_create(
 // )]
 // pub async fn user_list(
 //     Auth(session): Auth,
-//     State(s): State<ServerState>,
+    // State(s): State<Arc<ServerState>>,
 // ) -> Result<Json<()>> {
 //     todo!()
 // }
@@ -71,7 +73,7 @@ pub async fn user_create(
 pub async fn user_update(
     Path(user_id): Path<UserIdReq>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(body): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
@@ -103,7 +105,7 @@ pub async fn user_update(
 pub async fn user_delete(
     Path(user_id): Path<UserIdReq>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
         UserIdReq::UserSelf => session.user_id,
@@ -133,7 +135,7 @@ pub async fn user_delete(
 pub async fn user_get(
     Path(user_id): Path<UserIdReq>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let user_id = match user_id {
         UserIdReq::UserSelf => session.user_id,
@@ -144,7 +146,7 @@ pub async fn user_get(
     Ok(Json(user))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_create))
         // .routes(routes!(user_list))

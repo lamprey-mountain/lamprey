@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -33,7 +35,7 @@ use crate::error::Result;
 async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadCreateRequest>,
 ) -> Result<(StatusCode, Json<Thread>)> {
     let data = s.data();
@@ -83,7 +85,7 @@ async fn thread_create(
 async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, Json<Thread>)> {
     let data = s.data();
     let user_id = session.user_id;
@@ -107,7 +109,7 @@ async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Thread>>> {
     let user_id = session.user_id;
     let data = s.data();
@@ -133,7 +135,7 @@ async fn thread_list(
 async fn thread_update(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadPatch>,
 ) -> Result<Json<Thread>> {
     let user_id = session.user_id;
@@ -180,7 +182,7 @@ struct AckRes {
 async fn thread_ack(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
     let user_id = session.user_id;
@@ -192,7 +194,7 @@ async fn thread_ack(
     Ok(Json(AckRes { version_id }))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
         .routes(routes!(thread_get))

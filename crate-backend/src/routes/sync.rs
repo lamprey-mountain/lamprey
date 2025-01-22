@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket};
@@ -25,7 +26,7 @@ use crate::error::{Error, Result};
         (status = UPGRADE_REQUIRED, description = "success"),
     )
 )]
-async fn sync(State(s): State<ServerState>, upgrade: WebSocketUpgrade) -> impl IntoResponse {
+async fn sync(State(s): State<Arc<ServerState>>, upgrade: WebSocketUpgrade) -> impl IntoResponse {
     upgrade.on_upgrade(move |ws| worker(s, ws))
 }
 
@@ -51,7 +52,7 @@ impl Timeout {
 
 const HEARTBEAT_TIME: Duration = Duration::from_secs(30);
 
-async fn worker(s: ServerState, mut ws: WebSocket) {
+async fn worker(s: Arc<ServerState>, mut ws: WebSocket) {
     let mut state = ClientState::Unauthed;
     let mut timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
     // let mut client = Client::new(s, ws);
@@ -99,7 +100,7 @@ async fn handle_message(
     ws_msg: Message,
     ws: &mut WebSocket,
     timeout: &mut Timeout,
-    s: &ServerState,
+    s: &Arc<ServerState>,
     state: &mut ClientState,
 ) -> Result<()> {
     match ws_msg {
@@ -234,6 +235,6 @@ async fn handle_timeout(timeout: &mut Timeout, ws: &mut WebSocket) -> bool {
     }
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new().route("/sync", any(sync))
 }

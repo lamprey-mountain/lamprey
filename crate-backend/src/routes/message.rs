@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -31,7 +33,7 @@ use crate::error::Result;
 async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreateRequest>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
@@ -100,7 +102,7 @@ async fn message_list(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let user_id = session.user_id;
     let data = s.data();
@@ -131,7 +133,7 @@ async fn message_list(
 async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
     let user_id = session.user_id;
     let data = s.data();
@@ -161,7 +163,7 @@ async fn message_get(
 async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
@@ -256,7 +258,7 @@ async fn message_edit(
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
     let user_id = session.user_id;
@@ -296,7 +298,7 @@ async fn message_version_list(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let data = s.data();
     let user_id = session.user_id;
@@ -328,7 +330,7 @@ async fn message_version_list(
 async fn message_version_get(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
     let user_id = session.user_id;
     let data = s.data();
@@ -360,7 +362,7 @@ async fn message_version_get(
 async fn message_version_delete(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let user_id = session.user_id;
     let data = s.data();
@@ -381,7 +383,7 @@ async fn message_version_delete(
     Ok(Json(()))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
         .routes(routes!(message_get))

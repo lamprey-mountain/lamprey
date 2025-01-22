@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use sqlx::{query, query_as, query_scalar, Acquire};
+use types::SessionStatus;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::types::{DbSession, PaginationDirection, PaginationQuery, PaginationResponse, Session, SessionId, UserId};
+use crate::types::{DbSession, DbSessionStatus, PaginationDirection, PaginationQuery, PaginationResponse, Session, SessionId, UserId};
 
 use crate::data::DataSession;
 
@@ -50,6 +51,18 @@ impl DataSession for Postgres {
             .fetch_one(&self.pool)
             .await?;
         Ok(session.into())
+    }
+    
+    async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
+        let status: DbSessionStatus = status.into();
+        query!(
+            r#"UPDATE session SET status = $2 WHERE id = $1"#,
+            session_id.into_inner(),
+            status as _,
+        )
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 
     async fn session_list(

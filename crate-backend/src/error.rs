@@ -46,6 +46,12 @@ pub enum Error {
     SqlxMigrate(#[from] sqlx::migrate::MigrateError),
     #[error("tracing subscriber error: {0}")]
     TracingSubscriber(#[from] tracing::subscriber::SetGlobalDefaultError),
+    #[error("log format parse error: {0}")]
+    LogFormatParse(#[from] tracing_subscriber::filter::ParseError),
+    #[error("reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("figment error: {0}")]
+    Figment(#[from] figment::Error),
     #[error("not yet implemented...")]
     Unimplemented,
 }
@@ -72,22 +78,15 @@ impl Error {
             Error::BadHeader => StatusCode::BAD_REQUEST,
             Error::BadStatic(_) => StatusCode::BAD_REQUEST,
             Error::Serde(_) => StatusCode::BAD_REQUEST,
-            Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::MissingAuth => StatusCode::UNAUTHORIZED,
             Error::UnauthSession => StatusCode::UNAUTHORIZED,
             Error::TooBig => StatusCode::PAYLOAD_TOO_LARGE,
             Error::MissingPermissions => StatusCode::FORBIDDEN,
-            Error::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::CantOverwrite => StatusCode::CONFLICT,
-            Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::Axum(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::SushiSend(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ParseInt(_) => StatusCode::BAD_REQUEST,
             Error::ParseFloat(_) => StatusCode::BAD_REQUEST,
-            Error::Opendal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::SqlxMigrate(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::TracingSubscriber(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

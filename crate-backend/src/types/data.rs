@@ -163,6 +163,16 @@ impl From<DbSessionStatus> for SessionStatus {
     }
 }
 
+impl From<SessionStatus> for DbSessionStatus {
+    fn from(value: SessionStatus) -> Self {
+        match value {
+            SessionStatus::Unauthorized => DbSessionStatus::Unauthorized,
+            SessionStatus::Authorized => DbSessionStatus::Authorized,
+            SessionStatus::Sudo => DbSessionStatus::Sudo,
+        }
+    }
+}
+
 pub struct DbRole {
     pub id: RoleId,
     pub version_id: RoleVerId,

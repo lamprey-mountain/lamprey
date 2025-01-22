@@ -8,7 +8,7 @@ import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { Router, Route } from "@solidjs/router";
+import { Router, Route, A } from "@solidjs/router";
 
 export const Main = () => {
   const ctx = useCtx();
@@ -238,13 +238,9 @@ const Home = () => {
 			<br />
 			<button onClick={useInvite}>use invite</button>
 			<br />
-			<a href="/api/v1/auth/discord">
-				<button>discord login</button>
-			</a>
+			<A target="_self" href="/api/v1/auth/discord">discord login</A>
 			<br />
-			<a href="/api/docs">
-				<button>api docs</button>
-			</a>
+			<A href="/api/docs">api docs</A>
 			<br />
 		</div>
 	);

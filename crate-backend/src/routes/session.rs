@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -78,7 +80,7 @@ use super::util::Auth;
 pub async fn session_delete(
     Path(session_id): Path<SessionIdReq>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let session_id = match session_id {
         SessionIdReq::SessionSelf => session.id,
@@ -113,7 +115,7 @@ pub async fn session_delete(
 pub async fn session_get(
     Path(session_id): Path<SessionIdReq>,
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let session_id = match session_id {
         SessionIdReq::SessionSelf => session.id,
@@ -127,7 +129,7 @@ pub async fn session_get(
 	Ok(Json(session))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         // .routes(routes!(session_create))
         // .routes(routes!(session_list))

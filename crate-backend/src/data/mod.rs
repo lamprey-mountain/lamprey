@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use types::SearchMessageRequest;
+use types::{SearchMessageRequest, SessionStatus};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -161,6 +161,7 @@ pub trait DataSession {
     async fn session_create(&self, user_id: UserId, name: Option<String>) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: &str) -> Result<Session>;
+    async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;
     async fn session_list(
         &self,
         user_id: UserId,
@@ -203,7 +204,15 @@ pub trait DataUser {
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
+    async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User>;
+    async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()>;
 }
+
+// #[async_trait]
+// pub trait DataAuth {
+//     // DataAuth 
+//     async fn auth_put(&self, patch: UserCreate) -> Result<User>;
+// }
 
 #[async_trait]
 pub trait DataSearch {

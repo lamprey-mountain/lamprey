@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -24,7 +26,7 @@ use super::util::Auth;
 )]
 pub async fn search_messages(
     Auth(session): Auth,
-    State(s): State<ServerState>,
+    State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(body): Json<SearchMessageRequest>,
 ) -> Result<impl IntoResponse> {
@@ -33,7 +35,7 @@ pub async fn search_messages(
     Ok(Json(res))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(search_messages))
 }
