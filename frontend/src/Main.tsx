@@ -203,7 +203,7 @@ export const Main = () => {
 										>
 											<input type="text" name="text" autofocus />
 											<div style="height: 8px"></div>
-											<input type="submit">done!</input>{" "}
+											<input type="submit" value="done!"></input>{" "}
 											<button
 												onClick={() => {
 													modal.cont(null);
@@ -268,19 +268,32 @@ const Modal = (props: ParentProps) => {
 const Home = () => {
 	const ctx = useCtx();
 
-	async function createRoom() {
-		const name = await ctx.dispatch({ do: "modal.prompt", text: "name?" });
-		ctx.client.http("POST", "/api/v1/room", {
-			name,
+	function createRoom() {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "name?",
+			cont(name) {
+				if (!name) return;
+				ctx.client.http.POST("/api/v1/room", {
+					body: { name },
+				});
+			},
 		});
 	}
 
-	async function useInvite() {
-		const code = await ctx.dispatch({
+	function useInvite() {
+		ctx.dispatch({
 			do: "modal.prompt",
 			text: "invite code?",
+			cont(code) {
+				// TODO: fix
+				// ctx.client.http.POST("/api/v1/invite")
+				// ctx.client.http("POST", `/api/v1/invites/${code}`, {});
+				queueMicrotask(() => {
+					ctx.dispatch({ do: "modal.alert", text: "todo!" });
+				});
+			}
 		});
-		ctx.client.http("POST", `/api/v1/invites/${code}`, {});
 	}
 
 	return (

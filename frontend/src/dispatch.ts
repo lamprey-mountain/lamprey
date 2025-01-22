@@ -14,8 +14,6 @@ import { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { TimelineItemT } from "./Messages.tsx";
 
-const PAGINATE_LEN = 30;
-
 type RenderTimelineParams = {
 	items: Array<TimelineItem>;
 	slice: Slice;
