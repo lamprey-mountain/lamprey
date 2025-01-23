@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            ),\n            message_coalesced as (\n                select *\n                from (select *, row_number() over(partition by id order by version_id desc) as row_num\n                    from message)\n                where row_num = 1\n            )\n        select\n            msg.type as \"message_type: DbMessageType\",\n            msg.id,\n            msg.thread_id, \n            msg.version_id,\n            msg.ordering,\n            msg.content,\n            msg.metadata,\n            msg.reply_id,\n            msg.override_name,\n            row_to_json(usr) as \"author!: serde_json::Value\",\n            coalesce(att_json.attachments, '[]'::json) as \"attachments!: serde_json::Value\",\n            false as \"is_pinned!\"\n        from message_coalesced as msg\n        join usr on usr.id = msg.author_id\n        left join att_json on att_json.version_id = msg.version_id\n        where thread_id = $1 and msg.deleted_at is null\n          and msg.id > $2 AND msg.id < $3\n\t\torder by (CASE WHEN $4 = 'F' THEN msg.id END), msg.id DESC LIMIT $5\n            ",
+  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            )\n        select\n            msg.type as \"message_type: DbMessageType\",\n            msg.id,\n            msg.thread_id, \n            msg.version_id,\n            msg.ordering,\n            msg.content,\n            msg.metadata,\n            msg.reply_id,\n            msg.override_name,\n            row_to_json(usr) as \"author!: serde_json::Value\",\n            coalesce(att_json.attachments, '[]'::json) as \"attachments!: serde_json::Value\",\n            false as \"is_pinned!\"\n        from message as msg\n        join usr on usr.id = msg.author_id\n        left join att_json on att_json.version_id = msg.version_id\n        where thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n          and msg.id > $3 AND msg.id < $4\n\t\torder by (CASE WHEN $5 = 'f' THEN msg.version_id END), msg.version_id DESC LIMIT $6\n            ",
   "describe": {
     "columns": [
       {
@@ -79,6 +79,7 @@
         "Uuid",
         "Uuid",
         "Uuid",
+        "Uuid",
         "Text",
         "Int8"
       ]
@@ -98,5 +99,5 @@
       null
     ]
   },
-  "hash": "531a3f5802391c430b828937f578374c9edccaf942b8b839b126c9efc0e1f5de"
+  "hash": "4f9d138f9a91e65527765753d66f8651a62899136a6edf372bba9ded73ababf9"
 }

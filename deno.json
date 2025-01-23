@@ -20,6 +20,7 @@
 		"sdk": "./ts-sdk/index.ts"
 	},
 	"tasks": {
-		"hakari": "cargo hakari generate && cargo hakari manage-deps"
-	}
+		"hakari": "cargo hakari generate && cargo hakari manage-deps",
+		"sqlx-prep": "cargo sqlx prep --workspace",
+	},
 }

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE session SET status = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "session_status",
+            "kind": {
+              "Enum": [
+                "Unauthorized",
+                "Authorized",
+                "Sudo"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "120dc621ec55cb5bb4fd44e45532f4cf918a2844dd5c59e57996adf2a80205f8"
+}

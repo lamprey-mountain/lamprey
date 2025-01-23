@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM message WHERE discord_channel_id = ? ORDER BY discord_id DESC LIMIT 1",
+  "query": "SELECT * FROM message WHERE chat_thread_id = ? ORDER BY chat_id DESC LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "0e206caf8e87ff70771b3e2147cd4a4b6c6181fc72aef2f327366d666d06f489"
+  "hash": "6b0b2922ca0339c588bc13a14b2500ddd05aec36cc7b7ac8af509691d989ff33"
 }
