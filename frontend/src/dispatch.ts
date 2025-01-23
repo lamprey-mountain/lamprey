@@ -13,6 +13,7 @@ import { ChatCtx } from "./context.ts";
 import { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { TimelineItemT } from "./Messages.tsx";
+import { createUpload } from "sdk";
 
 type RenderTimelineParams = {
 	items: Array<TimelineItem>;
@@ -99,10 +100,15 @@ function renderTimeline(
 	return newItems;
 }
 
-function calculateSlice(old: Slice | undefined, off: number, len: number, dir: "b" | "f"): Slice {
+function calculateSlice(
+	old: Slice | undefined,
+	off: number,
+	len: number,
+	dir: "b" | "f",
+): Slice {
 	// messages are approx. 32 px high, show 3 pages of messages
 	const SLICE_LEN = Math.ceil(globalThis.innerHeight / 32) * 3;
-	
+
 	// scroll a page at a time
 	const PAGINATE_LEN = Math.ceil(globalThis.innerHeight / 32);
 
@@ -119,7 +125,7 @@ function calculateSlice(old: Slice | undefined, off: number, len: number, dir: "
 	} else {
 		const end = Math.min(old.end + off + PAGINATE_LEN, len);
 		const start = Math.max(end - SLICE_LEN, 0);
-		return { start, end }
+		return { start, end };
 	}
 }
 
@@ -150,7 +156,8 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	}
 
 	async function dispatch(action: Action) {
-		console.log("dispatch", action.do);
+		// console.log("dispatch", action.do);
+		console.log("dispatch", action);
 		switch (action.do) {
 			case "paginate": {
 				const { dir, thread_id } = action;
@@ -238,7 +245,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 								for (const msg of batch.items) {
 									update("messages", msg.id, msg);
 								}
-								
+
 								offset = batch.items.length;
 							}
 						});
@@ -249,7 +256,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					const tl = ctx.data.timelines[thread_id];
 					const slice = calculateSlice(oldSlice, offset, tl.length, dir);
 					update("slices", thread_id, slice);
-					
+
 					const { read_marker_id } = ctx.data.thread_state[thread_id];
 					const newItems = renderTimeline({
 						items: tl,
@@ -258,9 +265,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						has_before: tl.at(0)?.type === "hole",
 						has_after: tl.at(-1)?.type === "hole",
 					});
-					update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+					update(
+						"thread_state",
+						thread_id,
+						"timeline",
+						(old) => [...reconcile(newItems)(old)],
+					);
 				});
-				
+
 				return;
 			}
 			case "menu": {
@@ -329,14 +341,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				const { thread_id } = action;
 				const ts = ctx.data.thread_state[thread_id];
 				console.log(ts);
-				if (!ts.is_at_end) return;
-				
+				if (!ts?.is_at_end) return;
+
 				solidBatch(() => {
 					const tl = ctx.data.timelines[thread_id];
 					const oldSlice = ctx.data.slices[thread_id];
 					const slice = calculateSlice(oldSlice, 1, tl.length, "f");
 					update("slices", thread_id, slice);
-					
+
 					const { read_marker_id } = ctx.data.thread_state[thread_id];
 					const newItems = renderTimeline({
 						items: tl,
@@ -345,17 +357,30 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						has_before: tl.at(0)?.type === "hole",
 						has_after: tl.at(-1)?.type === "hole",
 					});
-					update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+					update(
+						"thread_state",
+						thread_id,
+						"timeline",
+						(old) => [...reconcile(newItems)(old)],
+					);
 
-					const isAtTimelineEnd = tl?.at(-1)?.type !== "hole" && ctx.data.slices[thread_id].end >= tl.length;
+					const isAtTimelineEnd = tl?.at(-1)?.type !== "hole" &&
+						ctx.data.slices[thread_id].end >= tl.length;
 					// HACK: solidjs doesn't like me doing this
-					const isFocused = location.pathname.match(/^\/thread\/([a-z0-9-]+)$/i)?.[1] === thread_id;
+					const isFocused =
+						location.pathname.match(/^\/thread\/([a-z0-9-]+)$/i)?.[1] ===
+							thread_id;
 					console.log({ isFocused, isAtTimelineEnd, scrollEnd: ts.is_at_end });
 					if (ts.is_at_end && isAtTimelineEnd) {
 						if (isFocused) {
-					   	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+							ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 						} else {
-					   	ctx.dispatch({ do: "thread.scroll_pos", thread_id, is_at_end: ts.is_at_end, pos: 999999 });
+							ctx.dispatch({
+								do: "thread.scroll_pos",
+								thread_id,
+								is_at_end: ts.is_at_end,
+								pos: 999999,
+							});
 						}
 					}
 				});
@@ -384,14 +409,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						const { message } = msg;
 						const { id, version_id, thread_id, nonce } = message;
 						update("messages", id, message);
-						
+
 						if (ctx.data.threads[thread_id]) {
 							update("threads", thread_id, "last_version_id", version_id);
 							if (id === version_id) {
 								update("threads", thread_id, "message_count", (i) => i + 1);
 							}
 						}
-						
+
 						if (!ctx.data.timelines[thread_id]) {
 							update("timelines", thread_id, [{ type: "hole" }, {
 								type: "remote",
@@ -419,9 +444,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 									message.thread_id,
 									(i) =>
 										i.map((j) =>
-											(j.type === "remote" && j.message.id === id)
-												? item
-												: j
+											(j.type === "remote" && j.message.id === id) ? item : j
 										),
 								);
 							}
@@ -554,6 +577,84 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				});
 				return;
 			}
+			case "upload.init": {
+				const { local_id, thread_id } = action;
+				const ts = () => ctx.data.thread_state[thread_id];
+				update("thread_state", thread_id, "attachments", ts().attachments.length, {
+					status: "uploading",
+					file: action.file,
+					local_id: local_id,
+					progress: 0,
+					paused: false,
+				});
+				const up = await createUpload({
+					file: action.file,
+					client: ctx.client,
+					onProgress(progress) {
+						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						if (idx === -1) return;
+						update("thread_state", thread_id, "attachments", idx, {
+							status: "uploading",
+							file: action.file,
+							local_id,
+							paused: false,
+							progress,
+						});
+					},
+					onFail(error) {
+						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						if (idx === -1) return;
+						update("thread_state", thread_id, "attachments", ts().attachments.toSpliced(idx, 1));
+						ctx.dispatch({ do: "modal.alert", text: error.message });
+					},
+					onComplete(media) {
+						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						if (idx === -1) return;
+						update("thread_state", thread_id, "attachments", idx, { status: "uploaded", media, local_id, file: action.file });
+					},
+					onPause() {
+						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						if (idx === -1) return;
+						update("thread_state", thread_id, "attachments", idx, {
+							...ctx.data.thread_state[thread_id].attachments[idx],
+							paused: true,
+						});
+					},
+					onResume() {
+						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						if (idx === -1) return;
+						update("thread_state", thread_id, "attachments", idx, {
+							...ctx.data.thread_state[thread_id].attachments[idx],
+							paused: false,
+						});
+					},
+				});
+				update("uploads", local_id, { up, thread_id });
+				return;
+			}
+			case "upload.pause": {
+				ctx.data.uploads[action.local_id]?.up.pause();
+				return;
+			}
+			case "upload.resume": {
+				ctx.data.uploads[action.local_id]?.up.resume();
+				return;
+			}
+			case "upload.cancel": {
+				const upload = ctx.data.uploads[action.local_id];
+				upload?.up.pause();
+				delete ctx.data.uploads[action.local_id];
+				const ts = ctx.data.thread_state[upload.thread_id];
+				const idx = ts.attachments.findIndex(i => i.local_id === action.local_id);
+				if (idx !== -1) {
+					ctx.dispatch({
+						do: "thread.attachments",
+						thread_id: upload.thread_id,
+						attachments: ts.attachments.toSpliced(idx, 1),
+					});
+				};
+				return;
+			}
 		}
 	}
 
@@ -626,6 +727,8 @@ async function handleSubmit(
 	}
 	const ts = ctx.data.thread_state[thread_id];
 	if (text.length === 0 && ts.attachments.length === 0) return false;
+	if (!ts.attachments.every((i) => i.status === "uploaded")) return false;
+	const attachments = ts.attachments.map((i) => i.media);
 	const reply_id = ts.reply_id;
 	const nonce = uuidv7();
 	ctx.client.http.POST("/api/v1/thread/{thread_id}/message", {
@@ -636,7 +739,7 @@ async function handleSubmit(
 			content: text,
 			reply_id,
 			nonce,
-			attachments: ts.attachments,
+			attachments,
 		},
 	});
 	const localMessage: MessageT = {
@@ -650,7 +753,7 @@ async function handleSubmit(
 		content: text,
 		author: ctx.data.user!,
 		metadata: null,
-		attachments: ts.attachments,
+		attachments,
 		is_pinned: false,
 		ordering: 0,
 	};

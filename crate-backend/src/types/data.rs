@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use tokio::io::BufWriter;
 use types::{
     Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId
 };
@@ -308,6 +309,7 @@ pub struct MediaUpload {
     pub create: MediaCreate,
     pub user_id: UserId,
     pub temp_file: TempFile,
+    pub temp_writer: BufWriter<TempFile>,
 }
 
 #[derive(sqlx::Type, PartialEq, Eq)]

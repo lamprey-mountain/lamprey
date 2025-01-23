@@ -13,6 +13,9 @@ const App: Component = () => {
 	const client = createClient({
 		baseUrl: BASE_URL,
 		token: TOKEN,
+		onState(state) {
+			console.log({ state });
+		},
 		onMessage(msg) {
 			console.log("recv", msg);
 			ctx.dispatch({
@@ -39,6 +42,7 @@ const App: Component = () => {
 		modals: [],
 		user: null,
 		menu: null,
+		uploads: {},
 	});
 
 	(async () => {

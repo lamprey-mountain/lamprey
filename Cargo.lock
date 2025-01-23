@@ -213,6 +213,7 @@ dependencies = [
  "figment",
  "futures-util",
  "headers",
+ "http 1.2.0",
  "opendal",
  "reqwest 0.12.12",
  "serde",

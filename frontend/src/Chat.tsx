@@ -1,16 +1,21 @@
 import {
 	createEffect,
 	For,
+	Match,
 	on,
 	Show,
+	Switch,
 	useContext,
 } from "solid-js";
 import Editor from "./Editor.tsx";
 import { getAttachment, TimelineItem } from "./Messages.tsx";
 
-import { chatctx, ThreadState } from "./context.ts";
+import { Attachment, chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
-import { AttachmentT, RoomT, ThreadT } from "./types.ts";
+import { RoomT, ThreadT } from "./types.ts";
+import { uuidv7 } from "uuidv7";
+import { createUpload } from "sdk";
+import { Media, MessageServer } from "../../ts-sdk/types.ts";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -119,50 +124,89 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	}));
 
+	// AAAAAAAA FIREFOX DOESNT SUPPORT READABLESTREAM IN BODY
+	// function progress<T>(call: (uploaded: number) => void): TransformStream<T, T> {
+	// 	let bytes = 0;
+	// 	return new TransformStream({
+	// 		transform(chunk, control) {
+	// 			console.log({ chunk, control })
+	// 			if (chunk === null) {
+	// 				control.terminate();
+	// 			} else if (ArrayBuffer.isView(chunk)) {
+	// 				bytes += chunk.byteLength;
+	// 				call(bytes);
+	// 				control.enqueue(chunk);
+	// 			} else {
+	// 				throw new Error("invalid bytes");
+	// 			}
+	// 		},
+	// 	});
+	// }
+
 	// TODO: handle this with onSubmit if possible
-	async function handleUpload(f: File) {
-		console.log(f);
-		const { data, error } = await ctx.client.http.POST("/api/v1/media", {
-			body: {
-				filename: f.name,
-				size: f.size,
-			},
-		});
-		if (error) {
-			ctx.dispatch({ do: "modal.alert", text: "failed to upload: " + error });
-			return;
-		}
-		const { upload_url } = data;
-		const r = await fetch(upload_url!, {
-			method: "PATCH",
-			headers: {
-				"authorization": ctx.client.opts.token,
-				"upload-offset": "0",
-			},
-			body: f,
-		});
-		if (!r.ok) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "failed to upload: " + await r.text(),
-			});
-			return;
-		}
-		const json = await r.json();
+	function handleUpload(file: File) {
+		console.log(file);
+		const local_id = uuidv7();
 		ctx.dispatch({
-			do: "thread.attachments",
+			do: "upload.init",
+			file,
+			local_id,
 			thread_id: props.thread.id,
-			attachments: [...ts()!.attachments, json],
 		});
-		console.log(ts()!.attachments);
 	}
 
-	function removeAttachment(id: string) {
+	function removeAttachment(local_id: string) {
 		ctx.dispatch({
 			do: "thread.attachments",
 			thread_id: props.thread.id,
-			attachments: [...ts()!.attachments].filter((i) => i.id !== id),
+			attachments: [...ts()!.attachments].filter((i) =>
+				i.local_id !== local_id
+			),
 		});
+	}
+
+	function renderAttachmentInfo(att: Attachment) {
+		if (att.status === "uploading") {
+			if (att.progress === att.file.size) {
+				return `processing...`;
+			} else {
+				const percent = ((att.progress / att.file.size) * 100).toFixed(2);
+				return `uploading (${percent}%)`;
+			}
+		} else {
+			return getAttachment(att.media);
+		}
+	}
+
+	function renderAttachment(att: Attachment) {
+		return (
+			<>
+				<div>
+					{renderAttachmentInfo(att)}
+				</div>
+				<button onClick={() => removeAttachment(att.local_id)}>
+					cancel/remove
+				</button>
+				<Switch>
+					<Match when={att.status === "uploading" && att.paused}>
+						<button
+							onClick={() =>
+								ctx.dispatch({ do: "upload.resume", local_id: att.local_id })}
+						>
+							resume
+						</button>
+					</Match>
+					<Match when={att.status === "uploading"}>
+						<button
+							onClick={() =>
+								ctx.dispatch({ do: "upload.pause", local_id: att.local_id })}
+						>
+							pause
+						</button>
+					</Match>
+				</Switch>
+			</>
+		);
 	}
 
 	// translate-y-[8px]
@@ -197,9 +241,9 @@ export const ChatMain = (props: ChatProps) => {
 				<Show when={ts()?.attachments.length}>
 					<ul class="attachments">
 						<For each={ts()!.attachments}>
-							{(media) => (
-								<li onClick={() => removeAttachment(media.id)}>
-									{getAttachment(media)}
+							{(att) => (
+								<li>
+									{renderAttachment(att)}
 								</li>
 							)}
 						</For>
@@ -215,8 +259,4 @@ export const ChatMain = (props: ChatProps) => {
 			</div>
 		</div>
 	);
-};
-
-type MediaPreviewProps = {
-	media: AttachmentT;
 };

@@ -1,8 +1,8 @@
 import { createContext, useContext } from "solid-js";
-import { Client, types } from "sdk";
+import { Client, types, Upload } from "sdk";
 import {
-	AttachmentT,
 	InviteT,
+	MediaT,
 	MemberT,
 	MessageT,
 	RoleT,
@@ -23,13 +23,20 @@ export type Slice = {
 	end: number;
 };
 
+export type Attachment =
+	& { file: File; local_id: string }
+	& (
+		| { status: "uploading"; progress: number; paused: boolean }
+		| { status: "uploaded"; media: MediaT }
+	);
+
 export type ThreadState = {
 	editor_state: EditorState;
 	reply_id: string | null;
 	scroll_pos: number | null;
 	is_at_end: boolean;
 	read_marker_id: string | null;
-	attachments: Array<AttachmentT>;
+	attachments: Array<Attachment>;
 	timeline: Array<TimelineItemT>;
 };
 
@@ -48,6 +55,8 @@ export type Data = {
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	menu: Menu | null;
+	// TODO: remove thread_id requirement
+	uploads: Record<string, { up: Upload, thread_id: string }>;
 };
 
 type Menu =
@@ -85,7 +94,12 @@ export type Action =
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
 	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
-	| { do: "thread.scroll_pos"; thread_id: string; pos: number | null; is_at_end: boolean }
+	| {
+		do: "thread.scroll_pos";
+		thread_id: string;
+		pos: number | null;
+		is_at_end: boolean;
+	}
 	| { do: "thread.autoscroll"; thread_id: string }
 	| {
 		do: "thread.mark_read";
@@ -97,16 +111,19 @@ export type Action =
 	| {
 		do: "thread.attachments";
 		thread_id: string;
-		attachments: Array<AttachmentT>;
+		attachments: Array<Attachment>;
 	}
 	| { do: "fetch.room"; room_id: string }
 	| { do: "fetch.thread"; thread_id: string }
 	| { do: "fetch.room_threads"; room_id: string }
+	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
+	| { do: "upload.pause"; local_id: string }
+	| { do: "upload.resume"; local_id: string }
+	| { do: "upload.cancel"; local_id: string }
 	| { do: "server"; msg: types.MessageServer };
 
 export type AttachmentCreateT = {
 	id: string;
-	// file: File,
 };
 
 export type ChatCtx = {

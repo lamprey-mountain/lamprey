@@ -1,16 +1,17 @@
 use std::sync::Arc;
 
 use axum::{
-    body::Bytes,
+    body::Body,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     Json,
 };
+use futures_util::StreamExt;
 use tokio::{
-    io::{AsyncSeekExt, AsyncWriteExt},
+    io::{AsyncSeekExt, AsyncWriteExt, BufWriter},
     process::Command,
 };
-use tracing::debug;
+use tracing::{debug, info};
 use url::Url;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -32,7 +33,7 @@ const MAX_SIZE: u64 = 1024 * 1024 * 16;
     path = "/media",
     tags = ["media"],
     responses(
-        (status = StatusCode::CREATED, description = "Get room success", body = MediaCreated)
+        (status = StatusCode::CREATED, description = "Create media success", body = MediaCreated)
     )
 )]
 async fn media_create(
@@ -48,6 +49,7 @@ async fn media_create(
     let user_id = session.user_id;
     let media_id = MediaId(uuid::Uuid::now_v7());
     let temp_file = TempFile::new().await.expect("failed to create temp file!");
+    let temp_writer = BufWriter::new(temp_file.open_rw().await?);
     let upload_url = Some(
         Url::parse(&format!(
             "https://chat.celery.eu.org/api/v1/media/{media_id}"
@@ -60,6 +62,7 @@ async fn media_create(
             create: r.clone(),
             user_id,
             temp_file,
+            temp_writer,
         },
     );
     let res = MediaCreated {
@@ -73,7 +76,6 @@ async fn media_create(
 }
 
 /// Media upload
-// TODO: stream
 #[utoipa::path(
     patch,
     path = "/media/{media_id}",
@@ -81,8 +83,8 @@ async fn media_create(
     params(("media_id", description = "Media id")),
     request_body = Vec<u8>,
     responses(
-        (status = NO_CONTENT, description = "Upload success" ),
-        (status = OK, description = "Upload done" ),
+        (status = NO_CONTENT, description = "Upload success"),
+        (status = OK, description = "Upload done"),
     )
 )]
 async fn media_upload(
@@ -90,7 +92,7 @@ async fn media_upload(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
-    body: Bytes,
+    body: Body,
 ) -> Result<(StatusCode, HeaderMap, Json<Option<Media>>)> {
     let mut up = s.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
     if up.user_id != session.user_id {
@@ -108,14 +110,28 @@ async fn media_upload(
         .ok_or(Error::BadHeader)?
         .to_str()?
         .parse()?;
+    let part_length: u64 = headers
+        .get("content-length")
+        .ok_or(Error::BadHeader)?
+        .to_str()?
+        .parse()?;
     if current_size != current_off {
         return Err(Error::CantOverwrite);
     }
-    if current_size + current_off > up.create.size {
+    if current_size + part_length > up.create.size {
         return Err(Error::TooBig);
     }
-    up.temp_file.seek(std::io::SeekFrom::End(0)).await?;
-    let end_size = current_off + up.temp_file.write(&body).await? as u64;
+    up.temp_file.seek(std::io::SeekFrom::Start(current_off)).await?;
+    let mut stream = body.into_data_stream();
+    let mut end_size = current_off;
+    while let Some(Ok(chunk)) = stream.next().await {
+        up.temp_writer.write_all(&chunk).await?;
+        end_size += chunk.len() as u64
+    }
+    info!("finished stream upload end_size={}", end_size);
+    
+    dbg!(end_size, up.create.size);
+    
     if end_size > up.create.size {
         let p = up.temp_file.file_path().to_owned();
         s.uploads.remove(&media_id);
@@ -183,7 +199,7 @@ async fn media_upload(
     tags = ["media"],
     params(("media_id", description = "Media id")),
     responses(
-        (status = OK, description = "Success" ),
+        (status = OK, description = "Success"),
     )
 )]
 async fn media_get(
@@ -203,7 +219,7 @@ async fn media_get(
     tags = ["media"],
     params(("media_id", description = "Media id")),
     responses(
-        (status = NO_CONTENT, description = "no content"),
+        (status = NO_CONTENT, description = "no content", headers(("upload-length" = u64), ("upload-offset" = u64))),
     )
 )]
 async fn media_check(
@@ -225,33 +241,6 @@ async fn media_check(
     headers.insert("upload-length", media.size.into());
     Ok((StatusCode::NO_CONTENT, headers))
 }
-
-// 	app.openAPIRegistry.registerPath(MediaCheck);
-
-// 	app.openapi(withAuth(MediaGet), async (c) => {
-// 		const user_id = c.get("user_id");
-// 		const media_id = c.req.param("media_id");
-// 		// extremely dubious
-// 		if (c.req.method === "HEAD") {
-// 			const up = uploads.get(media_id);
-// 			console.log({ uploads })
-// 			if (!up) return c.json({ error: "not found" }, 404);
-// 			if (up.user_id !== user_id) return c.json({ error: "not found" }, 404);
-// 			const stat = await Deno.stat(up.temp_file);
-// 			return new Response(null, {
-// 				status: 204,
-// 				headers: {
-// 					"Upload-Offset": stat.size.toString(),
-// 					"Upload-Length": up.size.toString(),
-// 				},
-// 			}) as any;
-// 		} else {
-// 			const media = await data.mediaSelect(media_id);
-// 			if (!media) return c.json({ error: "not found" }, 404);
-// 			media.url = await blobs.presignedGetUrl(media.url);
-// 			return c.json(media, 200);
-// 		}
-// 	});
 
 struct Metadata {
     height: Option<u64>,

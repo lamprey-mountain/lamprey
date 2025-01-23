@@ -8,6 +8,7 @@ export type Role = components["schemas"]["Role"];
 // export type Invite = components["schemas"]["Invite"];
 export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
+export type Media = components["schemas"]["Media"];
 
 export type Invite = { code: string };
 

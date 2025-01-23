@@ -4,6 +4,7 @@ use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::{DashMap, DashSet};
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
+use http::header;
 use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -117,6 +118,15 @@ pub struct ConfigDiscord {
     redirect_uri: String,
 }
 
+fn cors() -> CorsLayer {
+    use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
+    const UPLOAD_OFFSET: HeaderName = HeaderName::from_static("upload-offset");
+    const UPLOAD_LENGTH: HeaderName = HeaderName::from_static("upload-length");
+    CorsLayer::very_permissive()
+        .expose_headers([CONTENT_TYPE, UPLOAD_OFFSET, UPLOAD_LENGTH])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE, UPLOAD_OFFSET, UPLOAD_LENGTH])
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
@@ -160,7 +170,7 @@ async fn main() -> Result<()> {
             "/api/docs",
             get(|| async { Html(Scalar::with_url("/scalar", api1).to_html()) }),
         )
-        .layer(CorsLayer::very_permissive())
+        .layer(cors())
         .layer(TraceLayer::new_for_http())
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;

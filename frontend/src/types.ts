@@ -6,20 +6,7 @@ export type MessageT = types.Message;
 export type UserT = types.User;
 export type RoleT = types.Role;
 export type MemberT = types.RoomMember;
-
-export type AttachmentT = {
-	id: string;
-	filename: string;
-	url: string;
-	source_url: string | null;
-	thumbnail_url: string | null;
-	mime: string;
-	alt: string | null;
-	size: number;
-	height: number | null;
-	width: number | null;
-	duration: number | null;
-};
+export type MediaT = types.Media;
 
 export type InviteT = {
 	code: string;

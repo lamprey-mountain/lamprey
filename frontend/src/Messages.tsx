@@ -1,7 +1,7 @@
 // import { Tooltip } from "./Atoms.tsx";
 import { getTimestampFromUUID } from "sdk";
 import { For, Show } from "solid-js";
-import { AttachmentT, MessageT, MessageType, ThreadT, UserT } from "./types.ts";
+import { MediaT, MessageT, MessageType, ThreadT, UserT } from "./types.ts";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
@@ -33,9 +33,9 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	},
 };
 
-type UserPopupProps = {
-	user: UserT;
-};
+// type UserPopupProps = {
+// 	user: UserT;
+// };
 
 // const UserTooltip = (props: UserPopupProps) => {
 // 	// TODO: click to view full profile
@@ -60,7 +60,7 @@ const md = marked.use({
 	gfm: true,
 });
 
-export function getAttachment(a: AttachmentT) {
+export function getAttachment(a: MediaT) {
 	const b = a.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
