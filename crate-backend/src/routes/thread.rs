@@ -4,6 +4,7 @@ use axum::{
     extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, Json
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -45,28 +46,36 @@ async fn thread_create(
         .thread_create(ThreadCreate {
             room_id,
             creator_id: user_id,
-            name: json.name,
-            description: json.description,
+            name: json.name.clone(),
+            description: json.description.clone(),
             is_closed: json.is_closed.unwrap_or(false),
             is_locked: json.is_locked.unwrap_or(false),
             is_pinned: json.is_pinned.unwrap_or(false),
         })
         .await?;
-    data.message_create(MessageCreate {
+    let starter_message_id = data.message_create(MessageCreate {
         thread_id,
         content: Some("(thread create)".to_string()),
         attachment_ids: vec![],
         author_id: user_id,
         message_type: MessageType::ThreadUpdate,
-        metadata: None,
+        metadata: Some(json!({
+            "name": json.name,
+            "description": json.description,
+            "is_closed": json.is_closed.unwrap_or(false),
+            "is_locked": json.is_locked.unwrap_or(false),
+            "is_pinned": json.is_pinned.unwrap_or(false),
+        })),
         reply_id: None,
         override_name: None,
     })
     .await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
+    let starter_message = data.message_get(thread_id, starter_message_id).await?;
     s.sushi.send(MessageServer::UpsertThread {
         thread: thread.clone(),
     })?;
+    s.sushi.send(MessageServer::UpsertMessage { message: starter_message })?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
