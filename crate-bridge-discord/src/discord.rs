@@ -14,10 +14,7 @@ use serenity::{
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
-use crate::{
-    common::{Globals, GlobalsTrait, Portal, PortalMessage},
-    data::Data,
-};
+use crate::common::{Globals, GlobalsTrait, Portal, PortalMessage};
 
 struct GlobalsKey;
 
@@ -47,10 +44,10 @@ impl EventHandler for Handler {
                 .entry(config.my_thread_id)
                 .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
             let last_id = globals
-                .get_last_message_dc(ch.id)
-                .await
-                .unwrap()
-                .map(|m| m.discord_id);
+                .last_ids
+                .iter()
+                .find(|i| i.discord_channel_id == ch.id)
+                .map(|i| i.discord_id);
             let Some(last_id) = last_id else {
                 continue;
             };
@@ -64,7 +61,7 @@ impl EventHandler for Handler {
                 if msgs.is_empty() {
                     break;
                 }
-                info!("backfill {} messages", msgs.len());
+                info!("discord backfill {} messages", msgs.len());
                 let last_id = msgs.first().unwrap().id;
                 for message in msgs.into_iter().rev() {
                     let _ = portal.send(PortalMessage::DiscordMessageCreate { message });

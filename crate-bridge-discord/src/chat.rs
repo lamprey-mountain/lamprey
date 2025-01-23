@@ -6,11 +6,11 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{info, warn};
 use types::{
-    MediaCreated, MessageClient, MessageCreateRequest, MessageId, MessageServer, ThreadId, UserId,
+    MediaCreated, MessageClient, MessageCreateRequest, MessageId, MessageServer, PaginationResponse, ThreadId, UserId
 };
 use uuid::uuid;
 
-use crate::common::{Globals, GlobalsTrait, PortalMessage};
+use crate::common::{Globals, GlobalsTrait, Portal, PortalMessage};
 
 pub struct Unnamed {
     globals: Arc<Globals>,
@@ -89,6 +89,37 @@ impl Unnamed {
                     }
                     MessageServer::Ready { user } => {
                         info!("chat ready {}", user.name);
+
+                        let http = reqwest::Client::new();
+                        for config in &self.globals.config.portal {
+                            let portal = self.globals
+                                .portals
+                                .entry(config.my_thread_id)
+                                .or_insert_with(|| Portal::summon(self.globals.clone(), config.to_owned()));
+                            let last_id = self.globals.last_ids.get(&config.my_thread_id).map(|m| m.chat_id);
+                            let Some(mut last_id) = last_id else {
+                                continue;
+                            };
+                            loop {
+                                let url = format!("https://chat.celery.eu.org/api/v1/thread/{}/message?from={}&dir=f&limit=100", config.my_thread_id, last_id);
+                                let batch: PaginationResponse<types::Message> = http.get(url)
+                                    .header("authorization", token.clone())
+                                    .send()
+                                    .await?
+                                    .error_for_status()?
+                                    .json()
+                                    .await?;
+                                info!("chat backfill {} messages", batch.items.len());
+                                let new_last_id = batch.items.last().map(|m| m.id);
+                                for message in batch.items.into_iter() {
+                                    let _ = portal.send(PortalMessage::UnnamedMessageUpsert { message });
+                                }
+                                if !batch.has_more {
+                                    break;
+                                }
+                                last_id = new_last_id.unwrap();
+                            }
+                        }
                     }
                     MessageServer::UpsertThread { thread: _ } => {
                         info!("chat upsert thread");

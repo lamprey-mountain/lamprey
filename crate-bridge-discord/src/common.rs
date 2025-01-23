@@ -29,6 +29,7 @@ pub struct Globals {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
+    pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<UnnamedMessage>,
 }

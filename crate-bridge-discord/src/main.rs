@@ -4,6 +4,7 @@ use anyhow::Result;
 use chat::Unnamed;
 use common::{Config, Globals};
 use dashmap::DashMap;
+use data::Data;
 use discord::Discord;
 use tokio::sync::mpsc;
 use tracing_subscriber::EnvFilter;
@@ -38,9 +39,19 @@ async fn main() -> Result<()> {
         pool,
         config,
         portals: Arc::new(DashMap::new()),
+        last_ids: Arc::new(DashMap::new()),
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
     });
+
+    for config in &globals.config.portal {
+        let last_id = globals
+            .get_last_message_ch(config.my_thread_id)
+            .await?;
+        if let Some(last_id) = last_id {
+            globals.last_ids.insert(config.my_thread_id, last_id);
+        }
+    }
 
     let dc = Discord::new(globals.clone(), dc_chan.1);
     let ch = Unnamed::new(globals.clone(), ch_chan.1);
