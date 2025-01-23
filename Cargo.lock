@@ -207,6 +207,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.22.1",
+ "crate-hakari",
  "crossbeam",
  "dashmap 6.1.0",
  "dotenvy",
@@ -308,6 +309,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "crate-hakari",
  "dashmap 6.1.0",
  "dotenvy",
  "reqwest 0.12.12",
@@ -500,6 +502,56 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16b80225097f2e5ae4e7179dd2266824648f3e2f49d9134d584b76389d31c4c3"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "crate-hakari"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "byteorder",
+ "chrono",
+ "crossbeam-utils",
+ "deranged",
+ "digest",
+ "form_urlencoded",
+ "futures",
+ "futures-channel",
+ "futures-sink",
+ "futures-util",
+ "hashbrown 0.15.2",
+ "indexmap",
+ "log",
+ "md-5",
+ "memchr",
+ "percent-encoding",
+ "proc-macro2",
+ "rand",
+ "regex",
+ "regex-automata 0.4.9",
+ "regex-syntax 0.8.5",
+ "reqwest 0.12.12",
+ "ring",
+ "rustls-webpki 0.102.8",
+ "serde",
+ "serde_json",
+ "sha2",
+ "smallvec",
+ "sqlx",
+ "sqlx-core",
+ "sqlx-macros",
+ "sqlx-macros-core",
+ "sqlx-postgres",
+ "sqlx-sqlite",
+ "syn 2.0.96",
+ "time",
+ "tokio",
+ "tokio-tungstenite 0.26.1",
+ "toml_edit",
+ "tracing-core",
+ "tungstenite 0.26.1",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -3427,6 +3479,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 name = "types"
 version = "0.1.0"
 dependencies = [
+ "crate-hakari",
  "serde",
  "serde_json",
  "time",

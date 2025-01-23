@@ -18,5 +18,8 @@
 		"nanoid": "npm:nanoid@^5.0.9",
 		"uuidv7": "npm:uuidv7@^1.0.2",
 		"sdk": "./ts-sdk/index.ts"
+	},
+	"tasks": {
+		"hakari": "cargo hakari generate && cargo hakari manage-deps"
 	}
 }
