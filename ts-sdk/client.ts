@@ -67,7 +67,6 @@ export function createClient(opts: ClientOptions): Client {
 				ws.close();
 			}
 		});
-		globalThis.doerr = () => ws.send("bad data");
 
 		ws.addEventListener("open", (_e) => {
 			setState("connected");
