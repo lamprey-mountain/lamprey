@@ -23,7 +23,8 @@ pub struct Room {
 
     #[cfg_attr(feature = "utoipa", schema(read_only, required = false))]
     pub description: Option<String>,
-    // default_roles: Vec<RoleId>,
+
+    // pub room_type: RoomType,
 }
 
 /// Data required to create a room
@@ -48,8 +49,15 @@ pub struct RoomPatch {
     pub description: Option<Option<String>>,
 }
 
+// enum RoomType {
+//     Default,
+//     Dm { other: User },
+//     Reports,
+// }
+
 // #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize, sqlx::Type)]
 // #[sqlx(type_name = "room_type")]
 // pub enum RoomType {
 // 	Default,
+// 	Dm,
 // }

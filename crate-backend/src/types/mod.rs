@@ -6,7 +6,7 @@ pub use permission::*;
 pub use types::ids::*;
 pub use types::invite::*;
 pub use types::media::*;
-pub use types::member::*;
+pub use types::room_member::*;
 pub use types::message::*;
 pub use types::pagination::*;
 pub use types::permission::*;

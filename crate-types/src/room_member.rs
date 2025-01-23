@@ -39,6 +39,30 @@ pub enum RoomMembership {
 
 // === future stuff ===
 
+// pub struct RoomMember2 {
+//     pub user: User,
+//     pub room_id: RoomId,
+//     pub membership: RoomMembership,
+//     pub override_name: Option<String>,
+//     pub override_description: Option<String>,
+//     // pub override_avatar: Option<String>,
+//     pub roles: Vec<Role>,
+//     pub joined_at: time::OffsetDateTime,
+// }
+
+// generic profile data thing
+// struct Profile {
+//     name: String,
+//     /// room = topic, user = status
+//     info_short: Option<String>,
+//     /// room = description, user = bio
+//     info_long: Option<String>,
+//     avatar: Option<Url>,
+//     banner: Option<Url>,
+//     /// list of preferred locales, in order of most to least preferred
+//     languages: Vec<Locale>,
+// }
+
 // struct RoomMemberPut2 {
 //     pub user_id: UserId,
 //     pub room_id: RoomId,

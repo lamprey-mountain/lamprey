@@ -67,5 +67,22 @@ pub enum ThreadInfo {
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 // #[sqlx(type_name = "thread_type")]
 // pub enum ThreadType {
-// 	Default,
+// 	Chat,
+// }
+
+// pub enum ThreadState {
+//     /// always remains active
+//     Pinned,
+
+//     /// default state that new threads are in
+//     Active,
+    
+//     /// goes straight to Deleted instead of Archived
+//     Temporary,
+
+//     /// inactive
+//     Archived,
+
+//     /// will be permanently deleted soon, visible to moderators
+//     Deleted,
 // }

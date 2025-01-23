@@ -107,3 +107,16 @@ pub struct MediaTrack {
     
     pub source: TrackSource,
 }
+
+// struct UrlEmbed {
+//     url: String,
+//     title: Option<String>,
+//     description: Option<String>,
+//     site_name: Option<String>,
+//     color: Option<String>,
+//     media: Vec<Media>,
+//     iframe: Option<String>,
+//     author_url: Option<String>,
+//     author_name: Option<String>,
+//     author_avatar: Option<Media>,
+// }

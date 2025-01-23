@@ -40,3 +40,11 @@ pub struct UserPatch {
     pub is_bot: Option<bool>,
     pub is_alias: Option<bool>,
 }
+
+// enum UserType {
+//     Anonymous,
+//     Default,
+//     Alias { parent: User },
+//     Bot { owner: User },
+//     System,
+// }
