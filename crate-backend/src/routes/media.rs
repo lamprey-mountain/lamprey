@@ -130,19 +130,19 @@ async fn media_upload(
     }
     info!("finished stream upload end_size={}", end_size);
     
-    dbg!(end_size, up.create.size);
-    
     if end_size > up.create.size {
         let p = up.temp_file.file_path().to_owned();
         s.uploads.remove(&media_id);
         tokio::fs::remove_file(p).await?;
         Err(Error::TooBig)
     } else if end_size == up.create.size {
+        up.temp_writer.flush().await?;
         let p = up.temp_file.file_path().to_owned();
         let url = format!("media/{media_id}");
         let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
         debug!("finish upload for {}, mime {}", media_id, mime);
         let upload_s3 = async {
+            // TODO: stream upload
             let bytes = tokio::fs::read(&p).await?;
             s.blobs()
                 .write_with(&url, bytes)
