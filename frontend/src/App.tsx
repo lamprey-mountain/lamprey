@@ -16,12 +16,15 @@ const App: Component = () => {
 		onState(state) {
 			console.log({ state });
 		},
-		onMessage(msg) {
+		onSync(msg) {
 			console.log("recv", msg);
 			ctx.dispatch({
 				do: "server",
 				msg,
 			});
+		},
+		onReady(msg) {
+			ctx.dispatch({ do: "server.ready", msg });
 		},
 	});
 

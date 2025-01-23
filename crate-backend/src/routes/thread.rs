@@ -10,7 +10,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     types::{
-        MessageCreate, MessageServer, MessageType, MessageVerId, PaginationQuery,
+        MessageCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
         PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest,
         ThreadId, ThreadPatch,
     },
@@ -72,10 +72,10 @@ async fn thread_create(
     .await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
     let starter_message = data.message_get(thread_id, starter_message_id).await?;
-    s.sushi.send(MessageServer::UpsertThread {
+    s.broadcast(MessageSync::UpsertThread {
         thread: thread.clone(),
     })?;
-    s.sushi.send(MessageServer::UpsertMessage { message: starter_message })?;
+    s.sushi.send(MessageSync::UpsertMessage { message: starter_message })?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
@@ -156,7 +156,7 @@ async fn thread_update(
     perms.ensure(Permission::RoomManage)?;
     data.thread_update(thread_id, user_id, json).await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
-    s.sushi.send(MessageServer::UpsertThread {
+    s.sushi.send(MessageSync::UpsertThread {
         thread: thread.clone(),
     })?;
     Ok(Json(thread))

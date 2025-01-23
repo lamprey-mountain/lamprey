@@ -397,9 +397,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "server": {
 				const msg = action.msg;
-				if (msg.type === "Ready") {
-					update("user", msg.user);
-				} else if (msg.type === "UpsertRoom") {
+				if (msg.type === "UpsertRoom") {
 					update("rooms", msg.room.id, msg.room);
 				} else if (msg.type === "UpsertThread") {
 					update("threads", msg.thread.id, msg.thread);
@@ -499,6 +497,12 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				} else {
 					console.warn("unknown message", msg);
 				}
+				return;
+			}
+			case "server.ready": {
+				const { user } = action.msg;
+				update("user", user);
+				update("users", user.id, user);
 				return;
 			}
 			case "thread.mark_read": {

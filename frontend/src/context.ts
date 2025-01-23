@@ -56,7 +56,7 @@ export type Data = {
 	modals: Array<Modal>;
 	menu: Menu | null;
 	// TODO: remove thread_id requirement
-	uploads: Record<string, { up: Upload, thread_id: string }>;
+	uploads: Record<string, { up: Upload; thread_id: string }>;
 };
 
 type Menu =
@@ -120,7 +120,8 @@ export type Action =
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
 	| { do: "upload.cancel"; local_id: string }
-	| { do: "server"; msg: types.MessageServer };
+	| { do: "server"; msg: types.MessageSync }
+	| { do: "server.ready"; msg: types.MessageReady };
 
 export type AttachmentCreateT = {
 	id: string;

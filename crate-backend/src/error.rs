@@ -3,8 +3,9 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use tracing::error;
+use types::MessageEnvelope;
 
-use crate::types::MessageServer;
+use crate::types::MessageSync;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -35,7 +36,7 @@ pub enum Error {
     #[error("axum error")]
     Axum(#[from] axum::Error),
     #[error("sushi send error: {0}")]
-    SushiSend(#[from] tokio::sync::broadcast::error::SendError<MessageServer>),
+    SushiSend(#[from] tokio::sync::broadcast::error::SendError<MessageSync>),
     #[error("parse int error: {0}")]
     ParseInt(#[from] ParseIntError),
     #[error("parse float error: {0}")]
@@ -109,8 +110,8 @@ impl IntoResponse for Error {
 impl From<Error> for Message {
     fn from(val: Error) -> Self {
         Message::text(
-            serde_json::to_string(&MessageServer::Error {
-                error: val.to_string(),
+            serde_json::to_string(&MessageEnvelope {
+                payload: types::MessagePayload::Error { error: val.to_string() }
             })
             .expect("error should always be able to be serialized"),
         )

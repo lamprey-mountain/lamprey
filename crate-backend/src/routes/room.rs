@@ -10,7 +10,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     error::Result,
     types::{
-        MessageServer, PaginationQuery, PaginationResponse, Permission, Room, RoomCreate, RoomId,
+        MessageSync, PaginationQuery, PaginationResponse, Permission, Room, RoomCreate, RoomId,
         RoomPatch,
     },
     ServerState,
@@ -31,8 +31,7 @@ async fn room_create(
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
     let room = s.services().create_room(json, session.user_id).await?;
-    s.sushi
-        .send(MessageServer::UpsertRoom { room: room.clone() })?;
+    s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
 
@@ -119,8 +118,7 @@ async fn room_edit(
     perms.ensure(Permission::RoomManage)?;
     data.room_update(room_id, json).await?;
     let room = data.room_get(room_id).await?;
-    s.sushi
-        .send(MessageServer::UpsertRoom { room: room.clone() })?;
+    s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
     Ok(Json(room))
 }
 

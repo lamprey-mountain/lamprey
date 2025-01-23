@@ -9,30 +9,63 @@ use super::{
     Session, SessionId, Thread, ThreadId, User, UserId,
 };
 
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageClient {
+    /// initial message
     Hello {
         token: String,
 
-        // TODO: resutming connections,
-        last_id: Option<String>,
+        #[serde(flatten)]
+        resume: Option<SyncResume>,
     },
+
+    /// heartbeat
     Pong,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SyncResume {
+    pub conn: String,
+    pub seq: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageEnvelope {
+    #[serde(flatten)]
+    pub payload: MessagePayload,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "op")]
+pub enum MessagePayload {
+    /// heartbeat
+    Ping,
+
+    /// data to keep local copy of state in sync with server
+    Sync { data: MessageSync, seq: u64 },
+
+    /// some kind of error
+    Error { error: String },
+
+    /// successfully connected
+    Ready { user: User, conn: String, seq: u64 },
+
+    /// successfully reconnected
+    Resumed,
+
+    /// client needs to disconnect and reconnect
+    Reconnect { can_resume: bool },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
-pub enum MessageServer {
-    Ping {},
-    Ready {
-        user: User,
-    },
-    Error {
-        error: String,
-    },
+pub enum MessageSync {
     UpsertRoom {
         room: Room,
     },

@@ -8,11 +8,12 @@ use http::header;
 use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use sync::Connection;
 use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
-use types::{MediaId, MediaUpload, MessageServer};
+use types::{MediaId, MediaUpload, MessageSync};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable as _};
@@ -20,6 +21,7 @@ use utoipa_scalar::{Scalar, Servable as _};
 pub mod data;
 pub mod error;
 mod routes;
+mod sync;
 pub mod services;
 pub mod types;
 
@@ -48,8 +50,12 @@ pub struct ServerState {
     pub valid_oauth2_states: Arc<DashSet<Uuid>>,
 
     // this is fine probably
-    pub sushi: Sender<MessageServer>,
+    pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
+
+    // TODO: limit number of connections per user
+    pub syncers: Arc<DashMap<String, Connection>>,
+    
     pub pool: PgPool,
     pub blobs: opendal::Operator,
 }
@@ -60,6 +66,7 @@ impl ServerState {
             config,
             uploads: Arc::new(DashMap::new()),
             valid_oauth2_states: Arc::new(DashSet::new()),
+            syncers: Arc::new(DashMap::new()),
             pool,
             sushi: tokio::sync::broadcast::channel(100).0,
             // channel_user: Arc::new(DashMap::new()),
@@ -79,6 +86,11 @@ impl ServerState {
 
     fn blobs(&self) -> &opendal::Operator {
         &self.blobs
+    }
+
+    fn broadcast(&self, msg: MessageSync) -> Result<()> {
+        self.sushi.send(msg)?;
+        Ok(())
     }
 
     async fn presign(&self, url: &str) -> Result<String> {

@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::{MessageServer, UserCreateRequest, UserPatch};
+use types::{MessageSync, UserCreateRequest, UserPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{UserCreate, UserIdReq};
@@ -88,8 +88,7 @@ pub async fn user_update(
     let data = s.data();
     data.user_update(user_id, body).await?;
     let user = data.user_get(user_id).await?;
-    s.sushi
-        .send(MessageServer::UpsertUser { user: user.clone() })?;
+    s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
 }
 
@@ -119,7 +118,7 @@ pub async fn user_delete(
     }
     let data = s.data();
     data.user_delete(user_id).await?;
-    s.sushi.send(MessageServer::DeleteUser { id: user_id })?;
+    s.sushi.send(MessageSync::DeleteUser { id: user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

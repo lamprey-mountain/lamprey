@@ -97,8 +97,7 @@ pub async fn session_delete(
     }
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(session_id).await?;
-    s.sushi
-        .send(types::MessageServer::DeleteSession { id: session_id })?;
+    s.broadcast(types::MessageSync::DeleteSession { id: session_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

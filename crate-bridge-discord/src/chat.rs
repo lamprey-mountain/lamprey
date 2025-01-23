@@ -4,9 +4,9 @@ use anyhow::Result;
 use serenity::futures::{SinkExt as _, StreamExt};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
-use tracing::{info, warn};
+use tracing::{info, warn, error};
 use types::{
-    MediaCreated, MessageClient, MessageCreateRequest, MessageId, MessageServer, PaginationResponse, ThreadId, UserId
+    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload, MessageSync, PaginationResponse, SyncResume, ThreadId, UserId
 };
 use uuid::uuid;
 
@@ -63,6 +63,8 @@ impl Unnamed {
                 let _ = handle(msg, &t2).await;
             }
         });
+        
+        let mut resume: Option<SyncResume> = None;
         loop {
             let Ok((mut client, _)) =
                 tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await
@@ -73,21 +75,31 @@ impl Unnamed {
             };
             let hello = types::MessageClient::Hello {
                 token: token.clone(),
-                last_id: None,
+                resume: resume.clone(),
             };
             client
                 .send(Message::text(serde_json::to_string(&hello)?))
                 .await?;
             while let Some(Ok(msg)) = client.next().await {
                 let Message::Text(text) = msg else { continue };
-                let msg: MessageServer = serde_json::from_str(&text)?;
-                match msg {
-                    MessageServer::Ping {} => {
+                let msg: MessageEnvelope = serde_json::from_str(&text)?;
+                match msg.payload {
+                    MessagePayload::Ping => {
                         client
                             .send(Message::text(serde_json::to_string(&MessageClient::Pong)?))
                             .await?;
-                    }
-                    MessageServer::Ready { user } => {
+                    },
+                    MessagePayload::Sync { data, seq } => {
+                        handle_sync(self.globals.clone(), data).await?;
+                        match &mut resume {
+                            Some(r) => r.seq = seq,
+                            None => {},
+                        }
+                    },
+                    MessagePayload::Error { error } => {
+                        error!("{error}");
+                    },
+                    MessagePayload::Ready { user, conn, seq } => {
                         info!("chat ready {}", user.name);
 
                         let http = reqwest::Client::new();
@@ -120,40 +132,55 @@ impl Unnamed {
                                 last_id = new_last_id.unwrap();
                             }
                         }
+
+                        resume = Some(SyncResume { conn, seq });
                     }
-                    MessageServer::UpsertThread { thread: _ } => {
-                        info!("chat upsert thread");
-                        // TODO: what to do here?
-                    }
-                    MessageServer::UpsertMessage { message } => {
-                        info!("chat upsert message");
-                        if message.author.id
-                            == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69"))
-                        {
-                            continue;
+                    MessagePayload::Resumed => {},
+                    MessagePayload::Reconnect { can_resume } => {
+                        if !can_resume {
+                            resume = None;
                         }
-                        self.globals.portal_send(
-                            message.thread_id,
-                            PortalMessage::UnnamedMessageUpsert { message },
-                        );
-                    }
-                    MessageServer::DeleteMessage {
-                        thread_id,
-                        message_id,
-                    } => {
-                        info!("chat delete message");
-                        self.globals.portal_send(
-                            thread_id,
-                            PortalMessage::UnnamedMessageDelete { message_id },
-                        );
-                    }
-                    _ => {}
+                        client.close(None).await?;
+                    },
                 }
             }
             warn!("websocket disconnected, reconnecting in 1 second...");
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
+}
+
+async fn handle_sync(mut globals: Arc<Globals>, msg: MessageSync) -> Result<()> {
+    match msg {
+        MessageSync::UpsertThread { thread: _ } => {
+            info!("chat upsert thread");
+            // TODO: what to do here?
+        }
+        MessageSync::UpsertMessage { message } => {
+            info!("chat upsert message");
+            if message.author.id
+                == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69"))
+            {
+                return Ok(())
+            }
+            globals.portal_send(
+                message.thread_id,
+                PortalMessage::UnnamedMessageUpsert { message },
+            );
+        }
+        MessageSync::DeleteMessage {
+            thread_id,
+            message_id,
+        } => {
+            info!("chat delete message");
+            globals.portal_send(
+                thread_id,
+                PortalMessage::UnnamedMessageDelete { message_id },
+            );
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {

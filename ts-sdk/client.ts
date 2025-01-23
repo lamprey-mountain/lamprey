@@ -1,14 +1,15 @@
 import createFetch from "openapi-fetch";
 import * as oapi from "openapi-fetch";
 import type { paths } from "./schema.d.ts";
-import { MessageServer } from "./types.ts";
+import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
 
 export type ClientState = "stopped" | "connected" | "ready" | "reconnecting";
 
 export type ClientOptions = {
 	baseUrl: string;
 	token: string;
-	onMessage: (event: MessageServer) => void;
+	onReady: (event: MessageReady) => void;
+	onSync: (event: MessageSync) => void;
 	onState: (state: ClientState) => void;
 };
 
@@ -25,9 +26,15 @@ export type Client = {
 	stop: () => void;
 };
 
+type Resume = {
+	conn: string;
+	seq: number;
+};
+
 export function createClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let state: ClientState = "stopped";
+	let resume: null | Resume = null;
 
 	function setState(newState: ClientState) {
 		state = newState;
@@ -39,28 +46,40 @@ export function createClient(opts: ClientOptions): Client {
 
 		ws = new WebSocket(new URL("/api/v1/sync", opts.baseUrl));
 		ws.addEventListener("message", (e) => {
-			const msg = JSON.parse(e.data);
-			if (msg.type === "Ping") {
+			const msg: MessageEnvelope = JSON.parse(e.data);
+			if (msg.op === "Ping") {
 				ws.send(JSON.stringify({ type: "Pong" }));
-			} else {
-				if (msg.type === "Ready") {
-					setState("ready");
-				}
-				opts.onMessage(msg);
+			} else if (msg.op === "Sync") {
+				if (resume) resume.seq = msg.seq;
+				opts.onSync(msg.data);
+			} else if (msg.op === "Error") {
+				console.error(msg.error);
+				setState("reconnecting");
+				ws.close();
+			} else if (msg.op === "Ready") {
+				opts.onReady(msg);
+				resume = { conn: msg.conn, seq: msg.seq };
+				setState("ready");
+			} else if (msg.op === "Resumed") {
+				setState("ready");
+			} else if (msg.op === "Reconnect") {
+				if (!msg.can_resume) resume = null;
+				ws.close();
 			}
 		});
+		globalThis.doerr = () => ws.send("bad data");
 
 		ws.addEventListener("open", (_e) => {
 			setState("connected");
-			ws.send(JSON.stringify({ type: "Hello", token: opts.token }));
+			ws.send(JSON.stringify({ type: "Hello", token: opts.token, ...resume }));
 		});
-		
+
 		ws.addEventListener("error", (e) => {
 			setState("reconnecting");
 			console.error(e);
 			ws.close();
 		});
-		
+
 		ws.addEventListener("close", () => {
 			setTimeout(setupWebsocket, 1000);
 		});

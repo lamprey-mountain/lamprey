@@ -12,10 +12,17 @@ export type Media = components["schemas"]["Media"];
 
 export type Invite = { code: string };
 
-export type MessageServer =
-	| { type: "Ping" }
-	| { type: "Ready"; user: User }
-	| { type: "Error"; error: string }
+export type MessageReady = { op: "Ready"; user: User; conn: string; seq: number }
+
+export type MessageEnvelope =
+	| { op: "Ping" }
+	| { op: "Sync"; data: MessageSync; seq: number }
+	| { op: "Error"; error: string }
+	| MessageReady
+	| { op: "Resumed" }
+	| { op: "Reconnect", can_resume: boolean };
+
+export type MessageSync =
 	| { type: "UpsertRoom"; room: Room }
 	| { type: "UpsertThread"; thread: Thread }
 	| { type: "UpsertMessage"; message: Message }
