@@ -18,6 +18,11 @@ import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { A, Route, Router } from "@solidjs/router";
 
+const Title = (props: { children: string }) => {
+	createEffect(() => document.title = props.children);
+	return undefined;
+}
+
 export const Main = () => {
 	const ctx = useCtx();
 
@@ -49,25 +54,6 @@ export const Main = () => {
 		});
 	});
 
-	// function getComponent() {
-	// 	switch (ctx.data.view.view) {
-	// 		case "home": {
-	// 		}
-	// 		case "room": {
-	// 			return <RoomHome room={ctx.data.view.room} />;
-	// 		}
-	// 		case "room-settings": {
-	// 			const room = ctx.data.view.room;
-	// 			return <RoomSettings room={room} />;
-	// 		}
-	// 		case "thread": {
-	// 			const room = ctx.data.view.room;
-	// 			const thread = ctx.data.view.thread;
-	// 			return <ChatMain room={room} thread={thread} />;
-	// 		}
-	// 	}
-	// }
-
 	// HACK: wrap in Show since ctx might be null during hmr
 	// this router is extremely messy - i'm not sure if i'm going to keep it or if i'll roll my own
 	return (
@@ -78,6 +64,7 @@ export const Main = () => {
 						path="/"
 						component={() => (
 							<>
+								<Title>Home</Title>
 								<ChatNav />
 								<Home />
 							</>
@@ -89,6 +76,7 @@ export const Main = () => {
 							const room = () => ctx.data.rooms[p.params.room_id];
 							return (
 								<>
+									<Title>{room() ? room().name : "loading..."}</Title>
 									<ChatNav />
 									<Show when={room()}>
 										<RoomHome room={room()} />
@@ -103,6 +91,7 @@ export const Main = () => {
 							const room = () => ctx.data.rooms[p.params.room_id];
 							return (
 								<>
+									<Title>{room() ? `${room().name} settings` : "loading..."}</Title>
 									<ChatNav />
 									<Show when={room()}>
 										<RoomSettings room={room()} page={p.params.page} />
@@ -134,6 +123,7 @@ export const Main = () => {
 
 							return (
 								<>
+									<Title>{room() && thread() ? `${thread().name} - ${room().name}` : "loading..."}</Title>
 									<ChatNav />
 									<Show when={room() && thread()}>
 										<ChatMain room={room()} thread={thread()} />
