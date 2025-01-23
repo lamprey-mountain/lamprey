@@ -11,6 +11,7 @@ anyhow = "1.0.95"
 async-tempfile = "0.6.0"
 async-trait = "0.1.85"
 axum = { version = "0.8.1", features = ["macros", "ws"] }
+axum-extra = { version = "0.10.0", features = ["typed-header"] }
 base64 = "0.22.1"
 crossbeam = "0.8.4"
 dashmap = "6.1.0"

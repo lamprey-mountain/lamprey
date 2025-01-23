@@ -44,7 +44,7 @@ pub async fn user_create(
 }
 
 // TODO: not sure how to implement this
-/// User list
+// /// User list
 // #[utoipa::path(
 //     get,
 //     path = "/user",

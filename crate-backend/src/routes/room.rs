@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    Json,
+    extract::{Path, Query, State}, http::{HeaderMap, StatusCode}, response::IntoResponse, Json
 };
+use axum_extra::TypedHeader;
+use headers::ETag;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -29,7 +29,7 @@ async fn room_create(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
-) -> Result<(StatusCode, Json<Room>)> {
+) -> Result<impl IntoResponse> {
     let room = s.services().create_room(json, session.user_id).await?;
     s.sushi
         .send(MessageServer::UpsertRoom { room: room.clone() })?;
@@ -43,20 +43,34 @@ async fn room_create(
     tags = ["room"],
     params(("room_id", description = "Room id")),
     responses(
-        (status = 200, description = "Get room success", body = Room),
+        (status = OK, description = "Get room success", body = Room),
+        (status = NOT_MODIFIED, description = "Not modified"),
     )
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(session): Auth,
+    headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<Room>> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let user_id = session.user_id;
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
     let room = data.room_get(room_id).await?;
-    Ok(Json(room))
+
+    // TODO: use typedheader once the empty if-none-match bug is fixed
+    // TODO: last-modified
+    let etag = format!(r#"W/"{}""#, room.version_id);
+
+    if let Some(if_none_match) = headers.get("if-none-match") {
+        if if_none_match == &etag {
+            return Ok(StatusCode::NOT_MODIFIED.into_response())
+        }
+    }
+
+    let etag: ETag = etag.parse().unwrap();
+    Ok((TypedHeader(etag), Json(room)).into_response())
 }
 
 /// List visible rooms
@@ -73,7 +87,7 @@ async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<PaginationResponse<Room>>> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let res = data.room_list(session.user_id, q).await?;
     Ok(Json(res))
@@ -97,7 +111,7 @@ async fn room_edit(
     Auth(session): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
-) -> Result<Json<Room>> {
+) -> Result<impl IntoResponse> {
     let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_room_get(user_id, room_id).await?;
