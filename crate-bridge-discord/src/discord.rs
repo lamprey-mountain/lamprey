@@ -14,7 +14,7 @@ use serenity::{
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 
-use crate::common::{Globals, GlobalsTrait, Portal, PortalMessage};
+use crate::{common::{Globals, GlobalsTrait}, portal::{Portal, PortalMessage}};
 
 struct GlobalsKey;
 

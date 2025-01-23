@@ -153,6 +153,7 @@ async fn media_upload(
             Result::Ok(())
         };
         upload_s3.await?;
+        info!("uploaded {} bytes to s3", up.create.size);
         let user_id = session.user_id;
         let mut media = s
             .data()

@@ -13,6 +13,7 @@ mod chat;
 mod common;
 mod data;
 mod discord;
+mod portal;
 
 #[tokio::main]
 async fn main() -> Result<()> {

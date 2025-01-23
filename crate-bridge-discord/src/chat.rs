@@ -10,7 +10,7 @@ use types::{
 };
 use uuid::uuid;
 
-use crate::common::{Globals, GlobalsTrait, Portal, PortalMessage};
+use crate::{common::{Globals, GlobalsTrait}, portal::{Portal, PortalMessage}};
 
 pub struct Unnamed {
     globals: Arc<Globals>,
