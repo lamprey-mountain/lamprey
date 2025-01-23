@@ -48,6 +48,7 @@ export function createList<T>(options: {
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
 	const [isAtBottom, setIsAtBottom] = createSignal(false);
+	const [scrollPos, setScrollPos] = createSignal(0);
 	let topRef: HTMLElement | undefined;
 	let bottomRef: HTMLElement | undefined;
 	let anchorRef: Element;
@@ -64,7 +65,7 @@ export function createList<T>(options: {
 					anchorRef = el.target;
 					options.onPaginate?.("backwards");
 				}
-			} else if (entries[0].target === bottomEl()) {
+			} else if (el.target === bottomEl()) {
 				if (el.isIntersecting) {
 					shouldAutoscroll = options.autoscroll?.() || false;
 					anchorRef = el.target;
@@ -109,6 +110,7 @@ export function createList<T>(options: {
 	});
 
 	return {
+		scrollPos,
 		isAtBottom,
 		scrollBy(pos: number, smooth = false) {
 			wrapperEl()?.scrollBy({
@@ -173,11 +175,17 @@ export function createList<T>(options: {
 				resizes.observe(wrapperEl()!);
 			});
 
+			function handleScroll() {
+				const pos = wrapperEl()!.scrollTop;
+				setScrollPos(pos);
+				options.onScroll?.(pos);
+			}
+
 			return (
 				<ul
 					class="list"
 					ref={setWrapperEl}
-					onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}
+					onScroll={handleScroll}
 					onContextMenu={options.onContextMenu}
 				>
 					<For each={options.items()}>

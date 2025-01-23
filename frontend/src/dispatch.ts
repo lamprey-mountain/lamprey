@@ -311,6 +311,8 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					scroll_pos: null,
 					read_marker_id: action.read_id ?? null,
 					attachments: [],
+					is_at_end: true,
+					timeline: [],
 				});
 				return;
 			}
@@ -326,6 +328,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			case "thread.autoscroll": {
 				const { thread_id } = action;
 				const ts = ctx.data.thread_state[thread_id];
+				console.log(ts);
 				if (!ts.is_at_end) return;
 				
 				solidBatch(() => {
@@ -343,6 +346,18 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						has_after: tl.at(-1)?.type === "hole",
 					});
 					update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+
+					const isAtTimelineEnd = tl?.at(-1)?.type !== "hole" && ctx.data.slices[thread_id].end >= tl.length;
+					// HACK: solidjs doesn't like me doing this
+					const isFocused = location.pathname.match(/^\/thread\/([a-z0-9-]+)$/i)?.[1] === thread_id;
+					console.log({ isFocused, isAtTimelineEnd, scrollEnd: ts.is_at_end });
+					if (ts.is_at_end && isAtTimelineEnd) {
+						if (isFocused) {
+					   	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+						} else {
+					   	ctx.dispatch({ do: "thread.scroll_pos", thread_id, is_at_end: ts.is_at_end, pos: 999999 });
+						}
+					}
 				});
 				return;
 			}
@@ -411,15 +426,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 								);
 							}
 						}
-						
-						// TODO: make this work again?
-						// if (ctx.data.view.view === "thread" && ctx.data.view.thread.id === thread_id) {
-						// 	const tl = ctx.data.timelines[thread_id];
-						// 	const isAtEnd = tl?.at(-1)?.type !== "hole" && ctx.data.slices[thread_id].end >= tl.length;
-						// 	if (isAtEnd) {
-						//    	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-						// 	}
-						// }
 
 						dispatch({ do: "thread.autoscroll", thread_id });
 					});
@@ -554,8 +560,8 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	return dispatch;
 }
 
-// FIXME: show when messages fail to send
 // TODO: implement a retry queue
+// TODO: show when messages fail to send
 async function handleSubmit(
 	ctx: ChatCtx,
 	thread_id: string,
@@ -658,23 +664,6 @@ async function handleSubmit(
 		// update("messages", msg.id, msg);
 		update("thread_state", thread_id, "reply_id", null);
 		update("thread_state", thread_id, "attachments", []);
-		
-		const tl = ctx.data.timelines[thread_id];
-		
-		// FIXME: only autoscroll if actually at end of scrollable
-		const isAtEnd = ctx.data.slices[thread_id].end === tl.length - 1;
-		if (!isAtEnd) return;
-		
-		const oldSlice = ctx.data.slices[thread_id];
-		const slice = calculateSlice(oldSlice, 1, tl.length, "f");
-		const { read_marker_id } = ctx.data.thread_state[thread_id];
-		const newItems = renderTimeline({
-			items: tl,
-			slice,
-			read_marker_id,
-			has_before: tl.at(0)?.type === "hole",
-			has_after: tl.at(-1)?.type === "hole",
-		});
-		update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+		ctx.dispatch({ do: "thread.autoscroll", thread_id });
 	});
 }

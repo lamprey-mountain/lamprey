@@ -32,7 +32,7 @@ export const ChatMain = (props: ChatProps) => {
 
 	function init() {
 		const thread_id = props.thread.id;
-		const read_id = props.thread.last_read_id;
+		const read_id = props.thread.last_read_id ?? undefined;
 		ctx.dispatch({ do: "thread.init", thread_id, read_id });
 	}
 
@@ -85,14 +85,15 @@ export const ChatMain = (props: ChatProps) => {
 				},
 			});
 		},
-		onScroll(pos) {
-			ctx.dispatch({
-				do: "thread.scroll_pos",
-				thread_id: props.thread.id,
-				pos,
-				is_at_end: list.isAtBottom(),
-			});
-		},
+	});
+
+	createEffect(() => {
+		ctx.dispatch({
+			do: "thread.scroll_pos",
+			thread_id: props.thread.id,
+			pos: list.scrollPos(),
+			is_at_end: list.isAtBottom(),
+		});
 	});
 
 	createEffect(async () => {
