@@ -62,7 +62,7 @@ function renderTimeline(
 		if (msg.type === "hole") continue;
 		newItems.push({
 			type: "message",
-			id: msg.message.version_id,
+			id: msg.message.nonce ?? msg.message.version_id,
 			message: msg.message,
 			separate: true,
 			is_local: msg.type === "local",
@@ -314,21 +314,36 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				});
 				return;
 			}
-			// 	case "thread.init": {
-			// 	  update("thread_state", action.thread_id, {
-			//  		  editor_state: createEditorState(text => handleSubmit(ctx, action.thread_id, text, update)),
-			//  		  reply_id: null,
-			//  		  scroll_pos: null,
-			// 		read_marker_id: action.read_id ?? null,
-			// 		attachments: [],
-			// 	  });
-			// }
 			case "thread.reply": {
 				update("thread_state", action.thread_id, "reply_id", action.reply_id);
 				return;
 			}
 			case "thread.scroll_pos": {
 				update("thread_state", action.thread_id, "scroll_pos", action.pos);
+				update("thread_state", action.thread_id, "is_at_end", action.is_at_end);
+				return;
+			}
+			case "thread.autoscroll": {
+				const { thread_id } = action;
+				const ts = ctx.data.thread_state[thread_id];
+				if (!ts.is_at_end) return;
+				
+				solidBatch(() => {
+					const tl = ctx.data.timelines[thread_id];
+					const oldSlice = ctx.data.slices[thread_id];
+					const slice = calculateSlice(oldSlice, 1, tl.length, "f");
+					update("slices", thread_id, slice);
+					
+					const { read_marker_id } = ctx.data.thread_state[thread_id];
+					const newItems = renderTimeline({
+						items: tl,
+						slice,
+						read_marker_id,
+						has_before: tl.at(0)?.type === "hole",
+						has_after: tl.at(-1)?.type === "hole",
+					});
+					update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
+				});
 				return;
 			}
 			case "thread.attachments": {
@@ -381,11 +396,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 										(i) => [...i, item],
 									);
 								} else {
-									update(
-										"timelines",
-										message.thread_id,
-										(i) => [...i.slice(0, idx), item, ...i.slice(idx + 1)],
-									);
+									update("timelines", message.thread_id, idx, item);
 								}
 							} else {
 								update(
@@ -410,26 +421,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						// 	}
 						// }
 
-						solidBatch(() => {
-							const tl = ctx.data.timelines[thread_id];
-							// FIXME: only autoscroll if actually at end of scrollable
-							const isAtEnd = ctx.data.slices[thread_id]?.end === tl.length - 1;
-							if (!isAtEnd) return;
-							
-							const oldSlice = ctx.data.slices[thread_id];
-							const slice = calculateSlice(oldSlice, 1, tl.length, "f");
-							update("slices", thread_id, slice);
-							
-							const { read_marker_id } = ctx.data.thread_state[thread_id];
-							const newItems = renderTimeline({
-								items: tl,
-								slice,
-								read_marker_id,
-								has_before: tl.at(0)?.type === "hole",
-								has_after: tl.at(-1)?.type === "hole",
-							});
-							update("thread_state", thread_id, "timeline", (old) => [...reconcile(newItems)(old)]);
-						});
+						dispatch({ do: "thread.autoscroll", thread_id });
 					});
 					console.timeEnd("UpsertMessage");
 					// TODO: message deletions

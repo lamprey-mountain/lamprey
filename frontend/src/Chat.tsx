@@ -1,19 +1,16 @@
 import {
 	createEffect,
-	createSignal,
 	For,
 	on,
 	Show,
-	untrack,
 	useContext,
 } from "solid-js";
 import Editor from "./Editor.tsx";
-import { getAttachment, TimelineItem, TimelineItemT } from "./Messages.tsx";
+import { getAttachment, TimelineItem } from "./Messages.tsx";
 
 import { chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { AttachmentT, RoomT, ThreadT } from "./types.ts";
-import { reconcile } from "solid-js/store";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -93,6 +90,7 @@ export const ChatMain = (props: ChatProps) => {
 				do: "thread.scroll_pos",
 				thread_id: props.thread.id,
 				pos,
+				is_at_end: list.isAtBottom(),
 			});
 		},
 	});

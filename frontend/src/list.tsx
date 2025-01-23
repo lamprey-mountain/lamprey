@@ -47,6 +47,7 @@ export function createList<T>(options: {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
+	const [isAtBottom, setIsAtBottom] = createSignal(false);
 	let topRef: HTMLElement | undefined;
 	let bottomRef: HTMLElement | undefined;
 	let anchorRef: Element;
@@ -68,8 +69,10 @@ export function createList<T>(options: {
 					shouldAutoscroll = options.autoscroll?.() || false;
 					anchorRef = el.target;
 					options.onPaginate?.("forwards");
+					setIsAtBottom(true);
 				} else {
 					shouldAutoscroll = false;
+					setIsAtBottom(false);
 				}
 			}
 		}
@@ -106,6 +109,7 @@ export function createList<T>(options: {
 	});
 
 	return {
+		isAtBottom,
 		scrollBy(pos: number, smooth = false) {
 			wrapperEl()?.scrollBy({
 				top: pos,
@@ -169,11 +173,11 @@ export function createList<T>(options: {
 				resizes.observe(wrapperEl()!);
 			});
 
-			// onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}
 			return (
 				<ul
 					class="list"
 					ref={setWrapperEl}
+					onScroll={() => options.onScroll?.(wrapperEl()!.scrollTop)}
 					onContextMenu={options.onContextMenu}
 				>
 					<For each={options.items()}>

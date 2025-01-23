@@ -235,12 +235,9 @@ button, input[type=submit] {
 	}
 
 	& > .list {
-		/* display: flex; */
-		/* flex-direction: column; */
+		display: flex;
+		flex-direction: column;
 		overflow-y: auto;
-		display: grid;
-		grid-template-columns: 128px 1fr max-content;
-		overflow-anchor: none;
 
 		& header {
 			grid-column: span 3;
@@ -255,8 +252,7 @@ button, input[type=submit] {
 
 		& > li {
 			display: grid;
-			grid-template-columns: subgrid;
-			grid-column: span 3;
+			grid-template-columns: 128px 1fr max-content;
 
 			&:not(.message) > * {
 				overflow-anchor: none;
@@ -277,6 +273,10 @@ button, input[type=submit] {
 			&.selected {
 				box-shadow: 3px 0 0 inset #67dc82;
 				background-color: #67dc8222;
+			}
+
+			&.header {
+				display: contents;
 			}
 		}
 	}

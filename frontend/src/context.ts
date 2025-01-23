@@ -27,6 +27,7 @@ export type ThreadState = {
 	editor_state: EditorState;
 	reply_id: string | null;
 	scroll_pos: number | null;
+	is_at_end: boolean;
 	read_marker_id: string | null;
 	attachments: Array<AttachmentT>;
 	timeline: Array<TimelineItemT>;
@@ -84,7 +85,8 @@ export type Action =
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
 	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
-	| { do: "thread.scroll_pos"; thread_id: string; pos: number | null }
+	| { do: "thread.scroll_pos"; thread_id: string; pos: number | null; is_at_end: boolean }
+	| { do: "thread.autoscroll"; thread_id: string }
 	| {
 		do: "thread.mark_read";
 		thread_id: string;

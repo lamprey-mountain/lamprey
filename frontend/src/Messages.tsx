@@ -19,7 +19,6 @@ export type TimelineItemT =
 		| { type: "spacer-mini2" }
 		| { type: "unread-marker" }
 		| { type: "time-split" }
-		| { type: "anchor" }
 		| {
 			type: "message";
 			message: MessageT;
@@ -298,27 +297,18 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		}
 		case "spacer": {
 			return (
-				<li class="spacer">
-					<div style="flex:1;height:800px;grid-column:span 3"></div>
-				</li>
+				<li class="spacer" style="min-height:800px;flex:1"></li>
 			);
 		}
 		case "spacer-mini2": {
 			return (
-				<li class="spacer">
-					<div style="flex:1;height:8rem;grid-column:span 3"></div>
-				</li>
+				<li class="spacer" style="min-height:8rem;flex:1"></li>
 			);
 		}
 		case "spacer-mini": {
 			return (
-				<li class="spacer">
-					<div style="height:2rem;grid-column:span 3"></div>
-				</li>
+				<li class="spacer" style="min-height:2rem"></li>
 			);
-		}
-		case "anchor": {
-			return <li class="anchor"></li>;
 		}
 		case "unread-marker": {
 			return (
