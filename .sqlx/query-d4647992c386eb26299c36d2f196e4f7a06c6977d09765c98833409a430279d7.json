@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT id, user_id, token, status as \"status: _\", name FROM session\n        \tWHERE user_id = $1 AND id > $2 AND id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n        \t",
+  "query": "\n        \tSELECT id, user_id, token, status as \"status: _\", name FROM session\n        \tWHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'\n        \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n        \t",
   "describe": {
     "columns": [
       {
@@ -57,5 +57,5 @@
       true
     ]
   },
-  "hash": "ab587c6f877c52ca01ee0d5dbfa6070074d3266d414a0b23707551548b5ffeb0"
+  "hash": "d4647992c386eb26299c36d2f196e4f7a06c6977d09765c98833409a430279d7"
 }

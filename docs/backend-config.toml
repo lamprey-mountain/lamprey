@@ -11,7 +11,7 @@ region = "garage"
 access_key_id = "GK12345"
 secret_access_key = "12345"
 
-[[oauth_provider.discord]]
+[oauth_provider.discord]
 client_id = "12345"
 client_secret = "67890"
 authorization_url = "https://discord.com/oauth2/authorize?scope=identify&response_type=code"

@@ -63,6 +63,13 @@ pub enum SessionStatus {
     Sudo,
 }
 
+// Granular session capability flags?
+// enum SessionCapability {
+//     Default,
+//     Trusted,
+//     Sudo,
+// }
+
 impl From<String> for SessionToken {
     fn from(value: String) -> Self {
         Self(value)

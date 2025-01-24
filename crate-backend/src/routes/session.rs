@@ -85,10 +85,9 @@ pub async fn session_update(
     if patch.wont_change(&session) {
         return Ok((StatusCode::NOT_MODIFIED, Json(session)));
     }
-    // if json.wont_change(&message) {
-    // }
     data.session_update(session_id, patch).await?;
     let session = data.session_get(session_id).await?;
+    s.broadcast(types::MessageSync::UpsertSession { session: session.clone() })?;
     Ok((StatusCode::OK, Json(session)))
 }
 

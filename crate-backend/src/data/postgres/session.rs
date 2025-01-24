@@ -80,7 +80,7 @@ impl DataSession for Postgres {
             DbSession,
             r#"
         	SELECT id, user_id, token, status as "status: _", name FROM session
-        	WHERE user_id = $1 AND id > $2 AND id < $3
+        	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
             user_id.into_inner(),
@@ -92,7 +92,7 @@ impl DataSession for Postgres {
         .fetch_all(&mut *tx)
         .await?;
         let total = query_scalar!(
-            "SELECT count(*) FROM session WHERE user_id = $1",
+            "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
             user_id.into_inner()
         )
         .fetch_one(&mut *tx)
