@@ -70,7 +70,7 @@ async fn worker(s: Arc<ServerState>, mut ws: WebSocket) {
                             payload: MessagePayload::Reconnect { can_resume: true },
                         }).expect("can always serialize message")))
                         .await;
-                    let _ = ws.close();
+                    let _ = ws.close().await;
                     break;
                 }
             }

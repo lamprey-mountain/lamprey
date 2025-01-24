@@ -14,8 +14,6 @@ import { Attachment, chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
 import { uuidv7 } from "uuidv7";
-import { createUpload } from "sdk";
-import { Media, MessageServer } from "../../ts-sdk/types.ts";
 
 type ChatProps = {
 	thread: ThreadT;

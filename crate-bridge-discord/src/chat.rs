@@ -94,9 +94,8 @@ impl Unnamed {
                     }
                     MessagePayload::Sync { data, seq } => {
                         handle_sync(self.globals.clone(), data).await?;
-                        match &mut resume {
-                            Some(r) => r.seq = seq,
-                            None => {}
+                        if let Some(r) = &mut resume {
+                            r.seq = seq;
                         }
                     }
                     MessagePayload::Error { error } => {

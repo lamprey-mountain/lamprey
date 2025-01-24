@@ -59,7 +59,7 @@ export type Data = {
 	uploads: Record<string, { up: Upload; thread_id: string }>;
 };
 
-type Menu =
+export type Menu =
 	& {
 		x: number;
 		y: number;
@@ -70,7 +70,7 @@ type Menu =
 		| { type: "message"; message: MessageT }
 	);
 
-type Modal =
+export type Modal =
 	| { type: "alert"; text: string }
 	| {
 		type: "confirm";
@@ -80,7 +80,7 @@ type Modal =
 	| {
 		type: "prompt";
 		text: string;
-		cont: (text?: string) => void;
+		cont: (text: string | null) => void;
 	};
 
 export type Action =
@@ -90,7 +90,7 @@ export type Action =
 	// | { do: "modal.open", modal: any }
 	| { do: "modal.close" }
 	| { do: "modal.alert"; text: string }
-	| { do: "modal.prompt"; text: string; cont: (text?: string) => void }
+	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
 	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.reply"; thread_id: string; reply_id: string | null }

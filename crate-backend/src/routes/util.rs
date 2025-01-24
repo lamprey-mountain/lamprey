@@ -28,7 +28,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
             .data()
             .session_get_by_token(SessionToken(auth.token().to_string()))
             .await
-            .map_err(|err| match err.into() {
+            .map_err(|err| match err {
                 Error::NotFound => Error::MissingAuth,
                 other => other,
             })?;

@@ -47,7 +47,7 @@ pub async fn session_create(
 )]
 pub async fn session_list(
     Query(q): Query<PaginationQuery<SessionId>>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();

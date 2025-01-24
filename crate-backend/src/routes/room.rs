@@ -26,7 +26,7 @@ use super::util::Auth;
 )]
 #[axum::debug_handler]
 async fn room_create(
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
@@ -48,7 +48,7 @@ async fn room_create(
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -83,7 +83,7 @@ async fn room_get(
 )]
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -106,7 +106,7 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
@@ -136,7 +136,7 @@ async fn room_edit(
 // )]
 // async fn room_ack(
 //     Path((room_id,)): Path<(RoomId,)>,
-//     Auth(session, user_id): Auth,
+//     Auth(_session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -158,7 +158,7 @@ async fn room_edit(
 // )]
 // async fn dm_initialize(
 //     Path((user_id, )): Path<(UserId,)>,
-//     Auth(session, user_id): Auth,
+//     Auth(_session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<Room>> {
 //     todo!()
@@ -179,7 +179,7 @@ async fn room_edit(
 // )]
 // async fn dm_get(
 //     Path((user_id, )): Path<(UserId,)>,
-//     Auth(session, user_id): Auth,
+//     Auth(_session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<Room>> {
 //     todo!()

@@ -42,7 +42,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		const res = await fetch(upload_url!, {
 			method: "HEAD",
 			headers: {
-				"authorization": opts.client.opts.token,
+				"authorization": `Bearer ${opts.client.opts.token}`,
 			},
 		});
 		if (res.ok) {
@@ -82,7 +82,8 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		};
 
 		xhr.open("PATCH", upload_url!);
-		xhr.setRequestHeader("authorization", opts.client.opts.token);
+		// TODO: handle missing token
+		xhr.setRequestHeader("authorization", `Bearer ${opts.client.opts.token}`);
 		xhr.setRequestHeader("upload-offset", offset.toString());
 		xhr.send(opts.file.slice(offset));
 	}

@@ -1,7 +1,7 @@
 // import { Tooltip } from "./Atoms.tsx";
 import { getTimestampFromUUID } from "sdk";
 import { For, Show } from "solid-js";
-import { MediaT, MessageT, MessageType, ThreadT, UserT } from "./types.ts";
+import { MediaT, MessageT, MessageType, ThreadT } from "./types.ts";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";

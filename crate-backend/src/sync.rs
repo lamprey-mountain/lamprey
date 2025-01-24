@@ -5,7 +5,7 @@ use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
 use types::{
-    MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, SessionStatus,
+    MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session,
     ThreadId,
 };
 
@@ -112,7 +112,7 @@ impl Connection {
                 let session =
                     data.session_get_by_token(token)
                         .await
-                        .map_err(|err| match err.into() {
+                        .map_err(|err| match err {
                             Error::NotFound => Error::MissingAuth,
                             other => other,
                         })?;

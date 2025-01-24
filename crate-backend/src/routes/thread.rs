@@ -33,7 +33,7 @@ use crate::error::Result;
 )]
 async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadCreateRequest>,
 ) -> Result<impl IntoResponse> {
@@ -90,7 +90,7 @@ async fn thread_create(
 )]
 async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -113,7 +113,7 @@ async fn thread_get(
 async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -138,7 +138,7 @@ async fn thread_list(
 )]
 async fn thread_update(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
@@ -184,7 +184,7 @@ struct AckRes {
 )]
 async fn thread_ack(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {

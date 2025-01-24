@@ -24,7 +24,7 @@ use crate::error::Result;
 //     )
 // )]
 // pub async fn invite_delete(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -45,7 +45,7 @@ use crate::error::Result;
 )]
 pub async fn invite_resolve(
     Path(code): Path<InviteCode>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -84,7 +84,7 @@ pub async fn invite_resolve(
 //     )
 // )]
 // pub async fn invite_use(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -105,7 +105,7 @@ pub async fn invite_resolve(
 //     )
 // )]
 // pub async fn invite_room_create(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -126,7 +126,7 @@ pub async fn invite_resolve(
 //     )
 // )]
 // pub async fn invite_room_list(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -147,7 +147,7 @@ pub async fn invite_resolve(
 //     )
 // )]
 // pub async fn invite_user_create(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -168,7 +168,7 @@ pub async fn invite_resolve(
 //     )
 // )]
 // pub async fn invite_user_list(
-//     Auth(session): Auth,
+//     Auth(_session): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()

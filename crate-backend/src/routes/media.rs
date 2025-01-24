@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{cmp::Ordering, sync::Arc};
 
 use axum::{
     body::Body,
@@ -12,7 +12,6 @@ use tokio::{
     process::Command,
 };
 use tracing::{debug, info};
-use url::Url;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -37,7 +36,7 @@ const MAX_SIZE: u64 = 1024 * 1024 * 16;
     )
 )]
 async fn media_create(
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
 ) -> Result<(StatusCode, HeaderMap, Json<MediaCreated>)> {
@@ -49,13 +48,7 @@ async fn media_create(
     let media_id = MediaId(uuid::Uuid::now_v7());
     let temp_file = TempFile::new().await.expect("failed to create temp file!");
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
-    let upload_url = Some(
-        Url::parse(&format!(
-            "{}/api/v1/media/{media_id}",
-            s.config.base_url,
-        ))
-        .expect("somehow constructed invalid url"),
-    );
+    let upload_url = Some(s.config.base_url.join(&format!("/api/v1/media/{}", media_id))?);
     s.uploads.insert(
         media_id,
         MediaUpload {
@@ -89,7 +82,7 @@ async fn media_create(
 )]
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
@@ -130,64 +123,68 @@ async fn media_upload(
     }
     info!("finished stream upload end_size={}", end_size);
     
-    if end_size > up.create.size {
-        let p = up.temp_file.file_path().to_owned();
-        s.uploads.remove(&media_id);
-        tokio::fs::remove_file(p).await?;
-        Err(Error::TooBig)
-    } else if end_size == up.create.size {
-        up.temp_writer.flush().await?;
-        let p = up.temp_file.file_path().to_owned();
-        let url = format!("media/{media_id}");
-        let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
-        debug!("finish upload for {}, mime {}", media_id, mime);
-        let upload_s3 = async {
-            // TODO: stream upload
-            let bytes = tokio::fs::read(&p).await?;
-            s.blobs()
-                .write_with(&url, bytes)
-                .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-                // FIXME: sometimes this fails with "failed to parse header"
-                // .content_type(&mime)
+    match end_size.cmp(&up.create.size) {
+        Ordering::Greater => {
+            let p = up.temp_file.file_path().to_owned();
+            s.uploads.remove(&media_id);
+            tokio::fs::remove_file(p).await?;
+            Err(Error::TooBig)
+        }
+        Ordering::Equal => {
+            up.temp_writer.flush().await?;
+            let p = up.temp_file.file_path().to_owned();
+            let url = format!("media/{media_id}");
+            let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
+            debug!("finish upload for {}, mime {}", media_id, mime);
+            let upload_s3 = async {
+                // TODO: stream upload
+                let bytes = tokio::fs::read(&p).await?;
+                s.blobs()
+                    .write_with(&url, bytes)
+                    .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                    // FIXME: sometimes this fails with "failed to parse header"
+                    // .content_type(&mime)
+                    .await?;
+                Result::Ok(())
+            };
+            upload_s3.await?;
+            info!("uploaded {} bytes to s3", up.create.size);
+            let mut media = s
+                .data()
+                .media_insert(
+                    user_id,
+                    Media {
+                        alt: up.create.alt.clone(),
+                        id: media_id,
+                        filename: up.create.filename.clone(),
+                        url,
+                        source_url: None,
+                        thumbnail_url: None,
+                        mime,
+                        size: up.create.size,
+                        height: meta.height,
+                        width: meta.width,
+                        duration: meta.duration,
+                    },
+                )
                 .await?;
-            Result::Ok(())
-        };
-        upload_s3.await?;
-        info!("uploaded {} bytes to s3", up.create.size);
-        let mut media = s
-            .data()
-            .media_insert(
-                user_id,
-                Media {
-                    alt: up.create.alt.clone(),
-                    id: media_id,
-                    filename: up.create.filename.clone(),
-                    url,
-                    source_url: None,
-                    thumbnail_url: None,
-                    mime,
-                    size: up.create.size,
-                    height: meta.height,
-                    width: meta.width,
-                    duration: meta.duration,
-                },
-            )
-            .await?;
-        let size = up.create.size;
-        drop(up);
-        s.uploads
-            .remove(&media_id)
-            .expect("it was there a few milliseconds ago");
-        media.url = s.presign(&media.url).await?;
-        let mut headers = HeaderMap::new();
-        headers.insert("upload-offset", end_size.into());
-        headers.insert("upload-length", size.into());
-        Ok((StatusCode::OK, headers, Json(Some(media))))
-    } else {
-        let mut headers = HeaderMap::new();
-        headers.insert("upload-offset", end_size.into());
-        headers.insert("upload-length", up.create.size.into());
-        Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+            let size = up.create.size;
+            drop(up);
+            s.uploads
+                .remove(&media_id)
+                .expect("it was there a few milliseconds ago");
+            media.url = s.presign(&media.url).await?;
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", end_size.into());
+            headers.insert("upload-length", size.into());
+            Ok((StatusCode::OK, headers, Json(Some(media))))
+        }
+        Ordering::Less => {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", end_size.into());
+            headers.insert("upload-length", up.create.size.into());
+            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+        }
     }
 }
 
@@ -204,7 +201,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    Auth(_session, user_id): Auth,
+    Auth(_session, _user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Media>> {
     let mut media = s.data().media_select(media_id).await?;
@@ -224,7 +221,7 @@ async fn media_get(
 )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
-    Auth(session, user_id): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, HeaderMap)> {
     if let Some(up) = s.uploads.get_mut(&media_id) {

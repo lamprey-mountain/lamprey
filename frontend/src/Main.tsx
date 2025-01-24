@@ -2,15 +2,13 @@ import {
 	createEffect,
 	createSignal,
 	For,
-	Match,
 	ParentProps,
 	Show,
-	Switch,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { MessageMenu, RoomMenu, ThreadMenu } from "./Menu.tsx";
 import { ChatNav } from "./Nav.tsx";
-import { useCtx } from "./context.ts";
+import { Menu, useCtx, Modal as ContextModal } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
 import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
@@ -40,19 +38,106 @@ export const Main = () => {
 
 		setMenuParentRef({
 			getBoundingClientRect(): ClientRectObject {
+				const { menu } = ctx.data;
+				if (!menu) throw new Error("missing menu!");
 				return {
-					x: ctx.data.menu?.x,
-					y: ctx.data.menu?.y,
-					left: ctx.data.menu?.x,
-					top: ctx.data.menu?.y,
-					right: ctx.data.menu?.x,
-					bottom: ctx.data.menu?.y,
+					x: menu.x,
+					y: menu.y,
+					left: menu.x,
+					top: menu.y,
+					right: menu.x,
+					bottom: menu.y,
 					width: 0,
 					height: 0,
 				};
 			},
 		});
 	});
+	
+	function getMenu(menu: Menu) {
+		switch (menu.type) {
+			case "room": {
+				return <RoomMenu room={menu.room} />;
+			}
+			case "thread": {
+				return <ThreadMenu thread={menu.thread} />;
+			}
+			case "message": {
+				return <MessageMenu message={menu.message} />;
+			}
+		}
+	}
+	
+	function getModal(modal: ContextModal) {
+		switch (modal.type) {
+			case "alert": {
+				return (
+					<Modal>
+						<p>{modal.text}</p>
+						<div style="height: 8px"></div>
+						<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
+							okay!
+						</button>
+					</Modal>
+				)
+			}
+      case "confirm": {
+      	return (
+					<Modal>
+						<p>{modal.text}</p>
+						<div style="height: 8px"></div>
+						<button
+							onClick={() => {
+								modal.cont(true);
+								ctx.dispatch({ do: "modal.close" });
+							}}
+						>
+							okay!
+						</button>&nbsp;
+						<button
+							onClick={() => {
+								modal.cont(false);
+								ctx.dispatch({ do: "modal.close" });
+							}}
+						>
+							nevermind...
+						</button>
+					</Modal>
+      	)
+      }
+      case "prompt": {
+      	return (
+					<Modal>
+						<p>{modal.text}</p>
+						<div style="height: 8px"></div>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+								const form = e.target as HTMLFormElement;
+								const input = form.elements.namedItem(
+									"text",
+								) as HTMLInputElement;
+								modal.cont(input.value);
+								ctx.dispatch({ do: "modal.close" });
+							}}
+						>
+							<input type="text" name="text" autofocus />
+							<div style="height: 8px"></div>
+							<input type="submit" value="done!"></input>{" "}
+							<button
+								onClick={() => {
+									modal.cont(null);
+									ctx.dispatch({ do: "modal.close" });
+								}}
+							>
+								nevermind...
+							</button>
+						</form>
+					</Modal>
+      	)
+      }
+		}
+	}
 
 	// HACK: wrap in Show since ctx might be null during hmr
 	// this router is extremely messy - i'm not sure if i'm going to keep it or if i'll roll my own
@@ -143,70 +228,7 @@ export const Main = () => {
 				</Router>
 				<Portal mount={document.getElementById("overlay")!}>
 					<For each={ctx.data.modals}>
-						{(modal) => (
-							<Switch>
-								<Match when={modal.type === "alert"}>
-									<Modal>
-										<p>{modal.text}</p>
-										<div style="height: 8px"></div>
-										<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
-											okay!
-										</button>
-									</Modal>
-								</Match>
-								<Match when={modal.type === "confirm"}>
-									<Modal>
-										<p>{modal.text}</p>
-										<div style="height: 8px"></div>
-										<button
-											onClick={() => {
-												modal.cont(true);
-												ctx.dispatch({ do: "modal.close" });
-											}}
-										>
-											okay!
-										</button>&nbsp;
-										<button
-											onClick={() => {
-												modal.cont(false);
-												ctx.dispatch({ do: "modal.close" });
-											}}
-										>
-											nevermind...
-										</button>
-									</Modal>
-								</Match>
-								<Match when={modal.type === "prompt"}>
-									<Modal>
-										<p>{modal.text}</p>
-										<div style="height: 8px"></div>
-										<form
-											onSubmit={(e) => {
-												e.preventDefault();
-												const form = e.target as HTMLFormElement;
-												const input = form.elements.namedItem(
-													"text",
-												) as HTMLInputElement;
-												modal.cont(input.value);
-												ctx.dispatch({ do: "modal.close" });
-											}}
-										>
-											<input type="text" name="text" autofocus />
-											<div style="height: 8px"></div>
-											<input type="submit" value="done!"></input>{" "}
-											<button
-												onClick={() => {
-													modal.cont(null);
-													ctx.dispatch({ do: "modal.close" });
-												}}
-											>
-												nevermind...
-											</button>
-										</form>
-									</Modal>
-								</Match>
-							</Switch>
-						)}
+						{(modal) => getModal(modal)}
 					</For>
 					<Show when={ctx.data.menu}>
 						<div class="contextmenu">
@@ -217,20 +239,7 @@ export const Main = () => {
 									translate: `${menuFloating.x}px ${menuFloating.y}px`,
 								}}
 							>
-								<Switch>
-									<Match
-										when={ctx.data.menu.type === "room"}
-										children={<RoomMenu room={ctx.data.menu.room} />}
-									/>
-									<Match
-										when={ctx.data.menu.type === "thread"}
-										children={<ThreadMenu thread={ctx.data.menu.thread} />}
-									/>
-									<Match
-										when={ctx.data.menu.type === "message"}
-										children={<MessageMenu message={ctx.data.menu.message} />}
-									/>
-								</Switch>
+							{getMenu(ctx.data.menu!)}
 							</div>
 						</div>
 					</Show>
