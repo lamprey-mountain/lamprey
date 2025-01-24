@@ -400,6 +400,20 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				if (msg.type === "UpsertSession") {
 					// probably shouldn't be sending tokens here...
 					if (msg.session.token === ctx.client.opts.token) {
+						ctx.client.http.GET("/api/v1/user/{user_id}", {
+							params: {
+								path: {
+									user_id: "@self"
+								}
+							}
+						}).then((res) => {
+							const user = res.data
+							if (!user) {
+								throw new Error("couldn't fetch user");
+							}
+							update("user", user);
+							update("users", user.id, user);
+						});
 						ctx.dispatch({ do: "init" });
 					}
 				} else if (msg.type === "UpsertRoom") {
@@ -676,7 +690,8 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					},
 				});
 				if (error) {
-					console.error(error);
+					// TODO: handle unauthenticated
+					// console.error(error);
 					return;
 				}
 				solidBatch(() => {

@@ -167,9 +167,9 @@ impl Connection {
     }
 
     pub async fn queue_message(&mut self, msg: MessageSync) -> Result<()> {
-        let session = match &self.state {
+        let mut session = match &self.state {
             ConnectionState::Authenticated { session }
-            | ConnectionState::Disconnected { session } => session,
+            | ConnectionState::Disconnected { session } => session.clone(),
             _ => return Ok(()),
         };
 
@@ -194,7 +194,13 @@ impl Connection {
             MessageSync::UpsertMember { member } => AuthCheck::Room(member.room_id),
             MessageSync::UpsertSession {
                 session: upserted_session,
-            } => AuthCheck::Custom(session.can_see(upserted_session)),
+            } => {
+                if session.id == upserted_session.id {
+                    session = upserted_session.to_owned();
+                    self.state = ConnectionState::Authenticated { session: upserted_session.to_owned() };
+                }
+                AuthCheck::Custom(session.can_see(upserted_session))
+            },
             MessageSync::UpsertRole { role } => AuthCheck::Room(role.room_id),
             MessageSync::UpsertInvite { invite: _ } => {
                 // TODO
@@ -215,7 +221,12 @@ impl Connection {
             }
             MessageSync::DeleteSession { id } => {
                 // TODO: send message when other sessions from the same user are deleted
-                AuthCheck::Custom(*id == session.id)
+                if *id == session.id {
+                    self.state = ConnectionState::Unauthed;
+                    AuthCheck::Custom(true)
+                } else {
+                    AuthCheck::Custom(false)
+                }
             }
             MessageSync::DeleteRole {
                 room_id,

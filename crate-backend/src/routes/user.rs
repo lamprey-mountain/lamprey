@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::{MessageSync, UserCreateRequest, UserPatch};
+use types::{MessageSync, User, UserCreateRequest, UserPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{UserCreate, UserIdReq};
@@ -19,7 +19,7 @@ use crate::error::{Error, Result};
     path = "/user",
     tags = ["user"],
     responses(
-        (status = CREATED, description = "success"),
+        (status = CREATED, body = User, description = "success"),
     )
 )]
 pub async fn user_create(
@@ -69,7 +69,8 @@ pub async fn user_create(
     ),
     tags = ["user"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = User, description = "success"),
+        (status = NOT_MODIFIED, body = User, description = "not modified"),
     )
 )]
 pub async fn user_update(
@@ -131,7 +132,7 @@ pub async fn user_delete(
     ),
     tags = ["user"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = User, description = "success"),
     )
 )]
 pub async fn user_get(
