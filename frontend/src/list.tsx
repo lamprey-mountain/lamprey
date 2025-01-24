@@ -122,7 +122,8 @@ export function createList<T>(options: {
 			function reanchor() {
 				const wrap = wrapperEl();
 				// console.log("list::reanchor", wrap, anchorRef);
-				const shouldAutoscroll = isAtBottom() && (options.autoscroll?.() || false);
+				const shouldAutoscroll = isAtBottom() &&
+					(options.autoscroll?.() || false);
 				console.log(shouldAutoscroll);
 				if (!wrap || !anchorRef) return setRefs();
 				console.time("perf::reanchor");
@@ -173,7 +174,9 @@ export function createList<T>(options: {
 			function handleScroll() {
 				const pos = wrapperEl()!.scrollTop;
 				setScrollPos(pos);
-				setIsAtBottom(pos >= (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight));
+				setIsAtBottom(
+					pos >= (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight),
+				);
 				options.onScroll?.(pos);
 			}
 

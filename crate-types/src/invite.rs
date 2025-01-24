@@ -27,19 +27,18 @@ pub struct Invite {
     // pub roles: Vec<Role>,
 }
 
-fn time_rfc3339_option_serialize<S>(opt: &Option<time::OffsetDateTime>, serializer: S) -> Result<S::Ok, S::Error>
-    where S: Serializer
+fn time_rfc3339_option_serialize<S>(
+    opt: &Option<time::OffsetDateTime>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
 {
     #[derive(Serialize)]
-    struct Wrap(
-        #[serde(serialize_with = "time::serde::rfc3339::serialize")]
-        time::OffsetDateTime
-    );
-    
+    struct Wrap(#[serde(serialize_with = "time::serde::rfc3339::serialize")] time::OffsetDateTime);
+
     match opt {
-        Some(dt) => {
-            serializer.serialize_some(&Wrap(*dt))
-        }
+        Some(dt) => serializer.serialize_some(&Wrap(*dt)),
         None => serializer.serialize_none(),
     }
 }
@@ -49,7 +48,7 @@ fn time_rfc3339_option_serialize<S>(opt: &Option<time::OffsetDateTime>, serializ
 pub struct InviteWithMetadata {
     pub max_uses: Option<u64>,
     pub uses: u64,
-    
+
     #[serde(flatten)]
     pub invite: Invite,
 }
@@ -58,18 +57,11 @@ pub struct InviteWithMetadata {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum InviteTarget {
-    User {
-        user: User,
-    },
-    
-    Room {
-        room: Room,
-    },
-    
-    Thread {
-        room: Room,
-        thread: Thread,
-    },
+    User { user: User },
+
+    Room { room: Room },
+
+    Thread { room: Room, thread: Thread },
 }
 
 // more flexible invite restrictions?

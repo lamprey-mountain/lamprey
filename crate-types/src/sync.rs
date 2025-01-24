@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use super::{
     Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
-    Session, SessionId, Thread, ThreadId, User, UserId, SessionToken,
+    Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -56,10 +56,10 @@ pub enum MessagePayload {
     Ready {
         /// current user, null if session is unauthed
         user: Option<User>,
-        
+
         /// connection id
         conn: String,
-        
+
         /// sequence id for reconnecting
         seq: u64,
     },

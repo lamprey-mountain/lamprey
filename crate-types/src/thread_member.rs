@@ -22,12 +22,12 @@ pub struct ThreadMember {
 //     /// joined
 //     Join {
 //     },
-    
+
 //     /// kicked or left, can still view messages up until then, can rejoin
 //     Left {
 //         reason: Option<String>,
 //     },
-    
+
 //     /// banned, can still view messages up until they were banned
 //     Ban {
 //         reason: Option<String>,

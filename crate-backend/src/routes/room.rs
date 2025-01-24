@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State}, http::{HeaderMap, StatusCode}, response::IntoResponse, Json
+    extract::{Path, Query, State},
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    Json,
 };
 use axum_extra::TypedHeader;
 use headers::ETag;
@@ -63,7 +66,7 @@ async fn room_get(
 
     if let Some(if_none_match) = headers.get("if-none-match") {
         if if_none_match == &etag {
-            return Ok(StatusCode::NOT_MODIFIED.into_response())
+            return Ok(StatusCode::NOT_MODIFIED.into_response());
         }
     }
 

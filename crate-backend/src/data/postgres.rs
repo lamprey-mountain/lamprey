@@ -9,6 +9,7 @@ pub struct Postgres {
 
 impl Data for Postgres {}
 
+mod auth;
 mod invite;
 mod media;
 mod message;
@@ -22,7 +23,6 @@ mod session;
 mod thread;
 mod unread;
 mod user;
-mod auth;
 mod util;
 
 pub use util::Pagination;

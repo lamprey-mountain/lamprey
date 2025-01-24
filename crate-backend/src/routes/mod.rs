@@ -4,11 +4,11 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
 
+mod invite;
 mod message;
 mod room;
 mod thread;
 mod util;
-mod invite;
 // mod role;
 mod media;
 // mod member;

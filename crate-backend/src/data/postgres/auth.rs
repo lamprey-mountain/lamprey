@@ -10,7 +10,12 @@ use super::Postgres;
 
 #[async_trait]
 impl DataAuth for Postgres {
-    async fn auth_oauth_put(&self, provider: String, user_id: UserId, remote_id: String) -> Result<()> {
+    async fn auth_oauth_put(
+        &self,
+        provider: String,
+        user_id: UserId,
+        remote_id: String,
+    ) -> Result<()> {
         query!(
             "INSERT INTO oauth (provider, user_id, remote_id) VALUES ($1, $2, $3)",
             provider,
@@ -21,7 +26,7 @@ impl DataAuth for Postgres {
         .await?;
         Ok(())
     }
-    
+
     async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId> {
         let remote_id = query_scalar!(
             "SELECT user_id FROM oauth WHERE remote_id = $1 AND provider = $2",
@@ -32,7 +37,7 @@ impl DataAuth for Postgres {
         .await?;
         Ok(remote_id.into())
     }
-    
+
     async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()> {
         query!(
             "DELETE FROM oauth WHERE provider = $1 AND user_id = $2",
@@ -44,4 +49,3 @@ impl DataAuth for Postgres {
         Ok(())
     }
 }
-

@@ -6,7 +6,8 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info, warn};
 use types::{
-    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload, MessageSync, PaginationResponse, SessionToken, SyncResume, ThreadId, UserId
+    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload,
+    MessageSync, PaginationResponse, SessionToken, SyncResume, ThreadId, UserId,
 };
 use uuid::uuid;
 
@@ -102,7 +103,11 @@ impl Unnamed {
                         error!("{error}");
                     }
                     MessagePayload::Ready { user, conn, seq } => {
-                        info!("chat ready {}", user.expect("tried to use unauthenticated sesion token!").name);
+                        info!(
+                            "chat ready {}",
+                            user.expect("tried to use unauthenticated sesion token!")
+                                .name
+                        );
 
                         let http = reqwest::Client::new();
                         for config in &self.globals.config.portal {

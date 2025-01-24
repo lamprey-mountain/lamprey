@@ -12,31 +12,31 @@ pub enum Anything {
     User {
         user: User,
     },
-    
+
     Room {
         room: Room,
     },
-    
+
     Thread {
         room: Room,
         thread: Thread,
     },
-    
+
     Message {
         room: Room,
         thread: Thread,
         message: Message,
     },
-    
+
     Role {
         room: Room,
         role: Role,
     },
-    
+
     Invite {
         invite: Invite,
     },
-    
+
     Media {
         media: Media,
     },

@@ -4,10 +4,7 @@ use std::{collections::VecDeque, sync::Arc};
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
-use types::{
-    MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session,
-    ThreadId,
-};
+use types::{MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, ThreadId};
 
 use crate::error::{Error, Result};
 use crate::ServerState;
@@ -109,13 +106,13 @@ impl Connection {
                 resume: reconnect,
             } => {
                 let data = self.s.data();
-                let session =
-                    data.session_get_by_token(token)
-                        .await
-                        .map_err(|err| match err {
-                            Error::NotFound => Error::MissingAuth,
-                            other => other,
-                        })?;
+                let session = data
+                    .session_get_by_token(token)
+                    .await
+                    .map_err(|err| match err {
+                        Error::NotFound => Error::MissingAuth,
+                        other => other,
+                    })?;
 
                 // TODO: more forgiving reconnections
                 if let Some(r) = reconnect {
@@ -197,10 +194,12 @@ impl Connection {
             } => {
                 if session.id == upserted_session.id {
                     session = upserted_session.to_owned();
-                    self.state = ConnectionState::Authenticated { session: upserted_session.to_owned() };
+                    self.state = ConnectionState::Authenticated {
+                        session: upserted_session.to_owned(),
+                    };
                 }
                 AuthCheck::Custom(session.can_see(upserted_session))
-            },
+            }
             MessageSync::UpsertRole { role } => AuthCheck::Room(role.room_id),
             MessageSync::UpsertInvite { invite: _ } => {
                 // TODO

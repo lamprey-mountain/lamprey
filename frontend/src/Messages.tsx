@@ -296,19 +296,13 @@ function getTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			);
 		}
 		case "spacer": {
-			return (
-				<li class="spacer" style="min-height:800px;flex:1"></li>
-			);
+			return <li class="spacer" style="min-height:800px;flex:1"></li>;
 		}
 		case "spacer-mini2": {
-			return (
-				<li class="spacer" style="min-height:8rem;flex:1"></li>
-			);
+			return <li class="spacer" style="min-height:8rem;flex:1"></li>;
 		}
 		case "spacer-mini": {
-			return (
-				<li class="spacer" style="min-height:2rem"></li>
-			);
+			return <li class="spacer" style="min-height:2rem"></li>;
 		}
 		case "unread-marker": {
 			return (

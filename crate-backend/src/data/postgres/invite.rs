@@ -38,19 +38,16 @@ impl DataInvite for Postgres {
             "room" => {
                 let room = self.room_get(RoomId(row.target_id)).await?;
                 InviteTarget::Room { room }
-            },
+            }
             "thread" => {
                 let thread = self.thread_get(ThreadId(row.target_id), None).await?;
                 let room = self.room_get(thread.room_id).await?;
-                InviteTarget::Thread {
-                    room,
-                    thread,
-                }
-            },
+                InviteTarget::Thread { room, thread }
+            }
             "user" => {
                 let user = self.user_get(UserId(row.target_id)).await?;
                 InviteTarget::User { user }
-            },
+            }
             _ => panic!("invalid data in db"),
         };
         let creator = self.user_get(UserId(row.creator_id)).await?;
@@ -62,9 +59,11 @@ impl DataInvite for Postgres {
             expires_at: row.expires_at.map(|t| t.assume_utc()),
         };
         let invite_with_meta = InviteWithMetadata {
-          invite,
-          uses: row.uses.try_into().expect("invalid data in db"),
-          max_uses: row.max_uses.map(|n| n.try_into().expect("invalid data in db")),
+            invite,
+            uses: row.uses.try_into().expect("invalid data in db"),
+            max_uses: row
+                .max_uses
+                .map(|n| n.try_into().expect("invalid data in db")),
         };
         Ok(invite_with_meta)
     }

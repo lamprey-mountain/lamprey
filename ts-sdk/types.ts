@@ -12,7 +12,12 @@ export type Media = components["schemas"]["Media"];
 
 export type Invite = { code: string };
 
-export type MessageReady = { op: "Ready"; user: User | null; conn: string; seq: number }
+export type MessageReady = {
+	op: "Ready";
+	user: User | null;
+	conn: string;
+	seq: number;
+};
 
 export type MessageEnvelope =
 	| { op: "Ping" }
@@ -20,7 +25,7 @@ export type MessageEnvelope =
 	| { op: "Error"; error: string }
 	| MessageReady
 	| { op: "Resumed" }
-	| { op: "Reconnect", can_resume: boolean };
+	| { op: "Reconnect"; can_resume: boolean };
 
 export type MessageSync =
 	| { type: "UpsertRoom"; room: Room }

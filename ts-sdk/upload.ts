@@ -38,7 +38,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	async function resumeUpload() {
 		// make sure to cancel the currently in flight upload, in case resume is called multiple times
 		xhr?.abort();
-		
+
 		const res = await fetch(upload_url!, {
 			method: "HEAD",
 			headers: {
@@ -49,7 +49,9 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			offset = parseInt(res.headers.get("upload-offset")!, 10);
 			attemptUpload();
 		} else {
-			opts.onFail(new Error(`upload probe failed: ${await res.text() ?? res.statusText}`));
+			opts.onFail(
+				new Error(`upload probe failed: ${await res.text() ?? res.statusText}`),
+			);
 		}
 	}
 
@@ -102,7 +104,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			attemptUpload();
 			started = true;
 		}
-		
+
 		opts.onResume();
 	}
 

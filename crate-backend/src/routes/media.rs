@@ -48,7 +48,11 @@ async fn media_create(
     let media_id = MediaId(uuid::Uuid::now_v7());
     let temp_file = TempFile::new().await.expect("failed to create temp file!");
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
-    let upload_url = Some(s.config.base_url.join(&format!("/api/v1/media/{}", media_id))?);
+    let upload_url = Some(
+        s.config
+            .base_url
+            .join(&format!("/api/v1/media/{}", media_id))?,
+    );
     s.uploads.insert(
         media_id,
         MediaUpload {
@@ -114,7 +118,9 @@ async fn media_upload(
     if current_size + part_length > up.create.size {
         return Err(Error::TooBig);
     }
-    up.temp_file.seek(std::io::SeekFrom::Start(current_off)).await?;
+    up.temp_file
+        .seek(std::io::SeekFrom::Start(current_off))
+        .await?;
     let mut stream = body.into_data_stream();
     let mut end_size = current_off;
     while let Some(Ok(chunk)) = stream.next().await {
@@ -122,7 +128,7 @@ async fn media_upload(
         end_size += chunk.len() as u64
     }
     info!("finished stream upload end_size={}", end_size);
-    
+
     match end_size.cmp(&up.create.size) {
         Ordering::Greater => {
             let p = up.temp_file.file_path().to_owned();
@@ -141,7 +147,9 @@ async fn media_upload(
                 let bytes = tokio::fs::read(&p).await?;
                 s.blobs()
                     .write_with(&url, bytes)
-                    .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                    .cache_control(
+                        "public, max-age=604800, immutable, stale-while-revalidate=86400",
+                    )
                     // FIXME: sometimes this fails with "failed to parse header"
                     // .content_type(&mime)
                     .await?;

@@ -46,9 +46,7 @@ async fn main() -> Result<()> {
     });
 
     for config in &globals.config.portal {
-        let last_id = globals
-            .get_last_message_ch(config.my_thread_id)
-            .await?;
+        let last_id = globals.get_last_message_ch(config.my_thread_id).await?;
         if let Some(last_id) = last_id {
             globals.last_ids.insert(config.my_thread_id, last_id);
         }

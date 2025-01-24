@@ -403,11 +403,11 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						ctx.client.http.GET("/api/v1/user/{user_id}", {
 							params: {
 								path: {
-									user_id: "@self"
-								}
-							}
+									user_id: "@self",
+								},
+							},
 						}).then((res) => {
-							const user = res.data
+							const user = res.data;
 							if (!user) {
 								throw new Error("couldn't fetch user");
 							}
@@ -605,18 +605,26 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			case "upload.init": {
 				const { local_id, thread_id } = action;
 				const ts = () => ctx.data.thread_state[thread_id];
-				update("thread_state", thread_id, "attachments", ts().attachments.length, {
-					status: "uploading",
-					file: action.file,
-					local_id: local_id,
-					progress: 0,
-					paused: false,
-				});
+				update(
+					"thread_state",
+					thread_id,
+					"attachments",
+					ts().attachments.length,
+					{
+						status: "uploading",
+						file: action.file,
+						local_id: local_id,
+						progress: 0,
+						paused: false,
+					},
+				);
 				const up = await createUpload({
 					file: action.file,
 					client: ctx.client,
 					onProgress(progress) {
-						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						const idx = ts().attachments.findIndex((i) =>
+							i.local_id === local_id
+						);
 						if (idx === -1) return;
 						update("thread_state", thread_id, "attachments", idx, {
 							status: "uploading",
@@ -627,18 +635,34 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						});
 					},
 					onFail(error) {
-						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						const idx = ts().attachments.findIndex((i) =>
+							i.local_id === local_id
+						);
 						if (idx === -1) return;
-						update("thread_state", thread_id, "attachments", ts().attachments.toSpliced(idx, 1));
+						update(
+							"thread_state",
+							thread_id,
+							"attachments",
+							ts().attachments.toSpliced(idx, 1),
+						);
 						ctx.dispatch({ do: "modal.alert", text: error.message });
 					},
 					onComplete(media) {
-						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						const idx = ts().attachments.findIndex((i) =>
+							i.local_id === local_id
+						);
 						if (idx === -1) return;
-						update("thread_state", thread_id, "attachments", idx, { status: "uploaded", media, local_id, file: action.file });
+						update("thread_state", thread_id, "attachments", idx, {
+							status: "uploaded",
+							media,
+							local_id,
+							file: action.file,
+						});
 					},
 					onPause() {
-						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						const idx = ts().attachments.findIndex((i) =>
+							i.local_id === local_id
+						);
 						if (idx === -1) return;
 						update("thread_state", thread_id, "attachments", idx, {
 							...ctx.data.thread_state[thread_id].attachments[idx],
@@ -646,7 +670,9 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						});
 					},
 					onResume() {
-						const idx = ts().attachments.findIndex(i => i.local_id === local_id);
+						const idx = ts().attachments.findIndex((i) =>
+							i.local_id === local_id
+						);
 						if (idx === -1) return;
 						update("thread_state", thread_id, "attachments", idx, {
 							...ctx.data.thread_state[thread_id].attachments[idx],
@@ -670,14 +696,16 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				upload?.up.pause();
 				delete ctx.data.uploads[action.local_id];
 				const ts = ctx.data.thread_state[upload.thread_id];
-				const idx = ts.attachments.findIndex(i => i.local_id === action.local_id);
+				const idx = ts.attachments.findIndex((i) =>
+					i.local_id === action.local_id
+				);
 				if (idx !== -1) {
 					ctx.dispatch({
 						do: "thread.attachments",
 						thread_id: upload.thread_id,
 						attachments: ts.attachments.toSpliced(idx, 1),
 					});
-				};
+				}
 				return;
 			}
 			case "init": {

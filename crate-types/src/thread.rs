@@ -76,7 +76,7 @@ pub enum ThreadInfo {
 
 //     /// default state that new threads are in
 //     Active,
-    
+
 //     /// goes straight to Deleted instead of Archived
 //     Temporary,
 

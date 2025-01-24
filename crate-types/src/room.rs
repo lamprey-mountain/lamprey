@@ -23,7 +23,6 @@ pub struct Room {
 
     #[cfg_attr(feature = "utoipa", schema(read_only, required = false))]
     pub description: Option<String>,
-
     // pub room_type: RoomType,
 }
 

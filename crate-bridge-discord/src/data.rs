@@ -85,8 +85,7 @@ pub trait Data {
         &self,
         attachment_id: DcAttachmentId,
     ) -> Result<Option<AttachmentMetadata>>;
-    async fn get_last_message_ch(&self, thread_id: ThreadId)
-        -> Result<Option<MessageMetadata>>;
+    async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>>;
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()>;
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()>;
 }
@@ -186,8 +185,7 @@ impl Data for Globals {
         Ok(())
     }
 
-    async fn get_last_message_ch(&self, thread_id: ThreadId)
-        -> Result<Option<MessageMetadata>> {
+    async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>> {
         let b1 = thread_id.to_string();
         let row = query_as!(
             MessageMetadataRow,

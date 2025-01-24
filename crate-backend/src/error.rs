@@ -114,7 +114,9 @@ impl From<Error> for Message {
     fn from(val: Error) -> Self {
         Message::text(
             serde_json::to_string(&MessageEnvelope {
-                payload: types::MessagePayload::Error { error: val.to_string() }
+                payload: types::MessagePayload::Error {
+                    error: val.to_string(),
+                },
             })
             .expect("error should always be able to be serialized"),
         )

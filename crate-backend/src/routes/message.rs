@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State}, http::StatusCode, response::IntoResponse, Json
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 

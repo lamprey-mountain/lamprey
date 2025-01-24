@@ -65,16 +65,30 @@ pub struct OauthState {
 
 impl OauthState {
     pub fn new(provider: String, session_id: SessionId) -> Self {
-        Self { provider, session_id }
+        Self {
+            provider,
+            session_id,
+        }
     }
 }
 
 impl Services {
     pub fn oauth_create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
-        let p = self.state.config.oauth_provider.get(provider).ok_or(Error::NotFound)?;
+        let p = self
+            .state
+            .config
+            .oauth_provider
+            .get(provider)
+            .ok_or(Error::NotFound)?;
         let state = Uuid::new_v4();
-        self.state.oauth_states.insert(state, OauthState::new(provider.to_string(), session_id));
-        let redirect_uri: Url = self.state.config.base_url.join(&format!("/api/v1/auth/oauth/{}/redirect", provider))?;
+        self.state
+            .oauth_states
+            .insert(state, OauthState::new(provider.to_string(), session_id));
+        let redirect_uri: Url = self
+            .state
+            .config
+            .base_url
+            .join(&format!("/api/v1/auth/oauth/{}/redirect", provider))?;
         let url = Url::parse_with_params(
             &p.authorization_url,
             [
@@ -86,15 +100,31 @@ impl Services {
         Ok(url)
     }
 
-    pub async fn oauth_exchange_code_for_token(&self, state: Uuid, code: String) -> Result<(OauthTokenResponse, SessionId)> {
-        let (_, s) = self.state.oauth_states.remove(&state)
+    pub async fn oauth_exchange_code_for_token(
+        &self,
+        state: Uuid,
+        code: String,
+    ) -> Result<(OauthTokenResponse, SessionId)> {
+        let (_, s) = self
+            .state
+            .oauth_states
+            .remove(&state)
             .ok_or(Error::BadStatic("invalid or expired state"))?;
         if &s.provider != "discord" {
             return Err(Error::Unimplemented);
         }
         let client = reqwest::Client::new();
-        let p = self.state.config.oauth_provider.get(&s.provider).ok_or(Error::NotFound)?;
-        let redirect_uri: Url = self.state.config.base_url.join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
+        let p = self
+            .state
+            .config
+            .oauth_provider
+            .get(&s.provider)
+            .ok_or(Error::NotFound)?;
+        let redirect_uri: Url = self
+            .state
+            .config
+            .base_url
+            .join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
         let body = OauthTokenExchange {
             grant_type: "authorization_code".to_string(),
             code,
@@ -115,7 +145,12 @@ impl Services {
     }
 
     pub async fn oauth_revoke_token(&self, provider: &str, token: String) -> Result<()> {
-        let p = self.state.config.oauth_provider.get(provider).ok_or(Error::NotFound)?;
+        let p = self
+            .state
+            .config
+            .oauth_provider
+            .get(provider)
+            .ok_or(Error::NotFound)?;
         let client = reqwest::Client::new();
         let body = OauthTokenRevoke {
             token_type_hint: "access_token".to_string(),
@@ -130,7 +165,7 @@ impl Services {
             .error_for_status()?;
         Ok(())
     }
-    
+
     pub async fn discord_get_user(&self, token: String) -> Result<DiscordAuth> {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
@@ -143,7 +178,7 @@ impl Services {
             .await?;
         Ok(res)
     }
-    
+
     pub async fn github_get_user(&self, token: String) -> Result<GithubUser> {
         let client = reqwest::Client::new();
         // let res: serde_json::Value = client

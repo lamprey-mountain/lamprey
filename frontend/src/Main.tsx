@@ -1,14 +1,8 @@
-import {
-	createEffect,
-	createSignal,
-	For,
-	ParentProps,
-	Show,
-} from "solid-js";
+import { createEffect, createSignal, For, ParentProps, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { MessageMenu, RoomMenu, ThreadMenu } from "./Menu.tsx";
 import { ChatNav } from "./Nav.tsx";
-import { Menu, useCtx, Modal as ContextModal } from "./context.ts";
+import { Menu, Modal as ContextModal, useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
 import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./Settings.tsx";
@@ -19,7 +13,7 @@ import { A, Route, Router } from "@solidjs/router";
 const Title = (props: { children: string }) => {
 	createEffect(() => document.title = props.children);
 	return undefined;
-}
+};
 
 export const Main = () => {
 	const ctx = useCtx();
@@ -53,7 +47,7 @@ export const Main = () => {
 			},
 		});
 	});
-	
+
 	function getMenu(menu: Menu) {
 		switch (menu.type) {
 			case "room": {
@@ -67,7 +61,7 @@ export const Main = () => {
 			}
 		}
 	}
-	
+
 	function getModal(modal: ContextModal) {
 		switch (modal.type) {
 			case "alert": {
@@ -79,10 +73,10 @@ export const Main = () => {
 							okay!
 						</button>
 					</Modal>
-				)
+				);
 			}
-      case "confirm": {
-      	return (
+			case "confirm": {
+				return (
 					<Modal>
 						<p>{modal.text}</p>
 						<div style="height: 8px"></div>
@@ -103,10 +97,10 @@ export const Main = () => {
 							nevermind...
 						</button>
 					</Modal>
-      	)
-      }
-      case "prompt": {
-      	return (
+				);
+			}
+			case "prompt": {
+				return (
 					<Modal>
 						<p>{modal.text}</p>
 						<div style="height: 8px"></div>
@@ -134,8 +128,8 @@ export const Main = () => {
 							</button>
 						</form>
 					</Modal>
-      	)
-      }
+				);
+			}
 		}
 	}
 
@@ -176,7 +170,9 @@ export const Main = () => {
 							const room = () => ctx.data.rooms[p.params.room_id];
 							return (
 								<>
-									<Title>{room() ? `${room().name} settings` : "loading..."}</Title>
+									<Title>
+										{room() ? `${room().name} settings` : "loading..."}
+									</Title>
 									<ChatNav />
 									<Show when={room()}>
 										<RoomSettings room={room()} page={p.params.page} />
@@ -208,7 +204,11 @@ export const Main = () => {
 
 							return (
 								<>
-									<Title>{room() && thread() ? `${thread().name} - ${room().name}` : "loading..."}</Title>
+									<Title>
+										{room() && thread()
+											? `${thread().name} - ${room().name}`
+											: "loading..."}
+									</Title>
 									<ChatNav />
 									<Show when={room() && thread()}>
 										<ChatMain room={room()} thread={thread()} />
@@ -239,7 +239,7 @@ export const Main = () => {
 									translate: `${menuFloating.x}px ${menuFloating.y}px`,
 								}}
 							>
-							{getMenu(ctx.data.menu!)}
+								{getMenu(ctx.data.menu!)}
 							</div>
 						</div>
 					</Show>
@@ -291,7 +291,7 @@ const Home = () => {
 				queueMicrotask(() => {
 					ctx.dispatch({ do: "modal.alert", text: "todo!" });
 				});
-			}
+			},
 		});
 	}
 
@@ -299,9 +299,9 @@ const Home = () => {
 		const res = await ctx.client.http.POST("/api/v1/auth/oauth/{provider}", {
 			params: {
 				path: {
-					provider: "discord"
-				}
-			}
+					provider: "discord",
+				},
+			},
 		});
 		if (res.error) {
 			ctx.dispatch({ do: "modal.alert", text: "failed to create login url" });
@@ -315,8 +315,8 @@ const Home = () => {
 			params: {
 				path: {
 					session_id: "@self",
-				}
-			}
+				},
+			},
 		});
 		localStorage.clear();
 		location.reload(); // TODO: less hacky logout
