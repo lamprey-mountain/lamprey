@@ -110,7 +110,7 @@ impl Connection {
             } => {
                 let data = self.s.data();
                 let session =
-                    data.session_get_by_token(&token)
+                    data.session_get_by_token(token)
                         .await
                         .map_err(|err| match err.into() {
                             Error::NotFound => Error::MissingAuth,
@@ -118,9 +118,11 @@ impl Connection {
                         })?;
 
                 // TODO: guest sessions?
-                if session.status == SessionStatus::Unauthorized {
-                    return Err(Error::UnauthSession);
-                }
+                let user_id = match session.status {
+                    SessionStatus::Unauthorized => return Err(Error::UnauthSession),
+                    SessionStatus::Authorized { user_id } => user_id,
+                    SessionStatus::Sudo { user_id } => user_id,
+                };
 
                 // TODO: more forgiving reconnections
                 if let Some(r) = reconnect {
@@ -129,8 +131,8 @@ impl Connection {
                         debug!("resume conn exists");
                         if let Some(recon_session) = conn.state.session() {
                             debug!("resume session exists");
-                            if recon_session.user_id == session.user_id {
-                                debug!("session user id matches, resuming");
+                            if session.id == recon_session.id {
+                                debug!("session id matches, resuming");
                                 conn.rewind(r.seq)?;
                                 conn.push(
                                     MessageEnvelope {
@@ -146,7 +148,7 @@ impl Connection {
                     return Err(Error::BadStatic("bad or expired reconnection info"));
                 }
 
-                let user = data.user_get(session.user_id).await?;
+                let user = data.user_get(user_id).await?;
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
                         user,
@@ -175,6 +177,12 @@ impl Connection {
             _ => return Ok(()),
         };
 
+        let user_id = match session.status {
+            SessionStatus::Unauthorized => return Err(Error::UnauthSession),
+            SessionStatus::Authorized { user_id } => user_id,
+            SessionStatus::Sudo { user_id } => user_id,
+        };
+
         match &self.state {
             ConnectionState::Disconnected { .. }
                 if self.seq_server > self.seq_client + MAX_QUEUE_LEN as u64 =>
@@ -185,7 +193,6 @@ impl Connection {
             _ => {}
         }
 
-        let user_id = session.user_id;
         let auth_check = match &msg {
             MessageSync::UpsertRoom { room } => AuthCheck::Room(room.id),
             MessageSync::UpsertThread { thread } => AuthCheck::Thread(thread.id),
@@ -195,7 +202,9 @@ impl Connection {
                 AuthCheck::Custom(user.id == user_id)
             }
             MessageSync::UpsertMember { member } => AuthCheck::Room(member.room_id),
-            MessageSync::UpsertSession { session } => AuthCheck::Custom(session.user_id == user_id),
+            MessageSync::UpsertSession {
+                session: upserted_session,
+            } => AuthCheck::Custom(session.can_see(upserted_session)),
             MessageSync::UpsertRole { role } => AuthCheck::Room(role.room_id),
             MessageSync::UpsertInvite { invite: _ } => {
                 // TODO

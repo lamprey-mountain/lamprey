@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use types::{InviteWithMetadata, SearchMessageRequest, SessionPatch, SessionStatus};
+use types::{InviteWithMetadata, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -159,9 +159,9 @@ pub trait DataMessage {
 
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(&self, user_id: UserId, name: Option<String>) -> Result<Session>;
+    async fn session_create(&self, name: Option<String>) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
-    async fn session_get_by_token(&self, token: &str) -> Result<Session>;
+    async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;
     async fn session_list(
         &self,
@@ -212,7 +212,12 @@ pub trait DataUser {
 
 #[async_trait]
 pub trait DataAuth {
-    async fn auth_oauth_put(&self, provider: String, user_id: UserId, remote_id: String) -> Result<()>;
+    async fn auth_oauth_put(
+        &self,
+        provider: String,
+        user_id: UserId,
+        remote_id: String,
+    ) -> Result<()>;
     // async fn auth_oauth_get(&self, provider: String, user_id: UserId) -> Result<String>;
     async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId>;
     async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()>;

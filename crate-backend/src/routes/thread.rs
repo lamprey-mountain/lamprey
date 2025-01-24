@@ -33,12 +33,11 @@ use crate::error::Result;
 )]
 async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let user_id = session.user_id;
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadCreate)?;
@@ -91,11 +90,10 @@ async fn thread_create(
 )]
 async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
@@ -115,10 +113,9 @@ async fn thread_get(
 async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
@@ -141,11 +138,10 @@ async fn thread_list(
 )]
 async fn thread_update(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
-    let user_id = session.user_id;
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -188,11 +184,10 @@ struct AckRes {
 )]
 async fn thread_ack(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
-    let user_id = session.user_id;
     let data = s.data();
     let version_id = json.version_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;

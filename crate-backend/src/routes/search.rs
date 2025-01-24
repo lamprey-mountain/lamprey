@@ -21,13 +21,13 @@ use crate::error::Result;
     )
 )]
 pub async fn search_messages(
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(body): Json<SearchMessageRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let res = data.search_message(session.user_id, body, q).await?;
+    let res = data.search_message(user_id, body, q).await?;
     Ok(Json(res))
 }
 

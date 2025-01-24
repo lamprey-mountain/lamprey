@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use sqlx::{query, query_as, query_scalar, Acquire};
-use types::{SessionPatch, SessionStatus};
+use types::{SessionPatch, SessionStatus, SessionToken};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -15,17 +15,16 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataSession for Postgres {
-    async fn session_create(&self, user_id: UserId, name: Option<String>) -> Result<Session> {
+    async fn session_create(&self, name: Option<String>) -> Result<Session> {
         let session_id = Uuid::now_v7();
         let token = Uuid::new_v4(); // TODO: is this secure enough
         let session = query_as!(
             DbSession,
             r#"
             INSERT INTO session (id, user_id, token, status, name)
-            VALUES ($1, $2, $3, 'Unauthorized', $4)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3)
             RETURNING id, user_id, token, status as "status: _", name"#,
             session_id,
-            user_id.into_inner(),
             token.to_string(),
             name,
         )
@@ -45,11 +44,11 @@ impl DataSession for Postgres {
         Ok(session.into())
     }
 
-    async fn session_get_by_token(&self, token: &str) -> Result<Session> {
+    async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE token = $1"#,
-            token
+            token.0
         )
             .fetch_one(&self.pool)
             .await?;
@@ -57,11 +56,12 @@ impl DataSession for Postgres {
     }
 
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
-        let status: DbSessionStatus = status.into();
+        let status_db: DbSessionStatus = status.into();
         query!(
-            r#"UPDATE session SET status = $2 WHERE id = $1"#,
+            r#"UPDATE session SET status = $2, user_id = $3 WHERE id = $1"#,
             session_id.into_inner(),
-            status as _,
+            status_db as _,
+            status.user_id().map(|i| i.into_inner()),
         )
         .execute(&self.pool)
         .await?;
@@ -123,7 +123,7 @@ impl DataSession for Postgres {
         .await?;
         Ok(())
     }
-    
+
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;

@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use super::{
     Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
-    Session, SessionId, Thread, ThreadId, User, UserId,
+    Session, SessionId, Thread, ThreadId, User, UserId, SessionToken,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,7 +15,7 @@ use super::{
 pub enum MessageClient {
     /// initial message
     Hello {
-        token: String,
+        token: SessionToken,
 
         #[serde(flatten)]
         resume: Option<SyncResume>,

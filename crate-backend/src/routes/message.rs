@@ -30,12 +30,11 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
@@ -99,10 +98,9 @@ async fn message_create(
 async fn message_list(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -130,10 +128,9 @@ async fn message_list(
 )]
 async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -160,12 +157,11 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
-    let user_id = session.user_id;
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
@@ -255,11 +251,10 @@ async fn message_edit(
 )]
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
-    let user_id = session.user_id;
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
@@ -296,11 +291,10 @@ async fn message_delete(
 async fn message_version_list(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let data = s.data();
-    let user_id = session.user_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut res = data.message_version_list(thread_id, message_id, q).await?;
@@ -328,10 +322,9 @@ async fn message_version_list(
 )]
 async fn message_version_get(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
-    let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -360,10 +353,9 @@ async fn message_version_get(
 )]
 async fn message_version_delete(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
-    let user_id = session.user_id;
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;

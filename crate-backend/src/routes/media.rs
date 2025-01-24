@@ -37,7 +37,7 @@ const MAX_SIZE: u64 = 1024 * 1024 * 16;
     )
 )]
 async fn media_create(
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
 ) -> Result<(StatusCode, HeaderMap, Json<MediaCreated>)> {
@@ -46,7 +46,6 @@ async fn media_create(
     }
 
     use async_tempfile::TempFile;
-    let user_id = session.user_id;
     let media_id = MediaId(uuid::Uuid::now_v7());
     let temp_file = TempFile::new().await.expect("failed to create temp file!");
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
@@ -89,14 +88,14 @@ async fn media_create(
     )
 )]
 async fn media_upload(
-    Path((media_id,)): Path<(MediaId,)>,
-    Auth(session): Auth,
+    Path(media_id): Path<MediaId>,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
 ) -> Result<(StatusCode, HeaderMap, Json<Option<Media>>)> {
     let mut up = s.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
-    if up.user_id != session.user_id {
+    if up.user_id != user_id {
         return Err(Error::NotFound);
     }
     debug!(
@@ -155,7 +154,6 @@ async fn media_upload(
         };
         upload_s3.await?;
         info!("uploaded {} bytes to s3", up.create.size);
-        let user_id = session.user_id;
         let mut media = s
             .data()
             .media_insert(
@@ -206,7 +204,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    Auth(_session): Auth,
+    Auth(_session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Media>> {
     let mut media = s.data().media_select(media_id).await?;
@@ -225,12 +223,12 @@ async fn media_get(
     )
 )]
 async fn media_check(
-    Path((media_id,)): Path<(MediaId,)>,
-    Auth(session): Auth,
+    Path(media_id): Path<MediaId>,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, HeaderMap)> {
     if let Some(up) = s.uploads.get_mut(&media_id) {
-        if up.user_id == session.user_id {
+        if up.user_id == user_id {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
             headers.insert("upload-length", up.create.size.into());

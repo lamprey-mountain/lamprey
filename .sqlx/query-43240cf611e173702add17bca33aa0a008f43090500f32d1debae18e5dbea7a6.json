@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO session (id, user_id, token, status, name)\n            VALUES ($1, $2, $3, 'Unauthorized', $4)\n            RETURNING id, user_id, token, status as \"status: _\", name",
+  "query": "\n            INSERT INTO session (id, user_id, token, status, name)\n            VALUES ($1, NULL, $2, 'Unauthorized', $3)\n            RETURNING id, user_id, token, status as \"status: _\", name",
   "describe": {
     "columns": [
       {
@@ -43,18 +43,17 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
         "Text",
         "Text"
       ]
     },
     "nullable": [
       false,
-      false,
+      true,
       false,
       false,
       true
     ]
   },
-  "hash": "9a84c42f1c337693de64989a356056c147e40a58012c505595bafcdc242e799a"
+  "hash": "43240cf611e173702add17bca33aa0a008f43090500f32d1debae18e5dbea7a6"
 }

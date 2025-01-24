@@ -70,11 +70,11 @@ pub async fn auth_oauth_redirect(
     let dc = srv.discord_get_user(auth.access_token).await?;
     debug!("new discord user {:?}", dc);
     let data = s.data();
-    match data
+    let user_id = match data
         .auth_oauth_get_remote("discord".into(), dc.user.id.clone())
         .await
     {
-        Ok(_) => {},
+        Ok(user_id) => user_id,
         Err(Error::NotFound) => {
             let user = data
                 .user_create(UserCreate {
@@ -89,10 +89,11 @@ pub async fn auth_oauth_redirect(
                 .await?;
             data.auth_oauth_put("discord".into(), user.id, dc.user.id)
                 .await?;
+            user.id
         }
         Err(err) => return Err(err),
     };
-    data.session_set_status(session_id, SessionStatus::Authorized)
+    data.session_set_status(session_id, SessionStatus::Authorized { user_id })
         .await?;
     Ok(Html(include_str!("../oauth.html")))
 }

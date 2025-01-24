@@ -23,11 +23,11 @@ use crate::error::{Error, Result};
     )
 )]
 pub async fn user_create(
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreateRequest>,
 ) -> Result<impl IntoResponse> {
-    let parent_id = Some(session.user_id);
+    let parent_id = Some(user_id);
     let data = s.data();
     let user = data
         .user_create(UserCreate {
@@ -73,21 +73,21 @@ pub async fn user_create(
     )
 )]
 pub async fn user_update(
-    Path(user_id): Path<UserIdReq>,
-    Auth(session): Auth,
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
-    let user_id = match user_id {
-        UserIdReq::UserSelf => session.user_id,
-        UserIdReq::UserId(user_id) => user_id,
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if session.user_id != user_id {
-        return Err(Error::MissingPermissions);
+    if user_id != target_user_id {
+        return Err(Error::NotFound);
     }
     let data = s.data();
-    data.user_update(user_id, body).await?;
-    let user = data.user_get(user_id).await?;
+    data.user_update(target_user_id, body).await?;
+    let user = data.user_get(target_user_id).await?;
     s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -105,16 +105,16 @@ pub async fn user_update(
     )
 )]
 pub async fn user_delete(
-    Path(user_id): Path<UserIdReq>,
-    Auth(session): Auth,
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let user_id = match user_id {
-        UserIdReq::UserSelf => session.user_id,
-        UserIdReq::UserId(user_id) => user_id,
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if session.user_id != user_id {
-        return Err(Error::MissingPermissions);
+    if user_id != target_user_id {
+        return Err(Error::NotFound);
     }
     let data = s.data();
     data.user_delete(user_id).await?;
@@ -135,14 +135,18 @@ pub async fn user_delete(
     )
 )]
 pub async fn user_get(
-    Path(user_id): Path<UserIdReq>,
-    Auth(session): Auth,
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let user_id = match user_id {
-        UserIdReq::UserSelf => session.user_id,
-        UserIdReq::UserId(user_id) => user_id,
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
     };
+    // TODO: allow reading/updating bot users
+    if user_id != target_user_id {
+        return Err(Error::NotFound);
+    }
     let data = s.data();
     let user = data.user_get(user_id).await?;
     Ok(Json(user))

@@ -7,12 +7,11 @@ import { createClient } from "sdk";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
-const TOKEN = localStorage.getItem("token")!;
 
 const App: Component = () => {
+	const TOKEN = localStorage.getItem("token")!;
 	const client = createClient({
 		baseUrl: BASE_URL,
-		token: TOKEN,
 		onState(state) {
 			console.log({ state });
 		},
@@ -28,7 +27,12 @@ const App: Component = () => {
 		},
 	});
 
-	client.start();
+	// if (!TOKEN) {
+	// 	client.http.POST("/api/v1/session", {
+	// 	})
+	// }
+	
+	client.start(TOKEN);
 	onCleanup(() => client.stop());
 
 	const [data, update] = createStore<Data>({

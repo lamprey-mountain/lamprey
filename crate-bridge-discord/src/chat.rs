@@ -6,8 +6,7 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{error, info, warn};
 use types::{
-    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload,
-    MessageSync, PaginationResponse, SyncResume, ThreadId, UserId,
+    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload, MessageSync, PaginationResponse, SessionToken, SyncResume, ThreadId, UserId
 };
 use uuid::uuid;
 
@@ -78,7 +77,7 @@ impl Unnamed {
                 continue;
             };
             let hello = types::MessageClient::Hello {
-                token: token.clone(),
+                token: SessionToken(token.clone()),
                 resume: resume.clone(),
             };
             client

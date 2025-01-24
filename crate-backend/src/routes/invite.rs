@@ -8,8 +8,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
 
-use crate::error::Result;
 use super::util::Auth;
+use crate::error::Result;
 
 // /// Invite delete
 // #[utoipa::path(
@@ -45,24 +45,24 @@ use super::util::Auth;
 )]
 pub async fn invite_resolve(
     Path(code): Path<InviteCode>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let invite = d.invite_select(code).await?;
-    if invite.invite.creator.id == session.user_id {
-        return Ok(Json(invite).into_response())
+    if invite.invite.creator.id == user_id {
+        return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
-        InviteTarget::User { user } => user.id == session.user_id,
+        InviteTarget::User { user } => user.id == user_id,
         InviteTarget::Room { room } => {
-            let perms = d.permission_room_get(session.user_id, room.id).await?;
+            let perms = d.permission_room_get(user_id, room.id).await?;
             perms.has(Permission::InviteManage)
-        },
+        }
         InviteTarget::Thread { room: _, thread } => {
-            let perms = d.permission_thread_get(session.user_id, thread.id).await?;
+            let perms = d.permission_thread_get(user_id, thread.id).await?;
             perms.has(Permission::InviteManage)
-        },
+        }
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -178,9 +178,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         // .routes(routes!(invite_delete))
         .routes(routes!(invite_resolve))
-        // .routes(routes!(invite_use))
-        // .routes(routes!(invite_room_create))
-        // .routes(routes!(invite_user_create))
-        // .routes(routes!(invite_user_list))
-        // .routes(routes!(invite_room_list))
+    // .routes(routes!(invite_use))
+    // .routes(routes!(invite_room_create))
+    // .routes(routes!(invite_user_create))
+    // .routes(routes!(invite_user_list))
+    // .routes(routes!(invite_room_list))
 }

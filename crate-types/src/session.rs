@@ -13,7 +13,7 @@ use super::{ids::SessionId, UserId};
     derive(ToSchema),
     schema(examples("super_secret_session_token"))
 )]
-pub struct SessionToken(String);
+pub struct SessionToken(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -21,10 +21,8 @@ pub struct Session {
     #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub id: SessionId,
     #[cfg_attr(feature = "utoipa", schema(read_only))]
-    pub user_id: UserId,
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub token: SessionToken,
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
+    #[serde(flatten)]
     pub status: SessionStatus,
     #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub name: Option<String>,
@@ -33,9 +31,6 @@ pub struct Session {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SessionCreate {
-    #[cfg_attr(feature = "utoipa", schema(write_only))]
-    pub user_id: UserId,
-
     #[cfg_attr(feature = "utoipa", schema(write_only, required = false))]
     pub name: Option<String>,
 }
@@ -47,20 +42,26 @@ pub struct SessionPatch {
     pub name: Option<Option<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "status")]
 pub enum SessionStatus {
     /// The session exists but can't do anything besides authenticate
     Unauthorized,
-    
+
     /// The session exists and can do non-critical actions
-    Authorized,
-    
+    Authorized {
+        #[cfg_attr(feature = "utoipa", schema(write_only))]
+        user_id: UserId,
+    },
+
     // /// The session is probably not a bot (ie. solved a captcha)
     // Trusted,
-    
     /// The session exists and can do administrative actions
-    Sudo,
+    Sudo {
+        #[cfg_attr(feature = "utoipa", schema(write_only))]
+        user_id: UserId,
+    },
 }
 
 // Granular session capability flags?
@@ -85,5 +86,25 @@ impl fmt::Display for SessionToken {
 impl SessionPatch {
     pub fn wont_change(&self, target: &Session) -> bool {
         self.name.as_ref().is_none_or(|n| n == &target.name)
+    }
+}
+
+impl SessionStatus {
+    pub fn user_id(self) -> Option<UserId> {
+        match self {
+            SessionStatus::Unauthorized => None,
+            SessionStatus::Authorized { user_id } => Some(user_id),
+            SessionStatus::Sudo { user_id } => Some(user_id),
+        }
+    }
+}
+
+impl Session {
+    pub fn can_see(&self, other: &Self) -> bool {
+        match (self.status.user_id(), other.status.user_id()) {
+            (Some(a), Some(b)) if a == b => true,
+            _ if self.id == other.id => true,
+            _ => false,
+        }
     }
 }

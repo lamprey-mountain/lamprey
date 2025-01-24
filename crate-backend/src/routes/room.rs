@@ -26,11 +26,11 @@ use super::util::Auth;
 )]
 #[axum::debug_handler]
 async fn room_create(
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
-    let room = s.services().create_room(json, session.user_id).await?;
+    let room = s.services().create_room(json, user_id).await?;
     s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
@@ -48,12 +48,11 @@ async fn room_create(
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let user_id = session.user_id;
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
     let room = data.room_get(room_id).await?;
@@ -84,11 +83,11 @@ async fn room_get(
 )]
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let res = data.room_list(session.user_id, q).await?;
+    let res = data.room_list(user_id, q).await?;
     Ok(Json(res))
 }
 
@@ -107,11 +106,10 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(session): Auth,
+    Auth(session, user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
-    let user_id = session.user_id;
     let data = s.data();
     let perms = data.permission_room_get(user_id, room_id).await?;
     perms.ensure_view()?;
@@ -138,7 +136,7 @@ async fn room_edit(
 // )]
 // async fn room_ack(
 //     Path((room_id,)): Path<(RoomId,)>,
-//     Auth(session): Auth,
+//     Auth(session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<()>> {
 //     todo!()
@@ -160,7 +158,7 @@ async fn room_edit(
 // )]
 // async fn dm_initialize(
 //     Path((user_id, )): Path<(UserId,)>,
-//     Auth(session): Auth,
+//     Auth(session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<Room>> {
 //     todo!()
@@ -181,7 +179,7 @@ async fn room_edit(
 // )]
 // async fn dm_get(
 //     Path((user_id, )): Path<(UserId,)>,
-//     Auth(session): Auth,
+//     Auth(session, user_id): Auth,
 //     State(s): State<ServerState>,
 // ) -> Result<Json<Room>> {
 //     todo!()

@@ -7,7 +7,7 @@ export type ClientState = "stopped" | "connected" | "ready" | "reconnecting";
 
 export type ClientOptions = {
 	baseUrl: string;
-	token: string;
+	token?: string;
 	onReady: (event: MessageReady) => void;
 	onSync: (event: MessageSync) => void;
 	onState: (state: ClientState) => void;
@@ -20,7 +20,7 @@ export type Client = {
 	http: oapi.Client<paths>;
 
 	/** Start receiving events */
-	start: () => void;
+	start: (token?: string) => void;
 
 	/** Stop receiving events */
 	stop: () => void;
@@ -90,25 +90,32 @@ export function createClient(opts: ClientOptions): Client {
 
 	http.use({
 		onRequest(r) {
-			r.request.headers.set("authorization", `Bearer ${opts.token}`);
+			if (opts.token) {
+				r.request.headers.set("authorization", `Bearer ${opts.token}`);
+			}
 			return r.request;
 		},
 	});
 
+	function start(token?: string) {
+		if (token) opts.token = token;
+		setState("reconnecting");
+		if (ws) {
+			ws.close();
+		} else {
+			setupWebsocket();
+		}
+	}
+	
+	function stop() {
+		setState("stopped");
+		ws?.close();
+	}
+	
 	return {
 		opts,
 		http,
-		start: () => {
-			setState("reconnecting");
-			if (ws) {
-				ws.close();
-			} else {
-				setupWebsocket();
-			}
-		},
-		stop: () => {
-			setState("stopped");
-			ws?.close();
-		},
+		start,
+		stop,
 	};
 }

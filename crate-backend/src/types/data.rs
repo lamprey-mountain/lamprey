@@ -1,7 +1,9 @@
 use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, User, UserId, UserVerId
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
+    RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus,
+    SessionToken, Thread, ThreadId, User, UserId, UserVerId,
 };
 use uuid::Uuid;
 
@@ -133,7 +135,7 @@ impl From<DbThread> for Thread {
 
 pub struct DbSession {
     pub id: Uuid,
-    pub user_id: Uuid,
+    pub user_id: Option<Uuid>,
     pub token: SessionToken,
     pub status: DbSessionStatus,
     pub name: Option<String>,
@@ -151,20 +153,17 @@ impl From<DbSession> for Session {
     fn from(row: DbSession) -> Self {
         Session {
             id: row.id.into(),
-            user_id: row.user_id.into(),
             token: row.token,
-            status: row.status.into(),
+            status: match row.status {
+                DbSessionStatus::Unauthorized => SessionStatus::Unauthorized,
+                DbSessionStatus::Authorized => SessionStatus::Authorized {
+                    user_id: row.user_id.expect("invalid data in db!").into(),
+                },
+                DbSessionStatus::Sudo => SessionStatus::Sudo {
+                    user_id: row.user_id.expect("invalid data in db!").into(),
+                },
+            },
             name: row.name,
-        }
-    }
-}
-
-impl From<DbSessionStatus> for SessionStatus {
-    fn from(value: DbSessionStatus) -> Self {
-        match value {
-            DbSessionStatus::Unauthorized => SessionStatus::Unauthorized,
-            DbSessionStatus::Authorized => SessionStatus::Authorized,
-            DbSessionStatus::Sudo => SessionStatus::Sudo,
         }
     }
 }
@@ -173,8 +172,8 @@ impl From<SessionStatus> for DbSessionStatus {
     fn from(value: SessionStatus) -> Self {
         match value {
             SessionStatus::Unauthorized => DbSessionStatus::Unauthorized,
-            SessionStatus::Authorized => DbSessionStatus::Authorized,
-            SessionStatus::Sudo => DbSessionStatus::Sudo,
+            SessionStatus::Authorized { .. } => DbSessionStatus::Authorized,
+            SessionStatus::Sudo { .. } => DbSessionStatus::Sudo,
         }
     }
 }
