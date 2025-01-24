@@ -90,7 +90,7 @@ export function createClient(opts: ClientOptions): Client {
 
 	http.use({
 		onRequest(r) {
-			r.request.headers.set("authorization", `${opts.token}`);
+			r.request.headers.set("authorization", `Bearer ${opts.token}`);
 			return r.request;
 		},
 	});

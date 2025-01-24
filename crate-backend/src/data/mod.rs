@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use types::{InviteWithMetadata, SearchMessageRequest, SessionStatus};
+use types::{InviteWithMetadata, SearchMessageRequest, SessionPatch, SessionStatus};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -27,6 +27,7 @@ pub trait Data:
     + DataUnread
     + DataUser
     + DataSearch
+    + DataAuth
     + Send
     + Sync
 {
@@ -167,6 +168,7 @@ pub trait DataSession {
         user_id: UserId,
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>>;
+    async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&self, session_id: SessionId) -> Result<()>;
 }
 
@@ -204,15 +206,17 @@ pub trait DataUser {
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
-    async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User>;
-    async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()>;
+    // async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User>;
+    // async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()>;
 }
 
-// #[async_trait]
-// pub trait DataAuth {
-//     // DataAuth
-//     async fn auth_put(&self, patch: UserCreate) -> Result<User>;
-// }
+#[async_trait]
+pub trait DataAuth {
+    async fn auth_oauth_put(&self, provider: String, user_id: UserId, remote_id: String) -> Result<()>;
+    // async fn auth_oauth_get(&self, provider: String, user_id: UserId) -> Result<String>;
+    async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId>;
+    async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()>;
+}
 
 #[async_trait]
 pub trait DataSearch {

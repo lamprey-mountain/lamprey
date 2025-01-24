@@ -78,4 +78,5 @@ genid!(RoleId, "00000000-0000-0000-0000-00000000role");
 genid!(RoleVerId, "00000000-0000-0000-0ver-00000000role");
 genid!(MediaId, "00000000-0000-0000-0000-0000000media");
 genid!(SessionId, "00000000-0000-0000-0000-00000session");
+// genid!(SessionVerId, "00000000-0000-0000-0ver-00000session");
 // genid!(AuditLogEntryId, "00000000-0000-0000-0000-0auditlogent");

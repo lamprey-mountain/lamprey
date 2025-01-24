@@ -234,7 +234,7 @@ async fn message_edit(
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
     }
-    s.sushi.send(MessageSync::UpsertMessage {
+    s.broadcast(MessageSync::UpsertMessage {
         message: message.clone(),
     })?;
     Ok((StatusCode::CREATED, Json(message)))
@@ -272,7 +272,7 @@ async fn message_delete(
     perms.ensure(Permission::MessageDelete)?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
-    s.sushi.send(MessageSync::DeleteMessage {
+    s.broadcast(MessageSync::DeleteMessage {
         thread_id,
         message_id,
     })?;

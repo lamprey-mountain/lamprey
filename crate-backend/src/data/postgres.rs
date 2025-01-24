@@ -22,6 +22,7 @@ mod session;
 mod thread;
 mod unread;
 mod user;
+mod auth;
 mod util;
 
 pub use util::Pagination;

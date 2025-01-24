@@ -52,7 +52,8 @@ async fn media_create(
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
     let upload_url = Some(
         Url::parse(&format!(
-            "https://chat.celery.eu.org/api/v1/media/{media_id}"
+            "{}/api/v1/media/{media_id}",
+            s.config.base_url,
         ))
         .expect("somehow constructed invalid url"),
     );

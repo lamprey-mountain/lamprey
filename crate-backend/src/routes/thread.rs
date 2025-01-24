@@ -75,7 +75,7 @@ async fn thread_create(
     s.broadcast(MessageSync::UpsertThread {
         thread: thread.clone(),
     })?;
-    s.sushi.send(MessageSync::UpsertMessage { message: starter_message })?;
+    s.broadcast(MessageSync::UpsertMessage { message: starter_message })?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
@@ -156,7 +156,7 @@ async fn thread_update(
     perms.ensure(Permission::RoomManage)?;
     data.thread_update(thread_id, user_id, json).await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
-    s.sushi.send(MessageSync::UpsertThread {
+    s.broadcast(MessageSync::UpsertThread {
         thread: thread.clone(),
     })?;
     Ok(Json(thread))

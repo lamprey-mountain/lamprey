@@ -4,13 +4,17 @@ use anyhow::Result;
 use serenity::futures::{SinkExt as _, StreamExt};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 use types::{
-    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload, MessageSync, PaginationResponse, SyncResume, ThreadId, UserId
+    MediaCreated, MessageClient, MessageCreateRequest, MessageEnvelope, MessageId, MessagePayload,
+    MessageSync, PaginationResponse, SyncResume, ThreadId, UserId,
 };
 use uuid::uuid;
 
-use crate::{common::{Globals, GlobalsTrait}, portal::{Portal, PortalMessage}};
+use crate::{
+    common::{Globals, GlobalsTrait},
+    portal::{Portal, PortalMessage},
+};
 
 pub struct Unnamed {
     globals: Arc<Globals>,
@@ -63,7 +67,7 @@ impl Unnamed {
                 let _ = handle(msg, &t2).await;
             }
         });
-        
+
         let mut resume: Option<SyncResume> = None;
         loop {
             let Ok((mut client, _)) =
@@ -88,34 +92,42 @@ impl Unnamed {
                         client
                             .send(Message::text(serde_json::to_string(&MessageClient::Pong)?))
                             .await?;
-                    },
+                    }
                     MessagePayload::Sync { data, seq } => {
                         handle_sync(self.globals.clone(), data).await?;
                         match &mut resume {
                             Some(r) => r.seq = seq,
-                            None => {},
+                            None => {}
                         }
-                    },
+                    }
                     MessagePayload::Error { error } => {
                         error!("{error}");
-                    },
+                    }
                     MessagePayload::Ready { user, conn, seq } => {
                         info!("chat ready {}", user.name);
 
                         let http = reqwest::Client::new();
                         for config in &self.globals.config.portal {
-                            let portal = self.globals
+                            let portal = self
+                                .globals
                                 .portals
                                 .entry(config.my_thread_id)
-                                .or_insert_with(|| Portal::summon(self.globals.clone(), config.to_owned()));
-                            let last_id = self.globals.last_ids.get(&config.my_thread_id).map(|m| m.chat_id);
+                                .or_insert_with(|| {
+                                    Portal::summon(self.globals.clone(), config.to_owned())
+                                });
+                            let last_id = self
+                                .globals
+                                .last_ids
+                                .get(&config.my_thread_id)
+                                .map(|m| m.chat_id);
                             let Some(mut last_id) = last_id else {
                                 continue;
                             };
                             loop {
                                 let url = format!("https://chat.celery.eu.org/api/v1/thread/{}/message?from={}&dir=f&limit=100", config.my_thread_id, last_id);
-                                let batch: PaginationResponse<types::Message> = http.get(url)
-                                    .header("authorization", token.clone())
+                                let batch: PaginationResponse<types::Message> = http
+                                    .get(url)
+                                    .bearer_auth(token.clone())
                                     .send()
                                     .await?
                                     .error_for_status()?
@@ -124,7 +136,8 @@ impl Unnamed {
                                 info!("chat backfill {} messages", batch.items.len());
                                 let new_last_id = batch.items.last().map(|m| m.id);
                                 for message in batch.items.into_iter() {
-                                    let _ = portal.send(PortalMessage::UnnamedMessageUpsert { message });
+                                    let _ = portal
+                                        .send(PortalMessage::UnnamedMessageUpsert { message });
                                 }
                                 if !batch.has_more {
                                     break;
@@ -135,13 +148,13 @@ impl Unnamed {
 
                         resume = Some(SyncResume { conn, seq });
                     }
-                    MessagePayload::Resumed => {},
+                    MessagePayload::Resumed => {}
                     MessagePayload::Reconnect { can_resume } => {
                         if !can_resume {
                             resume = None;
                         }
                         client.close(None).await?;
-                    },
+                    }
                 }
             }
             warn!("websocket disconnected, reconnecting in 1 second...");
@@ -158,10 +171,8 @@ async fn handle_sync(mut globals: Arc<Globals>, msg: MessageSync) -> Result<()> 
         }
         MessageSync::UpsertMessage { message } => {
             info!("chat upsert message");
-            if message.author.id
-                == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69"))
-            {
-                return Ok(())
+            if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+                return Ok(());
             }
             globals.portal_send(
                 message.thread_id,
@@ -193,7 +204,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
             let c = reqwest::Client::new();
             let res: types::MediaCreated = c
                 .post("https://chat.celery.eu.org/api/v1/media")
-                .header("authorization", token)
+                .bearer_auth(token)
                 .header("content-type", "application/json")
                 .json(&types::MediaCreate {
                     filename,
@@ -208,7 +219,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
                 .json()
                 .await?;
             c.patch(res.upload_url.clone().unwrap())
-                .header("authorization", token)
+                .bearer_auth(token)
                 .header("upload-offset", "0")
                 .body(bytes)
                 .send()
@@ -225,7 +236,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
             let url = format!("https://chat.celery.eu.org/api/v1/thread/{thread_id}/message");
             let res: types::Message = c
                 .post(url)
-                .header("authorization", token)
+                .bearer_auth(token)
                 .header("content-type", "application/json")
                 .json(&req)
                 .send()
@@ -247,7 +258,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
             );
             let res: types::Message = c
                 .patch(url)
-                .header("authorization", token)
+                .bearer_auth(token)
                 .header("content-type", "application/json")
                 .json(&req)
                 .send()
@@ -267,7 +278,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
                 "https://chat.celery.eu.org/api/v1/thread/{thread_id}/message/{message_id}"
             );
             c.delete(url)
-                .header("authorization", token)
+                .bearer_auth(token)
                 .send()
                 .await?
                 .error_for_status()?;
@@ -284,7 +295,7 @@ async fn handle(msg: UnnamedMessage, token: &str) -> Result<()> {
             );
             let message: types::Message = reqwest::Client::new()
                 .get(url)
-                .header("authorization", token)
+                .bearer_auth(token)
                 .header("content-type", "application/json")
                 .send()
                 .await?

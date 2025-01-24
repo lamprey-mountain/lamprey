@@ -88,29 +88,4 @@ impl DataUser for Postgres {
         .await?;
         Ok(row.into())
     }
-
-    async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User> {
-        let row = query_as!(
-            DbUser,
-            r#"
-            SELECT id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system
-            FROM usr WHERE discord_id = $1
-        "#,
-            discord_id
-        )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(row.into())
-    }
-
-    async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()> {
-        query!(
-            "UPDATE usr SET discord_id = $2 WHERE id = $1",
-            user_id.into_inner(),
-            discord_id
-        )
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
 }

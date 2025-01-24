@@ -6,7 +6,7 @@ use crate::error::Result;
 use crate::ServerState;
 use crate::{data::Data, types::RoleCreate};
 
-mod oauth2;
+pub mod oauth2;
 
 pub struct Services {
     state: Arc<ServerState>,

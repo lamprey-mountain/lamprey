@@ -1,12 +1,12 @@
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
-use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
-use dashmap::{DashMap, DashSet};
+use axum::{extract::DefaultBodyLimit, routing::get, Json};
+use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
 use serde::Deserialize;
-use services::Services;
+use services::{oauth2::OauthState, Services};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use sync::Connection;
 use tokio::sync::broadcast::Sender;
@@ -14,6 +14,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
 use types::{MediaId, MediaUpload, MessageSync};
+use url::Url;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable as _};
@@ -21,8 +22,8 @@ use utoipa_scalar::{Scalar, Servable as _};
 pub mod data;
 pub mod error;
 mod routes;
-mod sync;
 pub mod services;
+mod sync;
 pub mod types;
 
 use error::Result;
@@ -45,17 +46,16 @@ pub struct ServerState {
     // should this be global?
     pub config: Config,
 
-    // TODO: move some of these into the db? or use something like redis?
-    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
-    pub valid_oauth2_states: Arc<DashSet<Uuid>>,
-
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
 
-    // TODO: limit number of connections per user
+    // TODO: limit number of connections per user, clean up old/unused entries
+    // TODO: move some of these into the db or redis?
     pub syncers: Arc<DashMap<String, Connection>>,
-    
+    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
+    pub oauth_states: Arc<DashMap<Uuid, OauthState>>,
+
     pub pool: PgPool,
     pub blobs: opendal::Operator,
 }
@@ -65,7 +65,7 @@ impl ServerState {
         Self {
             config,
             uploads: Arc::new(DashMap::new()),
-            valid_oauth2_states: Arc::new(DashSet::new()),
+            oauth_states: Arc::new(DashMap::new()),
             syncers: Arc::new(DashMap::new()),
             pool,
             sushi: tokio::sync::broadcast::channel(100).0,
@@ -89,7 +89,7 @@ impl ServerState {
     }
 
     fn broadcast(&self, msg: MessageSync) -> Result<()> {
-        self.sushi.send(msg)?;
+        let _ = self.sushi.send(msg);
         Ok(())
     }
 
@@ -110,8 +110,9 @@ impl ServerState {
 pub struct Config {
     rust_log: String,
     database_url: String,
+    base_url: Url,
     s3: ConfigS3,
-    discord: ConfigDiscord,
+    oauth_provider: HashMap<String, ConfigOauthProvider>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -124,10 +125,12 @@ pub struct ConfigS3 {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ConfigDiscord {
+pub struct ConfigOauthProvider {
     client_id: String,
     client_secret: String,
-    redirect_uri: String,
+    authorization_url: String,
+    token_url: String,
+    revocation_url: String,
 }
 
 fn cors() -> CorsLayer {
@@ -178,10 +181,7 @@ async fn main() -> Result<()> {
     let api1 = api.clone();
     let router = router
         .route("/api/docs.json", get(|| async { Json(api) }))
-        .route(
-            "/api/docs",
-            get(|| async { Html(Scalar::with_url("/scalar", api1).to_html()) }),
-        )
+        .merge(Scalar::with_url("/api/docs", api1).custom_html(include_str!("scalar.html")))
         .layer(cors())
         .layer(TraceLayer::new_for_http())
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16));

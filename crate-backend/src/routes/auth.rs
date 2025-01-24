@@ -1,12 +1,17 @@
 use std::sync::Arc;
 
+use axum::extract::Path;
 use axum::extract::Query;
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse};
+use axum::Json;
 use serde::Deserialize;
+use serde::Serialize;
 use tracing::debug;
 use types::SessionStatus;
+use url::Url;
+use utoipa::IntoParams;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
@@ -15,82 +20,61 @@ use crate::ServerState;
 
 use crate::error::{Error, Result};
 
-// const validStates = new Set();
+use super::util::AuthRelaxed;
 
-/// TEMP: Auth discord init
-///
-/// This will be replaced later with a more robust system
-// #[utoipa::path(
-//     get,
-//     path = "/session/{session_id}/auth/discord",
-//     params(
-//         ("session_id", description = "Session id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = FOUND, description = "success"),
-//     )
-// )]
-#[utoipa::path(
-    get,
-    path = "/auth/discord",
-    tags = ["session"],
-    responses(
-        (status = FOUND, description = "success"),
-    )
-)]
-pub async fn auth_discord_init(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
-    let url = s.services().oauth_create_url()?;
-    let mut headers = HeaderMap::new();
-    let redir = headers::HeaderValue::from_str(&url).expect("invalid location header?");
-    headers.insert("location", redir);
-    Ok((StatusCode::FOUND, headers))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Oauth2RedirectQuery {
+#[derive(Debug, Deserialize, IntoParams)]
+pub struct OauthRedirectQuery {
     state: Uuid,
     code: String,
 }
 
-/// Auth discord redirect
-// #[utoipa::path(
-//     get,
-//     path = "/session/{session_id}/auth/discord/redirect",
-//     params(
-//         ("session_id", description = "Session id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OauthInitResponse {
+    url: Url,
+}
+
+/// Auth oauth init
+#[utoipa::path(
+    post,
+    path = "/auth/oauth/{provider}",
+    tags = ["session"],
+    responses(
+        (status = OK, body = OauthInitResponse, description = "ready"),
+    )
+)]
+pub async fn auth_oauth_init(
+    Path(provider): Path<String>,
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let url = s.services().oauth_create_url(&provider, session.id)?;
+    Ok(Json(OauthInitResponse { url }))
+}
+
+/// Auth oauth redirect
 #[utoipa::path(
     get,
-    path = "/auth/discord/redirect",
+    path = "/auth/oauth/{provider}/redirect",
     tags = ["session"],
     responses(
         (status = OK, description = "success"),
     )
 )]
-pub async fn auth_discord_redirect(
-    Query(q): Query<Oauth2RedirectQuery>,
+pub async fn auth_oauth_redirect(
+    Path(_provider): Path<String>,
+    Query(q): Query<OauthRedirectQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    if s.valid_oauth2_states.remove(&q.state).is_none() {
-        return Err(Error::BadStatic("invalid or expired state"));
-    }
     let srv = s.services();
-    let auth = srv.oauth_exchange_code_for_token(q.code).await?;
-    let dc = srv.oauth_get_user(auth.access_token).await?;
+    let (auth, session_id) = srv.oauth_exchange_code_for_token(q.state, q.code).await?;
+    let dc = srv.discord_get_user(auth.access_token).await?;
     debug!("new discord user {:?}", dc);
     let data = s.data();
-    let user = match s
-        .data()
-        .temp_user_get_by_discord_id(dc.user.id.clone())
+    match data
+        .auth_oauth_get_remote("discord".into(), dc.user.id.clone())
         .await
     {
-        Ok(user) => user,
+        Ok(_) => {},
         Err(Error::NotFound) => {
             let user = data
                 .user_create(UserCreate {
@@ -103,25 +87,14 @@ pub async fn auth_discord_redirect(
                     is_system: false,
                 })
                 .await?;
-            data.temp_user_set_discord_id(user.id, dc.user.id).await?;
-            user
+            data.auth_oauth_put("discord".into(), user.id, dc.user.id)
+                .await?;
         }
         Err(err) => return Err(err),
     };
-    let s = data.session_create(user.id, None).await?;
-    data.session_set_status(s.id, SessionStatus::Authorized)
+    data.session_set_status(session_id, SessionStatus::Authorized)
         .await?;
-    Ok(Html(format!(
-        r#"
-         <pre>Success! You should be redirected; if not, click <a href="/">here</a></pre>
-         <script>
-           localStorage.setItem("token", "{}");
-           localStorage.setItem("user_id", "{}");
-           location.href = "/";
-         </script>
-    "#,
-        s.token, user.id
-    )))
+    Ok(Html(include_str!("../oauth.html")))
 }
 
 // /// Auth discord logout
@@ -245,8 +218,10 @@ pub async fn auth_discord_redirect(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(auth_discord_init))
-        .routes(routes!(auth_discord_redirect))
+        // .routes(routes!(auth_discord_init))
+        // .routes(routes!(auth_discord_redirect))
+        .routes(routes!(auth_oauth_init))
+        .routes(routes!(auth_oauth_redirect))
     // .routes(routes!(auth_discord_logout))
     // .routes(routes!(auth_discord_delete))
     // .routes(routes!(auth_discord_get))
@@ -257,3 +232,30 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     // .routes(routes!(auth_totp_set))
     // .routes(routes!(auth_totp_exec))
 }
+
+// planning
+// enum AuthAction {
+//     OauthStart { provider: String },
+//     // -> Authorized
+//     OauthFinish { state: Uuid, code: String },
+//     // -> Authorized
+//     EmailPassword { email: String, password: String },
+//     // -> Authorized
+//     EmailLink { email: String },
+//     // -> Sudo
+//     Totp { code: String },
+//     // -> Sudo
+//     SudoPassword { password: String },
+//     Captcha { code: String },
+// }
+
+// // requires sudo mode; cannot change auth in a way that locks you out of sudo mode
+// enum AuthUpdate {
+//     LinkTotp,                   // -> code
+//     LinkEmail { addr: String }, // -> send verification email
+//     LinkPassword { pass: String },
+//     UnlinkOauth { provider: String },
+//     UnlinkTotp {},
+//     UnlinkEmail {},
+//     UnlinkPassword {},
+// }

@@ -8,6 +8,7 @@ use types::MessageEnvelope;
 use crate::types::MessageSync;
 
 #[derive(thiserror::Error, Debug)]
+// TODO: avoid returning actual error messages to prevent leaking stuff
 pub enum Error {
     #[error("missing authentication")]
     MissingAuth,
@@ -53,6 +54,8 @@ pub enum Error {
     Reqwest(#[from] reqwest::Error),
     #[error("figment error: {0}")]
     Figment(#[from] figment::Error),
+    #[error("url parse error: {0}")]
+    UrlParseError(#[from] url::ParseError),
     #[error("not yet implemented...")]
     Unimplemented,
 }

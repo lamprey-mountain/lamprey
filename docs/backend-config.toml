@@ -1,0 +1,19 @@
+# stripped down version of my config
+
+rust_log = "debug,sqlx=debug"
+database_url = "postgres://user:pass@localhost:5432/chat"
+base_url = "https://example.com/"
+
+[s3]
+bucket = "chat-files"
+endpoint = "https://s4.celery.eu.org"
+region = "garage"
+access_key_id = "GK12345"
+secret_access_key = "12345"
+
+[[oauth_provider.discord]]
+client_id = "12345"
+client_secret = "67890"
+authorization_url = "https://discord.com/oauth2/authorize?scope=identify&response_type=code"
+token_url = "https://discord.com/api/v10/oauth2/token"
+revoke_url = "https://discord.com/api/v10/oauth2/token/revoke"

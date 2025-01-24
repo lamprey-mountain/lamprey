@@ -62,17 +62,17 @@ pub enum MessageType {
 }
 
 impl MessagePatch {
-    pub fn wont_change(&self, other: &Message) -> bool {
-        self.content.as_ref().is_none_or(|c| c == &other.content)
-            && self.metadata.as_ref().is_none_or(|m| m == &other.metadata)
-            && self.reply_id.is_none_or(|r| r == other.reply_id)
+    pub fn wont_change(&self, target: &Message) -> bool {
+        self.content.as_ref().is_none_or(|c| c == &target.content)
+            && self.metadata.as_ref().is_none_or(|m| m == &target.metadata)
+            && self.reply_id.is_none_or(|r| r == target.reply_id)
             && self
                 .override_name
                 .as_ref()
-                .is_none_or(|o| o == &other.override_name)
+                .is_none_or(|o| o == &target.override_name)
             && self.attachments.as_ref().is_none_or(|a| {
-                a.len() == other.attachments.len()
-                    && a.iter().zip(&other.attachments).all(|(a, b)| a.id == b.id)
+                a.len() == target.attachments.len()
+                    && a.iter().zip(&target.attachments).all(|(a, b)| a.id == b.id)
             })
     }
 }

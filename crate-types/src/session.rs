@@ -50,8 +50,16 @@ pub struct SessionPatch {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SessionStatus {
+    /// The session exists but can't do anything besides authenticate
     Unauthorized,
+    
+    /// The session exists and can do non-critical actions
     Authorized,
+    
+    // /// The session is probably not a bot (ie. solved a captcha)
+    // Trusted,
+    
+    /// The session exists and can do administrative actions
     Sudo,
 }
 
@@ -64,5 +72,11 @@ impl From<String> for SessionToken {
 impl fmt::Display for SessionToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl SessionPatch {
+    pub fn wont_change(&self, target: &Session) -> bool {
+        self.name.as_ref().is_none_or(|n| n == &target.name)
     }
 }

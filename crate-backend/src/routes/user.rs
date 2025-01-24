@@ -118,7 +118,7 @@ pub async fn user_delete(
     }
     let data = s.data();
     data.user_delete(user_id).await?;
-    s.sushi.send(MessageSync::DeleteUser { id: user_id })?;
+    s.broadcast(MessageSync::DeleteUser { id: user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -2,11 +2,12 @@
 // TODO: make more generic
 
 use serde::{Deserialize, Serialize};
+use types::SessionId;
 use url::Url;
 use uuid::Uuid;
 
 use super::Services;
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OauthTokenExchange {
@@ -31,17 +32,8 @@ pub struct OauthTokenRevoke {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DiscordAuth {
-    // /// the current application
-    // application: DiscordApplication,
-
-    // /// the scopes the user has authorized the application for
-    // scopes: Vec<String>,
-
-    // /// ISO8601 timestamp when the access token expires
-    // expires: String,
+    // NOTE: i'm assuming that `user` always exists for now
     /// the user who has authorized, if the user has authorized with the identify scope
-    ///
-    /// i'm assuming that `user` always exists for now
     pub user: DiscordUser,
 }
 
@@ -55,53 +47,63 @@ pub struct DiscordUser {
 
     /// the user's display name, if it is set. For bots, this is the application name
     pub global_name: Option<String>,
-    // avatar	?string	the user's avatar hash	identify
-    // bot?	boolean	whether the user belongs to an OAuth2 application	identify
-    // system?	boolean	whether the user is an Official Discord System user (part of the urgent message system)	identify
-    // mfa_enabled?	boolean	whether the user has two factor enabled on their account	identify
-    // banner?	?string	the user's banner hash	identify
-    // accent_color?	?integer	the user's banner color encoded as an integer representation of hexadecimal color code	identify
-    // locale?	string	the user's chosen language option	identify
-    // verified?	boolean	whether the email on this account has been verified	email
-    // email?	?string	the user's email	email
-    // flags?	integer	the flags on a user's account	identify
-    // premium_type?	integer	the type of Nitro subscription on a user's account	identify
-    // public_flags?	integer	the public flags on a user's account	identify
-    // avatar_decoration_data?	?avatar decoration data object	data for the user's avatar decoration	identify
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GithubUser {
+    /// the user's id
+    pub id: u64,
+
+    /// the user's name
+    pub name: String,
+}
+
+pub struct OauthState {
+    provider: String,
+    session_id: SessionId,
+}
+
+impl OauthState {
+    pub fn new(provider: String, session_id: SessionId) -> Self {
+        Self { provider, session_id }
+    }
 }
 
 impl Services {
-    pub fn oauth_create_url(&self) -> Result<String> {
+    pub fn oauth_create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
+        let p = self.state.config.oauth_provider.get(provider).ok_or(Error::NotFound)?;
         let state = Uuid::new_v4();
-        self.state.valid_oauth2_states.insert(state);
-        let dc = &self.state.config.discord;
+        self.state.oauth_states.insert(state, OauthState::new(provider.to_string(), session_id));
+        let redirect_uri: Url = self.state.config.base_url.join(&format!("/api/v1/auth/oauth/{}/redirect", provider))?;
         let url = Url::parse_with_params(
-            "https://canary.discord.com/oauth2/authorize",
+            &p.authorization_url,
             [
-                ("client_id", dc.client_id.as_str()),
-                ("response_type", "code"),
-                ("redirect_uri", &dc.redirect_uri),
-                ("scope", "identify"),
+                ("client_id", p.client_id.as_str()),
+                ("redirect_uri", redirect_uri.as_str()),
                 ("state", &state.to_string()),
             ],
-        )
-        .expect("invalid url?");
-        Ok(url.to_string())
+        )?;
+        Ok(url)
     }
 
-    pub async fn oauth_exchange_code_for_token(&self, code: String) -> Result<OauthTokenResponse> {
+    pub async fn oauth_exchange_code_for_token(&self, state: Uuid, code: String) -> Result<(OauthTokenResponse, SessionId)> {
+        let (_, s) = self.state.oauth_states.remove(&state)
+            .ok_or(Error::BadStatic("invalid or expired state"))?;
+        if &s.provider != "discord" {
+            return Err(Error::Unimplemented);
+        }
         let client = reqwest::Client::new();
-
-        let dc = &self.state.config.discord;
+        let p = self.state.config.oauth_provider.get(&s.provider).ok_or(Error::NotFound)?;
+        let redirect_uri: Url = self.state.config.base_url.join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
         let body = OauthTokenExchange {
             grant_type: "authorization_code".to_string(),
             code,
-            redirect_uri: dc.redirect_uri.clone(),
+            redirect_uri: redirect_uri.into(),
         };
 
         let res: OauthTokenResponse = client
-            .post("https://discord.com/api/v10/oauth2/token")
-            .basic_auth(&dc.client_id, Some(&dc.client_secret))
+            .post(&p.token_url)
+            .basic_auth(&p.client_id, Some(&p.client_secret))
             .form(&body)
             .send()
             .await?
@@ -109,10 +111,27 @@ impl Services {
             .json()
             .await?;
 
-        Ok(res)
+        Ok((res, s.session_id))
     }
 
-    pub async fn oauth_get_user(&self, token: String) -> Result<DiscordAuth> {
+    pub async fn oauth_revoke_token(&self, provider: &str, token: String) -> Result<()> {
+        let p = self.state.config.oauth_provider.get(provider).ok_or(Error::NotFound)?;
+        let client = reqwest::Client::new();
+        let body = OauthTokenRevoke {
+            token_type_hint: "access_token".to_string(),
+            token,
+        };
+        client
+            .post(&p.revocation_url)
+            .basic_auth(&p.client_id, Some(&p.client_secret))
+            .form(&body)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(())
+    }
+    
+    pub async fn discord_get_user(&self, token: String) -> Result<DiscordAuth> {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
             .get("https://discord.com/api/v10/oauth2/@me")
@@ -124,21 +143,30 @@ impl Services {
             .await?;
         Ok(res)
     }
-
-    pub async fn oauth_revoke_token(&self, token: String) -> Result<()> {
+    
+    pub async fn github_get_user(&self, token: String) -> Result<GithubUser> {
         let client = reqwest::Client::new();
-        let body = OauthTokenRevoke {
-            token_type_hint: "access_token".to_string(),
-            token,
-        };
-        let dc = &self.state.config.discord;
-        client
-            .post("https://discord.com/api/v10/oauth2/token/revoke")
-            .basic_auth(&dc.client_id, Some(&dc.client_secret))
-            .form(&body)
+        // let res: serde_json::Value = client
+        //     .get("https://api.github.com/user")
+        //     .header("accept", "application/vnd.github+json")
+        //     .header("X-GitHub-Api-Version", "2022-11-28")
+        //     .bearer_auth(token)
+        //     .send()
+        //     .await?
+        //     .error_for_status()?
+        //     .json()
+        //     .await?;
+        // res.get("");
+        let res: GithubUser = client
+            .get("https://api.github.com/user")
+            .header("accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .bearer_auth(token)
             .send()
             .await?
-            .error_for_status()?;
-        Ok(())
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
     }
 }
