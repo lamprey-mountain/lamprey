@@ -95,6 +95,8 @@ pub async fn auth_oauth_redirect(
     };
     data.session_set_status(session_id, SessionStatus::Authorized { user_id })
         .await?;
+    let session = data.session_get(session_id).await?;
+    s.broadcast(types::MessageSync::UpsertSession { session })?;
     Ok(Html(include_str!("../oauth.html")))
 }
 

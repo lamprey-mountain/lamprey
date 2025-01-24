@@ -103,7 +103,7 @@ impl Unnamed {
                         error!("{error}");
                     }
                     MessagePayload::Ready { user, conn, seq } => {
-                        info!("chat ready {}", user.name);
+                        info!("chat ready {}", user.expect("tried to use unauthenticated sesion token!").name);
 
                         let http = reqwest::Client::new();
                         for config in &self.globals.config.portal {

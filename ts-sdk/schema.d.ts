@@ -531,13 +531,11 @@ export interface components {
         };
         PaginationResponse_Session: {
             has_more: boolean;
-            items: {
+            items: (components["schemas"]["SessionStatus"] & {
                 id: components["schemas"]["SessionId"];
                 readonly name?: string | null;
-                status: components["schemas"]["SessionStatus"];
                 token: components["schemas"]["SessionToken"];
-                user_id: components["schemas"]["UserId"];
-            }[];
+            })[];
             /** Format: int64 */
             total: number;
         };
@@ -616,24 +614,31 @@ export interface components {
             /** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
             query: string;
         };
-        Session: {
+        Session: components["schemas"]["SessionStatus"] & {
             id: components["schemas"]["SessionId"];
             readonly name?: string | null;
-            status: components["schemas"]["SessionStatus"];
             token: components["schemas"]["SessionToken"];
-            user_id: components["schemas"]["UserId"];
         };
         SessionCreate: {
             name?: string | null;
-            user_id: components["schemas"]["UserId"];
         };
         /** Format: uuid */
         SessionId: string;
         SessionPatch: {
             name?: string | null;
         };
-        /** @enum {string} */
-        SessionStatus: "Unauthorized" | "Authorized" | "Sudo";
+        SessionStatus: {
+            /** @enum {string} */
+            status: "Unauthorized";
+        } | {
+            /** @enum {string} */
+            status: "Authorized";
+            user_id: components["schemas"]["UserId"];
+        } | {
+            /** @enum {string} */
+            status: "Sudo";
+            user_id: components["schemas"]["UserId"];
+        };
         SessionToken: string;
         Thread: {
             creator_id: components["schemas"]["UserId"];
@@ -820,7 +825,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Media id */
-                media_id: components["schemas"]["MediaId"];
+                media_id: string;
             };
             cookie?: never;
         };
@@ -843,7 +848,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description Media id */
-                media_id: components["schemas"]["MediaId"];
+                media_id: string;
             };
             cookie?: never;
         };
@@ -1092,7 +1097,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Session"];
+                };
             };
         };
     };

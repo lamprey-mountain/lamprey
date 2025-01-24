@@ -27,12 +27,22 @@ const App: Component = () => {
 		},
 	});
 
-	// if (!TOKEN) {
-	// 	client.http.POST("/api/v1/session", {
-	// 	})
-	// }
-	
-	client.start(TOKEN);
+	if (TOKEN) {
+		client.start(TOKEN);
+	} else {
+		client.http.POST("/api/v1/session", {
+			body: {},
+		}).then((res) => {
+			if (!res.data) {
+				console.log("failed to init session", res.response);
+				throw new Error("failed to init session");
+			}
+			const { token } = res.data;
+			localStorage.setItem("token", token);
+			client.start(token);
+		});
+	}
+
 	onCleanup(() => client.stop());
 
 	const [data, update] = createStore<Data>({
@@ -52,24 +62,6 @@ const App: Component = () => {
 		uploads: {},
 	});
 
-	(async () => {
-		const { data, error } = await client.http.GET("/api/v1/room", {
-			params: {
-				query: {
-					dir: "f",
-					limit: 100,
-				},
-			},
-		});
-		if (error) {
-			console.error(error);
-			return;
-		}
-		for (const room of data.items) {
-			update("rooms", room.id, room);
-		}
-	})();
-
 	const ctx: ChatCtx = {
 		client,
 		data,
@@ -79,6 +71,7 @@ const App: Component = () => {
 	};
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
+	ctx.dispatch({ do: "init" });
 
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });

@@ -397,7 +397,12 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "server": {
 				const msg = action.msg;
-				if (msg.type === "UpsertRoom") {
+				if (msg.type === "UpsertSession") {
+					// probably shouldn't be sending tokens here...
+					if (msg.session.token === ctx.client.opts.token) {
+						ctx.dispatch({ do: "init" });
+					}
+				} else if (msg.type === "UpsertRoom") {
 					update("rooms", msg.room.id, msg.room);
 				} else if (msg.type === "UpsertThread") {
 					update("threads", msg.thread.id, msg.thread);
@@ -501,8 +506,10 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "server.ready": {
 				const { user } = action.msg;
-				update("user", user);
-				update("users", user.id, user);
+				if (user) {
+					update("user", user);
+					update("users", user.id, user);
+				}
 				return;
 			}
 			case "thread.mark_read": {
@@ -658,6 +665,25 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					});
 				};
 				return;
+			}
+			case "init": {
+				const { data, error } = await ctx.client.http.GET("/api/v1/room", {
+					params: {
+						query: {
+							dir: "f",
+							limit: 100,
+						},
+					},
+				});
+				if (error) {
+					console.error(error);
+					return;
+				}
+				solidBatch(() => {
+					for (const room of data.items) {
+						update("rooms", room.id, room);
+					}
+				});
 			}
 		}
 	}

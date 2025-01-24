@@ -121,7 +121,8 @@ export type Action =
 	| { do: "upload.resume"; local_id: string }
 	| { do: "upload.cancel"; local_id: string }
 	| { do: "server"; msg: types.MessageSync }
-	| { do: "server.ready"; msg: types.MessageReady };
+	| { do: "server.ready"; msg: types.MessageReady }
+	| { do: "init" };
 
 export type AttachmentCreateT = {
 	id: string;

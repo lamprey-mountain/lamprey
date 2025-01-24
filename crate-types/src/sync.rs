@@ -53,7 +53,16 @@ pub enum MessagePayload {
     Error { error: String },
 
     /// successfully connected
-    Ready { user: User, conn: String, seq: u64 },
+    Ready {
+        /// current user, null if session is unauthed
+        user: Option<User>,
+        
+        /// connection id
+        conn: String,
+        
+        /// sequence id for reconnecting
+        seq: u64,
+    },
 
     /// successfully reconnected
     Resumed,

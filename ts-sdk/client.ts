@@ -106,16 +106,11 @@ export function createClient(opts: ClientOptions): Client {
 			setupWebsocket();
 		}
 	}
-	
+
 	function stop() {
 		setState("stopped");
 		ws?.close();
 	}
-	
-	return {
-		opts,
-		http,
-		start,
-		stop,
-	};
+
+	return { opts, http, start, stop };
 }

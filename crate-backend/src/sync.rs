@@ -117,13 +117,6 @@ impl Connection {
                             other => other,
                         })?;
 
-                // TODO: guest sessions?
-                let user_id = match session.status {
-                    SessionStatus::Unauthorized => return Err(Error::UnauthSession),
-                    SessionStatus::Authorized { user_id } => user_id,
-                    SessionStatus::Sudo { user_id } => user_id,
-                };
-
                 // TODO: more forgiving reconnections
                 if let Some(r) = reconnect {
                     debug!("attempting to resume");
@@ -148,7 +141,10 @@ impl Connection {
                     return Err(Error::BadStatic("bad or expired reconnection info"));
                 }
 
-                let user = data.user_get(user_id).await?;
+                let user = match session.user_id() {
+                    Some(user_id) => Some(data.user_get(user_id).await?),
+                    None => None,
+                };
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
                         user,
@@ -177,12 +173,6 @@ impl Connection {
             _ => return Ok(()),
         };
 
-        let user_id = match session.status {
-            SessionStatus::Unauthorized => return Err(Error::UnauthSession),
-            SessionStatus::Authorized { user_id } => user_id,
-            SessionStatus::Sudo { user_id } => user_id,
-        };
-
         match &self.state {
             ConnectionState::Disconnected { .. }
                 if self.seq_server > self.seq_client + MAX_QUEUE_LEN as u64 =>
@@ -199,7 +189,7 @@ impl Connection {
             MessageSync::UpsertMessage { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::UpsertUser { user } => {
                 // TODO: more user upserts?
-                AuthCheck::Custom(user.id == user_id)
+                AuthCheck::Custom(session.user_id().is_some_and(|id| user.id == id))
             }
             MessageSync::UpsertMember { member } => AuthCheck::Room(member.room_id),
             MessageSync::UpsertSession {
@@ -221,9 +211,12 @@ impl Connection {
             } => AuthCheck::Thread(*thread_id),
             MessageSync::DeleteUser { id } => {
                 // TODO
-                AuthCheck::Custom(*id == user_id)
+                AuthCheck::Custom(session.user_id().is_some_and(|i| *id == i))
             }
-            MessageSync::DeleteSession { id: _ } => todo!(),
+            MessageSync::DeleteSession { id } => {
+                // TODO: send message when other sessions from the same user are deleted
+                AuthCheck::Custom(*id == session.id)
+            }
             MessageSync::DeleteRole {
                 room_id,
                 role_id: _,
@@ -240,12 +233,12 @@ impl Connection {
                 todo!()
             }
         };
-        let should_send = match auth_check {
-            AuthCheck::Room(room_id) => {
+        let should_send = match (session.user_id(), auth_check) {
+            (Some(user_id), AuthCheck::Room(room_id)) => {
                 let perms = self.s.data().permission_room_get(user_id, room_id).await?;
                 perms.has(Permission::View)
             }
-            AuthCheck::Thread(thread_id) => {
+            (Some(user_id), AuthCheck::Thread(thread_id)) => {
                 let perms = self
                     .s
                     .data()
@@ -253,7 +246,8 @@ impl Connection {
                     .await?;
                 perms.has(Permission::View)
             }
-            AuthCheck::Custom(b) => b,
+            (_, AuthCheck::Custom(b)) => b,
+            (None, _) => false,
         };
         if should_send {
             self.push_sync(msg);

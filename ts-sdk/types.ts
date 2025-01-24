@@ -12,7 +12,7 @@ export type Media = components["schemas"]["Media"];
 
 export type Invite = { code: string };
 
-export type MessageReady = { op: "Ready"; user: User; conn: string; seq: number }
+export type MessageReady = { op: "Ready"; user: User | null; conn: string; seq: number }
 
 export type MessageEnvelope =
 	| { op: "Ping" }

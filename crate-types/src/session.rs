@@ -107,4 +107,8 @@ impl Session {
             _ => false,
         }
     }
+
+    pub fn user_id(&self) -> Option<UserId> {
+        self.status.user_id()
+    }
 }

@@ -23,7 +23,7 @@ use crate::error::{Error, Result};
     path = "/session",
     tags = ["session"],
     responses(
-        (status = CREATED, description = "success"),
+        (status = CREATED, body = Session, description = "success"),
     )
 )]
 pub async fn session_create(
