@@ -47,13 +47,12 @@ export function createList<T>(options: {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
-	const [isAtBottom, setIsAtBottom] = createSignal(false);
+	const [isAtBottom, setIsAtBottom] = createSignal(false); // FIXME: should only be true if at slice end
 	const [scrollPos, setScrollPos] = createSignal(0);
 	let topRef: HTMLElement | undefined;
 	let bottomRef: HTMLElement | undefined;
 	let anchorRef: Element;
 	let anchorRect: DOMRect;
-	let shouldAutoscroll = false;
 
 	const margin = 0;
 	const intersections = new IntersectionObserver((entries) => {
@@ -67,13 +66,8 @@ export function createList<T>(options: {
 				}
 			} else if (el.target === bottomEl()) {
 				if (el.isIntersecting) {
-					shouldAutoscroll = options.autoscroll?.() || false;
 					anchorRef = el.target;
 					options.onPaginate?.("forwards");
-					setIsAtBottom(true);
-				} else {
-					shouldAutoscroll = false;
-					setIsAtBottom(false);
 				}
 			}
 		}
@@ -83,7 +77,7 @@ export function createList<T>(options: {
 
 	const resizes = new ResizeObserver((_entries) => {
 		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
-		if (shouldAutoscroll) {
+		if (isAtBottom() && options.autoscroll?.() || false) {
 			console.log("list::autoscroll");
 			wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
 		}
@@ -128,11 +122,12 @@ export function createList<T>(options: {
 			function reanchor() {
 				const wrap = wrapperEl();
 				// console.log("list::reanchor", wrap, anchorRef);
+				const shouldAutoscroll = isAtBottom() && (options.autoscroll?.() || false);
 				console.log(shouldAutoscroll);
 				if (!wrap || !anchorRef) return setRefs();
 				console.time("perf::reanchor");
 				if (shouldAutoscroll) {
-					// console.log("list::autoscroll");
+					console.log("list::autoscroll");
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
 				} else {
 					// FIXME: tons of reflow and jank
@@ -178,6 +173,7 @@ export function createList<T>(options: {
 			function handleScroll() {
 				const pos = wrapperEl()!.scrollTop;
 				setScrollPos(pos);
+				setIsAtBottom(pos >= (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight));
 				options.onScroll?.(pos);
 			}
 
