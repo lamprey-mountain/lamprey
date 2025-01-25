@@ -23,6 +23,7 @@
 	"tasks": {
 		"hakari": "cargo hakari generate && cargo hakari manage-deps",
 		"sqlx-prep": "cargo sqlx prep --workspace",
-		"rustdoc": "cargo doc --no-deps -p types -p backend"
+		"rustdoc": "cargo doc --no-deps -p types -p backend",
+		"fmt": "cargo fmt && deno fmt"
 	}
 }

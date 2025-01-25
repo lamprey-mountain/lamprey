@@ -737,7 +737,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						update("rooms", room.id, room);
 					}
 				});
-					return;
+				return;
 			}
 			case "server.init_session": {
 				const res = await ctx.client.http.POST("/api/v1/session", {

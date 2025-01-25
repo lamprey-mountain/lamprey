@@ -163,7 +163,7 @@ export const Main = () => {
 										<UserSettings user={user()!} page={p.params.page} />
 									</Show>
 								</>
-							)
+							);
 						}}
 					/>
 					<Route

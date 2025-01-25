@@ -72,7 +72,7 @@ function Info(props: VoidProps<{ user: UserT }>) {
 			},
 		});
 	};
-	
+
 	return (
 		<>
 			<h2>info</h2>
@@ -102,13 +102,13 @@ function Sessions(props: VoidProps<{ user: UserT }>) {
 		const lastId = value?.items.at(-1)?.id ??
 			"00000000-0000-0000-0000-000000000000";
 		const { data, error } = await ctx.client.http.GET("/api/v1/session", {
-		  params: {
-		    query: {
-		      from: lastId,
-		      limit: 100,
-		      dir: "f",
-		    }
-		  }
+			params: {
+				query: {
+					from: lastId,
+					limit: 100,
+					dir: "f",
+				},
+			},
 		});
 		if (error) throw new Error(error);
 		return {
@@ -131,7 +131,7 @@ function Sessions(props: VoidProps<{ user: UserT }>) {
 			},
 		});
 	}
-	
+
 	function revokeSession(session_id: string) {
 		ctx.dispatch({
 			do: "modal.confirm",
@@ -144,28 +144,35 @@ function Sessions(props: VoidProps<{ user: UserT }>) {
 			},
 		});
 	}
-	
+
 	return (
 		<>
 			<h2>sessions</h2>
-		  <Show when={sessions()}>
-  		  <ul>
-  				<For each={sessions()!.items}>{s => 
-  					<li>
-  						<div>
-  							<Show when={s.name} fallback={<em>no name</em>}>{s.name}</Show> - {s.status}
-  							<button onClick={() => renameSession(s.id)}>rename</button>
-  							<button onClick={() => revokeSession(s.id)}>revoke</button>
-  						</div>
-  						<div>
-    						<code class="dim">{s.id}</code>
-    						<Show when={s.id === ctx.data.session?.id}>{" (current)"}</Show>
-  						</div>
-  					</li>
-  				}</For>
-  		  </ul>
-  		  <button onClick={fetchSessions}>more</button>
-		  </Show>
+			<Show when={sessions()}>
+				<ul>
+					<For each={sessions()!.items}>
+						{(s) => (
+							<li>
+								<div>
+									<Show when={s.name} fallback={<em>no name</em>}>
+										{s.name}
+									</Show>{" "}
+									- {s.status}
+									<button onClick={() => renameSession(s.id)}>rename</button>
+									<button onClick={() => revokeSession(s.id)}>revoke</button>
+								</div>
+								<div>
+									<code class="dim">{s.id}</code>
+									<Show when={s.id === ctx.data.session?.id}>
+										{" (current)"}
+									</Show>
+								</div>
+							</li>
+						)}
+					</For>
+				</ul>
+				<button onClick={fetchSessions}>more</button>
+			</Show>
 		</>
 	);
 }

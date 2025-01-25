@@ -1,4 +1,3 @@
-
 import { Component, onCleanup } from "solid-js";
 import { ChatCtx, chatctx, Data } from "./context.ts";
 import { createStore } from "solid-js/store";
@@ -65,7 +64,7 @@ const App: Component = () => {
 	}
 
 	onCleanup(() => client.stop());
-	
+
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
 	};

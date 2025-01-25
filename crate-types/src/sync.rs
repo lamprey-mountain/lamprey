@@ -56,7 +56,7 @@ pub enum MessagePayload {
     Ready {
         /// current user, null if session is unauthed
         user: Option<User>,
-        
+
         /// current session
         session: Session,
 
