@@ -159,7 +159,7 @@ pub trait DataMessage {
 
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(&self, name: Option<String>) -> Result<Session>;
+    async fn session_create(&self, token: SessionToken, name: Option<String>) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;

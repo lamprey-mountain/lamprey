@@ -20,18 +20,24 @@ pub struct SessionToken(pub String);
 pub struct Session {
     #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub id: SessionId,
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
-    pub token: SessionToken,
     #[serde(flatten)]
     pub status: SessionStatus,
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SessionWithToken {
+    #[serde(flatten)]
+    pub session: Session,
+    #[cfg_attr(feature = "utoipa", schema(read_only))]
+    pub token: SessionToken,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SessionCreate {
-    #[cfg_attr(feature = "utoipa", schema(write_only, required = false))]
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<String>,
 }
 

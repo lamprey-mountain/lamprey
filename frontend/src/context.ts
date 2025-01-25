@@ -7,6 +7,7 @@ import {
 	MessageT,
 	RoleT,
 	RoomT,
+	SessionT,
 	ThreadT,
 	UserT,
 } from "./types.ts";
@@ -52,6 +53,7 @@ export type Data = {
 	invites: Record<string, InviteT>;
 	users: Record<string, UserT>;
 	user: UserT | null;
+	session: SessionT | null;
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	menu: Menu | null;
@@ -122,6 +124,7 @@ export type Action =
 	| { do: "upload.cancel"; local_id: string }
 	| { do: "server"; msg: types.MessageSync }
 	| { do: "server.ready"; msg: types.MessageReady }
+	| { do: "server.init_session" }
 	| { do: "init" };
 
 export type AttachmentCreateT = {

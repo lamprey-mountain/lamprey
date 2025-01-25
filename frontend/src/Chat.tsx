@@ -14,6 +14,7 @@ import { Attachment, chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
 import { uuidv7 } from "uuidv7";
+import { throttle } from "@solid-primitives/scheduled";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -91,11 +92,15 @@ export const ChatMain = (props: ChatProps) => {
 	});
 
 	createEffect(() => {
-		ctx.dispatch({
-			do: "thread.scroll_pos",
-			thread_id: props.thread.id,
-			pos: list.scrollPos(),
-			is_at_end: list.isAtBottom(),
+		list.scrollPos();
+		throttle(() => {
+			init(); // FIXME: don't init on all scroll
+			ctx.dispatch({
+				do: "thread.scroll_pos",
+				thread_id: props.thread.id,
+				pos: list.scrollPos(),
+				is_at_end: list.isAtBottom(),
+			});
 		});
 	});
 

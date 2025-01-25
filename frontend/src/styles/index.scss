@@ -254,15 +254,14 @@ button, input[type="submit"] {
 			display: grid;
 			grid-template-columns: 128px 1fr max-content;
 
-			&:not(.message) > * {
+			&:not(.message) {
 				overflow-anchor: none;
 			}
 
 			&.unread-marker {
-				box-shadow: 3px 0 0 inset #3fa9c9;
+				box-shadow: 4px 0 0 -1px inset #3fa9c9;
 				background-color: #3fa9c922;
 				color: #3fa9c9;
-				grid-column: span 3;
 				margin: 8px 0;
 
 				& > .content {
@@ -271,7 +270,7 @@ button, input[type="submit"] {
 			}
 
 			&.selected {
-				box-shadow: 3px 0 0 inset #67dc82;
+				box-shadow: 4px 0 0 -1px inset #67dc82;
 				background-color: #67dc8222;
 			}
 

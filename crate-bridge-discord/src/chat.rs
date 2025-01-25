@@ -102,7 +102,7 @@ impl Unnamed {
                     MessagePayload::Error { error } => {
                         error!("{error}");
                     }
-                    MessagePayload::Ready { user, conn, seq } => {
+                    MessagePayload::Ready { user, conn, seq, .. } => {
                         info!(
                             "chat ready {}",
                             user.expect("tried to use unauthenticated sesion token!")

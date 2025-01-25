@@ -15,6 +15,7 @@ export type Invite = { code: string };
 export type MessageReady = {
 	op: "Ready";
 	user: User | null;
+	session: Session;
 	conn: string;
 	seq: number;
 };

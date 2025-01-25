@@ -8,6 +8,7 @@
 	"imports": {
 		"@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
 		"@floating-ui/dom": "npm:@floating-ui/dom",
+		"@solid-primitives/scheduled": "npm:@solid-primitives/scheduled@^1.5.0",
 		"@solid-primitives/websocket": "npm:@solid-primitives/websocket",
 		"@solidjs/router": "npm:@solidjs/router",
 		"event-emitter": "npm:event-emitter@^0.3.5",

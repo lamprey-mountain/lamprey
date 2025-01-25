@@ -69,12 +69,11 @@ impl DataMessage for Postgres {
     async fn message_get(&self, thread_id: ThreadId, id: MessageId) -> Result<Message> {
         let row = query_as!(DbMessage, r#"
             with
-            att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
-                select version_id, json_agg(row_to_json(media)) as attachments
-                from att_unnest
-                join media on att_unnest.media_id = media.id
-                group by att_unnest.version_id
+                select version_id, json_agg(row_to_json(media) order by ord) as attachments
+                from message, unnest(message.attachments) with ordinality as att(id, ord)
+                join media on att.id = media.id
+                group by message.version_id
             ),
             message_coalesced as (
                 select *
@@ -115,12 +114,11 @@ impl DataMessage for Postgres {
             DbMessage,
             r#"
             with
-            att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
-                select version_id, json_agg(row_to_json(media)) as attachments
-                from att_unnest
-                join media on att_unnest.media_id = media.id
-                group by att_unnest.version_id
+                select version_id, json_agg(row_to_json(media) order by ord) as attachments
+                from message, unnest(message.attachments) with ordinality as att(id, ord)
+                join media on att.id = media.id
+                group by message.version_id
             ),
             message_coalesced as (
                 select *
@@ -207,12 +205,11 @@ impl DataMessage for Postgres {
     ) -> Result<Message> {
         let row = query_as!(DbMessage, r#"
             with
-            att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
-                select version_id, json_agg(row_to_json(media)) as attachments
-                from att_unnest
-                join media on att_unnest.media_id = media.id
-                group by att_unnest.version_id
+                select version_id, json_agg(row_to_json(media) order by ord) as attachments
+                from message, unnest(message.attachments) with ordinality as att(id, ord)
+                join media on att.id = media.id
+                group by message.version_id
             )
             SELECT
                 msg.type as "message_type: DbMessageType",
@@ -266,12 +263,11 @@ impl DataMessage for Postgres {
             DbMessage,
             r#"
             with
-            att_unnest as (select version_id, unnest(attachments) as media_id from message),
             att_json as (
-                select version_id, json_agg(row_to_json(media)) as attachments
-                from att_unnest
-                join media on att_unnest.media_id = media.id
-                group by att_unnest.version_id
+                select version_id, json_agg(row_to_json(media) order by ord) as attachments
+                from message, unnest(message.attachments) with ordinality as att(id, ord)
+                join media on att.id = media.id
+                group by message.version_id
             )
         select
             msg.type as "message_type: DbMessageType",

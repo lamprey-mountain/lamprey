@@ -49,6 +49,7 @@ export function Submenu(
 	const [subEl, setSubEl] = createSignal<HTMLElement | undefined>();
 	const [hovered, setHovered] = createSignal(false);
 
+	// FIXME: seens to have an error on unmount
 	const dims = useFloating(itemEl, subEl, {
 		whileElementsMounted: autoUpdate,
 		middleware: [flip()],

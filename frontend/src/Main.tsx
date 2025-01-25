@@ -5,10 +5,13 @@ import { ChatNav } from "./Nav.tsx";
 import { Menu, Modal as ContextModal, useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
 import { RoomHome } from "./Room.tsx";
-import { RoomSettings } from "./Settings.tsx";
+import { RoomSettings } from "./RoomSettings.tsx";
+import { UserSettings } from "./UserSettings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { A, Route, Router } from "@solidjs/router";
+import { types } from "sdk";
+import { Home } from "./Home.tsx";
 
 const Title = (props: { children: string }) => {
 	createEffect(() => document.title = props.children);
@@ -150,6 +153,20 @@ export const Main = () => {
 						)}
 					/>
 					<Route
+						path="/settings/:page?"
+						component={(p) => {
+							const user = () => ctx.data.user;
+							return (
+								<>
+									<Title>{user() ? "Settings" : "loading..."}</Title>
+									<Show when={user()}>
+										<UserSettings user={user()!} page={p.params.page} />
+									</Show>
+								</>
+							)
+						}}
+					/>
+					<Route
 						path="/room/:room_id"
 						component={(p) => {
 							const room = () => ctx.data.rooms[p.params.room_id];
@@ -260,84 +277,6 @@ const Modal = (props: ParentProps) => {
 					{props.children}
 				</div>
 			</div>
-		</div>
-	);
-};
-
-const Home = () => {
-	const ctx = useCtx();
-
-	function createRoom() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				ctx.client.http.POST("/api/v1/room", {
-					body: { name },
-				});
-			},
-		});
-	}
-
-	function useInvite() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "invite code?",
-			cont(code) {
-				// TODO: fix
-				// ctx.client.http.POST("/api/v1/invite")
-				// ctx.client.http("POST", `/api/v1/invites/${code}`, {});
-				queueMicrotask(() => {
-					ctx.dispatch({ do: "modal.alert", text: "todo!" });
-				});
-			},
-		});
-	}
-
-	async function loginDiscord() {
-		const res = await ctx.client.http.POST("/api/v1/auth/oauth/{provider}", {
-			params: {
-				path: {
-					provider: "discord",
-				},
-			},
-		});
-		if (res.error) {
-			ctx.dispatch({ do: "modal.alert", text: "failed to create login url" });
-			return;
-		}
-		globalThis.open(res.data.url);
-	}
-
-	async function logout() {
-		await ctx.client.http.DELETE("/api/v1/session/{session_id}", {
-			params: {
-				path: {
-					session_id: "@self",
-				},
-			},
-		});
-		localStorage.clear();
-		location.reload(); // TODO: less hacky logout
-	}
-
-	return (
-		<div class="home">
-			<h2>home</h2>
-			<p>work in progress. expect bugs and missing polish.</p>
-			<button onClick={createRoom}>
-				create room
-			</button>
-			<br />
-			<button onClick={useInvite}>use invite</button>
-			<br />
-			<button onClick={loginDiscord}>login with discord</button>
-			<br />
-			<button onClick={logout}>logout</button>
-			<br />
-			<A target="_self" href="/api/docs">api docs</A>
-			<br />
 		</div>
 	);
 };

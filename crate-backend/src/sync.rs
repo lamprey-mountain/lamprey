@@ -145,6 +145,7 @@ impl Connection {
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
                         user,
+                        session: session.clone(),
                         conn: self.get_id().to_owned(),
                         seq: 0,
                     },

@@ -129,6 +129,7 @@ function calculateSlice(
 	}
 }
 
+// TODO: refactor this out into multiple smaller files
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
@@ -398,23 +399,25 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			case "server": {
 				const msg = action.msg;
 				if (msg.type === "UpsertSession") {
-					// probably shouldn't be sending tokens here...
-					if (msg.session.token === ctx.client.opts.token) {
-						ctx.client.http.GET("/api/v1/user/{user_id}", {
-							params: {
-								path: {
-									user_id: "@self",
+					if (msg.session.id === ctx.data.session?.id) {
+						update("session", msg.session);
+						if (!ctx.data.user) {
+							ctx.client.http.GET("/api/v1/user/{user_id}", {
+								params: {
+									path: {
+										user_id: "@self",
+									},
 								},
-							},
-						}).then((res) => {
-							const user = res.data;
-							if (!user) {
-								throw new Error("couldn't fetch user");
-							}
-							update("user", user);
-							update("users", user.id, user);
-						});
-						ctx.dispatch({ do: "init" });
+							}).then((res) => {
+								const user = res.data;
+								if (!user) {
+									throw new Error("couldn't fetch user");
+								}
+								update("user", user);
+								update("users", user.id, user);
+							});
+							ctx.dispatch({ do: "init" });
+						}
 					}
 				} else if (msg.type === "UpsertRoom") {
 					update("rooms", msg.room.id, msg.room);
@@ -513,17 +516,24 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 							delete obj[code];
 						}),
 					);
+				} else if (msg.type === "UpsertUser") {
+					const { user } = msg;
+					update("users", user.id, user);
+					if (user.id === ctx.data.user?.id) {
+						update("user", user);
+					}
 				} else {
 					console.warn("unknown message", msg);
 				}
 				return;
 			}
 			case "server.ready": {
-				const { user } = action.msg;
+				const { user, session } = action.msg;
 				if (user) {
 					update("user", user);
 					update("users", user.id, user);
 				}
+				update("session", session);
 				return;
 			}
 			case "thread.mark_read": {
@@ -727,6 +737,21 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						update("rooms", room.id, room);
 					}
 				});
+					return;
+			}
+			case "server.init_session": {
+				const res = await ctx.client.http.POST("/api/v1/session", {
+					body: {},
+				});
+				if (!res.data) {
+					console.log("failed to init session", res.response);
+					throw new Error("failed to init session");
+				}
+				const session = res.data;
+				localStorage.setItem("token", session.token);
+				update("session", session);
+				ctx.client.start(session.token);
+				return;
 			}
 		}
 	}

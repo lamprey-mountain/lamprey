@@ -1,3 +1,4 @@
+
 import { Component, onCleanup } from "solid-js";
 import { ChatCtx, chatctx, Data } from "./context.ts";
 import { createStore } from "solid-js/store";
@@ -8,6 +9,7 @@ import { createClient } from "sdk";
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
 
+// TODO: refactor bootstrap code?
 const App: Component = () => {
 	const TOKEN = localStorage.getItem("token")!;
 	const client = createClient({
@@ -27,24 +29,6 @@ const App: Component = () => {
 		},
 	});
 
-	if (TOKEN) {
-		client.start(TOKEN);
-	} else {
-		client.http.POST("/api/v1/session", {
-			body: {},
-		}).then((res) => {
-			if (!res.data) {
-				console.log("failed to init session", res.response);
-				throw new Error("failed to init session");
-			}
-			const { token } = res.data;
-			localStorage.setItem("token", token);
-			client.start(token);
-		});
-	}
-
-	onCleanup(() => client.stop());
-
 	const [data, update] = createStore<Data>({
 		rooms: {},
 		room_members: {},
@@ -58,6 +42,7 @@ const App: Component = () => {
 		thread_state: {},
 		modals: [],
 		user: null,
+		session: null,
 		menu: null,
 		uploads: {},
 	});
@@ -71,8 +56,16 @@ const App: Component = () => {
 	};
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
-	ctx.dispatch({ do: "init" });
 
+	if (TOKEN) {
+		client.start(TOKEN);
+		ctx.dispatch({ do: "init" });
+	} else {
+		ctx.dispatch({ do: "server.init_session" });
+	}
+
+	onCleanup(() => client.stop());
+	
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
 	};

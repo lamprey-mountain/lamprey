@@ -113,6 +113,7 @@ export function tooltip(
 		wrap.addEventListener("mouseleave", considerHidingTip);
 	});
 
+	// TODO: use onPointerEnter/Leave instead of mouse events?
 	return (
 		<>
 			{wrap}

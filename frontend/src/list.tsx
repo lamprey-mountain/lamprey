@@ -7,6 +7,7 @@ import {
 	createSignal,
 	onCleanup,
 } from "solid-js";
+// import { throttle } from "@solid-primitives/scheduled";
 
 export type TimelineStatus = "loading" | "update" | "ready";
 
@@ -41,7 +42,7 @@ export function createList<T>(options: {
 	topQuery: string;
 	bottomQuery: string;
 	onPaginate?: (dir: "forwards" | "backwards") => void;
-	onScroll?: (pos: number) => void;
+	// onScroll?: (pos: number) => void;
 	onContextMenu?: (e: MouseEvent) => void;
 }) {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
@@ -177,9 +178,10 @@ export function createList<T>(options: {
 				setIsAtBottom(
 					pos >= (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight),
 				);
-				options.onScroll?.(pos);
+				// options.onScroll?.(pos);
 			}
 
+			// TODO: onScrollEnd might be useful
 			return (
 				<ul
 					class="list"

@@ -5,10 +5,10 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::{
-    PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId, SessionPatch,
-    SessionStatus,
+    PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId, SessionPatch, SessionStatus, SessionToken, SessionWithToken
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 
 use crate::types::SessionIdReq;
 use crate::ServerState;
@@ -23,7 +23,7 @@ use crate::error::{Error, Result};
     path = "/session",
     tags = ["session"],
     responses(
-        (status = CREATED, body = Session, description = "success"),
+        (status = CREATED, body = SessionWithToken, description = "success"),
     )
 )]
 pub async fn session_create(
@@ -31,8 +31,13 @@ pub async fn session_create(
     Json(body): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let session = data.session_create(body.name).await?;
-    Ok((StatusCode::CREATED, Json(session)))
+    let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
+    let session = data.session_create(token.clone(), body.name).await?;
+    let session_with_token = SessionWithToken {
+        session,
+        token,
+    };
+    Ok((StatusCode::CREATED, Json(session_with_token)))
 }
 
 /// Session list

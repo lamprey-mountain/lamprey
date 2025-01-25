@@ -7,6 +7,7 @@ export type UserT = types.User;
 export type RoleT = types.Role;
 export type MemberT = types.RoomMember;
 export type MediaT = types.Media;
+export type SessionT = types.Session;
 
 export type InviteT = {
 	code: string;

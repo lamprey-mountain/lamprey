@@ -153,7 +153,6 @@ impl From<DbSession> for Session {
     fn from(row: DbSession) -> Self {
         Session {
             id: row.id.into(),
-            token: row.token,
             status: match row.status {
                 DbSessionStatus::Unauthorized => SessionStatus::Unauthorized,
                 DbSessionStatus::Authorized => SessionStatus::Authorized {
