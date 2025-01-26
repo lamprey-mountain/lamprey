@@ -1,12 +1,13 @@
 use anyhow::Result;
-use reqwest::Url;
-use types::{Message, MessageCreateRequest, SessionToken, ThreadId};
+use reqwest::{StatusCode, Url};
+use types::{
+    Media, MediaCreate, MediaCreated, Message, MessageCreateRequest, MessageId, MessagePatch, SessionToken, ThreadId
+};
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 
 pub struct Http {
-    // TODO: make private
-    pub token: SessionToken,
+    token: SessionToken,
     base_url: Url,
 }
 
@@ -15,10 +16,16 @@ impl Http {
         let base_url = Url::parse(DEFAULT_BASE).unwrap();
         Self { token, base_url }
     }
-    
-    pub async fn send_message(&self, thread_id: ThreadId, body: &MessageCreateRequest) -> Result<Message> {
+
+    pub async fn message_create(
+        &self,
+        thread_id: ThreadId,
+        body: &MessageCreateRequest,
+    ) -> Result<Message> {
         let c = reqwest::Client::new();
-        let url = self.base_url.join(&format!("/api/v1/thread/{thread_id}/message"))?;
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/thread/{thread_id}/message"))?;
         let res: Message = c
             .post(url)
             .bearer_auth(&self.token)
@@ -30,5 +37,89 @@ impl Http {
             .json()
             .await?;
         Ok(res)
+    }
+
+    pub async fn message_update(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        body: &MessagePatch,
+    ) -> Result<Message> {
+        let c = reqwest::Client::new();
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
+        let res: Message = c
+            .patch(url)
+            .bearer_auth(&self.token)
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
+
+    pub async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message> {
+        let c = reqwest::Client::new();
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
+        let res: Message = c
+            .get(url)
+            .bearer_auth(&self.token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
+
+    pub async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+        let c = reqwest::Client::new();
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
+        c.delete(url)
+            .bearer_auth(&self.token)
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(())
+    }
+
+    pub async fn media_create(&self, body: &MediaCreate) -> Result<MediaCreated> {
+        let c = reqwest::Client::new();
+        let url = self.base_url.join(&format!("/api/v1/media"))?;
+        let res = c
+            .delete(url)
+            .bearer_auth(&self.token)
+            .header("content-type", "application/json")
+            .json(&body)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
+    
+    pub async fn media_upload(&self, target: &MediaCreated, body: Vec<u8>) -> Result<Option<Media>> {
+        let c = reqwest::Client::new();
+        let res = c.patch(target.upload_url.clone().unwrap())
+            .bearer_auth(&self.token)
+            .header("upload-offset", "0")
+            .body(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        match res.status() {
+            StatusCode::OK => Ok(Some(res.json().await?)),
+            StatusCode::NO_CONTENT => Ok(None),
+            _ => unreachable!("technically reachable with a bad server"),
+        }
     }
 }

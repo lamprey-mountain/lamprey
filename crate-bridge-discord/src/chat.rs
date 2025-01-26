@@ -4,7 +4,7 @@ use anyhow::{Error, Result};
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 use types::{
-    MediaCreated, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId
+    Media, MediaCreate, MediaCreated, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId
 };
 use uuid::uuid;
 use sdk::{Client, EventHandler, Http};
@@ -24,7 +24,7 @@ pub enum UnnamedMessage {
     MediaUpload {
         filename: String,
         bytes: Vec<u8>,
-        response: oneshot::Sender<MediaCreated>,
+        response: oneshot::Sender<Media>,
     },
     MessageGet {
         thread_id: ThreadId,
@@ -109,57 +109,29 @@ impl Unnamed {
 }
 
 async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
-    let token = &http.token.to_string();
     match msg {
         UnnamedMessage::MediaUpload {
             filename,
             bytes,
             response,
         } => {
-            // send_message
-            let c = reqwest::Client::new();
-            let res: types::MediaCreated = c
-                .post("https://chat.celery.eu.org/api/v1/media")
-                .bearer_auth(token)
-                .header("content-type", "application/json")
-                .json(&types::MediaCreate {
-                    filename,
-                    size: bytes.len() as u64,
-                    alt: None,
-                    url: None,
-                    source_url: None,
-                })
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
-            c.patch(res.upload_url.clone().unwrap())
-                .bearer_auth(token)
-                .header("upload-offset", "0")
-                .body(bytes)
-                .send()
-                .await?
-                .error_for_status()?;
-            let _ = response.send(res);
+            let req = MediaCreate {
+                filename,
+                size: bytes.len() as u64,
+                alt: None,
+                url: None,
+                source_url: None,
+            };
+            let upload = http.media_create(&req).await?;
+            let media = http.media_upload(&upload, bytes).await?;
+            let _ = response.send(media.expect("failed to upload media!"));
         }
         UnnamedMessage::MessageCreate {
             thread_id,
             req,
             response,
         } => {
-            let c = reqwest::Client::new();
-            let url = format!("https://chat.celery.eu.org/api/v1/thread/{thread_id}/message");
-            let res: types::Message = c
-                .post(url)
-                .bearer_auth(token)
-                .header("content-type", "application/json")
-                .json(&req)
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
+            let res = http.message_create(thread_id, &req).await?;
             let _ = response.send(res);
         }
         UnnamedMessage::MessageUpdate {
@@ -168,20 +140,7 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             req,
             response,
         } => {
-            let c = reqwest::Client::new();
-            let url = format!(
-                "https://chat.celery.eu.org/api/v1/thread/{thread_id}/message/{message_id}"
-            );
-            let res: types::Message = c
-                .patch(url)
-                .bearer_auth(token)
-                .header("content-type", "application/json")
-                .json(&req)
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
+            let res = http.message_update(thread_id, message_id, &req).await?;
             let _ = response.send(res);
         }
         UnnamedMessage::MessageDelete {
@@ -189,15 +148,7 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             message_id,
             response,
         } => {
-            let c = reqwest::Client::new();
-            let url = format!(
-                "https://chat.celery.eu.org/api/v1/thread/{thread_id}/message/{message_id}"
-            );
-            c.delete(url)
-                .bearer_auth(token)
-                .send()
-                .await?
-                .error_for_status()?;
+            http.message_delete(thread_id, message_id).await?;
             let _ = response.send(());
         }
         UnnamedMessage::MessageGet {
@@ -205,19 +156,8 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             message_id,
             response,
         } => {
-            let url = format!(
-                "https://chat.celery.eu.org/api/v1/thread/{}/message/{}",
-                thread_id, message_id
-            );
-            let message: types::Message = reqwest::Client::new()
-                .get(url)
-                .bearer_auth(token)
-                .header("content-type", "application/json")
-                .send()
-                .await?
-                .json()
-                .await?;
-            let _ = response.send(message);
+            let res = http.message_get(thread_id, message_id).await?;
+            let _ = response.send(res);
         }
     }
     Ok(())

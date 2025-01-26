@@ -243,11 +243,11 @@ impl Portal {
                     let media = recv.await?;
                     self.globals
                         .insert_attachment(AttachmentMetadata {
-                            chat_id: media.media_id,
+                            chat_id: media.id,
                             discord_id: a.id,
                         })
                         .await?;
-                    req.attachments.push(types::MediaRef { id: media.media_id });
+                    req.attachments.push(types::MediaRef { id: media.id });
                 }
                 req.content = Some(match message.kind {
                     DcMessageType::Regular | DcMessageType::InlineReply
@@ -340,11 +340,11 @@ impl Portal {
                         let media = recv.await?;
                         self.globals
                             .insert_attachment(AttachmentMetadata {
-                                chat_id: media.media_id,
+                                chat_id: media.id,
                                 discord_id: att.id,
                             })
                             .await?;
-                        v.push(types::MediaRef { id: media.media_id });
+                        v.push(types::MediaRef { id: media.id });
                     }
                     Some(v)
                 } else {
