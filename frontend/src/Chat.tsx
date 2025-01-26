@@ -8,13 +8,14 @@ import {
 	useContext,
 } from "solid-js";
 import Editor from "./Editor.tsx";
-import { getAttachment, TimelineItem } from "./Messages.tsx";
+import { TimelineItem } from "./Messages.tsx";
 
 import { Attachment, chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
 import { uuidv7 } from "uuidv7";
 import { throttle } from "@solid-primitives/scheduled";
+import { renderAttachment } from "./Message.tsx";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -177,11 +178,11 @@ export const ChatMain = (props: ChatProps) => {
 				return `uploading (${percent}%)`;
 			}
 		} else {
-			return getAttachment(att.media);
+			return renderAttachment(att.media);
 		}
 	}
 
-	function renderAttachment(att: Attachment) {
+	function renderAttachment2(att: Attachment) {
 		return (
 			<>
 				<div>
@@ -246,7 +247,7 @@ export const ChatMain = (props: ChatProps) => {
 						<For each={ts()!.attachments}>
 							{(att) => (
 								<li>
-									{renderAttachment(att)}
+									{renderAttachment2(att)}
 								</li>
 							)}
 						</For>
