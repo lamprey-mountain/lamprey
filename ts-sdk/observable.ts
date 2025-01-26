@@ -4,7 +4,9 @@ export type Observable<T> = {
 	observable: Observer<T>;
 };
 
-export type Observer<T> = (subscriber: (val: T) => void) => () => void;
+export type Observer<T> = {
+	subscribe: (subscriber: (val: T) => void) => () => void;
+};
 
 export function createObservable<T>(
 	initial: T,
@@ -22,14 +24,17 @@ export function createObservable<T>(
 		get() {
 			return current;
 		},
-		observable(fn: (val: T) => void) {
-			listeners.add(fn);
-			fn(current);
-			onListenerChange?.(listeners.size);
-			return () => {
-				listeners.delete(fn);
+		observable: {
+			subscribe(fn: (val: T) => void) {
+				listeners.add(fn);
+				console.log("emit");
+				fn(current);
 				onListenerChange?.(listeners.size);
-			};
+				return () => {
+					listeners.delete(fn);
+					onListenerChange?.(listeners.size);
+				};
+			},
 		},
 	};
 }
@@ -54,6 +59,7 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 
 	const cleanup = (key: K, size: number) => {
 		if (size !== 0) return;
+		console.log(`cleanup ${key} ${size}`);
 		if (entries.get(key) === empty) entries.delete(key);
 	};
 
@@ -70,7 +76,7 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 		if (!o) return false;
 		return o.get() !== empty;
 	};
-	
+
 	return {
 		read: {
 			has,
@@ -92,6 +98,7 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 		},
 		write: {
 			set(key: K, value: V) {
+				console.log(`write ${key}`);
 				const exists = has(key);
 				init(key).set(value);
 				if (!exists) {
