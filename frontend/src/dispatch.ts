@@ -755,7 +755,10 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "window.mouse_move": {
 				// TODO: use triangle to submenu corners instead of dot with x axis
-				const pos = [...ctx.data.cursor.pos, [action.e.x, action.e.y] as [number, number]];
+				const pos = [
+					...ctx.data.cursor.pos,
+					[action.e.x, action.e.y] as [number, number],
+				];
 				if (pos.length > 5) pos.shift();
 				let vx = 0, vy = 0;
 				for (let i = 1; i < pos.length; i++) {

@@ -1,6 +1,6 @@
 import { useCtx } from "../context.ts";
 import { ThreadT } from "../types.ts";
-import { Menu, Item, Separator, Submenu } from "./Parts.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for threads
 export function ThreadMenu(props: { thread: ThreadT }) {

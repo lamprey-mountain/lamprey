@@ -1,5 +1,5 @@
 import { RoomT } from "../types.ts";
-import { Menu, Item, Separator, Submenu } from "./Parts.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
 export function RoomMenu(props: { room: RoomT }) {
@@ -61,4 +61,3 @@ function RoomNotificationMenu() {
 		</>
 	);
 }
-

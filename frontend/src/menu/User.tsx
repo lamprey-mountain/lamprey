@@ -1,4 +1,4 @@
-import { Menu, Item, Separator } from "./Parts.tsx";
+import { Item, Menu, Separator } from "./Parts.tsx";
 
 // the context menu for users
 export function UserMenu() {

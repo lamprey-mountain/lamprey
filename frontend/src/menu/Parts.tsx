@@ -10,7 +10,7 @@ import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "../context.ts";
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
-  const ctx = useCtx();
+	const ctx = useCtx();
 	return (
 		<menu
 			onMouseDown={(e) => !props.submenu && e.stopPropagation()}
@@ -28,7 +28,7 @@ export function Submenu(
 		{ content: JSX.Element; onClick?: (e: MouseEvent) => void }
 	>,
 ) {
-  const ctx = useCtx();
+	const ctx = useCtx();
 	const [itemEl, setItemEl] = createSignal<Element | undefined>();
 	const [subEl, setSubEl] = createSignal<HTMLElement | undefined>();
 	const [hovered, setHovered] = createSignal(false);
@@ -44,12 +44,14 @@ export function Submenu(
 	let timeout: number;
 
 	function handleMouseEnter() {
-		if (!ctx.data.cursor.preview) ctx.dispatch({ do: "menu.preview", id: menuId });
+		if (!ctx.data.cursor.preview) {
+			ctx.dispatch({ do: "menu.preview", id: menuId });
+		}
 		let s = 1;
 		const attempt = () => {
 			const a = -ctx.data.cursor.vel * (1 / s);
 			if (a <= 0.3) {
-			  ctx.dispatch({ do: "menu.preview", id: menuId });
+				ctx.dispatch({ do: "menu.preview", id: menuId });
 			} else {
 				s += .01;
 				timeout = setTimeout(attempt, a);
@@ -83,7 +85,9 @@ export function Submenu(
 					position: dims.strategy,
 					left: `${dims.x}px`,
 					top: `${dims.y}px`,
-					visibility: hovered() || ctx.data.cursor.preview === menuId ? "visible" : "hidden",
+					visibility: hovered() || ctx.data.cursor.preview === menuId
+						? "visible"
+						: "hidden",
 				}}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}
@@ -103,12 +107,14 @@ export function Item(
 
 	let timeout: number;
 	function handleMouseEnter() {
-		if (!ctx.data.cursor.preview) ctx.dispatch({ do: "menu.preview", id: null });
+		if (!ctx.data.cursor.preview) {
+			ctx.dispatch({ do: "menu.preview", id: null });
+		}
 		const s = 1;
 		const attempt = () => {
 			const a = -ctx.data.cursor.vel * (1 / s);
 			if (a <= 0) {
-			  ctx.dispatch({ do: "menu.preview", id: null });
+				ctx.dispatch({ do: "menu.preview", id: null });
 			} else {
 				timeout = setTimeout(attempt, a);
 			}

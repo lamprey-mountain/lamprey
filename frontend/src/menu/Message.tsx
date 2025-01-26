@@ -2,7 +2,7 @@
 
 import { useCtx } from "../context.ts";
 import { MessageT } from "../types.ts";
-import { Menu, Item, Separator } from "./Parts.tsx";
+import { Item, Menu, Separator } from "./Parts.tsx";
 
 // should i have a separate one for bulk messages?
 export function MessageMenu(props: { message: MessageT }) {
