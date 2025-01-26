@@ -1,281 +1,26 @@
 import { produce, reconcile, SetStoreFunction } from "solid-js/store";
-import { Action, Data, Slice, TimelineItem } from "./context.ts";
-import {
-	InviteT,
-	MemberT,
-	MessageT,
-	MessageType,
-	Pagination,
-	RoleT,
-} from "./types.ts";
+import { Action, Data } from "../context.ts";
+import { InviteT, MemberT, RoleT } from "../types.ts";
 import { batch as solidBatch } from "solid-js";
-import { ChatCtx } from "./context.ts";
-import { createEditorState } from "./Editor.tsx";
-import { uuidv7 } from "uuidv7";
-import { TimelineItemT } from "./Messages.tsx";
+import { ChatCtx } from "../context.ts";
+import { createEditorState } from "../Editor.tsx";
 import { createUpload } from "sdk";
-
-type RenderTimelineParams = {
-	items: Array<TimelineItem>;
-	slice: Slice;
-	read_marker_id: string | null;
-	has_before: boolean;
-	has_after: boolean;
-};
-
-function renderTimeline(
-	{ items, slice, read_marker_id, has_before, has_after }: RenderTimelineParams,
-): Array<TimelineItemT> {
-	const rawItems = items.slice(slice.start, slice.end) ?? [];
-	const newItems: Array<TimelineItemT> = [];
-	console.log("renderTimeline", {
-		items,
-		slice,
-		rawItems,
-	});
-
-	if (rawItems.length === 0) throw new Error("no items");
-
-	if (has_before) {
-		newItems.push({
-			type: "info",
-			id: "info",
-			header: false,
-		});
-		newItems.push({
-			type: "spacer",
-			id: "spacer-top",
-		});
-	} else {
-		newItems.push({
-			type: "spacer-mini2",
-			id: "spacer-top2",
-		});
-		newItems.push({
-			type: "info",
-			id: "info",
-			header: true,
-		});
-	}
-
-	for (let i = 0; i < rawItems.length; i++) {
-		const msg = rawItems[i];
-		if (msg.type === "hole") continue;
-		newItems.push({
-			type: "message",
-			id: msg.message.nonce ?? msg.message.version_id,
-			message: msg.message,
-			separate: true,
-			is_local: msg.type === "local",
-			// separate: shouldSplit(messages[i], messages[i - 1]),
-		});
-		// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
-		// items.push({
-		//   type: "message",
-		//   id: messages[i].id,
-		//   message: messages[i],
-		//   separate: true,
-		//   // separate: shouldSplit(messages[i], messages[i - 1]),
-		// });
-		if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
-			newItems.push({
-				type: "unread-marker",
-				id: "unread-marker",
-			});
-		}
-	}
-
-	if (has_after) {
-		newItems.push({
-			type: "spacer",
-			id: "spacer-bottom",
-		});
-	} else {
-		newItems.push({
-			type: "spacer-mini",
-			id: "spacer-bottom-mini",
-		});
-	}
-
-	return newItems;
-}
-
-function calculateSlice(
-	old: Slice | undefined,
-	off: number,
-	len: number,
-	dir: "b" | "f",
-): Slice {
-	// messages are approx. 32 px high, show 3 pages of messages
-	const SLICE_LEN = Math.ceil(globalThis.innerHeight / 32) * 3;
-
-	// scroll a page at a time
-	const PAGINATE_LEN = Math.ceil(globalThis.innerHeight / 32);
-
-	console.log({ old, off, len, dir });
-
-	if (!old) {
-		const end = len;
-		const start = Math.max(end - SLICE_LEN, 0);
-		return { start, end };
-	} else if (dir == "b") {
-		const start = Math.max(old.start + off - PAGINATE_LEN, 0);
-		const end = Math.min(start + SLICE_LEN, len);
-		return { start, end };
-	} else {
-		const end = Math.min(old.end + off + PAGINATE_LEN, len);
-		const start = Math.max(end - SLICE_LEN, 0);
-		return { start, end };
-	}
-}
+import {
+	calculateSlice,
+	dispatchMessages,
+	renderTimeline,
+} from "./messages.ts";
+import { handleSubmit } from "./submit.ts";
 
 // TODO: refactor this out into multiple smaller files
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
 
-	async function fetchMessages(
-		thread_id: string,
-		from: string,
-		dir: "b" | "f",
-	) {
-		const { data, error } = await ctx.client.http.GET(
-			"/api/v1/thread/{thread_id}/message",
-			{
-				params: {
-					path: { thread_id },
-					query: {
-						dir,
-						from,
-						limit: 100,
-					},
-				},
-			},
-		);
-		if (error) throw error;
-		return data;
-	}
-
 	async function dispatch(action: Action) {
 		// console.log("dispatch", action.do);
 		console.log("dispatch", action);
 		switch (action.do) {
-			case "paginate": {
-				const { dir, thread_id } = action;
-				const oldSlice = ctx.data.slices[thread_id] as Slice | undefined;
-				console.log("paginate", { dir, thread_id, oldSlice });
-
-				// fetch items
-				let offset: number = 0;
-				if (!oldSlice) {
-					const from = "ffffffff-ffff-ffff-ffff-ffffffffffff";
-					const batch = await fetchMessages(thread_id, from, dir);
-					const tl: Array<TimelineItem> = batch.items.map((i: MessageT) => ({
-						type: "remote" as const,
-						message: i,
-					}));
-					if (batch.has_more) tl.unshift({ type: "hole" });
-					solidBatch(() => {
-						update("timelines", thread_id, tl);
-						update("slices", thread_id, { start: 0, end: tl.length });
-						for (const msg of batch.items) {
-							update("messages", msg.id, msg);
-						}
-						offset = batch.items.length;
-						// ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-					});
-				} else {
-					const tl = ctx.data.timelines[thread_id];
-					// console.log({ tl, slice })
-					if (tl.length < 2) return; // needs startitem and nextitem
-					if (dir === "b") {
-						const startItem = tl[oldSlice.start];
-						const nextItem = tl[oldSlice.start + 1];
-						let batch: Pagination<MessageT> | undefined;
-						if (startItem?.type === "hole") {
-							const from = nextItem.type === "remote"
-								? nextItem.message.id
-								: "ffffffff-ffff-ffff-ffff-ffffffffffff";
-							batch = await fetchMessages(thread_id, from, dir);
-						}
-						solidBatch(() => {
-							if (batch) {
-								update("timelines", thread_id, (i) =>
-									[
-										...batch.has_more ? [{ type: "hole" }] : [],
-										...batch.items.map((j: MessageT) => ({
-											type: "remote",
-											message: j,
-										})),
-										...i.slice(oldSlice.start + 1),
-									] as Array<TimelineItem>);
-								for (const msg of batch.items) {
-									update("messages", msg.id, msg);
-								}
-								offset = batch.items.length;
-							}
-						});
-					} else {
-						console.log(oldSlice.start, oldSlice.end, [...tl]);
-						const startItem = tl[oldSlice.end - 1];
-						const nextItem = tl[oldSlice.end - 2];
-						let batch: Pagination<MessageT> | undefined;
-						if (startItem.type === "hole") {
-							const from = nextItem.type === "remote"
-								? nextItem.message.id
-								: "00000000-0000-0000-0000-000000000000";
-							batch = await fetchMessages(thread_id, from, dir);
-						}
-
-						// PERF: indexOf 115ms
-						// PERF: reanchor 95.1ms
-						// PERF: getting stuff from store? 362ms
-						// PERF: setstore: 808ms
-						// PERF: set scroll position: 76.6ms
-						solidBatch(() => {
-							if (batch) {
-								update("timelines", thread_id, (i) =>
-									[
-										...i.slice(0, oldSlice.end - 1),
-										...batch.items.map((j: MessageT) => ({
-											type: "remote",
-											message: j,
-										})),
-										...batch.has_more ? [{ type: "hole" }] : [],
-									] as Array<TimelineItem>);
-								for (const msg of batch.items) {
-									update("messages", msg.id, msg);
-								}
-
-								offset = batch.items.length;
-							}
-						});
-					}
-				}
-
-				solidBatch(() => {
-					const tl = ctx.data.timelines[thread_id];
-					const slice = calculateSlice(oldSlice, offset, tl.length, dir);
-					update("slices", thread_id, slice);
-
-					const { read_marker_id } = ctx.data.thread_state[thread_id];
-					const newItems = renderTimeline({
-						items: tl,
-						slice,
-						read_marker_id,
-						has_before: tl.at(0)?.type === "hole",
-						has_after: tl.at(-1)?.type === "hole",
-					});
-					update(
-						"thread_state",
-						thread_id,
-						"timeline",
-						(old) => [...reconcile(newItems)(old)],
-					);
-				});
-
-				return;
-			}
 			case "menu": {
 				if (action.menu) console.log("handle menu", action.menu);
 				update("menu", action.menu);
@@ -773,119 +518,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "menu.preview": {
 				update("cursor", "preview", action.id);
+				return;
+			}
+			default: {
+				dispatchMessages(ctx, update, action);
+				return;
 			}
 		}
 	}
 
 	return dispatch;
-}
-
-// TODO: implement a retry queue
-// TODO: show when messages fail to send
-async function handleSubmit(
-	ctx: ChatCtx,
-	thread_id: string,
-	text: string,
-	update: SetStoreFunction<Data>,
-) {
-	if (text.startsWith("/")) {
-		const [cmd, ...args] = text.slice(1).split(" ");
-		const { room_id } = ctx.data.threads[thread_id];
-		if (cmd === "thread") {
-			const name = text.slice("/thread ".length);
-			await ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
-				params: { path: { room_id } },
-				body: { name },
-			});
-		} else if (cmd === "archive") {
-			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-				params: { path: { thread_id } },
-				body: {
-					is_closed: true,
-				},
-			});
-		} else if (cmd === "unarchive") {
-			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-				params: { path: { thread_id } },
-				body: {
-					is_closed: false,
-				},
-			});
-		} else if (cmd === "desc") {
-			const description = args.join(" ");
-			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-				params: { path: { thread_id } },
-				body: {
-					description: description || null,
-				},
-			});
-		} else if (cmd === "name") {
-			const name = args.join(" ");
-			if (!name) return;
-			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-				params: { path: { thread_id } },
-				body: { name },
-			});
-		} else if (cmd === "desc-room") {
-			const description = args.join(" ");
-			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-				params: { path: { room_id } },
-				body: {
-					description: description || null,
-				},
-			});
-		} else if (cmd === "name-room") {
-			const name = args.join(" ");
-			if (!name) return;
-			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-				params: { path: { room_id } },
-				body: { name },
-			});
-		}
-		return;
-	}
-	const ts = ctx.data.thread_state[thread_id];
-	if (text.length === 0 && ts.attachments.length === 0) return false;
-	if (!ts.attachments.every((i) => i.status === "uploaded")) return false;
-	const attachments = ts.attachments.map((i) => i.media);
-	const reply_id = ts.reply_id;
-	const nonce = uuidv7();
-	ctx.client.http.POST("/api/v1/thread/{thread_id}/message", {
-		params: {
-			path: { thread_id },
-		},
-		body: {
-			content: text,
-			reply_id,
-			nonce,
-			attachments,
-		},
-	});
-	const localMessage: MessageT = {
-		type: MessageType.Default,
-		id: nonce,
-		thread_id,
-		version_id: nonce,
-		override_name: null,
-		reply_id,
-		nonce,
-		content: text,
-		author: ctx.data.user!,
-		metadata: null,
-		attachments,
-		is_pinned: false,
-		ordering: 0,
-	};
-	solidBatch(() => {
-		update(
-			"timelines",
-			thread_id,
-			(i) => [...i, { type: "local" as const, message: localMessage }],
-		);
-		// TODO: is this necessary?
-		// update("messages", msg.id, msg);
-		update("thread_state", thread_id, "reply_id", null);
-		update("thread_state", thread_id, "attachments", []);
-		ctx.dispatch({ do: "thread.autoscroll", thread_id });
-	});
 }

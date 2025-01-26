@@ -2,7 +2,7 @@ import { Component, onCleanup } from "solid-js";
 import { ChatCtx, chatctx, Data, defaultData } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
-import { createDispatcher } from "./dispatch.ts";
+import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient } from "sdk";
 
 const BASE_URL = localStorage.getItem("base_url") ??
