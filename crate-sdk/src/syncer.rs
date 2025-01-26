@@ -38,8 +38,9 @@ impl Syncer {
     pub async fn connect(&mut self) -> Result<()> {
         let mut resume: Option<SyncResume> = None;
         loop {
+            let url = self.base_url.join("/api/v1/sync")?;
             let Ok((mut client, _)) =
-                tokio_tungstenite::connect_async("wss://chat.celery.eu.org/api/v1/sync").await
+                tokio_tungstenite::connect_async(url.as_str()).await
             else {
                 warn!("websocket failed to connect, retrying in 1 second...");
                 tokio::time::sleep(Duration::from_secs(1)).await;
