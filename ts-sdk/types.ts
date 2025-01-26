@@ -10,6 +10,19 @@ export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
 export type Media = components["schemas"]["Media"];
 
+export type Pagination<T> = {
+	total: number;
+	items: Array<T>;
+	has_more: boolean;
+};
+
+export type PaginationQuery = {
+	from?: string;
+	to?: string;
+	limit?: number;
+	dir?: "b" | "f";
+};
+
 export type Invite = { code: string };
 
 export type MessageReady = {

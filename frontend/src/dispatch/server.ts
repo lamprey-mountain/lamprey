@@ -9,32 +9,31 @@ function reduceServer(
 	delta: types.MessageSync,
 ): Data {
 	switch (delta.type) {
-		case "UpsertSession":
-			{
-				const { session } = delta;
-				if (session.id === state.session?.id) {
-					return { ...state, session };
-				} else {
-					return state;
-				}
-				// if (!ctx.data.user) {
-				// 	ctx.client.http.GET("/api/v1/user/{user_id}", {
-				// 		params: {
-				// 			path: {
-				// 				user_id: "@self",
-				// 			},
-				// 		},
-				// 	}).then((res) => {
-				// 		const user = res.data;
-				// 		if (!user) {
-				// 			throw new Error("couldn't fetch user");
-				// 		}
-				// 		update("user", user);
-				// 		update("users", user.id, user);
-				// 	});
-				// 	ctx.dispatch({ do: "init" });
-				// }
+		case "UpsertSession": {
+			const { session } = delta;
+			if (session.id === state.session?.id) {
+				return { ...state, session };
+			} else {
+				return state;
 			}
+			// if (!ctx.data.user) {
+			// 	ctx.client.http.GET("/api/v1/user/{user_id}", {
+			// 		params: {
+			// 			path: {
+			// 				user_id: "@self",
+			// 			},
+			// 		},
+			// 	}).then((res) => {
+			// 		const user = res.data;
+			// 		if (!user) {
+			// 			throw new Error("couldn't fetch user");
+			// 		}
+			// 		update("user", user);
+			// 		update("users", user.id, user);
+			// 	});
+			// 	ctx.dispatch({ do: "init" });
+			// }
+		}
 		case "UpsertRoom": {
 			const { room } = delta;
 			return { ...state, rooms: { ...state.rooms, [room.id]: room } };

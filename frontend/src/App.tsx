@@ -1,4 +1,4 @@
-import { Component, onCleanup } from "solid-js";
+import { Component, createEffect, from, onCleanup } from "solid-js";
 import { ChatCtx, chatctx, Data, defaultData } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
@@ -13,9 +13,6 @@ const App: Component = () => {
 	const TOKEN = localStorage.getItem("token")!;
 	const client = createClient({
 		baseUrl: BASE_URL,
-		onState(state) {
-			console.log({ state });
-		},
 		onSync(msg) {
 			console.log("recv", msg);
 			ctx.dispatch({
@@ -26,6 +23,11 @@ const App: Component = () => {
 		onReady(msg) {
 			ctx.dispatch({ do: "server.ready", msg });
 		},
+	});
+
+	const cs = from(client.state);
+	createEffect(() => {
+		console.log("client state", cs());
 	});
 
 	const [data, update] = createStore<Data>(defaultData);
@@ -70,6 +72,10 @@ const App: Component = () => {
 		globalThis.removeEventListener("keydown", handleKeypress);
 		globalThis.removeEventListener("mousemove", handleMouseMove);
 	});
+
+	// TEMP: debugging
+	(globalThis as any).ctx = ctx;
+	(globalThis as any).client = client;
 
 	return (
 		<div id="root">
