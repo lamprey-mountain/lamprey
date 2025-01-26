@@ -313,6 +313,7 @@ dependencies = [
  "dashmap 6.1.0",
  "dotenvy",
  "reqwest 0.12.12",
+ "sdk",
  "serde",
  "serde_json",
  "serenity",
@@ -2450,6 +2451,24 @@ checksum = "da046153aa2352493d6cb7da4b6e5c0c057d8a1d0a9aa8560baffdd945acd414"
 dependencies = [
  "ring",
  "untrusted",
+]
+
+[[package]]
+name = "sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "crate-hakari",
+ "futures-util",
+ "reqwest 0.12.12",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite 0.26.1",
+ "tracing",
+ "types",
+ "uuid",
 ]
 
 [[package]]
