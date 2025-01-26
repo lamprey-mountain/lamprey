@@ -8,7 +8,6 @@ import {
 	useContext,
 } from "solid-js";
 import Editor from "./Editor.tsx";
-import { TimelineItem } from "./Messages.tsx";
 
 import { Attachment, chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
@@ -16,6 +15,7 @@ import { RoomT, ThreadT } from "./types.ts";
 import { uuidv7 } from "uuidv7";
 import { throttle } from "@solid-primitives/scheduled";
 import { renderAttachment } from "./Message.tsx";
+import { renderTimelineItem } from "./Messages.tsx";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -128,25 +128,6 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	}));
 
-	// AAAAAAAA FIREFOX DOESNT SUPPORT READABLESTREAM IN BODY
-	// function progress<T>(call: (uploaded: number) => void): TransformStream<T, T> {
-	// 	let bytes = 0;
-	// 	return new TransformStream({
-	// 		transform(chunk, control) {
-	// 			console.log({ chunk, control })
-	// 			if (chunk === null) {
-	// 				control.terminate();
-	// 			} else if (ArrayBuffer.isView(chunk)) {
-	// 				bytes += chunk.byteLength;
-	// 				call(bytes);
-	// 				control.enqueue(chunk);
-	// 			} else {
-	// 				throw new Error("invalid bytes");
-	// 			}
-	// 		},
-	// 	});
-	// }
-
 	// TODO: handle this with onSubmit if possible
 	function handleUpload(file: File) {
 		console.log(file);
@@ -213,14 +194,10 @@ export const ChatMain = (props: ChatProps) => {
 		);
 	}
 
-	// translate-y-[8px]
-	// <header class="bg-bg3 border-b-[1px] border-b-sep flex items-center px-[4px]">
-	// 	{props.thread.name} /
-	// </header>
 	return (
 		<div class="chat">
 			<list.List>
-				{(item) => <TimelineItem thread={props.thread} item={item} />}
+				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>
 			<div class="input">
 				<Show when={ts()?.reply_id}>

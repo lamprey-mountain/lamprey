@@ -24,7 +24,7 @@ export type TimelineItemT =
 		}
 	);
 
-function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
+export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 	switch (item.type) {
 		case "message": {
 			const ctx = useCtx();
@@ -72,9 +72,3 @@ function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		}
 	}
 }
-
-export const TimelineItem = (
-	props: { thread: ThreadT; item: TimelineItemT },
-) => {
-	return <>{renderTimelineItem(props.thread, props.item)}</>;
-};
