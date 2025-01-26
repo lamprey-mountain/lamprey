@@ -15,7 +15,6 @@ use crate::{
 };
 
 pub struct Unnamed {
-    globals: Arc<Globals>,
     recv: mpsc::Receiver<UnnamedMessage>,
     client: Client,
 }
@@ -91,12 +90,9 @@ impl EventHandler for Handle {
 impl Unnamed {
     pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<UnnamedMessage>) -> Self {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
-        let handle = Handle {
-            globals: globals.clone(),
-        };
+        let handle = Handle { globals };
         let client = Client::new(token.clone().into()).with_handler(Box::new(handle));
         Self {
-            globals,
             client,
             recv,
         }
