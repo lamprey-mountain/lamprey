@@ -1,16 +1,13 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use async_trait::async_trait;
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Url;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::{error, warn};
-use types::{
-    Message, MessageClient, MessageCreateRequest, MessageEnvelope, MessagePayload, MessageSync, SessionToken, SyncResume, ThreadId
-};
+use types::{MessageClient, MessageEnvelope, MessagePayload, SessionToken, SyncResume};
 
-use crate::handler::{EmptyHandler, ErasedHandler, EventHandler};
+use crate::handler::{EmptyHandler, ErasedHandler};
 
 pub struct Syncer {
     handler: Box<dyn ErasedHandler>,
@@ -23,7 +20,11 @@ const DEFAULT_BASE: &str = "wss://chat.celery.eu.org/";
 impl Syncer {
     pub fn new(token: SessionToken) -> Self {
         let base_url = Url::parse(DEFAULT_BASE).unwrap();
-        Self { token, base_url, handler: Box::new(EmptyHandler) }
+        Self {
+            token,
+            base_url,
+            handler: Box::new(EmptyHandler),
+        }
     }
 
     pub fn with_base_url(self, base_url: Url) -> Self {

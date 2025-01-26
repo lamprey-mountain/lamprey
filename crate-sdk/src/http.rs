@@ -1,7 +1,8 @@
 use anyhow::Result;
 use reqwest::{StatusCode, Url};
 use types::{
-    Media, MediaCreate, MediaCreated, Message, MessageCreateRequest, MessageId, MessagePatch, RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch
+    Media, MediaCreate, MediaCreated, Message, MessageCreateRequest, MessageId, MessagePatch,
+    RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch,
 };
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
@@ -93,7 +94,7 @@ impl Http {
 
     pub async fn media_create(&self, body: &MediaCreate) -> Result<MediaCreated> {
         let c = reqwest::Client::new();
-        let url = self.base_url.join(&format!("/api/v1/media"))?;
+        let url = self.base_url.join("/api/v1/media")?;
         let res = c
             .delete(url)
             .bearer_auth(&self.token)
@@ -106,10 +107,15 @@ impl Http {
             .await?;
         Ok(res)
     }
-    
-    pub async fn media_upload(&self, target: &MediaCreated, body: Vec<u8>) -> Result<Option<Media>> {
+
+    pub async fn media_upload(
+        &self,
+        target: &MediaCreated,
+        body: Vec<u8>,
+    ) -> Result<Option<Media>> {
         let c = reqwest::Client::new();
-        let res = c.patch(target.upload_url.clone().unwrap())
+        let res = c
+            .patch(target.upload_url.clone().unwrap())
             .bearer_auth(&self.token)
             .header("upload-offset", "0")
             .body(body)
@@ -144,16 +150,10 @@ impl Http {
             .await?;
         Ok(res)
     }
-    
-    pub async fn thread_update(
-        &self,
-        thread_id: ThreadId,
-        body: &ThreadPatch,
-    ) -> Result<Thread> {
+
+    pub async fn thread_update(&self, thread_id: ThreadId, body: &ThreadPatch) -> Result<Thread> {
         let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/thread/{thread_id}"))?;
+        let url = self.base_url.join(&format!("/api/v1/thread/{thread_id}"))?;
         let res: Thread = c
             .patch(url)
             .bearer_auth(&self.token)

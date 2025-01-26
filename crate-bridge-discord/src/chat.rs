@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::info;
 use types::{
-    Media, MediaCreate, MediaCreated, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId
+    Media, MediaCreate, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId,
 };
 use uuid::uuid;
-use sdk::{Client, EventHandler, Http};
 
 use crate::{
     common::{Globals, GlobalsTrait},
-    portal::{Portal, PortalMessage},
+    portal::PortalMessage,
 };
 
 pub struct Unnamed {
@@ -55,29 +55,29 @@ struct Handle {
 
 impl EventHandler for Handle {
     type Error = Error;
-    
+
     async fn ready(&mut self, _user: Option<User>, _session: Session) -> Result<()> {
         Ok(())
     }
-    
+
     async fn upsert_thread(&mut self, _thread: Thread) -> Result<()> {
         info!("chat upsert thread");
         // TODO: what to do here?
         Ok(())
     }
-    
+
     async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
         if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
             return Ok(());
-    }
+        }
         self.globals.portal_send(
             message.thread_id,
             PortalMessage::UnnamedMessageUpsert { message },
         );
         Ok(())
     }
-    
+
     async fn delete_message(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
         self.globals.portal_send(
@@ -91,9 +91,15 @@ impl EventHandler for Handle {
 impl Unnamed {
     pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<UnnamedMessage>) -> Self {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
-        let handle = Handle { globals: globals.clone() };
+        let handle = Handle {
+            globals: globals.clone(),
+        };
         let client = Client::new(token.clone().into()).with_handler(Box::new(handle));
-        Self { globals, client, recv }
+        Self {
+            globals,
+            client,
+            recv,
+        }
     }
 
     pub async fn connect(mut self) -> Result<()> {
@@ -102,7 +108,7 @@ impl Unnamed {
                 let _ = handle(msg, &self.client.http).await;
             }
         });
-        
+
         let _ = self.client.syncer.connect().await;
         Ok(())
     }

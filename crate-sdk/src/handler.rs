@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use std::future::{ready, Future};
 use types::{
-    Invite, InviteCode, Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId
+    Invite, InviteCode, Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role,
+    RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId,
 };
 use uuid::Uuid;
 
