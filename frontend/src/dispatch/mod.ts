@@ -33,7 +33,11 @@ type Reduction =
 	};
 
 // HACK: pass dispatch through here
-function reduce(state: Data, delta: Reduction, dispatch: (action: Action) => Promise<void>): Data {
+function reduce(
+	state: Data,
+	delta: Reduction,
+	dispatch: (action: Action) => Promise<void>,
+): Data {
 	switch (delta.do) {
 		case "menu": {
 			return { ...state, menu: delta.menu };
@@ -562,8 +566,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				return;
 			}
 			default: {
-				dispatchMessages(ctx, update, action);
-				return;
+				return dispatchMessages(ctx, update, action);
 			}
 		}
 	}
