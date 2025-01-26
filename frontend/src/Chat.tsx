@@ -1,21 +1,10 @@
-import {
-	createEffect,
-	For,
-	Match,
-	on,
-	Show,
-	Switch,
-	useContext,
-} from "solid-js";
-import Editor from "./Editor.tsx";
-
-import { Attachment, chatctx, ThreadState } from "./context.ts";
+import { createEffect, on, Show, useContext } from "solid-js";
+import { chatctx, ThreadState } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
-import { uuidv7 } from "uuidv7";
 import { throttle } from "@solid-primitives/scheduled";
-import { renderAttachment } from "./Message.tsx";
 import { renderTimelineItem } from "./Messages.tsx";
+import { Input } from "./Input.tsx";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -30,7 +19,6 @@ export const ChatMain = (props: ChatProps) => {
 	const tl = () => ctx.data.timelines[props.thread.id];
 	const ts = () =>
 		ctx.data.thread_state[props.thread.id] as ThreadState | undefined;
-	const reply = () => ctx.data.messages[ts()?.reply_id!];
 	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
 	const hasSpaceBottom = () =>
 		tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
@@ -128,116 +116,14 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	}));
 
-	// TODO: handle this with onSubmit if possible
-	function handleUpload(file: File) {
-		console.log(file);
-		const local_id = uuidv7();
-		ctx.dispatch({
-			do: "upload.init",
-			file,
-			local_id,
-			thread_id: props.thread.id,
-		});
-	}
-
-	function removeAttachment(local_id: string) {
-		ctx.dispatch({
-			do: "thread.attachments",
-			thread_id: props.thread.id,
-			attachments: [...ts()!.attachments].filter((i) =>
-				i.local_id !== local_id
-			),
-		});
-	}
-
-	function renderAttachmentInfo(att: Attachment) {
-		if (att.status === "uploading") {
-			if (att.progress === att.file.size) {
-				return `processing...`;
-			} else {
-				const percent = ((att.progress / att.file.size) * 100).toFixed(2);
-				return `uploading (${percent}%)`;
-			}
-		} else {
-			return renderAttachment(att.media);
-		}
-	}
-
-	function renderAttachment2(att: Attachment) {
-		return (
-			<>
-				<div>
-					{renderAttachmentInfo(att)}
-				</div>
-				<button onClick={() => removeAttachment(att.local_id)}>
-					cancel/remove
-				</button>
-				<Switch>
-					<Match when={att.status === "uploading" && att.paused}>
-						<button
-							onClick={() =>
-								ctx.dispatch({ do: "upload.resume", local_id: att.local_id })}
-						>
-							resume
-						</button>
-					</Match>
-					<Match when={att.status === "uploading"}>
-						<button
-							onClick={() =>
-								ctx.dispatch({ do: "upload.pause", local_id: att.local_id })}
-						>
-							pause
-						</button>
-					</Match>
-				</Switch>
-			</>
-		);
-	}
-
 	return (
 		<div class="chat">
 			<list.List>
 				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>
-			<div class="input">
-				<Show when={ts()?.reply_id}>
-					<div class="reply">
-						<button
-							class="cancel"
-							onClick={() =>
-								ctx.dispatch({
-									do: "thread.reply",
-									thread_id: props.thread.id,
-									reply_id: null,
-								})}
-						>
-							cancel
-						</button>
-						<div class="info">
-							replying to {reply()?.override_name ?? reply()?.author.name}:{" "}
-							{reply()?.content}
-						</div>
-					</div>
-				</Show>
-				<Show when={ts()?.attachments.length}>
-					<ul class="attachments">
-						<For each={ts()!.attachments}>
-							{(att) => (
-								<li>
-									{renderAttachment2(att)}
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={ts()}>
-					<Editor
-						state={ts()!.editor_state}
-						onUpload={handleUpload}
-						placeholder="send a message..."
-					/>
-				</Show>
-			</div>
+			<Show when={ts()}>
+				<Input ts={ts()!} thread={props.thread} />
+			</Show>
 		</div>
 	);
 };
