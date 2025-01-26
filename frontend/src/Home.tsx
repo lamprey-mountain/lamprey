@@ -22,7 +22,7 @@ export const Home = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "invite code?",
-			cont(code) {
+			cont(_code) {
 				// TODO: fix
 				// ctx.client.http.POST("/api/v1/invite")
 				// ctx.client.http("POST", `/api/v1/invites/${code}`, {});

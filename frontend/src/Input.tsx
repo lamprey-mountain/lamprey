@@ -14,7 +14,6 @@ export function Input(props: InputProps) {
 	const ctx = useCtx();
 	const reply = () => ctx.data.messages[props.ts.reply_id!];
 
-	// TODO: handle this with onSubmit if possible
 	function handleUpload(file: File) {
 		console.log(file);
 		const local_id = uuidv7();

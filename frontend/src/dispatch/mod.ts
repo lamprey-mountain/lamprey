@@ -1,5 +1,5 @@
 import { produce, reconcile, SetStoreFunction } from "solid-js/store";
-import { Action, Data } from "../context.ts";
+import { Action, Attachment, Data, Menu, useCtx } from "../context.ts";
 import { InviteT, MemberT, RoleT } from "../types.ts";
 import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "../context.ts";
@@ -12,6 +12,100 @@ import {
 } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 
+type Reduction =
+	| { do: "menu"; menu: Menu | null }
+	| { do: "modal.close" }
+	| { do: "modal.alert"; text: string }
+	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
+	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
+	| { do: "thread.init"; thread_id: string; read_id?: string }
+	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
+	| {
+		do: "thread.scroll_pos";
+		thread_id: string;
+		pos: number | null;
+		is_at_end: boolean;
+	}
+	| {
+		do: "thread.attachments";
+		thread_id: string;
+		attachments: Array<Attachment>;
+	};
+
+// HACK: pass dispatch through here
+function reduce(state: Data, delta: Reduction, dispatch: (action: Action) => Promise<void>): Data {
+	switch (delta.do) {
+		case "menu": {
+			return { ...state, menu: delta.menu };
+		}
+		case "modal.close": {
+			return { ...state, modals: state.modals.slice(1) };
+		}
+		case "modal.alert": {
+			return {
+				...state,
+				modals: [{ type: "alert", text: delta.text }, ...state.modals],
+			};
+		}
+		case "modal.prompt": {
+			const modal = {
+				type: "prompt" as const,
+				text: delta.text,
+				cont: delta.cont,
+			};
+			return { ...state, modals: [modal, ...state.modals] };
+		}
+		case "modal.confirm": {
+			const modal = {
+				type: "confirm" as const,
+				text: delta.text,
+				cont: delta.cont,
+			};
+			return { ...state, modals: [modal, ...state.modals] };
+		}
+		case "thread.init": {
+			const { thread_id } = delta;
+			if (state.thread_state[thread_id]) return state;
+			return {
+				...state,
+				thread_state: {
+					...state.thread_state,
+					[thread_id]: {
+						editor_state: createEditorState((text) => {
+							dispatch({ do: "thread.send", thread_id, text });
+						}),
+						reply_id: null,
+						scroll_pos: null,
+						read_marker_id: delta.read_id ?? null,
+						attachments: [],
+						is_at_end: true,
+						timeline: [],
+					},
+				},
+			};
+		}
+		case "thread.reply": {
+			return produce((s: Data) => {
+				s.thread_state[delta.thread_id].reply_id = delta.reply_id;
+				return s;
+			})(state);
+		}
+		case "thread.scroll_pos": {
+			return produce((s: Data) => {
+				s.thread_state[delta.thread_id].scroll_pos = delta.pos;
+				s.thread_state[delta.thread_id].is_at_end = delta.is_at_end;
+				return s;
+			})(state);
+		}
+		case "thread.attachments": {
+			return produce((s: Data) => {
+				s.thread_state[delta.thread_id].attachments = delta.attachments;
+				return s;
+			})(state);
+		}
+	}
+}
+
 // TODO: refactor this out into multiple smaller files
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	let ackGraceTimeout: number | undefined;
@@ -21,66 +115,18 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 		// console.log("dispatch", action.do);
 		console.log("dispatch", action);
 		switch (action.do) {
+			case "thread.reply":
+			case "thread.scroll_pos":
+			case "thread.attachments":
+			case "thread.init":
+			case "modal.close":
+			case "modal.alert":
+			case "modal.confirm":
+			case "modal.prompt":
 			case "menu": {
-				if (action.menu) console.log("handle menu", action.menu);
-				update("menu", action.menu);
-				return;
-			}
-			// case "modal.open": {
-			// 	updateData("modals", i => [action.modal, ...i ?? []]);
-			// 	return;
-			// }
-			case "modal.close": {
-				update("modals", (i) => i.slice(1));
-				return;
-			}
-			case "modal.alert": {
 				update(
-					"modals",
-					(i) => [{ type: "alert", text: action.text }, ...i ?? []],
+					reconcile(reduce(ctx.data, action, dispatch)),
 				);
-				return;
-			}
-			case "modal.confirm": {
-				const modal = {
-					type: "confirm" as const,
-					text: action.text,
-					cont: action.cont,
-				};
-				update("modals", (i) => [modal, ...i]);
-				return;
-			}
-			case "modal.prompt": {
-				const modal = {
-					type: "prompt" as const,
-					text: action.text,
-					cont: action.cont,
-				};
-				update("modals", (i) => [modal, ...i]);
-				return;
-			}
-			case "thread.init": {
-				if (ctx.data.thread_state[action.thread_id]) return;
-				update("thread_state", action.thread_id, {
-					editor_state: createEditorState((text) =>
-						handleSubmit(ctx, action.thread_id, text, update)
-					),
-					reply_id: null,
-					scroll_pos: null,
-					read_marker_id: action.read_id ?? null,
-					attachments: [],
-					is_at_end: true,
-					timeline: [],
-				});
-				return;
-			}
-			case "thread.reply": {
-				update("thread_state", action.thread_id, "reply_id", action.reply_id);
-				return;
-			}
-			case "thread.scroll_pos": {
-				update("thread_state", action.thread_id, "scroll_pos", action.pos);
-				update("thread_state", action.thread_id, "is_at_end", action.is_at_end);
 				return;
 			}
 			case "thread.autoscroll": {
@@ -130,15 +176,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						}
 					}
 				});
-				return;
-			}
-			case "thread.attachments": {
-				update(
-					"thread_state",
-					action.thread_id,
-					"attachments",
-					action.attachments,
-				);
 				return;
 			}
 			case "server": {
@@ -518,6 +555,10 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			}
 			case "menu.preview": {
 				update("cursor", "preview", action.id);
+				return;
+			}
+			case "thread.send": {
+				handleSubmit(ctx, action.thread_id, action.text, update);
 				return;
 			}
 			default: {

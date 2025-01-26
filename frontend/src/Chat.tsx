@@ -19,7 +19,7 @@ export const ChatMain = (props: ChatProps) => {
 	const tl = () => ctx.data.timelines[props.thread.id];
 	const ts = () =>
 		ctx.data.thread_state[props.thread.id] as ThreadState | undefined;
-	const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
+	// const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
 	const hasSpaceBottom = () =>
 		tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
 
@@ -111,7 +111,8 @@ export const ChatMain = (props: ChatProps) => {
 		// TODO: restore scroll position
 		queueMicrotask(() => {
 			const pos = ts()!.scroll_pos;
-			if (!pos) return list.scrollTo(999999);
+			console.log({ pos });
+			if (pos === null) return list.scrollTo(999999);
 			list.scrollTo(pos);
 		});
 	}));

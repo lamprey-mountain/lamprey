@@ -58,7 +58,8 @@ const App: Component = () => {
 	};
 
 	const handleMouseMove = (e: MouseEvent) => {
-		dispatch({ do: "window.mouse_move", e });
+		// TEMP: disable because spammy events
+		// dispatch({ do: "window.mouse_move", e });
 	};
 
 	globalThis.addEventListener("click", handleClick);
