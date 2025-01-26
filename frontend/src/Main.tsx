@@ -1,8 +1,8 @@
-import { createEffect, createSignal, For, ParentProps, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { MessageMenu, RoomMenu, ThreadMenu } from "./menu/mod.ts";
 import { ChatNav } from "./Nav.tsx";
-import { Menu, Modal as ContextModal, useCtx } from "./context.ts";
+import { Menu, useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
 import { RoomHome } from "./Room.tsx";
 import { RoomSettings } from "./RoomSettings.tsx";
@@ -11,6 +11,7 @@ import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { Route, Router } from "@solidjs/router";
 import { Home } from "./Home.tsx";
+import { getModal } from "./modal/mod.tsx";
 
 const Title = (props: { children: string }) => {
 	createEffect(() => document.title = props.children);
@@ -60,77 +61,6 @@ export const Main = () => {
 			}
 			case "message": {
 				return <MessageMenu message={menu.message} />;
-			}
-		}
-	}
-
-	function getModal(modal: ContextModal) {
-		switch (modal.type) {
-			case "alert": {
-				return (
-					<Modal>
-						<p>{modal.text}</p>
-						<div style="height: 8px"></div>
-						<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
-							okay!
-						</button>
-					</Modal>
-				);
-			}
-			case "confirm": {
-				return (
-					<Modal>
-						<p>{modal.text}</p>
-						<div style="height: 8px"></div>
-						<button
-							onClick={() => {
-								modal.cont(true);
-								ctx.dispatch({ do: "modal.close" });
-							}}
-						>
-							okay!
-						</button>&nbsp;
-						<button
-							onClick={() => {
-								modal.cont(false);
-								ctx.dispatch({ do: "modal.close" });
-							}}
-						>
-							nevermind...
-						</button>
-					</Modal>
-				);
-			}
-			case "prompt": {
-				return (
-					<Modal>
-						<p>{modal.text}</p>
-						<div style="height: 8px"></div>
-						<form
-							onSubmit={(e) => {
-								e.preventDefault();
-								const form = e.target as HTMLFormElement;
-								const input = form.elements.namedItem(
-									"text",
-								) as HTMLInputElement;
-								modal.cont(input.value);
-								ctx.dispatch({ do: "modal.close" });
-							}}
-						>
-							<input type="text" name="text" autofocus />
-							<div style="height: 8px"></div>
-							<input type="submit" value="done!"></input>{" "}
-							<button
-								onClick={() => {
-									modal.cont(null);
-									ctx.dispatch({ do: "modal.close" });
-								}}
-							>
-								nevermind...
-							</button>
-						</form>
-					</Modal>
-				);
 			}
 		}
 	}
@@ -262,20 +192,5 @@ export const Main = () => {
 				</Portal>
 			</Show>
 		</>
-	);
-};
-
-const Modal = (props: ParentProps) => {
-	const ctx = useCtx()!;
-	return (
-		<div class="modal">
-			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
-			<div class="content">
-				<div class="base"></div>
-				<div class="inner" role="dialog">
-					{props.children}
-				</div>
-			</div>
-		</div>
 	);
 };
