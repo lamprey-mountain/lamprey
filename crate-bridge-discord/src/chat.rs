@@ -92,10 +92,7 @@ impl Unnamed {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
         let handle = Handle { globals };
         let client = Client::new(token.clone().into()).with_handler(Box::new(handle));
-        Self {
-            client,
-            recv,
-        }
+        Self { client, recv }
     }
 
     pub async fn connect(mut self) -> Result<()> {
