@@ -1,5 +1,5 @@
 import { Component, onCleanup } from "solid-js";
-import { ChatCtx, chatctx, Data } from "./context.ts";
+import { ChatCtx, chatctx, Data, defaultData } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
 import { createDispatcher } from "./dispatch.ts";
@@ -28,23 +28,7 @@ const App: Component = () => {
 		},
 	});
 
-	const [data, update] = createStore<Data>({
-		rooms: {},
-		room_members: {},
-		room_roles: {},
-		threads: {},
-		messages: {},
-		timelines: {},
-		slices: {},
-		invites: {},
-		users: {},
-		thread_state: {},
-		modals: [],
-		user: null,
-		session: null,
-		menu: null,
-		uploads: {},
-	});
+	const [data, update] = createStore<Data>(defaultData);
 
 	const ctx: ChatCtx = {
 		client,
@@ -73,11 +57,17 @@ const App: Component = () => {
 		if (e.key === "Escape") dispatch({ do: "modal.close" });
 	};
 
+	const handleMouseMove = (e: MouseEvent) => {
+		dispatch({ do: "window.mouse_move", e });
+	};
+
 	globalThis.addEventListener("click", handleClick);
 	globalThis.addEventListener("keydown", handleKeypress);
+	globalThis.addEventListener("mousemove", handleMouseMove);
 	onCleanup(() => {
 		globalThis.removeEventListener("click", handleClick);
 		globalThis.removeEventListener("keydown", handleKeypress);
+		globalThis.removeEventListener("mousemove", handleMouseMove);
 	});
 
 	return (

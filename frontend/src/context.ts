@@ -57,8 +57,15 @@ export type Data = {
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	menu: Menu | null;
+	cursor: Cursor;
 	// TODO: remove thread_id requirement
 	uploads: Record<string, { up: Upload; thread_id: string }>;
+};
+
+export type Cursor = {
+	preview: string | null;
+	vel: number;
+	pos: Array<[number, number]>;
 };
 
 export type Menu =
@@ -89,6 +96,7 @@ export type Action =
 	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
 	| { do: "goto"; thread_id: string; event_id: string }
 	| { do: "menu"; menu: Menu | null }
+	| { do: "menu.preview"; id: string | null }
 	// | { do: "modal.open", modal: any }
 	| { do: "modal.close" }
 	| { do: "modal.alert"; text: string }
@@ -125,6 +133,7 @@ export type Action =
 	| { do: "server"; msg: types.MessageSync }
 	| { do: "server.ready"; msg: types.MessageReady }
 	| { do: "server.init_session" }
+	| { do: "window.mouse_move"; e: MouseEvent }
 	| { do: "init" };
 
 export type AttachmentCreateT = {
@@ -135,6 +144,29 @@ export type ChatCtx = {
 	client: Client;
 	data: Data;
 	dispatch: (action: Action) => Promise<void>;
+};
+
+export const defaultData: Data = {
+	rooms: {},
+	room_members: {},
+	room_roles: {},
+	threads: {},
+	messages: {},
+	timelines: {},
+	slices: {},
+	invites: {},
+	users: {},
+	thread_state: {},
+	modals: [],
+	user: null,
+	session: null,
+	menu: null,
+	uploads: {},
+	cursor: {
+		pos: [],
+		vel: 0,
+		preview: null,
+	},
 };
 
 export const chatctx = createContext<ChatCtx>();

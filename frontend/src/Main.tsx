@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, ParentProps, Show } from "solid-js";
 import { Portal } from "solid-js/web";
-import { MessageMenu, RoomMenu, ThreadMenu } from "./Menu.tsx";
+import { MessageMenu, RoomMenu, ThreadMenu } from "./menu/mod.ts";
 import { ChatNav } from "./Nav.tsx";
 import { Menu, Modal as ContextModal, useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
@@ -9,8 +9,7 @@ import { RoomSettings } from "./RoomSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { A, Route, Router } from "@solidjs/router";
-import { types } from "sdk";
+import { Route, Router } from "@solidjs/router";
 import { Home } from "./Home.tsx";
 
 const Title = (props: { children: string }) => {
