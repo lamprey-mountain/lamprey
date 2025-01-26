@@ -9,7 +9,7 @@ import { RoomSettings } from "./RoomSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { Route, Router } from "@solidjs/router";
+import { Route, Router, RouteSectionProps } from "@solidjs/router";
 import { Home } from "./Home.tsx";
 import { getModal } from "./modal/mod.tsx";
 
@@ -71,106 +71,15 @@ export const Main = () => {
 		<>
 			<Show when={useCtx()}>
 				<Router>
-					<Route
-						path="/"
-						component={() => (
-							<>
-								<Title>Home</Title>
-								<ChatNav />
-								<Home />
-							</>
-						)}
-					/>
-					<Route
-						path="/settings/:page?"
-						component={(p) => {
-							const user = () => ctx.data.user;
-							return (
-								<>
-									<Title>{user() ? "Settings" : "loading..."}</Title>
-									<Show when={user()}>
-										<UserSettings user={user()!} page={p.params.page} />
-									</Show>
-								</>
-							);
-						}}
-					/>
-					<Route
-						path="/room/:room_id"
-						component={(p) => {
-							const room = () => ctx.data.rooms[p.params.room_id];
-							return (
-								<>
-									<Title>{room() ? room().name : "loading..."}</Title>
-									<ChatNav />
-									<Show when={room()}>
-										<RoomHome room={room()} />
-									</Show>
-								</>
-							);
-						}}
-					/>
+					<Route path="/" component={RouteHome} />
+					<Route path="/settings/:page?" component={RouteSettings} />
+					<Route path="/room/:room_id" component={RouteRoom} />
 					<Route
 						path="/room/:room_id/settings/:page?"
-						component={(p) => {
-							const room = () => ctx.data.rooms[p.params.room_id];
-							return (
-								<>
-									<Title>
-										{room() ? `${room().name} settings` : "loading..."}
-									</Title>
-									<ChatNav />
-									<Show when={room()}>
-										<RoomSettings room={room()} page={p.params.page} />
-									</Show>
-								</>
-							);
-						}}
+						component={RouteRoomSettings}
 					/>
-					<Route
-						path="/thread/:thread_id"
-						component={(p) => {
-							const thread = () => ctx.data.threads[p.params.thread_id];
-							const room = () => ctx.data.rooms[thread()?.room_id];
-
-							createEffect(() => {
-								if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
-									ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id });
-								}
-							});
-
-							createEffect(() => {
-								if (!ctx.data.threads[p.params.thread_id]) {
-									ctx.dispatch({
-										do: "fetch.thread",
-										thread_id: p.params.thread_id,
-									});
-								}
-							});
-
-							return (
-								<>
-									<Title>
-										{room() && thread()
-											? `${thread().name} - ${room().name}`
-											: "loading..."}
-									</Title>
-									<ChatNav />
-									<Show when={room() && thread()}>
-										<ChatMain room={room()} thread={thread()} />
-									</Show>
-								</>
-							);
-						}}
-					/>
-					<Route
-						path="*404"
-						component={() => (
-							<div style="padding:8px">
-								not found
-							</div>
-						)}
-					/>
+					<Route path="/thread/:thread_id" component={RouteThread} />
+					<Route path="*404" component={RouteNotFound} />
 				</Router>
 				<Portal mount={document.getElementById("overlay")!}>
 					<For each={ctx.data.modals}>
@@ -194,3 +103,99 @@ export const Main = () => {
 		</>
 	);
 };
+
+const RouteHome = () => {
+	return (
+		<>
+			<Title>Home</Title>
+			<ChatNav />
+			<Home />
+		</>
+	);
+};
+
+function RouteSettings(p: RouteSectionProps) {
+	const ctx = useCtx();
+	const user = () => ctx.data.user;
+	return (
+		<>
+			<Title>{user() ? "Settings" : "loading..."}</Title>
+			<Show when={user()}>
+				<UserSettings user={user()!} page={p.params.page} />
+			</Show>
+		</>
+	);
+}
+
+function RouteRoom(p: RouteSectionProps) {
+	const ctx = useCtx();
+	const room = () => ctx.data.rooms[p.params.room_id];
+	return (
+		<>
+			<Title>{room() ? room().name : "loading..."}</Title>
+			<ChatNav />
+			<Show when={room()}>
+				<RoomHome room={room()} />
+			</Show>
+		</>
+	);
+}
+
+function RouteRoomSettings(p: RouteSectionProps) {
+	const ctx = useCtx();
+	const room = () => ctx.data.rooms[p.params.room_id];
+	return (
+		<>
+			<Title>
+				{room() ? `${room().name} settings` : "loading..."}
+			</Title>
+			<ChatNav />
+			<Show when={room()}>
+				<RoomSettings room={room()} page={p.params.page} />
+			</Show>
+		</>
+	);
+}
+
+function RouteThread(p: RouteSectionProps) {
+	const ctx = useCtx();
+	const thread = () => ctx.data.threads[p.params.thread_id];
+	const room = () => ctx.data.rooms[thread()?.room_id];
+
+	createEffect(() => {
+		if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
+			ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id });
+		}
+	});
+
+	createEffect(() => {
+		if (!ctx.data.threads[p.params.thread_id]) {
+			ctx.dispatch({
+				do: "fetch.thread",
+				thread_id: p.params.thread_id,
+			});
+		}
+	});
+
+	return (
+		<>
+			<Title>
+				{room() && thread()
+					? `${thread().name} - ${room().name}`
+					: "loading..."}
+			</Title>
+			<ChatNav />
+			<Show when={room() && thread()}>
+				<ChatMain room={room()} thread={thread()} />
+			</Show>
+		</>
+	);
+}
+
+function RouteNotFound() {
+	return (
+		<div style="padding:8px">
+			not found
+		</div>
+	);
+}
