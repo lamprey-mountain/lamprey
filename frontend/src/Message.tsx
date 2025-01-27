@@ -1,7 +1,7 @@
 import { getTimestampFromUUID } from "sdk";
 import { MediaT, MessageT, MessageType } from "./types.ts";
 import { useCtx } from "./context.ts";
-import { For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
@@ -65,6 +65,12 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
+			const html = createMemo(() =>
+				sanitizeHtml(
+					md.parse(props.message.content!) as string,
+					sanitizeHtmlOptions,
+				).trim()
+			);
 			return (
 				<>
 					<Show
@@ -88,13 +94,7 @@ export function MessageView(props: MessageProps) {
 								classList={{ local: props.is_local }}
 								ref={bodyEl!}
 							>
-								<span
-									innerHTML={sanitizeHtml(
-										md.parse(props.message.content!) as string,
-										sanitizeHtmlOptions,
-									).trim()}
-								>
-								</span>
+								<span innerHTML={html()}></span>
 								<Show when={props.message.id !== props.message.version_id}>
 									<span class="edited">(edited)</span>
 								</Show>

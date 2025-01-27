@@ -24,8 +24,6 @@ export function calculateSlice(
 	// scroll a page at a time
 	const PAGINATE_LEN = Math.ceil(globalThis.innerHeight / 32);
 
-	console.log({ old, off, len, dir });
-
 	if (!old) {
 		const end = len;
 		const start = Math.max(end - SLICE_LEN, 0);
@@ -46,11 +44,6 @@ export function renderTimeline(
 ): Array<TimelineItemT> {
 	const rawItems = items.slice(slice.start, slice.end) ?? [];
 	const newItems: Array<TimelineItemT> = [];
-	console.log("renderTimeline", {
-		items,
-		slice,
-		rawItems,
-	});
 
 	if (rawItems.length === 0) throw new Error("no items");
 
@@ -150,9 +143,9 @@ export async function dispatchMessages(
 		case "paginate": {
 			const { dir, thread_id } = action;
 			const oldSlice = ctx.data.slices[thread_id] as Slice | undefined;
-			console.log("paginate", { dir, thread_id, oldSlice });
 
 			// fetch items
+			let upd;
 			let offset: number = 0;
 			if (!oldSlice) {
 				const from = "ffffffff-ffff-ffff-ffff-ffffffffffff";
@@ -162,7 +155,7 @@ export async function dispatchMessages(
 					message: i,
 				}));
 				if (batch.has_more) tl.unshift({ type: "hole" });
-				solidBatch(() => {
+				upd = () => {
 					update("timelines", thread_id, tl);
 					update("slices", thread_id, { start: 0, end: tl.length });
 					for (const msg of batch.items) {
@@ -170,10 +163,9 @@ export async function dispatchMessages(
 					}
 					offset = batch.items.length;
 					// ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-				});
+				};
 			} else {
 				const tl = ctx.data.timelines[thread_id];
-				// console.log({ tl, slice })
 				if (tl.length < 2) return; // needs startitem and nextitem
 				if (dir === "b") {
 					const startItem = tl[oldSlice.start];
@@ -185,7 +177,7 @@ export async function dispatchMessages(
 							: "ffffffff-ffff-ffff-ffff-ffffffffffff";
 						batch = await fetchMessages(ctx, thread_id, from, dir);
 					}
-					solidBatch(() => {
+					upd = () => {
 						if (batch) {
 							update("timelines", thread_id, (i) =>
 								[
@@ -201,9 +193,8 @@ export async function dispatchMessages(
 							}
 							offset = batch.items.length;
 						}
-					});
+					};
 				} else {
-					console.log(oldSlice.start, oldSlice.end, [...tl]);
 					const startItem = tl[oldSlice.end - 1];
 					const nextItem = tl[oldSlice.end - 2];
 					let batch: Pagination<MessageT> | undefined;
@@ -219,7 +210,7 @@ export async function dispatchMessages(
 					// PERF: getting stuff from store? 362ms
 					// PERF: setstore: 808ms
 					// PERF: set scroll position: 76.6ms
-					solidBatch(() => {
+					upd = () => {
 						if (batch) {
 							update("timelines", thread_id, (i) =>
 								[
@@ -236,11 +227,13 @@ export async function dispatchMessages(
 
 							offset = batch.items.length;
 						}
-					});
+					};
 				}
 			}
 
 			solidBatch(() => {
+				upd();
+				
 				const tl = ctx.data.timelines[thread_id];
 				const slice = calculateSlice(oldSlice, offset, tl.length, dir);
 				update("slices", thread_id, slice);

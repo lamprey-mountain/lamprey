@@ -112,7 +112,6 @@ export function createEditorState(onSubmit: (text: string) => void) {
 				"Ctrl-i": createWrap("*"),
 				"Ctrl-`": createWrap("`"),
 				"Ctrl-m": (state) => {
-					console.log(state.doc);
 					return false;
 				},
 				"Shift-Enter": (state, dispatch) => {
@@ -530,7 +529,6 @@ export const Editor = (props: EditorProps) => {
 			// if (props.disabled)
 		});
 		createEffect(() => {
-			console.log("new state", props.state);
 			view.updateState(props.state);
 		});
 		onCleanup(() => view.destroy());

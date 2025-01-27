@@ -142,7 +142,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 			if (action.do === "thread.autoscroll") {
 				const { thread_id } = action;
 				const ts = ctx.data.thread_state[thread_id];
-				console.log(ts);
 				if (!ts?.is_at_end) return;
 
 				solidBatch(() => {
@@ -172,7 +171,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					const isFocused =
 						location.pathname.match(/^\/thread\/([a-z0-9-]+)$/i)?.[1] ===
 							thread_id;
-					console.log({ isFocused, isAtTimelineEnd, scrollEnd: ts.is_at_end });
 					if (ts.is_at_end && isAtTimelineEnd) {
 						if (isFocused) {
 							ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
@@ -444,7 +442,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					body: {},
 				});
 				if (!res.data) {
-					console.log("failed to init session", res.response);
+					console.error("failed to init session", res.response);
 					throw new Error("failed to init session");
 				}
 				const session = res.data;

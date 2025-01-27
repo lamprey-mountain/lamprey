@@ -58,7 +58,6 @@ export function createList<T>(options: {
 	const margin = 0;
 	const intersections = new IntersectionObserver((entries) => {
 		// PERF: run intersection callback takes too long
-		console.log("list::intersection", entries);
 		for (const el of entries) {
 			if (el.target === topEl()) {
 				if (el.isIntersecting) {
@@ -79,7 +78,6 @@ export function createList<T>(options: {
 	const resizes = new ResizeObserver((_entries) => {
 		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
 		if (isAtBottom() && options.autoscroll?.() || false) {
-			console.log("list::autoscroll");
 			wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
 		}
 	});
@@ -93,10 +91,6 @@ export function createList<T>(options: {
 		)! as HTMLElement;
 		setTopEl(newTopEl);
 		setBottomEl(newBottomEl);
-		console.log("setRefs", {
-			newTopEl,
-			newBottomEl,
-		});
 	}
 
 	onCleanup(() => {
@@ -122,27 +116,19 @@ export function createList<T>(options: {
 		List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
 			function reanchor() {
 				const wrap = wrapperEl();
-				// console.log("list::reanchor", wrap, anchorRef);
 				const shouldAutoscroll = isAtBottom() &&
 					(options.autoscroll?.() || false);
-				console.log(shouldAutoscroll);
 				if (!wrap || !anchorRef) return setRefs();
-				console.time("perf::reanchor");
 				if (shouldAutoscroll) {
-					console.log("list::autoscroll");
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
 				} else {
 					// FIXME: tons of reflow and jank
-					console.time("perf::forceReflow");
 					const currentRect = anchorRef.getBoundingClientRect();
-					console.timeEnd("perf::forceReflow");
 					const diff = (currentRect.y - anchorRect.y) +
 						(currentRect.height - anchorRect.height);
-					console.log("forcereflow", { diff, currentRect, anchorRect });
 					wrapperEl()?.scrollBy(0, diff);
 				}
 				setRefs();
-				console.timeEnd("perf::reanchor");
 			}
 
 			createComputed(on(options.items, () => {
@@ -182,6 +168,7 @@ export function createList<T>(options: {
 			}
 
 			// TODO: onScrollEnd might be useful
+			// TODO: set passive: true on scroll event
 			return (
 				<ul
 					class="list"

@@ -63,7 +63,6 @@ export function dispatchServer(
 	action: Action,
 	dispatch: (action: Action) => void,
 ) {
-	console.log("dispatchserver", action);
 	switch (action.do) {
 		case "server": {
 			const msg = action.msg;
