@@ -8,6 +8,7 @@
     "jsr:@std/io@0.224": "0.224.9",
     "npm:@deno/vite-plugin@1": "1.0.2_vite@6.0.6",
     "npm:@floating-ui/dom@*": "1.6.13",
+    "npm:@solid-primitives/map@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/scheduled@^1.5.0": "1.5.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/websocket@*": "1.2.2_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solidjs/router@*": "0.15.2_solid-js@1.9.3__seroval@1.1.1",
@@ -563,8 +564,28 @@
     "@rollup/rollup-win32-x64-msvc@4.29.1": {
       "integrity": "sha512-+10CMg9vt1MoHj6x1pxyjPSMjHTIlqs8/tBztXvPAx24SKs9jwVnKqHJumlH/IzhaPUaj3T6T6wfZr8okdXaIg=="
     },
+    "@solid-primitives/map@0.6.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-h8uCJNxUTvzNK/aTW9vJCd/PQeBkUL8i7AyLPvTFqMgcMnJ1I5GzAi5JODzxpxQwffxoqJyQtOE1vBqFzDv0Vw==",
+      "dependencies": [
+        "@solid-primitives/trigger",
+        "solid-js"
+      ]
+    },
     "@solid-primitives/scheduled@1.5.0_solid-js@1.9.3__seroval@1.1.1": {
       "integrity": "sha512-RVw24IRNh1FQ4DCMb3OahB70tXIwc5vH8nhR4nNPsXwUPQeuOkLsDI5BlxaPk0vyZgqw9lDpufgI3HnPwplgDw==",
+      "dependencies": [
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/trigger@1.2.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-sW4/3cDXSjYQampn8CIFZ11BlxgNf2li8r2fXnb3b3YWE6RdZZCl8PhvpPF38Gzl0CnryrbTPJWM7OIkseCDgQ==",
+      "dependencies": [
+        "@solid-primitives/utils",
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/utils@6.3.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-e7hTlJ1Ywh2+g/Qug+n4L1mpfxsikoIS4/sHE2EK9WatQt8UJqop/vE6bsLnXlU1xuhb/jo94Ah5Y27rd4wP7A==",
       "dependencies": [
         "solid-js"
       ]
@@ -3119,6 +3140,7 @@
         "dependencies": [
           "npm:@deno/vite-plugin@1",
           "npm:@floating-ui/dom@*",
+          "npm:@solid-primitives/map@0.6",
           "npm:@solid-primitives/scheduled@^1.5.0",
           "npm:@solid-primitives/websocket@*",
           "npm:@solidjs/router@*",

@@ -12,8 +12,7 @@
 	},
 	"lock": {
 		"path": "./deno.lock",
-		// frozen lockfile has too many issues for now?
-		"frozen": false
+		"frozen": true
 	},
 	"imports": {
 		"nanoid": "npm:nanoid@^5.0.9",
