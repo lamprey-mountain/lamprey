@@ -11,6 +11,11 @@ type MessageProps = {
 	is_local: boolean;
 };
 
+type MessageTextProps = {
+	message: MessageT;
+	is_local: boolean;
+};
+
 const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	transformTags: {
 		del: "s",
@@ -22,9 +27,25 @@ const md = marked.use({
 	gfm: true,
 });
 
+function MessageText(props: MessageTextProps) {
+	const html = createMemo(() =>
+		sanitizeHtml(
+			md.parse(props.message.content!) as string,
+			sanitizeHtmlOptions,
+		).trim()
+	);
+	return (
+		<div class="body markdown" classList={{ local: props.is_local }}>
+			<span innerHTML={html()}></span>
+			<Show when={props.message.id !== props.message.version_id}>
+				<span class="edited">(edited)</span>
+			</Show>
+		</div>
+	)
+}
+
 export function MessageView(props: MessageProps) {
 	const ctx = useCtx();
-	let bodyEl: HTMLDivElement;
 
 	function getComponent() {
 		const date =
@@ -54,7 +75,7 @@ export function MessageView(props: MessageProps) {
 				<>
 					<span></span>
 					<div class="content">
-						<span class="body" ref={bodyEl!}>
+						<span class="body">
 							<span class="author">{authorName}</span> updated the thread:{" "}
 							{listFormatter.format(updates) || "did nothing"}
 						</span>
@@ -65,12 +86,6 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
-			const html = createMemo(() =>
-				sanitizeHtml(
-					md.parse(props.message.content!) as string,
-					sanitizeHtmlOptions,
-				).trim()
-			);
 			return (
 				<>
 					<Show
@@ -89,16 +104,7 @@ export function MessageView(props: MessageProps) {
 					</div>
 					<div class="content">
 						<Show when={props.message.content}>
-							<div
-								class="body markdown"
-								classList={{ local: props.is_local }}
-								ref={bodyEl!}
-							>
-								<span innerHTML={html()}></span>
-								<Show when={props.message.id !== props.message.version_id}>
-									<span class="edited">(edited)</span>
-								</Show>
-							</div>
+							<MessageText is_local={props.is_local} message={props.message} />
 						</Show>
 						<ul class="attachments">
 							<For each={props.message.attachments}>
