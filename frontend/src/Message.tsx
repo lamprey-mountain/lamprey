@@ -41,7 +41,7 @@ function MessageText(props: MessageTextProps) {
 				<span class="edited">(edited)</span>
 			</Show>
 		</div>
-	)
+	);
 }
 
 export function MessageView(props: MessageProps) {

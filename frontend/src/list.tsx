@@ -48,7 +48,7 @@ export function createList<T>(options: {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
-	const [isAtBottom, setIsAtBottom] = createSignal(false); // FIXME: should only be true if at slice end
+	const [isAtBottom, setIsAtBottom] = createSignal(true); // FIXME: should only be true if at slice end
 	const [scrollPos, setScrollPos] = createSignal(0);
 	let topRef: HTMLElement | undefined;
 	let bottomRef: HTMLElement | undefined;
@@ -118,10 +118,10 @@ export function createList<T>(options: {
 				const wrap = wrapperEl();
 				const shouldAutoscroll = isAtBottom() &&
 					(options.autoscroll?.() || false);
-				if (!wrap || !anchorRef) return setRefs();
+				if (!wrap) return setRefs();
 				if (shouldAutoscroll) {
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
-				} else {
+				} else if (anchorRef) {
 					// FIXME: tons of reflow and jank
 					const currentRect = anchorRef.getBoundingClientRect();
 					const diff = (currentRect.y - anchorRect.y) +

@@ -233,7 +233,7 @@ export async function dispatchMessages(
 
 			solidBatch(() => {
 				upd();
-				
+
 				const tl = ctx.data.timelines[thread_id];
 				const slice = calculateSlice(oldSlice, offset, tl.length, dir);
 				update("slices", thread_id, slice);

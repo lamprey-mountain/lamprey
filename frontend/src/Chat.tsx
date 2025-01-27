@@ -14,7 +14,6 @@ type ChatProps = {
 export const ChatMain = (props: ChatProps) => {
 	const ctx = useContext(chatctx)!;
 
-	let paginating = false;
 	const slice = () => ctx.data.slices[props.thread.id];
 	const tl = () => ctx.data.timelines[props.thread.id];
 	const ts = () =>
@@ -38,8 +37,6 @@ export const ChatMain = (props: ChatProps) => {
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		async onPaginate(dir) {
-			if (paginating) return;
-			paginating = true;
 			const thread_id = props.thread.id;
 			if (dir === "forwards") {
 				await ctx.dispatch({ do: "paginate", dir: "f", thread_id });
@@ -51,8 +48,6 @@ export const ChatMain = (props: ChatProps) => {
 			} else {
 				await ctx.dispatch({ do: "paginate", dir: "b", thread_id });
 			}
-			// setTimeout(() => paginating = false, 1000);
-			paginating = false;
 		},
 		onContextMenu(e: MouseEvent) {
 			e.stopPropagation();
@@ -95,17 +90,16 @@ export const ChatMain = (props: ChatProps) => {
 
 	createEffect(async () => {
 		if (slice()?.start === undefined) {
-			if (paginating) return;
-			paginating = true;
 			await ctx.dispatch({
 				do: "paginate",
 				dir: "b",
 				thread_id: props.thread.id,
 			});
-			list.scrollTo(999999);
-			paginating = false;
 		}
 	});
+
+	createEffect(on(() => ts()?.timeline, () => {
+	}));
 
 	createEffect(on(() => props.thread, () => {
 		// TODO: restore scroll position
