@@ -11,6 +11,7 @@ import {
 } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 import { dispatchServer } from "./server.ts";
+import { MessageReady } from "../../../ts-sdk/types.ts";
 
 type Reduction =
 	| { do: "menu"; menu: Menu | null }
@@ -18,7 +19,6 @@ type Reduction =
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
-	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
 	| {
 		do: "thread.scroll_pos";
@@ -30,13 +30,13 @@ type Reduction =
 		do: "thread.attachments";
 		thread_id: string;
 		attachments: Array<Attachment>;
-	};
+	}
+	| { do: "server.ready"; msg: MessageReady }
+	| { do: "menu.preview"; id: string };
 
-// HACK: pass dispatch through here
 function reduce(
 	state: Data,
 	delta: Reduction,
-	dispatch: (action: Action) => Promise<void>,
 ): Data {
 	switch (delta.do) {
 		case "menu": {
@@ -67,27 +67,6 @@ function reduce(
 			};
 			return { ...state, modals: [modal, ...state.modals] };
 		}
-		case "thread.init": {
-			const { thread_id } = delta;
-			if (state.thread_state[thread_id]) return state;
-			return {
-				...state,
-				thread_state: {
-					...state.thread_state,
-					[thread_id]: {
-						editor_state: createEditorState((text) => {
-							dispatch({ do: "thread.send", thread_id, text });
-						}),
-						reply_id: null,
-						scroll_pos: null,
-						read_marker_id: delta.read_id ?? null,
-						attachments: [],
-						is_at_end: true,
-						timeline: [],
-					},
-				},
-			};
-		}
 		case "thread.reply": {
 			return produce((s: Data) => {
 				s.thread_state[delta.thread_id].reply_id = delta.reply_id;
@@ -107,7 +86,50 @@ function reduce(
 				return s;
 			})(state);
 		}
+		case "server.ready": {
+			const { user, session } = delta.msg;
+			return produce((s: Data) => {
+				if (user) {
+					s.user = user;
+					s.users[user.id] = user;
+				}
+				s.session = session;
+			})(state);
+		}
+		case "menu.preview": {
+			return {
+				...state,
+				cursor: {
+					...state.cursor,
+					preview: delta.id,
+				},
+			};
+		}
 	}
+}
+
+type Middleware = (
+	state: Data,
+	dispatch: (action: Action) => void,
+) => (next: (action: Action) => void) => (action: Action) => void;
+
+function combine(
+	reduce: (state: Data, delta: Reduction) => Data,
+	state: Data,
+	update: SetStoreFunction<Data>,
+	middleware: Array<Middleware>,
+) {
+	let _dispatch = (_action: Action) => {};
+	const dispatch = (action: Action) => {
+		console.log("reduce", state, action);
+		update((s) => reduce(s, action as Reduction));
+	};
+	const merged = middleware.toReversed().reduce(
+		(dispatch, m) => (action) => m(state, _dispatch)(dispatch)(action),
+		dispatch,
+	);
+	_dispatch = merged;
+	return merged;
 }
 
 // TODO: refactor this out into multiple smaller files
@@ -115,25 +137,9 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
 
-	async function dispatch(action: Action) {
-		// console.log("dispatch", action.do);
-		console.log("dispatch", action);
-		switch (action.do) {
-			case "thread.reply":
-			case "thread.scroll_pos":
-			case "thread.attachments":
-			case "thread.init":
-			case "modal.close":
-			case "modal.alert":
-			case "modal.confirm":
-			case "modal.prompt":
-			case "menu": {
-				update(
-					reconcile(reduce(ctx.data, action, dispatch)),
-				);
-				return;
-			}
-			case "thread.autoscroll": {
+	const threadAutoscroll: Middleware =
+		(_state, _dispatch) => (next) => (action) => {
+			if (action.do === "thread.autoscroll") {
 				const { thread_id } = action;
 				const ts = ctx.data.thread_state[thread_id];
 				console.log(ts);
@@ -180,21 +186,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						}
 					}
 				});
-				return;
+			} else {
+				next(action);
 			}
-			case "server": {
-				return dispatchServer(ctx, update, action, dispatch);
-			}
-			case "server.ready": {
-				const { user, session } = action.msg;
-				if (user) {
-					update("user", user);
-					update("users", user.id, user);
-				}
-				update("session", session);
-				return;
-			}
-			case "thread.mark_read": {
+		};
+
+	const threadMarkRead: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "thread.mark_read") {
 				const { thread_id, delay, also_local } = action;
 				// NOTE: may need separate timeouts per thread
 				clearTimeout(ackGraceTimeout);
@@ -224,9 +223,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						version_id,
 					);
 				}
-				return;
+			} else {
+				next(action);
 			}
-			case "fetch.room": {
+		};
+
+	const fetchRoom: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "fetch.room") {
 				const { data, error } = await ctx.client.http.GET(
 					"/api/v1/room/{room_id}",
 					{
@@ -235,9 +239,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				);
 				if (error) throw error;
 				update("rooms", action.room_id, data);
-				return;
+			} else {
+				next(action);
 			}
-			case "fetch.thread": {
+		};
+
+	const fetchThread: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "fetch.thread") {
 				const { data, error } = await ctx.client.http.GET(
 					"/api/v1/thread/{thread_id}",
 					{
@@ -246,9 +255,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				);
 				if (error) throw error;
 				update("threads", action.thread_id, data);
-				return;
+			} else {
+				next(action);
 			}
-			case "fetch.room_threads": {
+		};
+
+	const fetchRoomThreads: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "fetch.room_threads") {
 				// TODO: paginate
 				const { data, error } = await ctx.client.http.GET(
 					"/api/v1/room/{room_id}/thread",
@@ -268,9 +282,14 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						update("threads", item.id, item);
 					}
 				});
-				return;
+			} else {
+				next(action);
 			}
-			case "upload.init": {
+		};
+
+	const uploadInit: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "upload.init") {
 				const { local_id, thread_id } = action;
 				const ts = () => ctx.data.thread_state[thread_id];
 				update(
@@ -349,17 +368,31 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					},
 				});
 				update("uploads", local_id, { up, thread_id });
-				return;
+			} else {
+				next(action);
 			}
-			case "upload.pause": {
-				ctx.data.uploads[action.local_id]?.up.pause();
-				return;
-			}
-			case "upload.resume": {
+		};
+
+	const uploadPause: Middleware = (_state, _dispatch) => (next) => (action) => {
+		if (action.do === "upload.pause") {
+			ctx.data.uploads[action.local_id]?.up.pause();
+		} else {
+			next(action);
+		}
+	};
+
+	const uploadResume: Middleware =
+		(_state, _dispatch) => (next) => (action) => {
+			if (action.do === "upload.resume") {
 				ctx.data.uploads[action.local_id]?.up.resume();
-				return;
+			} else {
+				next(action);
 			}
-			case "upload.cancel": {
+		};
+
+	const uploadCancel: Middleware =
+		(_state, _dispatch) => (next) => (action) => {
+			if (action.do === "upload.cancel") {
 				const upload = ctx.data.uploads[action.local_id];
 				upload?.up.pause();
 				delete ctx.data.uploads[action.local_id];
@@ -374,30 +407,39 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						attachments: ts.attachments.toSpliced(idx, 1),
 					});
 				}
-				return;
+			} else {
+				next(action);
 			}
-			case "init": {
-				const { data, error } = await ctx.client.http.GET("/api/v1/room", {
-					params: {
-						query: {
-							dir: "f",
-							limit: 100,
-						},
+		};
+
+	const init: Middleware = (_state, _dispatch) => (next) => async (action) => {
+		if (action.do === "init") {
+			const { data, error } = await ctx.client.http.GET("/api/v1/room", {
+				params: {
+					query: {
+						dir: "f",
+						limit: 100,
 					},
-				});
-				if (error) {
-					// TODO: handle unauthenticated
-					// console.error(error);
-					return;
-				}
-				solidBatch(() => {
-					for (const room of data.items) {
-						update("rooms", room.id, room);
-					}
-				});
+				},
+			});
+			if (error) {
+				// TODO: handle unauthenticated
+				// console.error(error);
 				return;
 			}
-			case "server.init_session": {
+			solidBatch(() => {
+				for (const room of data.items) {
+					update("rooms", room.id, room);
+				}
+			});
+		} else {
+			next(action);
+		}
+	};
+
+	const serverInitSession: Middleware =
+		(_state, _dispatch) => (next) => async (action) => {
+			if (action.do === "server.init_session") {
 				const res = await ctx.client.http.POST("/api/v1/session", {
 					body: {},
 				});
@@ -409,39 +451,101 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				localStorage.setItem("token", session.token);
 				update("session", session);
 				ctx.client.start(session.token);
-				return;
+			} else {
+				next(action);
 			}
-			case "window.mouse_move": {
-				// TODO: use triangle to submenu corners instead of dot with x axis
-				const pos = [
-					...ctx.data.cursor.pos,
-					[action.e.x, action.e.y] as [number, number],
-				];
-				if (pos.length > 5) pos.shift();
-				let vx = 0, vy = 0;
-				for (let i = 1; i < pos.length; i++) {
-					vx += pos[i - 1][0] - pos[i][0];
-					vy += pos[i - 1][1] - pos[i][1];
-				}
-				solidBatch(() => {
-					update("cursor", "pos", pos);
-					update("cursor", "vel", (vx / Math.hypot(vx, vy)) || 0);
-				});
-				return;
-			}
-			case "menu.preview": {
-				update("cursor", "preview", action.id);
-				return;
-			}
-			case "thread.send": {
-				handleSubmit(ctx, action.thread_id, action.text, update);
-				return;
-			}
-			default: {
-				return dispatchMessages(ctx, update, action);
-			}
-		}
-	}
+		};
 
-	return dispatch;
+	const mouseMoved: Middleware = (_state, _dispatch) => (next) => (action) => {
+		if (action.do === "window.mouse_move") {
+			// TODO: use triangle to submenu corners instead of dot with x axis
+			const pos = [
+				...ctx.data.cursor.pos,
+				[action.e.x, action.e.y] as [number, number],
+			];
+			if (pos.length > 5) pos.shift();
+			let vx = 0, vy = 0;
+			for (let i = 1; i < pos.length; i++) {
+				vx += pos[i - 1][0] - pos[i][0];
+				vy += pos[i - 1][1] - pos[i][1];
+			}
+			solidBatch(() => {
+				update("cursor", "pos", pos);
+				update("cursor", "vel", (vx / Math.hypot(vx, vy)) || 0);
+			});
+		} else {
+			next(action);
+		}
+	};
+
+	const threadSend: Middleware = (_state, _dispatch) => (next) => (action) => {
+		if (action.do === "thread.send") {
+			handleSubmit(ctx, action.thread_id, action.text, update);
+		} else {
+			next(action);
+		}
+	};
+
+	const handleServer: Middleware = (_state, dispatch) => (next) => (action) => {
+		if (action.do === "server") {
+			return dispatchServer(ctx, update, action, dispatch);
+		} else {
+			next(action);
+		}
+	};
+
+	const threadInit: Middleware = (state, dispatch) => (next) => (action) => {
+		if (action.do === "thread.init") {
+			const { thread_id } = action;
+			if (state.thread_state[thread_id]) return;
+			update("thread_state", thread_id, {
+				editor_state: createEditorState((text) => {
+					dispatch({ do: "thread.send", thread_id, text });
+				}),
+				reply_id: null,
+				scroll_pos: null,
+				read_marker_id: action.read_id ?? null,
+				attachments: [],
+				is_at_end: true,
+				timeline: [],
+			});
+		} else {
+			next(action);
+		}
+	};
+
+	const paginate: Middleware = (_state, _dispatch) => (next) => (action) => {
+		if (action.do === "paginate") {
+			dispatchMessages(ctx, update, action);
+		} else {
+			next(action);
+		}
+	};
+
+	const log: Middleware = (state, _dispatch) => (next) => (action) => {
+		console.log("dispatch", action, state);
+		next(action);
+	};
+
+	const d = combine(reduce, ctx.data, update, [
+		log,
+		threadAutoscroll,
+		threadMarkRead,
+		fetchRoom,
+		fetchThread,
+		handleServer,
+		init,
+		serverInitSession,
+		threadInit,
+		paginate,
+		uploadCancel,
+		uploadInit,
+		uploadPause,
+		uploadResume,
+		fetchRoomThreads,
+		mouseMoved,
+		threadSend,
+	]);
+
+	return d;
 }

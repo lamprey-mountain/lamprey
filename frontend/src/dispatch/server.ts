@@ -1,7 +1,7 @@
 import { batch as solidBatch } from "solid-js";
 import { produce, reconcile, SetStoreFunction } from "solid-js/store";
 import { Action, ChatCtx, Data } from "../context.ts";
-import { InviteT, MemberT, RoleT } from "../types.ts";
+import { RoleT } from "../types.ts";
 import { types } from "sdk";
 
 function reduceServer(
@@ -9,31 +9,6 @@ function reduceServer(
 	delta: types.MessageSync,
 ): Data {
 	switch (delta.type) {
-		case "UpsertSession": {
-			const { session } = delta;
-			if (session.id === state.session?.id) {
-				return { ...state, session };
-			} else {
-				return state;
-			}
-			// if (!ctx.data.user) {
-			// 	ctx.client.http.GET("/api/v1/user/{user_id}", {
-			// 		params: {
-			// 			path: {
-			// 				user_id: "@self",
-			// 			},
-			// 		},
-			// 	}).then((res) => {
-			// 		const user = res.data;
-			// 		if (!user) {
-			// 			throw new Error("couldn't fetch user");
-			// 		}
-			// 		update("user", user);
-			// 		update("users", user.id, user);
-			// 	});
-			// 	ctx.dispatch({ do: "init" });
-			// }
-		}
 		case "UpsertRoom": {
 			const { room } = delta;
 			return { ...state, rooms: { ...state.rooms, [room.id]: room } };
@@ -86,8 +61,9 @@ export function dispatchServer(
 	ctx: ChatCtx,
 	update: SetStoreFunction<Data>,
 	action: Action,
-	dispatch: (action: Action) => Promise<void>,
+	dispatch: (action: Action) => void,
 ) {
+	console.log("dispatchserver", action);
 	switch (action.do) {
 		case "server": {
 			const msg = action.msg;
@@ -137,10 +113,9 @@ export function dispatchServer(
 							);
 						}
 					}
-
-					dispatch({ do: "thread.autoscroll", thread_id });
 				});
 				console.timeEnd("UpsertMessage");
+				dispatch({ do: "thread.autoscroll", thread_id: msg.message.thread_id });
 				// TODO: message deletions
 			} else if (msg.type === "UpsertRole") {
 				const role: RoleT = msg.role;
@@ -173,6 +148,28 @@ export function dispatchServer(
 						delete obj[code];
 					}),
 				);
+			} else if (msg.type === "UpsertSession") {
+				const { session } = msg;
+				if (session.id === ctx.data.session?.id) {
+					update("session", session);
+				}
+				if (!ctx.data.user) {
+					ctx.client.http.GET("/api/v1/user/{user_id}", {
+						params: {
+							path: {
+								user_id: "@self",
+							},
+						},
+					}).then((res) => {
+						const user = res.data;
+						if (!user) {
+							throw new Error("couldn't fetch user");
+						}
+						update("user", user);
+						update("users", user.id, user);
+					});
+					ctx.dispatch({ do: "init" });
+				}
 			} else {
 				update(reconcile(reduceServer(ctx.data, action.msg)));
 			}
