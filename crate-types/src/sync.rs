@@ -77,6 +77,7 @@ pub enum MessagePayload {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
+#[allow(clippy::large_enum_variant)]
 pub enum MessageSync {
     UpsertRoom {
         room: Room,

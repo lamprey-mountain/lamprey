@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use types::{InviteWithMetadata, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken};
+use types::{
+    InviteWithMetadata, RoomMember, RoomMemberPatch, SearchMessageRequest, SessionPatch,
+    SessionStatus, SessionToken,
+};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -48,7 +51,19 @@ pub trait DataRoom {
 #[async_trait]
 pub trait DataRoomMember {
     async fn room_member_put(&self, put: RoomMemberPut) -> Result<()>;
+    async fn room_member_patch(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        patch: RoomMemberPatch,
+    ) -> Result<()>;
     async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
+    async fn room_member_get(&self, room_id: RoomId, user_id: UserId) -> Result<RoomMember>;
+    async fn room_member_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomMember>>;
 }
 
 #[async_trait]
@@ -74,6 +89,12 @@ pub trait DataRole {
 pub trait DataRoleMember {
     async fn role_member_put(&self, user_id: UserId, role_id: RoleId) -> Result<()>;
     async fn role_member_delete(&self, user_id: UserId, role_id: RoleId) -> Result<()>;
+    async fn role_member_list(
+        &self,
+        role_id: RoleId,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomMember>>;
+    async fn role_member_count(&self, role_id: RoleId) -> Result<u64>;
 }
 
 #[async_trait]
@@ -206,8 +227,6 @@ pub trait DataUser {
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
-    // async fn temp_user_get_by_discord_id(&self, discord_id: String) -> Result<User>;
-    // async fn temp_user_set_discord_id(&self, user_id: UserId, discord_id: String) -> Result<()>;
 }
 
 #[async_trait]

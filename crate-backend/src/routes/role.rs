@@ -1,10 +1,19 @@
+use std::sync::Arc;
+
+use axum::extract::{Path, Query};
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use http::StatusCode;
+use types::{
+    PaginationQuery, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId, UserId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::types::{RoleCreate, RoleDeleteQuery};
 use crate::ServerState;
 
-use crate::error::{Error, Result};
 use super::util::Auth;
+use crate::error::Result;
 
 /// Role create
 #[utoipa::path(
@@ -15,14 +24,31 @@ use super::util::Auth;
     ),
     tags = ["role"],
     responses(
-        (status = CREATED, description = "success"),
+        (status = CREATED, body = Role, description = "success"),
     )
 )]
 pub async fn role_create(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(room_id): Path<RoomId>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(create): Json<RoleCreateRequest>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+    let role = d
+        .role_create(RoleCreate {
+            room_id,
+            name: create.name,
+            description: create.description,
+            permissions: create.permissions,
+            is_self_applicable: create.is_self_applicable,
+            is_mentionable: create.is_mentionable,
+            is_default: create.is_default,
+        })
+        .await?;
+    Ok((StatusCode::CREATED, Json(role)))
 }
 
 /// Role update
@@ -40,10 +66,22 @@ pub async fn role_create(
     )
 )]
 pub async fn role_update(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<RolePatch>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+    let role = d.role_select(room_id, role_id).await?;
+    if patch.wont_change(&role) {
+        return Ok(StatusCode::NOT_MODIFIED.into_response());
+    }
+    d.role_update(room_id, role_id, patch).await?;
+    let role = d.role_select(room_id, role_id).await?;
+    Ok(Json(role).into_response())
 }
 
 /// Role delete
@@ -60,10 +98,22 @@ pub async fn role_update(
     )
 )]
 pub async fn role_delete(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+    Query(query): Query<RoleDeleteQuery>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+    let existing = d.role_member_count(role_id).await?;
+    if existing > 0 && query.force {
+        d.role_delete(room_id, role_id).await?;
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Ok(StatusCode::CONFLICT)
+    }
 }
 
 /// Role get
@@ -80,10 +130,15 @@ pub async fn role_delete(
     )
 )]
 pub async fn role_get(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    let role = d.role_select(room_id, role_id).await?;
+    Ok(Json(role))
 }
 
 /// Role list
@@ -99,10 +154,16 @@ pub async fn role_get(
     )
 )]
 pub async fn role_list(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(room_id): Path<RoomId>,
+    Query(paginate): Query<PaginationQuery<RoleId>>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    let res = d.role_list(room_id, paginate).await?;
+    Ok(Json(res))
 }
 
 /// Role list members
@@ -119,10 +180,16 @@ pub async fn role_list(
     )
 )]
 pub async fn role_member_list(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+    Query(paginate): Query<PaginationQuery<UserId>>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    let res = d.role_member_list(role_id, paginate).await?;
+    Ok(Json(res))
 }
 
 /// Role member apply
@@ -140,10 +207,17 @@ pub async fn role_member_list(
     )
 )]
 pub async fn role_member_add(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleApply)?;
+    d.role_member_put(target_user_id, role_id).await?;
+    let member = d.room_member_get(room_id, target_user_id).await?;
+    Ok(Json(member))
 }
 
 /// Role member remove
@@ -161,13 +235,20 @@ pub async fn role_member_add(
     )
 )]
 pub async fn role_member_remove(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
+    Auth(_session, user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = d.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleApply)?;
+    d.role_member_delete(target_user_id, role_id).await?;
+    let member = d.room_member_get(room_id, target_user_id).await?;
+    Ok(Json(member))
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(role_create))
         .routes(routes!(role_update))

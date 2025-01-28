@@ -13,6 +13,7 @@ pub struct Role {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
+    // TODO: always keep sorted
     pub permissions: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
@@ -39,4 +40,30 @@ pub struct RolePatch {
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
     pub is_default: Option<bool>,
+}
+
+impl RolePatch {
+    pub fn wont_change(&self, target: &Role) -> bool {
+        self.name.as_ref().is_none_or(|c| c == &target.name)
+            && self
+                .description
+                .as_ref()
+                .is_none_or(|c| c == &target.description)
+            && self
+                .permissions
+                .as_ref()
+                .is_none_or(|c| c == &target.permissions)
+            && self
+                .is_self_applicable
+                .as_ref()
+                .is_none_or(|c| c == &target.is_self_applicable)
+            && self
+                .is_mentionable
+                .as_ref()
+                .is_none_or(|c| c == &target.is_mentionable)
+            && self
+                .is_default
+                .as_ref()
+                .is_none_or(|c| c == &target.is_default)
+    }
 }

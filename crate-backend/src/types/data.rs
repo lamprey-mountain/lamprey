@@ -2,7 +2,7 @@ use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
     Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
-    RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus,
+    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
     SessionToken, Thread, ThreadId, User, UserId, UserVerId,
 };
 use uuid::Uuid;
@@ -486,4 +486,32 @@ pub struct DbInvite {
     pub uses: i32,
     pub created_at: time::PrimitiveDateTime,
     pub expires_at: Option<time::PrimitiveDateTime>,
+}
+
+pub struct DbRoomMember {
+    pub user_id: Uuid,
+    pub room_id: Uuid,
+    pub membership: DbRoomMembership,
+    pub override_name: Option<String>,
+    pub override_description: Option<String>,
+    // override_avatar: z.string().url().or(z.literal("")),
+}
+
+impl From<DbRoomMember> for RoomMember {
+    fn from(row: DbRoomMember) -> Self {
+        RoomMember {
+            user_id: row.user_id.into(),
+            room_id: row.room_id.into(),
+            membership: row.membership.into(),
+            override_name: row.override_name,
+            override_description: row.override_description,
+            roles: vec![], // FIXME
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct RoleDeleteQuery {
+    #[serde(default)]
+    pub force: bool,
 }
