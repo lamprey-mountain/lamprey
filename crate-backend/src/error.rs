@@ -56,6 +56,9 @@ pub enum Error {
     Figment(#[from] figment::Error),
     #[error("url parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
+    #[error("unmodified")]
+    // HACK: not really an error, but still kind of helpful to have here
+    NotModified,
     #[error("not yet implemented...")]
     Unimplemented,
 }
@@ -90,6 +93,7 @@ impl Error {
             Error::ParseInt(_) => StatusCode::BAD_REQUEST,
             Error::ParseFloat(_) => StatusCode::BAD_REQUEST,
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
+            Error::NotModified => StatusCode::NOT_MODIFIED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -97,6 +101,10 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
+        match self {
+            Error::NotModified => return self.get_status().into_response(),
+            _ => {}
+        };
         error!(
             "Response error: status {}, message {:?}",
             self.get_status(),

@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
-use types::{Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, UserId};
+use serde_json::json;
+use types::{
+    MessageSync, MessageType, Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, Thread,
+    ThreadId, ThreadPatch, UserId,
+};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
+use crate::types::MessageCreate;
 use crate::ServerState;
 use crate::{data::Data, types::RoleCreate};
 
@@ -79,5 +84,70 @@ impl Services {
         self.data.role_member_put(creator, admin.id).await?;
         self.data.role_apply_default(room.id, creator).await?;
         Ok(room)
+    }
+
+    pub async fn update_thread(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        patch: ThreadPatch,
+    ) -> Result<Thread> {
+        // check update perms
+        let mut perms = self.data.permission_thread_get(user_id, thread_id).await?;
+        perms.ensure_view()?;
+        let thread = self.data.thread_get(thread_id, Some(user_id)).await?;
+        if thread.creator_id == user_id {
+            perms.add(Permission::ThreadManage);
+        }
+        perms.ensure(Permission::ThreadManage)?;
+
+        // shortcut if it wont modify the thread
+        if patch.wont_change(&thread) {
+            return Err(Error::NotModified);
+        }
+
+        if let Some(new_state) = &patch.state {
+            if !thread.state.can_change_to(&new_state) {
+                return Err(Error::BadStatic("can't change to that state"));
+            }
+        };
+
+        // update and refetch
+        self.data
+            .thread_update(thread_id, user_id, patch.clone())
+            .await?;
+        let thread = self.data.thread_get(thread_id, Some(user_id)).await?;
+
+        // send update message to thread
+        let update_message_id = self
+            .data
+            .message_create(MessageCreate {
+                thread_id,
+                content: Some("(thread update)".to_string()),
+                attachment_ids: vec![],
+                author_id: user_id,
+                message_type: MessageType::ThreadUpdate,
+                metadata: Some(json!({
+                    "name": patch.name,
+                    "description": patch.description,
+                })),
+                reply_id: None,
+                override_name: None,
+            })
+            .await?;
+        let update_message = self.data.message_get(thread_id, update_message_id).await?;
+
+        self.state.broadcast(MessageSync::UpsertMessage {
+            message: update_message,
+        })?;
+        let msg = MessageSync::UpsertThread {
+            thread: thread.clone(),
+        };
+        self.state.broadcast(msg.clone())?;
+        self.data
+            .audit_logs_room_append(thread.room_id, user_id, None, msg)
+            .await?;
+
+        Ok(thread)
     }
 }

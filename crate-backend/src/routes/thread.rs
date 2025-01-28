@@ -8,6 +8,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use types::ThreadState;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -136,24 +137,15 @@ async fn thread_list(
     )
 )]
 async fn thread_update(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ThreadPatch>,
+    Json(patch): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let mut perms = data.permission_thread_get(user_id, thread_id).await?;
-    perms.ensure_view()?;
-    let thread = data.thread_get(thread_id, Some(user_id)).await?;
-    if thread.creator_id == user_id {
-        perms.add(Permission::RoomManage);
-    }
-    perms.ensure(Permission::RoomManage)?;
-    data.thread_update(thread_id, user_id, json).await?;
-    let thread = data.thread_get(thread_id, Some(user_id)).await?;
-    s.broadcast(MessageSync::UpsertThread {
-        thread: thread.clone(),
-    })?;
+    let thread = s
+        .services()
+        .update_thread(user_id, thread_id, patch)
+        .await?;
     Ok(Json(thread))
 }
 
@@ -195,6 +187,132 @@ async fn thread_ack(
     Ok(Json(AckRes { version_id }))
 }
 
+/// Pin thread
+///
+/// Set a thread's state to Pinned.
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/ack",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = Thread, description = "success"),
+        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
+    )
+)]
+async fn thread_pin(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let patch = ThreadPatch {
+        name: None,
+        description: None,
+        state: Some(ThreadState::Pinned { pin_order: 0 }),
+    };
+    let thread = s
+        .services()
+        .update_thread(user_id, thread_id, patch)
+        .await?;
+    Ok(Json(thread))
+}
+
+/// Archive thread
+///
+/// Set a thread's state to Archived.
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/archive",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = Thread, description = "success"),
+        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
+    )
+)]
+async fn thread_archive(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let patch = ThreadPatch {
+        name: None,
+        description: None,
+        state: Some(ThreadState::Archived),
+    };
+    let thread = s
+        .services()
+        .update_thread(user_id, thread_id, patch)
+        .await?;
+    Ok(Json(thread))
+}
+
+/// Reopen/unpin thread
+///
+/// Set a thread's state to Default.
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/activate",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = Thread, description = "success"),
+        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
+    )
+)]
+async fn thread_activate(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let patch = ThreadPatch {
+        name: None,
+        description: None,
+        state: Some(ThreadState::Active),
+    };
+    let thread = s
+        .services()
+        .update_thread(user_id, thread_id, patch)
+        .await?;
+    Ok(Json(thread))
+}
+
+/// Delete thread
+///
+/// Set a thread's state to Deleted.
+#[utoipa::path(
+     delete,
+     path = "/thread/{thread_id}",
+     params(
+         ("thread_id", description = "Thread id"),
+     ),
+     tags = ["thread"],
+     responses(
+         (status = NO_CONTENT, body = Thread, description = "success"),
+     )
+ )]
+async fn thread_delete(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let patch = ThreadPatch {
+        name: None,
+        description: None,
+        state: Some(ThreadState::Deleted),
+    };
+    s.services()
+        .update_thread(user_id, thread_id, patch)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
@@ -202,4 +320,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list))
         .routes(routes!(thread_update))
         .routes(routes!(thread_ack))
+        .routes(routes!(thread_pin))
+        .routes(routes!(thread_archive))
+        .routes(routes!(thread_delete))
+        .routes(routes!(thread_activate))
 }

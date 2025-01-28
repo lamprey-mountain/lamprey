@@ -1,13 +1,14 @@
 use async_trait::async_trait;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
+use types::ThreadState;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, Thread,
-    ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, UserId,
+    DbThread, DbThreadState, PaginationDirection, PaginationQuery, PaginationResponse, RoomId,
+    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;
@@ -92,19 +93,29 @@ impl DataThread for Postgres {
         .fetch_one(&self.pool)
         .await?;
         let thread: Thread = thread.into();
+        let state = match patch.state.unwrap_or(thread.state) {
+            // ThreadState::Pinned { .. } => DbThreadState::Pinned,
+            ThreadState::Pinned { .. } => todo!(),
+            ThreadState::Active => DbThreadState::Active,
+            ThreadState::Temporary => DbThreadState::Temporary,
+            ThreadState::Archived => DbThreadState::Archived,
+            ThreadState::Deleted => DbThreadState::Deleted,
+        };
         let version_id = ThreadVerId(Uuid::now_v7());
         query!(
             r#"
             UPDATE thread SET
                 version_id = $2,
                 name = $3, 
-                description = $4
+                description = $4,
+                state = $5
             WHERE id = $1
         "#,
             thread_id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(thread.name),
             patch.description.unwrap_or(thread.description),
+            state as _,
         )
         .execute(&mut *tx)
         .await?;
@@ -112,4 +123,3 @@ impl DataThread for Postgres {
         Ok(version_id)
     }
 }
-

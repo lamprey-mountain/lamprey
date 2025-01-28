@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken
+    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch,
+    SearchMessageRequest, SessionPatch, SessionStatus, SessionToken,
 };
 use uuid::Uuid;
 

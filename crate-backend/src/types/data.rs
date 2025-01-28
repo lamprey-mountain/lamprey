@@ -533,3 +533,13 @@ pub struct RoleDeleteQuery {
     #[serde(default)]
     pub force: bool,
 }
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "thread_state")]
+pub enum DbThreadState {
+    Pinned,
+    Active,
+    Temporary,
+    Archived,
+    Deleted,
+}

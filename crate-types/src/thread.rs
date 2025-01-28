@@ -42,6 +42,7 @@ pub struct ThreadCreateRequest {
 pub struct ThreadPatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
+    pub state: Option<ThreadState>,
 }
 
 /// lifecycle of a thread
@@ -49,9 +50,7 @@ pub struct ThreadPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ThreadState {
     /// always remains active
-    Pinned {
-        pin_order: u32,
-    },
+    Pinned { pin_order: u32 },
 
     /// default state that new threads are in
     Active,
@@ -86,4 +85,27 @@ pub enum ThreadInfo {
         last_read_id: Option<MessageId>,
         message_count: u64,
     },
+}
+
+impl ThreadPatch {
+    pub fn wont_change(&self, other: &Thread) -> bool {
+        self.name.as_ref().is_none_or(|n| n == &other.name)
+            && self
+                .description
+                .as_ref()
+                .is_none_or(|n| n == &other.description)
+    }
+}
+
+impl ThreadState {
+    pub fn wont_change(&self, other: &Thread) -> bool {
+        &other.state == self
+    }
+    
+    pub fn can_change_to(&self, _to: &ThreadState) -> bool {
+        match self {
+            Self::Deleted => false,
+            _ => true,
+        }
+    }
 }
