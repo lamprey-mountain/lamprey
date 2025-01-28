@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For, from, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
@@ -6,6 +6,7 @@ import { useApi } from "./api.tsx";
 export const ChatNav = () => {
 	const ctx = useCtx();
 	const api = useApi();
+	const state = from(ctx.client.state)
 
 	// should i only show threads from the currently active rooms? or show less threads until the room is selected?
 	return (
@@ -61,7 +62,7 @@ export const ChatNav = () => {
 												<A
 													href={`/thread/${thread.id}`}
 													classList={{
-														"closed": thread.is_closed,
+														"closed": thread.state === "Archived",
 														"unread":
 															thread.last_read_id !== thread.last_version_id,
 													}}
@@ -86,6 +87,10 @@ export const ChatNav = () => {
 					)}
 				</For>
 			</ul>
+			<div style="flex:1"></div>
+			<div style="margin: 8px">
+				state: {state()}
+			</div>
 		</nav>
 	);
 };

@@ -53,6 +53,8 @@
 	background-color: $bg1;
 	color: $fg2;
 	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
 
 	& > ul {
 		padding: 0.25rem;
