@@ -29,7 +29,7 @@ use crate::error::Result;
 )]
 pub async fn role_create(
     Path(room_id): Path<RoomId>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoleCreateRequest>,
 ) -> Result<impl IntoResponse> {
@@ -67,7 +67,7 @@ pub async fn role_create(
 )]
 pub async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
@@ -100,7 +100,7 @@ pub async fn role_update(
 pub async fn role_delete(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(query): Query<RoleDeleteQuery>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -131,7 +131,7 @@ pub async fn role_delete(
 )]
 pub async fn role_get(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -156,7 +156,7 @@ pub async fn role_get(
 pub async fn role_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<RoleId>>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -182,7 +182,7 @@ pub async fn role_list(
 pub async fn role_member_list(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -208,7 +208,7 @@ pub async fn role_member_list(
 )]
 pub async fn role_member_add(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -236,7 +236,7 @@ pub async fn role_member_add(
 )]
 pub async fn role_member_remove(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();

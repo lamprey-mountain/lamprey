@@ -27,7 +27,7 @@ use crate::error::{Error, Result};
 pub async fn room_member_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -52,7 +52,7 @@ pub async fn room_member_list(
 )]
 pub async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -78,7 +78,7 @@ pub async fn room_member_get(
 #[axum::debug_handler]
 pub async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
@@ -114,7 +114,7 @@ pub async fn room_member_update(
 )]
 pub async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();

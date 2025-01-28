@@ -11,7 +11,8 @@ use crate::{
 };
 
 pub struct AuthRelaxed(pub Session);
-pub struct Auth(pub Session, pub UserId);
+pub struct AuthWithSession(pub Session, pub UserId);
+pub struct Auth(pub UserId);
 
 impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
     type Rejection = Error;
@@ -36,7 +37,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
     }
 }
 
-impl FromRequestParts<Arc<ServerState>> for Auth {
+impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
     type Rejection = Error;
 
     async fn from_request_parts(
@@ -49,5 +50,18 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
             SessionStatus::Authorized { user_id } => Ok(Self(session, user_id)),
             SessionStatus::Sudo { user_id } => Ok(Self(session, user_id)),
         }
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for Auth {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let AuthWithSession(_session, user_id) =
+            AuthWithSession::from_request_parts(parts, s).await?;
+        Ok(Self(user_id))
     }
 }

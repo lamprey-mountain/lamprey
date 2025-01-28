@@ -24,7 +24,7 @@ use crate::error::{Error, Result};
 )]
 pub async fn user_create(
     // NOTE: utoipa + cargo check seems to break with _session here?
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreateRequest>,
 ) -> Result<impl IntoResponse> {
@@ -76,7 +76,7 @@ pub async fn user_create(
 )]
 pub async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
@@ -108,7 +108,7 @@ pub async fn user_update(
 )]
 pub async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -138,7 +138,7 @@ pub async fn user_delete(
 )]
 pub async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {

@@ -21,7 +21,7 @@ use crate::error::Result;
     )
 )]
 pub async fn search_messages(
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(body): Json<SearchMessageRequest>,

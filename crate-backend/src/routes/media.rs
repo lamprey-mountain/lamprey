@@ -36,7 +36,7 @@ const MAX_SIZE: u64 = 1024 * 1024 * 16;
     )
 )]
 async fn media_create(
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
 ) -> Result<(StatusCode, HeaderMap, Json<MediaCreated>)> {
@@ -86,7 +86,7 @@ async fn media_create(
 )]
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
@@ -209,7 +209,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    Auth(_session, _user_id): Auth,
+    Auth(_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Media>> {
     let mut media = s.data().media_select(media_id).await?;
@@ -229,7 +229,7 @@ async fn media_get(
 )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<(StatusCode, HeaderMap)> {
     if let Some(up) = s.uploads.get_mut(&media_id) {

@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::types::SessionIdReq;
 use crate::ServerState;
 
-use super::util::{Auth, AuthRelaxed};
+use super::util::{AuthRelaxed, AuthWithSession};
 use crate::error::{Error, Result};
 
 // TODO: expire old unused sessions
@@ -50,7 +50,7 @@ pub async fn session_create(
 )]
 pub async fn session_list(
     Query(q): Query<PaginationQuery<SessionId>>,
-    Auth(_session, user_id): Auth,
+    AuthWithSession(_session, user_id): AuthWithSession,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();

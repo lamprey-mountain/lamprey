@@ -33,7 +33,7 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreateRequest>,
 ) -> Result<impl IntoResponse> {
@@ -101,7 +101,7 @@ async fn message_create(
 async fn message_list(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -131,7 +131,7 @@ async fn message_list(
 )]
 async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -160,7 +160,7 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
@@ -254,7 +254,7 @@ async fn message_edit(
 )]
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
@@ -294,7 +294,7 @@ async fn message_delete(
 async fn message_version_list(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let data = s.data();
@@ -325,7 +325,7 @@ async fn message_version_list(
 )]
 async fn message_version_get(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
     let data = s.data();
@@ -356,7 +356,7 @@ async fn message_version_get(
 )]
 async fn message_version_delete(
     Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(_session, user_id): Auth,
+    Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let data = s.data();
