@@ -160,7 +160,7 @@ export function createList<T>(options: {
 
 			function handleScroll() {
 				const pos = wrapperEl()!.scrollTop;
-				const bottom = (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight)
+				const bottom = wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight;
 				setScrollPos(pos);
 				setIsAtBottom(pos >= bottom);
 				// TODO: maybe use css + trigger elements?
