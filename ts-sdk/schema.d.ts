@@ -84,13 +84,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** media get */
+		/** Media get */
 		get: operations["media_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
-		/** media head */
+		/**
+		 * Media check
+		 * @description Get headers useful for resuming an upload
+		 */
 		head: operations["media_check"];
 		/** Media upload */
 		patch: operations["media_upload"];
@@ -121,14 +124,14 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get a room by its id. */
+		/** Get a room by its id */
 		get: operations["room_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** edit a room */
+		/** Edit a room */
 		patch: operations["room_edit"];
 		trace?: never;
 	};
@@ -350,7 +353,7 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** edit a thread */
+		/** Edit a thread */
 		patch: operations["thread_update"];
 		trace?: never;
 	};
@@ -363,8 +366,8 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * ack thread
-		 * @description mark a thread as read (or unread)
+		 * Ack thread
+		 * @description Mark a thread as read (or unread).
 		 */
 		put: operations["thread_ack"];
 		post?: never;
@@ -418,7 +421,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** list message versions */
+		/** List message versions */
 		get: operations["message_version_list"];
 		put?: never;
 		post?: never;
@@ -435,11 +438,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** get message version */
+		/** Get message version */
 		get: operations["message_version_get"];
 		put?: never;
 		post?: never;
-		/** delete message version */
+		/** Delete message version */
 		delete: operations["message_version_delete"];
 		options?: never;
 		head?: never;
@@ -626,6 +629,20 @@ export interface components {
 			/** Format: uri */
 			url: string;
 		};
+		PaginationResponse_Invite: {
+			has_more: boolean;
+			items: {
+				code: components["schemas"]["InviteCode"];
+				/** Format: date-time */
+				created_at: string;
+				creator: components["schemas"]["User"];
+				/** Format: date-time */
+				expires_at?: string | null;
+				target: components["schemas"]["InviteTarget"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
 		PaginationResponse_Message: {
 			has_more: boolean;
 			items: {
@@ -647,18 +664,47 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		PaginationResponse_Role: {
+			has_more: boolean;
+			items: {
+				description?: string | null;
+				id: components["schemas"]["RoleId"];
+				is_default: boolean;
+				is_mentionable: boolean;
+				is_self_applicable: boolean;
+				name: string;
+				permissions: components["schemas"]["Permission"][];
+				room_id: components["schemas"]["RoomId"];
+				version_id: components["schemas"]["RoleVerId"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
 		PaginationResponse_Room: {
 			has_more: boolean;
 			items: {
-				readonly description?: string | null;
+				description?: string | null;
 				/** @description A unique identifier for this room */
 				id: components["schemas"]["RoomId"];
-				readonly name: string;
+				name: string;
 				/**
 				 * Format: uuid
 				 * @description A monotonically increasing id that is updated every time this room is modified.
 				 */
-				readonly version_id: string;
+				version_id: string;
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_RoomMember: {
+			has_more: boolean;
+			items: {
+				membership: components["schemas"]["RoomMembership"];
+				override_description?: string | null;
+				override_name?: string | null;
+				roles: components["schemas"]["Role"][];
+				room_id: components["schemas"]["RoomId"];
+				user_id: components["schemas"]["UserId"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -678,16 +724,12 @@ export interface components {
 				creator_id: components["schemas"]["UserId"];
 				description?: string | null;
 				id: components["schemas"]["ThreadId"];
-				is_closed: boolean;
-				is_locked: boolean;
-				is_pinned: boolean;
-				is_unread: boolean;
-				last_read_id?: null | components["schemas"]["MessageId"];
-				last_version_id: components["schemas"]["MessageId"];
-				/** Format: int64 */
-				message_count: number;
+				info: components["schemas"]["ThreadInfo"];
 				name: string;
 				room_id: components["schemas"]["RoomId"];
+				state: components["schemas"]["ThreadState"];
+				version_id: components["schemas"]["ThreadVerId"];
+				visibility: components["schemas"]["ThreadVisibility"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -746,15 +788,15 @@ export interface components {
 		RoleVerId: string;
 		/** @description A room */
 		Room: {
-			readonly description?: string | null;
+			description?: string | null;
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["RoomId"];
-			readonly name: string;
+			name: string;
 			/**
 			 * Format: uuid
 			 * @description A monotonically increasing id that is updated every time this room is modified.
 			 */
-			readonly version_id: string;
+			version_id: string;
 		};
 		/** @description Data required to create a room */
 		RoomCreate: {
@@ -818,33 +860,44 @@ export interface components {
 			creator_id: components["schemas"]["UserId"];
 			description?: string | null;
 			id: components["schemas"]["ThreadId"];
-			is_closed: boolean;
-			is_locked: boolean;
-			is_pinned: boolean;
+			info: components["schemas"]["ThreadInfo"];
+			name: string;
+			room_id: components["schemas"]["RoomId"];
+			state: components["schemas"]["ThreadState"];
+			version_id: components["schemas"]["ThreadVerId"];
+			visibility: components["schemas"]["ThreadVisibility"];
+		};
+		ThreadCreateRequest: {
+			description?: string | null;
+			name: string;
+		};
+		/** Format: uuid */
+		ThreadId: string;
+		ThreadInfo: {
 			is_unread: boolean;
 			last_read_id?: null | components["schemas"]["MessageId"];
 			last_version_id: components["schemas"]["MessageId"];
 			/** Format: int64 */
 			message_count: number;
-			name: string;
-			room_id: components["schemas"]["RoomId"];
+			/** @enum {string} */
+			type: "Chat";
 		};
-		ThreadCreateRequest: {
-			description?: string | null;
-			is_closed?: boolean | null;
-			is_locked?: boolean | null;
-			is_pinned?: boolean | null;
-			name: string;
-		};
-		/** Format: uuid */
-		ThreadId: string;
 		ThreadPatch: {
 			description?: string | null;
-			is_closed?: boolean | null;
-			is_locked?: boolean | null;
-			is_pinned?: boolean | null;
 			name?: string | null;
 		};
+		/**
+		 * @description lifecycle of a thread
+		 * @enum {string}
+		 */
+		ThreadState: "Pinned" | "Active" | "Temporary" | "Archived" | "Deleted";
+		/** Format: uuid */
+		ThreadVerId: string;
+		/**
+		 * @description who can view this thread
+		 * @enum {string}
+		 */
+		ThreadVisibility: "Room";
 		User: {
 			description?: string | null;
 			id: components["schemas"]["UserId"];
@@ -916,7 +969,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description success */
+			/** @description success; responds with html + javascript */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -1031,7 +1084,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Media"];
+				};
 			};
 		};
 	};
@@ -1079,9 +1134,11 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Media"];
+				};
 			};
-			/** @description Upload success */
+			/** @description Upload part success */
 			204: {
 				headers: {
 					[name: string]: unknown;
@@ -1208,7 +1265,10 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Invite"];
+				};
 			};
 		};
 	};
@@ -1229,7 +1289,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Invite"];
+				};
 			};
 		};
 	};
@@ -1250,7 +1312,10 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RoomMember"];
+				};
 			};
 		};
 	};
@@ -1273,7 +1338,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["RoomMember"];
+				};
 			};
 		};
 	};
@@ -1292,7 +1359,7 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description success */
-			200: {
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -1323,6 +1390,15 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
+				content: {
+					"application/json": components["schemas"]["RoomMember"];
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
 				content?: never;
 			};
 		};
@@ -1344,7 +1420,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["PaginationResponse_Role"];
+				};
 			};
 		};
 	};
@@ -1394,7 +1472,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Role"];
+				};
 			};
 		};
 	};
@@ -1444,7 +1524,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Role"];
+				};
 			};
 			/** @description success */
 			304: {
@@ -1474,7 +1556,10 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RoomMember"];
+				};
 			};
 		};
 	};
@@ -1499,7 +1584,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["RoomMember"];
+				};
 			};
 		};
 	};
@@ -1524,7 +1611,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["RoomMember"];
+				};
 			};
 		};
 	};
@@ -1950,7 +2039,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
 			};
 			/** @description no change */
 			304: {
@@ -1985,7 +2076,10 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
 			};
 		};
 	};
@@ -2010,7 +2104,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
 			};
 		};
 	};
@@ -2137,9 +2233,7 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json": components["schemas"]["User"];
-				};
+				content?: never;
 			};
 		};
 	};
