@@ -18,7 +18,7 @@ use crate::error::Result;
 /// Role create
 #[utoipa::path(
     post,
-    path = "/rooms/{room_id}/role",
+    path = "/room/{room_id}/role",
     params(
         ("room_id", description = "Room id"),
     ),
@@ -54,7 +54,7 @@ pub async fn role_create(
 /// Role update
 #[utoipa::path(
     patch,
-    path = "/rooms/{room_id}/role/{role_id}",
+    path = "/room/{room_id}/role/{role_id}",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
@@ -87,7 +87,7 @@ pub async fn role_update(
 /// Role delete
 #[utoipa::path(
     delete,
-    path = "/rooms/{room_id}/role/{role_id}",
+    path = "/room/{room_id}/role/{role_id}",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
@@ -119,7 +119,7 @@ pub async fn role_delete(
 /// Role get
 #[utoipa::path(
     get,
-    path = "/rooms/{room_id}/role/{role_id}",
+    path = "/room/{room_id}/role/{role_id}",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
@@ -144,7 +144,7 @@ pub async fn role_get(
 /// Role list
 #[utoipa::path(
     get,
-    path = "/rooms/{room_id}/role",
+    path = "/room/{room_id}/role",
     params(
         ("room_id", description = "Room id"),
     ),
@@ -169,7 +169,7 @@ pub async fn role_list(
 /// Role list members
 #[utoipa::path(
     get,
-    path = "/rooms/{room_id}/role/{role_id}/member",
+    path = "/room/{room_id}/role/{role_id}/member",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
@@ -195,7 +195,7 @@ pub async fn role_member_list(
 /// Role member apply
 #[utoipa::path(
     put,
-    path = "/rooms/{room_id}/role/{role_id}/member/{user_id}",
+    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
@@ -223,7 +223,7 @@ pub async fn role_member_add(
 /// Role member remove
 #[utoipa::path(
     delete,
-    path = "/rooms/{room_id}/role/{role_id}/member/{user_id}",
+    path = "/room/{room_id}/role/{role_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),

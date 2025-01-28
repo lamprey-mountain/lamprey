@@ -15,7 +15,7 @@ use crate::error::{Error, Result};
 /// Room member list
 #[utoipa::path(
     put,
-    path = "/rooms/{room_id}/member",
+    path = "/room/{room_id}/member",
     params(
         ("room_id", description = "Room id"),
     ),
@@ -40,7 +40,7 @@ pub async fn room_member_list(
 /// Room member get
 #[utoipa::path(
     put,
-    path = "/rooms/{room_id}/member/{user_id}",
+    path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
@@ -65,7 +65,7 @@ pub async fn room_member_get(
 /// Room member update
 #[utoipa::path(
     patch,
-    path = "/rooms/{room_id}/member/{user_id}",
+    path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
@@ -102,7 +102,7 @@ pub async fn room_member_update(
 /// Room member delete (kick/leave)
 #[utoipa::path(
     delete,
-    path = "/rooms/{room_id}/member/{user_id}",
+    path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
