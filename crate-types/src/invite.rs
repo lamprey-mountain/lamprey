@@ -78,7 +78,15 @@ impl fmt::Display for InviteCode {
     }
 }
 
-impl PaginationKey for InviteCode {}
+impl PaginationKey for InviteCode {
+    fn min() -> Self {
+        InviteCode("".to_string())
+    }
+
+    fn max() -> Self {
+        InviteCode("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ".to_string())
+    }
+}
 
 impl From<InviteWithMetadata> for Invite {
     fn from(value: InviteWithMetadata) -> Self {

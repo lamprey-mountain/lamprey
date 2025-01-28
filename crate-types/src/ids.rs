@@ -20,7 +20,16 @@ pub trait Identifier:
 {
 }
 
-impl<T: Identifier> PaginationKey for T {}
+impl<T: Identifier> PaginationKey for T {
+    fn min() -> Self {
+        Uuid::nil().into()
+    }
+
+    fn max() -> Self {
+        Uuid::max().into()
+    }
+    
+}
 
 macro_rules! genid {
     ($name:ident, $example:expr) => {

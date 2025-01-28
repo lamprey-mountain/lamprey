@@ -109,17 +109,31 @@ pub trait DataPermission {
 
 #[async_trait]
 pub trait DataInvite {
+    async fn invite_select(&self, code: InviteCode) -> Result<InviteWithMetadata>;
+    async fn invite_delete(&self, code: InviteCode) -> Result<()>;
+
     async fn invite_insert_room(
         &self,
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
-    ) -> Result<InviteWithMetadata>;
-    async fn invite_select(&self, code: InviteCode) -> Result<InviteWithMetadata>;
-    async fn invite_delete(&self, code: InviteCode) -> Result<()>;
-    // TODO: invite listing
-    // async fn invite_list_room(room_id: RoomId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+    ) -> Result<()>;
+    async fn invite_list_room(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>>;
+
+    // TODO: user invites
+    // async fn invite_insert_user(
+    //     &self,
+    //     user_id: UserId,
+    //     creator_id: UserId,
+    //     code: InviteCode,
+    // ) -> Result<InviteWithMetadata>;
     // async fn invite_list_user(user_id: UserId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+
+    async fn invite_incr_use(&self, target_id: Uuid) -> Result<()>;
 }
 
 #[async_trait]

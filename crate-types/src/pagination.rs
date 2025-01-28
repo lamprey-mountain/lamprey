@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {}
+pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
+    fn min() -> Self;
+    fn max() -> Self;
+}
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

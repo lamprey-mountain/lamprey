@@ -39,3 +39,4 @@ utoipa-axum = "0.1.3"
 utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 uuid = { version = "1.11.1", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }
 crate-hakari = { version = "0.1", path = "../crate-hakari" }
+nanoid = "0.4.0"
