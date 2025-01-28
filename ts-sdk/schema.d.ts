@@ -720,17 +720,16 @@ export interface components {
 		};
 		PaginationResponse_Thread: {
 			has_more: boolean;
-			items: {
+			items: (components["schemas"]["ThreadInfo"] & {
 				creator_id: components["schemas"]["UserId"];
 				description?: string | null;
 				id: components["schemas"]["ThreadId"];
-				info: components["schemas"]["ThreadInfo"];
 				name: string;
 				room_id: components["schemas"]["RoomId"];
 				state: components["schemas"]["ThreadState"];
 				version_id: components["schemas"]["ThreadVerId"];
 				visibility: components["schemas"]["ThreadVisibility"];
-			}[];
+			})[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -856,11 +855,10 @@ export interface components {
 		SessionWithToken: components["schemas"]["Session"] & {
 			token: components["schemas"]["SessionToken"];
 		};
-		Thread: {
+		Thread: components["schemas"]["ThreadInfo"] & {
 			creator_id: components["schemas"]["UserId"];
 			description?: string | null;
 			id: components["schemas"]["ThreadId"];
-			info: components["schemas"]["ThreadInfo"];
 			name: string;
 			room_id: components["schemas"]["RoomId"];
 			state: components["schemas"]["ThreadState"];
@@ -886,11 +884,19 @@ export interface components {
 			description?: string | null;
 			name?: string | null;
 		};
-		/**
-		 * @description lifecycle of a thread
-		 * @enum {string}
-		 */
-		ThreadState: "Pinned" | "Active" | "Temporary" | "Archived" | "Deleted";
+		/** @description lifecycle of a thread */
+		ThreadState:
+			| {
+				/** @description always remains active */
+				Pinned: {
+					/** Format: int32 */
+					pin_order: number;
+				};
+			}
+			| "Active"
+			| "Temporary"
+			| "Archived"
+			| "Deleted";
 		/** Format: uuid */
 		ThreadVerId: string;
 		/**

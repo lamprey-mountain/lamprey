@@ -23,6 +23,8 @@ pub struct Thread {
 
     pub state: ThreadState,
     pub visibility: ThreadVisibility,
+
+    #[serde(flatten)]
     pub info: ThreadInfo,
 }
 
@@ -47,7 +49,9 @@ pub struct ThreadPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ThreadState {
     /// always remains active
-    Pinned,
+    Pinned {
+        pin_order: u32,
+    },
 
     /// default state that new threads are in
     Active,
