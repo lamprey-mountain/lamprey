@@ -24,11 +24,11 @@ use crate::error::{Error, Result};
 )]
 pub async fn user_create(
     // NOTE: utoipa + cargo check seems to break with _session here?
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreateRequest>,
 ) -> Result<impl IntoResponse> {
-    let parent_id = Some(user_id);
+    let parent_id = Some(auth_user_id);
     let data = s.data();
     let user = data
         .user_create(UserCreate {
@@ -37,8 +37,6 @@ pub async fn user_create(
             description: body.description,
             status: body.status,
             is_bot: body.is_bot,
-            is_alias: body.is_alias,
-            is_system: false,
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))
@@ -62,6 +60,7 @@ pub async fn user_create(
 // }
 
 /// User update
+// TODO: updating/deleting bots
 #[utoipa::path(
     patch,
     path = "/user/{user_id}",
@@ -76,15 +75,15 @@ pub async fn user_create(
 )]
 pub async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if user_id != target_user_id {
+    if auth_user_id != target_user_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
@@ -108,19 +107,19 @@ pub async fn user_update(
 )]
 pub async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if user_id != target_user_id {
+    if auth_user_id != target_user_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
-    data.user_delete(user_id).await?;
-    s.broadcast(MessageSync::DeleteUser { id: user_id })?;
+    data.user_delete(target_user_id).await?;
+    s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -138,19 +137,15 @@ pub async fn user_delete(
 )]
 pub async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => user_id,
+        UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    // TODO: allow reading/updating bot users
-    if user_id != target_user_id {
-        return Err(Error::NotFound);
-    }
     let data = s.data();
-    let user = data.user_get(user_id).await?;
+    let user = data.user_get(target_user_id).await?;
     Ok(Json(user))
 }
 

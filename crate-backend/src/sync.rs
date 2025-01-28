@@ -252,11 +252,11 @@ impl Connection {
                 let perms = self.s.data().permission_room_get(user_id, room_id).await?;
                 perms.has(Permission::View)
             }
-            (Some(user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
-                if user_id == target_user_id {
+            (Some(auth_user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
+                if auth_user_id == target_user_id {
                     true
                 } else {
-                    let perms = self.s.data().permission_room_get(user_id, room_id).await?;
+                    let perms = self.s.data().permission_room_get(auth_user_id, room_id).await?;
                     perms.has(Permission::View)
                 }
             }
@@ -268,7 +268,7 @@ impl Connection {
                     .await?;
                 perms.has(Permission::View)
             }
-            (Some(user_id), AuthCheck::User(target_user_id)) => user_id == target_user_id,
+            (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
             (_, AuthCheck::Custom(b)) => b,
             (None, _) => false,
         };

@@ -904,20 +904,16 @@ export interface components {
 		 * @enum {string}
 		 */
 		ThreadVisibility: "Room";
-		User: {
+		User: components["schemas"]["UserType"] & {
 			description?: string | null;
 			id: components["schemas"]["UserId"];
-			is_alias: boolean;
-			is_bot: boolean;
-			is_system: boolean;
 			name: string;
-			parent_id?: null | components["schemas"]["UserId"];
+			state: components["schemas"]["UserState"];
 			status?: string | null;
 			version_id: components["schemas"]["UserVerId"];
 		};
 		UserCreateRequest: {
 			description?: string | null;
-			is_alias: boolean;
 			is_bot: boolean;
 			name: string;
 			status?: string | null;
@@ -926,11 +922,22 @@ export interface components {
 		UserId: string;
 		UserPatch: {
 			description?: string | null;
-			is_alias?: boolean | null;
-			is_bot?: boolean | null;
 			name?: string | null;
 			status?: string | null;
 		};
+		/** @enum {string} */
+		UserState: "Active" | "Suspended" | "Deleted";
+		UserType: "Default" | {
+			/** @description makes two users be considered the same user */
+			Alias: {
+				alias_id: components["schemas"]["UserId"];
+			};
+		} | {
+			/** @description automated account */
+			Bot: {
+				owner_id: components["schemas"]["UserId"];
+			};
+		} | "System";
 		/** Format: uuid */
 		UserVerId: string;
 	};

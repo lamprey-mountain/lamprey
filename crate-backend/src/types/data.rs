@@ -1,10 +1,7 @@
 use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
-    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
-    SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User,
-    UserId, UserVerId,
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserState, UserType, UserVerId
 };
 use uuid::Uuid;
 
@@ -24,11 +21,8 @@ pub struct DbUser {
     pub name: String,
     pub description: Option<String>,
     pub status: Option<String>,
-    // email: Option<String>,
-    // avatar: Option<String>,
-    pub is_bot: bool,
-    pub is_alias: bool,
-    pub is_system: bool,
+    pub r#type: DbUserType,
+    pub state: DbUserState,
 }
 
 pub struct UserCreate {
@@ -37,8 +31,6 @@ pub struct UserCreate {
     pub description: Option<String>,
     pub status: Option<String>,
     pub is_bot: bool,
-    pub is_alias: bool,
-    pub is_system: bool,
 }
 
 #[derive(sqlx::Type)]
@@ -57,18 +49,46 @@ impl From<DbRoomMembership> for RoomMembership {
     }
 }
 
+#[derive(Deserialize, sqlx::Type)]
+#[sqlx(type_name = "user_type")]
+pub enum DbUserType {
+    Default,
+    Alias,
+    Bot,
+    System,
+}
+
+#[derive(Deserialize, sqlx::Type)]
+#[sqlx(type_name = "user_state")]
+pub enum DbUserState {
+    Active,
+    Suspended,
+    Deleted,
+}
+
 impl From<DbUser> for User {
     fn from(row: DbUser) -> Self {
         User {
             id: row.id,
             version_id: row.version_id,
-            parent_id: row.parent_id.map(UserId),
             name: row.name,
             description: row.description,
             status: row.status,
-            is_bot: row.is_bot,
-            is_alias: row.is_alias,
-            is_system: row.is_system,
+            user_type: match row.r#type {
+                DbUserType::Default => UserType::Default,
+                DbUserType::Alias => UserType::Alias {
+                    alias_id: row.parent_id.unwrap().into(),
+                },
+                DbUserType::Bot => UserType::Bot {
+                    owner_id: row.parent_id.unwrap().into(),
+                },
+                DbUserType::System => UserType::System,
+            },
+            state: match row.state {
+                DbUserState::Active => UserState::Active,
+                DbUserState::Suspended => UserState::Suspended,
+                DbUserState::Deleted => UserState::Deleted,
+            },
         }
     }
 }

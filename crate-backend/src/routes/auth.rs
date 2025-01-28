@@ -83,8 +83,6 @@ pub async fn auth_oauth_redirect(
                     description: None,
                     status: None,
                     is_bot: false,
-                    is_alias: false,
-                    is_system: false,
                 })
                 .await?;
             data.auth_oauth_put("discord".into(), user.id, dc.user.id)

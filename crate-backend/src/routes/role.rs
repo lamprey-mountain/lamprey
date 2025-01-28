@@ -212,11 +212,11 @@ pub async fn role_member_list(
 )]
 pub async fn role_member_add(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     d.role_member_put(target_user_id, role_id).await?;
@@ -243,11 +243,11 @@ pub async fn role_member_add(
 )]
 pub async fn role_member_remove(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     d.role_member_delete(target_user_id, role_id).await?;

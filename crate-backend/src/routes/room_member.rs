@@ -55,11 +55,11 @@ pub async fn room_member_list(
 )]
 pub async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     Ok(Json(res))
@@ -81,14 +81,14 @@ pub async fn room_member_get(
 )]
 pub async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
-    if target_user_id != user_id {
+    if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberManage)?;
     }
 
@@ -120,13 +120,13 @@ pub async fn room_member_update(
 )]
 pub async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
-    if target_user_id != user_id {
+    if target_user_id == auth_user_id {
         d.room_member_delete(room_id, target_user_id).await?;
         s.broadcast(MessageSync::DeleteRoomMember {
             room_id,

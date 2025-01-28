@@ -16,6 +16,7 @@ pub mod sync;
 pub mod thread;
 pub mod thread_member;
 pub mod user;
+pub mod profile;
 
 pub use any::*;
 pub use ids::*;
@@ -33,3 +34,4 @@ pub use sync::*;
 pub use thread::*;
 pub use thread_member::*;
 pub use user::*;
+pub use profile::*;
