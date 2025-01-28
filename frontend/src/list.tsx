@@ -160,15 +160,20 @@ export function createList<T>(options: {
 
 			function handleScroll() {
 				const pos = wrapperEl()!.scrollTop;
+				const bottom = (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight)
 				setScrollPos(pos);
-				setIsAtBottom(
-					pos >= (wrapperEl()!.scrollHeight - wrapperEl()!.offsetHeight),
-				);
+				setIsAtBottom(pos >= bottom);
+				// TODO: maybe use css + trigger elements?
+				if (pos >= bottom - 200) {
+					options.onPaginate?.("forwards");
+				} else if (pos < 200) {
+					options.onPaginate?.("backwards");
+				}
 				// options.onScroll?.(pos);
 			}
 
 			// TODO: onScrollEnd might be useful
-			// TODO: set passive: true on scroll event
+			// TODO: set passive: true on scroll event?
 			return (
 				<ul
 					class="list"
