@@ -48,8 +48,10 @@ export interface paths {
 		/** Invite resolve */
 		get: operations["invite_resolve"];
 		put?: never;
-		post?: never;
-		delete?: never;
+		/** Invite use */
+		post: operations["invite_use"];
+		/** Invite delete */
+		delete: operations["invite_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -128,6 +130,138 @@ export interface paths {
 		head?: never;
 		/** edit a room */
 		patch: operations["room_edit"];
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/invite": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Invite room list
+		 * @description List invites that go to a room
+		 */
+		get: operations["invite_room_list"];
+		put?: never;
+		/**
+		 * Invite room create
+		 * @description Create an invite that goes to a room
+		 */
+		post: operations["invite_room_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/member": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Room member list */
+		put: operations["room_member_list"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/member/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Room member get */
+		put: operations["room_member_get"];
+		post?: never;
+		/** Room member delete (kick/leave) */
+		delete: operations["room_member_delete"];
+		options?: never;
+		head?: never;
+		/** Room member update */
+		patch: operations["room_member_update"];
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/role": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Role list */
+		get: operations["role_list"];
+		put?: never;
+		/** Role create */
+		post: operations["role_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/role/{role_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Role get */
+		get: operations["role_get"];
+		put?: never;
+		post?: never;
+		/** Role delete */
+		delete: operations["role_delete"];
+		options?: never;
+		head?: never;
+		/** Role update */
+		patch: operations["role_update"];
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/role/{role_id}/member": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Role list members */
+		get: operations["role_member_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Role member apply */
+		put: operations["role_member_add"];
+		post?: never;
+		/** Role member remove */
+		delete: operations["role_member_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/thread": {
@@ -533,8 +667,7 @@ export interface components {
 			has_more: boolean;
 			items: (components["schemas"]["SessionStatus"] & {
 				id: components["schemas"]["SessionId"];
-				readonly name?: string | null;
-				token: components["schemas"]["SessionToken"];
+				name?: string | null;
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -591,8 +724,24 @@ export interface components {
 			room_id: components["schemas"]["RoomId"];
 			version_id: components["schemas"]["RoleVerId"];
 		};
+		RoleCreateRequest: {
+			description?: string | null;
+			is_default?: boolean;
+			is_mentionable?: boolean;
+			is_self_applicable?: boolean;
+			name: string;
+			permissions?: components["schemas"]["Permission"][];
+		};
 		/** Format: uuid */
 		RoleId: string;
+		RolePatch: {
+			description?: string | null;
+			is_default?: boolean | null;
+			is_mentionable?: boolean | null;
+			is_self_applicable?: boolean | null;
+			name?: string | null;
+			permissions?: components["schemas"]["Permission"][] | null;
+		};
 		/** Format: uuid */
 		RoleVerId: string;
 		/** @description A room */
@@ -620,7 +769,11 @@ export interface components {
 			override_name?: string | null;
 			roles: components["schemas"]["Role"][];
 			room_id: components["schemas"]["RoomId"];
-			user: components["schemas"]["User"];
+			user_id: components["schemas"]["UserId"];
+		};
+		RoomMemberPatch: {
+			override_description?: string | null;
+			override_name?: string | null;
 		};
 		/** @enum {string} */
 		RoomMembership: "Join" | "Ban";
@@ -635,8 +788,7 @@ export interface components {
 		};
 		Session: components["schemas"]["SessionStatus"] & {
 			id: components["schemas"]["SessionId"];
-			readonly name?: string | null;
-			token: components["schemas"]["SessionToken"];
+			name?: string | null;
 		};
 		SessionCreate: {
 			name?: string | null;
@@ -659,6 +811,9 @@ export interface components {
 			user_id: components["schemas"]["UserId"];
 		};
 		SessionToken: string;
+		SessionWithToken: components["schemas"]["Session"] & {
+			token: components["schemas"]["SessionToken"];
+		};
 		Thread: {
 			creator_id: components["schemas"]["UserId"];
 			description?: string | null;
@@ -790,6 +945,48 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["InviteWithMetadata"];
 				};
+			};
+		};
+	};
+	invite_use: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The code identifying this invite */
+				invite_code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description The code identifying this invite */
+				invite_code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -994,6 +1191,343 @@ export interface operations {
 			};
 		};
 	};
+	invite_room_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_room_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description User id */
+				user_id: components["schemas"]["UserId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description User id */
+				user_id: components["schemas"]["UserId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description User id */
+				user_id: components["schemas"]["UserId"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomMemberPatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoleCreateRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Role"];
+				};
+			};
+		};
+	};
+	role_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RolePatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description success */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_member_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_member_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+				/** @description User id */
+				user_id: components["schemas"]["UserId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_member_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["RoomId"];
+				/** @description Role id */
+				role_id: components["schemas"]["RoleId"];
+				/** @description User id */
+				user_id: components["schemas"]["UserId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	thread_list: {
 		parameters: {
 			query?: {
@@ -1120,7 +1654,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["Session"];
+					"application/json": components["schemas"]["SessionWithToken"];
 				};
 			};
 		};
