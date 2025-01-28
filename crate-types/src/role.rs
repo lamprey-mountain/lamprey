@@ -24,10 +24,20 @@ pub struct Role {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoleCreateRequest {
     pub name: String,
+    
+    #[serde(default)]
     pub description: Option<String>,
+    
+    #[serde(default)]
     pub permissions: Vec<Permission>,
+    
+    #[serde(default)]
     pub is_self_applicable: bool,
+    
+    #[serde(default)]
     pub is_mentionable: bool,
+    
+    #[serde(default)]
     pub is_default: bool,
 }
 
