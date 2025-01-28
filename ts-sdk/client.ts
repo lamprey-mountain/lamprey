@@ -71,8 +71,6 @@ export function createClient(opts: ClientOptions): Client {
 				opts.onSync(msg.data);
 			} else if (msg.op === "Error") {
 				console.error(msg.error);
-				setState("reconnecting");
-				ws.close();
 			} else if (msg.op === "Ready") {
 				opts.onReady(msg);
 				resume = { conn: msg.conn, seq: msg.seq };
