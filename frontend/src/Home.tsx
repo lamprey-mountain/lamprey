@@ -60,7 +60,7 @@ export const Home = () => {
 		localStorage.clear();
 		location.reload(); // TODO: less hacky logout
 	}
-	
+
 	const api = useApi();
 
 	return (

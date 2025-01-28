@@ -182,7 +182,7 @@ export function ApiProvider(
 		tempCreateSession,
 	};
 
-	console.log("provider created", api)
+	console.log("provider created", api);
 	return (
 		<ApiContext.Provider value={api}>
 			{props.children}

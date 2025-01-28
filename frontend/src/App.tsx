@@ -44,7 +44,7 @@ const App: Component = () => {
 // HACK: this exists so the api context exists
 const App2 = (props: any) => {
 	console.log("API", useApi());
-	
+
 	const [data, update] = createStore<Data>(defaultData);
 
 	const ctx: ChatCtx = {
@@ -94,19 +94,19 @@ const App2 = (props: any) => {
 			ctx.dispatch({ do: "server.init_session" });
 		});
 	}
-	
+
 	props.events.on("sync", (msg) => {
 		ctx.dispatch({
 			do: "server",
 			msg,
 		});
 	});
-	
+
 	return (
 		<chatctx.Provider value={ctx}>
 			<Main />
 		</chatctx.Provider>
 	);
-}
+};
 
 export default App;
