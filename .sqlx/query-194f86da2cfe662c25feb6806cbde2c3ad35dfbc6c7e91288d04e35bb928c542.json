@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            RETURNING id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system\n        ",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\"\n            FROM usr WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -35,31 +35,41 @@
       },
       {
         "ordinal": 6,
-        "name": "is_bot",
-        "type_info": "Bool"
+        "name": "state: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_state",
+            "kind": {
+              "Enum": [
+                "Active",
+                "Suspended",
+                "Deleted"
+              ]
+            }
+          }
+        }
       },
       {
         "ordinal": 7,
-        "name": "is_alias",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 8,
-        "name": "is_system",
-        "type_info": "Bool"
+        "name": "type: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Alias",
+                "Bot",
+                "System"
+              ]
+            }
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Text",
-        "Text",
-        "Bool",
-        "Bool",
-        "Bool"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -70,9 +80,8 @@
       true,
       true,
       false,
-      false,
       false
     ]
   },
-  "hash": "f02aa71276acb5f10dc66ed5e608c0757a7d2e4287511505e2ed50b7d44f0685"
+  "hash": "194f86da2cfe662c25feb6806cbde2c3ad35dfbc6c7e91288d04e35bb928c542"
 }

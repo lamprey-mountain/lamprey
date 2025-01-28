@@ -1,0 +1,117 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, status, can_fork, type, state)\n            VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)\n            RETURNING id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "state: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_state",
+            "kind": {
+              "Enum": [
+                "Active",
+                "Suspended",
+                "Deleted"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "type: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Alias",
+                "Bot",
+                "System"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "user_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Alias",
+                "Bot",
+                "System"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "user_state",
+            "kind": {
+              "Enum": [
+                "Active",
+                "Suspended",
+                "Deleted"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a70332580f494a2b6f1e8a786a7276bb08dc34d7a2c0d53b57ceb7aa89f44130"
+}
