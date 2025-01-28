@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            with\n            att_unnest as (select version_id, unnest(attachments) as media_id from message),\n            att_json as (\n                select version_id, json_agg(row_to_json(media)) as attachments\n                from att_unnest\n                join media on att_unnest.media_id = media.id\n                group by att_unnest.version_id\n            ),\n            message_coalesced as (\n                select *\n                from (select *, row_number() over(partition by id order by version_id desc) as row_num\n                    from message)\n                where row_num = 1\n            )\n            SELECT\n                msg.type as \"message_type: DbMessageType\",\n                msg.id,\n                msg.thread_id, \n                msg.version_id,\n                msg.ordering,\n                msg.content,\n                msg.metadata,\n                msg.reply_id,\n                msg.override_name,\n                false as \"is_pinned!\",\n                row_to_json(usr) as \"author!\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\n            FROM message_coalesced AS msg\n            JOIN usr ON usr.id = msg.author_id\n            left JOIN att_json ON att_json.version_id = msg.version_id\n                 WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL\n        ",
+  "query": "\n            with\n            att_json as (\n                select version_id, json_agg(row_to_json(media) order by ord) as attachments\n                from message, unnest(message.attachments) with ordinality as att(id, ord)\n                join media on att.id = media.id\n                group by message.version_id\n            )\n            SELECT\n                msg.type as \"message_type: DbMessageType\",\n                msg.id,\n                msg.thread_id, \n                msg.version_id,\n                msg.ordering,\n                msg.content,\n                msg.metadata,\n                msg.reply_id,\n                msg.override_name,\n                false as \"is_pinned!\",\n                row_to_json(usr) as \"author!\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\n            FROM message AS msg\n            JOIN usr ON usr.id = msg.author_id\n            left JOIN att_json ON att_json.version_id = msg.version_id\n                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL\n        ",
   "describe": {
     "columns": [
       {
@@ -77,6 +77,7 @@
     "parameters": {
       "Left": [
         "Uuid",
+        "Uuid",
         "Uuid"
       ]
     },
@@ -95,5 +96,5 @@
       null
     ]
   },
-  "hash": "65afbdbcaf03100690ed20c3fa04f27e62767e4174f374ec2655f324aa9a9bc6"
+  "hash": "757a97ceadd8c65f2cc1c0932916b62310796f6f1aec50e9a7c7dc49f64bf3b1"
 }

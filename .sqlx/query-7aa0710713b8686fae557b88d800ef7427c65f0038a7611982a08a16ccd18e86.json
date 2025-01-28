@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT room_id, user_id, membership as \"membership: _\", override_name, override_description\n            FROM room_member\n        \tWHERE room_id = $1 AND user_id > $2 AND user_id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "override_description",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "7aa0710713b8686fae557b88d800ef7427c65f0038a7611982a08a16ccd18e86"
+}

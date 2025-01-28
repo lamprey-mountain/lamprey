@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT \n            \tr.user_id,\n            \tr.room_id,\n                r.membership as \"membership: _\",\n                r.override_name,\n                r.override_description\n            FROM room_member AS r\n            JOIN role_member ON role_member.user_id = r.user_id\n        \tWHERE room_id = $1 AND r.user_id > $2 AND r.user_id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "override_description",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "765d9bc86c66d184215f25818d3ad473074de97d4e80c259fc93d386d63b44f0"
+}

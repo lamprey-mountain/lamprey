@@ -1,0 +1,108 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT\n            \tid,\n            \tdescription,\n            \tis_default,\n            \tis_mentionable,\n            \tpermissions as \"permissions: _\",\n            \tversion_id,\n            \troom_id,\n            \tis_self_applicable,\n            \tname\n            FROM role\n        \tWHERE room_id = $1 AND id > $2 AND id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_default",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "RoomManage",
+                      "ThreadCreate",
+                      "ThreadManage",
+                      "ThreadDelete",
+                      "MessageCreate",
+                      "MessageFilesEmbeds",
+                      "MessagePin",
+                      "MessageDelete",
+                      "MessageMassMention",
+                      "MemberKick",
+                      "MemberBan",
+                      "MemberManage",
+                      "InviteCreate",
+                      "InviteManage",
+                      "RoleManage",
+                      "RoleApply",
+                      "View",
+                      "MessageEdit"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_self_applicable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "06bfe834d5fc22a8c1c780b375757212dce4f30b9a7f139922673e30fddfb61e"
+}
