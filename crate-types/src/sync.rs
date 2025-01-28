@@ -4,9 +4,11 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::{InviteTargetId, InviteWithMetadata};
+
 use super::{
-    Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
-    Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
+    InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
+    SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,7 +93,7 @@ pub enum MessageSync {
     UpsertUser {
         user: User,
     },
-    UpsertMember {
+    UpsertRoomMember {
         member: RoomMember,
     },
     UpsertSession {
@@ -101,7 +103,7 @@ pub enum MessageSync {
         role: Role,
     },
     UpsertInvite {
-        invite: Invite,
+        invite: InviteWithMetadata,
     },
     DeleteMessage {
         thread_id: ThreadId,
@@ -117,17 +119,19 @@ pub enum MessageSync {
     },
     DeleteSession {
         id: SessionId,
+        user_id: Option<UserId>,
     },
     DeleteRole {
         room_id: RoomId,
         role_id: RoleId,
     },
-    DeleteMember {
+    DeleteRoomMember {
         room_id: RoomId,
         user_id: UserId,
     },
     DeleteInvite {
         code: InviteCode,
+        target: InviteTargetId,
     },
     Webhook {
         hook_id: Uuid,

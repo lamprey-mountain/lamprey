@@ -14,6 +14,7 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoomMember for Postgres {
+    // FIXME: apply other attributes in RoomMemberPut
     async fn room_member_put(&self, put: RoomMemberPut) -> Result<()> {
         let membership: DbRoomMembership = put.membership.into();
         query!(

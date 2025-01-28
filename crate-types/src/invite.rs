@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize, Serializer};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::PaginationKey;
+use crate::{PaginationKey, RoomId, ThreadId, UserId};
 
 use super::{Room, Thread, User};
 
@@ -62,6 +62,24 @@ pub enum InviteTarget {
     Room { room: Room },
 
     Thread { room: Room, thread: Thread },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum InviteTargetId {
+    User {
+        user_id: UserId,
+    },
+
+    Room {
+        room_id: RoomId,
+    },
+
+    Thread {
+        room_id: RoomId,
+        thread_id: ThreadId,
+    },
 }
 
 // more flexible invite restrictions?

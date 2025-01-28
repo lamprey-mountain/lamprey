@@ -7,8 +7,8 @@ use http::StatusCode;
 use nanoid::nanoid;
 use serde::Serialize;
 use types::{
-    Invite, InviteCode, InviteTarget, InviteWithMetadata, PaginationQuery, PaginationResponse,
-    Permission, RoomId, RoomMemberPut, RoomMembership,
+    Invite, InviteCode, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMemberPut, RoomMembership,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -36,20 +36,34 @@ pub async fn invite_delete(
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
-    let has_perm = match invite.invite.target {
-        InviteTarget::User { user } => user.id == user_id,
-        InviteTarget::Room { room } => d
-            .permission_room_get(user_id, room.id)
-            .await?
-            .has(Permission::InviteManage),
-        InviteTarget::Thread { thread, .. } => d
-            .permission_thread_get(user_id, thread.id)
-            .await?
-            .has(Permission::InviteManage),
+    let (has_perm, id_target) = match invite.invite.target {
+        InviteTarget::User { user } => (
+            user.id == user_id,
+            InviteTargetId::User { user_id: user.id },
+        ),
+        InviteTarget::Room { room } => (
+            d.permission_room_get(user_id, room.id)
+                .await?
+                .has(Permission::InviteManage),
+            InviteTargetId::Room { room_id: room.id },
+        ),
+        InviteTarget::Thread { room, thread } => (
+            d.permission_thread_get(user_id, thread.id)
+                .await?
+                .has(Permission::InviteManage),
+            InviteTargetId::Thread {
+                room_id: room.id,
+                thread_id: thread.id,
+            },
+        ),
     };
     let can_delete = user_id == invite.invite.creator.id || has_perm;
     if can_delete {
-        d.invite_delete(code).await?;
+        d.invite_delete(code.clone()).await?;
+        s.broadcast(MessageSync::DeleteInvite {
+            code,
+            target: id_target,
+        })?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -128,9 +142,11 @@ pub async fn invite_use(
             })
             .await?;
             d.role_apply_default(room.id, user_id).await?;
+            let member = d.room_member_get(room.id, user_id).await?;
+            s.broadcast(MessageSync::UpsertRoomMember { member })?;
         }
     }
-    Ok(StatusCode::OK)
+    Ok(())
 }
 
 /// Invite room create
@@ -162,6 +178,9 @@ pub async fn invite_room_create(
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_room(room_id, user_id, code.clone()).await?;
     let invite = d.invite_select(code).await?;
+    s.broadcast(MessageSync::UpsertInvite {
+        invite: invite.clone(),
+    })?;
     Ok((StatusCode::CREATED, Json(invite)))
 }
 

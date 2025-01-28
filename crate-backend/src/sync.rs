@@ -4,7 +4,10 @@ use std::{collections::VecDeque, sync::Arc};
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
-use types::{MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, ThreadId};
+use types::{
+    InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
+    Session, ThreadId, UserId,
+};
 
 use crate::error::{Error, Result};
 use crate::ServerState;
@@ -40,6 +43,8 @@ enum ConnectionState {
 enum AuthCheck {
     Custom(bool),
     Room(RoomId),
+    RoomOrUser(RoomId, UserId),
+    User(UserId),
     Thread(ThreadId),
 }
 
@@ -187,9 +192,9 @@ impl Connection {
             MessageSync::UpsertMessage { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::UpsertUser { user } => {
                 // TODO: more user upserts?
-                AuthCheck::Custom(session.user_id().is_some_and(|id| user.id == id))
+                AuthCheck::User(user.id)
             }
-            MessageSync::UpsertMember { member } => AuthCheck::Room(member.room_id),
+            MessageSync::UpsertRoomMember { member } => AuthCheck::Room(member.room_id),
             MessageSync::UpsertSession {
                 session: upserted_session,
             } => {
@@ -202,41 +207,39 @@ impl Connection {
                 AuthCheck::Custom(session.can_see(upserted_session))
             }
             MessageSync::UpsertRole { role } => AuthCheck::Room(role.room_id),
-            MessageSync::UpsertInvite { invite: _ } => {
-                // TODO
-                AuthCheck::Custom(false)
-            }
-            MessageSync::DeleteMessage {
-                thread_id,
-                message_id: _,
-            } => AuthCheck::Thread(*thread_id),
-            MessageSync::DeleteMessageVersion {
-                thread_id,
-                message_id: _,
-                version_id: _,
-            } => AuthCheck::Thread(*thread_id),
+            MessageSync::UpsertInvite { invite } => match &invite.invite.target {
+                InviteTarget::User { user } => AuthCheck::User(user.id),
+                InviteTarget::Room { room } => AuthCheck::Room(room.id),
+                InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
+            },
+            MessageSync::DeleteMessage { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::DeleteMessageVersion { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::DeleteUser { id } => {
                 // TODO
-                AuthCheck::Custom(session.user_id().is_some_and(|i| *id == i))
+                AuthCheck::User(*id)
             }
-            MessageSync::DeleteSession { id } => {
+            MessageSync::DeleteSession { id, user_id } => {
                 // TODO: send message when other sessions from the same user are deleted
                 if *id == session.id {
                     self.state = ConnectionState::Unauthed;
                     AuthCheck::Custom(true)
+                } else if let Some(user_id) = user_id {
+                    AuthCheck::User(*user_id)
                 } else {
                     AuthCheck::Custom(false)
                 }
             }
-            MessageSync::DeleteRole {
-                room_id,
-                role_id: _,
-            } => AuthCheck::Room(*room_id),
-            MessageSync::DeleteMember {
-                room_id,
-                user_id: _,
-            } => AuthCheck::Room(*room_id),
-            MessageSync::DeleteInvite { code: _ } => todo!(),
+            MessageSync::DeleteRole { room_id, .. } => AuthCheck::Room(*room_id),
+            MessageSync::DeleteRoomMember { room_id, user_id } => {
+                AuthCheck::RoomOrUser(*room_id, *user_id)
+            }
+            MessageSync::DeleteInvite { target, .. } => match target {
+                InviteTargetId::User { user_id } => {
+                    AuthCheck::Custom(session.user_id().is_some_and(|id| id == *user_id))
+                }
+                InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
+                InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            },
             MessageSync::Webhook {
                 hook_id: _,
                 data: _,
@@ -249,6 +252,14 @@ impl Connection {
                 let perms = self.s.data().permission_room_get(user_id, room_id).await?;
                 perms.has(Permission::View)
             }
+            (Some(user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
+                if user_id == target_user_id {
+                    true
+                } else {
+                    let perms = self.s.data().permission_room_get(user_id, room_id).await?;
+                    perms.has(Permission::View)
+                }
+            }
             (Some(user_id), AuthCheck::Thread(thread_id)) => {
                 let perms = self
                     .s
@@ -257,6 +268,7 @@ impl Connection {
                     .await?;
                 perms.has(Permission::View)
             }
+            (Some(user_id), AuthCheck::User(target_user_id)) => user_id == target_user_id,
             (_, AuthCheck::Custom(b)) => b,
             (None, _) => false,
         };

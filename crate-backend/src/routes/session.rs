@@ -5,8 +5,8 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::{
-    PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId, SessionPatch,
-    SessionStatus, SessionToken, SessionWithToken,
+    MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId,
+    SessionPatch, SessionStatus, SessionToken, SessionWithToken,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -91,7 +91,7 @@ pub async fn session_update(
     }
     data.session_update(session_id, patch).await?;
     let session = data.session_get(session_id).await?;
-    s.broadcast(types::MessageSync::UpsertSession {
+    s.broadcast(MessageSync::UpsertSession {
         session: session.clone(),
     })?;
     Ok((StatusCode::OK, Json(session)))
@@ -128,7 +128,10 @@ pub async fn session_delete(
     }
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(session_id).await?;
-    s.broadcast(types::MessageSync::DeleteSession { id: session_id })?;
+    s.broadcast(MessageSync::DeleteSession {
+        id: session_id,
+        user_id: target_session.user_id(),
+    })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

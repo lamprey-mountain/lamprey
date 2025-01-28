@@ -5,7 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
 use types::{
-    PaginationQuery, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId, UserId,
+    MessageSync, PaginationQuery, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId,
+    UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -48,6 +49,7 @@ pub async fn role_create(
             is_default: create.is_default,
         })
         .await?;
+    s.broadcast(MessageSync::UpsertRole { role: role.clone() })?;
     Ok((StatusCode::CREATED, Json(role)))
 }
 
@@ -81,6 +83,7 @@ pub async fn role_update(
     }
     d.role_update(room_id, role_id, patch).await?;
     let role = d.role_select(room_id, role_id).await?;
+    s.broadcast(MessageSync::UpsertRole { role: role.clone() })?;
     Ok(Json(role).into_response())
 }
 
@@ -110,6 +113,7 @@ pub async fn role_delete(
     let existing = d.role_member_count(role_id).await?;
     if existing == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
+        s.broadcast(MessageSync::DeleteRole { room_id, role_id })?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)
@@ -217,6 +221,9 @@ pub async fn role_member_add(
     perms.ensure(Permission::RoleApply)?;
     d.role_member_put(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
+    s.broadcast(MessageSync::UpsertRoomMember {
+        member: member.clone(),
+    })?;
     Ok(Json(member))
 }
 
@@ -245,6 +252,9 @@ pub async fn role_member_remove(
     perms.ensure(Permission::RoleApply)?;
     d.role_member_delete(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
+    s.broadcast(MessageSync::UpsertRoomMember {
+        member: member.clone(),
+    })?;
     Ok(Json(member))
 }
 

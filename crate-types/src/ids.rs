@@ -28,7 +28,6 @@ impl<T: Identifier> PaginationKey for T {
     fn max() -> Self {
         Uuid::max().into()
     }
-    
 }
 
 macro_rules! genid {

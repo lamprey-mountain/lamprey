@@ -4,7 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
-use types::{PaginationQuery, Permission, RoomId, RoomMemberPatch, UserId};
+use types::{MessageSync, PaginationQuery, Permission, RoomId, RoomMemberPatch, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
@@ -75,7 +75,6 @@ pub async fn room_member_get(
         (status = OK, description = "success"),
     )
 )]
-#[axum::debug_handler]
 pub async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
     Auth(user_id): Auth,
@@ -95,6 +94,9 @@ pub async fn room_member_update(
     if start == res {
         Ok(StatusCode::NOT_MODIFIED.into_response())
     } else {
+        s.broadcast(MessageSync::UpsertRoomMember {
+            member: res.clone(),
+        })?;
         Ok(Json(res).into_response())
     }
 }
@@ -122,6 +124,10 @@ pub async fn room_member_delete(
     perms.ensure_view()?;
     if target_user_id != user_id {
         d.room_member_delete(room_id, target_user_id).await?;
+        s.broadcast(MessageSync::DeleteRoomMember {
+            room_id,
+            user_id: target_user_id,
+        })?;
     } else {
         perms.ensure(Permission::MemberKick)?;
         // d.room_member_delete(room_id, target_user_id).await?;

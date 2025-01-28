@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use std::future::{ready, Future};
 use types::{
-    Invite, InviteCode, Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role,
-    RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId,
+    InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId,
+    Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId,
 };
 use uuid::Uuid;
 
@@ -44,7 +44,7 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
-    fn upsert_member(
+    fn upsert_room_member(
         &mut self,
         member: RoomMember,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
@@ -64,7 +64,7 @@ pub trait EventHandler: Send {
 
     fn upsert_invite(
         &mut self,
-        invite: Invite,
+        invite: InviteWithMetadata,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
@@ -105,7 +105,7 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
-    fn delete_member(
+    fn delete_room_member(
         &mut self,
         room_id: RoomId,
         user_id: UserId,
@@ -152,7 +152,7 @@ where
                 MessageSync::UpsertThread { thread } => self.upsert_thread(thread).await,
                 MessageSync::UpsertMessage { message } => self.upsert_message(message).await,
                 MessageSync::UpsertUser { user } => self.upsert_user(user).await,
-                MessageSync::UpsertMember { member } => self.upsert_member(member).await,
+                MessageSync::UpsertRoomMember { member } => self.upsert_room_member(member).await,
                 MessageSync::UpsertSession { session } => self.upsert_session(session).await,
                 MessageSync::UpsertRole { role } => self.upsert_role(role).await,
                 MessageSync::UpsertInvite { invite } => self.upsert_invite(invite).await,
@@ -169,14 +169,14 @@ where
                         .await
                 }
                 MessageSync::DeleteUser { id } => self.delete_user(id).await,
-                MessageSync::DeleteSession { id } => self.delete_session(id).await,
+                MessageSync::DeleteSession { id, .. } => self.delete_session(id).await,
                 MessageSync::DeleteRole { room_id, role_id } => {
                     self.delete_role(room_id, role_id).await
                 }
-                MessageSync::DeleteMember { room_id, user_id } => {
-                    self.delete_member(room_id, user_id).await
+                MessageSync::DeleteRoomMember { room_id, user_id } => {
+                    self.delete_room_member(room_id, user_id).await
                 }
-                MessageSync::DeleteInvite { code } => self.delete_invite(code).await,
+                MessageSync::DeleteInvite { code, .. } => self.delete_invite(code).await,
                 MessageSync::Webhook { hook_id, data } => self.webhook(hook_id, data).await,
             },
             MessagePayload::Error { error } => self.error(error).await,

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            insert into invite (target_type, target_id, code, creator_id)\n            values ('room', $1, $2, $3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5b506d490ede1c3261cd0921e76ad3f82cad9631dbcd2361b98a3983153dfd38"
+}
