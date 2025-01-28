@@ -47,7 +47,7 @@ async fn worker(s: Arc<ServerState>, mut ws: WebSocket) {
                             let _ = ws.send(err.into()).await;
                             let _ = ws
                                 .send(Message::text(serde_json::to_string(&MessageEnvelope {
-                                    payload: MessagePayload::Reconnect { can_resume: true },
+                                    payload: MessagePayload::Reconnect { can_resume: false },
                                 }).expect("can always serialize message")))
                                 .await;
                             let _ = ws.close().await;
