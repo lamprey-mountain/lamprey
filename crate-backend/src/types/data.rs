@@ -1,9 +1,7 @@
 use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
-    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
-    SessionToken, Thread, ThreadId, User, UserId, UserVerId,
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserVerId
 };
 use uuid::Uuid;
 
@@ -88,15 +86,13 @@ pub struct DbThread {
     pub id: ThreadId,
     pub room_id: RoomId,
     pub creator_id: UserId,
+    pub version_id: ThreadVerId,
     pub name: String,
     pub description: Option<String>,
-    pub is_closed: bool,
-    pub is_locked: bool,
-    pub is_pinned: bool,
-    pub is_unread: bool,
     pub last_version_id: MessageId,
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
+    pub is_unread: bool,
 }
 
 pub struct ThreadCreate {
@@ -104,9 +100,6 @@ pub struct ThreadCreate {
     pub creator_id: UserId,
     pub name: String,
     pub description: Option<String>,
-    pub is_closed: bool,
-    pub is_locked: bool,
-    pub is_pinned: bool,
 }
 
 // #[sqlx(type_name = "thread_type")]
@@ -120,15 +113,17 @@ impl From<DbThread> for Thread {
             id: row.id,
             room_id: row.room_id,
             creator_id: row.creator_id,
+            version_id: row.version_id,
             name: row.name,
             description: row.description,
-            is_closed: row.is_closed,
-            is_locked: row.is_locked,
-            is_pinned: row.is_pinned,
-            is_unread: row.is_unread,
-            last_version_id: row.last_version_id,
-            last_read_id: row.last_read_id.map(Into::into),
-            message_count: row.message_count.try_into().expect("count is negative?"),
+            info: ThreadInfo::Chat {
+                is_unread: row.is_unread,
+                last_version_id: row.last_version_id,
+                last_read_id: row.last_read_id.map(Into::into),
+                message_count: row.message_count.try_into().expect("count is negative?"),
+            },
+            state: ThreadState::Active,
+            visibility: ThreadVisibility::Room,
         }
     }
 }

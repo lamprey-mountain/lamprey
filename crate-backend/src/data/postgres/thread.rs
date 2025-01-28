@@ -35,14 +35,12 @@ async fn thread_get_with_executor(
             group by thread_id
         )
         select
-            thread.id as id,
-            thread.room_id as room_id,
-            thread.creator_id as creator_id,
-            thread.name as name,
+            thread.id,
+            thread.room_id,
+            thread.creator_id,
+            thread.version_id,
+            thread.name,
             thread.description,
-            thread.is_closed as is_closed,
-            thread.is_locked as is_locked,
-            false as "is_pinned!",
             coalesce(count, 0) as "message_count!",
             last_version_id as "last_version_id!",
             unread.version_id as "last_read_id?",
@@ -68,16 +66,14 @@ impl DataThread for Postgres {
         let thread_id = Uuid::now_v7();
         query!(
             "
-			INSERT INTO thread (id, creator_id, room_id, name, description, is_closed, is_locked)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO thread (id, creator_id, room_id, name, description)
+			VALUES ($1, $2, $3, $4, $5)
         ",
             thread_id,
             create.creator_id.into_inner(),
             create.room_id.into_inner(),
             create.name,
             create.description,
-            create.is_closed,
-            create.is_locked,
         )
         .execute(&self.pool)
         .await?;
@@ -118,14 +114,12 @@ impl DataThread for Postgres {
             group by thread_id
         )
         select
-            thread.id as id,
-            thread.room_id as room_id,
-            thread.creator_id as creator_id,
-            thread.name as name,
+            thread.id,
+            thread.room_id,
+            thread.creator_id,
+            thread.name,
+            thread.version_id,
             thread.description,
-            thread.is_closed as is_closed,
-            thread.is_locked as is_locked,
-            false as "is_pinned!",
             coalesce(count, 0) as "message_count!",
             last_version_id as "last_version_id!",
             unread.version_id as "last_read_id?",
@@ -185,18 +179,13 @@ impl DataThread for Postgres {
             UPDATE thread SET
                 version_id = $2,
                 name = $3, 
-                description = $4,
-                is_closed = $5,
-                is_locked = $6
+                description = $4
             WHERE id = $1
         "#,
             thread_id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(thread.name),
             patch.description.unwrap_or(thread.description),
-            patch.is_closed.unwrap_or(thread.is_closed),
-            patch.is_locked.unwrap_or(thread.is_locked),
-            // patch.is_pinned.unwrap_or(room.is_pinned),
         )
         .execute(&mut *tx)
         .await?;

@@ -49,9 +49,6 @@ async fn thread_create(
             creator_id: user_id,
             name: json.name.clone(),
             description: json.description.clone(),
-            is_closed: json.is_closed.unwrap_or(false),
-            is_locked: json.is_locked.unwrap_or(false),
-            is_pinned: json.is_pinned.unwrap_or(false),
         })
         .await?;
     let starter_message_id = data
@@ -64,9 +61,6 @@ async fn thread_create(
             metadata: Some(json!({
                 "name": json.name,
                 "description": json.description,
-                "is_closed": json.is_closed.unwrap_or(false),
-                "is_locked": json.is_locked.unwrap_or(false),
-                "is_pinned": json.is_pinned.unwrap_or(false),
             })),
             reply_id: None,
             override_name: None,
