@@ -87,8 +87,23 @@ impl DataRole for Postgres {
         })
     }
 
-    async fn role_delete(&self, _room_id: RoomId, _role_id: RoleId) -> Result<()> {
-        todo!()
+    async fn role_delete(&self, _room_id: RoomId, role_id: RoleId) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        query!(
+            "DELETE FROM role_member WHERE role_id = $1",
+            role_id.into_inner()
+        )
+        .execute(&mut *tx)
+        .await?;
+        query!(
+            "DELETE FROM role WHERE id = $1",
+            role_id.into_inner()
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
