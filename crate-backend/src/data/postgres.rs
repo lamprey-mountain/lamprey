@@ -5,6 +5,8 @@ use super::Data;
 #[derive(Debug)]
 pub struct Postgres {
     pub(crate) pool: PgPool,
+    // TODO: make postgres use one transaction + smaller queries?
+    // pub(crate) conn: PgConnection,
 }
 
 impl Data for Postgres {}

@@ -81,3 +81,4 @@ impl DataAuditLogs for Postgres {
         Ok(())
     }
 }
+

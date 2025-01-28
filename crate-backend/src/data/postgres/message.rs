@@ -1,9 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{
     DbMessage, DbMessageType, Message, MessageCreate, MessageId, MessageVerId, PaginationDirection,
     PaginationQuery, PaginationResponse, ThreadId,
@@ -67,38 +68,14 @@ impl DataMessage for Postgres {
     }
 
     async fn message_get(&self, thread_id: ThreadId, id: MessageId) -> Result<Message> {
-        let row = query_as!(DbMessage, r#"
-            with
-            att_json as (
-                select version_id, json_agg(row_to_json(media) order by ord) as attachments
-                from message, unnest(message.attachments) with ordinality as att(id, ord)
-                join media on att.id = media.id
-                group by message.version_id
-            ),
-            message_coalesced as (
-                select *
-                from (select *, row_number() over(partition by id order by version_id desc) as row_num
-                    from message)
-                where row_num = 1
-            )
-            SELECT
-                msg.type as "message_type: DbMessageType",
-                msg.id,
-                msg.thread_id, 
-                msg.version_id,
-                msg.ordering,
-                msg.content,
-                msg.metadata,
-                msg.reply_id,
-                msg.override_name,
-                false as "is_pinned!",
-                row_to_json(usr) as "author!",
-                coalesce(att_json.attachments, '[]'::json) as "attachments!"
-            FROM message_coalesced AS msg
-            JOIN usr ON usr.id = msg.author_id
-            left JOIN att_json ON att_json.version_id = msg.version_id
-                 WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL
-        "#, thread_id.into_inner(), id.into_inner()).fetch_one(&self.pool).await?;
+        let row = query_file_as!(
+            DbMessage,
+            "sql/message_get.sql",
+            thread_id.into_inner(),
+            id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(row.into())
     }
 
@@ -108,81 +85,20 @@ impl DataMessage for Postgres {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let items = query_as!(
-            DbMessage,
-            r#"
-            with
-            att_json as (
-                select version_id, json_agg(row_to_json(media) order by ord) as attachments
-                from message, unnest(message.attachments) with ordinality as att(id, ord)
-                join media on att.id = media.id
-                group by message.version_id
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_paginate.sql",
+                thread_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
             ),
-            message_coalesced as (
-                select *
-                from (select *, row_number() over(partition by id order by version_id desc) as row_num
-                    from message)
-                where row_num = 1
-            )
-        select
-            msg.type as "message_type: DbMessageType",
-            msg.id,
-            msg.thread_id, 
-            msg.version_id,
-            msg.ordering,
-            msg.content,
-            msg.metadata,
-            msg.reply_id,
-            msg.override_name,
-            row_to_json(usr) as "author!: serde_json::Value",
-            coalesce(att_json.attachments, '[]'::json) as "attachments!: serde_json::Value",
-            false as "is_pinned!"
-        from message_coalesced as msg
-        join usr on usr.id = msg.author_id
-        left join att_json on att_json.version_id = msg.version_id
-        where thread_id = $1 and msg.deleted_at is null
-          and msg.id > $2 AND msg.id < $3
-		order by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5
-            "#,
-            thread_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
+            query_file_scalar!("sql/message_count.sql", thread_id.into_inner())
         )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
-            r#"
-            with message_coalesced as (
-                select *
-                from (select *, row_number() over(partition by id order by version_id desc) as row_num
-                    from message)
-                where row_num = 1
-            )
-            select count(*) from message_coalesced where thread_id = $1
-            "#,
-            thread_id.into_inner()
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
     }
 
     async fn message_delete(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
@@ -203,32 +119,15 @@ impl DataMessage for Postgres {
         message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<Message> {
-        let row = query_as!(DbMessage, r#"
-            with
-            att_json as (
-                select version_id, json_agg(row_to_json(media) order by ord) as attachments
-                from message, unnest(message.attachments) with ordinality as att(id, ord)
-                join media on att.id = media.id
-                group by message.version_id
-            )
-            SELECT
-                msg.type as "message_type: DbMessageType",
-                msg.id,
-                msg.thread_id, 
-                msg.version_id,
-                msg.ordering,
-                msg.content,
-                msg.metadata,
-                msg.reply_id,
-                msg.override_name,
-                false as "is_pinned!",
-                row_to_json(usr) as "author!",
-                coalesce(att_json.attachments, '[]'::json) as "attachments!"
-            FROM message AS msg
-            JOIN usr ON usr.id = msg.author_id
-            left JOIN att_json ON att_json.version_id = msg.version_id
-                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL
-        "#, thread_id.into_inner(), message_id.into_inner(), version_id.into_inner()).fetch_one(&self.pool).await?;
+        let row = query_file_as!(
+            DbMessage,
+            "sql/message_version_get.sql",
+            thread_id.into_inner(),
+            message_id.into_inner(),
+            version_id.into_inner()
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(row.into())
     }
 
@@ -257,70 +156,24 @@ impl DataMessage for Postgres {
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let items = query_as!(
-            DbMessage,
-            r#"
-            with
-            att_json as (
-                select version_id, json_agg(row_to_json(media) order by ord) as attachments
-                from message, unnest(message.attachments) with ordinality as att(id, ord)
-                join media on att.id = media.id
-                group by message.version_id
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                "sql/message_version_paginate.sql",
+                thread_id.into_inner(),
+                message_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r"select count(*) from message where thread_id = $1 and id = $2",
+                thread_id.into_inner(),
+                message_id.into_inner(),
             )
-        select
-            msg.type as "message_type: DbMessageType",
-            msg.id,
-            msg.thread_id, 
-            msg.version_id,
-            msg.ordering,
-            msg.content,
-            msg.metadata,
-            msg.reply_id,
-            msg.override_name,
-            row_to_json(usr) as "author!: serde_json::Value",
-            coalesce(att_json.attachments, '[]'::json) as "attachments!: serde_json::Value",
-            false as "is_pinned!"
-        from message as msg
-        join usr on usr.id = msg.author_id
-        left join att_json on att_json.version_id = msg.version_id
-        where thread_id = $1 and msg.id = $2 and msg.deleted_at is null
-          and msg.id > $3 AND msg.id < $4
-		order by (CASE WHEN $5 = 'f' THEN msg.version_id END), msg.version_id DESC LIMIT $6
-            "#,
-            thread_id.into_inner(),
-            message_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
-            r#"
-            select count(*) from message where thread_id = $1 and id = $2
-            "#,
-            thread_id.into_inner(),
-            message_id.into_inner(),
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
     }
 }

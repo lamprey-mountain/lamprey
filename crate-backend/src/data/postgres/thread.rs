@@ -1,9 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire, PgExecutor};
+use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{
     DbThread, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, Thread,
     ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, UserId,
@@ -12,53 +13,6 @@ use crate::types::{
 use crate::data::DataThread;
 
 use super::{Pagination, Postgres};
-
-async fn thread_get_with_executor(
-    exec: impl PgExecutor<'_>,
-    thread_id: ThreadId,
-    user_id: Option<UserId>,
-) -> Result<Thread> {
-    let row = query_as!(
-        DbThread,
-        r#"
-        with last_id as (
-            select thread_id, max(version_id) as last_version_id from message group by thread_id
-        ), message_coalesced AS (
-            select *
-            from (select *, row_number() over(partition by id order by version_id desc) as row_num
-                from message)
-            where row_num = 1
-        ),
-        message_count as (
-            select thread_id, count(*) as count
-            from message_coalesced
-            group by thread_id
-        )
-        select
-            thread.id,
-            thread.room_id,
-            thread.creator_id,
-            thread.version_id,
-            thread.name,
-            thread.description,
-            coalesce(count, 0) as "message_count!",
-            last_version_id as "last_version_id!",
-            unread.version_id as "last_read_id?",
-            coalesce(last_version_id != unread.version_id, true) as "is_unread!"
-        from thread
-        join message_count on message_count.thread_id = thread.id
-        join last_id on last_id.thread_id = thread.id
-        full outer join usr on true
-        left join unread on usr.id = unread.user_id and thread.id = unread.thread_id
-        where thread.id = $1 and usr.id = $2
-    "#,
-        thread_id.into_inner(),
-        user_id.map(|id| id.into_inner())
-    )
-    .fetch_one(exec)
-    .await?;
-    Ok(row.into())
-}
 
 #[async_trait]
 impl DataThread for Postgres {
@@ -83,9 +37,15 @@ impl DataThread for Postgres {
 
     /// get a thread, panics if there are no messages
     async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
-        let mut conn = self.pool.acquire().await?;
-        let thread = thread_get_with_executor(&mut *conn, thread_id, user_id).await?;
-        Ok(thread)
+        let thread = query_file_as!(
+            DbThread,
+            "sql/thread_get.sql",
+            thread_id.into_inner(),
+            user_id.map(|id| id.into_inner())
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(thread.into())
     }
 
     async fn thread_list(
@@ -95,73 +55,24 @@ impl DataThread for Postgres {
         pagination: PaginationQuery<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<_> = pagination.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let items = query_as!(
-            DbThread,
-            r#"
-        with last_id as (
-            select thread_id, max(version_id) as last_version_id from message group by thread_id
-        ), message_coalesced AS (
-            select *
-            from (select *, row_number() over(partition by id order by version_id desc) as row_num
-                from message)
-            where row_num = 1
-        ),
-        message_count as (
-            select thread_id, count(*) as count
-            from message_coalesced
-            group by thread_id
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbThread,
+                "sql/thread_paginate.sql",
+                room_id.into_inner(),
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM thread WHERE room_id = $1"#,
+                room_id.into_inner()
+            )
         )
-        select
-            thread.id,
-            thread.room_id,
-            thread.creator_id,
-            thread.name,
-            thread.version_id,
-            thread.description,
-            coalesce(count, 0) as "message_count!",
-            last_version_id as "last_version_id!",
-            unread.version_id as "last_read_id?",
-            coalesce(last_version_id != unread.version_id, true) as "is_unread!"
-        from thread
-        join message_count on message_count.thread_id = thread.id
-        join last_id on last_id.thread_id = thread.id
-        full outer join usr on true
-        left join unread on usr.id = unread.user_id and thread.id = unread.thread_id
-		where room_id = $1 AND usr.id = $2 AND thread.id > $3 AND thread.id < $4
-		order by (CASE WHEN $5 = 'f' THEN thread.id END), thread.id DESC LIMIT $6
-            "#,
-            room_id.into_inner(),
-            user_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
-            r#"SELECT count(*) FROM thread WHERE room_id = $1"#,
-            room_id.into_inner()
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
     }
 
     async fn thread_update(
@@ -172,7 +83,15 @@ impl DataThread for Postgres {
     ) -> Result<ThreadVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let thread = thread_get_with_executor(&mut *tx, thread_id, Some(user_id)).await?;
+        let thread = query_file_as!(
+            DbThread,
+            "sql/thread_get.sql",
+            thread_id.into_inner(),
+            user_id.into_inner(),
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        let thread: Thread = thread.into();
         let version_id = ThreadVerId(Uuid::now_v7());
         query!(
             r#"
@@ -193,3 +112,4 @@ impl DataThread for Postgres {
         Ok(version_id)
     }
 }
+

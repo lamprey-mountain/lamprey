@@ -4,6 +4,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{
     DbRoom, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId,
     RoomPatch, RoomVerId, UserId,
@@ -55,45 +56,28 @@ impl DataRoom for Postgres {
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>> {
         let p: Pagination<_> = pagination.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let items = query_as!(
-            DbRoom,
-            "
-        	SELECT room.id, room.version_id, room.name, room.description FROM room_member
-        	JOIN room ON room_member.room_id = room.id
-        	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
-        	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
-        ",
-            user_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRoom,
+                "
+            	SELECT room.id, room.version_id, room.name, room.description FROM room_member
+            	JOIN room ON room_member.room_id = room.id
+            	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
+            	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
+                ",
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM room_member WHERE room_member.user_id = $1",
+                user_id.into_inner()
+            )
         )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
-            "SELECT count(*) FROM room_member WHERE room_member.user_id = $1",
-            user_id.into_inner()
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
     }
 
     async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {

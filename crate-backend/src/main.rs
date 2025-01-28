@@ -80,6 +80,12 @@ impl ServerState {
         })
     }
 
+    // fn acquire_data(&self) -> Box<dyn Data> {
+    //     Box::new(Postgres {
+    //         pool: self.pool.clone(),
+    //     })
+    // }
+
     fn services(self: &Arc<Self>) -> Services {
         Services::new(self.clone(), self.data())
     }

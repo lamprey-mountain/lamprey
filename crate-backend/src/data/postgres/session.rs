@@ -4,6 +4,7 @@ use types::{SessionPatch, SessionStatus, SessionToken};
 use uuid::Uuid;
 
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{
     DbSession, DbSessionStatus, PaginationDirection, PaginationQuery, PaginationResponse, Session,
     SessionId, UserId,
@@ -72,10 +73,8 @@ impl DataSession for Postgres {
         user_id: UserId,
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
         let p: Pagination<_> = pagination.try_into()?;
-        let items = query_as!(
+        gen_paginate!(p, self.pool, query_as!(
             DbSession,
             r#"
         	SELECT id, user_id, token, status as "status: _", name FROM session
@@ -87,30 +86,10 @@ impl DataSession for Postgres {
             p.before.into_inner(),
             p.dir.to_string(),
             (p.limit + 1) as i32
-        )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
+        ), query_scalar!(
             "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
             user_id.into_inner()
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
+        ))
     }
 
     async fn session_delete(&self, session_id: SessionId) -> Result<()> {
@@ -149,3 +128,4 @@ impl DataSession for Postgres {
         Ok(())
     }
 }
+

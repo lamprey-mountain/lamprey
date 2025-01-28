@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::data::postgres::Pagination;
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{
     DbPermission, DbRole, PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch,
     RoleVerId, RoomId,
@@ -37,54 +38,37 @@ impl DataRole for Postgres {
         paginate: PaginationQuery<RoleId>,
     ) -> Result<PaginationResponse<Role>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let items = query_as!(
-            DbRole,
-            r#"
-        	SELECT
-            	id,
-            	description,
-            	is_default,
-            	is_mentionable,
-            	permissions as "permissions: _",
-            	version_id,
-            	room_id,
-            	is_self_applicable,
-            	name
-            FROM role
-        	WHERE room_id = $1 AND id > $2 AND id < $3
-        	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
-        "#,
-            room_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRole,
+                r#"
+            	SELECT
+                	id,
+                	description,
+                	is_default,
+                	is_mentionable,
+                	permissions as "permissions: _",
+                	version_id,
+                	room_id,
+                	is_self_applicable,
+                	name
+                FROM role
+            	WHERE room_id = $1 AND id > $2 AND id < $3
+            	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
+                "#,
+                room_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM role WHERE room_id = $1",
+                room_id.into_inner(),
+            )
         )
-        .fetch_all(&mut *tx)
-        .await?;
-        let total = query_scalar!(
-            "SELECT count(*) FROM role WHERE room_id = $1",
-            room_id.into_inner(),
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        tx.rollback().await?;
-        let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-        Ok(PaginationResponse {
-            items,
-            total: total.unwrap_or(0) as u64,
-            has_more,
-        })
     }
 
     async fn role_delete(&self, _room_id: RoomId, role_id: RoleId) -> Result<()> {

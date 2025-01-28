@@ -68,5 +68,8 @@ macro_rules! gen_paginate {
             total: total.unwrap_or(0) as u64,
             has_more,
         })
-    }}
+    }};
+    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr) => {
+        gen_paginate!($p, $pool, $qlist, $qtotal, Into::into)
+    };
 }

@@ -15,6 +15,7 @@ use crate::types::{
 
 pub mod postgres;
 
+// #[async_trait]
 pub trait Data:
     DataRoom
     + DataRoomMember
@@ -34,6 +35,8 @@ pub trait Data:
     + Send
     + Sync
 {
+    // async fn commit(self) -> Result<()>;
+    // async fn rollback(self) -> Result<()>;
 }
 
 #[async_trait]
