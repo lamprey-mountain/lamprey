@@ -8,6 +8,7 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use headers::ETag;
+use types::{AuditLog, AuditLogId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -123,6 +124,32 @@ async fn room_edit(
     Ok(Json(room))
 }
 
+/// Fetch audit logs
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/logs",
+    params(
+        ("room_id", description = "Room id"),
+    ),
+    tags = ["room"],
+    responses(
+        (status = 200, description = "fetch audit logs success", body = PaginationResponse<AuditLog>),
+    )
+)]
+async fn room_audit_logs(
+    Path(room_id): Path<RoomId>,
+    Query(paginate): Query<PaginationQuery<AuditLogId>>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = data.permission_room_get(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoomManage)?;
+    let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
+    Ok(Json(logs))
+}
+
 // /// ack message
 // ///
 // /// Mark all threads in a room as read.
@@ -194,6 +221,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_get))
         .routes(routes!(room_list))
         .routes(routes!(room_edit))
+        .routes(routes!(room_audit_logs))
     // .routes(routes!(room_ack))
     // .routes(routes!(dm_init))
     // .routes(routes!(dm_get))

@@ -24,5 +24,6 @@ mod thread;
 mod unread;
 mod user;
 mod util;
+mod audit_logs;
 
 pub use util::Pagination;

@@ -42,3 +42,31 @@ impl<K: PaginationKey> TryInto<Pagination<K>> for PaginationQuery<K> {
         })
     }
 }
+
+#[macro_export]
+macro_rules! gen_paginate {
+    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $map:expr) => {{
+        let mut conn = $pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+
+        let items = $qlist.fetch_all(&mut *tx).await?;
+        let total = $qtotal.fetch_one(&mut *tx).await?;
+        let has_more = items.len() > $p.limit as usize;
+        let mut items: Vec<_> = items
+            .into_iter()
+            .take($p.limit as usize)
+            .map($map)
+            .collect();
+        if $p.dir == PaginationDirection::B {
+            items.reverse();
+        }
+        
+        // tx intentionally dropped to rollback here
+        
+        Ok(PaginationResponse {
+            items,
+            total: total.unwrap_or(0) as u64,
+            has_more,
+        })
+    }}
+}

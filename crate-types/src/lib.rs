@@ -17,6 +17,7 @@ pub mod thread;
 pub mod thread_member;
 pub mod user;
 pub mod profile;
+pub mod audit_logs;
 
 pub use any::*;
 pub use ids::*;
@@ -35,3 +36,4 @@ pub use thread::*;
 pub use thread_member::*;
 pub use user::*;
 pub use profile::*;
+pub use audit_logs::*;

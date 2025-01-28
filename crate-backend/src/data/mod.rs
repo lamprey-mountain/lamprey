@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use types::{
-    InviteWithMetadata, RoomMember, RoomMemberPatch, SearchMessageRequest, SessionPatch,
-    SessionStatus, SessionToken,
+    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken
 };
 use uuid::Uuid;
 
@@ -31,6 +30,7 @@ pub trait Data:
     + DataUser
     + DataSearch
     + DataAuth
+    + DataAuditLogs
     + Send
     + Sync
 {
@@ -264,4 +264,20 @@ pub trait DataSearch {
         query: SearchMessageRequest,
         paginate: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+}
+
+#[async_trait]
+pub trait DataAuditLogs {
+    async fn audit_logs_room_fetch(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<AuditLogId>,
+    ) -> Result<PaginationResponse<AuditLog>>;
+    async fn audit_logs_room_append(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        reason: Option<String>,
+        payload: MessageSync,
+    ) -> Result<()>;
 }

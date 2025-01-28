@@ -4,12 +4,14 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{InviteTargetId, InviteWithMetadata};
+use crate::{InviteTarget, InviteTargetId, InviteWithMetadata};
 
 use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
     SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
+
+use serde_json::Value as JsonValue;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -106,10 +108,12 @@ pub enum MessageSync {
         invite: InviteWithMetadata,
     },
     DeleteMessage {
+        room_id: RoomId,
         thread_id: ThreadId,
         message_id: MessageId,
     },
     DeleteMessageVersion {
+        room_id: RoomId,
         thread_id: ThreadId,
         message_id: MessageId,
         version_id: MessageVerId,
@@ -135,7 +139,7 @@ pub enum MessageSync {
     },
     Webhook {
         hook_id: Uuid,
-        data: serde_json::Value,
+        data: JsonValue,
     },
 }
 
@@ -153,3 +157,46 @@ pub enum MessageSync {
 // #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 // #[serde(tag = "type")]
 // enum MessageRoom {}
+
+impl MessageSync {
+    pub fn room_audit_loggable(&self) -> bool {
+        match self {
+            MessageSync::UpsertRoom { .. } => true,
+            MessageSync::UpsertThread { .. } => true,
+            MessageSync::UpsertRoomMember { .. } => true,
+            MessageSync::UpsertRole { .. } => true,
+            MessageSync::UpsertInvite { .. } => true,
+            MessageSync::DeleteMessage { .. } => true,
+            MessageSync::DeleteMessageVersion { .. } => true,
+            MessageSync::DeleteRole { .. } => true,
+            MessageSync::DeleteRoomMember { .. } => true,
+            MessageSync::DeleteInvite { .. } => true,
+            _ => false,
+        }
+    }
+    
+    pub fn associated_room(&self) -> Option<RoomId> {
+        let id = match self {
+            MessageSync::UpsertRoom { room } => room.id,
+            MessageSync::UpsertThread { thread } => thread.room_id,
+            MessageSync::UpsertRoomMember { member } => member.room_id,
+            MessageSync::UpsertRole { role } => role.room_id,
+            MessageSync::DeleteMessage { room_id, .. } => *room_id,
+            MessageSync::DeleteMessageVersion { room_id, .. } => *room_id,
+            MessageSync::DeleteRole { room_id, .. } => *room_id,
+            MessageSync::DeleteRoomMember { room_id, .. } => *room_id,
+            MessageSync::UpsertInvite { invite } => match &invite.invite.target {
+                InviteTarget::User { .. } => return None,
+                InviteTarget::Room { room } => room.id,
+                InviteTarget::Thread { room, .. } => room.id,
+            },
+            MessageSync::DeleteInvite { target, .. } => match target {
+                InviteTargetId::User { .. } => return None,
+                InviteTargetId::Room { room_id } => *room_id,
+                InviteTargetId::Thread { room_id, .. } => *room_id,
+            },
+            _ => return None,
+        };
+        Some(id)
+    }
+}

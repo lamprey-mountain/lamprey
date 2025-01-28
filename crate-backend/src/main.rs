@@ -174,9 +174,11 @@ async fn main() -> Result<()> {
         .secret_access_key(&config.s3.secret_access_key);
     let blobs = opendal::Operator::new(blobs_builder).unwrap().finish();
 
+    let state = Arc::new(ServerState::new(config, pool, blobs));
+
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
-        .with_state(Arc::new(ServerState::new(config, pool, blobs)))
+        .with_state(state)
         .split_for_parts();
     let api1 = api.clone();
     let router = router

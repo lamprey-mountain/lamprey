@@ -159,11 +159,13 @@ where
                 MessageSync::DeleteMessage {
                     thread_id,
                     message_id,
+                    ..
                 } => self.delete_message(thread_id, message_id).await,
                 MessageSync::DeleteMessageVersion {
                     thread_id,
                     message_id,
                     version_id,
+                    ..
                 } => {
                     self.delete_message_version(thread_id, message_id, version_id)
                         .await
