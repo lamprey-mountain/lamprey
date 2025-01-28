@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
+use types::util::Diff;
 use types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreateRequest, RoleId,
     RolePatch, RoomId, RoomMember, UserId,
@@ -80,7 +81,7 @@ pub async fn role_update(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
-    if patch.wont_change(&role) {
+    if !patch.changes(&role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
     d.role_update(room_id, role_id, patch).await?;

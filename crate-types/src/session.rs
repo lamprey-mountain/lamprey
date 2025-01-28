@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::Diff;
+
 use super::{ids::SessionId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -81,9 +83,9 @@ impl fmt::Display for SessionToken {
     }
 }
 
-impl SessionPatch {
-    pub fn wont_change(&self, target: &Session) -> bool {
-        self.name.as_ref().is_none_or(|n| n == &target.name)
+impl Diff<Session> for SessionPatch {
+    fn changes(&self, other: &Session) -> bool {
+        self.name.changes(&other.name)
     }
 }
 

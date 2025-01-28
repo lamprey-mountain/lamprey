@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::{Diff, deserialize_sorted_permissions, deserialize_sorted_permissions_option};
+
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -13,7 +15,7 @@ pub struct Role {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
-    // TODO: always keep sorted
+    #[serde(deserialize_with = "deserialize_sorted_permissions")]
     pub permissions: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
@@ -46,34 +48,20 @@ pub struct RoleCreateRequest {
 pub struct RolePatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
+    #[serde(deserialize_with = "deserialize_sorted_permissions_option")]
     pub permissions: Option<Vec<Permission>>,
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
     pub is_default: Option<bool>,
 }
 
-impl RolePatch {
-    pub fn wont_change(&self, target: &Role) -> bool {
-        self.name.as_ref().is_none_or(|c| c == &target.name)
-            && self
-                .description
-                .as_ref()
-                .is_none_or(|c| c == &target.description)
-            && self
-                .permissions
-                .as_ref()
-                .is_none_or(|c| c == &target.permissions)
-            && self
-                .is_self_applicable
-                .as_ref()
-                .is_none_or(|c| c == &target.is_self_applicable)
-            && self
-                .is_mentionable
-                .as_ref()
-                .is_none_or(|c| c == &target.is_mentionable)
-            && self
-                .is_default
-                .as_ref()
-                .is_none_or(|c| c == &target.is_default)
+impl Diff<Role> for RolePatch {
+    fn changes(&self, other: &Role) -> bool {
+        self.name.changes(&other.name)
+        || self.description.changes(&other.description)
+        || self.is_self_applicable.changes(&other.is_self_applicable)
+        || self.is_mentionable.changes(&other.is_mentionable)
+        || self.is_default.changes(&other.is_default)
+        || self.permissions.changes(&other.permissions)
     }
 }

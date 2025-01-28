@@ -6,6 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use types::util::Diff;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -162,7 +163,7 @@ async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessagePatch>,
+    Json(patch): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
@@ -175,18 +176,18 @@ async fn message_edit(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
-    if json.content.is_none() && json.attachments.as_ref().is_some_and(|a| a.is_empty()) {
+    if patch.content.is_none() && patch.attachments.as_ref().is_some_and(|a| a.is_empty()) {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
         ));
     }
-    if !json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
+    if !patch.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
-    if json.wont_change(&message) {
+    if !patch.changes(&message) {
         return Ok((StatusCode::NOT_MODIFIED, Json(message)));
     }
-    let attachment_ids: Vec<_> = json
+    let attachment_ids: Vec<_> = patch
         .attachments
         .map(|ats| ats.into_iter().map(|r| r.id).collect())
         .unwrap_or_else(|| {
@@ -212,13 +213,13 @@ async fn message_edit(
             message_id,
             MessageCreate {
                 thread_id,
-                content: json.content.unwrap_or(message.content),
+                content: patch.content.unwrap_or(message.content),
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
                 message_type: MessageType::Default,
-                metadata: json.metadata.unwrap_or(message.metadata),
-                reply_id: json.reply_id.unwrap_or(message.reply_id),
-                override_name: json.override_name.unwrap_or(message.override_name),
+                metadata: patch.metadata.unwrap_or(message.metadata),
+                reply_id: patch.reply_id.unwrap_or(message.reply_id),
+                override_name: patch.override_name.unwrap_or(message.override_name),
             },
         )
         .await?;

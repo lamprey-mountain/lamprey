@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::Diff;
+
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,22 +59,22 @@ pub struct MessagePatch {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MessageType {
+    /// a basic message
     Default,
+    
+    /// a message logging an update to the thread
     ThreadUpdate,
 }
 
-impl MessagePatch {
-    pub fn wont_change(&self, target: &Message) -> bool {
-        self.content.as_ref().is_none_or(|c| c == &target.content)
-            && self.metadata.as_ref().is_none_or(|m| m == &target.metadata)
-            && self.reply_id.is_none_or(|r| r == target.reply_id)
-            && self
-                .override_name
-                .as_ref()
-                .is_none_or(|o| o == &target.override_name)
-            && self.attachments.as_ref().is_none_or(|a| {
-                a.len() == target.attachments.len()
-                    && a.iter().zip(&target.attachments).all(|(a, b)| a.id == b.id)
+impl Diff<Message> for MessagePatch {
+    fn changes(&self, other: &Message) -> bool {
+        self.content.changes(&other.content)
+            || self.metadata.changes(&other.metadata)
+            || self.reply_id.changes(&other.reply_id)
+            || self.override_name.changes(&other.override_name)
+            || self.attachments.as_ref().is_some_and(|a| {
+                a.len() != other.attachments.len()
+                    || a.iter().zip(&other.attachments).any(|(a, b)| a.id != b.id)
             })
     }
 }

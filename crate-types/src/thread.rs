@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::ThreadVerId;
+use crate::{util::Diff, ThreadVerId};
 
 use super::{MessageId, RoomId, ThreadId, UserId};
 
@@ -87,21 +87,19 @@ pub enum ThreadInfo {
     },
 }
 
-impl ThreadPatch {
-    pub fn wont_change(&self, other: &Thread) -> bool {
-        self.name.as_ref().is_none_or(|n| n == &other.name)
-            && self
-                .description
-                .as_ref()
-                .is_none_or(|n| n == &other.description)
+impl Diff<Thread> for ThreadPatch {
+    fn changes(&self, other: &Thread) -> bool {
+        self.name.changes(&other.name) || self.description.changes(&other.description)
+    }
+}
+
+impl Diff<Thread> for ThreadState {
+    fn changes(&self, other: &Thread) -> bool {
+        self != &other.state
     }
 }
 
 impl ThreadState {
-    pub fn wont_change(&self, other: &Thread) -> bool {
-        &other.state == self
-    }
-    
     pub fn can_change_to(&self, _to: &ThreadState) -> bool {
         match self {
             Self::Deleted => false,

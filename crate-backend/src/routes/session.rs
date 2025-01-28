@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use types::util::Diff;
 use types::{
     MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId,
     SessionPatch, SessionStatus, SessionToken, SessionWithToken,
@@ -86,7 +87,7 @@ pub async fn session_update(
     if !session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
-    if patch.wont_change(&session) {
+    if !patch.changes(&session) {
         return Ok((StatusCode::NOT_MODIFIED, Json(session)));
     }
     data.session_update(session_id, patch).await?;

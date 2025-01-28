@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use serde_json::json;
+use types::util::Diff;
 use types::{
     MessageSync, MessageType, Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, Thread,
     ThreadId, ThreadPatch, UserId,
@@ -102,7 +103,7 @@ impl Services {
         perms.ensure(Permission::ThreadManage)?;
 
         // shortcut if it wont modify the thread
-        if patch.wont_change(&thread) {
+        if !patch.changes(&thread) {
             return Err(Error::NotModified);
         }
 
