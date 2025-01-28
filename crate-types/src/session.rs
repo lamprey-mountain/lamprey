@@ -54,16 +54,12 @@ pub enum SessionStatus {
     Unauthorized,
 
     /// The session exists and can do non-critical actions
-    Authorized {
-        user_id: UserId,
-    },
+    Authorized { user_id: UserId },
 
     // /// The session is probably not a bot (ie. solved a captcha)
     // Trusted,
     /// The session exists and can do administrative actions
-    Sudo {
-        user_id: UserId,
-    },
+    Sudo { user_id: UserId },
 }
 
 // Granular session capability flags?

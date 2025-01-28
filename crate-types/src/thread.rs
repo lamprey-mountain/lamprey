@@ -14,10 +14,10 @@ pub struct Thread {
     pub room_id: RoomId,
     pub creator_id: UserId,
     pub version_id: ThreadVerId,
-    
+
     #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
     pub name: String,
-    
+
     #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 2048))]
     pub description: Option<String>,
 
@@ -68,7 +68,6 @@ pub enum ThreadState {
 pub enum ThreadVisibility {
     /// Everyone in the room can view
     Room,
-
     // Public
     // Private { recipients: Vec<UserId> }
 }

@@ -1,7 +1,10 @@
 use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserVerId
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
+    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
+    SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User,
+    UserId, UserVerId,
 };
 use uuid::Uuid;
 

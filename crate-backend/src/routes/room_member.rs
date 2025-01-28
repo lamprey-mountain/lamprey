@@ -4,7 +4,10 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
-use types::{MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, UserId};
+use types::{
+    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
+    RoomMemberPatch, UserId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;

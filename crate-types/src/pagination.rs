@@ -15,13 +15,13 @@ pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
 pub struct PaginationQuery<K: PaginationKey> {
     /// The key to start paginating from. Not inclusive. Optional.
     pub from: Option<K>,
-    
+
     /// The key to stop paginating at. Not inclusive. Optional.
     pub to: Option<K>,
-    
+
     /// Whether to paginate forwards or backwards. Defaults to forwards. Paginating backwards does not reverse the order of items.
     pub dir: Option<PaginationDirection>,
-    
+
     /// The maximum number of items to return.
     pub limit: Option<u16>,
 }
