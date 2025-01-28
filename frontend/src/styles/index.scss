@@ -94,18 +94,6 @@
 	}
 }
 
-h1 {
-	font-size: 1.5rem;
-}
-
-h2 {
-	font-size: 1.5rem;
-}
-
-h3 {
-	font-size: 1.3rem;
-}
-
 button, input[type="submit"] {
 	padding: 0 0.25rem;
 	background-color: $bg3;
@@ -303,6 +291,22 @@ button, input[type="submit"] {
 	}
 }
 
+h1 {
+	font-size: 1.5rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+}
+
+h3 {
+	font-size: 1.3rem;
+}
+
+strong {
+	font-weight: bold;
+}
+
 s {
 	text-decoration: strikethrough;
 }
@@ -328,13 +332,29 @@ a {
 	cursor: pointer;
 }
 
+.select-all {
+	user-select: all;
+}
+
+em {
+	font-style: italic;
+}
+
 .markdown {
-	& ul {
-		list-style: disc;
+	& ul, ol {
+		white-space: normal;
 	}
 
-	& ol {
-		list-style: numbered;
+	& li {
+		list-style-position: inside;
+	}
+	
+	& ul > li {
+		list-style-type: disc;
+	}
+
+	& ol > li {
+		list-style-type: numbered;
 	}
 }
 
@@ -510,14 +530,6 @@ input[type="text"] {
 	& button.spaced {
 		margin-left: 4px;
 	}
-}
-
-.select-all {
-	user-select: all;
-}
-
-em {
-	font-style: italic;
 }
 
 .message {
