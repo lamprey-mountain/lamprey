@@ -3,31 +3,13 @@ import { produce, reconcile, SetStoreFunction } from "solid-js/store";
 import { Action, ChatCtx, Data } from "../context.ts";
 import { RoleT } from "../types.ts";
 import { types } from "sdk";
+import { useApi } from "../api.tsx";
 
 function reduceServer(
 	state: Data,
 	delta: types.MessageSync,
 ): Data {
 	switch (delta.type) {
-		case "UpsertRoom": {
-			const { room } = delta;
-			return { ...state, rooms: { ...state.rooms, [room.id]: room } };
-		}
-		case "UpsertThread": {
-			const { thread } = delta;
-			return { ...state, threads: { ...state.threads, [thread.id]: thread } };
-		}
-		case "UpsertUser": {
-			const { user } = delta;
-			return {
-				...state,
-				users: {
-					...state.users,
-					[user.id]: user,
-				},
-				user: user.id === state.user?.id ? user : state.user,
-			};
-		}
 		case "UpsertInvite": {
 			const { invite } = delta;
 			return { ...state, invites: { ...state.invites, [invite.code]: invite } };
@@ -37,10 +19,11 @@ function reduceServer(
 			const { room_id, user } = member;
 			return {
 				...state,
-				users: {
-					...state.users,
-					[user.id]: user,
-				},
+				// TODO: fix this (won't matter if data is normalized?)
+				// users: {
+				// 	...state.users,
+				// 	[user.id]: user,
+				// },
 				room_members: {
 					...state.room_members,
 					[room_id]: {
@@ -65,6 +48,7 @@ export function dispatchServer(
 ) {
 	switch (action.do) {
 		case "server": {
+			const api = useApi();
 			const msg = action.msg;
 			if (msg.type === "UpsertMessage") {
 				console.time("UpsertMessage");
@@ -73,11 +57,13 @@ export function dispatchServer(
 					const { id, version_id, thread_id, nonce } = message;
 					update("messages", id, message);
 
-					if (ctx.data.threads[thread_id]) {
-						update("threads", thread_id, "last_version_id", version_id);
-						if (id === version_id) {
-							update("threads", thread_id, "message_count", (i) => i + 1);
-						}
+					const t = api.threads.cache.get(thread_id);
+					if (t) {
+						api.threads.cache.set(thread_id, {
+							...t,
+							message_count: t.message_count + (id === version_id ? 1 : 0),
+							last_version_id: version_id,
+						});
 					}
 
 					if (!ctx.data.timelines[thread_id]) {
@@ -121,24 +107,24 @@ export function dispatchServer(
 				const { room_id } = role;
 				if (!ctx.data.room_roles[room_id]) update("room_roles", room_id, {});
 				update("room_roles", room_id, role.id, role);
-			} else if (msg.type === "DeleteMember") {
-				const { user_id, room_id } = msg;
-				update(
-					"room_members",
-					room_id,
-					produce((obj) => {
-						if (!obj) return;
-						delete obj[user_id];
-					}),
-				);
-				if (user_id === ctx.data.user?.id) {
-					update(
-						"rooms",
-						produce((obj) => {
-							delete obj[room_id];
-						}),
-					);
-				}
+				// } else if (msg.type === "DeleteMember") {
+				// 	const { user_id, room_id } = msg;
+				// 	update(
+				// 		"room_members",
+				// 		room_id,
+				// 		produce((obj) => {
+				// 			if (!obj) return;
+				// 			delete obj[user_id];
+				// 		}),
+				// 	);
+				// 	if (user_id === ctx.data.user?.id) {
+				// 		update(
+				// 			"rooms",
+				// 			produce((obj) => {
+				// 				delete obj[room_id];
+				// 			}),
+				// 		);
+				// 	}
 			} else if (msg.type === "DeleteInvite") {
 				const { code } = msg;
 				update(
@@ -147,28 +133,6 @@ export function dispatchServer(
 						delete obj[code];
 					}),
 				);
-			} else if (msg.type === "UpsertSession") {
-				const { session } = msg;
-				if (session.id === ctx.data.session?.id) {
-					update("session", session);
-				}
-				if (!ctx.data.user) {
-					ctx.client.http.GET("/api/v1/user/{user_id}", {
-						params: {
-							path: {
-								user_id: "@self",
-							},
-						},
-					}).then((res) => {
-						const user = res.data;
-						if (!user) {
-							throw new Error("couldn't fetch user");
-						}
-						update("user", user);
-						update("users", user.id, user);
-					});
-					ctx.dispatch({ do: "init" });
-				}
 			} else {
 				update(reconcile(reduceServer(ctx.data, action.msg)));
 			}

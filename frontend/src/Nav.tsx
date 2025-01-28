@@ -1,9 +1,11 @@
 import { For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { A } from "@solidjs/router";
+import { useApi } from "./api.tsx";
 
 export const ChatNav = () => {
 	const ctx = useCtx();
+	const api = useApi();
 
 	// should i only show threads from the currently active rooms? or show less threads until the room is selected?
 	return (
@@ -12,7 +14,7 @@ export const ChatNav = () => {
 				<li>
 					<A href="/" end>home</A>
 				</li>
-				<For each={Object.values(ctx.data.rooms)}>
+				<For each={[...api.rooms.cache.values()]}>
 					{(room) => (
 						<li>
 							<A
@@ -48,9 +50,11 @@ export const ChatNav = () => {
 										</A>
 									</li>
 									<For
-										each={Object.values(ctx.data.threads).filter((i) =>
-											i.room_id === room.id
-										)}
+										each={[
+											...api.threads.cache.values().filter((i) =>
+												i.room_id === room.id
+											),
+										]}
 									>
 										{(thread) => (
 											<li>

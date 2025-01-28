@@ -1,6 +1,7 @@
 import { UUID } from "uuidv7";
 
 export * as types from "./types.ts";
+export * from "./types.ts";
 export * from "./client.ts";
 export * from "./upload.ts";
 

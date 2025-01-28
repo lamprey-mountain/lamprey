@@ -3,6 +3,7 @@ import { useCtx } from "./context.ts";
 import { Pagination, SessionT, UserT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
+import { useApi } from "./api.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
@@ -91,6 +92,7 @@ function Info(props: VoidProps<{ user: UserT }>) {
 
 function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();
+	const api = useApi();
 
 	// FIXME: live update sessions
 	const [sessions, { refetch: fetchSessions }] = createResource<
@@ -163,7 +165,7 @@ function Sessions(props: VoidProps<{ user: UserT }>) {
 								</div>
 								<div>
 									<code class="dim">{s.id}</code>
-									<Show when={s.id === ctx.data.session?.id}>
+									<Show when={s.id === api.session()?.id}>
 										{" (current)"}
 									</Show>
 								</div>

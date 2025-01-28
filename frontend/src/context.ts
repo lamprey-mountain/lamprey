@@ -7,9 +7,7 @@ import {
 	MessageT,
 	RoleT,
 	RoomT,
-	SessionT,
 	ThreadT,
-	UserT,
 } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { TimelineItemT } from "./Messages.tsx";
@@ -43,17 +41,12 @@ export type ThreadState = {
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
-	rooms: Record<string, RoomT>;
 	room_members: Record<string, Record<string, MemberT>>;
 	room_roles: Record<string, Record<string, RoleT>>;
-	threads: Record<string, ThreadT>;
 	messages: Record<string, MessageT>;
 	timelines: Record<string, Array<TimelineItem>>;
 	slices: Record<string, Slice>;
 	invites: Record<string, InviteT>;
-	users: Record<string, UserT>;
-	user: UserT | null;
-	session: SessionT | null;
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	menu: Menu | null;
@@ -124,15 +117,12 @@ export type Action =
 		thread_id: string;
 		attachments: Array<Attachment>;
 	}
-	| { do: "fetch.room"; room_id: string }
-	| { do: "fetch.thread"; thread_id: string }
 	| { do: "fetch.room_threads"; room_id: string }
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
 	| { do: "upload.cancel"; local_id: string }
 	| { do: "server"; msg: types.MessageSync }
-	| { do: "server.ready"; msg: types.MessageReady }
 	| { do: "server.init_session" }
 	| { do: "window.mouse_move"; e: MouseEvent }
 	| { do: "init" };
@@ -144,23 +134,18 @@ export type AttachmentCreateT = {
 export type ChatCtx = {
 	client: Client;
 	data: Data;
-	dispatch: (action: Action) => Promise<void>;
+	dispatch: (action: Action) => void;
 };
 
 export const defaultData: Data = {
-	rooms: {},
 	room_members: {},
 	room_roles: {},
-	threads: {},
 	messages: {},
 	timelines: {},
 	slices: {},
 	invites: {},
-	users: {},
 	thread_state: {},
 	modals: [],
-	user: null,
-	session: null,
 	menu: null,
 	uploads: {},
 	cursor: {

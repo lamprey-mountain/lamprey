@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
+import { useApi } from "./api.tsx";
 
 export const Home = () => {
 	const ctx = useCtx();
@@ -59,25 +60,27 @@ export const Home = () => {
 		localStorage.clear();
 		location.reload(); // TODO: less hacky logout
 	}
+	
+	const api = useApi();
 
 	return (
 		<div class="home">
 			<h2>home</h2>
 			<p>work in progress. expect bugs and missing polish.</p>
-			<button onClick={createRoom}>
-				create room
-			</button>
-			<br />
-			<button onClick={useInvite}>use invite</button>
-			<br />
-			<Show when={ctx.data.user}>
-				<A href="/settings">settings</A>
-				<br />
-			</Show>
 			<button onClick={loginDiscord}>login with discord</button>
 			<br />
 			<button onClick={logout}>logout</button>
 			<br />
+			<Show when={api.users.cache.get("@self")}>
+				<button onClick={createRoom}>
+					create room
+				</button>
+				<br />
+				<button onClick={useInvite}>use invite</button>
+				<br />
+				<A href="/settings">settings</A>
+				<br />
+			</Show>
 			<A target="_self" href="/api/docs">api docs</A>
 			<br />
 		</div>

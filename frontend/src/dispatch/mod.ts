@@ -11,7 +11,7 @@ import {
 } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 import { dispatchServer } from "./server.ts";
-import { MessageReady } from "../../../ts-sdk/types.ts";
+import { useApi } from "../api.tsx";
 
 type Reduction =
 	| { do: "menu"; menu: Menu | null }
@@ -31,7 +31,6 @@ type Reduction =
 		thread_id: string;
 		attachments: Array<Attachment>;
 	}
-	| { do: "server.ready"; msg: MessageReady }
 	| { do: "menu.preview"; id: string };
 
 function reduce(
@@ -86,16 +85,6 @@ function reduce(
 				return s;
 			})(state);
 		}
-		case "server.ready": {
-			const { user, session } = delta.msg;
-			return produce((s: Data) => {
-				if (user) {
-					s.user = user;
-					s.users[user.id] = user;
-				}
-				s.session = session;
-			})(state);
-		}
 		case "menu.preview": {
 			return {
 				...state,
@@ -132,8 +121,8 @@ function combine(
 	return merged;
 }
 
-// TODO: refactor this out into multiple smaller files
 export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
+	const api = useApi();
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
 
@@ -205,13 +194,16 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 					return;
 				}
 
-				const version_id = action.version_id ??
-					ctx.data.threads[thread_id].last_version_id;
+				const t = api.threads.cache.get(thread_id)!;
+				const version_id = action.version_id ?? t!.last_version_id;
 				await ctx.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
 					params: { path: { thread_id } },
 					body: { version_id },
 				});
-				update("threads", thread_id, "last_read_id", version_id);
+				api.threads.cache.set(thread_id, {
+					...t,
+					last_read_id: version_id,
+				});
 				const has_thread = !!ctx.data.thread_state[action.thread_id];
 				if (also_local && has_thread) {
 					update(
@@ -221,38 +213,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 						version_id,
 					);
 				}
-			} else {
-				next(action);
-			}
-		};
-
-	const fetchRoom: Middleware =
-		(_state, _dispatch) => (next) => async (action) => {
-			if (action.do === "fetch.room") {
-				const { data, error } = await ctx.client.http.GET(
-					"/api/v1/room/{room_id}",
-					{
-						params: { path: { room_id: action.room_id } },
-					},
-				);
-				if (error) throw error;
-				update("rooms", action.room_id, data);
-			} else {
-				next(action);
-			}
-		};
-
-	const fetchThread: Middleware =
-		(_state, _dispatch) => (next) => async (action) => {
-			if (action.do === "fetch.thread") {
-				const { data, error } = await ctx.client.http.GET(
-					"/api/v1/thread/{thread_id}",
-					{
-						params: { path: { thread_id: action.thread_id } },
-					},
-				);
-				if (error) throw error;
-				update("threads", action.thread_id, data);
 			} else {
 				next(action);
 			}
@@ -277,7 +237,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				if (error) throw error;
 				solidBatch(() => {
 					for (const item of data.items) {
-						update("threads", item.id, item);
+						api.threads.cache.set(item.id, item);
 					}
 				});
 			} else {
@@ -425,9 +385,10 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 				// console.error(error);
 				return;
 			}
+			console.log(api);
 			solidBatch(() => {
 				for (const room of data.items) {
-					update("rooms", room.id, room);
+					api.rooms.cache.set(room.id, room);
 				}
 			});
 		} else {
@@ -436,19 +397,9 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 	};
 
 	const serverInitSession: Middleware =
-		(_state, _dispatch) => (next) => async (action) => {
+		(_state, _dispatch) => (next) => (action) => {
 			if (action.do === "server.init_session") {
-				const res = await ctx.client.http.POST("/api/v1/session", {
-					body: {},
-				});
-				if (!res.data) {
-					console.error("failed to init session", res.response);
-					throw new Error("failed to init session");
-				}
-				const session = res.data;
-				localStorage.setItem("token", session.token);
-				update("session", session);
-				ctx.client.start(session.token);
+				api.tempCreateSession();
 			} else {
 				next(action);
 			}
@@ -529,8 +480,6 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 		log,
 		threadAutoscroll,
 		threadMarkRead,
-		fetchRoom,
-		fetchThread,
 		handleServer,
 		init,
 		serverInitSession,

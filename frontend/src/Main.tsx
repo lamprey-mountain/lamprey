@@ -12,9 +12,10 @@ import { useFloating } from "solid-floating-ui";
 import { Route, Router, RouteSectionProps } from "@solidjs/router";
 import { Home } from "./Home.tsx";
 import { getModal } from "./modal/mod.tsx";
+import { useApi } from "./api.tsx";
 
-const Title = (props: { children: string }) => {
-	createEffect(() => document.title = props.children);
+const Title = (props: { title: string }) => {
+	createEffect(() => document.title = props.title);
 	return undefined;
 };
 
@@ -107,7 +108,7 @@ export const Main = () => {
 const RouteHome = () => {
 	return (
 		<>
-			<Title>Home</Title>
+			<Title title="Home" />
 			<ChatNav />
 			<Home />
 		</>
@@ -115,11 +116,11 @@ const RouteHome = () => {
 };
 
 function RouteSettings(p: RouteSectionProps) {
-	const ctx = useCtx();
-	const user = () => ctx.data.user;
+	const api = useApi();
+	const user = () => api.users.cache.get("@self");
 	return (
 		<>
-			<Title>{user() ? "Settings" : "loading..."}</Title>
+			<Title title={user() ? "Settings" : "loading..."} />
 			<Show when={user()}>
 				<UserSettings user={user()!} page={p.params.page} />
 			</Show>
@@ -128,65 +129,47 @@ function RouteSettings(p: RouteSectionProps) {
 }
 
 function RouteRoom(p: RouteSectionProps) {
-	const ctx = useCtx();
-	const room = () => ctx.data.rooms[p.params.room_id];
+	const api = useApi();
+	const [room] = api.rooms.fetch(() => p.params.room_id);
 	return (
 		<>
-			<Title>{room() ? room().name : "loading..."}</Title>
+			<Title title={room() ? room()!.name : "loading..."} />
 			<ChatNav />
 			<Show when={room()}>
-				<RoomHome room={room()} />
+				<RoomHome room={room()!} />
 			</Show>
 		</>
 	);
 }
 
 function RouteRoomSettings(p: RouteSectionProps) {
-	const ctx = useCtx();
-	const room = () => ctx.data.rooms[p.params.room_id];
+	const api = useApi();
+	const [room] = api.rooms.fetch(() => p.params.room_id);
+	const title = () => room() ? `${room()!.name} settings` : "loading...";
 	return (
 		<>
-			<Title>
-				{room() ? `${room().name} settings` : "loading..."}
-			</Title>
+			<Title title={title()} />
 			<ChatNav />
 			<Show when={room()}>
-				<RoomSettings room={room()} page={p.params.page} />
+				<RoomSettings room={room()!} page={p.params.page} />
 			</Show>
 		</>
 	);
 }
 
 function RouteThread(p: RouteSectionProps) {
-	const ctx = useCtx();
-	const thread = () => ctx.data.threads[p.params.thread_id];
-	const room = () => ctx.data.rooms[thread()?.room_id];
-
-	createEffect(() => {
-		if (thread()?.room_id && !ctx.data.rooms[thread()?.room_id]) {
-			ctx.dispatch({ do: "fetch.room", room_id: p.params.room_id });
-		}
-	});
-
-	createEffect(() => {
-		if (!ctx.data.threads[p.params.thread_id]) {
-			ctx.dispatch({
-				do: "fetch.thread",
-				thread_id: p.params.thread_id,
-			});
-		}
-	});
+	const api = useApi();
+	const [thread] = api.threads.fetch(() => p.params.thread_id);
+	const [room] = api.rooms.fetch(() => thread()?.room_id!);
 
 	return (
 		<>
-			<Title>
-				{room() && thread()
-					? `${thread().name} - ${room().name}`
-					: "loading..."}
-			</Title>
+			<Show when={room()} fallback={<Title title="loading..." />}>
+				<Title title={`${thread()!.name} - ${room()!.name}`} />
+			</Show>
 			<ChatNav />
-			<Show when={room() && thread()}>
-				<ChatMain room={room()} thread={thread()} />
+			<Show when={room()}>
+				<ChatMain room={room()!} thread={thread()!} />
 			</Show>
 		</>
 	);

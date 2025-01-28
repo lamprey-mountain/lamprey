@@ -36,17 +36,17 @@ export const ChatMain = (props: ChatProps) => {
 		autoscroll: () => !hasSpaceBottom(),
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
-		async onPaginate(dir) {
+		onPaginate(dir) {
 			const thread_id = props.thread.id;
 			if (dir === "forwards") {
-				await ctx.dispatch({ do: "paginate", dir: "f", thread_id });
+				ctx.dispatch({ do: "paginate", dir: "f", thread_id });
 				const isAtEnd = ctx.data.slices[thread_id].end ===
 					ctx.data.timelines[thread_id].length;
 				if (isAtEnd) {
 					ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 				}
 			} else {
-				await ctx.dispatch({ do: "paginate", dir: "b", thread_id });
+				ctx.dispatch({ do: "paginate", dir: "b", thread_id });
 			}
 		},
 		onContextMenu(e: MouseEvent) {
@@ -88,9 +88,9 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	});
 
-	createEffect(async () => {
+	createEffect(() => {
 		if (slice()?.start === undefined) {
-			await ctx.dispatch({
+			ctx.dispatch({
 				do: "paginate",
 				dir: "b",
 				thread_id: props.thread.id,

@@ -3,25 +3,27 @@ import { ChatCtx, chatctx, Data, defaultData } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
 import { createDispatcher } from "./dispatch/mod.ts";
-import { createClient } from "sdk";
+import { createClient, MessageReady, MessageSync } from "sdk";
+import { ApiProvider, useApi } from "./api.tsx";
+import { createEmitter } from "@solid-primitives/event-bus";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
 
 // TODO: refactor bootstrap code?
 const App: Component = () => {
-	const TOKEN = localStorage.getItem("token")!;
+	const events = createEmitter<{
+		sync: MessageSync;
+		ready: MessageReady;
+	}>();
 	const client = createClient({
 		baseUrl: BASE_URL,
 		onSync(msg) {
 			console.log("recv", msg);
-			ctx.dispatch({
-				do: "server",
-				msg,
-			});
+			events.emit("sync", msg);
 		},
 		onReady(msg) {
-			ctx.dispatch({ do: "server.ready", msg });
+			events.emit("ready", msg);
 		},
 	});
 
@@ -30,10 +32,23 @@ const App: Component = () => {
 		console.log("client state", cs());
 	});
 
+	return (
+		<div id="root">
+			<ApiProvider client={client} temp_events={events}>
+				<App2 client={client} events={events} />
+			</ApiProvider>
+		</div>
+	);
+};
+
+// HACK: this exists so the api context exists
+const App2 = (props: any) => {
+	console.log("API", useApi());
+	
 	const [data, update] = createStore<Data>(defaultData);
 
 	const ctx: ChatCtx = {
-		client,
+		client: props.client,
 		data,
 		dispatch: () => {
 			throw new Error("oh no!");
@@ -42,14 +57,7 @@ const App: Component = () => {
 	const dispatch = createDispatcher(ctx, update);
 	ctx.dispatch = dispatch;
 
-	if (TOKEN) {
-		client.start(TOKEN);
-		ctx.dispatch({ do: "init" });
-	} else {
-		ctx.dispatch({ do: "server.init_session" });
-	}
-
-	onCleanup(() => client.stop());
+	onCleanup(() => props.client.stop());
 
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
@@ -75,15 +83,30 @@ const App: Component = () => {
 
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
-	(globalThis as any).client = client;
+	(globalThis as any).client = props.client;
 
+	const TOKEN = localStorage.getItem("token")!;
+	if (TOKEN) {
+		props.client.start(TOKEN);
+		ctx.dispatch({ do: "init" });
+	} else {
+		queueMicrotask(() => {
+			ctx.dispatch({ do: "server.init_session" });
+		});
+	}
+	
+	props.events.on("sync", (msg) => {
+		ctx.dispatch({
+			do: "server",
+			msg,
+		});
+	});
+	
 	return (
-		<div id="root">
-			<chatctx.Provider value={{ client, data, dispatch }}>
-				<Main />
-			</chatctx.Provider>
-		</div>
+		<chatctx.Provider value={ctx}>
+			<Main />
+		</chatctx.Provider>
 	);
-};
+}
 
 export default App;

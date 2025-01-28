@@ -3,6 +3,7 @@ import { ChatCtx, Data } from "../context.ts";
 import { SetStoreFunction } from "solid-js/store";
 import { uuidv7 } from "uuidv7";
 import { MessageT, MessageType } from "../types.ts";
+import { useApi } from "../api.tsx";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send
@@ -12,9 +13,10 @@ export async function handleSubmit(
 	text: string,
 	update: SetStoreFunction<Data>,
 ) {
+	const api = useApi();
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
-		const { room_id } = ctx.data.threads[thread_id];
+		const { room_id } = api.threads.cache.get(thread_id)!;
 		if (cmd === "thread") {
 			const name = text.slice("/thread ".length);
 			await ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
@@ -94,7 +96,7 @@ export async function handleSubmit(
 		reply_id,
 		nonce,
 		content: text,
-		author: ctx.data.user!,
+		author: api.users.cache.get("@self")!,
 		metadata: null,
 		attachments,
 		is_pinned: false,

@@ -3,6 +3,7 @@ import { RoomT } from "./types.ts";
 import { chatctx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
+import { useApi } from "./api.tsx";
 
 export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useContext(chatctx)!;
@@ -46,6 +47,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	}
 
 	const nav = useNavigate();
+	const api = useApi();
 
 	// const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
 	// 	if (value?.room_id !== room_id) value = undefined;
@@ -72,9 +74,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<br />
 			<ul>
 				<For
-					each={Object.values(ctx.data.threads).filter((i) =>
-						i.room_id === props.room.id
-					)}
+					each={[
+						...api.threads.cache.values()
+							.filter((i) => i.room_id === props.room.id),
+					]}
 				>
 					{(thread) => (
 						<li>

@@ -8,6 +8,7 @@
     "jsr:@std/io@0.224": "0.224.9",
     "npm:@deno/vite-plugin@1": "1.0.2_vite@6.0.6",
     "npm:@floating-ui/dom@*": "1.6.13",
+    "npm:@solid-primitives/event-bus@^1.1.0": "1.1.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/map@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/scheduled@^1.5.0": "1.5.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/websocket@*": "1.2.2_solid-js@1.9.3__seroval@1.1.1",
@@ -563,6 +564,13 @@
     },
     "@rollup/rollup-win32-x64-msvc@4.29.1": {
       "integrity": "sha512-+10CMg9vt1MoHj6x1pxyjPSMjHTIlqs8/tBztXvPAx24SKs9jwVnKqHJumlH/IzhaPUaj3T6T6wfZr8okdXaIg=="
+    },
+    "@solid-primitives/event-bus@1.1.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-r1SAAP/EBo6/vXe6ZogZfAxhrhWLBXRDtt8+6qcNPqVCFiJo5eXmwAD+upoKWmipXpmgrwi4yhXpL4K9IHAP3w==",
+      "dependencies": [
+        "@solid-primitives/utils",
+        "solid-js"
+      ]
     },
     "@solid-primitives/map@0.6.0_solid-js@1.9.3__seroval@1.1.1": {
       "integrity": "sha512-h8uCJNxUTvzNK/aTW9vJCd/PQeBkUL8i7AyLPvTFqMgcMnJ1I5GzAi5JODzxpxQwffxoqJyQtOE1vBqFzDv0Vw==",
@@ -3140,6 +3148,7 @@
         "dependencies": [
           "npm:@deno/vite-plugin@1",
           "npm:@floating-ui/dom@*",
+          "npm:@solid-primitives/event-bus@^1.1.0",
           "npm:@solid-primitives/map@0.6",
           "npm:@solid-primitives/scheduled@^1.5.0",
           "npm:@solid-primitives/websocket@*",
