@@ -4,7 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
-use types::{MessageSync, PaginationQuery, Permission, RoomId, RoomMemberPatch, UserId};
+use types::{MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
@@ -21,7 +21,7 @@ use crate::error::{Error, Result};
     ),
     tags = ["member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
 )]
 pub async fn room_member_list(
@@ -47,7 +47,7 @@ pub async fn room_member_list(
     ),
     tags = ["member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = RoomMember, description = "success"),
     )
 )]
 pub async fn room_member_get(
@@ -72,7 +72,8 @@ pub async fn room_member_get(
     ),
     tags = ["member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = RoomMember, description = "success"),
+        (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
 pub async fn room_member_update(
@@ -111,7 +112,7 @@ pub async fn room_member_update(
     ),
     tags = ["member"],
     responses(
-        (status = OK, description = "success"),
+        (status = NO_CONTENT, description = "success"),
     )
 )]
 pub async fn room_member_delete(

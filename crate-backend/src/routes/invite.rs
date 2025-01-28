@@ -160,7 +160,7 @@ pub async fn invite_use(
     ),
     tags = ["invite"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = Invite, description = "success"),
     )
 )]
 pub async fn invite_room_create(
@@ -202,7 +202,7 @@ enum InviteWithPotentialMetadata {
     ),
     tags = ["invite"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
 )]
 pub async fn invite_room_list(

@@ -57,7 +57,7 @@ pub async fn auth_oauth_init(
     path = "/auth/oauth/{provider}/redirect",
     tags = ["session"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, description = "success; responds with html + javascript"),
     )
 )]
 pub async fn auth_oauth_redirect(

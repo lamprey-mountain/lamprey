@@ -154,7 +154,7 @@ async fn message_get(
     ),
     tags = ["message"],
     responses(
-        (status = OK, description = "edit message success"),
+        (status = OK, body = Message, description = "edit message success"),
         (status = NOT_MODIFIED, description = "no change"),
     )
 )]
@@ -277,7 +277,7 @@ async fn message_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// list message versions
+/// List message versions
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message/{message_id}/version",
@@ -288,7 +288,7 @@ async fn message_delete(
     ),
     tags = ["message"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
 )]
 async fn message_version_list(
@@ -309,7 +309,7 @@ async fn message_version_list(
     Ok(Json(res))
 }
 
-/// get message version
+/// Get message version
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",
@@ -320,7 +320,7 @@ async fn message_version_list(
     ),
     tags = ["message"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = Message, description = "success"),
     )
 )]
 async fn message_version_get(
@@ -340,7 +340,7 @@ async fn message_version_get(
     Ok(Json(message))
 }
 
-/// delete message version
+/// Delete message version
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",

@@ -80,8 +80,8 @@ async fn media_create(
     params(("media_id", description = "Media id")),
     request_body = Vec<u8>,
     responses(
-        (status = NO_CONTENT, description = "Upload success"),
-        (status = OK, description = "Upload done"),
+        (status = NO_CONTENT, description = "Upload part success"),
+        (status = OK, body = Media, description = "Upload done"),
     )
 )]
 async fn media_upload(
@@ -196,15 +196,15 @@ async fn media_upload(
     }
 }
 
-/// media get
-// todo: restrict media visibility? or make it always public?
+/// Media get
+// TODO: restrict media visibility? or make it always public?
 #[utoipa::path(
     get,
     path = "/media/{media_id}",
     tags = ["media"],
     params(("media_id", description = "Media id")),
     responses(
-        (status = OK, description = "Success"),
+        (status = OK, body = Media, description = "Success"),
     )
 )]
 async fn media_get(
@@ -217,7 +217,9 @@ async fn media_get(
     Ok(Json(media))
 }
 
-/// media head
+/// Media check
+///
+/// Get headers useful for resuming an upload
 #[utoipa::path(
     head,
     path = "/media/{media_id}",

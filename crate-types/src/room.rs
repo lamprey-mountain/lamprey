@@ -11,17 +11,14 @@ use super::ids::RoomId;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Room {
     /// A unique identifier for this room
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub id: RoomId,
 
     /// A monotonically increasing id that is updated every time this room is modified.
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub version_id: Uuid,
 
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(read_only, required = false))]
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub description: Option<String>,
     // pub room_type: RoomType,
 }
@@ -30,10 +27,9 @@ pub struct Room {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomCreate {
-    #[cfg_attr(feature = "utoipa", schema(write_only))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(write_only, required = false))]
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub description: Option<String>,
 }
 
@@ -41,10 +37,7 @@ pub struct RoomCreate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomPatch {
-    #[cfg_attr(feature = "utoipa", schema(write_only))]
     pub name: Option<String>,
-
-    #[cfg_attr(feature = "utoipa", schema(write_only))]
     pub description: Option<Option<String>>,
 }
 

@@ -71,7 +71,7 @@ pub async fn user_create(
     tags = ["user"],
     responses(
         (status = OK, body = User, description = "success"),
-        (status = NOT_MODIFIED, body = User, description = "not modified"),
+        (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
 pub async fn user_update(

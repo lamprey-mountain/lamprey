@@ -38,7 +38,7 @@ async fn room_create(
     Ok((StatusCode::CREATED, Json(room)))
 }
 
-/// Get a room by its id.
+/// Get a room by its id
 #[utoipa::path(
     get,
     path = "/room/{room_id}",
@@ -94,7 +94,7 @@ async fn room_list(
     Ok(Json(res))
 }
 
-/// edit a room
+/// Edit a room
 #[utoipa::path(
     patch,
     path = "/room/{room_id}",

@@ -128,7 +128,7 @@ async fn thread_list(
     Ok(Json(res))
 }
 
-/// edit a thread
+/// Edit a thread
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}",
@@ -173,9 +173,9 @@ struct AckRes {
     version_id: MessageVerId,
 }
 
-/// ack thread
+/// Ack thread
 ///
-/// mark a thread as read (or unread)
+/// Mark a thread as read (or unread).
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/ack",

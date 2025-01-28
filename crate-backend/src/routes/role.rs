@@ -5,8 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
 use types::{
-    MessageSync, PaginationQuery, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId,
-    UserId,
+    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId, RoomMember, UserId
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -63,7 +62,7 @@ pub async fn role_create(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = Role, description = "success"),
         (status = NOT_MODIFIED, description = "success"),
     )
 )]
@@ -130,7 +129,7 @@ pub async fn role_delete(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = Role, description = "success"),
     )
 )]
 pub async fn role_get(
@@ -154,7 +153,7 @@ pub async fn role_get(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<Role>, description = "success"),
     )
 )]
 pub async fn role_list(
@@ -180,7 +179,7 @@ pub async fn role_list(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
 )]
 pub async fn role_member_list(
@@ -207,7 +206,7 @@ pub async fn role_member_list(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = RoomMember, description = "success"),
     )
 )]
 pub async fn role_member_add(
@@ -238,7 +237,7 @@ pub async fn role_member_add(
     ),
     tags = ["role"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = RoomMember, description = "success"),
     )
 )]
 pub async fn role_member_remove(

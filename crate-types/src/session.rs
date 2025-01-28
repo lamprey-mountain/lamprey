@@ -18,7 +18,6 @@ pub struct SessionToken(pub String);
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Session {
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub id: SessionId,
     #[serde(flatten)]
     pub status: SessionStatus,
@@ -30,7 +29,6 @@ pub struct Session {
 pub struct SessionWithToken {
     #[serde(flatten)]
     pub session: Session,
-    #[cfg_attr(feature = "utoipa", schema(read_only))]
     pub token: SessionToken,
 }
 
@@ -44,7 +42,7 @@ pub struct SessionCreate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SessionPatch {
-    #[cfg_attr(feature = "utoipa", schema(write_only, required = false))]
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<Option<String>>,
 }
 
@@ -57,7 +55,6 @@ pub enum SessionStatus {
 
     /// The session exists and can do non-critical actions
     Authorized {
-        #[cfg_attr(feature = "utoipa", schema(write_only))]
         user_id: UserId,
     },
 
@@ -65,7 +62,6 @@ pub enum SessionStatus {
     // Trusted,
     /// The session exists and can do administrative actions
     Sudo {
-        #[cfg_attr(feature = "utoipa", schema(write_only))]
         user_id: UserId,
     },
 }
