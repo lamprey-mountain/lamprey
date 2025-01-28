@@ -228,10 +228,10 @@ button, input[type="submit"] {
 				border: solid 1px $sep;
 			}
 		}
-	}
-
-	& > .editor {
-		box-shadow: 2px 2px 8px #1114;
+		
+		& > .editor {
+			box-shadow: 2px 2px 8px #1114;
+		}
 	}
 
 	& > .list {
