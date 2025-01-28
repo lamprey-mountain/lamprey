@@ -128,7 +128,12 @@ impl DataSession for Postgres {
         let mut tx = conn.begin().await?;
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE id = $1"#,
+            r#"
+            SELECT id, user_id, token, status as "status: _", name
+            FROM session
+            WHERE id = $1
+            FOR UPDATE
+            "#,
             session_id.into_inner()
         )
         .fetch_one(&self.pool)

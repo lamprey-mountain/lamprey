@@ -43,6 +43,7 @@ impl DataUser for Postgres {
             "
             SELECT id, version_id, parent_id, name, description, status, is_bot, is_alias, is_system
             FROM usr WHERE id = $1
+            FOR UPDATE
             ",
             user_id.into_inner()
         )

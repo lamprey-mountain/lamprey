@@ -117,6 +117,7 @@ impl DataRole for Postgres {
             SELECT id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, is_default
             FROM role
             WHERE room_id = $1 AND id = $2
+            FOR UPDATE
         "#, room_id.into_inner(), role_id.into_inner())
     	    .fetch_one(&mut *tx)
         	.await?;

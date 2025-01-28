@@ -101,7 +101,12 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query_as!(
             DbRoom,
-            "SELECT id, version_id, name, description FROM room WHERE id = $1",
+            "
+            SELECT id, version_id, name, description
+            FROM room
+            WHERE id = $1
+            FOR UPDATE
+            ",
             id.into_inner()
         )
         .fetch_one(&mut *tx)
