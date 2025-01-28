@@ -927,17 +927,21 @@ export interface components {
 		};
 		/** @enum {string} */
 		UserState: "Active" | "Suspended" | "Deleted";
-		UserType: "Default" | {
-			/** @description makes two users be considered the same user */
-			Alias: {
-				alias_id: components["schemas"]["UserId"];
-			};
+		UserType: {
+			/** @enum {string} */
+			type: "Default";
 		} | {
-			/** @description automated account */
-			Bot: {
-				owner_id: components["schemas"]["UserId"];
-			};
-		} | "System";
+			alias_id: components["schemas"]["UserId"];
+			/** @enum {string} */
+			type: "Alias";
+		} | {
+			owner_id: components["schemas"]["UserId"];
+			/** @enum {string} */
+			type: "Bot";
+		} | {
+			/** @enum {string} */
+			type: "System";
+		};
 		/** Format: uuid */
 		UserVerId: string;
 	};
