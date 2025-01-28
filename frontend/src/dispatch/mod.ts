@@ -11,7 +11,7 @@ import {
 } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 import { dispatchServer } from "./server.ts";
-import { useApi } from "../api.tsx";
+import { Api } from "../api.tsx";
 
 type Reduction =
 	| { do: "menu"; menu: Menu | null }
@@ -121,8 +121,11 @@ function combine(
 	return merged;
 }
 
-export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
-	const api = useApi();
+export function createDispatcher(
+	ctx: ChatCtx,
+	api: Api,
+	update: SetStoreFunction<Data>,
+) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
 
@@ -429,7 +432,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 
 	const threadSend: Middleware = (_state, _dispatch) => (next) => (action) => {
 		if (action.do === "thread.send") {
-			handleSubmit(ctx, action.thread_id, action.text, update);
+			handleSubmit(ctx, action.thread_id, action.text, update, api);
 		} else {
 			next(action);
 		}
@@ -437,7 +440,7 @@ export function createDispatcher(ctx: ChatCtx, update: SetStoreFunction<Data>) {
 
 	const handleServer: Middleware = (_state, dispatch) => (next) => (action) => {
 		if (action.do === "server") {
-			return dispatchServer(ctx, update, action, dispatch);
+			return dispatchServer(ctx, update, action, dispatch, api);
 		} else {
 			next(action);
 		}

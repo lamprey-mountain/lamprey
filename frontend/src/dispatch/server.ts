@@ -3,7 +3,7 @@ import { produce, reconcile, SetStoreFunction } from "solid-js/store";
 import { Action, ChatCtx, Data } from "../context.ts";
 import { RoleT } from "../types.ts";
 import { types } from "sdk";
-import { useApi } from "../api.tsx";
+import { Api } from "../api.tsx";
 
 function reduceServer(
 	state: Data,
@@ -45,10 +45,10 @@ export function dispatchServer(
 	update: SetStoreFunction<Data>,
 	action: Action,
 	dispatch: (action: Action) => void,
+	api: Api,
 ) {
 	switch (action.do) {
 		case "server": {
-			const api = useApi();
 			const msg = action.msg;
 			if (msg.type === "UpsertMessage") {
 				console.time("UpsertMessage");

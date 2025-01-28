@@ -79,7 +79,7 @@ export function createReactiveResource<T>(
 	return [cache, inner];
 }
 
-type Api = {
+export type Api = {
 	rooms: {
 		fetch: ResourceFetch<Room>;
 		cache: ReactiveMap<string, Room>;

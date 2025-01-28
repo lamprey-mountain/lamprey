@@ -54,7 +54,7 @@ const App2 = (props: any) => {
 			throw new Error("oh no!");
 		},
 	};
-	const dispatch = createDispatcher(ctx, update);
+	const dispatch = createDispatcher(ctx, useApi(), update);
 	ctx.dispatch = dispatch;
 
 	onCleanup(() => props.client.stop());
