@@ -18,11 +18,11 @@ export function calculateSlice(
 	len: number,
 	dir: "b" | "f",
 ): Slice {
-	// messages are approx. 32 px high, show 3 pages of messages
-	const SLICE_LEN = Math.ceil(globalThis.innerHeight / 32) * 3;
+	// messages are approx. 20 px high, show 3 pages of messages
+	const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
 	// scroll a page at a time
-	const PAGINATE_LEN = Math.ceil(globalThis.innerHeight / 32);
+	const PAGINATE_LEN = SLICE_LEN / 3;
 
 	if (!old) {
 		const end = len;
@@ -243,8 +243,8 @@ export async function dispatchMessages(
 					items: tl,
 					slice,
 					read_marker_id,
-					has_before: tl.at(0)?.type === "hole",
-					has_after: tl.at(-1)?.type === "hole",
+					has_before: tl.at(0)?.type === "hole" || slice.start !== 0,
+					has_after: tl.at(-1)?.type === "hole" || slice.end !== tl.length,
 				});
 				update(
 					"thread_state",
