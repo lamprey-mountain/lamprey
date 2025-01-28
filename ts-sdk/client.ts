@@ -97,6 +97,7 @@ export function createClient(opts: ClientOptions): Client {
 		});
 
 		ws.addEventListener("close", () => {
+			setState("reconnecting");
 			setTimeout(setupWebsocket, 1000);
 		});
 	}
