@@ -7,13 +7,10 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-anyhow = "1.0.95"
 async-tempfile = "0.6.0"
 async-trait = "0.1.85"
 axum = { version = "0.8.1", features = ["macros", "ws"] }
 axum-extra = { version = "0.10.0", features = ["typed-header"] }
-base64 = "0.22.1"
-crossbeam = "0.8.4"
 dashmap = "6.1.0"
 dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env", "toml"] }
@@ -28,7 +25,6 @@ sqlx = { version = "0.8.3", features = ["runtime-tokio", "postgres", "uuid", "ti
 thiserror = "2.0.11"
 time = { version = "0.3.37", features = ["serde"] }
 tokio = { version = "1.42.0", features = ["macros", "process", "rt-multi-thread"] }
-tokio-util = "0.7.13"
 tower-http = { version = "0.6.2", features = ["cors", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }

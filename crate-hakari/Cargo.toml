@@ -25,7 +25,7 @@ form_urlencoded = { version = "1" }
 futures = { version = "0.3", default-features = false, features = ["async-await", "std"] }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
-futures-sink = { version = "0.3" }
+futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
 hashbrown = { version = "0.15" }
 indexmap = { version = "2", features = ["serde"] }
@@ -67,7 +67,7 @@ digest = { version = "0.10", features = ["mac", "oid", "std"] }
 form_urlencoded = { version = "1" }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
-futures-sink = { version = "0.3" }
+futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
 hashbrown = { version = "0.15" }
 indexmap = { version = "2", features = ["serde"] }
