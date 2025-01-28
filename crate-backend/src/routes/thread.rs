@@ -192,7 +192,7 @@ async fn thread_ack(
 /// Set a thread's state to Pinned.
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/ack",
+    path = "/thread/{thread_id}/pin",
     params(
         ("thread_id", description = "Thread id"),
     ),
@@ -287,16 +287,16 @@ async fn thread_activate(
 ///
 /// Set a thread's state to Deleted.
 #[utoipa::path(
-     delete,
-     path = "/thread/{thread_id}",
-     params(
-         ("thread_id", description = "Thread id"),
-     ),
-     tags = ["thread"],
-     responses(
-         (status = NO_CONTENT, body = Thread, description = "success"),
-     )
- )]
+    delete,
+    path = "/thread/{thread_id}",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = NO_CONTENT, body = Thread, description = "success"),
+    )
+)]
 async fn thread_delete(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
