@@ -108,7 +108,7 @@ pub async fn role_delete(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let existing = d.role_member_count(role_id).await?;
-    if existing > 0 && query.force {
+    if existing == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {

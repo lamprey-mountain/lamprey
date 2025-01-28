@@ -55,9 +55,10 @@ impl DataRoleMember for Postgres {
                 r.membership as "membership: _",
                 r.override_name,
                 r.override_description
-            FROM room_member AS r
-            JOIN role_member ON role_member.user_id = r.user_id
-        	WHERE room_id = $1 AND r.user_id > $2 AND r.user_id < $3
+            FROM role_member AS m
+            JOIN role ON role.id = m.role_id
+            JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id
+        	WHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3
         	ORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5
         "#,
             role_id.into_inner(),

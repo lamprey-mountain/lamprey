@@ -96,12 +96,9 @@ impl DataRole for Postgres {
         )
         .execute(&mut *tx)
         .await?;
-        query!(
-            "DELETE FROM role WHERE id = $1",
-            role_id.into_inner()
-        )
-        .execute(&mut *tx)
-        .await?;
+        query!("DELETE FROM role WHERE id = $1", role_id.into_inner())
+            .execute(&mut *tx)
+            .await?;
         tx.commit().await?;
         Ok(())
     }
