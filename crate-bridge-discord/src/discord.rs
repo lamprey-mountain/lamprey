@@ -12,7 +12,7 @@ use serenity::{
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{
     common::{Globals, GlobalsTrait},
@@ -188,7 +188,10 @@ impl Discord {
 
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
-                let _ = self.handle(msg, &http).await;
+                match self.handle(msg, &http).await {
+                    Ok(_) => {},
+                    Err(err) => error!("{err}"),
+                };
             }
         });
 

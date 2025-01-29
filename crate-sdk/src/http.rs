@@ -96,7 +96,7 @@ impl Http {
         let c = reqwest::Client::new();
         let url = self.base_url.join("/api/v1/media")?;
         let res = c
-            .delete(url)
+            .post(url)
             .bearer_auth(&self.token)
             .header("content-type", "application/json")
             .json(&body)

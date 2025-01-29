@@ -13,6 +13,7 @@ use serenity::all::{
 use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tracing::error;
 use types::Message;
 use types::MessageId;
 use types::ThreadId;
@@ -65,7 +66,10 @@ impl Portal {
 
     async fn activate(mut self) {
         while let Some(msg) = self.recv.recv().await {
-            let _ = self.handle(msg).await;
+            match self.handle(msg).await {
+                Ok(_) => {},
+                Err(err) => error!("{err}"),
+            };
         }
     }
 

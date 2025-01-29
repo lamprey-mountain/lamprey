@@ -90,6 +90,15 @@ pub enum TrackSource {
     Generated,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
+enum MediaSize {
+    /// if the size is known
+    Bytes(u64),
+    
+    /// approx bandwidth if the size is unknown (media streaming)
+    BytesPerSecond(u64),
+}
+
 /// a unique "view" of this piece of media. could be the source, an audio/video track, a thumbnail, other metadata, etc
 #[derive(Debug, Clone, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 pub struct MediaTrack {

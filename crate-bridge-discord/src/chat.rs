@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
-use tracing::info;
+use tracing::{error, info};
 use types::{
     Media, MediaCreate, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId,
 };
@@ -98,7 +98,10 @@ impl Unnamed {
     pub async fn connect(mut self) -> Result<()> {
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
-                let _ = handle(msg, &self.client.http).await;
+                match handle(msg, &self.client.http).await {
+                    Ok(_) => {},
+                    Err(err) => error!("{err}"),
+                };
             }
         });
 
