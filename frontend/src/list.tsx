@@ -7,6 +7,7 @@ import {
 	createSignal,
 	onCleanup,
 } from "solid-js";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 // import { throttle } from "@solid-primitives/scheduled";
 
 export type TimelineStatus = "loading" | "update" | "ready";
@@ -50,13 +51,15 @@ export function createList<T>(options: {
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
 	const [isAtBottom, setIsAtBottom] = createSignal(true); // FIXME: should only be true if at slice end
 	const [scrollPos, setScrollPos] = createSignal(0);
-	let topRef: HTMLElement | undefined;
-	let bottomRef: HTMLElement | undefined;
 	let anchorRef: Element;
 	let anchorRect: DOMRect;
 
-	const margin = 0;
-	const intersections = new IntersectionObserver((entries) => {
+	createIntersectionObserver(
+		() => [topEl(), bottomEl()].filter((i) => i) as Element[],
+		handleIntersections,
+	);
+
+	function handleIntersections(entries: IntersectionObserverEntry[]) {
 		// PERF: run intersection callback takes too long
 		for (const el of entries) {
 			if (el.target === topEl()) {
@@ -71,9 +74,7 @@ export function createList<T>(options: {
 				}
 			}
 		}
-	}, {
-		rootMargin: `${margin}px 0px ${margin}px 0px`,
-	});
+	}
 
 	const resizes = new ResizeObserver((_entries) => {
 		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
@@ -94,7 +95,6 @@ export function createList<T>(options: {
 	}
 
 	onCleanup(() => {
-		intersections.disconnect();
 		resizes.disconnect();
 	});
 
@@ -142,16 +142,12 @@ export function createList<T>(options: {
 
 			createEffect(on(topEl, (topEl) => {
 				if (!topEl) return;
-				if (topRef) intersections.unobserve(topRef);
-				topRef = topEl;
-				intersections.observe(topEl);
+				setTopEl(topEl);
 			}));
 
 			createEffect(on(bottomEl, (bottomEl) => {
 				if (!bottomEl) return;
-				if (bottomRef) intersections.unobserve(bottomRef);
-				bottomRef = bottomEl;
-				intersections.observe(bottomEl);
+				setBottomEl(bottomEl);
 			}));
 
 			onMount(() => {
