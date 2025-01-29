@@ -1,5 +1,6 @@
 import { ParentProps } from "solid-js";
 import { Modal as ContextModal, useCtx } from "../context.ts";
+import { autofocus } from "@solid-primitives/autofocus";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -70,7 +71,7 @@ export function getModal(modal: ContextModal) {
 							ctx.dispatch({ do: "modal.close" });
 						}}
 					>
-						<input type="text" name="text" autofocus />
+						<input type="text" name="text" use:autofocus autofocus />
 						<div style="height: 8px"></div>
 						<input type="submit" value="done!"></input>{" "}
 						<button

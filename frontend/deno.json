@@ -8,7 +8,9 @@
 	"imports": {
 		"@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.0",
 		"@floating-ui/dom": "npm:@floating-ui/dom",
+		"@solid-primitives/autofocus": "npm:@solid-primitives/autofocus@^0.1.0",
 		"@solid-primitives/event-bus": "npm:@solid-primitives/event-bus@^1.1.0",
+		"@solid-primitives/intersection-observer": "npm:@solid-primitives/intersection-observer@^2.2.0",
 		"@solid-primitives/map": "npm:@solid-primitives/map@^0.6.0",
 		"@solid-primitives/scheduled": "npm:@solid-primitives/scheduled@^1.5.0",
 		"@solid-primitives/websocket": "npm:@solid-primitives/websocket",
