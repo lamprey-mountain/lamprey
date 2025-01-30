@@ -17,12 +17,12 @@ use crate::error::{Error, Result};
 
 /// Room member list
 #[utoipa::path(
-    put,
+    get,
     path = "/room/{room_id}/member",
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["member"],
+    tags = ["room_member"],
     responses(
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
@@ -42,13 +42,13 @@ pub async fn room_member_list(
 
 /// Room member get
 #[utoipa::path(
-    put,
+    get,
     path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["room_member"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -73,7 +73,7 @@ pub async fn room_member_get(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["room_member"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -113,7 +113,7 @@ pub async fn room_member_update(
         ("room_id", description = "Room id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["room_member"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
