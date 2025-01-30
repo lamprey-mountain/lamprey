@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with message_coalesced as (\n    select *\n    from (select *, row_number() over(partition by id order by version_id desc) as row_num\n        from message)\n    where row_num = 1\n)\nselect count(*) from message_coalesced where thread_id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6c3665b93d5ab33fdefcd48804ec88e428965456099859449932216babe39fc7"
+}

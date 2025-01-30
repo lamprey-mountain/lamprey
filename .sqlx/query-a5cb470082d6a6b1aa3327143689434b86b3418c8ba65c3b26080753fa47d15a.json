@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT room.id, room.version_id, room.name, room.description FROM room_member\n        \tJOIN room ON room_member.room_id = room.id\n        \tWHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5\n        ",
+  "query": "\n            \tSELECT room.id, room.version_id, room.name, room.description FROM room_member\n            \tJOIN room ON room_member.room_id = room.id\n            \tWHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       true
     ]
   },
-  "hash": "198c1f9a5c5c1fa8e0832ca5582e0f62c7a575f6452fb8c59b20b563a703dc54"
+  "hash": "a5cb470082d6a6b1aa3327143689434b86b3418c8ba65c3b26080753fa47d15a"
 }

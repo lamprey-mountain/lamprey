@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            with\n            att_json as (\n                select version_id, json_agg(row_to_json(media) order by ord) as attachments\n                from message, unnest(message.attachments) with ordinality as att(id, ord)\n                join media on att.id = media.id\n                group by message.version_id\n            )\n            SELECT\n                msg.type as \"message_type: DbMessageType\",\n                msg.id,\n                msg.thread_id, \n                msg.version_id,\n                msg.ordering,\n                msg.content,\n                msg.metadata,\n                msg.reply_id,\n                msg.override_name,\n                false as \"is_pinned!\",\n                row_to_json(usr) as \"author!\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\n            FROM message AS msg\n            JOIN usr ON usr.id = msg.author_id\n            left JOIN att_json ON att_json.version_id = msg.version_id\n                 WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL\n        ",
+  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    ),\n    thread_viewer as (\n        select thread.id from thread\n        join room_member on thread.room_id = room_member.room_id\n        where room_member.user_id = $1\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '[]'::json) as \"attachments!: serde_json::Value\",\n    false as \"is_pinned!\"\nfrom message_coalesced as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\njoin thread_viewer on msg.thread_id = thread_viewer.id\nwhere msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\n  and content @@ websearch_to_tsquery($6)\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -60,25 +60,28 @@
       },
       {
         "ordinal": 9,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "author!: serde_json::Value",
+        "type_info": "Json"
       },
       {
         "ordinal": 10,
-        "name": "author!",
+        "name": "attachments!: serde_json::Value",
         "type_info": "Json"
       },
       {
         "ordinal": 11,
-        "name": "attachments!",
-        "type_info": "Json"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Text",
+        "Int8",
+        "Text"
       ]
     },
     "nullable": [
@@ -96,5 +99,5 @@
       null
     ]
   },
-  "hash": "757a97ceadd8c65f2cc1c0932916b62310796f6f1aec50e9a7c7dc49f64bf3b1"
+  "hash": "14e3ad493ee57b8d41fd1e19eda95efbd2876a672e0af3594ce22c9beb87f8ac"
 }
