@@ -284,7 +284,7 @@ export function ApiProvider(
 				if (l?.pagination) {
 					const p = l.pagination;
 					const idx = p.items.findIndex((i) => i.id === room.id);
-					if (idx === -1) {
+					if (idx !== -1) {
 						l.mutate({
 							...p,
 							items: p.items.toSpliced(idx, 1, room),
@@ -305,7 +305,7 @@ export function ApiProvider(
 			if (l?.pagination) {
 				const p = l.pagination;
 				const idx = p.items.findIndex((i) => i.id === thread.id);
-				if (idx === -1) {
+				if (idx !== -1) {
 					l.mutate({
 						...p,
 						items: p.items.toSpliced(idx, 1, thread),
@@ -326,6 +326,23 @@ export function ApiProvider(
 		} else if (msg.type === "UpsertSession") {
 			if (msg.session?.id === session()?.id) {
 				setSession(session);
+			}
+		} else if (msg.type === "DeleteRoomMember") {
+			const user_id = userCache.get("@self")?.id;
+			if (msg.user_id === user_id) {
+				if ("pagination" in roomListing) {
+					const l = roomListing as unknown as Listing<Room>;
+					if (l?.pagination) {
+						const p = l.pagination;
+						const idx = p.items.findIndex((i) => i.id === msg.room_id);
+						if (idx !== -1) {
+							l.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1),
+							});
+						}
+					}
+				}
 			}
 		}
 	});
