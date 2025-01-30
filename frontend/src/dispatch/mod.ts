@@ -225,24 +225,24 @@ export function createDispatcher(
 		(_state, _dispatch) => (next) => async (action) => {
 			if (action.do === "fetch.room_threads") {
 				// TODO: paginate
-				const { data, error } = await ctx.client.http.GET(
-					"/api/v1/room/{room_id}/thread",
-					{
-						params: {
-							path: { room_id: action.room_id },
-							query: {
-								dir: "f",
-								limit: 100,
-							},
-						},
-					},
-				);
-				if (error) throw error;
-				solidBatch(() => {
-					for (const item of data.items) {
-						api.threads.cache.set(item.id, item);
-					}
-				});
+				// const { data, error } = await ctx.client.http.GET(
+				// 	"/api/v1/room/{room_id}/thread",
+				// 	{
+				// 		params: {
+				// 			path: { room_id: action.room_id },
+				// 			query: {
+				// 				dir: "f",
+				// 				limit: 100,
+				// 			},
+				// 		},
+				// 	},
+				// );
+				// if (error) throw error;
+				// solidBatch(() => {
+				// 	for (const item of data.items) {
+				// 		api.threads.cache.set(item.id, item);
+				// 	}
+				// });
 			} else {
 				next(action);
 			}
@@ -375,25 +375,25 @@ export function createDispatcher(
 
 	const init: Middleware = (_state, _dispatch) => (next) => async (action) => {
 		if (action.do === "init") {
-			const { data, error } = await ctx.client.http.GET("/api/v1/room", {
-				params: {
-					query: {
-						dir: "f",
-						limit: 100,
-					},
-				},
-			});
-			if (error) {
-				// TODO: handle unauthenticated
-				// console.error(error);
-				return;
-			}
-			console.log(api);
-			solidBatch(() => {
-				for (const room of data.items) {
-					api.rooms.cache.set(room.id, room);
-				}
-			});
+			// const { data, error } = await ctx.client.http.GET("/api/v1/room", {
+			// 	params: {
+			// 		query: {
+			// 			dir: "f",
+			// 			limit: 100,
+			// 		},
+			// 	},
+			// });
+			// if (error) {
+			// 	// TODO: handle unauthenticated
+			// 	// console.error(error);
+			// 	return;
+			// }
+			// console.log(api);
+			// solidBatch(() => {
+			// 	for (const room of data.items) {
+			// 		api.rooms.cache.set(room.id, room);
+			// 	}
+			// });
 		} else {
 			next(action);
 		}

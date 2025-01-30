@@ -6,7 +6,9 @@ import { useApi } from "./api.tsx";
 export const ChatNav = () => {
 	const ctx = useCtx();
 	const api = useApi();
-	const state = from(ctx.client.state)
+	const state = from(ctx.client.state);
+
+	const rooms = api.rooms.list();
 
 	// should i only show threads from the currently active rooms? or show less threads until the room is selected?
 	return (
@@ -15,7 +17,7 @@ export const ChatNav = () => {
 				<li>
 					<A href="/" end>home</A>
 				</li>
-				<For each={[...api.rooms.cache.values()]}>
+				<For each={rooms()?.items}>
 					{(room) => (
 						<li>
 							<A

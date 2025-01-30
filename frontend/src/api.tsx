@@ -1,5 +1,7 @@
 import {
 	Accessor,
+	batch,
+	createComputed,
 	createContext,
 	createSignal,
 	ParentProps,
@@ -11,6 +13,7 @@ import {
 	Client,
 	MessageReady,
 	MessageSync,
+	Pagination,
 	Room,
 	Session,
 	Thread,
@@ -19,14 +22,7 @@ import {
 import { Emitter } from "@solid-primitives/event-bus";
 import { createResource } from "solid-js";
 import { createEffect } from "solid-js";
-
-// type ResourceState = "ready" | "loading" | "errored";
-
-// type Resource<T> = (() => T | undefined) & {
-// 	state: ResourceState;
-// 	error: Error;
-// 	loading: boolean;
-// };
+import { untrack } from "solid-js";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -79,23 +75,6 @@ export function createReactiveResource<T>(
 	return [cache, inner];
 }
 
-export type Api = {
-	rooms: {
-		fetch: ResourceFetch<Room>;
-		cache: ReactiveMap<string, Room>;
-	};
-	threads: {
-		fetch: ResourceFetch<Thread>;
-		cache: ReactiveMap<string, Thread>;
-	};
-	users: {
-		fetch: ResourceFetch<User>;
-		cache: ReactiveMap<string, User>;
-	};
-	session: Accessor<Session | null>;
-	tempCreateSession: () => void;
-};
-
 const ApiContext = createContext<Api>();
 
 export function useApi() {
@@ -136,6 +115,148 @@ export function ApiProvider(
 		});
 	});
 
+	function createRoomList(): () => Resource<Pagination<Room>> {
+		type T = Room;
+		const cache = roomCache;
+		let pagination: Pagination<T> | undefined;
+		let resource: Resource<Pagination<T>>;
+		// let mutate: (value: T) => void;
+		let refetch: () => void;
+		let isFetching = false;
+
+		return () => {
+			if (resource) {
+				if (!isFetching) refetch();
+				return resource;
+			}
+
+			[resource, { refetch }] = createResource(async () => {
+				isFetching = true;
+				const { data, error } = await props.client.http.GET("/api/v1/room", {
+					params: {
+						query: {
+							dir: "f",
+							limit: 100,
+							from: pagination?.items.at(-1)?.id,
+						},
+					},
+				});
+
+				if (error) {
+					// TODO: handle unauthenticated
+					console.error(error);
+					throw error;
+				}
+
+				batch(() => {
+					for (const item of data.items) {
+						cache.set(item.id, item);
+					}
+					pagination = {
+						...data,
+						items: [...pagination?.items ?? [], ...data.items],
+					};
+				});
+
+				isFetching = false;
+				return pagination!;
+			});
+
+			return resource;
+		};
+	}
+
+	function createThreadList() {
+		type T = Thread;
+		type P = Pagination<T>;
+		type Listing = {
+			resource: Resource<P>;
+			pagination: P | undefined;
+			// mutate: (value: T) => void;
+			refetch: () => void;
+			prom: Promise<unknown> | undefined;
+		};
+
+		const cache = threadCache;
+		const listings = new Map<string, Listing>();
+
+		async function paginate(room_id: string, pagination?: P): Promise<P> {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await props.client.http.GET(
+				"/api/v1/room/{room_id}/thread",
+				{
+					params: {
+						path: { room_id },
+						query: {
+							dir: "f",
+							limit: 100,
+							from: pagination?.items.at(-1)?.id,
+						},
+					},
+				},
+			);
+
+			if (error) {
+				// TODO: handle unauthenticated
+				console.error(error);
+				throw error;
+			}
+
+			batch(() => {
+				for (const item of data.items) {
+					cache.set(item.id, item);
+				}
+			});
+
+			return {
+				...data,
+				items: [...pagination?.items ?? [], ...data.items],
+			};
+		}
+
+		return (room_id_signal: () => string) => {
+			createComputed(() => {
+				const room_id = room_id_signal();
+				const cached = listings.get(room_id);
+
+				if (cached) {
+					if (!cached.prom) cached.refetch();
+					return;
+				}
+
+				const listing = { isFetching: true } as unknown as Listing;
+				listings.set(room_id, listing);
+
+				const [resource, { refetch }] = createResource(
+					room_id,
+					async (room_id): Promise<P> => {
+						if (listing.prom) {
+							await listing.prom;
+							return listing.pagination!;
+						}
+
+						const prom = paginate(room_id, listing.pagination);
+						listing.prom = prom;
+						const res = await prom;
+						listing.pagination = res;
+						listing.prom = undefined;
+						return res!;
+					},
+					{},
+				);
+
+				listing.resource = resource;
+				listing.refetch = refetch as () => void;
+			});
+
+			return listings.get(untrack(room_id_signal))!.resource;
+		};
+	}
+
+	const roomList = createRoomList();
+	const threadList = createThreadList();
+
 	props.temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
 			roomCache.set(msg.room.id, msg.room);
@@ -175,9 +296,9 @@ export function ApiProvider(
 	}
 
 	const api = {
-		rooms: { cache: roomCache, fetch: roomFetch },
+		rooms: { cache: roomCache, fetch: roomFetch, list: roomList },
+		threads: { cache: threadCache, fetch: threadFetch, list: threadList },
 		users: { cache: userCache, fetch: userFetch },
-		threads: { cache: threadCache, fetch: threadFetch },
 		session,
 		tempCreateSession,
 	};
@@ -189,3 +310,22 @@ export function ApiProvider(
 		</ApiContext.Provider>
 	);
 }
+
+export type Api = {
+	rooms: {
+		fetch: ResourceFetch<Room>;
+		list: () => Resource<Pagination<Room>>;
+		cache: ReactiveMap<string, Room>;
+	};
+	threads: {
+		fetch: ResourceFetch<Thread>;
+		list: (room_id: () => string) => Resource<Pagination<Thread>>;
+		cache: ReactiveMap<string, Thread>;
+	};
+	users: {
+		fetch: ResourceFetch<User>;
+		cache: ReactiveMap<string, User>;
+	};
+	session: Accessor<Session | null>;
+	tempCreateSession: () => void;
+};

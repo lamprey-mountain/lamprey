@@ -1,25 +1,18 @@
-import { createEffect, For, Show, useContext } from "solid-js";
+import { For, Show } from "solid-js";
 import { RoomT } from "./types.ts";
-import { chatctx } from "./context.ts";
+import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 
 export const RoomHome = (props: { room: RoomT }) => {
-	const ctx = useContext(chatctx)!;
+	const ctx = useCtx();
+	const api = useApi();
+	const nav = useNavigate();
 	const room_id = () => props.room.id;
 
-	createEffect(() => {
-		// TODO: cache
-		// const roomThreadCount = [...Object.values(ctx.data.threads)].filter((i) =>
-		// 	i.room_id === room_id()
-		// ).length;
-		// if (roomThreadCount === 0) {
-		// 	ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() })
-		// }
-		ctx.dispatch({ do: "fetch.room_threads", room_id: room_id() });
-	});
-
+	const threads = api.threads.list(room_id);
+	
 	function createThread(room_id: string) {
 		ctx.dispatch({
 			do: "modal.prompt",
@@ -46,9 +39,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	const nav = useNavigate();
-	const api = useApi();
-
 	// const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
 	// 	if (value?.room_id !== room_id) value = undefined;
 	// 	if (value?.has_more === false) return value;
@@ -74,10 +64,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<br />
 			<ul>
 				<For
-					each={[
-						...api.threads.cache.values()
-							.filter((i) => i.room_id === props.room.id),
-					]}
+					each={[...threads()?.items.filter((i) => i.room_id === props.room.id) ?? []]}
 				>
 					{(thread) => (
 						<li>
