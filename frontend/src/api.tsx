@@ -115,52 +115,76 @@ export function ApiProvider(
 		});
 	});
 
+	type Listing<T> = {
+		resource: Resource<Pagination<T>>;
+		pagination: Pagination<T> | undefined;
+		mutate: (value: Pagination<T>) => void;
+		refetch: () => void;
+		prom: Promise<unknown> | undefined;
+	};
+
+	const roomListing: Listing<Room> | Record<string, never> = {};
+	const threadListings = new Map<string, Listing<Thread>>();
+
 	function createRoomList(): () => Resource<Pagination<Room>> {
 		type T = Room;
 		const cache = roomCache;
-		let pagination: Pagination<T> | undefined;
-		let resource: Resource<Pagination<T>>;
-		// let mutate: (value: T) => void;
-		let refetch: () => void;
-		let isFetching = false;
+		const listing = roomListing;
 
-		return () => {
-			if (resource) {
-				if (!isFetching) refetch();
-				return resource;
+		async function paginate(pagination?: Pagination<T>) {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await props.client.http.GET("/api/v1/room", {
+				params: {
+					query: {
+						dir: "f",
+						limit: 100,
+						from: pagination?.items.at(-1)?.id,
+					},
+				},
+			});
+
+			if (error) {
+				// TODO: handle unauthenticated
+				console.error(error);
+				throw error;
 			}
 
-			[resource, { refetch }] = createResource(async () => {
-				isFetching = true;
-				const { data, error } = await props.client.http.GET("/api/v1/room", {
-					params: {
-						query: {
-							dir: "f",
-							limit: 100,
-							from: pagination?.items.at(-1)?.id,
-						},
-					},
-				});
+			batch(() => {
+				for (const item of data.items) {
+					cache.set(item.id, item);
+				}
+			});
 
-				if (error) {
-					// TODO: handle unauthenticated
-					console.error(error);
-					throw error;
+			return {
+				...data,
+				items: [...pagination?.items ?? [], ...data.items],
+			};
+		}
+
+		return () => {
+			if (listing.resource) {
+				if (!listing.prom) listing.refetch();
+				return listing.resource;
+			}
+
+			const [resource, { refetch, mutate }] = createResource(async () => {
+				if (listing?.prom) {
+					await listing!.prom;
+					return listing!.pagination!;
 				}
 
-				batch(() => {
-					for (const item of data.items) {
-						cache.set(item.id, item);
-					}
-					pagination = {
-						...data,
-						items: [...pagination?.items ?? [], ...data.items],
-					};
-				});
-
-				isFetching = false;
-				return pagination!;
+				const prom = paginate(listing!.pagination);
+				listing!.prom = prom;
+				const res = await prom;
+				listing!.pagination = res;
+				listing!.prom = undefined;
+				return res!;
 			});
+
+			listing.resource = resource;
+			listing.refetch = refetch;
+			listing.mutate = mutate;
 
 			return resource;
 		};
@@ -169,16 +193,9 @@ export function ApiProvider(
 	function createThreadList() {
 		type T = Thread;
 		type P = Pagination<T>;
-		type Listing = {
-			resource: Resource<P>;
-			pagination: P | undefined;
-			// mutate: (value: T) => void;
-			refetch: () => void;
-			prom: Promise<unknown> | undefined;
-		};
 
 		const cache = threadCache;
-		const listings = new Map<string, Listing>();
+		const listings = threadListings;
 
 		async function paginate(room_id: string, pagination?: P): Promise<P> {
 			if (pagination && !pagination.has_more) return pagination;
@@ -225,10 +242,10 @@ export function ApiProvider(
 					return;
 				}
 
-				const listing = { isFetching: true } as unknown as Listing;
+				const listing = { isFetching: true } as unknown as Listing<T>;
 				listings.set(room_id, listing);
 
-				const [resource, { refetch }] = createResource(
+				const [resource, { refetch, mutate }] = createResource(
 					room_id,
 					async (room_id): Promise<P> => {
 						if (listing.prom) {
@@ -248,6 +265,7 @@ export function ApiProvider(
 
 				listing.resource = resource;
 				listing.refetch = refetch as () => void;
+				listing.mutate = mutate;
 			});
 
 			return listings.get(untrack(room_id_signal))!.resource;
@@ -259,9 +277,47 @@ export function ApiProvider(
 
 	props.temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
-			roomCache.set(msg.room.id, msg.room);
+			const { room } = msg;
+			roomCache.set(room.id, room);
+			if ("pagination" in roomListing) {
+				const l = roomListing as unknown as Listing<Room>;
+				if (l?.pagination) {
+					const p = l.pagination;
+					const idx = p.items.findIndex((i) => i.id === room.id);
+					if (idx === -1) {
+						l.mutate({
+							...p,
+							items: p.items.toSpliced(idx, 1, room),
+						});
+					} else if (p.items.length === 0 || room.id > p.items[0].id) {
+						l.mutate({
+							...p,
+							items: [...p.items, room],
+							total: p.total + 1,
+						});
+					}
+				}
+			}
 		} else if (msg.type === "UpsertThread") {
-			threadCache.set(msg.thread.id, msg.thread);
+			const { thread } = msg;
+			threadCache.set(thread.id, thread);
+			const l = threadListings.get(thread.room_id);
+			if (l?.pagination) {
+				const p = l.pagination;
+				const idx = p.items.findIndex((i) => i.id === thread.id);
+				if (idx === -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, thread),
+					});
+				} else if (p.items.length === 0 || thread.id > p.items[0].id) {
+					l.mutate({
+						...p,
+						items: [...p.items, thread],
+						total: p.total + 1,
+					});
+				}
+			}
 		} else if (msg.type === "UpsertUser") {
 			userCache.set(msg.user.id, msg.user);
 			if (msg.user.id === userCache.get("@self")?.id) {
