@@ -159,6 +159,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/logs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Fetch audit logs */
+		get: operations["room_audit_logs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/member": {
 		parameters: {
 			query?: never;
@@ -166,9 +183,9 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
 		/** Room member list */
-		put: operations["room_member_list"];
+		get: operations["room_member_list"];
+		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -183,9 +200,9 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
 		/** Room member get */
-		put: operations["room_member_get"];
+		get: operations["room_member_get"];
+		put?: never;
 		post?: never;
 		/** Room member delete (kick/leave) */
 		delete: operations["room_member_delete"];
@@ -350,7 +367,11 @@ export interface paths {
 		get: operations["thread_get"];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Delete thread
+		 * @description Set a thread's state to Deleted.
+		 */
+		delete: operations["thread_delete"];
 		options?: never;
 		head?: never;
 		/** Edit a thread */
@@ -370,6 +391,46 @@ export interface paths {
 		 * @description Mark a thread as read (or unread).
 		 */
 		put: operations["thread_ack"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/activate": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Reopen/unpin thread
+		 * @description Set a thread's state to Default.
+		 */
+		put: operations["thread_activate"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/archive": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Archive thread
+		 * @description Set a thread's state to Archived.
+		 */
+		put: operations["thread_archive"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -449,6 +510,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/pin": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Pin thread
+		 * @description Set a thread's state to Pinned.
+		 */
+		put: operations["thread_pin"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user": {
 		parameters: {
 			query?: never;
@@ -492,6 +573,15 @@ export interface components {
 		AckReq: {
 			version_id: components["schemas"]["MessageVerId"];
 		};
+		AuditLog: {
+			id: components["schemas"]["AuditLogId"];
+			payload: components["schemas"]["MessageSync"];
+			reason?: string | null;
+			room_id: components["schemas"]["RoomId"];
+			user_id: components["schemas"]["UserId"];
+		};
+		/** Format: uuid */
+		AuditLogId: string;
 		Invite: {
 			code: components["schemas"]["InviteCode"];
 			/** Format: date-time */
@@ -513,6 +603,20 @@ export interface components {
 		} | {
 			room: components["schemas"]["Room"];
 			thread: components["schemas"]["Thread"];
+			/** @enum {string} */
+			type: "Thread";
+		};
+		InviteTargetId: {
+			/** @enum {string} */
+			type: "User";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			room_id: components["schemas"]["RoomId"];
+			/** @enum {string} */
+			type: "Room";
+		} | {
+			room_id: components["schemas"]["RoomId"];
+			thread_id: components["schemas"]["ThreadId"];
 			/** @enum {string} */
 			type: "Thread";
 		};
@@ -621,6 +725,82 @@ export interface components {
 			override_name?: string | null;
 			reply_id?: null | components["schemas"]["MessageId"];
 		};
+		MessageSync: {
+			room: components["schemas"]["Room"];
+			/** @enum {string} */
+			type: "UpsertRoom";
+		} | {
+			thread: components["schemas"]["Thread"];
+			/** @enum {string} */
+			type: "UpsertThread";
+		} | {
+			message: components["schemas"]["Message"];
+			/** @enum {string} */
+			type: "UpsertMessage";
+		} | {
+			/** @enum {string} */
+			type: "UpsertUser";
+			user: components["schemas"]["User"];
+		} | {
+			member: components["schemas"]["RoomMember"];
+			/** @enum {string} */
+			type: "UpsertRoomMember";
+		} | {
+			session: components["schemas"]["Session"];
+			/** @enum {string} */
+			type: "UpsertSession";
+		} | {
+			role: components["schemas"]["Role"];
+			/** @enum {string} */
+			type: "UpsertRole";
+		} | {
+			invite: components["schemas"]["InviteWithMetadata"];
+			/** @enum {string} */
+			type: "UpsertInvite";
+		} | {
+			message_id: components["schemas"]["MessageId"];
+			room_id: components["schemas"]["RoomId"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "DeleteMessage";
+		} | {
+			message_id: components["schemas"]["MessageId"];
+			room_id: components["schemas"]["RoomId"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "DeleteMessageVersion";
+			version_id: components["schemas"]["MessageVerId"];
+		} | {
+			id: components["schemas"]["UserId"];
+			/** @enum {string} */
+			type: "DeleteUser";
+		} | {
+			id: components["schemas"]["SessionId"];
+			/** @enum {string} */
+			type: "DeleteSession";
+			user_id?: null | components["schemas"]["UserId"];
+		} | {
+			role_id: components["schemas"]["RoleId"];
+			room_id: components["schemas"]["RoomId"];
+			/** @enum {string} */
+			type: "DeleteRole";
+		} | {
+			room_id: components["schemas"]["RoomId"];
+			/** @enum {string} */
+			type: "DeleteRoomMember";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			code: components["schemas"]["InviteCode"];
+			target: components["schemas"]["InviteTargetId"];
+			/** @enum {string} */
+			type: "DeleteInvite";
+		} | {
+			data: components["schemas"]["Value"];
+			/** Format: uuid */
+			hook_id: string;
+			/** @enum {string} */
+			type: "Webhook";
+		};
 		/** @enum {string} */
 		MessageType: "Default" | "ThreadUpdate";
 		/** Format: uuid */
@@ -628,6 +808,18 @@ export interface components {
 		OauthInitResponse: {
 			/** Format: uri */
 			url: string;
+		};
+		PaginationResponse_AuditLog: {
+			has_more: boolean;
+			items: {
+				id: components["schemas"]["AuditLogId"];
+				payload: components["schemas"]["MessageSync"];
+				reason?: string | null;
+				room_id: components["schemas"]["RoomId"];
+				user_id: components["schemas"]["UserId"];
+			}[];
+			/** Format: int64 */
+			total: number;
 		};
 		PaginationResponse_Invite: {
 			has_more: boolean;
@@ -883,6 +1075,7 @@ export interface components {
 		ThreadPatch: {
 			description?: string | null;
 			name?: string | null;
+			state?: null | components["schemas"]["ThreadState"];
 		};
 		/** @description lifecycle of a thread */
 		ThreadState:
@@ -944,6 +1137,7 @@ export interface components {
 		};
 		/** Format: uuid */
 		UserVerId: string;
+		Value: unknown;
 	};
 	responses: never;
 	parameters: never;
@@ -1308,6 +1502,30 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Invite"];
+				};
+			};
+		};
+	};
+	room_audit_logs: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description fetch audit logs success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_AuditLog"];
 				};
 			};
 		};
@@ -1868,13 +2086,36 @@ export interface operations {
 			};
 		};
 	};
+	thread_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
 	thread_update: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: string;
 			};
 			cookie?: never;
 		};
@@ -1926,6 +2167,70 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	thread_activate: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+			/** @description didn't change anything */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
+	thread_archive: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+			/** @description didn't change anything */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
 			};
 		};
 	};
@@ -2149,6 +2454,38 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	thread_pin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+			/** @description didn't change anything */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
 			};
 		};
 	};
