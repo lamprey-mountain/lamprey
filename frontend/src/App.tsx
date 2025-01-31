@@ -88,7 +88,6 @@ const App2 = (props: any) => {
 	const TOKEN = localStorage.getItem("token")!;
 	if (TOKEN) {
 		props.client.start(TOKEN);
-		ctx.dispatch({ do: "init" });
 	} else {
 		queueMicrotask(() => {
 			ctx.dispatch({ do: "server.init_session" });

@@ -117,7 +117,6 @@ export type Action =
 		thread_id: string;
 		attachments: Array<Attachment>;
 	}
-	| { do: "fetch.room_threads"; room_id: string }
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
@@ -125,7 +124,6 @@ export type Action =
 	| { do: "server"; msg: types.MessageSync }
 	| { do: "server.init_session" }
 	| { do: "window.mouse_move"; e: MouseEvent }
-	| { do: "init" };
 
 export type AttachmentCreateT = {
 	id: string;

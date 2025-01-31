@@ -11,6 +11,7 @@ import {
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	Client,
+	Message,
 	MessageReady,
 	MessageSync,
 	Pagination,
@@ -23,6 +24,7 @@ import { Emitter } from "@solid-primitives/event-bus";
 import { createResource } from "solid-js";
 import { createEffect } from "solid-js";
 import { untrack } from "solid-js";
+import { MessageListAnchor, Ranges } from "./api/messages.ts";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -272,8 +274,117 @@ export function ApiProvider(
 		};
 	}
 
+	function createMessageList() {
+		const threads = new Map<string, Ranges>();
+
+		return (
+			thread_id_signal: () => string,
+			dir_signal: () => MessageListAnchor,
+		): Resource<Array<Message>> => {
+			// always have Ranges for the current thread
+			createComputed(() => {
+				const thread_id = thread_id_signal();
+				const ranges = threads.get(thread_id) ?? new Ranges();
+				threads.set(thread_id, ranges);
+			});
+
+			const [resource, { refetch, mutate }] = createResource(() => ({
+				thread_id: thread_id_signal(),
+				dir: dir_signal(),
+			}), async ({ thread_id, dir }) => {
+				const ranges = threads.get(thread_id)!;
+				
+				console.log("update message list", {
+					thread_id,
+					dir,
+				});
+				
+				if (dir.type === "forwards") {
+					if (dir.message_id) {
+						throw new Error("todo");
+					} else {
+						throw new Error("todo");
+					}
+				}
+				
+				if (dir.type !== "backwards") throw new Error("todo");
+				if (dir.message_id) {
+					const r = ranges.find(dir.message_id);
+					console.log(ranges, r);
+					if (r) {
+						const idx = r.items.findIndex((i) => i.id === dir.message_id);
+						if (idx !== -1) {
+							if (idx >= dir.limit) return r.items.slice(idx - dir.limit, idx);
+							// fetch more
+							const { data, error } = await props.client.http.GET(
+								"/api/v1/thread/{thread_id}/message",
+								{
+									params: {
+										path: { thread_id },
+										query: { dir: "b", limit: 100, from: r.start() },
+									},
+								},
+							);
+							if (error) throw new Error(error);
+							for (const item of data.items.toReversed()) {
+								const existing = ranges.find(item.id);
+								if (existing) {
+									throw new Error("todo");
+								} else {
+									r.items.unshift(item);
+								}
+							}
+							r.has_backwards = data.has_more;
+							const idx2 = idx + data.items.length;
+							console.log(idx, idx2, data.items.length, dir.limit);
+							const start = Math.max(idx2 - dir.limit, 0);
+							const end = Math.min(start + dir.limit, r.items.length);
+							return r.items.slice(start, end);
+						} else {
+							// fetch thread
+							throw new Error("todo");
+						}
+					} else {
+						// forwards
+						throw new Error("todo");
+					}
+				}
+
+				const range = ranges.live;
+				if (range.isEmpty()) {
+					const { data, error } = await props.client.http.GET(
+						"/api/v1/thread/{thread_id}/message",
+						{
+							params: {
+								path: { thread_id },
+								query: { dir: "b", limit: 100 },
+							},
+						},
+					);
+					if (error) throw new Error(error);
+					for (const item of data.items.toReversed()) {
+						const existing = ranges.find(item.id);
+						if (existing) {
+							throw new Error("todo");
+						} else {
+							range.items.unshift(item);
+						}
+					}
+					range.has_backwards = data.has_more;
+				} else {
+					// don't need to do anything
+				}
+
+				return range.items;
+			});
+
+			return resource;
+		};
+	}
+
 	const roomList = createRoomList();
 	const threadList = createThreadList();
+	const messageList = createMessageList();
 
 	props.temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
@@ -372,6 +483,7 @@ export function ApiProvider(
 		rooms: { cache: roomCache, fetch: roomFetch, list: roomList },
 		threads: { cache: threadCache, fetch: threadFetch, list: threadList },
 		users: { cache: userCache, fetch: userFetch },
+		messages: { list: messageList },
 		session,
 		tempCreateSession,
 	};
@@ -398,6 +510,12 @@ export type Api = {
 	users: {
 		fetch: ResourceFetch<User>;
 		cache: ReactiveMap<string, User>;
+	};
+	messages: {
+		list: (
+			thread_id: () => string,
+			anchor: () => MessageListAnchor,
+		) => Resource<Array<Message>>;
 	};
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;
