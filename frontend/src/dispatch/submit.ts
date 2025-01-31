@@ -8,7 +8,7 @@ export async function handleSubmit(
 	ctx: ChatCtx,
 	thread_id: string,
 	text: string,
-	_update: SetStoreFunction<Data>,
+	update: SetStoreFunction<Data>,
 	api: Api,
 ) {
 	console.log(useApi());
@@ -79,4 +79,6 @@ export async function handleSubmit(
 		reply_id,
 		attachments,
 	});
+	update("thread_state", thread_id, "reply_id", null);
+	update("thread_state", thread_id, "attachments", []);
 }

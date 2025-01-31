@@ -85,7 +85,6 @@ export const ChatMain = (props: ChatProps) => {
 					setAnchor({
 						type: "forwards",
 						limit: SLICE_LEN,
-						// fix: mark threads read
 						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
