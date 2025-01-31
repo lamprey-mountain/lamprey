@@ -11,7 +11,6 @@ import {
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	Client,
-	Message,
 	MessageReady,
 	MessageSync,
 	Pagination,
@@ -24,7 +23,11 @@ import { Emitter } from "@solid-primitives/event-bus";
 import { createResource } from "solid-js";
 import { createEffect } from "solid-js";
 import { untrack } from "solid-js";
-import { MessageListAnchor, Ranges } from "./api/messages.ts";
+import {
+	MessageListAnchor,
+	MessageRange,
+	MessageRanges,
+} from "./api/messages.ts";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -39,6 +42,10 @@ export type Json =
 	| { [k in string]: Json };
 
 type ResourceFetch<T> = (id: () => string) => [Resource<T>];
+
+function assertEq<T>(a: T, b: T) {
+	if (a !== b) throw new Error(`assert failed: ${a} !== ${b}`);
+}
 
 export function createReactiveResource<T>(
 	fetch: (id: string) => Promise<ResourceResponse<T>>,
@@ -275,38 +282,84 @@ export function ApiProvider(
 	}
 
 	function createMessageList() {
-		const threads = new Map<string, Ranges>();
+		const threads = new Map<string, MessageRanges>();
 
 		return (
 			thread_id_signal: () => string,
 			dir_signal: () => MessageListAnchor,
-		): Resource<Array<Message>> => {
+		): Resource<MessageRange> => {
 			// always have Ranges for the current thread
 			createComputed(() => {
 				const thread_id = thread_id_signal();
-				const ranges = threads.get(thread_id) ?? new Ranges();
+				const ranges = threads.get(thread_id) ?? new MessageRanges();
 				threads.set(thread_id, ranges);
 			});
 
-			const [resource, { refetch, mutate }] = createResource(() => ({
-				thread_id: thread_id_signal(),
-				dir: dir_signal(),
-			}), async ({ thread_id, dir }) => {
+			async function update(
+				{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
+			): Promise<MessageRange> {
 				const ranges = threads.get(thread_id)!;
-				
+
 				console.log("update message list", {
 					thread_id,
 					dir,
 				});
-				
+
 				if (dir.type === "forwards") {
 					if (dir.message_id) {
-						throw new Error("todo");
+						const r = ranges.find(dir.message_id);
+						console.log(ranges, r);
+						if (r) {
+							const idx = r.items.findIndex((i) => i.id === dir.message_id);
+							if (idx !== -1) {
+								if (idx < r.len - dir.limit || !r.has_forward) {
+									const start = idx;
+									const end = Math.min(idx + dir.limit, r.len);
+									const s = r.slice(start, end);
+									assertEq(s.start, dir.message_id);
+									return s;
+								}
+								
+								throw new Error("todo");
+
+								// // fetch more
+								// const { data, error } = await props.client.http.GET(
+								// 	"/api/v1/thread/{thread_id}/message",
+								// 	{
+								// 		params: {
+								// 			path: { thread_id },
+								// 			query: { dir: "b", limit: 100, from: r.start },
+								// 		},
+								// 	},
+								// );
+								// if (error) throw new Error(error);
+								// for (const item of data.items.toReversed()) {
+								// 	const existing = ranges.find(item.id);
+								// 	if (existing) {
+								// 		throw new Error("todo");
+								// 	} else {
+								// 		r.items.unshift(item);
+								// 	}
+								// }
+								// r.has_backwards = data.has_more;
+								// const end = idx + data.items.length + 1;
+								// const start = Math.max(end - dir.limit, 0);
+								// const s = r.slice(start, end);
+								// assertEq(s.end, dir.message_id);
+								// return s;
+							} else {
+								// fetch thread
+								throw new Error("todo");
+							}
+						} else {
+							// new range
+							throw new Error("todo");
+						}
 					} else {
 						throw new Error("todo");
 					}
 				}
-				
+
 				if (dir.type !== "backwards") throw new Error("todo");
 				if (dir.message_id) {
 					const r = ranges.find(dir.message_id);
@@ -314,14 +367,21 @@ export function ApiProvider(
 					if (r) {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
-							if (idx >= dir.limit) return r.items.slice(idx - dir.limit, idx);
+							if (idx >= dir.limit) {
+								const end = idx + 1;
+								const start = Math.max(end - dir.limit, 0);
+								const s = r.slice(start, end);
+								assertEq(s.end, dir.message_id);
+								return s;
+							}
+
 							// fetch more
 							const { data, error } = await props.client.http.GET(
 								"/api/v1/thread/{thread_id}/message",
 								{
 									params: {
 										path: { thread_id },
-										query: { dir: "b", limit: 100, from: r.start() },
+										query: { dir: "b", limit: 100, from: r.start },
 									},
 								},
 							);
@@ -335,17 +395,17 @@ export function ApiProvider(
 								}
 							}
 							r.has_backwards = data.has_more;
-							const idx2 = idx + data.items.length;
-							console.log(idx, idx2, data.items.length, dir.limit);
-							const start = Math.max(idx2 - dir.limit, 0);
-							const end = Math.min(start + dir.limit, r.items.length);
-							return r.items.slice(start, end);
+							const end = idx + data.items.length + 1;
+							const start = Math.max(end - dir.limit, 0);
+							const s = r.slice(start, end);
+							assertEq(s.end, dir.message_id);
+							return s;
 						} else {
 							// fetch thread
 							throw new Error("todo");
 						}
 					} else {
-						// forwards
+						// new range
 						throw new Error("todo");
 					}
 				}
@@ -375,8 +435,13 @@ export function ApiProvider(
 					// don't need to do anything
 				}
 
-				return range.items;
-			});
+				return range.slice(range.len - dir.limit, range.len);
+			}
+
+			const [resource] = createResource(() => ({
+				thread_id: thread_id_signal(),
+				dir: dir_signal(),
+			}), update);
 
 			return resource;
 		};
@@ -515,7 +580,7 @@ export type Api = {
 		list: (
 			thread_id: () => string,
 			anchor: () => MessageListAnchor,
-		) => Resource<Array<Message>>;
+		) => Resource<MessageRange>;
 	};
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;

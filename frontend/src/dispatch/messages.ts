@@ -4,14 +4,6 @@ import { Action, ChatCtx, Data, Slice, TimelineItem } from "../context.ts";
 import { TimelineItemT } from "../Messages.tsx";
 import { MessageT, Pagination } from "../types.ts";
 
-type RenderTimelineParams = {
-	items: Array<TimelineItem>;
-	slice: Slice;
-	read_marker_id: string | null;
-	has_before: boolean;
-	has_after: boolean;
-};
-
 export function calculateSlice(
 	old: Slice | undefined,
 	off: number,
@@ -39,13 +31,19 @@ export function calculateSlice(
 	}
 }
 
+type RenderTimelineParams = {
+	items: Array<TimelineItem>;
+	read_marker_id: string | null;
+	has_before: boolean;
+	has_after: boolean;
+};
+
 export function renderTimeline(
-	{ items, slice, read_marker_id, has_before, has_after }: RenderTimelineParams,
+	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
 ): Array<TimelineItemT> {
-	const rawItems = items.slice(slice.start, slice.end) ?? [];
 	const newItems: Array<TimelineItemT> = [];
 
-	if (rawItems.length === 0) throw new Error("no items");
+	if (items.length === 0) throw new Error("no items");
 
 	if (has_before) {
 		newItems.push({
@@ -69,8 +67,8 @@ export function renderTimeline(
 		});
 	}
 
-	for (let i = 0; i < rawItems.length; i++) {
-		const msg = rawItems[i];
+	for (let i = 0; i < items.length; i++) {
+		const msg = items[i];
 		if (msg.type === "hole") continue;
 		newItems.push({
 			type: "message",
@@ -88,7 +86,7 @@ export function renderTimeline(
 		//   separate: true,
 		//   // separate: shouldSplit(messages[i], messages[i - 1]),
 		// });
-		if (msg.message.id === read_marker_id && i !== rawItems.length - 1) {
+		if (msg.message.id === read_marker_id && i !== items.length - 1) {
 			newItems.push({
 				type: "unread-marker",
 				id: "unread-marker",

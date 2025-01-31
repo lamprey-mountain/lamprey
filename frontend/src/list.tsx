@@ -115,6 +115,7 @@ export function createList<T>(options: {
 		},
 		List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
 			function reanchor() {
+				// console.log("attempt reanchor")
 				const wrap = wrapperEl();
 				const shouldAutoscroll = isAtBottom() &&
 					(options.autoscroll?.() || false);
@@ -126,6 +127,7 @@ export function createList<T>(options: {
 					const currentRect = anchorRef.getBoundingClientRect();
 					const diff = (currentRect.y - anchorRect.y) +
 						(currentRect.height - anchorRect.height);
+					// console.log("reanchored", anchorRect, currentRect, diff)
 					wrapperEl()?.scrollBy(0, diff);
 				}
 				setRefs();
@@ -133,11 +135,7 @@ export function createList<T>(options: {
 
 			createComputed(on(options.items, () => {
 				anchorRect = anchorRef?.getBoundingClientRect();
-			}));
-
-			createEffect(on(options.items, () => {
 				queueMicrotask(reanchor);
-				// reanchor()
 			}));
 
 			createEffect(on(topEl, (topEl) => {

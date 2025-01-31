@@ -1,21 +1,19 @@
-import { createEffect, on, Show, useContext } from "solid-js";
-import { chatctx, ThreadState, TimelineItem, useCtx } from "./context.ts";
+import { createEffect, on, Show } from "solid-js";
+import { ThreadState, TimelineItem, useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
-import { throttle } from "@solid-primitives/scheduled";
-import { renderTimelineItem } from "./Messages.tsx";
+import { renderTimelineItem, TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { MessageListAnchor } from "./api/messages.ts";
 import { renderTimeline } from "./dispatch/messages.ts";
+import { reconcile } from "solid-js/store";
 
 type ChatProps = {
 	thread: ThreadT;
 	room: RoomT;
 };
-
-const SLICE_LEN = 50;
 
 export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
@@ -31,7 +29,7 @@ export const ChatMain = (props: ChatProps) => {
 
 	const [anchor, setAnchor] = createSignal<MessageListAnchor>({
 		type: "backwards",
-		limit: SLICE_LEN,
+		limit: 50, // TODO: calculate dynamically
 	});
 
 	const messages = api.messages.list(() => props.thread.id, anchor);
@@ -41,22 +39,27 @@ export const ChatMain = (props: ChatProps) => {
 		console.log("update messages error", messages.error)
 	})
 
-	function tl() {
-		if (messages()?.length) {
-			return renderTimeline({
-				items: messages()!.map((i) => ({
+	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
+
+	createEffect(() => {
+		const m = messages();
+		if (m?.items.length) {
+			console.log(m.has_backwards, m.has_forward);
+			const rendered = renderTimeline({
+				items: m.items.map((i) => ({
 					type: "remote",
 					message: i,
 				})) as Array<TimelineItem>,
-				has_after: false,
-				has_before: false,
+				has_after: m.has_forward,
+				has_before: m.has_backwards,
 				read_marker_id: ts()?.read_marker_id ?? null,
-				slice: { start: 0, end: 50 },
+				// slice: { start: 0, end: 50 },
 			});
+			setTl((old) => [...reconcile(rendered)(old)]);
 		} else {
-			return [];
+			setTl([]);
 		}
-	}
+	});
 
 	function init() {
 		const thread_id = props.thread.id;
@@ -74,8 +77,14 @@ export const ChatMain = (props: ChatProps) => {
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
 			if (messages.loading) return;
+			// const thread_id = props.thread.id;
 			
-			const thread_id = props.thread.id;
+			// messages are approx. 20 px high, show 3 pages of messages
+			const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+			// scroll a page at a time
+			const PAGINATE_LEN = SLICE_LEN / 3;
+			
 			if (dir === "forwards") {
 				// ctx.dispatch({ do: "paginate", dir: "f", thread_id });
 				// const isAtEnd = ctx.data.slices[thread_id].end ===
@@ -83,19 +92,19 @@ export const ChatMain = (props: ChatProps) => {
 				// if (isAtEnd) {
 				// 	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 				// }
-				console.log("paginate forwards", messages.loading);
-				// setAnchor({
-				// 	type: "forwards",
-				// 	limit: SLICE_LEN,
-				// 	message_id: messages()?.at(-20)?.id,
-				// });
+				console.log("paginate forwards");
+				setAnchor({
+					type: "forwards",
+					limit: SLICE_LEN,
+					message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
+				});
 			} else {
 				// ctx.dispatch({ do: "paginate", dir: "b", thread_id });
-				console.log("paginate backwards", messages.loading);
+				console.log("paginate backwards");
 				setAnchor({
 					type: "backwards",
 					limit: SLICE_LEN,
-					message_id: messages()?.[20]?.id,
+					message_id: messages()?.items[PAGINATE_LEN]?.id,
 				});
 			}
 		},
