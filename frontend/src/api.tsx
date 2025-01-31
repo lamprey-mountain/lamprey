@@ -562,20 +562,12 @@ export function ApiProvider(
 			if (r) {
 				if (m.nonce) {
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
-					console.log(m.nonce, idx);
 					if (idx !== -1) {
 						r.live.items.splice(idx, 1);
 					}
 				}
 				r.live.items.push(m);
-				for (const mut of threadMessageMutators) {
-					if (mut.thread_id !== m.thread_id) continue;
-					if (mut.query.type !== "backwards") continue;
-					if (mut.query.message_id) continue;
-					const start = Math.max(r.live.len - mut.query.limit, 0);
-					const end = Math.min(start + mut.query.limit, r.live.len);
-					mut.mutate(r.live.slice(start, end));
-				}
+				updateMessageMutators(r, m.thread_id);
 			}
 		}
 	});
@@ -626,14 +618,7 @@ export function ApiProvider(
 		const r = threadMessageRanges.get(thread_id);
 		if (r) {
 			r.live.items.push(local);
-			for (const mut of threadMessageMutators) {
-				if (mut.thread_id !== thread_id) continue;
-				if (mut.query.type === "backwards") continue;
-				if (mut.query.message_id) continue;
-				const start = Math.max(r.live.len - mut.query.limit, 0);
-				const end = Math.min(start + mut.query.limit, r.live.len);
-				mut.mutate(r.live.slice(start, end));
-			}
+			updateMessageMutators(r, thread_id);
 		}
 
 		const { data, error } = await props.client.http.POST(
@@ -651,6 +636,17 @@ export function ApiProvider(
 		);
 		if (error) throw new Error(error);
 		return data;
+	}
+
+	function updateMessageMutators(r: MessageRanges, thread_id: string) {
+		for (const mut of threadMessageMutators) {
+			if (mut.thread_id !== thread_id) continue;
+			if (mut.query.type !== "backwards") continue;
+			if (mut.query.message_id) continue;
+			const start = Math.max(r.live.len - mut.query.limit, 0);
+			const end = Math.min(start + mut.query.limit, r.live.len);
+			mut.mutate(r.live.slice(start, end));
+		}
 	}
 
 	const api = {

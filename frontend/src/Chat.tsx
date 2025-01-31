@@ -213,7 +213,6 @@ export function renderTimeline(
 			id: msg.version_id,
 			message: msg,
 			separate: true,
-			is_local: !!msg.is_local,
 			// separate: shouldSplit(messages[i], messages[i - 1]),
 		});
 		// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;

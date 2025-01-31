@@ -20,7 +20,6 @@ export type TimelineItemT =
 			type: "message";
 			message: MessageT;
 			separate: boolean;
-			is_local: boolean;
 		}
 	);
 
@@ -37,7 +36,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 					}}
 					data-message-id={item.message.id}
 				>
-					<MessageView message={item.message} is_local={item.is_local} />
+					<MessageView message={item.message} />
 				</li>
 			);
 		}
