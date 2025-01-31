@@ -38,7 +38,6 @@ import {
 import { MessageType } from "./types.ts";
 import { uuidv7 } from "uuidv7";
 import { onCleanup } from "solid-js";
-import { createStore } from "solid-js/store";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -76,12 +75,13 @@ export function createReactiveResource<T>(
 				if (error) throw error;
 				requests.delete(id);
 				cache.set(id, data);
-				createEffect(() => {
-					// HACK: extra closure to make typescript happy
-					mutate(() => cache.get(id));
-				});
 				return data;
 			})();
+			
+			createEffect(() => {
+				// HACK: extra closure to make typescript happy
+				mutate(() => cache.get(id));
+			});
 
 			requests.set(id, req);
 			return req;
