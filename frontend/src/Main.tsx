@@ -37,7 +37,7 @@ export const Main = () => {
 		setMenuParentRef({
 			getBoundingClientRect(): ClientRectObject {
 				const { menu } = ctx.data;
-				if (!menu) throw new Error("missing menu!");
+				if (!menu) return {};
 				return {
 					x: menu.x,
 					y: menu.y,
