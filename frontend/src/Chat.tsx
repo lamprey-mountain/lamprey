@@ -71,7 +71,7 @@ export const ChatMain = (props: ChatProps) => {
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
 			if (messages.loading) return;
-			// const thread_id = props.thread.id;
+			const thread_id = props.thread.id;
 
 			// messages are approx. 20 px high, show 3 pages of messages
 			const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
@@ -85,6 +85,7 @@ export const ChatMain = (props: ChatProps) => {
 					setAnchor({
 						type: "forwards",
 						limit: SLICE_LEN,
+						// fix: mark threads read
 						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
@@ -92,7 +93,9 @@ export const ChatMain = (props: ChatProps) => {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
-					// ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+					if (list.isAtBottom()) {
+						ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+					}
 				}
 			} else {
 				setAnchor({
