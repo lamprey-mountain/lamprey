@@ -55,7 +55,6 @@ export function dispatchServer(
 				solidBatch(() => {
 					const { message } = msg;
 					const { id, version_id, thread_id } = message;
-					update("messages", id, message);
 
 					const t = api.threads.cache.get(thread_id);
 					if (t) {

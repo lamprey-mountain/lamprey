@@ -1,10 +1,10 @@
 import { getTimestampFromUUID } from "sdk";
 import { MediaT, MessageT, MessageType } from "./types.ts";
-import { useCtx } from "./context.ts";
 import { For, Show } from "solid-js";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
+import { useApi } from "./api.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -51,8 +51,6 @@ function MessageText(props: MessageTextProps) {
 }
 
 export function MessageView(props: MessageProps) {
-	const ctx = useCtx();
-
 	function getComponent() {
 		const date =
 			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
@@ -92,13 +90,13 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
+			const api = useApi();
 			return (
 				<>
-					<Show
-						when={props.message.reply_id &&
-							ctx.data.messages[props.message.reply_id!]}
-					>
-						<ReplyView reply={ctx.data.messages[props.message.reply_id!]} />
+					<Show when={props.message.reply_id}>
+						<ReplyView
+							reply={api.messages.cache.get(props.message.reply_id!)}
+						/>
 					</Show>
 					<div class="author-wrap">
 						<div
@@ -127,16 +125,19 @@ export function MessageView(props: MessageProps) {
 	return <>{getComponent()}</>;
 }
 
-function ReplyView(props: { reply: MessageT }) {
-	const name = props.reply.override_name ?? props.reply.author.name;
-	const content = props.reply.content ??
-		`${props.reply.attachments.length} attachment(s)`;
+function ReplyView(props: { reply?: MessageT }) {
+	const name = () => props.reply?.override_name ?? props.reply?.author.name;
+	const content = () =>
+		props.reply?.content ??
+			`${props.reply?.attachments.length} attachment(s)`;
 	return (
 		<>
 			<div class="reply arrow">{"\u21B1"}</div>
 			<div class="reply reply-content">
-				<span class="author">{name}:</span>
-				{content}
+				<Show when={props.reply} fallback="loading..">
+					<span class="author">{name()}:</span>
+					{content()}
+				</Show>
 			</div>
 			<div class="reply"></div>
 		</>

@@ -122,7 +122,7 @@ export const ChatMain = (props: ChatProps) => {
 					type: "message",
 					x: e.x,
 					y: e.y,
-					message: ctx.data.messages[message_id],
+					message: api.messages.cache.get(message_id)!,
 				},
 			});
 		},

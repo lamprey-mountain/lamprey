@@ -38,7 +38,6 @@ export type ThreadState = {
 export type Data = {
 	room_members: Record<string, Record<string, MemberT>>;
 	room_roles: Record<string, Record<string, RoleT>>;
-	messages: Record<string, MessageT>;
 	slices: Record<string, Slice>;
 	invites: Record<string, InviteT>;
 	thread_state: Record<string, ThreadState>;
@@ -131,7 +130,6 @@ export type ChatCtx = {
 export const defaultData: Data = {
 	room_members: {},
 	room_roles: {},
-	messages: {},
 	slices: {},
 	invites: {},
 	thread_state: {},

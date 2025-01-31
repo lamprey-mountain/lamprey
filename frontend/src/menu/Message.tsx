@@ -1,5 +1,6 @@
 // the context menu for messages
 
+import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { MessageT } from "../types.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
@@ -7,6 +8,7 @@ import { Item, Menu, Separator } from "./Parts.tsx";
 // should i have a separate one for bulk messages?
 export function MessageMenu(props: { message: MessageT }) {
 	const ctx = useCtx();
+	const api = useApi();
 	const copyId = () => navigator.clipboard.writeText(props.message.id);
 	const setReply = () =>
 		ctx.dispatch({
@@ -15,16 +17,12 @@ export function MessageMenu(props: { message: MessageT }) {
 			reply_id: props.message.id,
 		});
 
-	// FIXME: mark messages unread
 	function markUnread() {
-		const thread = ctx.data.timelines[props.message.thread_id];
-		const index = thread.findIndex((i) =>
-			i.type === "remote" && i.message.id === props.message.id
-		);
-		const next = thread[index - 1];
-		const next_id = next?.type === "remote"
-			? next.message.id
-			: props.message.id;
+		const r = api.messages.cacheRanges.get(props.message.thread_id)!;
+		const tl = r.find(props.message.id)?.items!;
+		const index = tl.findIndex((i) =>i.id === props.message.id && !i.is_local );
+		const next = tl[index - 1];
+		const next_id = next?.id ?? props.message.id;
 		ctx.dispatch({
 			do: "thread.mark_read",
 			thread_id: props.message.thread_id,

@@ -4,6 +4,7 @@ import { ThreadT } from "./types.ts";
 import Editor from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { renderAttachment } from "./Message.tsx";
+import { useApi } from "./api.tsx";
 
 type InputProps = {
 	ts: ThreadState;
@@ -12,7 +13,8 @@ type InputProps = {
 
 export function Input(props: InputProps) {
 	const ctx = useCtx();
-	const reply = () => ctx.data.messages[props.ts.reply_id!];
+	const api = useApi();
+	const reply = () => api.messages.cache.get(props.ts.reply_id!);
 
 	function handleUpload(file: File) {
 		console.log(file);

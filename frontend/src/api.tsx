@@ -292,6 +292,7 @@ export function ApiProvider(
 
 	const threadMessageRanges = new Map<string, MessageRanges>();
 	const threadMessageMutators = new Set<MessageMutator>();
+	const messageCache = new ReactiveMap<string, Message>();
 
 	function createMessageList() {
 		return (
@@ -404,14 +405,17 @@ export function ApiProvider(
 									},
 								);
 								if (error) throw new Error(error);
-								for (const item of data.items.toReversed()) {
-									const existing = ranges.find(item.id);
-									if (existing) {
-										throw new Error("todo");
-									} else {
-										r.items.unshift(item);
+								batch(() => {
+									for (const item of data.items.toReversed()) {
+										messageCache.set(item.id, item);
+										const existing = ranges.find(item.id);
+										if (existing) {
+											throw new Error("todo");
+										} else {
+											r.items.unshift(item);
+										}
 									}
-								}
+								});
 								r.has_backwards = data.has_more;
 								const end = idx + data.items.length + 1;
 								const start = Math.max(end - dir.limit, 0);
@@ -440,14 +444,17 @@ export function ApiProvider(
 							},
 						);
 						if (error) throw new Error(error);
-						for (const item of data.items.toReversed()) {
-							const existing = ranges.find(item.id);
-							if (existing) {
-								throw new Error("todo");
-							} else {
-								range.items.unshift(item);
+						batch(() => {
+							for (const item of data.items.toReversed()) {
+								messageCache.set(item.id, item);
+								const existing = ranges.find(item.id);
+								if (existing) {
+									throw new Error("todo");
+								} else {
+									range.items.unshift(item);
+								}
 							}
-						}
+						});
 						range.has_backwards = data.has_more;
 					} else {
 						// don't need to do anything
@@ -574,7 +581,10 @@ export function ApiProvider(
 					}
 				}
 				r.live.items.push(m);
-				updateMessageMutators(r, m.thread_id);
+				batch(() => {
+					messageCache.set(m.id, m);
+					updateMessageMutators(r, m.thread_id);
+				});
 			}
 		}
 	});
@@ -660,7 +670,12 @@ export function ApiProvider(
 		rooms: { cache: roomCache, fetch: roomFetch, list: roomList },
 		threads: { cache: threadCache, fetch: threadFetch, list: threadList },
 		users: { cache: userCache, fetch: userFetch },
-		messages: { list: messageList, send: messageSend },
+		messages: {
+			list: messageList,
+			send: messageSend,
+			cache: messageCache,
+			cacheRanges: threadMessageRanges,
+		},
 		session,
 		tempCreateSession,
 	};
@@ -701,6 +716,8 @@ export type Api = {
 			thread_id: () => string,
 			anchor: () => MessageListAnchor,
 		) => Resource<MessageRange>;
+		cache: ReactiveMap<string, Message>;
+		cacheRanges: Map<string, MessageRanges>;
 	};
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;
