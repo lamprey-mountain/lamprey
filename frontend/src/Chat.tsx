@@ -1,5 +1,5 @@
 import { createEffect, on, Show } from "solid-js";
-import { ThreadState, TimelineItem, useCtx } from "./context.ts";
+import { ThreadState, useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
 import { renderTimelineItem, TimelineItemT } from "./Messages.tsx";
@@ -7,8 +7,8 @@ import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { MessageListAnchor } from "./api/messages.ts";
-import { renderTimeline } from "./dispatch/messages.ts";
 import { reconcile } from "solid-js/store";
+import { Message } from "sdk";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -34,22 +34,13 @@ export const ChatMain = (props: ChatProps) => {
 
 	const messages = api.messages.list(() => props.thread.id, anchor);
 
-	createEffect(() => {
-		console.log("update messages", messages())
-		console.log("update messages error", messages.error)
-	})
-
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
 	createEffect(() => {
 		const m = messages();
 		if (m?.items.length) {
-			console.log(m.has_backwards, m.has_forward);
 			const rendered = renderTimeline({
-				items: m.items.map((i) => ({
-					type: "remote",
-					message: i,
-				})) as Array<TimelineItem>,
+				items: m.items,
 				has_after: m.has_forward,
 				has_before: m.has_backwards,
 				read_marker_id: ts()?.read_marker_id ?? null,
@@ -72,35 +63,35 @@ export const ChatMain = (props: ChatProps) => {
 
 	const list = createList({
 		items: tl,
-		// autoscroll: () => !hasSpaceBottom(),
+		autoscroll: () => !messages()?.has_backwards,
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
 			if (messages.loading) return;
 			// const thread_id = props.thread.id;
-			
+
 			// messages are approx. 20 px high, show 3 pages of messages
 			const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
 			// scroll a page at a time
 			const PAGINATE_LEN = SLICE_LEN / 3;
-			
+
+			const msgs = messages()!;
 			if (dir === "forwards") {
-				// ctx.dispatch({ do: "paginate", dir: "f", thread_id });
-				// const isAtEnd = ctx.data.slices[thread_id].end ===
-				// 	ctx.data.timelines[thread_id].length;
-				// if (isAtEnd) {
-				// 	ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-				// }
-				console.log("paginate forwards");
-				setAnchor({
-					type: "forwards",
-					limit: SLICE_LEN,
-					message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
-				});
+				if (msgs.has_forward) {
+					setAnchor({
+						type: "forwards",
+						limit: SLICE_LEN,
+						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
+					});
+				} else {
+					setAnchor({
+						type: "backwards",
+						limit: SLICE_LEN,
+					});
+					// ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
+				}
 			} else {
-				// ctx.dispatch({ do: "paginate", dir: "b", thread_id });
-				console.log("paginate backwards");
 				setAnchor({
 					type: "backwards",
 					limit: SLICE_LEN,
@@ -161,7 +152,7 @@ export const ChatMain = (props: ChatProps) => {
 		// TODO: restore scroll position
 		queueMicrotask(() => {
 			const pos = ts()!.scroll_pos;
-			console.log({ pos });
+			// console.log({ pos });
 			if (pos === null) return list.scrollTo(999999);
 			list.scrollTo(pos);
 		});
@@ -178,3 +169,75 @@ export const ChatMain = (props: ChatProps) => {
 		</div>
 	);
 };
+
+type RenderTimelineParams = {
+	items: Array<Message>;
+	read_marker_id: string | null;
+	has_before: boolean;
+	has_after: boolean;
+};
+
+export function renderTimeline(
+	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
+): Array<TimelineItemT> {
+	const newItems: Array<TimelineItemT> = [];
+	if (items.length === 0) throw new Error("no items");
+	if (has_before) {
+		newItems.push({
+			type: "info",
+			id: "info",
+			header: false,
+		});
+		newItems.push({
+			type: "spacer",
+			id: "spacer-top",
+		});
+	} else {
+		newItems.push({
+			type: "spacer-mini2",
+			id: "spacer-top2",
+		});
+		newItems.push({
+			type: "info",
+			id: "info",
+			header: true,
+		});
+	}
+	for (let i = 0; i < items.length; i++) {
+		const msg = items[i];
+		newItems.push({
+			type: "message",
+			id: msg.version_id,
+			message: msg,
+			separate: true,
+			is_local: !!msg.is_local,
+			// separate: shouldSplit(messages[i], messages[i - 1]),
+		});
+		// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
+		// items.push({
+		//   type: "message",
+		//   id: messages[i].id,
+		//   message: messages[i],
+		//   separate: true,
+		//   // separate: shouldSplit(messages[i], messages[i - 1]),
+		// });
+		if (msg.id === read_marker_id && i !== items.length - 1) {
+			newItems.push({
+				type: "unread-marker",
+				id: "unread-marker",
+			});
+		}
+	}
+	if (has_after) {
+		newItems.push({
+			type: "spacer",
+			id: "spacer-bottom",
+		});
+	} else {
+		newItems.push({
+			type: "spacer-mini",
+			id: "spacer-bottom-mini",
+		});
+	}
+	return newItems;
+}

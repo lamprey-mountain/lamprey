@@ -1,7 +1,14 @@
 import { Message } from "sdk";
-import { Resource } from "solid-js";
+
+export type MessageMutator = {
+	mutate: (r: MessageRange) => void;
+	query: MessageListAnchor;
+	thread_id: string;
+};
 
 export class MessageRange {
+	public mutators = new Set<MessageMutator>();
+
 	constructor(
 		public has_forward: boolean,
 		public has_backwards: boolean,
@@ -21,7 +28,7 @@ export class MessageRange {
 	get end(): string {
 		return this.items.at(-1)!.id;
 	}
-	
+
 	get len(): number {
 		return this.items.length;
 	}
@@ -43,7 +50,6 @@ export class MessageRange {
 export class MessageRanges {
 	live = new MessageRange(false, true, []);
 	ranges: Array<MessageRange> = [this.live];
-	resources = new Set<Resource<Array<Message>>>();
 
 	find(message_id: string): MessageRange | null {
 		for (const range of this.ranges) {

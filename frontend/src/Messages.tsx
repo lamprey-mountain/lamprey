@@ -1,5 +1,5 @@
 // import { Tooltip } from "./Atoms.tsx";
-import { Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
@@ -25,6 +25,10 @@ export type TimelineItemT =
 	);
 
 export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
+	createEffect(() => {
+		console.log(item);
+	})
+	
 	switch (item.type) {
 		case "message": {
 			const ctx = useCtx();

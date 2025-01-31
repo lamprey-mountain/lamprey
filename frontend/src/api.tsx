@@ -11,6 +11,9 @@ import {
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	Client,
+	Media,
+	Message,
+	MessageCreate,
 	MessageReady,
 	MessageSync,
 	Pagination,
@@ -25,9 +28,14 @@ import { createEffect } from "solid-js";
 import { untrack } from "solid-js";
 import {
 	MessageListAnchor,
+	MessageMutator,
 	MessageRange,
 	MessageRanges,
 } from "./api/messages.ts";
+import { MessageType } from "./types.ts";
+import { uuidv7 } from "uuidv7";
+import { onCleanup } from "solid-js";
+import { createStore } from "solid-js/store";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -55,7 +63,6 @@ export function createReactiveResource<T>(
 
 	function inner(id: () => string): [Resource<T>] {
 		const [data, { mutate }] = createResource<T, string>(id, (id) => {
-			console.log("start");
 			const cached = cache.get(id);
 			if (cached) return cached;
 			const existing = requests.get(id);
@@ -64,7 +71,6 @@ export function createReactiveResource<T>(
 			const req = (async () => {
 				const { data, error } = await fetch(id);
 				if (error) throw error;
-				console.log("finish");
 				requests.delete(id);
 				cache.set(id, data);
 				createEffect(() => {
@@ -281,9 +287,10 @@ export function ApiProvider(
 		};
 	}
 
-	function createMessageList() {
-		const threads = new Map<string, MessageRanges>();
+	const threadMessageRanges = new Map<string, MessageRanges>();
+	const threadMessageMutators = new Set<MessageMutator>();
 
+	function createMessageList() {
 		return (
 			thread_id_signal: () => string,
 			dir_signal: () => MessageListAnchor,
@@ -291,16 +298,17 @@ export function ApiProvider(
 			// always have Ranges for the current thread
 			createComputed(() => {
 				const thread_id = thread_id_signal();
-				const ranges = threads.get(thread_id) ?? new MessageRanges();
-				threads.set(thread_id, ranges);
+				const ranges = threadMessageRanges.get(thread_id) ??
+					new MessageRanges();
+				threadMessageRanges.set(thread_id, ranges);
 			});
 
 			async function update(
 				{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
 			): Promise<MessageRange> {
-				const ranges = threads.get(thread_id)!;
+				const ranges = threadMessageRanges.get(thread_id)!;
 
-				console.log("update message list", {
+				console.log("recalculate message list", {
 					thread_id,
 					dir,
 				});
@@ -308,7 +316,7 @@ export function ApiProvider(
 				if (dir.type === "forwards") {
 					if (dir.message_id) {
 						const r = ranges.find(dir.message_id);
-						console.log(ranges, r);
+						// console.log(ranges, r);
 						if (r) {
 							const idx = r.items.findIndex((i) => i.id === dir.message_id);
 							if (idx !== -1) {
@@ -319,7 +327,7 @@ export function ApiProvider(
 									assertEq(s.start, dir.message_id);
 									return s;
 								}
-								
+
 								throw new Error("todo");
 
 								// // fetch more
@@ -363,7 +371,7 @@ export function ApiProvider(
 				if (dir.type !== "backwards") throw new Error("todo");
 				if (dir.message_id) {
 					const r = ranges.find(dir.message_id);
-					console.log(ranges, r);
+					// console.log(ranges, r);
 					if (r) {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
@@ -438,10 +446,24 @@ export function ApiProvider(
 				return range.slice(range.len - dir.limit, range.len);
 			}
 
-			const [resource] = createResource(() => ({
+			// TODO: debounce
+			const query = () => ({
 				thread_id: thread_id_signal(),
 				dir: dir_signal(),
-			}), update);
+			});
+
+			const [resource, { mutate }] = createResource(query, update);
+
+			// HACK: surely there's a better way...
+			const mut = { mutate } as unknown as MessageMutator;
+			createComputed(() => {
+				mut.query = dir_signal();
+				mut.thread_id = thread_id_signal();
+			});
+			threadMessageMutators.add(mut);
+			onCleanup(() => {
+				threadMessageMutators.delete(mut);
+			});
 
 			return resource;
 		};
@@ -520,6 +542,29 @@ export function ApiProvider(
 					}
 				}
 			}
+		} else if (msg.type === "UpsertMessage") {
+			const m = msg.message;
+			if (m.nonce) {
+				const r = threadMessageRanges.get(m.thread_id);
+				if (r) {
+					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
+					if (idx === -1) {
+						console.log("push");
+						r.live.items.push(m);
+					} else {
+						console.log("splice", idx);
+						r.live.items.splice(idx, 1, m);
+					}
+					for (const mut of threadMessageMutators) {
+						if (mut.thread_id !== m.thread_id) continue;
+						if (mut.query.type !== "backwards") continue;
+						if (mut.query.message_id) continue;
+						const start = Math.max(r.live.len - mut.query.limit, 0);
+						const end = Math.min(start + mut.query.limit, r.live.len);
+						mut.mutate(r.live.slice(start, end));
+					}
+				}
+			}
 		}
 	});
 
@@ -544,11 +589,61 @@ export function ApiProvider(
 		props.client.start(session.token);
 	}
 
+
+	async function messageSend(thread_id: string, body: MessageSendReq): Promise<Message> {
+		const id = uuidv7();
+		const local: Message = {
+			type: MessageType.Default,
+			id,
+			thread_id,
+			version_id: id,
+			override_name: null,
+			reply_id: null,
+			content: null,
+			author: api.users.cache.get("@self")!,
+			metadata: null,
+			is_pinned: false,
+			ordering: 0,
+			...body,
+			nonce: id,
+			is_local: true,
+		};
+
+		const r = threadMessageRanges.get(thread_id);
+		if (r) {
+			r.live.items.push(local);
+			for (const mut of threadMessageMutators) {
+				if (mut.thread_id !== thread_id) continue;
+				if (mut.query.type === "backwards") continue;
+				if (mut.query.message_id) continue;
+				const start = Math.max(r.live.len - mut.query.limit, 0);
+				const end = Math.min(start + mut.query.limit, r.live.len);
+				mut.mutate(r.live.slice(start, end));
+			}
+		}
+
+		const { data, error } = await props.client.http.POST(
+			"/api/v1/thread/{thread_id}/message",
+			{
+				params: {
+					path: { thread_id },
+				},
+				body: {
+					...body,
+					attachments: body.attachments?.map(i => ({ id: i.id })),
+					nonce: id,
+				},
+			},
+		);
+		if (error) throw new Error(error);
+		return data;
+	}
+
 	const api = {
 		rooms: { cache: roomCache, fetch: roomFetch, list: roomList },
 		threads: { cache: threadCache, fetch: threadFetch, list: threadList },
 		users: { cache: userCache, fetch: userFetch },
-		messages: { list: messageList },
+		messages: { list: messageList, send: messageSend },
 		session,
 		tempCreateSession,
 	};
@@ -559,6 +654,10 @@ export function ApiProvider(
 			{props.children}
 		</ApiContext.Provider>
 	);
+}
+
+type MessageSendReq = Omit<MessageCreate, "nonce"> & {
+	attachments: Array<Media>;
 }
 
 export type Api = {
@@ -577,6 +676,10 @@ export type Api = {
 		cache: ReactiveMap<string, User>;
 	};
 	messages: {
+		send: (
+			thread_id: string,
+			message: MessageSendReq,
+		) => Promise<Message>;
 		list: (
 			thread_id: () => string,
 			anchor: () => MessageListAnchor,

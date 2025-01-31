@@ -1,14 +1,10 @@
-import { produce, reconcile, SetStoreFunction } from "solid-js/store";
+import { produce, SetStoreFunction } from "solid-js/store";
 import { Action, Attachment, Data, Menu } from "../context.ts";
 import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
 import { createUpload } from "sdk";
-import {
-	calculateSlice,
-	dispatchMessages,
-	renderTimeline,
-} from "./messages.ts";
+// import { calculateSlice, renderTimeline, } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 import { dispatchServer } from "./server.ts";
 import { Api } from "../api.tsx";
@@ -128,58 +124,6 @@ export function createDispatcher(
 ) {
 	let ackGraceTimeout: number | undefined;
 	let ackDebounceTimeout: number | undefined;
-
-	const threadAutoscroll: Middleware =
-		(_state, _dispatch) => (next) => (action) => {
-			if (action.do === "thread.autoscroll") {
-				const { thread_id } = action;
-				const ts = ctx.data.thread_state[thread_id];
-				if (!ts?.is_at_end) return;
-
-				solidBatch(() => {
-					const tl = ctx.data.timelines[thread_id];
-					const oldSlice = ctx.data.slices[thread_id];
-					const slice = calculateSlice(oldSlice, 1, tl.length, "f");
-					update("slices", thread_id, slice);
-
-					const { read_marker_id } = ctx.data.thread_state[thread_id];
-					const newItems = renderTimeline({
-						items: tl,
-						slice,
-						read_marker_id,
-						has_before: tl.at(0)?.type === "hole",
-						has_after: tl.at(-1)?.type === "hole",
-					});
-					update(
-						"thread_state",
-						thread_id,
-						"timeline",
-						(old) => [...reconcile(newItems)(old)],
-					);
-
-					const isAtTimelineEnd = tl?.at(-1)?.type !== "hole" &&
-						ctx.data.slices[thread_id].end >= tl.length;
-					// HACK: solidjs doesn't like me doing this
-					const isFocused =
-						location.pathname.match(/^\/thread\/([a-z0-9-]+)$/i)?.[1] ===
-							thread_id;
-					if (ts.is_at_end && isAtTimelineEnd) {
-						if (isFocused) {
-							ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-						} else {
-							ctx.dispatch({
-								do: "thread.scroll_pos",
-								thread_id,
-								is_at_end: ts.is_at_end,
-								pos: 999999,
-							});
-						}
-					}
-				});
-			} else {
-				next(action);
-			}
-		};
 
 	const threadMarkRead: Middleware =
 		(_state, _dispatch) => (next) => async (action) => {
@@ -413,14 +357,6 @@ export function createDispatcher(
 		}
 	};
 
-	const paginate: Middleware = (_state, _dispatch) => (next) => (action) => {
-		if (action.do === "paginate") {
-			// dispatchMessages(ctx, update, action);
-		} else {
-			next(action);
-		}
-	};
-
 	const log: Middleware = (state, _dispatch) => (next) => (action) => {
 		console.log("dispatch", action, state);
 		next(action);
@@ -428,12 +364,10 @@ export function createDispatcher(
 
 	const d = combine(reduce, ctx.data, update, [
 		log,
-		threadAutoscroll,
 		threadMarkRead,
 		handleServer,
 		serverInitSession,
 		threadInit,
-		paginate,
 		uploadCancel,
 		uploadInit,
 		uploadPause,

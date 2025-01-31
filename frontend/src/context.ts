@@ -12,11 +12,6 @@ import {
 import type { EditorState } from "prosemirror-state";
 import { TimelineItemT } from "./Messages.tsx";
 
-export type TimelineItem =
-	| { type: "remote"; message: MessageT }
-	| { type: "local"; message: MessageT }
-	| { type: "hole" };
-
 export type Slice = {
 	start: number;
 	end: number;
@@ -44,7 +39,6 @@ export type Data = {
 	room_members: Record<string, Record<string, MemberT>>;
 	room_roles: Record<string, Record<string, RoleT>>;
 	messages: Record<string, MessageT>;
-	timelines: Record<string, Array<TimelineItem>>;
 	slices: Record<string, Slice>;
 	invites: Record<string, InviteT>;
 	thread_state: Record<string, ThreadState>;
@@ -104,7 +98,6 @@ export type Action =
 		pos: number | null;
 		is_at_end: boolean;
 	}
-	| { do: "thread.autoscroll"; thread_id: string }
 	| {
 		do: "thread.mark_read";
 		thread_id: string;
@@ -139,7 +132,6 @@ export const defaultData: Data = {
 	room_members: {},
 	room_roles: {},
 	messages: {},
-	timelines: {},
 	slices: {},
 	invites: {},
 	thread_state: {},

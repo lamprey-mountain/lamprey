@@ -16,7 +16,7 @@ function reduceServer(
 		}
 		case "UpsertMember": {
 			const { member } = delta;
-			const { room_id, user } = member;
+			const { room_id, user_id } = member;
 			return {
 				...state,
 				// TODO: fix this (won't matter if data is normalized?)
@@ -28,7 +28,7 @@ function reduceServer(
 					...state.room_members,
 					[room_id]: {
 						...state.room_members[room_id],
-						[user.id]: member,
+						[user_id]: member,
 					},
 				},
 			};
@@ -44,7 +44,7 @@ export function dispatchServer(
 	ctx: ChatCtx,
 	update: SetStoreFunction<Data>,
 	action: Action,
-	dispatch: (action: Action) => void,
+	_dispatch: (action: Action) => void,
 	api: Api,
 ) {
 	switch (action.do) {
@@ -54,7 +54,7 @@ export function dispatchServer(
 				console.time("UpsertMessage");
 				solidBatch(() => {
 					const { message } = msg;
-					const { id, version_id, thread_id, nonce } = message;
+					const { id, version_id, thread_id } = message;
 					update("messages", id, message);
 
 					const t = api.threads.cache.get(thread_id);
@@ -65,42 +65,8 @@ export function dispatchServer(
 							last_version_id: version_id,
 						});
 					}
-
-					if (!ctx.data.timelines[thread_id]) {
-						update("timelines", thread_id, [{ type: "hole" }, {
-							type: "remote",
-							message,
-						}]);
-					} else {
-						const tl = ctx.data.timelines[thread_id];
-						const item = { type: "remote" as const, message };
-						if (id === version_id) {
-							const idx = tl.findIndex((i) =>
-								i.type === "local" && i.message.nonce === nonce
-							);
-							if (idx === -1) {
-								update(
-									"timelines",
-									message.thread_id,
-									(i) => [...i, item],
-								);
-							} else {
-								update("timelines", message.thread_id, idx, item);
-							}
-						} else {
-							update(
-								"timelines",
-								message.thread_id,
-								(i) =>
-									i.map((j) =>
-										(j.type === "remote" && j.message.id === id) ? item : j
-									),
-							);
-						}
-					}
 				});
 				console.timeEnd("UpsertMessage");
-				dispatch({ do: "thread.autoscroll", thread_id: msg.message.thread_id });
 				// TODO: message deletions
 			} else if (msg.type === "UpsertRole") {
 				const role: RoleT = msg.role;
