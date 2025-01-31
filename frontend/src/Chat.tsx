@@ -39,6 +39,7 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(() => {
 		const m = messages();
 		if (m?.items.length) {
+			console.log("render timeline", m.items);
 			const rendered = renderTimeline({
 				items: m.items,
 				has_after: m.has_forward,
@@ -63,7 +64,7 @@ export const ChatMain = (props: ChatProps) => {
 
 	const list = createList({
 		items: tl,
-		autoscroll: () => !messages()?.has_backwards,
+		autoscroll: () => !messages()?.has_forward,
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {

@@ -366,84 +366,87 @@ export function ApiProvider(
 					} else {
 						throw new Error("todo");
 					}
-				}
+				} else if (dir.type === "backwards") {
+					if (dir.message_id) {
+						const r = ranges.find(dir.message_id);
+						// console.log(ranges, r);
+						if (r) {
+							const idx = r.items.findIndex((i) => i.id === dir.message_id);
+							if (idx !== -1) {
+								if (idx >= dir.limit) {
+									const end = idx + 1;
+									const start = Math.max(end - dir.limit, 0);
+									const s = r.slice(start, end);
+									assertEq(s.end, dir.message_id);
+									return s;
+								}
 
-				if (dir.type !== "backwards") throw new Error("todo");
-				if (dir.message_id) {
-					const r = ranges.find(dir.message_id);
-					// console.log(ranges, r);
-					if (r) {
-						const idx = r.items.findIndex((i) => i.id === dir.message_id);
-						if (idx !== -1) {
-							if (idx >= dir.limit) {
-								const end = idx + 1;
+								// fetch more
+								const { data, error } = await props.client.http.GET(
+									"/api/v1/thread/{thread_id}/message",
+									{
+										params: {
+											path: { thread_id },
+											query: { dir: "b", limit: 100, from: r.start },
+										},
+									},
+								);
+								if (error) throw new Error(error);
+								for (const item of data.items.toReversed()) {
+									const existing = ranges.find(item.id);
+									if (existing) {
+										throw new Error("todo");
+									} else {
+										r.items.unshift(item);
+									}
+								}
+								r.has_backwards = data.has_more;
+								const end = idx + data.items.length + 1;
 								const start = Math.max(end - dir.limit, 0);
 								const s = r.slice(start, end);
 								assertEq(s.end, dir.message_id);
 								return s;
+							} else {
+								// fetch thread
+								throw new Error("todo");
 							}
+						} else {
+							// new range
+							throw new Error("todo");
+						}
+					}
 
-							// fetch more
-							const { data, error } = await props.client.http.GET(
-								"/api/v1/thread/{thread_id}/message",
-								{
-									params: {
-										path: { thread_id },
-										query: { dir: "b", limit: 100, from: r.start },
-									},
+					const range = ranges.live;
+					if (range.isEmpty()) {
+						const { data, error } = await props.client.http.GET(
+							"/api/v1/thread/{thread_id}/message",
+							{
+								params: {
+									path: { thread_id },
+									query: { dir: "b", limit: 100 },
 								},
-							);
-							if (error) throw new Error(error);
-							for (const item of data.items.toReversed()) {
-								const existing = ranges.find(item.id);
-								if (existing) {
-									throw new Error("todo");
-								} else {
-									r.items.unshift(item);
-								}
-							}
-							r.has_backwards = data.has_more;
-							const end = idx + data.items.length + 1;
-							const start = Math.max(end - dir.limit, 0);
-							const s = r.slice(start, end);
-							assertEq(s.end, dir.message_id);
-							return s;
-						} else {
-							// fetch thread
-							throw new Error("todo");
-						}
-					} else {
-						// new range
-						throw new Error("todo");
-					}
-				}
-
-				const range = ranges.live;
-				if (range.isEmpty()) {
-					const { data, error } = await props.client.http.GET(
-						"/api/v1/thread/{thread_id}/message",
-						{
-							params: {
-								path: { thread_id },
-								query: { dir: "b", limit: 100 },
 							},
-						},
-					);
-					if (error) throw new Error(error);
-					for (const item of data.items.toReversed()) {
-						const existing = ranges.find(item.id);
-						if (existing) {
-							throw new Error("todo");
-						} else {
-							range.items.unshift(item);
+						);
+						if (error) throw new Error(error);
+						for (const item of data.items.toReversed()) {
+							const existing = ranges.find(item.id);
+							if (existing) {
+								throw new Error("todo");
+							} else {
+								range.items.unshift(item);
+							}
 						}
+						range.has_backwards = data.has_more;
+					} else {
+						// don't need to do anything
 					}
-					range.has_backwards = data.has_more;
-				} else {
-					// don't need to do anything
-				}
 
-				return range.slice(range.len - dir.limit, range.len);
+					const start = Math.max(range.len - dir.limit, 0);
+					const end = Math.min(start + dir.limit, range.len);
+					return range.slice(start, end);
+				} else {
+					throw new Error("todo");
+				}
 			}
 
 			// TODO: debounce
@@ -544,25 +547,23 @@ export function ApiProvider(
 			}
 		} else if (msg.type === "UpsertMessage") {
 			const m = msg.message;
-			if (m.nonce) {
-				const r = threadMessageRanges.get(m.thread_id);
-				if (r) {
+			const r = threadMessageRanges.get(m.thread_id);
+			if (r) {
+				if (m.nonce) {
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
-					if (idx === -1) {
-						console.log("push");
-						r.live.items.push(m);
-					} else {
-						console.log("splice", idx);
-						r.live.items.splice(idx, 1, m);
+					console.log(m.nonce, idx);
+					if (idx !== -1) {
+						r.live.items.splice(idx, 1);
 					}
-					for (const mut of threadMessageMutators) {
-						if (mut.thread_id !== m.thread_id) continue;
-						if (mut.query.type !== "backwards") continue;
-						if (mut.query.message_id) continue;
-						const start = Math.max(r.live.len - mut.query.limit, 0);
-						const end = Math.min(start + mut.query.limit, r.live.len);
-						mut.mutate(r.live.slice(start, end));
-					}
+				}
+				r.live.items.push(m);
+				for (const mut of threadMessageMutators) {
+					if (mut.thread_id !== m.thread_id) continue;
+					if (mut.query.type !== "backwards") continue;
+					if (mut.query.message_id) continue;
+					const start = Math.max(r.live.len - mut.query.limit, 0);
+					const end = Math.min(start + mut.query.limit, r.live.len);
+					mut.mutate(r.live.slice(start, end));
 				}
 			}
 		}
@@ -589,8 +590,10 @@ export function ApiProvider(
 		props.client.start(session.token);
 	}
 
-
-	async function messageSend(thread_id: string, body: MessageSendReq): Promise<Message> {
+	async function messageSend(
+		thread_id: string,
+		body: MessageSendReq,
+	): Promise<Message> {
 		const id = uuidv7();
 		const local: Message = {
 			type: MessageType.Default,
@@ -630,7 +633,7 @@ export function ApiProvider(
 				},
 				body: {
 					...body,
-					attachments: body.attachments?.map(i => ({ id: i.id })),
+					attachments: body.attachments?.map((i) => ({ id: i.id })),
 					nonce: id,
 				},
 			},
@@ -658,7 +661,7 @@ export function ApiProvider(
 
 type MessageSendReq = Omit<MessageCreate, "nonce"> & {
 	attachments: Array<Media>;
-}
+};
 
 export type Api = {
 	rooms: {
