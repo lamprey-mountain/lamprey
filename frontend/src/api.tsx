@@ -561,7 +561,14 @@ export function ApiProvider(
 			const r = threadMessageRanges.get(m.thread_id);
 			if (r) {
 				if (m.nonce) {
+					// local echo
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
+					if (idx !== -1) {
+						r.live.items.splice(idx, 1);
+					}
+				} else if (m.version_id !== m.id) {
+					// edits
+					const idx = r.live.items.findIndex((i) => i.id === m.id);
 					if (idx !== -1) {
 						r.live.items.splice(idx, 1);
 					}
