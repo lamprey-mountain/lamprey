@@ -27,16 +27,24 @@ const md = marked.use({
 	gfm: true,
 });
 
+const contentToHtml = new WeakMap();
+
 function MessageText(props: MessageTextProps) {
-	const html = createMemo(() =>
-		sanitizeHtml(
+	function getHtml(): string {
+		const cached = contentToHtml.get(props.message);
+		if (cached) return cached;
+		// console.count("render_html");
+		const html = sanitizeHtml(
 			md.parse(props.message.content!) as string,
 			sanitizeHtmlOptions,
-		).trim()
-	);
+		).trim();
+		contentToHtml.set(props.message, html);
+		return html;
+	}
+
 	return (
 		<div class="body markdown" classList={{ local: props.is_local }}>
-			<span innerHTML={html()}></span>
+			<span innerHTML={getHtml()}></span>
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited">(edited)</span>
 			</Show>

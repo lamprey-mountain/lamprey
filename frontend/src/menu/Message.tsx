@@ -15,6 +15,7 @@ export function MessageMenu(props: { message: MessageT }) {
 			reply_id: props.message.id,
 		});
 
+	// FIXME: mark messages unread
 	function markUnread() {
 		const thread = ctx.data.timelines[props.message.thread_id];
 		const index = thread.findIndex((i) =>

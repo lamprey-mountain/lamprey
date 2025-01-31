@@ -123,7 +123,7 @@ export function createList<T>(options: {
 				if (shouldAutoscroll) {
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
 				} else if (anchorRef) {
-					// FIXME: tons of reflow and jank
+					// FIXME: don't force reflow; this casuses jank
 					const currentRect = anchorRef.getBoundingClientRect();
 					const diff = (currentRect.y - anchorRect.y) +
 						(currentRect.height - anchorRect.height);

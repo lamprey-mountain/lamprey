@@ -40,6 +40,7 @@ export const ChatMain = (props: ChatProps) => {
 		const m = messages();
 		if (m?.items.length) {
 			console.log("render timeline", m.items);
+			console.time("rendertimeline");
 			const rendered = renderTimeline({
 				items: m.items,
 				has_after: m.has_forward,
@@ -48,6 +49,7 @@ export const ChatMain = (props: ChatProps) => {
 				// slice: { start: 0, end: 50 },
 			});
 			setTl((old) => [...reconcile(rendered)(old)]);
+			console.timeEnd("rendertimeline");
 		} else {
 			setTl([]);
 		}
