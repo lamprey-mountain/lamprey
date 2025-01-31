@@ -116,7 +116,7 @@ export type Action =
 	| { do: "upload.cancel"; local_id: string }
 	| { do: "server"; msg: types.MessageSync }
 	| { do: "server.init_session" }
-	| { do: "window.mouse_move"; e: MouseEvent }
+	| { do: "window.mouse_move"; e: MouseEvent };
 
 export type AttachmentCreateT = {
 	id: string;

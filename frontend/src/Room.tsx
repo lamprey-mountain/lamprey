@@ -12,7 +12,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const room_id = () => props.room.id;
 
 	const threads = api.threads.list(room_id);
-	
+
 	function createThread(room_id: string) {
 		ctx.dispatch({
 			do: "modal.prompt",
@@ -64,7 +64,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<br />
 			<ul>
 				<For
-					each={[...threads()?.items.filter((i) => i.room_id === props.room.id) ?? []]}
+					each={[
+						...threads()?.items.filter((i) => i.room_id === props.room.id) ??
+							[],
+					]}
 				>
 					{(thread) => (
 						<li>

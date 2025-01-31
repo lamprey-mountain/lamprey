@@ -77,7 +77,7 @@ export function createReactiveResource<T>(
 				cache.set(id, data);
 				return data;
 			})();
-			
+
 			createEffect(() => {
 				// HACK: extra closure to make typescript happy
 				mutate(() => cache.get(id));

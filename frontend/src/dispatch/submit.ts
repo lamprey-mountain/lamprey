@@ -1,6 +1,6 @@
 import { ChatCtx, Data } from "../context.ts";
 import { SetStoreFunction } from "solid-js/store";
-import { Api } from "../api.tsx";
+import { Api, useApi } from "../api.tsx";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send
@@ -11,6 +11,7 @@ export async function handleSubmit(
 	_update: SetStoreFunction<Data>,
 	api: Api,
 ) {
+	console.log(useApi());
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
 		const { room_id } = api.threads.cache.get(thread_id)!;
@@ -20,21 +21,21 @@ export async function handleSubmit(
 				params: { path: { room_id } },
 				body: { name },
 			});
-		// TODO: reimplement
-		// } else if (cmd === "archive") {
-		// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-		// 		params: { path: { thread_id } },
-		// 		body: {
-		// 			is_closed: true,
-		// 		},
-		// 	});
-		// } else if (cmd === "unarchive") {
-		// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-		// 		params: { path: { thread_id } },
-		// 		body: {
-		// 			is_closed: false,
-		// 		},
-		// 	});
+			// TODO: reimplement
+			// } else if (cmd === "archive") {
+			// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+			// 		params: { path: { thread_id } },
+			// 		body: {
+			// 			is_closed: true,
+			// 		},
+			// 	});
+			// } else if (cmd === "unarchive") {
+			// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
+			// 		params: { path: { thread_id } },
+			// 		body: {
+			// 			is_closed: false,
+			// 		},
+			// 	});
 		} else if (cmd === "desc") {
 			const description = args.join(" ");
 			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
