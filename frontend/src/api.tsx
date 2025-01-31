@@ -1,3 +1,6 @@
+// TODO: this file is getting big and should probably be split and refactored
+// i'm copypasting stuff for now, but will refactor out abstractions later
+
 import {
 	Accessor,
 	batch,
@@ -303,9 +306,18 @@ export function ApiProvider(
 				threadMessageRanges.set(thread_id, ranges);
 			});
 
+			let old: { thread_id: string; dir: MessageListAnchor };
 			async function update(
 				{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
+				{ value: oldValue }: { value?: MessageRange },
 			): Promise<MessageRange> {
+				// ugly, but seems to work
+				if (
+					old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
+					old.dir.type === dir.type && old.dir.message_id === dir.message_id
+				) return oldValue!;
+				old = { thread_id, dir };
+
 				const ranges = threadMessageRanges.get(thread_id)!;
 
 				console.log("recalculate message list", {
@@ -449,7 +461,6 @@ export function ApiProvider(
 				}
 			}
 
-			// TODO: debounce
 			const query = () => ({
 				thread_id: thread_id_signal(),
 				dir: dir_signal(),
