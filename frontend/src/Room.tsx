@@ -34,22 +34,17 @@ export const RoomHome = (props: { room: RoomT }) => {
 			do: "modal.confirm",
 			text: "are you sure you want to leave?",
 			cont() {
-				// TODO: ctx.client.http("DELETE", `/api/v1/room/${room_id}/member/@self`);
+				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
+					params: {
+						path: {
+							room_id: props.room.id,
+							user_id: api.users.cache.get("@self")!.id,
+						},
+					},
+				});
 			},
 		});
 	}
-
-	// const [threads, { refetch: fetchThreads }] = createResource<Pagination<ThreadT> & { room_id: string }, string>(() => props.room.id, async (room_id, { value }) => {
-	// 	if (value?.room_id !== room_id) value = undefined;
-	// 	if (value?.has_more === false) return value;
-	// 	const lastId = value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
-	// 	const batch = await ctx.client.http("GET", `/api/v1/room/${room_id}/threads?dir=f&from=${lastId}&limit=100`);
-	// 	return {
-	// 		...batch,
-	// 		items: [...value?.items ?? [], ...batch.items],
-	// 		room_id,
-	// 	};
-	// });
 
 	// <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
 	return (
