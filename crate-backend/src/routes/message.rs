@@ -114,7 +114,7 @@ struct ContextResponse {
     get,
     path = "/thread/{thread_id}/context/{message_id}",
     params(
-        PaginationQuery<MessageId>,
+        ContextQuery,
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id"),
     ),
