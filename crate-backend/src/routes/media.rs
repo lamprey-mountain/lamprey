@@ -12,6 +12,7 @@ use tokio::{
     process::Command,
 };
 use tracing::{debug, info};
+use types::UserId;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -138,53 +139,19 @@ async fn media_upload(
         }
         Ordering::Equal => {
             up.temp_writer.flush().await?;
-            let p = up.temp_file.file_path().to_owned();
-            let url = format!("media/{media_id}");
-            let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
-            debug!("finish upload for {}, mime {}", media_id, mime);
-            let upload_s3 = async {
-                // TODO: stream upload
-                let bytes = tokio::fs::read(&p).await?;
-                s.blobs()
-                    .write_with(&url, bytes)
-                    .cache_control(
-                        "public, max-age=604800, immutable, stale-while-revalidate=86400",
-                    )
-                    // FIXME: sometimes this fails with "failed to parse header"
-                    // .content_type(&mime)
-                    .await?;
-                Result::Ok(())
-            };
-            upload_s3.await?;
-            info!("uploaded {} bytes to s3", up.create.size);
-            let mut media = s
-                .data()
-                .media_insert(
-                    user_id,
-                    Media {
-                        alt: up.create.alt.clone(),
-                        id: media_id,
-                        filename: up.create.filename.clone(),
-                        url,
-                        source_url: None,
-                        thumbnail_url: None,
-                        mime,
-                        size: up.create.size,
-                        height: meta.height,
-                        width: meta.width,
-                        duration: meta.duration,
-                    },
-                )
-                .await?;
-            let size = up.create.size;
             drop(up);
-            s.uploads
+            let (_, up) = s.uploads
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
+            let mut media = process_upload(up, media_id, user_id, s.clone()).await?;
+            debug!("finished processing media");
+            debug!("qwfp");
             media.url = s.presign(&media.url).await?;
+            debug!("zxcv");
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", end_size.into());
-            headers.insert("upload-length", size.into());
+            headers.insert("upload-length", media.size.into());
+            debug!("arst");
             Ok((StatusCode::OK, headers, Json(Some(media))))
         }
         Ordering::Less => {
@@ -323,6 +290,46 @@ async fn get_mime_type(file: &std::path::Path) -> Result<String> {
     let out = Command::new("file").arg("-ib").arg(file).output().await?;
     let mime = String::from_utf8(out.stdout).expect("file has failed me");
     Ok(mime)
+}
+
+async fn process_upload(up: MediaUpload, media_id: MediaId, user_id: UserId, s: Arc<ServerState>) -> Result<Media> {
+    let p = up.temp_file.file_path().to_owned();
+    let url = format!("media/{media_id}");
+    let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
+    debug!("finish upload for {}, mime {}", media_id, mime);
+    let upload_s3 = async {
+        // TODO: stream upload
+        let bytes = tokio::fs::read(&p).await?;
+        s.blobs()
+            .write_with(&url, bytes)
+            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+            // FIXME: sometimes this fails with "failed to parse header"
+            // .content_type(&mime)
+            .await?;
+        Result::Ok(())
+    };
+    upload_s3.await?;
+    info!("uploaded {} bytes to s3", up.create.size);
+    let media = s
+        .data()
+        .media_insert(
+            user_id,
+            Media {
+                alt: up.create.alt.clone(),
+                id: media_id,
+                filename: up.create.filename.clone(),
+                url,
+                source_url: None,
+                thumbnail_url: None,
+                mime,
+                size: up.create.size,
+                height: meta.height,
+                width: meta.width,
+                duration: meta.duration,
+            },
+        )
+        .await?;
+    Ok(media)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
