@@ -31,13 +31,10 @@ import { createEffect } from "solid-js";
 import { untrack } from "solid-js";
 import {
 	MessageListAnchor,
-	MessageMutator,
 	MessageRange,
 	MessageRanges,
+	Messages,
 } from "./api/messages.ts";
-import { MessageType } from "./types.ts";
-import { uuidv7 } from "uuidv7";
-import { onCleanup } from "solid-js";
 
 type ResourceResponse<T> = { data: T; error: undefined } | {
 	data: undefined;
@@ -52,10 +49,6 @@ export type Json =
 	| { [k in string]: Json };
 
 type ResourceFetch<T> = (id: () => string) => [Resource<T>];
-
-function assertEq<T>(a: T, b: T) {
-	if (a !== b) throw new Error(`assert failed: ${a} !== ${b}`);
-}
 
 export function createReactiveResource<T>(
 	fetch: (id: string) => Promise<ResourceResponse<T>>,
@@ -109,6 +102,7 @@ export function ApiProvider(
 	}>,
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
+	const messages = new Messages();
 
 	const [roomCache, roomFetch] = createReactiveResource<Room>((room_id) => {
 		console.log("fetch", room_id);
@@ -289,210 +283,9 @@ export function ApiProvider(
 			return listings.get(untrack(room_id_signal))!.resource;
 		};
 	}
-
-	const threadMessageRanges = new Map<string, MessageRanges>();
-	const threadMessageMutators = new Set<MessageMutator>();
-	const messageCache = new ReactiveMap<string, Message>();
-
-	function createMessageList() {
-		return (
-			thread_id_signal: () => string,
-			dir_signal: () => MessageListAnchor,
-		): Resource<MessageRange> => {
-			// always have Ranges for the current thread
-			createComputed(() => {
-				const thread_id = thread_id_signal();
-				const ranges = threadMessageRanges.get(thread_id) ??
-					new MessageRanges();
-				threadMessageRanges.set(thread_id, ranges);
-			});
-
-			let old: { thread_id: string; dir: MessageListAnchor };
-			async function update(
-				{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
-				{ value: oldValue }: { value?: MessageRange },
-			): Promise<MessageRange> {
-				// ugly, but seems to work
-				if (
-					old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
-					old.dir.type === dir.type && old.dir.message_id === dir.message_id
-				) return oldValue!;
-				old = { thread_id, dir };
-
-				const ranges = threadMessageRanges.get(thread_id)!;
-
-				console.log("recalculate message list", {
-					thread_id,
-					dir,
-				});
-
-				if (dir.type === "forwards") {
-					if (dir.message_id) {
-						const r = ranges.find(dir.message_id);
-						// console.log(ranges, r);
-						if (r) {
-							const idx = r.items.findIndex((i) => i.id === dir.message_id);
-							if (idx !== -1) {
-								if (idx < r.len - dir.limit || !r.has_forward) {
-									const start = idx;
-									const end = Math.min(idx + dir.limit, r.len);
-									const s = r.slice(start, end);
-									assertEq(s.start, dir.message_id);
-									return s;
-								}
-
-								throw new Error("todo");
-
-								// // fetch more
-								// const { data, error } = await props.client.http.GET(
-								// 	"/api/v1/thread/{thread_id}/message",
-								// 	{
-								// 		params: {
-								// 			path: { thread_id },
-								// 			query: { dir: "b", limit: 100, from: r.start },
-								// 		},
-								// 	},
-								// );
-								// if (error) throw new Error(error);
-								// for (const item of data.items.toReversed()) {
-								// 	const existing = ranges.find(item.id);
-								// 	if (existing) {
-								// 		throw new Error("todo");
-								// 	} else {
-								// 		r.items.unshift(item);
-								// 	}
-								// }
-								// r.has_backwards = data.has_more;
-								// const end = idx + data.items.length + 1;
-								// const start = Math.max(end - dir.limit, 0);
-								// const s = r.slice(start, end);
-								// assertEq(s.end, dir.message_id);
-								// return s;
-							} else {
-								// fetch thread
-								throw new Error("todo");
-							}
-						} else {
-							// new range
-							throw new Error("todo");
-						}
-					} else {
-						throw new Error("todo");
-					}
-				} else if (dir.type === "backwards") {
-					if (dir.message_id) {
-						const r = ranges.find(dir.message_id);
-						// console.log(ranges, r);
-						if (r) {
-							const idx = r.items.findIndex((i) => i.id === dir.message_id);
-							if (idx !== -1) {
-								if (idx >= dir.limit) {
-									const end = idx + 1;
-									const start = Math.max(end - dir.limit, 0);
-									const s = r.slice(start, end);
-									assertEq(s.end, dir.message_id);
-									return s;
-								}
-
-								// fetch more
-								const { data, error } = await props.client.http.GET(
-									"/api/v1/thread/{thread_id}/message",
-									{
-										params: {
-											path: { thread_id },
-											query: { dir: "b", limit: 100, from: r.start },
-										},
-									},
-								);
-								if (error) throw new Error(error);
-								batch(() => {
-									for (const item of data.items.toReversed()) {
-										messageCache.set(item.id, item);
-										const existing = ranges.find(item.id);
-										if (existing) {
-											throw new Error("todo");
-										} else {
-											r.items.unshift(item);
-										}
-									}
-								});
-								r.has_backwards = data.has_more;
-								const end = idx + data.items.length + 1;
-								const start = Math.max(end - dir.limit, 0);
-								const s = r.slice(start, end);
-								assertEq(s.end, dir.message_id);
-								return s;
-							} else {
-								// fetch thread
-								throw new Error("todo");
-							}
-						} else {
-							// new range
-							throw new Error("todo");
-						}
-					}
-
-					const range = ranges.live;
-					if (range.isEmpty()) {
-						const { data, error } = await props.client.http.GET(
-							"/api/v1/thread/{thread_id}/message",
-							{
-								params: {
-									path: { thread_id },
-									query: { dir: "b", limit: 100 },
-								},
-							},
-						);
-						if (error) throw new Error(error);
-						batch(() => {
-							for (const item of data.items.toReversed()) {
-								messageCache.set(item.id, item);
-								const existing = ranges.find(item.id);
-								if (existing) {
-									throw new Error("todo");
-								} else {
-									range.items.unshift(item);
-								}
-							}
-						});
-						range.has_backwards = data.has_more;
-					} else {
-						// don't need to do anything
-					}
-
-					const start = Math.max(range.len - dir.limit, 0);
-					const end = Math.min(start + dir.limit, range.len);
-					return range.slice(start, end);
-				} else {
-					throw new Error("todo");
-				}
-			}
-
-			const query = () => ({
-				thread_id: thread_id_signal(),
-				dir: dir_signal(),
-			});
-
-			const [resource, { mutate }] = createResource(query, update);
-
-			// HACK: surely there's a better way...
-			const mut = { mutate } as unknown as MessageMutator;
-			createComputed(() => {
-				mut.query = dir_signal();
-				mut.thread_id = thread_id_signal();
-			});
-			threadMessageMutators.add(mut);
-			onCleanup(() => {
-				threadMessageMutators.delete(mut);
-			});
-
-			return resource;
-		};
-	}
-
+	
 	const roomList = createRoomList();
 	const threadList = createThreadList();
-	const messageList = createMessageList();
 
 	props.temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
@@ -565,7 +358,7 @@ export function ApiProvider(
 			}
 		} else if (msg.type === "UpsertMessage") {
 			const m = msg.message;
-			const r = threadMessageRanges.get(m.thread_id);
+			const r = messages.cacheRanges.get(m.thread_id);
 			if (r) {
 				if (m.nonce) {
 					// local echo
@@ -582,8 +375,8 @@ export function ApiProvider(
 				}
 				r.live.items.push(m);
 				batch(() => {
-					messageCache.set(m.id, m);
-					updateMessageMutators(r, m.thread_id);
+					messages.cache.set(m.id, m);
+					messages._updateMutators(r, m.thread_id);
 				});
 			}
 		}
@@ -610,75 +403,17 @@ export function ApiProvider(
 		props.client.start(session.token);
 	}
 
-	async function messageSend(
-		thread_id: string,
-		body: MessageSendReq,
-	): Promise<Message> {
-		const id = uuidv7();
-		const local: Message = {
-			type: MessageType.Default,
-			id,
-			thread_id,
-			version_id: id,
-			override_name: null,
-			reply_id: null,
-			content: null,
-			author: api.users.cache.get("@self")!,
-			metadata: null,
-			is_pinned: false,
-			ordering: 0,
-			...body,
-			nonce: id,
-			is_local: true,
-		};
-
-		const r = threadMessageRanges.get(thread_id);
-		if (r) {
-			r.live.items.push(local);
-			updateMessageMutators(r, thread_id);
-		}
-
-		const { data, error } = await props.client.http.POST(
-			"/api/v1/thread/{thread_id}/message",
-			{
-				params: {
-					path: { thread_id },
-				},
-				body: {
-					...body,
-					attachments: body.attachments?.map((i) => ({ id: i.id })),
-					nonce: id,
-				},
-			},
-		);
-		if (error) throw new Error(error);
-		return data;
-	}
-
-	function updateMessageMutators(r: MessageRanges, thread_id: string) {
-		for (const mut of threadMessageMutators) {
-			if (mut.thread_id !== thread_id) continue;
-			if (mut.query.type !== "backwards") continue;
-			if (mut.query.message_id) continue;
-			const start = Math.max(r.live.len - mut.query.limit, 0);
-			const end = Math.min(start + mut.query.limit, r.live.len);
-			mut.mutate(r.live.slice(start, end));
-		}
-	}
-
-	const api = {
+	// FIXME: make reactive again
+	const api: Api = {
 		rooms: { cache: roomCache, fetch: roomFetch, list: roomList },
 		threads: { cache: threadCache, fetch: threadFetch, list: threadList },
 		users: { cache: userCache, fetch: userFetch },
-		messages: {
-			list: messageList,
-			send: messageSend,
-			cache: messageCache,
-			cacheRanges: threadMessageRanges,
-		},
+		messages,
 		session,
 		tempCreateSession,
+		client: props.client,
 	};
+	messages.api = api;
 
 	console.log("provider created", api);
 	return (
@@ -721,4 +456,5 @@ export type Api = {
 	};
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;
+	client: Client;
 };
