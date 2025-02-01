@@ -5,6 +5,7 @@ import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
+import { useCtx } from "./context.ts";
 
 type MessageProps = {
 	message: MessageT;
@@ -126,14 +127,30 @@ export function MessageView(props: MessageProps) {
 }
 
 function ReplyView(props: { reply?: MessageT }) {
+	const ctx = useCtx();
+
 	const name = () => props.reply?.override_name ?? props.reply?.author.name;
 	const content = () =>
 		props.reply?.content ??
 			`${props.reply?.attachments.length} attachment(s)`;
+
+	const scrollToReply = () => {
+		if (!props.reply) return;
+		ctx.dispatch({
+			do: "thread.set_anchor",
+			thread_id: props.reply.thread_id,
+			anchor: {
+				type: "context",
+				limit: 50, // TODO: calc dynamically
+				message_id: props.reply.id,
+			},
+		});
+	};
+
 	return (
 		<>
 			<div class="reply arrow">{"\u21B1"}</div>
-			<div class="reply reply-content">
+			<div class="reply reply-content" onClick={scrollToReply}>
 				<Show when={props.reply} fallback="loading..">
 					<span class="author">{name()}:</span>
 					{content()}

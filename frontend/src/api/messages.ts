@@ -1,4 +1,4 @@
-import { Media, Message, MessageCreate } from "sdk";
+import { Media, Message, MessageCreate, PaginationQuery } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
@@ -93,8 +93,6 @@ export class Messages {
 	public _mutators = new Set<MessageMutator>();
 	public api: Api = null as unknown as Api;
 
-	constructor() {}
-
 	list(
 		thread_id_signal: () => string,
 		dir_signal: () => MessageListAnchor,
@@ -102,16 +100,66 @@ export class Messages {
 		// always have Ranges for the current thread
 		createComputed(() => {
 			const thread_id = thread_id_signal();
-			const ranges = this.cacheRanges.get(thread_id) ??
-				new MessageRanges();
-			this.cacheRanges.set(thread_id, ranges);
+			if (!this.cacheRanges.has(thread_id)) {
+				this.cacheRanges.set(thread_id, new MessageRanges());
+			}
 		});
 
-		let old: { thread_id: string; dir: MessageListAnchor };
 		const update = async (
+			a: { thread_id: string; dir: MessageListAnchor },
+			b: { value?: MessageRange },
+		): Promise<MessageRange> => {
+			try {
+				return await _update(a, b);
+			} catch (err) {
+				console.error(err);
+				throw err;
+			}
+		};
+
+		const fetchList = async (thread_id: string, query: PaginationQuery) => {
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/thread/{thread_id}/message",
+				{
+					params: {
+						path: { thread_id },
+						query,
+					},
+				},
+			);
+			if (error) throw new Error(error);
+			return data;
+		};
+
+		const fetchContext = async (
+			thread_id: string,
+			message_id: string,
+			limit: number,
+		) => {
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/thread/{thread_id}/context/{message_id}",
+				{
+					params: {
+						path: { thread_id, message_id },
+						query: { limit },
+					},
+				},
+			);
+			if (error) throw new Error(error);
+			return data;
+		};
+
+		let old: { thread_id: string; dir: MessageListAnchor };
+		const _update = async (
 			{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
 			{ value: oldValue }: { value?: MessageRange },
 		): Promise<MessageRange> => {
+			// HACK: force tracking
+			dir.type;
+			dir.limit;
+			dir.message_id;
+			console.log("diff", { thread_id, dir }, old);
+
 			// ugly, but seems to work
 			if (
 				old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
@@ -195,16 +243,11 @@ export class Messages {
 							}
 
 							// fetch more
-							const { data, error } = await this.api.client.http.GET(
-								"/api/v1/thread/{thread_id}/message",
-								{
-									params: {
-										path: { thread_id },
-										query: { dir: "b", limit: 100, from: r.start },
-									},
-								},
-							);
-							if (error) throw new Error(error);
+							const data = await fetchList(thread_id, {
+								dir: "b",
+								limit: 100,
+								from: r.start,
+							});
 							batch(() => {
 								for (const item of data.items.toReversed()) {
 									this.cache.set(item.id, item);
@@ -234,16 +277,7 @@ export class Messages {
 
 				const range = ranges.live;
 				if (range.isEmpty()) {
-					const { data, error } = await this.api.client.http.GET(
-						"/api/v1/thread/{thread_id}/message",
-						{
-							params: {
-								path: { thread_id },
-								query: { dir: "b", limit: 100 },
-							},
-						},
-					);
-					if (error) throw new Error(error);
+					const data = await fetchList(thread_id, { dir: "b", limit: 100 });
 					batch(() => {
 						for (const item of data.items.toReversed()) {
 							this.cache.set(item.id, item);
@@ -263,9 +297,77 @@ export class Messages {
 				const start = Math.max(range.len - dir.limit, 0);
 				const end = Math.min(start + dir.limit, range.len);
 				return range.slice(start, end);
-			} else {
-				throw new Error("todo");
+			} else if (dir.type === "context") {
+				const r = ranges.find(dir.message_id);
+
+				if (r) {
+					const idx = r.items.findIndex((i) => i.id === dir.message_id);
+					if (idx !== -1) {
+						throw new Error("todo");
+						// if (idx >= dir.limit) {
+						// 	const end = idx + 1;
+						// 	const start = Math.max(end - dir.limit, 0);
+						// 	const s = r.slice(start, end);
+						// 	assertEq(s.end, dir.message_id);
+						// 	return s;
+						// }
+
+						// // fetch more
+						// const { data, error } = await this.api.client.http.GET(
+						// 	"/api/v1/thread/{thread_id}/message",
+						// 	{
+						// 		params: {
+						// 			path: { thread_id },
+						// 			query: { dir: "b", limit: 100, from: r.start },
+						// 		},
+						// 	},
+						// );
+						// if (error) throw new Error(error);
+						// batch(() => {
+						// 	for (const item of data.items.toReversed()) {
+						// 		this.cache.set(item.id, item);
+						// 		const existing = ranges.find(item.id);
+						// 		if (existing) {
+						// 			throw new Error("todo");
+						// 		} else {
+						// 			r.items.unshift(item);
+						// 		}
+						// 	}
+						// });
+						// r.has_backwards = data.has_more;
+						// const end = idx + data.items.length + 1;
+						// const start = Math.max(end - dir.limit, 0);
+						// const s = r.slice(start, end);
+						// assertEq(s.end, dir.message_id);
+						// return s;
+					} else {
+						// fetch thread
+						throw new Error("todo");
+					}
+				} else {
+					// new range
+					const range = new MessageRange(false, false, []);
+					const data = await fetchContext(thread_id, dir.message_id, dir.limit);
+					batch(() => {
+						for (const item of data.items.toReversed()) {
+							this.cache.set(item.id, item);
+							const existing = ranges.find(item.id);
+							if (existing) {
+								throw new Error("todo");
+							} else {
+								range.items.unshift(item);
+							}
+						}
+					});
+					range.has_backwards = data.has_more;
+					ranges.ranges.push(range);
+					const start = Math.max(range.len - dir.limit, 0);
+					const end = Math.min(start + dir.limit, range.len);
+					return range.slice(start, end);
+				}
 			}
+
+			throw new Error("unreachable");
 		};
 
 		const query = () => ({
