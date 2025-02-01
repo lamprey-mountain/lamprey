@@ -4,7 +4,7 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{InviteTarget, InviteTargetId, InviteWithMetadata};
+use crate::{InviteTargetId, InviteWithMetadata};
 
 use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
@@ -159,7 +159,7 @@ pub enum MessageSync {
 // enum MessageRoom {}
 
 impl MessageSync {
-    pub fn room_audit_loggable(&self) -> bool {
+    pub fn is_room_audit_loggable(&self) -> bool {
         match self {
             MessageSync::UpsertRoom { .. } => true,
             MessageSync::UpsertThread { .. } => true,
@@ -173,30 +173,5 @@ impl MessageSync {
             MessageSync::DeleteInvite { .. } => true,
             _ => false,
         }
-    }
-    
-    pub fn associated_room(&self) -> Option<RoomId> {
-        let id = match self {
-            MessageSync::UpsertRoom { room } => room.id,
-            MessageSync::UpsertThread { thread } => thread.room_id,
-            MessageSync::UpsertRoomMember { member } => member.room_id,
-            MessageSync::UpsertRole { role } => role.room_id,
-            MessageSync::DeleteMessage { room_id, .. } => *room_id,
-            MessageSync::DeleteMessageVersion { room_id, .. } => *room_id,
-            MessageSync::DeleteRole { room_id, .. } => *room_id,
-            MessageSync::DeleteRoomMember { room_id, .. } => *room_id,
-            MessageSync::UpsertInvite { invite } => match &invite.invite.target {
-                InviteTarget::User { .. } => return None,
-                InviteTarget::Room { room } => room.id,
-                InviteTarget::Thread { room, .. } => room.id,
-            },
-            MessageSync::DeleteInvite { target, .. } => match target {
-                InviteTargetId::User { .. } => return None,
-                InviteTargetId::Room { room_id } => *room_id,
-                InviteTargetId::Thread { room_id, .. } => *room_id,
-            },
-            _ => return None,
-        };
-        Some(id)
     }
 }

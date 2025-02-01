@@ -98,9 +98,9 @@ pub async fn room_member_update(
     if start == res {
         Ok(StatusCode::NOT_MODIFIED.into_response())
     } else {
-        s.broadcast(MessageSync::UpsertRoomMember {
+        s.broadcast_room(room_id, auth_user_id, None, MessageSync::UpsertRoomMember {
             member: res.clone(),
-        })?;
+        }).await?;
         Ok(Json(res).into_response())
     }
 }
@@ -128,10 +128,10 @@ pub async fn room_member_delete(
     perms.ensure_view()?;
     if target_user_id == auth_user_id {
         d.room_member_delete(room_id, target_user_id).await?;
-        s.broadcast(MessageSync::DeleteRoomMember {
+        s.broadcast_room(room_id, auth_user_id, None, MessageSync::DeleteRoomMember {
             room_id,
             user_id: target_user_id,
-        })?;
+        }).await?;
     } else {
         perms.ensure(Permission::MemberKick)?;
         // d.room_member_delete(room_id, target_user_id).await?;

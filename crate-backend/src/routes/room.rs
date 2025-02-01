@@ -120,7 +120,8 @@ async fn room_edit(
     perms.ensure(Permission::RoomManage)?;
     data.room_update(room_id, json).await?;
     let room = data.room_get(room_id).await?;
-    s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
+    let msg = MessageSync::UpsertRoom { room: room.clone() };
+    s.broadcast_room(room_id, user_id, None, msg).await?;
     Ok(Json(room))
 }
 

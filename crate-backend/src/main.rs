@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
+use ::types::{RoomId, UserId};
 use axum::{extract::DefaultBodyLimit, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -92,6 +93,20 @@ impl ServerState {
 
     fn blobs(&self) -> &opendal::Operator {
         &self.blobs
+    }
+
+    async fn broadcast_room(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        reason: Option<String>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        if msg.is_room_audit_loggable() {
+            self.data().audit_logs_room_append(room_id, user_id, reason, msg.clone()).await?;
+        }
+        let _ = self.sushi.send(msg);
+        Ok(())
     }
 
     fn broadcast(&self, msg: MessageSync) -> Result<()> {

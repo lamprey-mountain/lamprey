@@ -144,10 +144,7 @@ impl Services {
         let msg = MessageSync::UpsertThread {
             thread: thread.clone(),
         };
-        self.state.broadcast(msg.clone())?;
-        self.data
-            .audit_logs_room_append(thread.room_id, user_id, None, msg)
-            .await?;
+        self.state.broadcast_room(thread.room_id, user_id, None, msg).await?;
 
         Ok(thread)
     }

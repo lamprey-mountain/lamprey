@@ -69,9 +69,9 @@ async fn thread_create(
         .await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
     let starter_message = data.message_get(thread_id, starter_message_id).await?;
-    s.broadcast(MessageSync::UpsertThread {
+    s.broadcast_room(room_id, user_id, None, MessageSync::UpsertThread {
         thread: thread.clone(),
-    })?;
+    }).await?;
     s.broadcast(MessageSync::UpsertMessage {
         message: starter_message,
     })?;

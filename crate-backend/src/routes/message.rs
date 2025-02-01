@@ -83,9 +83,10 @@ async fn message_create(
         media.url = s.presign(&media.url).await?;
     }
     message.nonce = json.nonce;
-    s.broadcast(MessageSync::UpsertMessage {
+    let msg = MessageSync::UpsertMessage {
         message: message.clone(),
-    })?;
+    };
+    s.broadcast(msg)?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 

@@ -51,8 +51,7 @@ pub async fn role_create(
         })
         .await?;
     let msg = MessageSync::UpsertRole { role: role.clone() };
-    s.broadcast(msg.clone())?;
-    d.audit_logs_room_append(room_id, user_id, None, msg).await?;
+    s.broadcast_room(room_id, user_id, None, msg).await?;
     Ok((StatusCode::CREATED, Json(role)))
 }
 
@@ -87,8 +86,7 @@ pub async fn role_update(
     d.role_update(room_id, role_id, patch).await?;
     let role = d.role_select(room_id, role_id).await?;
     let msg = MessageSync::UpsertRole { role: role.clone() };
-    s.broadcast(msg.clone())?;
-    d.audit_logs_room_append(room_id, user_id, None, msg).await?;
+    s.broadcast_room(room_id, user_id, None, msg).await?;
     Ok(Json(role).into_response())
 }
 
@@ -119,8 +117,7 @@ pub async fn role_delete(
     if existing == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
         let msg = MessageSync::DeleteRole { room_id, role_id };
-        s.broadcast(msg.clone())?;
-        d.audit_logs_room_append(room_id, user_id, None, msg).await?;
+        s.broadcast_room(room_id, user_id, None, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)
@@ -231,8 +228,7 @@ pub async fn role_member_add(
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),
     };
-    s.broadcast(msg.clone())?;
-    d.audit_logs_room_append(room_id, auth_user_id, None, msg).await?;
+    s.broadcast_room(room_id, auth_user_id, None, msg).await?;
     Ok(Json(member))
 }
 
@@ -264,8 +260,7 @@ pub async fn role_member_remove(
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),
     };
-    s.broadcast(msg.clone())?;
-    d.audit_logs_room_append(room_id, auth_user_id, None, msg).await?;
+    s.broadcast_room(room_id, auth_user_id, None, msg).await?;
     Ok(Json(member))
 }
 
