@@ -8,6 +8,11 @@ import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
+import {
+	createScheduled,
+	debounce,
+	throttle,
+} from "@solid-primitives/scheduled";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -19,9 +24,10 @@ export const ChatMain = (props: ChatProps) => {
 	const api = useApi();
 
 	const ts = () => ctx.data.thread_state[props.thread.id];
-	const anchor = () => ctx.thread_anchor.get(props.thread.id) ?? { type: "backwards", limit: 50 };
+	const anchor = () =>
+		ctx.thread_anchor.get(props.thread.id) ?? { type: "backwards", limit: 50 };
 	const messages = api.messages.list(() => props.thread.id, anchor);
-	
+
 	createEffect(() => {
 		console.log(messages());
 	});
@@ -58,7 +64,7 @@ export const ChatMain = (props: ChatProps) => {
 
 	const list = createList({
 		items: tl,
-		autoscroll: () => !messages()?.has_forward,
+		autoscroll: () => !messages()?.has_forward && anchor().type !== "context",
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
@@ -166,6 +172,46 @@ export const ChatMain = (props: ChatProps) => {
 			list.scrollTo(pos);
 		});
 	}));
+
+	createEffect(() => {
+		// paginateThrottle();
+		const a = anchor();
+		if (a.type === "context") {
+			// TODO: is this safe and performant?
+			const target = document.querySelector(
+				`li[data-message-id="${a.message_id}"]`,
+			);
+			if (target) {
+				console.log("scroll into view + animate", target);
+				target.scrollIntoView({
+					// behavior: "smooth",
+					behavior: "instant",
+					block: "center",
+				});
+				target.animate([
+					{
+						boxShadow: "4px 0 0 -1px inset #cc1856",
+						backgroundColor: "#cc185622",
+						offset: 0,
+					},
+					{
+						boxShadow: "4px 0 0 -1px inset #cc1856",
+						backgroundColor: "#cc185622",
+						offset: .8,
+					},
+					{
+						boxShadow: "none",
+						backgroundColor: "none",
+						offset: 1,
+					},
+				], {
+					duration: 1000,
+				});
+			} else {
+				console.warn("couldn't find target to scroll to");
+			}
+		}
+	});
 
 	return (
 		<div class="chat">

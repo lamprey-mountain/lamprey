@@ -1,5 +1,5 @@
 // import { Tooltip } from "./Atoms.tsx";
-import { Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
@@ -33,6 +33,8 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 					classList={{
 						"selected":
 							item.message.id === ctx.data.thread_state[thread.id]?.reply_id,
+						// "context": a()?.type === "context" &&
+						// 	item.message.id === a()!.message_id,
 					}}
 					data-message-id={item.message.id}
 				>

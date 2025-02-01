@@ -288,6 +288,11 @@ button, input[type="submit"] {
 				background-color: #67dc8222;
 			}
 
+			&.context {
+				box-shadow: 4px 0 0 -1px inset #cc1856;
+				background-color: #cc185622;
+			}
+
 			&.header {
 				display: contents;
 			}
@@ -597,6 +602,17 @@ input[type="text"] {
 	& > .reply {
 		color: $fg5;
 		font-size: 0.8rem;
+		cursor: pointer;
+
+		& > .author {
+			position: static;
+			padding: 0;
+			padding-right: 8px;
+		}
+		
+		&:hover {
+			color: $fg4;
+		}
 
 		&.arrow {
 			text-align: right;

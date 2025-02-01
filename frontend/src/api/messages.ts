@@ -303,14 +303,15 @@ export class Messages {
 				if (r) {
 					const idx = r.items.findIndex((i) => i.id === dir.message_id);
 					if (idx !== -1) {
-						throw new Error("todo");
-						// if (idx >= dir.limit) {
-						// 	const end = idx + 1;
-						// 	const start = Math.max(end - dir.limit, 0);
-						// 	const s = r.slice(start, end);
+						if (idx >= dir.limit && (idx <= r.len - dir.limit) || !r.has_forward) {
+							const end = Math.min(idx + dir.limit, r.len);
+							const start = Math.max(idx - dir.limit, 0);
+							const s = r.slice(start, end);
 						// 	assertEq(s.end, dir.message_id);
-						// 	return s;
-						// }
+							return s;
+						}
+						
+						throw new Error("todo");
 
 						// // fetch more
 						// const { data, error } = await this.api.client.http.GET(
