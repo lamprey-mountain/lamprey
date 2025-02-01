@@ -446,8 +446,8 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Get context for messages in a thread
-		 * @description More efficient than calling List Message twice
+		 * Get context for message
+		 * @description More efficient than calling List messages twice
 		 */
 		get: operations["message_context"];
 		put?: never;
@@ -602,6 +602,13 @@ export interface components {
 		};
 		/** Format: uuid */
 		AuditLogId: string;
+		ContextResponse: {
+			has_after: boolean;
+			has_before: boolean;
+			items: components["schemas"]["Message"][];
+			/** Format: int64 */
+			total: number;
+		};
 		Invite: {
 			code: components["schemas"]["InviteCode"];
 			/** Format: date-time */
@@ -2278,8 +2285,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
+					"application/json": components["schemas"]["ContextResponse"];
 				};
 			};
 		};
