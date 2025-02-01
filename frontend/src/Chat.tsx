@@ -201,7 +201,7 @@ export const ChatMain = (props: ChatProps) => {
 					},
 					{
 						boxShadow: "none",
-						backgroundColor: "none",
+						backgroundColor: "transparent",
 						offset: 1,
 					},
 				], {
