@@ -107,9 +107,9 @@ struct ContextResponse {
     has_before: bool,
 }
 
-/// Get context for messages in a thread
+/// Get context for message
 ///
-/// More efficient than calling List Message twice
+/// More efficient than calling List messages twice
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/context/{message_id}",
@@ -120,7 +120,7 @@ struct ContextResponse {
     ),
     tags = ["message"],
     responses(
-        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+        (status = OK, body = ContextResponse, description = "List thread messages success"),
     )
 )]
 async fn message_context(
