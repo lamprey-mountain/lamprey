@@ -27,6 +27,9 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 		navigator.clipboard.writeText(url);
 	};
 
+	const logToConsole = () =>
+		console.log(JSON.parse(JSON.stringify(props.thread)));
+
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
@@ -48,7 +51,7 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 			<Item onClick={deleteThread}>delete</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
-			<Item>view source</Item>
+			<Item onClick={logToConsole}>log to console</Item>
 		</Menu>
 	);
 }

@@ -11,7 +11,10 @@ export function RoomMenu(props: { room: RoomT }) {
 		const url = `${ctx.client.opts.baseUrl}/room/${props.room.id}`;
 		navigator.clipboard.writeText(url);
 	};
-	
+
+	const logToConsole = () =>
+		console.log(JSON.parse(JSON.stringify(props.room)));
+
 	return (
 		<Menu>
 			<Item>mark as read</Item>
@@ -27,7 +30,7 @@ export function RoomMenu(props: { room: RoomT }) {
 			<Item>leave</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
-			<Item>inspect</Item>
+			<Item onClick={logToConsole}>log to console</Item>
 		</Menu>
 	);
 }

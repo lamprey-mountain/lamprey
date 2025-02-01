@@ -20,7 +20,7 @@ export function MessageMenu(props: { message: MessageT }) {
 	function markUnread() {
 		const r = api.messages.cacheRanges.get(props.message.thread_id)!;
 		const tl = r.find(props.message.id)?.items!;
-		const index = tl.findIndex((i) =>i.id === props.message.id && !i.is_local );
+		const index = tl.findIndex((i) => i.id === props.message.id && !i.is_local);
 		const next = tl[index - 1];
 		const next_id = next?.id ?? props.message.id;
 		ctx.dispatch({
@@ -30,6 +30,9 @@ export function MessageMenu(props: { message: MessageT }) {
 			also_local: true,
 		});
 	}
+
+	const logToConsole = () =>
+		console.log(JSON.parse(JSON.stringify(props.message)));
 
 	return (
 		<Menu>
@@ -42,11 +45,7 @@ export function MessageMenu(props: { message: MessageT }) {
 			<Item>redact</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
-			<Item
-				onClick={() => console.log(JSON.parse(JSON.stringify(props.message)))}
-			>
-				log to console
-			</Item>
+			<Item onClick={logToConsole}>log to console</Item>
 		</Menu>
 	);
 }
