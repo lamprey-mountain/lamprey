@@ -22,10 +22,15 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 		});
 	};
 
+	const copyLink = () => {
+		const url = `${ctx.client.opts.baseUrl}/thread/${props.thread.id}`;
+		navigator.clipboard.writeText(url);
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
-			<Item>copy link</Item>
+			<Item onClick={copyLink}>copy link</Item>
 			<ThreadNotificationMenu />
 			<Separator />
 			<Submenu content={"edit"}>
