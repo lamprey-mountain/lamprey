@@ -14,6 +14,14 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 		});
 	};
 
+	const deleteThread = () => {
+		ctx.client.http.DELETE("/api/v1/thread/{thread_id}", {
+			params: {
+				path: { thread_id: props.thread.id },
+			},
+		});
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
@@ -32,7 +40,7 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 			<Item>pin</Item>
 			<Item>close</Item>
 			<Item>lock</Item>
-			<Item>delete</Item>
+			<Item onClick={deleteThread}>delete</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item>view source</Item>

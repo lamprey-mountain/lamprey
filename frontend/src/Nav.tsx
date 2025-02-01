@@ -10,7 +10,6 @@ export const ChatNav = () => {
 
 	const rooms = api.rooms.list();
 
-	// should i only show threads from the currently active rooms? or show less threads until the room is selected?
 	return (
 		<nav id="nav">
 			<ul>
@@ -55,7 +54,7 @@ export const ChatNav = () => {
 									<For
 										each={[
 											...api.threads.cache.values().filter((i) =>
-												i.room_id === room.id
+												i.room_id === room.id && i.state !== "Deleted"
 											),
 										]}
 									>

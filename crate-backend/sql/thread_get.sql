@@ -18,6 +18,7 @@ select
     thread.version_id,
     thread.name,
     thread.description,
+    thread.state as "state: DbThreadState",
     coalesce(count, 0) as "message_count!",
     last_version_id as "last_version_id!",
     unread.version_id as "last_read_id?",

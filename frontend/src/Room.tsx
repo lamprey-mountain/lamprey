@@ -60,7 +60,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<ul>
 				<For
 					each={[
-						...threads()?.items.filter((i) => i.room_id === props.room.id) ??
+						...threads()?.items.filter((i) =>
+							i.room_id === props.room.id && i.state !== "Deleted"
+						) ??
 							[],
 					]}
 				>

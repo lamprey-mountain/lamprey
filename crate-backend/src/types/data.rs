@@ -116,6 +116,7 @@ pub struct DbThread {
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
     pub is_unread: bool,
+    pub state: DbThreadState,
 }
 
 pub struct ThreadCreate {
@@ -145,7 +146,13 @@ impl From<DbThread> for Thread {
                 last_read_id: row.last_read_id.map(Into::into),
                 message_count: row.message_count.try_into().expect("count is negative?"),
             },
-            state: ThreadState::Active,
+            state: match row.state {
+                DbThreadState::Pinned => todo!(),
+                DbThreadState::Active => ThreadState::Active,
+                DbThreadState::Temporary => ThreadState::Temporary,
+                DbThreadState::Archived => ThreadState::Archived,
+                DbThreadState::Deleted => ThreadState::Deleted,
+            },
             visibility: ThreadVisibility::Room,
         }
     }
@@ -534,7 +541,7 @@ pub struct RoleDeleteQuery {
     pub force: bool,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "thread_state")]
 pub enum DbThreadState {
     Pinned,
