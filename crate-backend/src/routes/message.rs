@@ -6,7 +6,9 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use types::util::Diff;
+use serde::{Deserialize, Serialize};
+use types::{util::Diff, PaginationDirection};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -88,6 +90,84 @@ async fn message_create(
     };
     s.broadcast(msg)?;
     Ok((StatusCode::CREATED, Json(message)))
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams)]
+struct ContextQuery {
+    to_start: Option<MessageId>,
+    to_end: Option<MessageId>,
+    limit: Option<u16>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
+struct ContextResponse {
+    items: Vec<Message>,
+    total: u64,
+    has_after: bool,
+    has_before: bool,
+}
+
+/// Get context for messages in a thread
+///
+/// More efficient than calling List Message twice
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/context/{message_id}",
+    params(
+        PaginationQuery<MessageId>,
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id"),
+    ),
+    tags = ["message"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+    )
+)]
+async fn message_context(
+    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Query(q): Query<ContextQuery>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    perms.ensure_view()?;
+    let limit = q.limit.unwrap_or(10);
+    if limit > 100 {
+        return Err(Error::BadStatic("limit too big"));
+    }
+    let before_q = PaginationQuery {
+        from: Some(message_id),
+        to: q.to_start,
+        dir: Some(PaginationDirection::B),
+        limit: Some(limit),
+    };
+    let before = data.message_list(thread_id, before_q).await?;
+    let after_q = PaginationQuery {
+        from: Some(message_id),
+        to: q.to_end,
+        dir: Some(PaginationDirection::F),
+        limit: Some(limit),
+    };
+    let after = data.message_list(thread_id, after_q).await?;
+    let message = data.message_get(thread_id, message_id).await?;
+    let mut res = ContextResponse {
+        items: before
+            .items
+            .into_iter()
+            .chain([message])
+            .chain(after.items.into_iter())
+            .collect(),
+        total: after.total,
+        has_after: after.has_more,
+        has_before: before.has_more,
+    };
+    for message in &mut res.items {
+        for media in &mut message.attachments {
+            media.url = s.presign(&media.url).await?;
+        }
+    }
+    Ok(Json(res))
 }
 
 /// List messages in a thread
@@ -386,6 +466,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_create))
         .routes(routes!(message_get))
         .routes(routes!(message_list))
+        .routes(routes!(message_context))
         .routes(routes!(message_edit))
         .routes(routes!(message_delete))
         .routes(routes!(message_version_list))
