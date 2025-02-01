@@ -27,8 +27,16 @@ export function Input(props: InputProps) {
 		});
 	}
 
+	function uploadFile(e: InputEvent) {
+		const target = e.target! as HTMLInputElement;
+		const files = target.files!;
+		for (const file of files) {
+			handleUpload(file);
+		}
+	}
+
 	return (
-		<div class="input">
+		<div class="bottom">
 			<Show when={props.ts.reply_id}>
 				<div class="reply">
 					<button
@@ -59,11 +67,17 @@ export function Input(props: InputProps) {
 					</For>
 				</ul>
 			</Show>
-			<Editor
-				state={props.ts.editor_state}
-				onUpload={handleUpload}
-				placeholder="send a message..."
-			/>
+			<div class="input">
+				<label class="upload">
+					upload file
+					<input multiple type="file" onInput={uploadFile} value="upload file" />
+				</label>
+				<Editor
+					state={props.ts.editor_state}
+					onUpload={handleUpload}
+					placeholder="send a message..."
+				/>
+			</div>
 		</div>
 	);
 }

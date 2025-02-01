@@ -188,18 +188,18 @@ button, input[type="submit"] {
 	grid-template-rows: 1fr 0;
 	contain: strict;
 
-	& > .input {
+	& > .bottom {
 		position: absolute;
 		bottom: 0;
 		width: 100%;
 		background-image: linear-gradient(to top, $bg2 25%, transparent);
 		display: flex;
 		padding: 4px;
-		padding-left: 124px;
 		max-height: 50%;
 		flex-direction: column;
-
+		
 		& > .reply {
+			padding-left: 124px;
 			background-color: $bg2;
 			display: flex;
 			position: relative;
@@ -219,8 +219,32 @@ button, input[type="submit"] {
 			}
 		}
 
-		& > .editor {
-			box-shadow: 2px 2px 8px #1114;
+		& > .attachments {
+			padding-left: 124px;
+		}
+
+		& > .input {
+			display: flex;
+			
+			& > .upload {
+				width: 124px;
+				padding: 0 4px;
+				background: $bg3;
+				border: solid $bg4 1px;
+				cursor: pointer;
+
+				&:hover {
+					background: $bg2;
+				}
+
+				& > input[type="file"] {
+					display: none;
+				}
+			}
+		
+			& > .editor {
+				box-shadow: 2px 2px 8px #1114;
+			}
 		}
 	}
 
@@ -677,7 +701,7 @@ input[type="text"] {
 		padding: 4px;
 
 		& .media {
-			max-height: min(50vh, 500px);
+			max-height: min(30vh, 200px);
 			max-width: min(600px, 100%);
 			contain: content;
 
