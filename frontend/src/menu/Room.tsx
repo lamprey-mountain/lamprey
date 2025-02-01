@@ -1,14 +1,21 @@
+import { useCtx } from "../context.ts";
 import { RoomT } from "../types.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
 export function RoomMenu(props: { room: RoomT }) {
+	const ctx = useCtx();
 	const copyId = () => navigator.clipboard.writeText(props.room.id);
 
+	const copyLink = () => {
+		const url = `${ctx.client.opts.baseUrl}/room/${props.room.id}`;
+		navigator.clipboard.writeText(url);
+	};
+	
 	return (
 		<Menu>
 			<Item>mark as read</Item>
-			<Item>copy link</Item>
+			<Item onClick={copyLink}>copy link</Item>
 			<RoomNotificationMenu />
 			<Separator />
 			<Submenu content={"edit"}>
