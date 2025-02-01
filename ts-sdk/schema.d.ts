@@ -2256,13 +2256,13 @@ export interface operations {
 	};
 	message_context: {
 		parameters: {
-			query?: never;
+			query?: {
+				to_start?: null | components["schemas"]["MessageId"];
+				to_end?: null | components["schemas"]["MessageId"];
+				limit?: number | null;
+			};
 			header?: never;
 			path: {
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 				/** @description Thread id */
 				thread_id: components["schemas"]["ThreadId"];
 				/** @description Message id */
