@@ -438,6 +438,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/context/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get context for messages in a thread
+		 * @description More efficient than calling List Message twice
+		 */
+		get: operations["message_context"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/thread/{thread_id}/message": {
 		parameters: {
 			query?: never;
@@ -2230,6 +2250,36 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
+	message_context: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				from: string;
+				to: string;
+				dir: "b" | "f";
+				limit: number;
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description Message id */
+				message_id: components["schemas"]["MessageId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
 				};
 			};
 		};
