@@ -1,7 +1,12 @@
-import { Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
+import { createScheduled, leadingAndTrailing, throttle, } from "@solid-primitives/scheduled";
+import { createResource } from "solid-js";
+import { MessageView } from "./Message.tsx";
+import { Message } from "sdk";
+import { flags } from "./flags.ts";
 
 export const Home = () => {
 	const ctx = useCtx();
@@ -83,6 +88,48 @@ export const Home = () => {
 			</Show>
 			<A target="_self" href="/api/docs">api docs</A>
 			<br />
+			<Show when={flags.has("message_search")}>
+				<Search />
+			</Show>
 		</div>
+	);
+};
+
+const Search = () => {
+	const ctx = useCtx();
+	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
+	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
+	const [searchResults] = createResource(
+		searchQuery as any,
+		(async (query: string, { value }: { value?: Array<Message> }) => {
+			if (!query) return;
+			const { data, error } = await ctx.client.http.POST(
+				"/api/v1/search/message",
+				{
+					body: { query },
+				},
+			);
+			if (error) throw new Error(error);
+			return data.items;
+		}) as any,
+	);
+
+	return (
+		<>
+			<h3>experiments</h3>
+			<label>
+				search messages:{" "}
+				<input type="text" onInput={(e) => setSearchQuery(e.target.value)} />
+			</label>
+			<br />
+			<Show when={searchResults.loading}>loading...</Show>
+			<For each={searchResults() as any}>
+				{(m: Message) => (
+					<li class="message">
+						<MessageView message={m} />
+					</li>
+				)}
+			</For>
+		</>
 	);
 };

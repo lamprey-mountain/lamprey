@@ -559,6 +559,9 @@ input[type="text"] {
 }
 
 .message {
+	display: grid;
+	grid-template-columns: 128px 1fr max-content;
+	
 	&:hover {
 		& > * {
 			background-color: rgba(var(--color-bg1), 0.3);
