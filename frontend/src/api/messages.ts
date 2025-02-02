@@ -1,4 +1,10 @@
-import { Media, Message, MessageCreate, PaginationQuery } from "sdk";
+import {
+	Media,
+	Message,
+	MessageCreate,
+	PaginationQuery,
+	PaginationResponseMessage,
+} from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
@@ -60,7 +66,7 @@ export class MessageRange {
 
 export class MessageRanges {
 	live = new MessageRange(false, true, []);
-	ranges: Array<MessageRange> = [this.live];
+	ranges = new Set([this.live]);
 
 	find(message_id: string): MessageRange | null {
 		for (const range of this.ranges) {
@@ -149,6 +155,84 @@ export class Messages {
 			return data;
 		};
 
+		const mergeRanges = (
+			a: MessageRange,
+			b: MessageRange,
+		) => {
+			const bids = new Set(b.items.map((i) => i.id));
+			const sharedStart = a.items.findIndex((i) => bids.has(i.id));
+			const sharedEnd = a.items.findLastIndex((i) => bids.has(i.id));
+			console.log("mergeRanges", a, b, sharedStart, sharedEnd);
+			return new MessageRange(
+				a.has_forward && b.has_forward,
+				a.has_backwards && b.has_backwards,
+				// [
+				// 	...a.items.slice(
+				// 		0,
+				// 		sharedStart === -1 ? a.items.length : sharedStart,
+				// 	),
+				// 	...b.items,
+				// 	...a.items.slice(sharedEnd === -1 ? 0 : sharedEnd),
+				// ],
+				[...new Set([...a.items.map((i) => i.id), ...b.items.map((i) => i.id)])]
+					.map((i) =>
+						a.items.find((j) => i === j.id) ??
+							b.items.find((j) => i === j.id)!
+					),
+			);
+		};
+
+		/** append a set of data to a range, deduplicating ranges if there are multiple */
+		const mergeAfter = (
+			ranges: MessageRanges,
+			range: MessageRange,
+			data: PaginationResponseMessage,
+		): MessageRange => {
+			const items: Array<Message> = [];
+			for (const item of data.items) {
+				this.cache.set(item.id, item);
+				const existing = ranges.find(item.id);
+				if (existing && existing !== range) {
+					console.log("merge (after)!");
+					ranges.ranges.delete(range);
+					ranges.ranges.delete(existing);
+					range = mergeRanges(range, existing);
+					ranges.ranges.add(range);
+					if (existing === ranges.live) ranges.live = range;
+				} else {
+					items.push(item);
+				}
+			}
+			range.items.push(...items);
+			range.has_forward = range.has_forward ? data.has_more : false;
+			return range;
+		};
+
+		/** prepend a set of data to a range, deduplicating ranges if there are multiple */
+		const mergeBefore = (
+			ranges: MessageRanges,
+			range: MessageRange,
+			data: PaginationResponseMessage,
+		): MessageRange => {
+			const items: Array<Message> = [];
+			for (const item of data.items) {
+				this.cache.set(item.id, item);
+				const existing = ranges.find(item.id);
+				if (existing && existing !== range) {
+					console.log("merge (before)!");
+					ranges.ranges.delete(range);
+					ranges.ranges.delete(existing);
+					range = mergeRanges(range, existing);
+					ranges.ranges.add(range);
+				} else {
+					items.push(item);
+				}
+			}
+			range.items.unshift(...items);
+			range.has_backwards = range.has_backwards ? data.has_more : false;
+			return range;
+		};
+
 		let old: { thread_id: string; dir: MessageListAnchor };
 		const _update = async (
 			{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
@@ -172,6 +256,7 @@ export class Messages {
 			console.log("recalculate message list", {
 				thread_id,
 				dir,
+				ranges,
 			});
 
 			if (dir.type === "forwards") {
@@ -181,7 +266,8 @@ export class Messages {
 					if (r) {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
-							if (idx < r.len - dir.limit || !r.has_forward) {
+							if (idx + dir.limit < r.len || !r.has_forward) {
+								console.log("messages reuse range for forwards");
 								const start = idx;
 								const end = Math.min(idx + dir.limit, r.len);
 								const s = r.slice(start, end);
@@ -189,42 +275,30 @@ export class Messages {
 								return s;
 							}
 
-							throw new Error("todo");
-
-							// // fetch more
-							// const { data, error } = await props.client.http.GET(
-							// 	"/api/v1/thread/{thread_id}/message",
-							// 	{
-							// 		params: {
-							// 			path: { thread_id },
-							// 			query: { dir: "b", limit: 100, from: r.start },
-							// 		},
-							// 	},
-							// );
-							// if (error) throw new Error(error);
-							// for (const item of data.items.toReversed()) {
-							// 	const existing = ranges.find(item.id);
-							// 	if (existing) {
-							// 		throw new Error("todo");
-							// 	} else {
-							// 		r.items.unshift(item);
-							// 	}
-							// }
-							// r.has_backwards = data.has_more;
-							// const end = idx + data.items.length + 1;
-							// const start = Math.max(end - dir.limit, 0);
-							// const s = r.slice(start, end);
-							// assertEq(s.end, dir.message_id);
-							// return s;
+							console.log("messages fetch more for forwards");
+							const data = await fetchList(thread_id, {
+								dir: "f",
+								limit: 100,
+								from: r.end,
+							});
+							const range = mergeAfter(ranges, r, data);
+							const idx2 = range.items.findIndex((i) =>
+								i.id === dir.message_id
+							);
+							const end = idx2 + 1;
+							const start = Math.max(end - dir.limit, 0);
+							const s = range.slice(start, end);
+							assertEq(s.end, dir.message_id);
+							return s;
 						} else {
-							// fetch thread
-							throw new Error("todo");
+							throw new Error("unreachable");
 						}
 					} else {
-						// new range
+						console.log("messages fetch initial for forwards");
 						throw new Error("todo");
 					}
 				} else {
+					console.log("messages fetch start for forwards");
 					throw new Error("todo");
 				}
 			} else if (dir.type === "backwards") {
@@ -235,6 +309,7 @@ export class Messages {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
 							if (idx >= dir.limit) {
+								console.log("messages reuse range for backwards");
 								const end = idx + 1;
 								const start = Math.max(end - dir.limit, 0);
 								const s = r.slice(start, end);
@@ -248,26 +323,17 @@ export class Messages {
 								limit: 100,
 								from: r.start,
 							});
-							batch(() => {
-								for (const item of data.items.toReversed()) {
-									this.cache.set(item.id, item);
-									const existing = ranges.find(item.id);
-									if (existing) {
-										throw new Error("todo");
-									} else {
-										r.items.unshift(item);
-									}
-								}
-							});
-							r.has_backwards = data.has_more;
-							const end = idx + data.items.length + 1;
+							const range = mergeBefore(ranges, r, data);
+							const idx2 = range.items.findIndex((i) =>
+								i.id === dir.message_id
+							);
+							const end = idx2 + 1;
 							const start = Math.max(end - dir.limit, 0);
-							const s = r.slice(start, end);
+							const s = range.slice(start, end);
 							assertEq(s.end, dir.message_id);
 							return s;
 						} else {
-							// fetch thread
-							throw new Error("todo");
+							throw new Error("unreachable");
 						}
 					} else {
 						// new range
@@ -278,18 +344,19 @@ export class Messages {
 				const range = ranges.live;
 				if (range.isEmpty()) {
 					const data = await fetchList(thread_id, { dir: "b", limit: 100 });
-					batch(() => {
-						for (const item of data.items.toReversed()) {
-							this.cache.set(item.id, item);
-							const existing = ranges.find(item.id);
-							if (existing) {
-								throw new Error("todo");
-							} else {
-								range.items.unshift(item);
-							}
-						}
-					});
-					range.has_backwards = data.has_more;
+					mergeBefore(ranges, range, data);
+					// batch(() => {
+					// 	for (const item of data.items.toReversed()) {
+					// 		this.cache.set(item.id, item);
+					// 		const existing = ranges.find(item.id);
+					// 		if (existing) {
+					// 			throw new Error("todo");
+					// 		} else {
+					// 			range.items.unshift(item);
+					// 		}
+					// 	}
+					// });
+					// range.has_backwards = data.has_more;
 				} else {
 					// don't need to do anything
 				}
@@ -303,67 +370,72 @@ export class Messages {
 				if (r) {
 					const idx = r.items.findIndex((i) => i.id === dir.message_id);
 					if (idx !== -1) {
-						if (idx >= dir.limit && (idx <= r.len - dir.limit) || !r.has_forward) {
+						const hasEnoughForwards = (idx <= r.len - dir.limit) ||
+							!r.has_forward;
+						const hasEnoughBackwards = (idx >= dir.limit) || !r.has_backwards;
+
+						if (hasEnoughBackwards && hasEnoughForwards) {
+							console.log("messages reuse range for context");
 							const end = Math.min(idx + dir.limit, r.len);
 							const start = Math.max(idx - dir.limit, 0);
 							const s = r.slice(start, end);
-						// 	assertEq(s.end, dir.message_id);
+							// 	assertEq(s.end, dir.message_id);
 							return s;
 						}
-						
-						throw new Error("todo");
 
-						// // fetch more
-						// const { data, error } = await this.api.client.http.GET(
-						// 	"/api/v1/thread/{thread_id}/message",
-						// 	{
-						// 		params: {
-						// 			path: { thread_id },
-						// 			query: { dir: "b", limit: 100, from: r.start },
-						// 		},
-						// 	},
-						// );
-						// if (error) throw new Error(error);
-						// batch(() => {
-						// 	for (const item of data.items.toReversed()) {
-						// 		this.cache.set(item.id, item);
-						// 		const existing = ranges.find(item.id);
-						// 		if (existing) {
-						// 			throw new Error("todo");
-						// 		} else {
-						// 			r.items.unshift(item);
-						// 		}
-						// 	}
-						// });
-						// r.has_backwards = data.has_more;
-						// const end = idx + data.items.length + 1;
-						// const start = Math.max(end - dir.limit, 0);
-						// const s = r.slice(start, end);
-						// assertEq(s.end, dir.message_id);
-						// return s;
+						console.log("messages fetch more for context");
+						if (!hasEnoughBackwards) {
+							const data = await fetchList(thread_id, {
+								dir: "b",
+								limit: 100,
+								from: r.start,
+							});
+							batch(() => {
+								mergeBefore(ranges, r, data);
+							});
+						}
+
+						if (!hasEnoughForwards) {
+							const data = await fetchList(thread_id, {
+								dir: "f",
+								limit: 100,
+								from: r.end,
+							});
+							batch(() => {
+								mergeAfter(ranges, r, data);
+							});
+						}
+
+						const idx2 = r.items.findIndex((i) => i.id === dir.message_id);
+						const end = idx2 + 1;
+						const start = Math.max(end - dir.limit, 0);
+						const s = r.slice(start, end);
+						return s;
 					} else {
 						// fetch thread
 						throw new Error("todo");
 					}
 				} else {
 					// new range
-					const range = new MessageRange(false, false, []);
+					console.log("messages fetch context");
 					const data = await fetchContext(thread_id, dir.message_id, dir.limit);
+					let range = new MessageRange(false, false, []);
+					ranges.ranges.add(range);
 					batch(() => {
-						for (const item of data.items.toReversed()) {
-							this.cache.set(item.id, item);
-							const existing = ranges.find(item.id);
-							if (existing) {
-								throw new Error("todo");
-							} else {
-								range.items.unshift(item);
-							}
-						}
+						range = mergeAfter(ranges, range, {
+							items: data.items,
+							has_more: data.has_before,
+							total: data.total,
+						});
+						// TODO: unify these names
+						range.has_backwards = data.has_before;
+						range.has_forward = data.has_after;
 					});
-					range.has_backwards = data.has_more;
-					ranges.ranges.push(range);
-					const start = Math.max(range.len - dir.limit, 0);
-					const end = Math.min(start + dir.limit, range.len);
+
+					console.log(data, range);
+					const idx = range.items.findIndex((i) => i.id === dir.message_id);
+					const end = Math.min(idx + dir.limit + 1, range.len);
+					const start = Math.max(idx - dir.limit, 0);
 					return range.slice(start, end);
 				}
 			}

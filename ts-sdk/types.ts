@@ -10,6 +10,7 @@ export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreateRequest"];
+export type PaginationResponseMessage = components["schemas"]["PaginationResponse_Message"];
 
 export type Pagination<T> = {
 	total: number;

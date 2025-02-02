@@ -68,6 +68,8 @@ export const ChatMain = (props: ChatProps) => {
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
+			// FIXME: this tends to fire an excessive number of times
+			// it's not a problem when *actually* paginating, but is for eg. marking threads read or scrolling to replies
 			if (messages.loading) return;
 			const thread_id = props.thread.id;
 
@@ -174,47 +176,53 @@ export const ChatMain = (props: ChatProps) => {
 	}));
 
 	createEffect(() => {
-		// paginateThrottle();
 		const a = anchor();
-		if (a.type === "context") {
-			// TODO: is this safe and performant?
-			const target = document.querySelector(
-				`li[data-message-id="${a.message_id}"]`,
-			);
-			if (target) {
-				console.log("scroll into view + animate", target);
-				target.scrollIntoView({
-					// behavior: "smooth",
-					behavior: "instant",
-					block: "center",
-				});
-				target.animate([
-					{
-						boxShadow: "4px 0 0 -1px inset #cc1856",
-						backgroundColor: "#cc185622",
-						offset: 0,
-					},
-					{
-						boxShadow: "4px 0 0 -1px inset #cc1856",
-						backgroundColor: "#cc185622",
-						offset: .8,
-					},
-					{
-						boxShadow: "none",
-						backgroundColor: "transparent",
-						offset: 1,
-					},
-				], {
-					duration: 1000,
-				});
-			} else {
-				console.warn("couldn't find target to scroll to");
+		messages();
+		setTimeout(() => {
+			// paginateThrottle();
+			if (a.type === "context") {
+				// TODO: is this safe and performant?
+				const target = document.querySelector(
+					`li[data-message-id="${a.message_id}"]`,
+				);
+				if (target) {
+					console.log("scroll into view + animate", target);
+					target.scrollIntoView({
+						// behavior: "smooth",
+						behavior: "instant",
+						block: "center",
+					});
+					target.animate([
+						{
+							boxShadow: "4px 0 0 -1px inset #cc1856",
+							backgroundColor: "#cc185622",
+							offset: 0,
+						},
+						{
+							boxShadow: "4px 0 0 -1px inset #cc1856",
+							backgroundColor: "#cc185622",
+							offset: .8,
+						},
+						{
+							boxShadow: "none",
+							backgroundColor: "transparent",
+							offset: 1,
+						},
+					], {
+						duration: 1000,
+					});
+				} else {
+					console.warn("couldn't find target to scroll to");
+				}
 			}
-		}
+		});
 	});
 
 	return (
 		<div class="chat">
+			<Show when={messages.loading}>
+				<div class="loading">loading...</div>
+			</Show>
 			<list.List>
 				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>

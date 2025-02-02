@@ -96,6 +96,8 @@ export function MessageView(props: MessageProps) {
 				<>
 					<Show when={props.message.reply_id}>
 						<ReplyView
+							thread_id={props.message.thread_id}
+							reply_id={props.message.reply_id!}
 							reply={api.messages.cache.get(props.message.reply_id!)}
 						/>
 					</Show>
@@ -126,7 +128,13 @@ export function MessageView(props: MessageProps) {
 	return <>{getComponent()}</>;
 }
 
-function ReplyView(props: { reply?: MessageT }) {
+type ReplyProps = {
+	thread_id: string;
+	reply_id: string;
+	reply?: MessageT;
+};
+
+function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 
 	const name = () => props.reply?.override_name ?? props.reply?.author.name;
@@ -135,14 +143,14 @@ function ReplyView(props: { reply?: MessageT }) {
 			`${props.reply?.attachments.length} attachment(s)`;
 
 	const scrollToReply = () => {
-		if (!props.reply) return;
+		// if (!props.reply) return;
 		ctx.dispatch({
 			do: "thread.set_anchor",
-			thread_id: props.reply.thread_id,
+			thread_id: props.thread_id,
 			anchor: {
 				type: "context",
 				limit: 50, // TODO: calc dynamically
-				message_id: props.reply.id,
+				message_id: props.reply_id,
 			},
 		});
 	};

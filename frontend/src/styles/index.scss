@@ -298,6 +298,15 @@ button, input[type="submit"] {
 			}
 		}
 	}
+
+	& > .loading {
+		position: absolute;
+		top: 8px;
+		left: 8px;
+		padding: 8px;
+		background: $bg1;
+		z-index: 100;
+	}
 }
 
 .editor {
