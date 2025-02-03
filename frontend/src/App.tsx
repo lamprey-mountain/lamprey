@@ -76,8 +76,11 @@ const App: Component = () => {
 		let menu: Partial<Menu> | null = null;
 
 		if (messageId) {
+			const threadId = api.messages.cache.get(messageId)?.thread_id;
+			if (!threadId) return;
 			menu = {
 				type: "message",
+				thread_id: threadId,
 				message_id: messageId,
 			};
 		}
