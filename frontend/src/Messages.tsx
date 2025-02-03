@@ -29,7 +29,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			const ctx = useCtx();
 			return (
 				<li
-					class="message"
+					class="message has-menu"
 					classList={{
 						"selected":
 							item.message.id === ctx.data.thread_state[thread.id]?.reply_id,

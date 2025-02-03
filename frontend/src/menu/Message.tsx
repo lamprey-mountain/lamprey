@@ -2,37 +2,39 @@
 
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { MessageT } from "../types.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 // should i have a separate one for bulk messages?
-export function MessageMenu(props: { message: MessageT }) {
+export function MessageMenu(props: { thread_id: string; message_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
-	const copyId = () => navigator.clipboard.writeText(props.message.id);
+	const message = api.messages.fetch(
+		() => props.thread_id,
+		() => props.message_id,
+	);
+	const copyId = () => navigator.clipboard.writeText(props.message_id);
 	const setReply = () =>
 		ctx.dispatch({
 			do: "thread.reply",
-			thread_id: props.message.thread_id,
-			reply_id: props.message.id,
+			thread_id: props.thread_id,
+			reply_id: props.message_id,
 		});
 
 	function markUnread() {
-		const r = api.messages.cacheRanges.get(props.message.thread_id)!;
-		const tl = r.find(props.message.id)?.items!;
-		const index = tl.findIndex((i) => i.id === props.message.id && !i.is_local);
+		const r = api.messages.cacheRanges.get(props.thread_id)!;
+		const tl = r.find(props.message_id)?.items!;
+		const index = tl.findIndex((i) => i.id === props.message_id && !i.is_local);
 		const next = tl[index - 1];
-		const next_id = next?.id ?? props.message.id;
+		const next_id = next?.id ?? props.message_id;
 		ctx.dispatch({
 			do: "thread.mark_read",
-			thread_id: props.message.thread_id,
+			thread_id: props.thread_id,
 			version_id: next_id,
 			also_local: true,
 		});
 	}
 
-	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify(props.message)));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
 	return (
 		<Menu>

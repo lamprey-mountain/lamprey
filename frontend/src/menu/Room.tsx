@@ -1,19 +1,22 @@
+import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { RoomT } from "../types.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
-export function RoomMenu(props: { room: RoomT }) {
+export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
-	const copyId = () => navigator.clipboard.writeText(props.room.id);
+	const api = useApi();
+	const room = api.rooms.fetch(() => props.room_id);
+	
+	const copyId = () => navigator.clipboard.writeText(props.room_id);
 
 	const copyLink = () => {
-		const url = `${ctx.client.opts.baseUrl}/room/${props.room.id}`;
+		const url = `${ctx.client.opts.baseUrl}/room/${props.room_id}`;
 		navigator.clipboard.writeText(url);
 	};
 
 	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify(props.room)));
+		console.log(JSON.parse(JSON.stringify(room())));
 
 	return (
 		<Menu>

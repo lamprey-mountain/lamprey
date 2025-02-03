@@ -9,7 +9,6 @@ import { dispatchServer } from "./server.ts";
 import { Api } from "../api.tsx";
 
 type Reduction =
-	| { do: "menu"; menu: Menu | null }
 	| { do: "modal.close" }
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
@@ -33,9 +32,6 @@ function reduce(
 	delta: Reduction,
 ): Data {
 	switch (delta.do) {
-		case "menu": {
-			return { ...state, menu: delta.menu };
-		}
 		case "modal.close": {
 			return { ...state, modals: state.modals.slice(1) };
 		}

@@ -1,15 +1,17 @@
+import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { ThreadT } from "../types.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for threads
-export function ThreadMenu(props: { thread: ThreadT }) {
+export function ThreadMenu(props: { thread_id: string }) {
 	const ctx = useCtx();
-	const copyId = () => navigator.clipboard.writeText(props.thread.id);
+	const api = useApi();
+	const thread = api.rooms.fetch(() => props.thread_id);
+	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
 		ctx.dispatch({
 			do: "thread.mark_read",
-			thread_id: props.thread.id,
+			thread_id: props.thread_id,
 			also_local: true,
 		});
 	};
@@ -17,18 +19,18 @@ export function ThreadMenu(props: { thread: ThreadT }) {
 	const deleteThread = () => {
 		ctx.client.http.DELETE("/api/v1/thread/{thread_id}", {
 			params: {
-				path: { thread_id: props.thread.id },
+				path: { thread_id: props.thread_id },
 			},
 		});
 	};
 
 	const copyLink = () => {
-		const url = `${ctx.client.opts.baseUrl}/thread/${props.thread.id}`;
+		const url = `${ctx.client.opts.baseUrl}/thread/${props.thread_id}`;
 		navigator.clipboard.writeText(url);
 	};
 
 	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify(props.thread)));
+		console.log(JSON.parse(JSON.stringify(thread())));
 
 	return (
 		<Menu>

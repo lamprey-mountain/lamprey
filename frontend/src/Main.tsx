@@ -30,13 +30,11 @@ export const Main = () => {
 	});
 
 	createEffect(() => {
-		// force solid to track these properties
-		ctx?.data.menu?.x;
-		ctx?.data.menu?.y;
-
+		ctx.menu();
+		
 		setMenuParentRef({
 			getBoundingClientRect(): ClientRectObject {
-				const { menu } = ctx.data;
+				const menu = ctx.menu();
 				if (!menu) return {};
 				return {
 					x: menu.x,
@@ -55,13 +53,13 @@ export const Main = () => {
 	function getMenu(menu: Menu) {
 		switch (menu.type) {
 			case "room": {
-				return <RoomMenu room={menu.room} />;
+				return <RoomMenu room_id={menu.room_id} />;
 			}
 			case "thread": {
-				return <ThreadMenu thread={menu.thread} />;
+				return <ThreadMenu thread_id={menu.thread_id} />;
 			}
 			case "message": {
-				return <MessageMenu message={menu.message} />;
+				return <MessageMenu thread_id={menu.thread_id} message_id={menu.message_id} />;
 			}
 		}
 	}
@@ -86,7 +84,7 @@ export const Main = () => {
 					<For each={ctx.data.modals}>
 						{(modal) => getModal(modal)}
 					</For>
-					<Show when={ctx.data.menu}>
+					<Show when={ctx.menu()}>
 						<div class="contextmenu">
 							<div
 								ref={setMenuRef}
@@ -95,7 +93,7 @@ export const Main = () => {
 									translate: `${menuFloating.x}px ${menuFloating.y}px`,
 								}}
 							>
-								{getMenu(ctx.data.menu!)}
+								{getMenu(ctx.menu()!)}
 							</div>
 						</div>
 					</Show>

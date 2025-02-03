@@ -117,28 +117,28 @@ export const ChatMain = (props: ChatProps) => {
 			}
 		},
 		onContextMenu(e: MouseEvent) {
-			e.stopPropagation();
-			const target = e.target as HTMLElement;
-			const media_el = target.closest("a, img, video, audio") as HTMLElement;
-			const message_el = target.closest("li[data-message-id]") as HTMLElement;
-			const message_id = message_el?.dataset.messageId;
-			if (!message_id || (media_el && message_el.contains(media_el))) {
-				ctx.dispatch({
-					do: "menu",
-					menu: null,
-				});
-				return;
-			}
-			e.preventDefault();
-			ctx.dispatch({
-				do: "menu",
-				menu: {
-					type: "message",
-					x: e.x,
-					y: e.y,
-					message: api.messages.cache.get(message_id)!,
-				},
-			});
+			// e.stopPropagation();
+			// const target = e.target as HTMLElement;
+			// const media_el = target.closest("a, img, video, audio") as HTMLElement;
+			// const message_el = target.closest("li[data-message-id]") as HTMLElement;
+			// const message_id = message_el?.dataset.messageId;
+			// if (!message_id || (media_el && message_el.contains(media_el))) {
+			// 	ctx.dispatch({
+			// 		do: "menu",
+			// 		menu: null,
+			// 	});
+			// 	return;
+			// }
+			// e.preventDefault();
+			// ctx.dispatch({
+			// 	do: "menu",
+			// 	menu: {
+			// 		type: "message",
+			// 		x: e.x,
+			// 		y: e.y,
+			// 		message: api.messages.cache.get(message_id)!,
+			// 	},
+			// });
 		},
 	});
 

@@ -1,14 +1,6 @@
-import { createContext, useContext } from "solid-js";
+import { Accessor, createContext, useContext } from "solid-js";
 import { Client, types, Upload } from "sdk";
-import {
-	InviteT,
-	MediaT,
-	MemberT,
-	MessageT,
-	RoleT,
-	RoomT,
-	ThreadT,
-} from "./types.ts";
+import { InviteT, MediaT, MemberT, RoleT, } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -42,7 +34,6 @@ export type Data = {
 	invites: Record<string, InviteT>;
 	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
-	menu: Menu | null;
 	cursor: Cursor;
 	// TODO: remove thread_id requirement
 	uploads: Record<string, { up: Upload; thread_id: string }>;
@@ -60,9 +51,9 @@ export type Menu =
 		y: number;
 	}
 	& (
-		| { type: "room"; room: RoomT }
-		| { type: "thread"; thread: ThreadT }
-		| { type: "message"; message: MessageT }
+		| { type: "room"; room_id: string }
+		| { type: "thread"; thread_id: string }
+		| { type: "message"; thread_id: string, message_id: string }
 	);
 
 export type Modal =
@@ -81,7 +72,6 @@ export type Modal =
 export type Action =
 	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
 	| { do: "goto"; thread_id: string; event_id: string }
-	| { do: "menu"; menu: Menu | null }
 	| { do: "menu.preview"; id: string | null }
 	// | { do: "modal.open", modal: any }
 	| { do: "modal.close" }
@@ -128,6 +118,7 @@ export type ChatCtx = {
 	dispatch: (action: Action) => void;
 
 	thread_anchor: ReactiveMap<string, MessageListAnchor>,
+	menu: Accessor<Menu | null>,
 };
 
 export const defaultData: Data = {
@@ -137,7 +128,6 @@ export const defaultData: Data = {
 	invites: {},
 	thread_state: {},
 	modals: [],
-	menu: null,
 	uploads: {},
 	cursor: {
 		pos: [],

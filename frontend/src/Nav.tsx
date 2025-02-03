@@ -20,16 +20,9 @@ export const ChatNav = () => {
 					{(room) => (
 						<li>
 							<A
+								class="has-menu"
+								data-room-id={room.id}
 								href={`/room/${room.id}`}
-								onContextMenu={(e) => {
-									e.stopPropagation();
-									if (e.shiftKey) return;
-									e.preventDefault();
-									ctx.dispatch({
-										do: "menu",
-										menu: { type: "room", x: e.x, y: e.y, room },
-									});
-								}}
 							>
 								{room.name}
 							</A>
@@ -37,16 +30,9 @@ export const ChatNav = () => {
 								<ul>
 									<li>
 										<A
+											class="has-menu"
 											href={`/room/${room.id}`}
-											onContextMenu={(e) => {
-												e.stopPropagation();
-												if (e.shiftKey) return;
-												e.preventDefault();
-												ctx.dispatch({
-													do: "menu",
-													menu: { type: "room", x: e.x, y: e.y, room },
-												});
-											}}
+											data-room-id={room.id}
 										>
 											home
 										</A>
@@ -62,20 +48,13 @@ export const ChatNav = () => {
 											<li>
 												<A
 													href={`/thread/${thread.id}`}
+													class="has-menu"
 													classList={{
 														"closed": thread.state === "Archived",
 														"unread":
 															thread.last_read_id !== thread.last_version_id,
 													}}
-													onContextMenu={(e) => {
-														e.stopPropagation();
-														if (e.shiftKey) return;
-														e.preventDefault();
-														ctx.dispatch({
-															do: "menu",
-															menu: { type: "thread", x: e.x, y: e.y, thread },
-														});
-													}}
+													data-thread-id={thread.id}
 												>
 													{thread.name}
 												</A>

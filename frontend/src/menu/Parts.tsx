@@ -130,10 +130,8 @@ export function Item(
 		<li>
 			<button
 				onClick={(e) => {
-					e.stopPropagation();
 					props.onClick?.(e);
 					if (!props.onClick) ctx.dispatch({ do: "modal.alert", text: "todo" });
-					ctx.dispatch({ do: "menu", menu: null });
 				}}
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
