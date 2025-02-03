@@ -67,7 +67,7 @@ impl Portal {
     async fn activate(mut self) {
         while let Some(msg) = self.recv.recv().await {
             match self.handle(msg).await {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(err) => error!("{err}"),
             };
         }
@@ -253,15 +253,20 @@ impl Portal {
                         .await?;
                     req.attachments.push(types::MediaRef { id: media.id });
                 }
-                req.content = Some(match message.kind {
+                req.content = match message.kind {
                     DcMessageType::Regular | DcMessageType::InlineReply
                         if message.content.is_empty() && message.attachments.is_empty() =>
                     {
-                        "(empty message, or sticker/embeds only)".to_string()
+                        Some("(empty message, or sticker/embeds only)".to_string())
                     }
-                    DcMessageType::Regular | DcMessageType::InlineReply => message.content,
-                    other => format!("(discord message: {:?})", other),
-                });
+                    DcMessageType::Regular | DcMessageType::InlineReply
+                        if message.content.is_empty() =>
+                    {
+                        None
+                    }
+                    DcMessageType::Regular | DcMessageType::InlineReply => Some(message.content),
+                    other => Some(format!("(discord message: {:?})", other)),
+                };
                 match message.message_reference.map(|r| r.kind) {
                     Some(MessageReferenceKind::Default) => {
                         if let Some(reply) = message.referenced_message {
