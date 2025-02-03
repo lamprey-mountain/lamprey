@@ -87,49 +87,6 @@ export const Home = () => {
 				<br />
 			</Show>
 			<A target="_self" href="/api/docs">api docs</A>
-			<br />
-			<Show when={flags.has("message_search")}>
-				<Search />
-			</Show>
 		</div>
-	);
-};
-
-const Search = () => {
-	const ctx = useCtx();
-	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
-	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
-	const [searchResults] = createResource(
-		searchQuery as any,
-		(async (query: string, { value }: { value?: Array<Message> }) => {
-			if (!query) return;
-			const { data, error } = await ctx.client.http.POST(
-				"/api/v1/search/message",
-				{
-					body: { query },
-				},
-			);
-			if (error) throw new Error(error);
-			return data.items;
-		}) as any,
-	);
-
-	return (
-		<>
-			<h3>experiments</h3>
-			<label>
-				search messages:{" "}
-				<input type="text" onInput={(e) => setSearchQuery(e.target.value)} />
-			</label>
-			<br />
-			<Show when={searchResults.loading}>loading...</Show>
-			<For each={searchResults() as any}>
-				{(m: Message) => (
-					<li class="message has-menu" data-message-id={m.id}>
-						<MessageView message={m} />
-					</li>
-				)}
-			</For>
-		</>
 	);
 };

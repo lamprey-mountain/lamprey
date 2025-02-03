@@ -37,6 +37,7 @@ import { RoomMenu } from "./menu/Room.tsx";
 import { ThreadMenu } from "./menu/Thread.tsx";
 import { getModal } from "./modal/mod.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
+import { Debug } from "./Debug.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -52,6 +53,7 @@ const App: Component = () => {
 				component={RouteRoomSettings}
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
+			<Route path="/debug" component={Debug} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);

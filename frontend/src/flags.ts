@@ -10,6 +10,9 @@ type ImportMeta = {
 
 export const allFlags = [
 	{
+		id: "dev",
+	},
+	{
 		id: "message_search",
 	},
 	{
@@ -19,7 +22,7 @@ export const allFlags = [
 
 type Flag = (typeof allFlags)[number]["id"];
 
-const flagsDev: Flag[] = ["message_search", "room_member_list"];
+const flagsDev: Flag[] = ["dev", "message_search", "room_member_list"];
 const flagsProd: Flag[] = [];
 
 export const flags = new ReactiveSet(
