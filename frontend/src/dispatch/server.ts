@@ -14,7 +14,7 @@ function reduceServer(
 			const { invite } = delta;
 			return { ...state, invites: { ...state.invites, [invite.code]: invite } };
 		}
-		case "UpsertMember": {
+		case "UpsertRoomMember": {
 			const { member } = delta;
 			const { room_id, user_id } = member;
 			return {

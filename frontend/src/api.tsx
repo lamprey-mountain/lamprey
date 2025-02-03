@@ -21,7 +21,9 @@ import {
 	MessageReady,
 	MessageSync,
 	Pagination,
+	Role,
 	Room,
+	RoomMember,
 	Session,
 	Thread,
 	User,
@@ -37,6 +39,8 @@ import { Rooms } from "./api/rooms.ts";
 import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
+import { RoomMembers } from "./api/room_members.ts";
+import { Roles } from "./api/roles.ts";
 
 export type Json =
 	| number
@@ -63,6 +67,8 @@ export function createApi(
 	const rooms = new Rooms();
 	const threads = new Threads();
 	const invites = new Invites();
+	const roles = new Roles();
+	const room_members = new RoomMembers();
 	const users = new Users();
 	const messages = new Messages();
 
@@ -124,6 +130,26 @@ export function createApi(
 			if (msg.session?.id === session()?.id) {
 				setSession(session);
 			}
+		} else if (msg.type === "UpsertRoomMember") {
+			const m = msg.member;
+			room_members.cache.get(m.room_id)?.set(m.user_id, m);
+			const l = room_members._cachedListings.get(m.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex(i => i.user_id === m.user_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, m),
+					});
+				} else {
+					l.mutate({
+						...p,
+						items: [...p.items, m],
+						total: p.total + 1,
+					});
+				}
+			}
 		} else if (msg.type === "DeleteRoomMember") {
 			const user_id = users.cache.get("@self")?.id;
 			if (msg.user_id === user_id) {
@@ -139,6 +165,19 @@ export function createApi(
 							});
 						}
 					}
+				}
+			}
+			room_members.cache.get(msg.room_id)?.delete(msg.user_id);
+			const l = room_members._cachedListings.get(msg.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex(i => i.user_id === msg.user_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1),
+						total: p.total - 1,
+					});
 				}
 			}
 		} else if (msg.type === "UpsertMessage") {
@@ -214,6 +253,40 @@ export function createApi(
 				}
 			}
 			invites.cache.delete(msg.code);
+		} else if (msg.type === "UpsertRole") {
+			const r = msg.role;
+			roles.cache.set(r.id, r);
+			const l = roles._cachedListings.get(r.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex(i => i.id === r.id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, r),
+					});
+				} else {
+					l.mutate({
+						...p,
+						items: [...p.items, r],
+						total: p.total + 1,
+					});
+				}
+			}
+		} else if (msg.type === "DeleteRole") {
+			roles.cache.delete(msg.role_id);
+			const l = roles._cachedListings.get(msg.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex(i => i.id === msg.role_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1),
+						total: p.total - 1,
+					});
+				}
+			}
 		}
 	});
 
@@ -244,6 +317,8 @@ export function createApi(
 		rooms,
 		threads,
 		invites,
+		roles,
+		room_members,
 		users,
 		messages,
 		session,
@@ -261,6 +336,8 @@ export function createApi(
 	messages.api = api;
 	rooms.api = api;
 	threads.api = api;
+	roles.api = api;
+	room_members.api = api;
 	invites.api = api;
 	users.api = api;
 
@@ -287,6 +364,16 @@ export type Api = {
 		fetch: (invite_code: () => string) => Resource<Invite>;
 		list: (room_id: () => string) => Resource<Pagination<Invite>>;
 		cache: ReactiveMap<string, Invite>;
+	};
+	roles: {
+		fetch: (room_id: () => string, role_id: () => string) => Resource<Role>;
+		list: (room_id: () => string) => Resource<Pagination<Role>>;
+		cache: ReactiveMap<string, Role>;
+	};
+	room_members: {
+		fetch: (room_id: () => string, user_id: () => string) => Resource<RoomMember>;
+		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
+		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
 	};
 	users: {
 		fetch: (user_id: () => string) => Resource<User>;

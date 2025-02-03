@@ -120,6 +120,7 @@ const App: Component = () => {
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
 	(globalThis as any).client = client;
+	(globalThis as any).api = api;
 
 	const TOKEN = localStorage.getItem("token")!;
 	if (TOKEN) {

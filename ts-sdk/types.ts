@@ -47,7 +47,7 @@ export type MessageSync =
 	| { type: "UpsertThread"; thread: Thread }
 	| { type: "UpsertMessage"; message: Message }
 	| { type: "UpsertUser"; user: User }
-	| { type: "UpsertMember"; member: RoomMember }
+	| { type: "UpsertRoomMember"; member: RoomMember }
 	| { type: "UpsertSession"; session: Session }
 	| { type: "UpsertRole"; role: Role }
 	| { type: "UpsertInvite"; invite: Invite }
