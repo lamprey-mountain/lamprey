@@ -25,6 +25,16 @@ export const ChatMain = (props: ChatProps) => {
 	const messages = api.messages.list(() => props.thread.id, anchor);
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
+	const markRead = throttle(
+		() =>
+			ctx.dispatch({
+				do: "thread.mark_read",
+				thread_id: props.thread.id,
+				delay: true,
+			}),
+		300,
+	);
+
 	const list = createList({
 		items: tl,
 		autoscroll: () => !messages()?.has_forward && anchor().type !== "context",
@@ -55,9 +65,7 @@ export const ChatMain = (props: ChatProps) => {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
-					if (list.isAtBottom()) {
-						ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
-					}
+					if (list.isAtBottom()) markRead();
 				}
 			} else {
 				ctx.thread_anchor.set(thread_id, {
