@@ -4,7 +4,7 @@ import { createStore } from "solid-js/store";
 import { Main } from "./Main.tsx";
 import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient, MessageReady, MessageSync } from "sdk";
-import { ApiProvider, useApi } from "./api.tsx";
+import { createApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 
@@ -33,34 +33,21 @@ const App: Component = () => {
 		console.log("client state", cs());
 	});
 
-	return (
-		<div id="root">
-			<ApiProvider client={client} temp_events={events}>
-				<App2 client={client} events={events} />
-			</ApiProvider>
-		</div>
-	);
-};
-
-// HACK: this exists so the api context exists
-const App2 = (props: any) => {
-	console.log("API", useApi());
-
+	const api = createApi(client, events);
 	const [data, update] = createStore<Data>(defaultData);
-
 	const ctx: ChatCtx = {
-		client: props.client,
+		client,
 		data,
 		dispatch: () => {
 			throw new Error("oh no!");
 		},
-		
+
 		thread_anchor: new ReactiveMap(),
 	};
-	const dispatch = createDispatcher(ctx, useApi(), update);
+	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 
-	onCleanup(() => props.client.stop());
+	onCleanup(() => client.stop());
 
 	const handleClick = () => {
 		dispatch({ do: "menu", menu: null });
@@ -86,18 +73,18 @@ const App2 = (props: any) => {
 
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
-	(globalThis as any).client = props.client;
+	(globalThis as any).client = client;
 
 	const TOKEN = localStorage.getItem("token")!;
 	if (TOKEN) {
-		props.client.start(TOKEN);
+		client.start(TOKEN);
 	} else {
 		queueMicrotask(() => {
 			ctx.dispatch({ do: "server.init_session" });
 		});
 	}
 
-	props.events.on("sync", (msg) => {
+	events.on("sync", (msg) => {
 		ctx.dispatch({
 			do: "server",
 			msg,
@@ -105,9 +92,13 @@ const App2 = (props: any) => {
 	});
 
 	return (
-		<chatctx.Provider value={ctx}>
-			<Main />
-		</chatctx.Provider>
+		<div id="root">
+			<api.Provider>
+				<chatctx.Provider value={ctx}>
+					<Main />
+				</chatctx.Provider>
+			</api.Provider>
+		</div>
 	);
 };
 

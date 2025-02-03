@@ -4,6 +4,7 @@
 import {
 	Accessor,
 	batch,
+	Component,
 	createContext,
 	createSignal,
 	ParentProps,
@@ -50,13 +51,11 @@ export function useApi() {
 	return useContext(ApiContext)!;
 }
 
-export function ApiProvider(
-	props: ParentProps<{
-		client: Client;
-		temp_events: Emitter<{
-			sync: MessageSync;
-			ready: MessageReady;
-		}>;
+export function createApi(
+	client: Client,
+	temp_events: Emitter<{
+		sync: MessageSync;
+		ready: MessageReady;
 	}>,
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
@@ -67,7 +66,7 @@ export function ApiProvider(
 	const users = new Users();
 	const messages = new Messages();
 
-	props.temp_events.on("sync", (msg) => {
+	temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
@@ -218,7 +217,7 @@ export function ApiProvider(
 		}
 	});
 
-	props.temp_events.on("ready", (msg) => {
+	temp_events.on("ready", (msg) => {
 		if (msg.user) {
 			users.cache.set("@self", msg.user);
 			users.cache.set(msg.user.id, msg.user);
@@ -227,7 +226,7 @@ export function ApiProvider(
 	});
 
 	async function tempCreateSession() {
-		const res = await props.client.http.POST("/api/v1/session", {
+		const res = await client.http.POST("/api/v1/session", {
 			body: {},
 		});
 		if (!res.data) {
@@ -237,7 +236,7 @@ export function ApiProvider(
 		const session = res.data;
 		localStorage.setItem("token", session.token);
 		setSession(session);
-		props.client.start(session.token);
+		client.start(session.token);
 	}
 
 	// FIXME: make reactive again
@@ -249,8 +248,16 @@ export function ApiProvider(
 		messages,
 		session,
 		tempCreateSession,
-		client: props.client,
+		client: client,
+		Provider(props: ParentProps) {
+			return (
+				<ApiContext.Provider value={api}>
+					{props.children}
+				</ApiContext.Provider>
+			);
+		},
 	};
+	
 	messages.api = api;
 	rooms.api = api;
 	threads.api = api;
@@ -258,11 +265,7 @@ export function ApiProvider(
 	users.api = api;
 
 	console.log("provider created", api);
-	return (
-		<ApiContext.Provider value={api}>
-			{props.children}
-		</ApiContext.Provider>
-	);
+	return api;
 }
 
 type MessageSendReq = Omit<MessageCreate, "nonce"> & {
@@ -308,6 +311,7 @@ export type Api = {
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;
 	client: Client;
+	Provider: Component<ParentProps>,
 };
 
 export type Listing<T> = {
