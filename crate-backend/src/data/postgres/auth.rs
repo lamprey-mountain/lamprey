@@ -15,12 +15,14 @@ impl DataAuth for Postgres {
         provider: String,
         user_id: UserId,
         remote_id: String,
+        can_auth: bool,
     ) -> Result<()> {
         query!(
-            "INSERT INTO oauth (provider, user_id, remote_id) VALUES ($1, $2, $3)",
+            "INSERT INTO oauth (provider, user_id, remote_id, can_auth) VALUES ($1, $2, $3, $4)",
             provider,
             user_id.into_inner(),
             remote_id,
+            can_auth,
         )
         .execute(&self.pool)
         .await?;

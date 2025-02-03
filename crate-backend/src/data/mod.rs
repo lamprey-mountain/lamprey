@@ -254,6 +254,7 @@ pub trait DataAuth {
         provider: String,
         user_id: UserId,
         remote_id: String,
+        can_auth: bool,
     ) -> Result<()>;
     // async fn auth_oauth_get(&self, provider: String, user_id: UserId) -> Result<String>;
     async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId>;
