@@ -451,6 +451,10 @@ export type Api = {
 			thread_id: () => string,
 			anchor: () => MessageListAnchor,
 		) => Resource<MessageRange>;
+		fetch: (
+			thread_id: () => string,
+			message_id: () => string,
+		) => Resource<Message>;
 		cache: ReactiveMap<string, Message>;
 		cacheRanges: Map<string, MessageRanges>;
 	};

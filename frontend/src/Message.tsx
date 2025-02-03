@@ -91,14 +91,12 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
-			const api = useApi();
 			return (
 				<>
 					<Show when={props.message.reply_id}>
 						<ReplyView
 							thread_id={props.message.thread_id}
 							reply_id={props.message.reply_id!}
-							reply={api.messages.cache.get(props.message.reply_id!)}
 						/>
 					</Show>
 					<div class="author-wrap">
@@ -131,16 +129,24 @@ export function MessageView(props: MessageProps) {
 type ReplyProps = {
 	thread_id: string;
 	reply_id: string;
-	reply?: MessageT;
 };
 
 function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
+	const api = useApi();
+	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
 
-	const name = () => props.reply?.override_name ?? props.reply?.author.name;
-	const content = () =>
-		props.reply?.content ??
-			`${props.reply?.attachments.length} attachment(s)`;
+	const name = () => {
+		const r = reply();
+		if (!r) return;
+		return r.override_name ?? r.author.name;
+	};
+
+	const content = () => {
+		const r = reply();
+		if (!r) return;
+		return r.content ?? `${r.attachments.length} attachment(s)`;
+	};
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
@@ -159,7 +165,7 @@ function ReplyView(props: ReplyProps) {
 		<>
 			<div class="reply arrow">{"\u21B1"}</div>
 			<div class="reply reply-content" onClick={scrollToReply}>
-				<Show when={props.reply} fallback="loading..">
+				<Show when={!reply.loading} fallback="loading..">
 					<span class="author">{name()}:</span>
 					{content()}
 				</Show>

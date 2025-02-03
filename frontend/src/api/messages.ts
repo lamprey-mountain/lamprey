@@ -9,6 +9,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
 	createComputed,
+	createEffect,
 	createResource,
 	onCleanup,
 	Resource,
@@ -498,6 +499,35 @@ export class Messages {
 		);
 		if (error) throw new Error(error);
 		return data;
+	}
+
+	fetch(thread_id: () => string, message_id: () => string): Resource<Message> {
+		const query = () => ({
+			thread_id: thread_id(),
+			message_id: message_id(),
+		});
+		const [resource, { mutate }] = createResource(
+			query,
+			async ({ thread_id, message_id }) => {
+				const m = this.cache.get(message_id);
+				if (m) return m;
+				const { data, error } = await this.api.client.http.GET(
+					"/api/v1/thread/{thread_id}/message/{message_id}",
+					{
+						params: {
+							path: { thread_id, message_id },
+						},
+					},
+				);
+				if (error) throw new Error(error);
+				return data;
+			},
+		);
+		createEffect(() => {
+			const m = this.cache.get(message_id());
+			if (m) mutate(m);
+		});
+		return resource;
 	}
 
 	_updateMutators(r: MessageRanges, thread_id: string) {
