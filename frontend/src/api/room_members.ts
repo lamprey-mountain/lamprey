@@ -8,7 +8,6 @@ import {
 	untrack,
 } from "solid-js";
 import { Api, Listing } from "../api.tsx";
-import { createComputed } from "solid-js";
 
 export class RoomMembers {
 	api: Api = null as unknown as Api;
@@ -63,13 +62,8 @@ export class RoomMembers {
 	}
 
 	list(room_id_sig: () => string): Resource<Pagination<RoomMember>> {
-		createComputed(() => {
-			const room_id = room_id_sig();
-			if (!this.cache.has(room_id)) {
-				this.cache.set(room_id, new ReactiveMap());
-			}
-		});
-		
+		const room_id = untrack(room_id_sig);
+
 		const paginate = async (pagination?: Pagination<RoomMember>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
@@ -92,9 +86,17 @@ export class RoomMembers {
 				console.error(error);
 				throw error;
 			}
+			
+			const room_id = room_id_sig();
+			let cache = this.cache.get(room_id);
+			if (!cache) {
+				cache = new ReactiveMap();
+				this.cache.set(room_id, cache);
+			}
+
 			batch(() => {
 				for (const item of data.items) {
-					this.cache.get(item.room_id)!.set(item.user_id, item);
+					cache.set(item.user_id, item);
 				}
 			});
 
@@ -104,7 +106,6 @@ export class RoomMembers {
 			};
 		};
 
-		const room_id = untrack(room_id_sig);
 		const l = this._cachedListings.get(room_id);
 		if (l) {
 			if (!l.prom) l.refetch();

@@ -1,13 +1,7 @@
 import { Pagination, Thread } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import {
-	batch,
-	createEffect,
-	createResource,
-	Resource,
-} from "solid-js";
+import { batch, createEffect, createResource, Resource } from "solid-js";
 import { Api } from "../api.tsx";
-import { createComputed } from "solid-js";
 
 type Listing<T> = {
 	// resource: Resource<Pagination<T>>;
@@ -93,36 +87,21 @@ export class Threads {
 			};
 		};
 
-		// const room_id = untrack(room_id_signal);
-		// const l = this._cachedControllers.get(room_id);
-		// if (l) {
-		// 	// NOTE: does this deduplicate refetches?
-		// 	l.refetch();
-		// 	return l.resource;
-		// }
-
-		createComputed(() => {
-			// const l = {
-			// 	resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
-			// 	refetch: () => {},
-			// 	mutate: () => {},
-			// 	prom: null,
-			// 	pagination: null,
-			// };
-			console.log("set listing");
-			this._cachedListings.set(room_id_signal(), {
-				prom: null,
-				pagination: null,
-			});
-		});
-
 		const [resource, { mutate }] = createResource(
 			room_id_signal,
 			async (room_id) => {
-				const l = this._cachedListings.get(room_id)!;
+				let l = this._cachedListings.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
+				}
+
+				if (!l) {
+					l = {
+						prom: null,
+						pagination: null,
+					};
+					this._cachedListings.set(room_id, l);
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();

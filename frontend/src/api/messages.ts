@@ -14,6 +14,7 @@ import {
 	createResource,
 	onCleanup,
 	Resource,
+	untrack,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
@@ -128,12 +129,10 @@ export class Messages {
 		dir_signal: () => MessageListAnchor,
 	): Resource<MessageRange> {
 		// always have Ranges for the current thread
-		createComputed(() => {
-			const thread_id = thread_id_signal();
-			if (!this.cacheRanges.has(thread_id)) {
-				this.cacheRanges.set(thread_id, new MessageRanges());
-			}
-		});
+		const thread_id = untrack(thread_id_signal);
+		if (!this.cacheRanges.has(thread_id)) {
+			this.cacheRanges.set(thread_id, new MessageRanges());
+		}
 
 		const update = async (
 			a: { thread_id: string; dir: MessageListAnchor },
@@ -236,11 +235,6 @@ export class Messages {
 			{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
 			{ value: oldValue }: { value?: MessageRange },
 		): Promise<MessageRange> => {
-			// HACK: force tracking
-			dir.type;
-			dir.limit;
-			dir.message_id;
-
 			// ugly, but seems to work
 			if (
 				old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
@@ -248,7 +242,11 @@ export class Messages {
 			) return oldValue!;
 			old = { thread_id, dir };
 
-			const ranges = this.cacheRanges.get(thread_id);
+			let ranges = this.cacheRanges.get(thread_id);
+			if (!ranges) {
+				ranges = new MessageRanges();
+				this.cacheRanges.set(thread_id, ranges);
+			}
 
 			console.log("recalculate message list", {
 				thread_id,
@@ -336,7 +334,7 @@ export class Messages {
 							console.log("messages fetch more for context");
 							let dataBefore: Pagination<Message>;
 							let dataAfter: Pagination<Message>;
-							
+
 							if (!hasEnoughBackwards) {
 								dataBefore = await fetchList(thread_id, {
 									dir: "b",
@@ -352,7 +350,7 @@ export class Messages {
 									from: r.end,
 								});
 							}
-							
+
 							batch(() => {
 								if (dataBefore) mergeBefore(ranges, r, dataBefore);
 								if (dataAfter) mergeAfter(ranges, r, dataAfter);
