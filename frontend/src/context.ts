@@ -104,7 +104,6 @@ export type Action =
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
 	| { do: "upload.cancel"; local_id: string }
-	| { do: "server"; msg: types.MessageSync }
 	| { do: "server.init_session" }
 	| { do: "window.mouse_move"; e: MouseEvent };
 

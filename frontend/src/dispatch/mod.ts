@@ -5,7 +5,6 @@ import { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
 import { createUpload } from "sdk";
 import { handleSubmit } from "./submit.ts";
-import { dispatchServer } from "./server.ts";
 import { Api } from "../api.tsx";
 
 type Reduction =
@@ -324,14 +323,6 @@ export function createDispatcher(
 		}
 	};
 
-	const handleServer: Middleware = (_state, dispatch) => (next) => (action) => {
-		if (action.do === "server") {
-			return dispatchServer(ctx, update, action, dispatch, api);
-		} else {
-			next(action);
-		}
-	};
-
 	const threadInit: Middleware = (state, dispatch) => (next) => (action) => {
 		if (action.do === "thread.init") {
 			const { thread_id } = action;
@@ -373,7 +364,6 @@ export function createDispatcher(
 	const d = combine(reduce, ctx.data, update, [
 		log,
 		threadMarkRead,
-		handleServer,
 		serverInitSession,
 		threadInit,
 		uploadCancel,

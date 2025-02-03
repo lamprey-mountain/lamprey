@@ -134,13 +134,6 @@ const App: Component = () => {
 		});
 	}
 
-	events.on("sync", (msg) => {
-		ctx.dispatch({
-			do: "server",
-			msg,
-		});
-	});
-
 	return (
 		<div id="root">
 			<api.Provider>

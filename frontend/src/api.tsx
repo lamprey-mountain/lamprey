@@ -203,6 +203,14 @@ export function createApi(
 					messages._updateMutators(r, m.thread_id);
 				});
 			}
+			const t = api.threads.cache.get(m.thread_id);
+			if (t) {
+				api.threads.cache.set(m.thread_id, {
+					...t,
+					message_count: t.message_count + (m.id === m.version_id ? 1 : 0),
+					last_version_id: m.version_id,
+				});
+			}
 		} else if (msg.type === "UpsertInvite") {
 			const { invite } = msg;
 			invites.cache.set(invite.code, invite);
@@ -287,6 +295,8 @@ export function createApi(
 					});
 				}
 			}
+		} else {
+			console.warn(`unknown event ${msg.type}`, msg);
 		}
 	});
 
