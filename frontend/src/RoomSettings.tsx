@@ -8,8 +8,8 @@ import { useApi } from "./api.tsx";
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "invites", path: "invites", component: Invites },
-	// TODO: { name: "roles", path: "roles", component: Roles },
-	// TODO: { name: "members", path: "members", component: Members },
+	{ name: "roles", path: "roles", component: Roles },
+	{ name: "members", path: "members", component: Members },
 ];
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
@@ -91,159 +91,148 @@ function Info(props: VoidProps<{ room: RoomT }>) {
 	);
 }
 
-// function Roles(props: VoidProps<{ room: RoomT }>) {
-// 	const ctx = useCtx();
+function Roles(props: VoidProps<{ room: RoomT }>) {
+	const ctx = useCtx();
+	const api = useApi();
+	const roles = api.roles.list(() => props.room.id);
 
-// 	const [roles, { refetch: fetchRoles }] = createResource<
-// 		Pagination<RoleT> & { room_id: string },
-// 		string
-// 	>(() => props.room.id, async (room_id, { value }) => {
-// 		if (value?.room_id !== room_id) value = undefined;
-// 		if (value?.has_more === false) return value;
-// 		const lastId = value?.items.at(-1)?.id ??
-// 			"00000000-0000-0000-0000-000000000000";
-// 		const batch = await ctx.client.http(
-// 			"GET",
-// 			`/api/v1/room/${room_id}/roles?dir=f&from=${lastId}&limit=100`,
-// 		);
-// 		return {
-// 			...batch,
-// 			items: [...value?.items ?? [], ...batch.items],
-// 		};
-// 	});
+	const createRole = () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "role name?",
+			cont(name) {
+				if (!name) return;
+				api.client.http.POST("/api/v1/room/{room_id}/role", {
+					params: { path: { room_id: props.room.id } },
+					body: { name },
+				});
+			},
+		});
+	};
 
-// 	const createRole = async () => {
-// 		const name = await ctx.dispatch({ do: "modal.prompt", text: "role name?" });
-// 		ctx.client.http("POST", `/api/v1/room/${props.room.id}/roles`, {
-// 			name,
-// 		});
-// 	};
+	const deleteRole = (role_id: string) => () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "are you sure?",
+			cont(confirmed) {
+				if (!confirmed) return;
+				api.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
+					params: { path: { room_id: props.room.id, role_id } },
+				});
+			},
+		});
+	};
 
-// 	const deleteRole = (role_id: string) => () => {
-// 		ctx.client.http("DELETE", `/api/v1/room/${props.room.id}/roles/${role_id}`);
-// 	};
+	return (
+		<>
+			<h2>roles</h2>
+			<button onClick={api.roles.list(() => props.room.id)}>fetch more</button>
+			<br />
+			<button onClick={createRole}>create role</button>
+			<br />
+			<Show when={roles()}>
+				<ul>
+					<For each={roles()!.items}>
+						{(i) => (
+							<li>
+								<details>
+									<summary>{i.name}</summary>
+									<button onClick={deleteRole(i.id)}>delete role</button>
+									<pre>{JSON.stringify(i, null, 2)}</pre>
+								</details>
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
+		</>
+	);
+}
 
-// 	return (
-// 		<>
-// 			<h2>roles</h2>
-// 			<button onClick={fetchRoles}>fetch more</button>
-// 			<br />
-// 			<button onClick={createRole}>create role</button>
-// 			<br />
-// 			<Show when={roles()}>
-// 				<ul>
-// 					<For each={roles()!.items}>
-// 						{(i) => (
-// 							<li>
-// 								<details>
-// 									<summary>{i.name}</summary>
-// 									<button onClick={deleteRole(i.id)}>delete role</button>
-// 									<pre>{JSON.stringify(i, null, 2)}</pre>
-// 								</details>
-// 							</li>
-// 						)}
-// 					</For>
-// 				</ul>
-// 			</Show>
-// 		</>
-// 	);
-// }
+function Members(props: VoidProps<{ room: RoomT }>) {
+	const ctx = useCtx();
+	const api = useApi();
+	const members = api.room_members.list(() => props.room.id);
 
-// function Members(props: VoidProps<{ room: RoomT }>) {
-// 	const ctx = useCtx();
-// 	const [members, { refetch: fetchMembers }] = createResource<
-// 		Pagination<MemberT> & { room_id: string },
-// 		string
-// 	>(() => props.room.id, async (room_id, { value }) => {
-// 		if (value?.room_id !== room_id) value = undefined;
-// 		if (value?.has_more === false) return value;
-// 		const lastId = value?.items.at(-1)?.user.id ??
-// 			"00000000-0000-0000-0000-000000000000";
-// 		const batch = await ctx.client.http(
-// 			"GET",
-// 			`/api/v1/room/${room_id}/members?dir=f&from=${lastId}&limit=100`,
-// 		);
-// 		return {
-// 			...batch,
-// 			items: [...value?.items ?? [], ...batch.items],
-// 		};
-// 	});
+	const addRole = (user_id: string) => () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "role id?",
+			cont(role_id) {
+				if (!role_id) return;
+				api.client.http.PUT(
+					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+					{ params: { path: { room_id: props.room.id, role_id, user_id } } },
+				);
+			},
+		});
+	};
 
-// 	const addRole = (user_id: string) => async () => {
-// 		const role_id = await ctx.dispatch({
-// 			do: "modal.prompt",
-// 			text: "role id?",
-// 		});
-// 		ctx.client.http(
-// 			"PUT",
-// 			`/api/v1/room/${props.room.id}/members/${user_id}/roles/${role_id}`,
-// 		);
-// 	};
+	const removeRole = (user_id: string) => () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "role id?",
+			cont(role_id) {
+				if (!role_id) return;
+				api.client.http.DELETE(
+					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+					{ params: { path: { room_id: props.room.id, role_id, user_id } } },
+				);
+			},
+		});
+	};
 
-// 	const removeRole = (user_id: string) => async () => {
-// 		const role_id = await ctx.dispatch({
-// 			do: "modal.prompt",
-// 			text: "role id?",
-// 		});
-// 		ctx.client.http(
-// 			"DELETE",
-// 			`/api/v1/room/${props.room.id}/members/${user_id}/roles/${role_id}`,
-// 		);
-// 	};
-
-// 	const obs = new IntersectionObserver((ents) => {
-// 		if (ents.some((i) => i.isIntersecting)) fetchMembers();
-// 	});
-
-// 	onCleanup(() => obs.disconnect());
-
-// 	return (
-// 		<>
-// 			<h2>members</h2>
-// 			<button onClick={fetchMembers}>fetch more</button>
-// 			<Show when={members()}>
-// 				<ul>
-// 					<For each={members()!.items}>
-// 						{(i) => (
-// 							<li>
-// 								<div style="display:flex">
-// 									<div style="margin-right:.25rem">
-// 										{i.override_name ?? i.user.name}
-// 									</div>
-// 									<div>
-// 										<For each={i.roles}>
-// 											{(i) => (
-// 												<button
-// 													class="spaced"
-// 													onClick={() =>
-// 														ctx.dispatch({ do: "modal.alert", text: i.id })}
-// 												>
-// 													{i.name}
-// 												</button>
-// 											)}
-// 										</For>
-// 									</div>
-// 									<div style="flex:1"></div>
-// 									<button class="spaced" onClick={addRole(i.user.id)}>
-// 										add role
-// 									</button>
-// 									<button class="spaced" onClick={removeRole(i.user.id)}>
-// 										remove role
-// 									</button>
-// 								</div>
-// 								<details>
-// 									<summary>json</summary>
-// 									<pre>{JSON.stringify(i, null, 2)}</pre>
-// 								</details>
-// 							</li>
-// 						)}
-// 					</For>
-// 				</ul>
-// 				<div ref={(el) => obs.observe(el)}></div>
-// 			</Show>
-// 		</>
-// 	);
-// }
+	return (
+		<>
+			<h2>members</h2>
+			<button onClick={() => api.roles.list(() => props.room.id)}>
+				fetch more
+			</button>
+			<Show when={members()}>
+				<ul>
+					<For each={members()!.items}>
+						{(i) => {
+							const user = api.users.fetch(() => i.user_id);
+							return (
+								<li>
+									<div style="display:flex">
+										<div style="margin-right:.25rem">
+											{i.override_name ?? user()?.name}
+										</div>
+										<div>
+											<For each={i.roles}>
+												{(i) => (
+													<button
+														class="spaced"
+														onClick={() =>
+															ctx.dispatch({ do: "modal.alert", text: i.id })}
+													>
+														{i.name}
+													</button>
+												)}
+											</For>
+										</div>
+										<div style="flex:1"></div>
+										<button class="spaced" onClick={addRole(i.user_id)}>
+											add role
+										</button>
+										<button class="spaced" onClick={removeRole(i.user_id)}>
+											remove role
+										</button>
+									</div>
+									<details>
+										<summary>json</summary>
+										<pre>{JSON.stringify(i, null, 2)}</pre>
+									</details>
+								</li>
+							);
+						}}
+					</For>
+				</ul>
+			</Show>
+		</>
+	);
+}
 
 function Invites(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();
@@ -271,7 +260,9 @@ function Invites(props: VoidProps<{ room: RoomT }>) {
 			<h2>invites</h2>
 			<button onClick={createInvite}>create invite</button>
 			<br />
-			<button onClick={() => api.invites.list(() => props.room.id)}>fetch more</button>
+			<button onClick={() => api.invites.list(() => props.room.id)}>
+				fetch more
+			</button>
 			<br />
 			<Show when={invites()}>
 				<ul>
