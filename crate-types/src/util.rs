@@ -14,7 +14,7 @@ impl<T: PartialEq> Diff<T> for T {
 
 impl<T: PartialEq> Diff<T> for Option<T> {
     fn changes(&self, other: &T) -> bool {
-        self.as_ref().is_none_or(|s| s.changes(other))
+        self.as_ref().is_some_and(|s| s.changes(other))
     }
 }
 
