@@ -13,6 +13,7 @@
     "npm:@solid-primitives/intersection-observer@^2.2.0": "2.2.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/map@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/scheduled@^1.5.0": "1.5.0_solid-js@1.9.3__seroval@1.1.1",
+    "npm:@solid-primitives/set@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/websocket@*": "1.2.2_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solidjs/router@*": "0.15.2_solid-js@1.9.3__seroval@1.1.1",
     "npm:@types/node@*": "22.5.4",
@@ -598,6 +599,13 @@
     "@solid-primitives/scheduled@1.5.0_solid-js@1.9.3__seroval@1.1.1": {
       "integrity": "sha512-RVw24IRNh1FQ4DCMb3OahB70tXIwc5vH8nhR4nNPsXwUPQeuOkLsDI5BlxaPk0vyZgqw9lDpufgI3HnPwplgDw==",
       "dependencies": [
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/set@0.6.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-P1Tp001m8ib5XCi/LEJHh2QsoS2uPO86HewtbrSxr2axt5te9EGc0UOwNKTPxNvNSLNHteUw5IrzDsEklW4m3g==",
+      "dependencies": [
+        "@solid-primitives/trigger",
         "solid-js"
       ]
     },
@@ -3169,6 +3177,7 @@
           "npm:@solid-primitives/intersection-observer@^2.2.0",
           "npm:@solid-primitives/map@0.6",
           "npm:@solid-primitives/scheduled@^1.5.0",
+          "npm:@solid-primitives/set@0.6",
           "npm:@solid-primitives/websocket@*",
           "npm:@solidjs/router@*",
           "npm:event-emitter@~0.3.5",

@@ -1,3 +1,5 @@
+import { ReactiveSet } from "@solid-primitives/set";
+
 type Env = {
 	DEV: boolean;
 };
@@ -17,9 +19,9 @@ export const allFlags = [
 
 type Flag = (typeof allFlags)[number]["id"];
 
-const flagsDev: Set<Flag> = new Set(["message_search", "room_member_list"]);
-const flagsProd: Set<Flag> = new Set([]);
+const flagsDev: Flag[] = ["message_search", "room_member_list"];
+const flagsProd: Flag[] = [];
 
-export const flags = (import.meta as unknown as ImportMeta).env.DEV
-	? flagsDev
-	: flagsProd;
+export const flags = new ReactiveSet(
+	(import.meta as unknown as ImportMeta).env.DEV ? flagsDev : flagsProd,
+);

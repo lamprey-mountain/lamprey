@@ -8,6 +8,7 @@ import { createApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createSignal } from "solid-js";
+import { flags } from "./flags.ts";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -125,6 +126,7 @@ const App: Component = () => {
 	(globalThis as any).ctx = ctx;
 	(globalThis as any).client = client;
 	(globalThis as any).api = api;
+	(globalThis as any).flags = flags;
 
 	const TOKEN = localStorage.getItem("token")!;
 	if (TOKEN) {
