@@ -130,7 +130,7 @@ function RouteSettings(p: RouteSectionProps) {
 
 function RouteRoom(p: RouteSectionProps) {
 	const api = useApi();
-	const [room] = api.rooms.fetch(() => p.params.room_id);
+	const room = api.rooms.fetch(() => p.params.room_id);
 	return (
 		<>
 			<Title title={room() ? room()!.name : "loading..."} />
@@ -144,7 +144,7 @@ function RouteRoom(p: RouteSectionProps) {
 
 function RouteRoomSettings(p: RouteSectionProps) {
 	const api = useApi();
-	const [room] = api.rooms.fetch(() => p.params.room_id);
+	const room = api.rooms.fetch(() => p.params.room_id);
 	const title = () => room() ? `${room()!.name} settings` : "loading...";
 	return (
 		<>
@@ -159,8 +159,8 @@ function RouteRoomSettings(p: RouteSectionProps) {
 
 function RouteThread(p: RouteSectionProps) {
 	const api = useApi();
-	const [thread] = api.threads.fetch(() => p.params.thread_id);
-	const [room] = api.rooms.fetch(() => thread()?.room_id!);
+	const thread = api.threads.fetch(() => p.params.thread_id);
+	const room = api.rooms.fetch(() => thread()?.room_id!);
 
 	return (
 		<>
