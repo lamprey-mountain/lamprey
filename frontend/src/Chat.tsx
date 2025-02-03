@@ -1,4 +1,4 @@
-import { createEffect, on, Show } from "solid-js";
+import { createEffect, createRenderEffect, on, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
@@ -8,11 +8,7 @@ import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
-import {
-	createScheduled,
-	debounce,
-	throttle,
-} from "@solid-primitives/scheduled";
+import { throttle } from "@solid-primitives/scheduled";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -27,40 +23,7 @@ export const ChatMain = (props: ChatProps) => {
 	const anchor = () =>
 		ctx.thread_anchor.get(props.thread.id) ?? { type: "backwards", limit: 50 };
 	const messages = api.messages.list(() => props.thread.id, anchor);
-
-	createEffect(() => {
-		console.log(messages());
-	});
-
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
-
-	createEffect(() => {
-		const m = messages();
-		if (m?.items.length) {
-			console.log("render timeline", m.items);
-			console.time("rendertimeline");
-			const rendered = renderTimeline({
-				items: m.items,
-				has_after: m.has_forward,
-				has_before: m.has_backwards,
-				read_marker_id: ts()?.read_marker_id ?? null,
-				// slice: { start: 0, end: 50 },
-			});
-			setTl((old) => [...reconcile(rendered)(old)]);
-			console.timeEnd("rendertimeline");
-		} else {
-			setTl([]);
-		}
-	});
-
-	function init() {
-		const thread_id = props.thread.id;
-		const read_id = props.thread.last_read_id ?? undefined;
-		ctx.dispatch({ do: "thread.init", thread_id, read_id });
-	}
-
-	init();
-	createEffect(init);
 
 	const list = createList({
 		items: tl,
@@ -116,107 +79,66 @@ export const ChatMain = (props: ChatProps) => {
 				});
 			}
 		},
-		onContextMenu(e: MouseEvent) {
-			// e.stopPropagation();
-			// const target = e.target as HTMLElement;
-			// const media_el = target.closest("a, img, video, audio") as HTMLElement;
-			// const message_el = target.closest("li[data-message-id]") as HTMLElement;
-			// const message_id = message_el?.dataset.messageId;
-			// if (!message_id || (media_el && message_el.contains(media_el))) {
-			// 	ctx.dispatch({
-			// 		do: "menu",
-			// 		menu: null,
-			// 	});
-			// 	return;
-			// }
-			// e.preventDefault();
-			// ctx.dispatch({
-			// 	do: "menu",
-			// 	menu: {
-			// 		type: "message",
-			// 		x: e.x,
-			// 		y: e.y,
-			// 		message: api.messages.cache.get(message_id)!,
-			// 	},
-			// });
-		},
 	});
 
-	// createEffect(() => {
-	// 	list.scrollPos();
-	// 	throttle(() => {
-	// 		init(); // FIXME: don't init on all scroll
-	// 		ctx.dispatch({
-	// 			do: "thread.scroll_pos",
-	// 			thread_id: props.thread.id,
-	// 			pos: list.scrollPos(),
-	// 			is_at_end: list.isAtBottom(),
-	// 		});
-	// 	});
-	// });
-
-	// createEffect(() => {
-	// 	if (slice()?.start === undefined) {
-	// 		ctx.dispatch({
-	// 			do: "paginate",
-	// 			dir: "b",
-	// 			thread_id: props.thread.id,
-	// 		});
-	// 	}
-	// });
-
-	createEffect(on(() => props.thread, () => {
-		// TODO: restore scroll position
-		queueMicrotask(() => {
-			const pos = ts()!.scroll_pos;
-			// console.log({ pos });
-			if (pos === null) return list.scrollTo(999999);
-			list.scrollTo(pos);
-		});
+	// effect to update timeline
+	createRenderEffect(on(messages, (m) => {
+		if (m?.items.length) {
+			console.log("render timeline", m.items);
+			console.time("rendertimeline");
+			const rendered = renderTimeline({
+				items: m.items,
+				has_after: m.has_forward,
+				has_before: m.has_backwards,
+				read_marker_id: ts()?.read_marker_id ?? null,
+				// slice: { start: 0, end: 50 },
+			});
+			setTl((old) => [...reconcile(rendered)(old)]);
+			console.timeEnd("rendertimeline");
+		} else {
+			console.log("tried to render empty timeline");
+		}
 	}));
 
+	// effect to initialize new threads
+	createEffect(on(() => props.thread.id, (thread_id) => {
+		const read_id = props.thread.last_read_id ?? undefined;
+		ctx.dispatch({ do: "thread.init", thread_id, read_id });
+	}));
+
+	// effect to update saved scroll position
+	const setPos = throttle(() => {
+		const pos = list.isAtBottom() ? -1 : list.scrollPos();
+		console.log("set pos", pos);
+		ctx.thread_scroll_pos.set(props.thread.id, pos);
+	}, 300);
+
 	createEffect(() => {
-		const a = anchor();
-		messages();
-		setTimeout(() => {
-			// paginateThrottle();
-			if (a.type === "context") {
-				// TODO: is this safe and performant?
-				const target = document.querySelector(
-					`li[data-message-id="${a.message_id}"]`,
-				);
-				if (target) {
-					console.log("scroll into view + animate", target);
-					target.scrollIntoView({
-						// behavior: "smooth",
-						behavior: "instant",
-						block: "center",
-					});
-					target.animate([
-						{
-							boxShadow: "4px 0 0 -1px inset #cc1856",
-							backgroundColor: "#cc185622",
-							offset: 0,
-						},
-						{
-							boxShadow: "4px 0 0 -1px inset #cc1856",
-							backgroundColor: "#cc185622",
-							offset: .8,
-						},
-						{
-							boxShadow: "none",
-							backgroundColor: "transparent",
-							offset: 1,
-						},
-					], {
-						duration: 1000,
-					});
+		list.scrollPos();
+		setPos();
+	});
+
+	// effect to restore saved scroll position or scroll to selected message
+	let last_thread_id: string | undefined;
+	createEffect(on(() => [tl(), anchor()] as const, ([_tl, anchor]) => {
+		// make sure this runs after tl renders
+		if (messages.loading) return;
+		queueMicrotask(() => {
+			if (anchor.type === "context") {
+				console.log("scroll to anchor");
+				highlight(anchor.message_id);
+			} else if (last_thread_id !== props.thread.id) {
+				const pos = ctx.thread_scroll_pos.get(props.thread.id);
+				console.log("get pos", pos);
+				if (pos === undefined || pos === -1) {
+					list.scrollTo(999999);
 				} else {
-					console.warn("couldn't find target to scroll to");
+					list.scrollTo(pos);
 				}
+				last_thread_id = props.thread.id;
 			}
 		});
-	});
+	}));
 
 	return (
 		<div class="chat">
@@ -302,4 +224,40 @@ export function renderTimeline(
 		});
 	}
 	return newItems;
+}
+
+function highlight(message_id: string) {
+	// TODO: is this safe and performant?
+	const target = document.querySelector(
+		`li[data-message-id="${message_id}"]`,
+	);
+	if (target) {
+		console.log("scroll into view + animate", target);
+		target.scrollIntoView({
+			// behavior: "smooth",
+			behavior: "instant",
+			block: "center",
+		});
+		target.animate([
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: 0,
+			},
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: .8,
+			},
+			{
+				boxShadow: "none",
+				backgroundColor: "transparent",
+				offset: 1,
+			},
+		], {
+			duration: 1000,
+		});
+	} else {
+		console.warn("couldn't find target to scroll to");
+	}
 }

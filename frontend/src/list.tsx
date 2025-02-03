@@ -115,14 +115,15 @@ export function createList<T>(options: {
 		},
 		List(props: { children: (item: T, idx: Accessor<number>) => JSX.Element }) {
 			function reanchor() {
-				// console.log("attempt reanchor")
+				console.log("do reanchor");
 				const wrap = wrapperEl();
 				const shouldAutoscroll = isAtBottom() &&
 					(options.autoscroll?.() || false);
 				if (!wrap) return setRefs();
 				if (shouldAutoscroll) {
+					console.log("autoscrolled");
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
-				} else if (anchorRef) {
+				} else if (anchorRef && wrap.contains(anchorRef)) {
 					// FIXME: don't force reflow; this casuses jank
 					const currentRect = anchorRef.getBoundingClientRect();
 					const diff = (currentRect.y - anchorRect.y) +
@@ -134,6 +135,7 @@ export function createList<T>(options: {
 			}
 
 			createComputed(on(options.items, () => {
+				console.log("begin reanchor");
 				anchorRect = anchorRef?.getBoundingClientRect();
 				queueMicrotask(reanchor);
 			}));

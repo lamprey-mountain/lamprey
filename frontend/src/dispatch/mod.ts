@@ -14,12 +14,6 @@ type Reduction =
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
 	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
 	| {
-		do: "thread.scroll_pos";
-		thread_id: string;
-		pos: number | null;
-		is_at_end: boolean;
-	}
-	| {
 		do: "thread.attachments";
 		thread_id: string;
 		attachments: Array<Attachment>;
@@ -59,13 +53,6 @@ function reduce(
 		case "thread.reply": {
 			return produce((s: Data) => {
 				s.thread_state[delta.thread_id].reply_id = delta.reply_id;
-				return s;
-			})(state);
-		}
-		case "thread.scroll_pos": {
-			return produce((s: Data) => {
-				s.thread_state[delta.thread_id].scroll_pos = delta.pos;
-				s.thread_state[delta.thread_id].is_at_end = delta.is_at_end;
 				return s;
 			})(state);
 		}
@@ -332,15 +319,9 @@ export function createDispatcher(
 					dispatch({ do: "thread.send", thread_id, text });
 				}),
 				reply_id: null,
-				scroll_pos: null,
 				read_marker_id: action.read_id ?? null,
 				attachments: [],
-				is_at_end: true,
 			});
-			// ctx.thread_anchor.set(thread_id, {
-			// 	type: "backwards",
-			// 	limit: 50, // TODO: calculate dynamically
-			// });
 		} else {
 			next(action);
 		}

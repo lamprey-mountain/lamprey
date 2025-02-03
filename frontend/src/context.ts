@@ -20,10 +20,8 @@ export type Attachment =
 export type ThreadState = {
 	editor_state: EditorState;
 	reply_id: string | null;
-	scroll_pos: number | null;
-	is_at_end: boolean;
-	read_marker_id: string | null;
 	attachments: Array<Attachment>;
+	read_marker_id: string | null;
 };
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
@@ -116,8 +114,9 @@ export type ChatCtx = {
 	data: Data;
 	dispatch: (action: Action) => void;
 
-	thread_anchor: ReactiveMap<string, MessageListAnchor>,
 	menu: Accessor<Menu | null>,
+	thread_anchor: ReactiveMap<string, MessageListAnchor>,
+	thread_scroll_pos: Map<string, number>,
 };
 
 export const defaultData: Data = {
