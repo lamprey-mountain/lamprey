@@ -1,6 +1,6 @@
 import { Accessor, createContext, useContext } from "solid-js";
-import { Client, types, Upload } from "sdk";
-import { InviteT, MediaT, MemberT, RoleT, } from "./types.ts";
+import { Client, Upload } from "sdk";
+import { InviteT, MediaT, MemberT, RoleT } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -51,7 +51,7 @@ export type Menu =
 	& (
 		| { type: "room"; room_id: string }
 		| { type: "thread"; thread_id: string }
-		| { type: "message"; thread_id: string, message_id: string }
+		| { type: "message"; thread_id: string; message_id: string }
 	);
 
 export type Modal =
@@ -97,7 +97,6 @@ export type Action =
 		thread_id: string;
 		attachments: Array<Attachment>;
 	}
-	| { do: "thread.set_anchor"; thread_id: string, anchor: MessageListAnchor }
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
@@ -114,9 +113,9 @@ export type ChatCtx = {
 	data: Data;
 	dispatch: (action: Action) => void;
 
-	menu: Accessor<Menu | null>,
-	thread_anchor: ReactiveMap<string, MessageListAnchor>,
-	thread_scroll_pos: Map<string, number>,
+	menu: Accessor<Menu | null>;
+	thread_anchor: ReactiveMap<string, MessageListAnchor>;
+	thread_scroll_pos: Map<string, number>;
 };
 
 export const defaultData: Data = {

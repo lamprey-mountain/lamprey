@@ -327,16 +327,6 @@ export function createDispatcher(
 		}
 	};
 
-	const threadAnchor: Middleware = (_state, _dispatch) => (next) => (action) => {
-		if (action.do === "thread.set_anchor") {
-			const { thread_id } = action;
-			// if (!state.thread_state[thread_id]) return;
-			ctx.thread_anchor.set(thread_id, action.anchor);
-		} else {
-			next(action);
-		}
-	};
-
 	const log: Middleware = (state, _dispatch) => (next) => (action) => {
 		console.log("dispatch", action, state);
 		next(action);
@@ -353,7 +343,6 @@ export function createDispatcher(
 		uploadResume,
 		mouseMoved,
 		threadSend,
-		threadAnchor,
 	]);
 
 	return d;

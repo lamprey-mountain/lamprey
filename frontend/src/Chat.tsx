@@ -45,37 +45,25 @@ export const ChatMain = (props: ChatProps) => {
 			const msgs = messages()!;
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
-					ctx.dispatch({
-						do: "thread.set_anchor",
-						thread_id,
-						anchor: {
-							type: "forwards",
-							limit: SLICE_LEN,
-							message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
-						},
+					ctx.thread_anchor.set(thread_id, {
+						type: "forwards",
+						limit: SLICE_LEN,
+						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
-					ctx.dispatch({
-						do: "thread.set_anchor",
-						thread_id,
-						anchor: {
-							type: "backwards",
-							limit: SLICE_LEN,
-						},
+					ctx.thread_anchor.set(thread_id, {
+						type: "backwards",
+						limit: SLICE_LEN,
 					});
 					if (list.isAtBottom()) {
 						ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 					}
 				}
 			} else {
-				ctx.dispatch({
-					do: "thread.set_anchor",
-					thread_id,
-					anchor: {
-						type: "backwards",
-						limit: SLICE_LEN,
-						message_id: messages()?.items[PAGINATE_LEN]?.id,
-					},
+				ctx.thread_anchor.set(thread_id, {
+					type: "backwards",
+					limit: SLICE_LEN,
+					message_id: messages()?.items[PAGINATE_LEN]?.id,
 				});
 			}
 		},

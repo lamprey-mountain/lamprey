@@ -150,14 +150,10 @@ function ReplyView(props: ReplyProps) {
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
-		ctx.dispatch({
-			do: "thread.set_anchor",
-			thread_id: props.thread_id,
-			anchor: {
-				type: "context",
-				limit: 50, // TODO: calc dynamically
-				message_id: props.reply_id,
-			},
+		ctx.thread_anchor.set(props.thread_id, {
+			type: "context",
+			limit: 50, // TODO: calc dynamically
+			message_id: props.reply_id,
 		});
 	};
 
