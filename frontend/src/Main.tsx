@@ -4,7 +4,7 @@ import { MessageMenu, RoomMenu, ThreadMenu } from "./menu/mod.ts";
 import { ChatNav } from "./Nav.tsx";
 import { Menu, useCtx } from "./context.ts";
 import { ChatMain } from "./Chat.tsx";
-import { RoomHome } from "./Room.tsx";
+import { RoomHome, RoomMembers } from "./Room.tsx";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
@@ -13,6 +13,7 @@ import { Route, Router, RouteSectionProps } from "@solidjs/router";
 import { Home } from "./Home.tsx";
 import { getModal } from "./modal/mod.tsx";
 import { useApi } from "./api.tsx";
+import { flags } from "./flags.ts";
 
 const Title = (props: { title: string }) => {
 	createEffect(() => document.title = props.title);
@@ -135,6 +136,9 @@ function RouteRoom(p: RouteSectionProps) {
 			<ChatNav />
 			<Show when={room()}>
 				<RoomHome room={room()!} />
+				<Show when={flags.has("room_member_list")}>
+					<RoomMembers room={room()!} />
+				</Show>
 			</Show>
 		</>
 	);

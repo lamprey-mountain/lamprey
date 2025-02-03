@@ -749,3 +749,13 @@ input[type="text"] {
 .input li .media {
 	max-height: min(30vh, 500px);
 }
+
+.room-members {
+	width: 196px;
+	background: $bg1;
+	padding: 4px;
+
+	& > li {
+		@include truncate;
+	}
+}

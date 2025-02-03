@@ -5,6 +5,24 @@ import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 
+export const RoomMembers = (props: { room: RoomT }) => {
+	const api = useApi();
+	const room_id = () => props.room.id;
+
+	const members = api.room_members.list(room_id);
+
+	return (
+		<ul class="room-members">
+			<For each={members()?.items}>
+				{(i) => {
+					const user = api.users.fetch(() => i.user_id);
+					return <li>{user()?.name}</li>;
+				}}
+			</For>
+		</ul>
+	);
+};
+
 export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useCtx();
 	const api = useApi();
