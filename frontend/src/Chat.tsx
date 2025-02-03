@@ -1,14 +1,18 @@
 import { createEffect, on, Show } from "solid-js";
-import { ThreadState, useCtx } from "./context.ts";
+import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
 import { renderTimelineItem, TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
-import { MessageListAnchor } from "./api/messages.ts";
 import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
+import {
+	createScheduled,
+	debounce,
+	throttle,
+} from "@solid-primitives/scheduled";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -19,20 +23,14 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
 
-	// const slice = () => ctx.data.slices[props.thread.id];
-	// const tl = () => ctx.data.timelines[props.thread.id];
-	const ts = () =>
-		ctx.data.thread_state[props.thread.id] as ThreadState | undefined;
-	// const hasSpaceTop = () => tl()?.[0]?.type === "hole" || slice()?.start > 0;
-	// const hasSpaceBottom = () =>
-	// 	tl()?.at(-1)?.type === "hole" || slice()?.end < tl()?.length;
-
-	const [anchor, setAnchor] = createSignal<MessageListAnchor>({
-		type: "backwards",
-		limit: 50, // TODO: calculate dynamically
-	});
-
+	const ts = () => ctx.data.thread_state[props.thread.id];
+	const anchor = () =>
+		ctx.thread_anchor.get(props.thread.id) ?? { type: "backwards", limit: 50 };
 	const messages = api.messages.list(() => props.thread.id, anchor);
+
+	createEffect(() => {
+		console.log(messages());
+	});
 
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
@@ -66,10 +64,12 @@ export const ChatMain = (props: ChatProps) => {
 
 	const list = createList({
 		items: tl,
-		autoscroll: () => !messages()?.has_forward,
+		autoscroll: () => !messages()?.has_forward && anchor().type !== "context",
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
+			// FIXME: this tends to fire an excessive number of times
+			// it's not a problem when *actually* paginating, but is for eg. marking threads read or scrolling to replies
 			if (messages.loading) return;
 			const thread_id = props.thread.id;
 
@@ -82,25 +82,37 @@ export const ChatMain = (props: ChatProps) => {
 			const msgs = messages()!;
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
-					setAnchor({
-						type: "forwards",
-						limit: SLICE_LEN,
-						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
+					ctx.dispatch({
+						do: "thread.set_anchor",
+						thread_id,
+						anchor: {
+							type: "forwards",
+							limit: SLICE_LEN,
+							message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
+						},
 					});
 				} else {
-					setAnchor({
-						type: "backwards",
-						limit: SLICE_LEN,
+					ctx.dispatch({
+						do: "thread.set_anchor",
+						thread_id,
+						anchor: {
+							type: "backwards",
+							limit: SLICE_LEN,
+						},
 					});
 					if (list.isAtBottom()) {
 						ctx.dispatch({ do: "thread.mark_read", thread_id, delay: true });
 					}
 				}
 			} else {
-				setAnchor({
-					type: "backwards",
-					limit: SLICE_LEN,
-					message_id: messages()?.items[PAGINATE_LEN]?.id,
+				ctx.dispatch({
+					do: "thread.set_anchor",
+					thread_id,
+					anchor: {
+						type: "backwards",
+						limit: SLICE_LEN,
+						message_id: messages()?.items[PAGINATE_LEN]?.id,
+					},
 				});
 			}
 		},
@@ -163,8 +175,54 @@ export const ChatMain = (props: ChatProps) => {
 		});
 	}));
 
+	createEffect(() => {
+		const a = anchor();
+		messages();
+		setTimeout(() => {
+			// paginateThrottle();
+			if (a.type === "context") {
+				// TODO: is this safe and performant?
+				const target = document.querySelector(
+					`li[data-message-id="${a.message_id}"]`,
+				);
+				if (target) {
+					console.log("scroll into view + animate", target);
+					target.scrollIntoView({
+						// behavior: "smooth",
+						behavior: "instant",
+						block: "center",
+					});
+					target.animate([
+						{
+							boxShadow: "4px 0 0 -1px inset #cc1856",
+							backgroundColor: "#cc185622",
+							offset: 0,
+						},
+						{
+							boxShadow: "4px 0 0 -1px inset #cc1856",
+							backgroundColor: "#cc185622",
+							offset: .8,
+						},
+						{
+							boxShadow: "none",
+							backgroundColor: "transparent",
+							offset: 1,
+						},
+					], {
+						duration: 1000,
+					});
+				} else {
+					console.warn("couldn't find target to scroll to");
+				}
+			}
+		});
+	});
+
 	return (
 		<div class="chat">
+			<Show when={messages.loading}>
+				<div class="loading">loading...</div>
+			</Show>
 			<list.List>
 				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>

@@ -438,6 +438,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/context/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get context for message
+		 * @description More efficient than calling List messages twice
+		 */
+		get: operations["message_context"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/thread/{thread_id}/message": {
 		parameters: {
 			query?: never;
@@ -582,6 +602,13 @@ export interface components {
 		};
 		/** Format: uuid */
 		AuditLogId: string;
+		ContextResponse: {
+			has_after: boolean;
+			has_before: boolean;
+			items: components["schemas"]["Message"][];
+			/** Format: int64 */
+			total: number;
+		};
 		Invite: {
 			code: components["schemas"]["InviteCode"];
 			/** Format: date-time */
@@ -2230,6 +2257,35 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
+	message_context: {
+		parameters: {
+			query?: {
+				to_start?: null | components["schemas"]["MessageId"];
+				to_end?: null | components["schemas"]["MessageId"];
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description Message id */
+				message_id: components["schemas"]["MessageId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ContextResponse"];
 				};
 			};
 		};

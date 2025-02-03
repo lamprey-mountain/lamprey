@@ -127,7 +127,7 @@ export function createList<T>(options: {
 					const currentRect = anchorRef.getBoundingClientRect();
 					const diff = (currentRect.y - anchorRect.y) +
 						(currentRect.height - anchorRect.height);
-					// console.log("reanchored", anchorRect, currentRect, diff)
+					console.log("reanchored", anchorRect, currentRect, diff);
 					wrapperEl()?.scrollBy(0, diff);
 				}
 				setRefs();

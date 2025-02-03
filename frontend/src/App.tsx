@@ -6,6 +6,7 @@ import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient, MessageReady, MessageSync } from "sdk";
 import { ApiProvider, useApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
+import { ReactiveMap } from "@solid-primitives/map";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -53,6 +54,8 @@ const App2 = (props: any) => {
 		dispatch: () => {
 			throw new Error("oh no!");
 		},
+		
+		thread_anchor: new ReactiveMap(),
 	};
 	const dispatch = createDispatcher(ctx, useApi(), update);
 	ctx.dispatch = dispatch;

@@ -4,7 +4,6 @@ import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
 import { createUpload } from "sdk";
-// import { calculateSlice, renderTimeline, } from "./messages.ts";
 import { handleSubmit } from "./submit.ts";
 import { dispatchServer } from "./server.ts";
 import { Api } from "../api.tsx";
@@ -350,8 +349,21 @@ export function createDispatcher(
 				read_marker_id: action.read_id ?? null,
 				attachments: [],
 				is_at_end: true,
-				timeline: [],
 			});
+			// ctx.thread_anchor.set(thread_id, {
+			// 	type: "backwards",
+			// 	limit: 50, // TODO: calculate dynamically
+			// });
+		} else {
+			next(action);
+		}
+	};
+
+	const threadAnchor: Middleware = (_state, _dispatch) => (next) => (action) => {
+		if (action.do === "thread.set_anchor") {
+			const { thread_id } = action;
+			// if (!state.thread_state[thread_id]) return;
+			ctx.thread_anchor.set(thread_id, action.anchor);
 		} else {
 			next(action);
 		}
@@ -374,6 +386,7 @@ export function createDispatcher(
 		uploadResume,
 		mouseMoved,
 		threadSend,
+		threadAnchor,
 	]);
 
 	return d;

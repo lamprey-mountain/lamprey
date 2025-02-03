@@ -10,7 +10,8 @@ import {
 	ThreadT,
 } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
-import { TimelineItemT } from "./Messages.tsx";
+import { MessageListAnchor } from "./api/messages.ts";
+import { ReactiveMap } from "@solid-primitives/map";
 
 export type Slice = {
 	start: number;
@@ -31,7 +32,6 @@ export type ThreadState = {
 	is_at_end: boolean;
 	read_marker_id: string | null;
 	attachments: Array<Attachment>;
-	timeline: Array<TimelineItemT>;
 };
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
@@ -109,6 +109,7 @@ export type Action =
 		thread_id: string;
 		attachments: Array<Attachment>;
 	}
+	| { do: "thread.set_anchor"; thread_id: string, anchor: MessageListAnchor }
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
@@ -125,6 +126,8 @@ export type ChatCtx = {
 	client: Client;
 	data: Data;
 	dispatch: (action: Action) => void;
+
+	thread_anchor: ReactiveMap<string, MessageListAnchor>,
 };
 
 export const defaultData: Data = {

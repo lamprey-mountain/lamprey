@@ -5,6 +5,7 @@ import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
+import { useCtx } from "./context.ts";
 
 type MessageProps = {
 	message: MessageT;
@@ -90,12 +91,12 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
-			const api = useApi();
 			return (
 				<>
 					<Show when={props.message.reply_id}>
 						<ReplyView
-							reply={api.messages.cache.get(props.message.reply_id!)}
+							thread_id={props.message.thread_id}
+							reply_id={props.message.reply_id!}
 						/>
 					</Show>
 					<div class="author-wrap">
@@ -125,16 +126,46 @@ export function MessageView(props: MessageProps) {
 	return <>{getComponent()}</>;
 }
 
-function ReplyView(props: { reply?: MessageT }) {
-	const name = () => props.reply?.override_name ?? props.reply?.author.name;
-	const content = () =>
-		props.reply?.content ??
-			`${props.reply?.attachments.length} attachment(s)`;
+type ReplyProps = {
+	thread_id: string;
+	reply_id: string;
+};
+
+function ReplyView(props: ReplyProps) {
+	const ctx = useCtx();
+	const api = useApi();
+	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
+
+	const name = () => {
+		const r = reply();
+		if (!r) return;
+		return r.override_name ?? r.author.name;
+	};
+
+	const content = () => {
+		const r = reply();
+		if (!r) return;
+		return r.content ?? `${r.attachments.length} attachment(s)`;
+	};
+
+	const scrollToReply = () => {
+		// if (!props.reply) return;
+		ctx.dispatch({
+			do: "thread.set_anchor",
+			thread_id: props.thread_id,
+			anchor: {
+				type: "context",
+				limit: 50, // TODO: calc dynamically
+				message_id: props.reply_id,
+			},
+		});
+	};
+
 	return (
 		<>
 			<div class="reply arrow">{"\u21B1"}</div>
-			<div class="reply reply-content">
-				<Show when={props.reply} fallback="loading..">
+			<div class="reply reply-content" onClick={scrollToReply}>
+				<Show when={!reply.loading} fallback="loading..">
 					<span class="author">{name()}:</span>
 					{content()}
 				</Show>
