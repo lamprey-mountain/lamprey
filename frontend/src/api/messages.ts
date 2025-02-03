@@ -74,6 +74,28 @@ export class MessageRanges {
 		}
 		return null;
 	}
+
+	merge(a: MessageRange, b: MessageRange) {
+		// TODO: profile performance
+		const c = new MessageRange(
+			a.has_forward && b.has_forward,
+			a.has_backwards && b.has_backwards,
+			[...new Set([...a.items.map((i) => i.id), ...b.items.map((i) => i.id)])]
+				.toSorted((a, b) => a > b ? 1 : -1)
+				.map((i) =>
+					a.items.find((j) => i === j.id) ??
+						b.items.find((j) => i === j.id)!
+				),
+		);
+		console.log("mergeRanges", a, b, c);
+		this.ranges.delete(a);
+		this.ranges.delete(b);
+		this.ranges.add(c);
+		if (a === this.live || b === this.live) {
+			this.live = c;
+		}
+		return c;
+	}
 }
 
 export type MessageListAnchor =
@@ -155,56 +177,29 @@ export class Messages {
 			return data;
 		};
 
-		const mergeRanges = (
-			a: MessageRange,
-			b: MessageRange,
-		) => {
-			const bids = new Set(b.items.map((i) => i.id));
-			const sharedStart = a.items.findIndex((i) => bids.has(i.id));
-			const sharedEnd = a.items.findLastIndex((i) => bids.has(i.id));
-			console.log("mergeRanges", a, b, sharedStart, sharedEnd);
-			return new MessageRange(
-				a.has_forward && b.has_forward,
-				a.has_backwards && b.has_backwards,
-				// [
-				// 	...a.items.slice(
-				// 		0,
-				// 		sharedStart === -1 ? a.items.length : sharedStart,
-				// 	),
-				// 	...b.items,
-				// 	...a.items.slice(sharedEnd === -1 ? 0 : sharedEnd),
-				// ],
-				[...new Set([...a.items.map((i) => i.id), ...b.items.map((i) => i.id)])]
-					.map((i) =>
-						a.items.find((j) => i === j.id) ??
-							b.items.find((j) => i === j.id)!
-					),
-			);
-		};
-
 		/** append a set of data to a range, deduplicating ranges if there are multiple */
 		const mergeAfter = (
 			ranges: MessageRanges,
 			range: MessageRange,
 			data: PaginationResponseMessage,
 		): MessageRange => {
-			const items: Array<Message> = [];
+			let items: Array<Message> = [];
 			for (const item of data.items) {
 				this.cache.set(item.id, item);
 				const existing = ranges.find(item.id);
-				if (existing && existing !== range) {
-					console.log("merge (after)!");
-					ranges.ranges.delete(range);
-					ranges.ranges.delete(existing);
-					range = mergeRanges(range, existing);
-					ranges.ranges.add(range);
-					if (existing === ranges.live) ranges.live = range;
+				if (existing) {
+					if (existing !== range) {
+						console.log("merge (after)!");
+						range.items.push(...items);
+						items = [];
+						range = ranges.merge(range, existing);
+					}
 				} else {
 					items.push(item);
 				}
 			}
 			range.items.push(...items);
-			range.has_forward = range.has_forward ? data.has_more : false;
+			range.has_forward &&= data.has_more;
 			return range;
 		};
 
@@ -214,22 +209,23 @@ export class Messages {
 			range: MessageRange,
 			data: PaginationResponseMessage,
 		): MessageRange => {
-			const items: Array<Message> = [];
+			let items: Array<Message> = [];
 			for (const item of data.items) {
 				this.cache.set(item.id, item);
 				const existing = ranges.find(item.id);
-				if (existing && existing !== range) {
-					console.log("merge (before)!");
-					ranges.ranges.delete(range);
-					ranges.ranges.delete(existing);
-					range = mergeRanges(range, existing);
-					ranges.ranges.add(range);
+				if (existing) {
+					if (existing !== range) {
+						console.log("merge (before)!");
+						range.items.unshift(...items);
+						items = [];
+						range = ranges.merge(range, existing);
+					}
 				} else {
 					items.push(item);
 				}
 			}
 			range.items.unshift(...items);
-			range.has_backwards = range.has_backwards ? data.has_more : false;
+			range.has_backwards &&= data.has_more;
 			return range;
 		};
 
@@ -242,7 +238,6 @@ export class Messages {
 			dir.type;
 			dir.limit;
 			dir.message_id;
-			console.log("diff", { thread_id, dir }, old);
 
 			// ugly, but seems to work
 			if (
@@ -304,7 +299,6 @@ export class Messages {
 			} else if (dir.type === "backwards") {
 				if (dir.message_id) {
 					const r = ranges.find(dir.message_id);
-					// console.log(ranges, r);
 					if (r) {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
