@@ -1564,7 +1564,12 @@ export interface operations {
 	};
 	room_member_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description Room id */
@@ -1672,7 +1677,12 @@ export interface operations {
 	};
 	role_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description Room id */

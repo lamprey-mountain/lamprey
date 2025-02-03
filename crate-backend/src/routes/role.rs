@@ -154,6 +154,7 @@ pub async fn role_get(
     get,
     path = "/room/{room_id}/role",
     params(
+        PaginationQuery<RoleId>,
         ("room_id", description = "Room id"),
     ),
     tags = ["role"],

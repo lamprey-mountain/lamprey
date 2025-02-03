@@ -20,6 +20,7 @@ use crate::error::{Error, Result};
     get,
     path = "/room/{room_id}/member",
     params(
+        PaginationQuery<UserId>,
         ("room_id", description = "Room id"),
     ),
     tags = ["room_member"],
