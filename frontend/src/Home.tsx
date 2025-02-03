@@ -2,7 +2,7 @@ import { createSignal, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
-import { createScheduled, leadingAndTrailing, throttle, } from "@solid-primitives/scheduled";
+import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
 import { createResource } from "solid-js";
 import { MessageView } from "./Message.tsx";
 import { Message } from "sdk";
@@ -28,12 +28,12 @@ export const Home = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "invite code?",
-			cont(_code) {
-				// TODO: fix
-				// ctx.client.http.POST("/api/v1/invite")
-				// ctx.client.http("POST", `/api/v1/invites/${code}`, {});
-				queueMicrotask(() => {
-					ctx.dispatch({ do: "modal.alert", text: "todo!" });
+			cont(invite_code) {
+				if (!invite_code) return;
+				ctx.client.http.POST("/api/v1/invite/{invite_code}", {
+					params: {
+						path: { invite_code },
+					},
 				});
 			},
 		});
