@@ -1488,7 +1488,12 @@ export interface operations {
 	};
 	invite_room_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description Room id */

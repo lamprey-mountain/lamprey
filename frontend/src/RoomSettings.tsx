@@ -3,10 +3,11 @@ import { useCtx } from "./context.ts";
 import { RoomT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
+import { useApi } from "./api.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
-	// TODO: { name: "invites", path: "invites", component: Invites },
+	{ name: "invites", path: "invites", component: Invites },
 	// TODO: { name: "roles", path: "roles", component: Roles },
 	// TODO: { name: "members", path: "members", component: Members },
 ];
@@ -244,58 +245,51 @@ function Info(props: VoidProps<{ room: RoomT }>) {
 // 	);
 // }
 
-// function Invites(props: VoidProps<{ room: RoomT }>) {
-// 	const ctx = useCtx();
+function Invites(props: VoidProps<{ room: RoomT }>) {
+	const api = useApi();
 
-// 	const [invites, { refetch: fetchInvites }] = createResource<
-// 		Pagination<InviteT> & { room_id: string },
-// 		string
-// 	>(() => props.room.id, async (room_id, { value }) => {
-// 		if (value?.room_id !== room_id) value = undefined;
-// 		if (value?.has_more === false) return value;
-// 		const lastId = value?.items.at(-1)?.code ?? "";
-// 		const batch = await ctx.client.http(
-// 			"GET",
-// 			`/api/v1/room/${room_id}/invites?dir=f&from=${lastId}&limit=100`,
-// 		);
-// 		return {
-// 			...batch,
-// 			items: [...value?.items ?? [], ...batch.items],
-// 		};
-// 	});
+	const invites = api.invites.list(() => props.room.id);
 
-// 	const createInvite = () => {
-// 		ctx.client.http("POST", `/api/v1/room/${props.room.id}/invites`, {});
-// 	};
+	const createInvite = () => {
+		api.client.http.POST("/api/v1/room/{room_id}/invite", {
+			params: {
+				path: { room_id: props.room.id },
+			},
+		});
+	};
 
-// 	const deleteInvite = (code: string) => {
-// 		ctx.client.http("DELETE", `/api/v1/invites/${code}`);
-// 	};
+	const deleteInvite = (code: string) => {
+		api.client.http.DELETE("/api/v1/invite/{invite_code}", {
+			params: {
+				path: { invite_code: code },
+			},
+		});
+	};
 
-// 	return (
-// 		<>
-// 			<h2>invites</h2>
-// 			<button onClick={createInvite}>create invite</button>
-// 			<br />
-// 			<button onClick={fetchInvites}>fetch more</button>
-// 			<br />
-// 			<Show when={invites()}>
-// 				<ul>
-// 					<For each={invites()!.items}>
-// 						{(i) => (
-// 							<li>
-// 								<details>
-// 									<summary>{i.code}</summary>
-// 									<button onClick={() => deleteInvite(i.code)}>
-// 										delete invite
-// 									</button>
-// 									<pre>{JSON.stringify(i, null, 2)}</pre>
-// 								</details>
-// 							</li>
-// 						)}
-// 					</For>
-// 				</ul>
-// 			</Show>
-// 		</>
-// 	);
-// }
+	return (
+		<>
+			<h2>invites</h2>
+			<button onClick={createInvite}>create invite</button>
+			<br />
+			<button onClick={() => api.invites.list(() => props.room.id)}>fetch more</button>
+			<br />
+			<Show when={invites()}>
+				<ul>
+					<For each={invites()!.items}>
+						{(i) => (
+							<li>
+								<details>
+									<summary>{i.code}</summary>
+									<button onClick={() => deleteInvite(i.code)}>
+										delete invite
+									</button>
+									<pre>{JSON.stringify(i, null, 2)}</pre>
+								</details>
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
+		</>
+	);
+}

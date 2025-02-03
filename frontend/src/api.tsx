@@ -13,6 +13,7 @@ import {
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	Client,
+	Invite,
 	Media,
 	Message,
 	MessageCreate,
@@ -34,6 +35,7 @@ import {
 import { Rooms } from "./api/rooms.ts";
 import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
+import { Invites } from "./api/invite.ts";
 
 export type Json =
 	| number
@@ -61,6 +63,7 @@ export function ApiProvider(
 
 	const rooms = new Rooms();
 	const threads = new Threads();
+	const invites = new Invites();
 	const users = new Users();
 	const messages = new Messages();
 
@@ -93,16 +96,24 @@ export function ApiProvider(
 				const p = l.pagination;
 				const idx = p.items.findIndex((i) => i.id === thread.id);
 				if (idx !== -1) {
-					l.mutate({
-						...p,
-						items: p.items.toSpliced(idx, 1, thread),
-					});
+					for (const mut of threads._listingMutators) {
+						if (mut.room_id === thread.room_id) {
+							mut.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1, thread),
+							});
+						}
+					}
 				} else if (p.items.length === 0 || thread.id > p.items[0].id) {
-					l.mutate({
-						...p,
-						items: [...p.items, thread],
-						total: p.total + 1,
-					});
+					for (const mut of threads._listingMutators) {
+						if (mut.room_id === thread.room_id) {
+							mut.mutate({
+								...p,
+								items: [...p.items, thread],
+								total: p.total + 1,
+							});
+						}
+					}
 				}
 			}
 		} else if (msg.type === "UpsertUser") {
@@ -154,6 +165,56 @@ export function ApiProvider(
 					messages._updateMutators(r, m.thread_id);
 				});
 			}
+		} else if (msg.type === "UpsertInvite") {
+			const { invite } = msg;
+			invites.cache.set(invite.code, invite);
+			console.log("upsert", invites);
+			if (invite.target.type === "Room") {
+				const room_id = invite.target.room.id;
+				const l = invites._cachedListings.get(room_id);
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						const idx = p.items.findIndex((i) => i.code === invite.code);
+						if (idx !== -1) {
+							l.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1, invite),
+							});
+						} else {
+							l.mutate({
+								...p,
+								items: [...p.items, invite],
+								total: p.total + 1,
+							});
+						}
+					}
+				}
+			}
+		} else if (msg.type === "DeleteInvite") {
+			const invite = invites.cache.get(msg.code);
+			console.log("delete invite", invite);
+			if (invite) {
+				if (invite.target.type === "Room") {
+					const room_id = invite.target.room.id;
+					const l = invites._cachedListings.get(room_id);
+					console.log(l);
+					if (l?.pagination) {
+						const p = l.resource.latest;
+						if (p) {
+							const idx = p.items.findIndex((i) => i.code === invite.code);
+							console.log("splice", idx);
+							if (idx !== -1) {
+								l.mutate({
+									...p,
+									items: p.items.toSpliced(idx, 1),
+								});
+							}
+						}
+					}
+				}
+			}
+			invites.cache.delete(msg.code);
 		}
 	});
 
@@ -183,6 +244,7 @@ export function ApiProvider(
 	const api: Api = {
 		rooms,
 		threads,
+		invites,
 		users,
 		messages,
 		session,
@@ -192,6 +254,7 @@ export function ApiProvider(
 	messages.api = api;
 	rooms.api = api;
 	threads.api = api;
+	invites.api = api;
 	users.api = api;
 
 	console.log("provider created", api);
@@ -216,6 +279,11 @@ export type Api = {
 		fetch: (thread_id: () => string) => Resource<Thread>;
 		list: (room_id: () => string) => Resource<Pagination<Thread>>;
 		cache: ReactiveMap<string, Thread>;
+	};
+	invites: {
+		fetch: (invite_code: () => string) => Resource<Invite>;
+		list: (room_id: () => string) => Resource<Pagination<Invite>>;
+		cache: ReactiveMap<string, Invite>;
 	};
 	users: {
 		fetch: (user_id: () => string) => Resource<User>;

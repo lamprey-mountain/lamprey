@@ -5,15 +5,26 @@ import {
 	createEffect,
 	createResource,
 	Resource,
-	untrack,
 } from "solid-js";
-import { Api, Listing } from "../api.tsx";
+import { Api } from "../api.tsx";
+import { createComputed } from "solid-js";
+
+type Listing<T> = {
+	// resource: Resource<Pagination<T>>;
+	pagination: Pagination<T> | null;
+	// mutate: (value: Pagination<T>) => void;
+	// refetch: () => void;
+	prom: Promise<unknown> | null;
+};
 
 export class Threads {
 	api: Api = null as unknown as Api;
 	cache = new ReactiveMap<string, Thread>();
 	_requests = new Map<string, Promise<Thread>>();
 	_cachedListings = new Map<string, Listing<Thread>>();
+	_listingMutators = new Set<
+		{ room_id: string; mutate: (value: Pagination<Thread>) => void }
+	>();
 
 	fetch(thread_id: () => string): Resource<Thread> {
 		const [resource, { mutate }] = createResource(thread_id, (thread_id) => {
@@ -82,23 +93,30 @@ export class Threads {
 			};
 		};
 
-		const room_id = untrack(room_id_signal);
-		const l = this._cachedListings.get(room_id);
-		if (l) {
-			if (!l.prom) l.refetch();
-			return l.resource;
-		}
+		// const room_id = untrack(room_id_signal);
+		// const l = this._cachedControllers.get(room_id);
+		// if (l) {
+		// 	// NOTE: does this deduplicate refetches?
+		// 	l.refetch();
+		// 	return l.resource;
+		// }
 
-		const l2 = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
-			refetch: () => {},
-			mutate: () => {},
-			prom: null,
-			pagination: null,
-		};
-		this._cachedListings.set(room_id, l2);
+		createComputed(() => {
+			// const l = {
+			// 	resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+			// 	refetch: () => {},
+			// 	mutate: () => {},
+			// 	prom: null,
+			// 	pagination: null,
+			// };
+			console.log("set listing");
+			this._cachedListings.set(room_id_signal(), {
+				prom: null,
+				pagination: null,
+			});
+		});
 
-		const [resource, { refetch, mutate }] = createResource(
+		const [resource, { mutate }] = createResource(
 			room_id_signal,
 			async (room_id) => {
 				const l = this._cachedListings.get(room_id)!;
@@ -112,13 +130,21 @@ export class Threads {
 				const res = await prom;
 				l!.pagination = res;
 				l!.prom = null;
+
+				for (const mut of this._listingMutators) {
+					if (mut.room_id === room_id) mut.mutate(res);
+				}
+
 				return res!;
 			},
 		);
 
-		l2.resource = resource;
-		l2.refetch = refetch;
-		l2.mutate = mutate;
+		const mut = { room_id: room_id_signal(), mutate };
+		this._listingMutators.add(mut);
+
+		createEffect(() => {
+			mut.room_id = room_id_signal();
+		});
 
 		return resource;
 	}
