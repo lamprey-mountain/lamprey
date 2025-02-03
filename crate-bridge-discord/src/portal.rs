@@ -264,11 +264,10 @@ impl Portal {
                 });
                 match message.message_reference.map(|r| r.kind) {
                     Some(MessageReferenceKind::Default) => {
-                        let reply = message
-                            .referenced_message
-                            .expect("replies should have a referenced message");
-                        let row = self.globals.get_message_dc(reply.id).await?;
-                        req.reply_id = row.map(|r| r.chat_id);
+                        if let Some(reply) = message.referenced_message {
+                            let row = self.globals.get_message_dc(reply.id).await?;
+                            req.reply_id = row.map(|r| r.chat_id);
+                        }
                     }
                     Some(MessageReferenceKind::Forward) => {
                         // TODO: support forwards once serenity supports them
