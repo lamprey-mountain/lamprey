@@ -2,6 +2,7 @@ import {
 	Media,
 	Message,
 	MessageCreate,
+	Pagination,
 	PaginationQuery,
 	PaginationResponseMessage,
 } from "sdk";
@@ -247,7 +248,7 @@ export class Messages {
 			) return oldValue!;
 			old = { thread_id, dir };
 
-			const ranges = this.cacheRanges.get(thread_id)!;
+			const ranges = this.cacheRanges.get(thread_id);
 
 			console.log("recalculate message list", {
 				thread_id,
@@ -255,37 +256,26 @@ export class Messages {
 				ranges,
 			});
 
+			if (!ranges) throw new Error("missing ranges!");
+
+			// step 1. fetch more messages if needed
 			if (dir.type === "forwards") {
 				if (dir.message_id) {
 					const r = ranges.find(dir.message_id);
-					// console.log(ranges, r);
 					if (r) {
 						const idx = r.items.findIndex((i) => i.id === dir.message_id);
 						if (idx !== -1) {
 							if (idx + dir.limit < r.len || !r.has_forward) {
 								console.log("messages reuse range for forwards");
-								const start = idx;
-								const end = Math.min(idx + dir.limit, r.len);
-								const s = r.slice(start, end);
-								assertEq(s.start, dir.message_id);
-								return s;
+							} else {
+								console.log("messages fetch more for forwards");
+								const data = await fetchList(thread_id, {
+									dir: "f",
+									limit: 100,
+									from: r.end,
+								});
+								mergeAfter(ranges, r, data);
 							}
-
-							console.log("messages fetch more for forwards");
-							const data = await fetchList(thread_id, {
-								dir: "f",
-								limit: 100,
-								from: r.end,
-							});
-							const range = mergeAfter(ranges, r, data);
-							const idx2 = range.items.findIndex((i) =>
-								i.id === dir.message_id
-							);
-							const end = idx2 + 1;
-							const start = Math.max(end - dir.limit, 0);
-							const s = range.slice(start, end);
-							assertEq(s.end, dir.message_id);
-							return s;
 						} else {
 							throw new Error("unreachable");
 						}
@@ -305,11 +295,6 @@ export class Messages {
 						if (idx !== -1) {
 							if (idx >= dir.limit) {
 								console.log("messages reuse range for backwards");
-								const end = idx + 1;
-								const start = Math.max(end - dir.limit, 0);
-								const s = r.slice(start, end);
-								assertEq(s.end, dir.message_id);
-								return s;
 							}
 
 							// fetch more
@@ -318,15 +303,7 @@ export class Messages {
 								limit: 100,
 								from: r.start,
 							});
-							const range = mergeBefore(ranges, r, data);
-							const idx2 = range.items.findIndex((i) =>
-								i.id === dir.message_id
-							);
-							const end = idx2 + 1;
-							const start = Math.max(end - dir.limit, 0);
-							const s = range.slice(start, end);
-							assertEq(s.end, dir.message_id);
-							return s;
+							mergeBefore(ranges, r, data);
 						} else {
 							throw new Error("unreachable");
 						}
@@ -340,25 +317,9 @@ export class Messages {
 				if (range.isEmpty()) {
 					const data = await fetchList(thread_id, { dir: "b", limit: 100 });
 					mergeBefore(ranges, range, data);
-					// batch(() => {
-					// 	for (const item of data.items.toReversed()) {
-					// 		this.cache.set(item.id, item);
-					// 		const existing = ranges.find(item.id);
-					// 		if (existing) {
-					// 			throw new Error("todo");
-					// 		} else {
-					// 			range.items.unshift(item);
-					// 		}
-					// 	}
-					// });
-					// range.has_backwards = data.has_more;
 				} else {
 					// don't need to do anything
 				}
-
-				const start = Math.max(range.len - dir.limit, 0);
-				const end = Math.min(start + dir.limit, range.len);
-				return range.slice(start, end);
 			} else if (dir.type === "context") {
 				const r = ranges.find(dir.message_id);
 
@@ -371,41 +332,32 @@ export class Messages {
 
 						if (hasEnoughBackwards && hasEnoughForwards) {
 							console.log("messages reuse range for context");
-							const end = Math.min(idx + dir.limit, r.len);
-							const start = Math.max(idx - dir.limit, 0);
-							const s = r.slice(start, end);
-							// 	assertEq(s.end, dir.message_id);
-							return s;
-						}
+						} else {
+							console.log("messages fetch more for context");
+							let dataBefore: Pagination<Message>;
+							let dataAfter: Pagination<Message>;
+							
+							if (!hasEnoughBackwards) {
+								dataBefore = await fetchList(thread_id, {
+									dir: "b",
+									limit: 100,
+									from: r.start,
+								});
+							}
 
-						console.log("messages fetch more for context");
-						if (!hasEnoughBackwards) {
-							const data = await fetchList(thread_id, {
-								dir: "b",
-								limit: 100,
-								from: r.start,
-							});
+							if (!hasEnoughForwards) {
+								dataAfter = await fetchList(thread_id, {
+									dir: "f",
+									limit: 100,
+									from: r.end,
+								});
+							}
+							
 							batch(() => {
-								mergeBefore(ranges, r, data);
+								if (dataBefore) mergeBefore(ranges, r, dataBefore);
+								if (dataAfter) mergeAfter(ranges, r, dataAfter);
 							});
 						}
-
-						if (!hasEnoughForwards) {
-							const data = await fetchList(thread_id, {
-								dir: "f",
-								limit: 100,
-								from: r.end,
-							});
-							batch(() => {
-								mergeAfter(ranges, r, data);
-							});
-						}
-
-						const idx2 = r.items.findIndex((i) => i.id === dir.message_id);
-						const end = idx2 + 1;
-						const start = Math.max(end - dir.limit, 0);
-						const s = r.slice(start, end);
-						return s;
 					} else {
 						// fetch thread
 						throw new Error("todo");
@@ -426,13 +378,51 @@ export class Messages {
 						range.has_backwards = data.has_before;
 						range.has_forward = data.has_after;
 					});
-
-					console.log(data, range);
-					const idx = range.items.findIndex((i) => i.id === dir.message_id);
-					const end = Math.min(idx + dir.limit + 1, range.len);
-					const start = Math.max(idx - dir.limit, 0);
-					return range.slice(start, end);
 				}
+			}
+
+			// step 2. get a slice of the message range
+			if (dir.type === "forwards") {
+				if (dir.message_id) {
+					const r = ranges.find(dir.message_id);
+					if (!r) throw new Error("failed to fetch messages");
+					const idx = r.items.findIndex((i) => i.id === dir.message_id);
+					if (idx === -1) throw new Error("failed to fetch messages");
+					const start = idx;
+					const end = Math.min(idx + dir.limit, r.len);
+					const s = r.slice(start, end);
+					assertEq(s.start, dir.message_id);
+					return s;
+				} else {
+					throw new Error("todo");
+				}
+			} else if (dir.type === "backwards") {
+				if (dir.message_id) {
+					const r = ranges.find(dir.message_id);
+					if (!r) throw new Error("failed to fetch messages");
+					const idx = r.items.findIndex((i) => i.id === dir.message_id);
+					if (idx === -1) throw new Error("failed to fetch messages");
+					const end = idx + 1;
+					const start = Math.max(end - dir.limit, 0);
+					const s = r.slice(start, end);
+					assertEq(s.end, dir.message_id);
+					return s;
+				} else {
+					const r = ranges.live;
+					const start = Math.max(r.len - dir.limit, 0);
+					const end = Math.min(start + dir.limit, r.len);
+					return r.slice(start, end);
+				}
+			} else if (dir.type === "context") {
+				const r = ranges.find(dir.message_id);
+				if (!r) throw new Error("failed to fetch messages");
+
+				const idx = r.items.findIndex((i) => i.id === dir.message_id);
+				if (idx === -1) throw new Error("failed to fetch messages");
+				const end = Math.min(idx + dir.limit, r.len);
+				const start = Math.max(idx - dir.limit, 0);
+				const s = r.slice(start, end);
+				return s;
 			}
 
 			throw new Error("unreachable");
