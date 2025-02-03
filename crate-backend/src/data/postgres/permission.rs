@@ -11,7 +11,6 @@ use super::Postgres;
 #[async_trait]
 impl DataPermission for Postgres {
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
-        let mut conn = self.pool.acquire().await?;
         let perms = query_scalar!(
             r#"
             WITH perms AS (
@@ -30,7 +29,7 @@ impl DataPermission for Postgres {
             user_id.into_inner(),
             room_id.into_inner()
         )
-        .fetch_all(&mut *conn)
+        .fetch_all(&self.pool)
         .await?;
         Ok(perms.into_iter().map(Into::into).collect())
     }
@@ -41,12 +40,11 @@ impl DataPermission for Postgres {
         user_id: UserId,
         thread_id: ThreadId,
     ) -> Result<Permissions> {
-        let mut conn = self.pool.acquire().await?;
         let room_id = query_scalar!(
             "SELECT room_id FROM thread WHERE id = $1",
             thread_id.into_inner()
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(&self.pool)
         .await?;
         let perms = self.permission_room_get(user_id, room_id.into()).await?;
         Ok(perms.into_iter().collect())

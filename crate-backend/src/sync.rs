@@ -99,6 +99,7 @@ impl Connection {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self, ws, timeout), fields(id = self.get_id()))]
     pub async fn handle_message_client(
         &mut self,
         msg: MessageClient,
@@ -169,6 +170,7 @@ impl Connection {
         Ok(())
     }
 
+    #[tracing::instrument(level = "debug", skip(self), fields(id = self.get_id()))]
     pub async fn queue_message(&mut self, msg: MessageSync) -> Result<()> {
         let mut session = match &self.state {
             ConnectionState::Authenticated { session }
@@ -292,9 +294,9 @@ impl Connection {
         self.queue.truncate(MAX_QUEUE_LEN);
     }
 
+    #[tracing::instrument(level = "debug", skip(self, ws), fields(id = self.get_id()))]
     pub async fn drain(&mut self, ws: &mut WebSocket) -> Result<()> {
         let last_seen = self.seq_client;
-        debug!("drain id={} last_seen={}", self.get_id(), last_seen);
         let mut high_water_mark = last_seen;
         for (seq, msg) in self.queue.iter().rev() {
             if seq.is_none_or(|s| s > last_seen) {
