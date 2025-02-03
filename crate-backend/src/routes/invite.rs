@@ -198,6 +198,7 @@ enum InviteWithPotentialMetadata {
     get,
     path = "/room/{room_id}/invite",
     params(
+        PaginationQuery<InviteCode>,
         ("room_id", description = "Room id"),
     ),
     tags = ["invite"],

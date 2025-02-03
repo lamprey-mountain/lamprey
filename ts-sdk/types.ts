@@ -5,12 +5,13 @@ export type Thread = components["schemas"]["Thread"];
 export type User = components["schemas"]["User"];
 export type Message = components["schemas"]["Message"] & { is_local?: true };
 export type Role = components["schemas"]["Role"];
-// export type Invite = components["schemas"]["Invite"];
+export type Invite = components["schemas"]["Invite"];
 export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreateRequest"];
-export type PaginationResponseMessage = components["schemas"]["PaginationResponse_Message"];
+export type PaginationResponseMessage =
+	components["schemas"]["PaginationResponse_Message"];
 
 export type Pagination<T> = {
 	total: number;
@@ -24,8 +25,6 @@ export type PaginationQuery = {
 	limit?: number;
 	dir?: "b" | "f";
 };
-
-export type Invite = { code: string };
 
 export type MessageReady = {
 	op: "Ready";
