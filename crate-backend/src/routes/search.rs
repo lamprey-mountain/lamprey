@@ -27,7 +27,12 @@ pub async fn search_messages(
     Json(body): Json<SearchMessageRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let res = data.search_message(user_id, body, q).await?;
+    let mut res = data.search_message(user_id, body, q).await?;
+    for message in &mut res.items {
+        for media in &mut message.attachments {
+            media.url = s.presign(&media.url).await?;
+        }
+    }
     Ok(Json(res))
 }
 
