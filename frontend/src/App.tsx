@@ -68,10 +68,11 @@ const App: Component = () => {
 	const handleContextMenu = (e: MouseEvent) => {
 		const targetEl = e.target as HTMLElement;
 		const menuEl = targetEl.closest(".has-menu") as HTMLElement | null;
+		const mediaEl = targetEl.closest("a, img, video, audio") as HTMLElement | null;
 		if (!menuEl) return;
+		if (mediaEl && targetEl.contains(mediaEl)) return;
 
 		// TODO: refactor?
-		// TODO: load targets instead of returning
 		const { messageId, roomId, threadId } = menuEl.dataset;
 		let menu: Partial<Menu> | null = null;
 
