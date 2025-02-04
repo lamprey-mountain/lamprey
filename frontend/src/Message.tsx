@@ -6,6 +6,7 @@ import { marked } from "marked";
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { AudioView, ImageView, VideoView } from "./Media.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -186,19 +187,9 @@ export function renderAttachment(a: MediaT) {
 	// console.log({ ty, params });
 
 	if (b === "image") {
-		// <div class="spacer" style={{ height: `${a.height}px`, width: `${a.width}px` }}></div>
 		return (
 			<li>
-				<div
-					class="media"
-					style={{ "aspect-ratio": `${a.width} / ${a.height}` }}
-				>
-					<img
-						src={a.url}
-						alt={a.alt ?? undefined}
-						style={{ height: `${a.height}px`, width: `${a.width}px` }}
-					/>
-				</div>
+				<ImageView media={a} />
 				<a download={a.filename} href={a.url}>download {a.filename}</a>
 				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 			</li>
@@ -206,13 +197,7 @@ export function renderAttachment(a: MediaT) {
 	} else if (b === "video") {
 		return (
 			<li>
-				<div
-					class="media"
-					style={{ "aspect-ratio": `${a.width} / ${a.height}` }}
-				>
-					<div class="spacer"></div>
-					<video height={a.height!} width={a.width!} src={a.url} controls />
-				</div>
+				<VideoView media={a} />
 				<a download={a.filename} href={a.url}>download {a.filename}</a>
 				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 			</li>
@@ -220,7 +205,7 @@ export function renderAttachment(a: MediaT) {
 	} else if (b === "audio") {
 		return (
 			<li>
-				<audio src={a.url} controls />
+				<AudioView media={a} />
 				<a download={a.filename} href={a.url}>download {a.filename}</a>
 				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 			</li>
