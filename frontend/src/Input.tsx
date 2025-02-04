@@ -35,6 +35,8 @@ export function Input(props: InputProps) {
 		}
 	}
 
+	const editor_state = () => ctx.thread_editor_state.get(props.thread.id)!;
+
 	return (
 		<div class="input">
 			<Show when={props.ts.attachments.length}>
@@ -70,13 +72,20 @@ export function Input(props: InputProps) {
 			<div class="text">
 				<label class="upload">
 					upload file
-					<input multiple type="file" onInput={uploadFile} value="upload file" />
+					<input
+						multiple
+						type="file"
+						onInput={uploadFile}
+						value="upload file"
+					/>
 				</label>
-				<Editor
-					state={ctx.thread_editor_state.get(props.thread.id)!}
-					onUpload={handleUpload}
-					placeholder="send a message..."
-				/>
+				<Show when={true || editor_state()}>
+					<Editor
+						state={editor_state()}
+						onUpload={handleUpload}
+						placeholder="send a message..."
+					/>
+				</Show>
 			</div>
 		</div>
 	);

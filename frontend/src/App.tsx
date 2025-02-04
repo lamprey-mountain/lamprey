@@ -93,6 +93,7 @@ export const Root: Component = (props: ParentProps) => {
 
 		menu,
 		thread_anchor: new ReactiveMap(),
+		thread_editor_state: new ReactiveMap(),
 		thread_highlight: new ReactiveMap(),
 		thread_scroll_pos: new Map(),
 	};
