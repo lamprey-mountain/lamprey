@@ -1,6 +1,6 @@
 import { getTimestampFromUUID } from "sdk";
 import { MediaT, MessageT, MessageType } from "./types.ts";
-import { For, Show } from "solid-js";
+import { batch, For, Show } from "solid-js";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
@@ -155,6 +155,9 @@ function ReplyView(props: ReplyProps) {
 			type: "context",
 			limit: 50, // TODO: calc dynamically
 			message_id: props.reply_id,
+		});
+		batch(() => {
+			ctx.thread_highlight.set(props.thread_id, props.reply_id);
 		});
 	};
 

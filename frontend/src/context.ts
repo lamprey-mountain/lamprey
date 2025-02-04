@@ -115,6 +115,7 @@ export type ChatCtx = {
 
 	menu: Accessor<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
+	thread_highlight: Map<string, string>;
 	thread_scroll_pos: Map<string, number>;
 };
 

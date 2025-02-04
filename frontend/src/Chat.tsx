@@ -9,6 +9,7 @@ import { createSignal } from "solid-js";
 import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
+import { MessageListAnchor } from "./api/messages.ts";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -20,8 +21,14 @@ export const ChatMain = (props: ChatProps) => {
 	const api = useApi();
 
 	const ts = () => ctx.data.thread_state[props.thread.id];
-	const anchor = () =>
-		ctx.thread_anchor.get(props.thread.id) ?? { type: "backwards", limit: 50 };
+	const anchor = (): MessageListAnchor => {
+		const a = ctx.thread_anchor.get(props.thread.id);
+		if (a) return a;
+		const r = ts()?.read_marker_id;
+		if (r) return { type: "context", limit: 50, message_id: r };
+		return { type: "backwards", limit: 50 };
+	};
+
 	const messages = api.messages.list(() => props.thread.id, anchor);
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
@@ -77,24 +84,30 @@ export const ChatMain = (props: ChatProps) => {
 		},
 	});
 
+	// TODO: all of these effects are kind of annoying to work with - there has to be a better way
+	// its also quite brittle...
+
 	// effect to update timeline
-	createRenderEffect(on(messages, (m) => {
-		if (m?.items.length) {
-			console.log("render timeline", m.items);
-			console.time("rendertimeline");
-			const rendered = renderTimeline({
-				items: m.items,
-				has_after: m.has_forward,
-				has_before: m.has_backwards,
-				read_marker_id: ts()?.read_marker_id ?? null,
-				// slice: { start: 0, end: 50 },
-			});
-			setTl((old) => [...reconcile(rendered)(old)]);
-			console.timeEnd("rendertimeline");
-		} else {
-			console.log("tried to render empty timeline");
-		}
-	}));
+	createRenderEffect(
+		on(() => [messages(), ts()?.read_marker_id] as const, ([m, rid]) => {
+			if (m?.items.length) {
+				console.log("render timeline", m.items, ts);
+				console.time("rendertimeline");
+				const rendered = renderTimeline({
+					items: m.items,
+					has_after: m.has_forward,
+					has_before: m.has_backwards,
+					read_marker_id: rid ?? null,
+					// slice: { start: 0, end: 50 },
+				});
+				setTl((old) => [...reconcile(rendered)(old)]);
+				anchor();
+				console.timeEnd("rendertimeline");
+			} else {
+				console.log("tried to render empty timeline");
+			}
+		}),
+	);
 
 	// effect to initialize new threads
 	createEffect(on(() => props.thread.id, (thread_id) => {
@@ -114,27 +127,88 @@ export const ChatMain = (props: ChatProps) => {
 		setPos();
 	});
 
-	// effect to restore saved scroll position or scroll to selected message
+	// effect to restore saved scroll position
 	let last_thread_id: string | undefined;
-	createEffect(on(() => [tl(), anchor()] as const, ([_tl, anchor]) => {
-		// make sure this runs after tl renders
-		if (messages.loading) return;
-		queueMicrotask(() => {
-			if (anchor.type === "context") {
+	createEffect(
+		on(
+			() => [tl(), messages.loading, anchor()] as const,
+			([_tl, loading, anchor]) => {
+				// make sure this runs after tl renders
+				if (loading) return;
+				queueMicrotask(() => {
+					if (anchor.type === "context") {
+						console.log("scroll to anchor");
+						// TODO: is this safe and performant?
+						const target = document.querySelector(
+							`li[data-message-id="${anchor.message_id}"]`,
+						);
+						if (target) {
+							console.log("scroll into view", target);
+							target.scrollIntoView({
+								// behavior: "smooth",
+								behavior: "instant",
+								block: "center",
+							});
+							last_thread_id = props.thread.id;
+						} else {
+							console.warn("couldn't find target to scroll to");
+						}
+					} else if (last_thread_id !== props.thread.id) {
+						const pos = ctx.thread_scroll_pos.get(props.thread.id);
+						console.log("get pos", pos);
+						if (pos === undefined || pos === -1) {
+							list.scrollTo(999999);
+						} else {
+							list.scrollTo(pos);
+						}
+						last_thread_id = props.thread.id;
+					}
+				});
+			},
+		),
+	);
+
+	// effect to highlight selected message
+	createEffect(
+		on(
+			() =>
+				[messages.loading, ctx.thread_highlight.get(props.thread.id)] as const,
+			([loading, hl]) => {
+				if (loading) return;
+				if (!hl) return;
 				console.log("scroll to anchor");
-				highlight(anchor.message_id);
-			} else if (last_thread_id !== props.thread.id) {
-				const pos = ctx.thread_scroll_pos.get(props.thread.id);
-				console.log("get pos", pos);
-				if (pos === undefined || pos === -1) {
-					list.scrollTo(999999);
-				} else {
-					list.scrollTo(pos);
+				// TODO: is this safe and performant?
+				const target = document.querySelector(
+					`li[data-message-id="${hl}"]`,
+				);
+				console.log("scroll into view + animate", hl, target);
+				if (!target) {
+					console.warn("couldn't find target to scroll to");
+					return;
 				}
-				last_thread_id = props.thread.id;
-			}
-		});
-	}));
+				target.animate([
+					{
+						boxShadow: "4px 0 0 -1px inset #cc1856",
+						backgroundColor: "#cc185622",
+						offset: 0,
+					},
+					{
+						boxShadow: "4px 0 0 -1px inset #cc1856",
+						backgroundColor: "#cc185622",
+						offset: .8,
+					},
+					{
+						boxShadow: "none",
+						backgroundColor: "transparent",
+						offset: 1,
+					},
+				], {
+					duration: 1000,
+				});
+				ctx.thread_highlight.delete(props.thread.id);
+			},
+		),
+	);
 
 	return (
 		<div class="chat">
@@ -220,40 +294,4 @@ export function renderTimeline(
 		});
 	}
 	return newItems;
-}
-
-function highlight(message_id: string) {
-	// TODO: is this safe and performant?
-	const target = document.querySelector(
-		`li[data-message-id="${message_id}"]`,
-	);
-	if (target) {
-		console.log("scroll into view + animate", target);
-		target.scrollIntoView({
-			// behavior: "smooth",
-			behavior: "instant",
-			block: "center",
-		});
-		target.animate([
-			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
-				offset: 0,
-			},
-			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
-				offset: .8,
-			},
-			{
-				boxShadow: "none",
-				backgroundColor: "transparent",
-				offset: 1,
-			},
-		], {
-			duration: 1000,
-		});
-	} else {
-		console.warn("couldn't find target to scroll to");
-	}
 }
