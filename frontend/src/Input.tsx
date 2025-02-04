@@ -36,7 +36,18 @@ export function Input(props: InputProps) {
 	}
 
 	return (
-		<div class="bottom">
+		<div class="input">
+			<Show when={props.ts.attachments.length}>
+				<ul class="attachments">
+					<For each={props.ts.attachments}>
+						{(att) => (
+							<li>
+								{renderAttachment2(props.thread, props.ts, att)}
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
 			<Show when={props.ts.reply_id}>
 				<div class="reply">
 					<button
@@ -56,18 +67,7 @@ export function Input(props: InputProps) {
 					</div>
 				</div>
 			</Show>
-			<Show when={props.ts.attachments.length}>
-				<ul class="attachments">
-					<For each={props.ts.attachments}>
-						{(att) => (
-							<li>
-								{renderAttachment2(props.thread, props.ts, att)}
-							</li>
-						)}
-					</For>
-				</ul>
-			</Show>
-			<div class="input">
+			<div class="text">
 				<label class="upload">
 					upload file
 					<input multiple type="file" onInput={uploadFile} value="upload file" />

@@ -161,10 +161,6 @@ button, input[type="submit"] {
 					color: $fg3;
 				}
 			}
-
-			& > .bottom {
-				/* self-start mt-[8px] text-fg2 cursor-pointer hover:text-fg1 hover:underline */
-			}
 		}
 
 		& > .preview > details {
@@ -188,22 +184,18 @@ button, input[type="submit"] {
 	grid-template-rows: 1fr 0;
 	contain: strict;
 
-	& > .bottom {
+	& > .input {
 		position: absolute;
 		bottom: 0;
 		width: 100%;
 		background-image: linear-gradient(to top, $bg2 25%, transparent);
 		display: flex;
+		flex-direction: column;
 		padding: 4px;
 		max-height: 50%;
-		flex-direction: column;
 		
 		& > .reply {
-			padding-left: 124px;
-			background-color: $bg2;
 			display: flex;
-			position: relative;
-			margin-bottom: -1px;
 
 			& > .info {
 				padding: 0 4px;
@@ -213,9 +205,9 @@ button, input[type="submit"] {
 			}
 
 			& > .cancel {
-				position: absolute;
-				right: 100%;
+				width: 124px;
 				border: solid 1px $sep;
+				background-color: $bg2;
 			}
 		}
 
@@ -223,7 +215,7 @@ button, input[type="submit"] {
 			padding-left: 124px;
 		}
 
-		& > .input {
+		& > .text {
 			display: flex;
 			
 			& > .upload {
@@ -243,6 +235,7 @@ button, input[type="submit"] {
 			}
 		
 			& > .editor {
+				flex: 1;
 				box-shadow: 2px 2px 8px #1114;
 			}
 		}
