@@ -73,7 +73,7 @@ export function Input(props: InputProps) {
 					<input multiple type="file" onInput={uploadFile} value="upload file" />
 				</label>
 				<Editor
-					state={props.ts.editor_state}
+					state={ctx.thread_editor_state.get(props.thread.id)!}
 					onUpload={handleUpload}
 					placeholder="send a message..."
 				/>

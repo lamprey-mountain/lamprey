@@ -1,5 +1,5 @@
 import { produce, SetStoreFunction } from "solid-js/store";
-import { Action, Attachment, Data, Menu } from "../context.ts";
+import { Action, Attachment, Data } from "../context.ts";
 import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
@@ -314,10 +314,13 @@ export function createDispatcher(
 		if (action.do === "thread.init") {
 			const { thread_id } = action;
 			if (state.thread_state[thread_id]) return;
-			update("thread_state", thread_id, {
-				editor_state: createEditorState((text) => {
+			ctx.thread_editor_state.set(
+				thread_id,
+				createEditorState((text) => {
 					dispatch({ do: "thread.send", thread_id, text });
 				}),
+			);
+			update("thread_state", thread_id, {
 				reply_id: null,
 				read_marker_id: action.read_id ?? null,
 				attachments: [],

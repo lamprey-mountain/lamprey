@@ -18,7 +18,6 @@ export type Attachment =
 	);
 
 export type ThreadState = {
-	editor_state: EditorState;
 	reply_id: string | null;
 	attachments: Array<Attachment>;
 	read_marker_id: string | null;
@@ -117,6 +116,7 @@ export type ChatCtx = {
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
 	thread_highlight: Map<string, string>;
 	thread_scroll_pos: Map<string, number>;
+	thread_editor_state: ReactiveMap<string, EditorState>;
 };
 
 export const defaultData: Data = {
