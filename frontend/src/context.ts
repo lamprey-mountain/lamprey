@@ -1,5 +1,5 @@
 import { Accessor, createContext, useContext } from "solid-js";
-import { Client, MessageReady, MessageSync, Upload } from "sdk";
+import { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
 import { InviteT, MediaT, MemberT, RoleT } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
@@ -63,13 +63,17 @@ export type Modal =
 		type: "prompt";
 		text: string;
 		cont: (text: string | null) => void;
+	}
+	| {
+		type: "media";
+		media: Media;
 	};
 
 export type Action =
 	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
 	| { do: "goto"; thread_id: string; event_id: string }
 	| { do: "menu.preview"; id: string | null }
-	// | { do: "modal.open", modal: any }
+	| { do: "modal.open", modal: Modal }
 	| { do: "modal.close" }
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
@@ -113,13 +117,13 @@ export type ChatCtx = {
 	thread_read_marker_id: ReactiveMap<string, string>;
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
-	events: Emitter<Events>,
+	events: Emitter<Events>;
 };
 
 export type Events = {
 	sync: MessageSync;
 	ready: MessageReady;
-}
+};
 
 export const defaultData: Data = {
 	room_members: {},

@@ -790,3 +790,23 @@ input[type="text"] {
 	88%  { content: "⠇ "; }
 	100% { content: "⠏ "; }
 }
+
+.modal-media > .content  {
+	& > .base {
+		background: none;
+		border: none;
+	}
+
+	& > .inner {
+		padding: 0;
+		max-width: 100%;
+	}
+}
+
+.modal-media .media {
+	max-height: 80vh;
+
+	& > .inner {
+		max-width: 80vw;
+	}
+}

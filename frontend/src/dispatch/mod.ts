@@ -1,5 +1,5 @@
 import { SetStoreFunction } from "solid-js/store";
-import { Action, Attachment, Data } from "../context.ts";
+import { Action, Attachment, Data, Modal } from "../context.ts";
 import { batch as solidBatch } from "solid-js";
 import { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
@@ -9,6 +9,7 @@ import { Api } from "../api.tsx";
 
 type Reduction =
 	| { do: "modal.close" }
+	| { do: "modal.open"; modal: Modal }
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
@@ -21,6 +22,9 @@ function reduce(
 	switch (delta.do) {
 		case "modal.close": {
 			return { ...state, modals: state.modals.slice(1) };
+		}
+		case "modal.open": {
+			return { ...state, modals: [...state.modals, delta.modal] };
 		}
 		case "modal.alert": {
 			return {

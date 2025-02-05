@@ -1,5 +1,6 @@
 import { ParentProps, VoidProps } from "solid-js";
 import { Media } from "sdk";
+import { useCtx } from "./context.ts";
 
 type MediaProps = VoidProps<{ media: Media }>;
 
@@ -12,16 +13,16 @@ export const ImageView = (props: MediaProps) => {
 	// 	unit: "byte",
 	// 	unitDisplay: "narrow",
 	// });
-	
+
 	return (
-		<Resized media={props.media}>
+		<Wrap media={props.media} popup>
 			<img
 				src={props.media.url}
 				alt={props.media.alt ?? undefined}
 				height={props.media.height!}
 				width={props.media.width!}
 			/>
-		</Resized>
+		</Wrap>
 	);
 	// <a download={a.filename} href={a.url}>download {a.filename}</a>
 	// <div class="dim">{ty} - {byteFmt.format(a.size)}</div>
@@ -29,9 +30,9 @@ export const ImageView = (props: MediaProps) => {
 
 export const VideoView = (props: MediaProps) => {
 	return (
-		<Resized media={props.media}>
+		<Wrap media={props.media}>
 			<video controls src={props.media.url} />
-		</Resized>
+		</Wrap>
 	);
 };
 
@@ -39,7 +40,8 @@ export const AudioView = (props: MediaProps) => {
 	return <audio src={props.media.url} controls />;
 };
 
-export const Resized = (props: ParentProps<{ media: Media }>) => {
+export const Wrap = (props: ParentProps<{ media: Media; popup?: boolean }>) => {
+	const ctx = useCtx();
 	return (
 		<div
 			class="media"
@@ -47,6 +49,14 @@ export const Resized = (props: ParentProps<{ media: Media }>) => {
 				"--height": `${props.media.height}px`,
 				"--width": `${props.media.width}px`,
 				"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+			}}
+			onClick={() => {
+				if (props.popup) {
+					ctx.dispatch({
+						do: "modal.open",
+						modal: { type: "media", media: props.media },
+					});
+				}
 			}}
 		>
 			<div class="inner">
