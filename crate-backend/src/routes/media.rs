@@ -140,7 +140,8 @@ async fn media_upload(
         Ordering::Equal => {
             up.temp_writer.flush().await?;
             drop(up);
-            let (_, up) = s.uploads
+            let (_, up) = s
+                .uploads
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
             let mut media = process_upload(up, media_id, user_id, s.clone()).await?;
@@ -216,6 +217,7 @@ async fn media_check(
     Ok((StatusCode::NO_CONTENT, headers))
 }
 
+#[derive(Clone, Copy)]
 struct Metadata {
     height: Option<u64>,
     width: Option<u64>,
@@ -255,7 +257,7 @@ mod ffprobe {
     }
 }
 
-async fn get_metadata(file: &std::path::Path) -> Result<Metadata> {
+async fn get_metadata(file: &std::path::Path) -> Result<Option<Metadata>> {
     let out = Command::new("ffprobe")
         .args([
             "-v",
@@ -269,6 +271,9 @@ async fn get_metadata(file: &std::path::Path) -> Result<Metadata> {
         .arg(file)
         .output()
         .await?;
+    if !out.status.success() {
+        return Ok(None);
+    }
     let json: ffprobe::Metadata = serde_json::from_slice(&out.stdout)?;
     let duration: Option<f64> = match json.format.duration {
         Some(s) => Some(s.parse::<f64>()? * 1000.),
@@ -279,11 +284,11 @@ async fn get_metadata(file: &std::path::Path) -> Result<Metadata> {
         .iter()
         .find(|i| i.disposition.default == 1 && i.width.is_some())
         .or_else(|| json.streams.iter().find(|i| i.width.is_some()));
-    Ok(Metadata {
+    Ok(Some(Metadata {
         height: dims.and_then(|i| i.height),
         width: dims.and_then(|i| i.width),
         duration: duration.map(|i| i as u64),
-    })
+    }))
 }
 
 async fn get_mime_type(file: &std::path::Path) -> Result<String> {
@@ -292,7 +297,12 @@ async fn get_mime_type(file: &std::path::Path) -> Result<String> {
     Ok(mime)
 }
 
-async fn process_upload(up: MediaUpload, media_id: MediaId, user_id: UserId, s: Arc<ServerState>) -> Result<Media> {
+async fn process_upload(
+    up: MediaUpload,
+    media_id: MediaId,
+    user_id: UserId,
+    s: Arc<ServerState>,
+) -> Result<Media> {
     let p = up.temp_file.file_path().to_owned();
     let url = format!("media/{media_id}");
     let (meta, mime) = tokio::try_join!(get_metadata(&p), get_mime_type(&p))?;
@@ -323,9 +333,9 @@ async fn process_upload(up: MediaUpload, media_id: MediaId, user_id: UserId, s: 
                 thumbnail_url: None,
                 mime,
                 size: up.create.size,
-                height: meta.height,
-                width: meta.width,
-                duration: meta.duration,
+                height: meta.and_then(|m| m.height),
+                width: meta.and_then(|m| m.width),
+                duration: meta.and_then(|m| m.duration),
             },
         )
         .await?;
