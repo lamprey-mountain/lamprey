@@ -118,7 +118,7 @@ export const Root: Component = (props: ParentProps) => {
 	const handleContextMenu = (e: MouseEvent) => {
 		const targetEl = e.target as HTMLElement;
 		const menuEl = targetEl.closest(".has-menu") as HTMLElement | null;
-		const mediaEl = targetEl.closest("a, img, video, audio") as
+		const mediaEl = targetEl.closest("a:not(.has-menu), img, video, audio") as
 			| HTMLElement
 			| null;
 		if (!menuEl) return;
