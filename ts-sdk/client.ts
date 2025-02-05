@@ -5,7 +5,7 @@ import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
 import { createObservable, Observer } from "./observable.ts";
 export * from "./observable.ts";
 
-export type ClientState = "stopped" | "connected" | "ready" | "reconnecting";
+export type ClientState = "stopped" | "connecting" | "connected" | "ready";
 
 export type ClientOptions = {
 	baseUrl: string;
@@ -59,7 +59,7 @@ export function createClient(opts: ClientOptions): Client {
 	}
 
 	function setupWebsocket() {
-		if (state.get() !== "reconnecting") return;
+		if (state.get() !== "connecting") return;
 
 		ws = new WebSocket(new URL("/api/v1/sync", opts.baseUrl));
 		ws.addEventListener("message", (e) => {
@@ -89,20 +89,22 @@ export function createClient(opts: ClientOptions): Client {
 		});
 
 		ws.addEventListener("error", (e) => {
-			setState("reconnecting");
+			if (state.get() === "stopped") return;
+			setState("connecting");
 			console.error(e);
 			ws.close();
 		});
 
 		ws.addEventListener("close", () => {
-			setState("reconnecting");
+			if (state.get() === "stopped") return;
+			setState("connecting");
 			setTimeout(setupWebsocket, 1000);
 		});
 	}
 
 	function start(token?: string) {
 		if (token) opts.token = token;
-		setState("reconnecting");
+		setState("connecting");
 		if (ws) {
 			ws.close();
 		} else {
