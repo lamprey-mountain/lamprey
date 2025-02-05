@@ -716,6 +716,8 @@ input[type="text"] {
 
 .attachments {
 	display: flex;
+	overflow-x: auto;
+	max-width: 100%;
 
 	& > li {
 		background-color: $bg3;
