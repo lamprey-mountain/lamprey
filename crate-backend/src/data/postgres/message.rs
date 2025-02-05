@@ -116,14 +116,12 @@ impl DataMessage for Postgres {
     async fn message_version_get(
         &self,
         thread_id: ThreadId,
-        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<Message> {
         let row = query_file_as!(
             DbMessage,
             "sql/message_version_get.sql",
             thread_id.into_inner(),
-            message_id.into_inner(),
             version_id.into_inner()
         )
         .fetch_one(&self.pool)
@@ -134,13 +132,11 @@ impl DataMessage for Postgres {
     async fn message_version_delete(
         &self,
         _thread_id: ThreadId,
-        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()> {
         let now = time::OffsetDateTime::now_utc().unix_timestamp();
         query!(
-            "UPDATE message SET deleted_at = $3 WHERE id = $1 AND version_id = $2",
-            message_id.into_inner(),
+            "UPDATE message SET deleted_at = $2 WHERE version_id = $1",
             version_id.into_inner(),
             now
         )

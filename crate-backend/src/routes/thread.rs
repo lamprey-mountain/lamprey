@@ -157,8 +157,8 @@ async fn thread_update(
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct AckReq {
-    /// The last read message id.
-    message_id: MessageId,
+    /// The last read message id. Will be resolved from version_id if empty.
+    message_id: Option<MessageId>,
 
     /// The last read id in this thread. Currently unused, may be deprecated later?
     version_id: MessageVerId,
@@ -188,7 +188,7 @@ struct AckRes {
     )
 )]
 async fn thread_ack(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
@@ -196,8 +196,12 @@ async fn thread_ack(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let message_id = json.message_id;
     let version_id = json.version_id;
+    let message_id = if let Some(message_id) = json.message_id {
+        message_id
+    } else {
+        data.message_version_get(thread_id, version_id).await?.id
+    };
     data.unread_put(user_id, thread_id, message_id, version_id)
         .await?;
     Ok(Json(AckRes {

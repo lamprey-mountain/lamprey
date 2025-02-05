@@ -179,13 +179,11 @@ pub trait DataMessage {
     async fn message_version_get(
         &self,
         thread_id: ThreadId,
-        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<Message>;
     async fn message_version_delete(
         &self,
         thread_id: ThreadId,
-        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()>;
     async fn message_version_list(

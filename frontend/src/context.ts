@@ -43,7 +43,12 @@ export type Menu =
 	& (
 		| { type: "room"; room_id: string }
 		| { type: "thread"; thread_id: string }
-		| { type: "message"; thread_id: string; message_id: string }
+		| {
+			type: "message";
+			thread_id: string;
+			message_id: string;
+			version_id: string;
+		}
 	);
 
 export type Modal =
@@ -78,7 +83,7 @@ export type Action =
 	| {
 		do: "thread.mark_read";
 		thread_id: string;
-		message_id: string;
+		message_id?: string;
 		version_id: string;
 		delay?: boolean;
 		also_local?: boolean;

@@ -10,13 +10,10 @@ export function ThreadMenu(props: { thread_id: string }) {
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
 		const thread = api.threads.cache.get(props.thread_id)!;
-		const message_id = api.messages.cacheRanges.get(props.thread_id)?.live.end;
-		if (!message_id) throw new Error("fixme: last message id");
 		ctx.dispatch({
 			do: "thread.mark_read",
 			thread_id: props.thread_id,
 			also_local: true,
-			message_id,
 			version_id: thread.last_version_id,
 		});
 	};

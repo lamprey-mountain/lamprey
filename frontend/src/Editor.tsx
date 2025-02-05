@@ -1,4 +1,9 @@
-import { Command, EditorState, TextSelection } from "prosemirror-state";
+import {
+	Command,
+	EditorState,
+	Plugin,
+	TextSelection,
+} from "prosemirror-state";
 import {
 	Decoration,
 	DecorationAttrs,
@@ -10,7 +15,6 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { marked, Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
-import { useCtx } from "./context.ts";
 
 const md = marked.use({
 	breaks: true,
@@ -66,6 +70,7 @@ type EditorProps = {
 	placeholder?: string;
 	disabled?: boolean;
 	class?: string;
+	state: EditorState;
 	onUpload?: (file: File) => void;
 };
 
@@ -151,26 +156,20 @@ export function createEditorState(onSubmit: (text: string) => void) {
 					return true;
 				},
 			}),
+			// (cfg: EditorStateConfig) => {
+			// 	return cfg.doc;
+			// },
 		],
 	});
 }
 
 export const Editor = (props: EditorProps) => {
-	const ctx = useCtx();
 	let editorEl: HTMLDivElement;
 
 	onMount(() => {
-		let state = ctx.thread_editor_state.get(props.thread_id)!;
-		if (!state) {
-			state = createEditorState((text) => {
-				ctx.dispatch({ do: "thread.send", thread_id: props.thread_id, text });
-			});
-			ctx.thread_editor_state.set(props.thread_id, state);
-		}
-		
 		const view = new EditorView({ mount: editorEl }, {
 			domParser: DOMParser.fromSchema(schema),
-			state,
+			state: props.state,
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
@@ -537,6 +536,9 @@ export const Editor = (props: EditorProps) => {
 				editable: () => !(props.disabled ?? false),
 			});
 			// if (props.disabled)
+		});
+		createEffect(() => {
+			view.updateState(props.state);
 		});
 		onCleanup(() => view.destroy());
 	});

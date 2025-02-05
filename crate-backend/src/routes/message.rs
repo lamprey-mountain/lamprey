@@ -310,7 +310,7 @@ async fn message_edit(
             .await?;
     }
     let mut message = data
-        .message_version_get(thread_id, message_id, version_id)
+        .message_version_get(thread_id, version_id)
         .await?;
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
@@ -408,7 +408,7 @@ async fn message_version_list(
     )
 )]
 async fn message_version_get(
-    Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
+    Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
@@ -416,7 +416,7 @@ async fn message_version_get(
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut message = data
-        .message_version_get(thread_id, message_id, version_id)
+        .message_version_get(thread_id, version_id)
         .await?;
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
@@ -439,7 +439,7 @@ async fn message_version_get(
     )
 )]
 async fn message_version_delete(
-    Path((thread_id, message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
+    Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
@@ -447,7 +447,7 @@ async fn message_version_delete(
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data
-        .message_version_get(thread_id, message_id, version_id)
+        .message_version_get(thread_id, version_id)
         .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
@@ -456,7 +456,7 @@ async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    data.message_version_delete(thread_id, message_id, version_id)
+    data.message_version_delete(thread_id, version_id)
         .await?;
     Ok(Json(()))
 }

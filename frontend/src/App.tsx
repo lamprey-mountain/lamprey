@@ -128,30 +128,34 @@ export const Root: Component = (props: ParentProps) => {
 		if (mediaEl && targetEl.contains(mediaEl)) return;
 
 		// TODO: refactor?
-		const { messageId, roomId, threadId } = menuEl.dataset;
+		const { messageId: message_id, roomId: room_id, threadId: thread_id } =
+			menuEl.dataset;
 		let menu: Partial<Menu> | null = null;
 
-		if (messageId) {
-			const threadId = api.messages.cache.get(messageId)?.thread_id;
-			if (!threadId) return;
+		if (message_id) {
+			const message = api.messages.cache.get(message_id);
+			if (!message) return;
+			const thread_id = message.thread_id;
+			const version_id = message.version_id;
 			menu = {
 				type: "message",
-				thread_id: threadId,
-				message_id: messageId,
+				thread_id,
+				message_id,
+				version_id,
 			};
 		}
 
-		if (threadId) {
+		if (thread_id) {
 			menu = {
 				type: "thread",
-				thread_id: threadId,
+				thread_id,
 			};
 		}
 
-		if (roomId) {
+		if (room_id) {
 			menu = {
 				type: "room",
-				room_id: roomId,
+				room_id,
 			};
 		}
 
@@ -336,6 +340,7 @@ function Overlay() {
 					<MessageMenu
 						thread_id={menu.thread_id}
 						message_id={menu.message_id}
+						version_id={menu.version_id}
 					/>
 				);
 			}

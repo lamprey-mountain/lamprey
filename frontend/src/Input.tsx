@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch } from "solid-js/web";
 import { Attachment, useCtx } from "./context.ts";
 import { ThreadT } from "./types.ts";
-import Editor from "./Editor.tsx";
+import Editor, { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { renderAttachment } from "./Message.tsx";
 import { useApi } from "./api.tsx";
@@ -36,6 +36,18 @@ export function Input(props: InputProps) {
 	}
 
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
+
+	const editor_state = () => {
+		let state = ctx.thread_editor_state.get(props.thread.id)!;
+		// if (!state) {
+		if (true) {
+			state = createEditorState((text) => {
+				ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+			});
+			ctx.thread_editor_state.set(props.thread.id, state);
+		}
+		return state;
+	}
 
 	return (
 		<div class="input">
@@ -76,6 +88,7 @@ export function Input(props: InputProps) {
 				</label>
 				<Editor
 					thread_id={props.thread.id}
+					state={editor_state()}
 					onUpload={handleUpload}
 					placeholder="send a message..."
 				/>

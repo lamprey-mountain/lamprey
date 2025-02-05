@@ -5,14 +5,23 @@ import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 // should i have a separate one for bulk messages?
-export function MessageMenu(props: { thread_id: string; message_id: string }) {
+
+type MessageMenuProps = {
+	thread_id: string;
+	message_id: string;
+	version_id: string;
+};
+
+export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const message = api.messages.fetch(
 		() => props.thread_id,
 		() => props.message_id,
 	);
+
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
+
 	const setReply = () => {
 		ctx.thread_reply_id.set(props.thread_id, props.message_id);
 	};
@@ -23,10 +32,11 @@ export function MessageMenu(props: { thread_id: string; message_id: string }) {
 		const index = tl.findIndex((i) => i.id === props.message_id && !i.is_local);
 		const next = tl[index - 1];
 		const next_id = next?.id ?? props.message_id;
+		const next_version_id = next?.version_id ?? props.version_id;
 		ctx.dispatch({
 			do: "thread.mark_read",
 			thread_id: props.thread_id,
-			version_id: next_id,
+			version_id: next_version_id,
 			message_id: next_id,
 			also_local: true,
 		});

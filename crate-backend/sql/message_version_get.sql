@@ -21,4 +21,4 @@ SELECT
 FROM message AS msg
 JOIN usr ON usr.id = msg.author_id
 left JOIN att_json ON att_json.version_id = msg.version_id
-     WHERE thread_id = $1 AND msg.id = $2 AND msg.version_id = $3 AND msg.deleted_at IS NULL
+     WHERE thread_id = $1 AND msg.version_id = $2 AND msg.deleted_at IS NULL
