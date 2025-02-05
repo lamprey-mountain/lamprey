@@ -376,6 +376,10 @@ em {
 .markdown {
 	& ul, ol {
 		white-space: normal;
+
+		& ul, ol {
+			margin-left: 1rem;
+		}
 	}
 
 	& li {
