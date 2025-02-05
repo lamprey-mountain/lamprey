@@ -34,9 +34,16 @@ pub struct ConfigPortal {
     pub discord_webhook: String,
 }
 
+impl ConfigPortal {
+    #[inline]
+    pub fn discord_channel_or_thread_id(&self) -> DcChannelId {
+        self.discord_thread_id.unwrap_or(self.discord_channel_id)
+    }
+}
+
 impl Config {
     pub fn portal_by_discord_id(&self, id: DcChannelId) -> Option<&ConfigPortal> {
-        self.portal.iter().find(|i| i.discord_channel_id == id)
+        self.portal.iter().find(|i| i.discord_channel_or_thread_id() == id)
     }
 
     pub fn portal_by_thread_id(&self, id: ThreadId) -> Option<&ConfigPortal> {

@@ -1,3 +1,4 @@
+-- FIXME: doesn't work if usr.id = null
 with last_id as (
     select thread_id, max(version_id) as last_version_id from message group by thread_id
 ), message_coalesced AS (

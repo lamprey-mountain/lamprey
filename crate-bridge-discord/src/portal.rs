@@ -204,6 +204,7 @@ impl Portal {
                 let Some(existing) = self.globals.get_message(message_id).await? else {
                     return Ok(());
                 };
+                self.globals.delete_message(message_id).await?;
                 let (send, recv) = oneshot::channel();
                 self.globals
                     .dc_chan
@@ -388,6 +389,7 @@ impl Portal {
                 let Some(existing) = self.globals.get_message_dc(message_id).await? else {
                     return Ok(());
                 };
+                self.globals.delete_message_dc(message_id).await?;
                 let (send, recv) = oneshot::channel();
                 let thread_id = self.thread_id();
                 self.globals

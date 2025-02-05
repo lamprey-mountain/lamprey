@@ -12,6 +12,7 @@ pub struct MessageMetadata {
     pub chat_id: MessageId,
     pub chat_thread_id: ThreadId,
     pub discord_id: DcMessageId,
+    /// the THREAD id, falling back to channel id
     pub discord_channel_id: DcChannelId,
 }
 
@@ -88,6 +89,8 @@ pub trait Data {
     async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>>;
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()>;
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()>;
+    async fn delete_message(&self, message_id: MessageId) -> Result<()>;
+    async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()>;
 }
 
 #[async_trait]
@@ -195,5 +198,21 @@ impl Data for Globals {
         .fetch_optional(&self.pool)
         .await?;
         Ok(row.map(|r| r.try_into()).transpose()?)
+    }
+
+    async fn delete_message(&self, message_id: MessageId) -> Result<()> {
+        let b1 = message_id.to_string();
+        let row = query!("DELETE FROM message WHERE chat_id = ?", b1)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()> {
+        let b1 = message_id.to_string();
+        let row = query!("DELETE FROM message WHERE discord_id = ?", b1)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
     }
 }

@@ -79,7 +79,7 @@ impl EventHandler for Handler {
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
         globals.portal_send_dc(
-            message.channel_id,
+            message.thread.as_ref().map(|t| t.id).unwrap_or(message.channel_id),
             PortalMessage::DiscordMessageCreate { message },
         );
     }
