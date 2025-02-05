@@ -738,16 +738,23 @@ input[type="text"] {
 }
 
 .media {
-	max-height: min(30vh, 200px);
-	max-width: min(600px, 100%);
 	contain: content;
+	max-height: min(50vh, 600px);
+	aspect-ratio: var(--aspect-ratio);
+	
+	& .inner {
+		max-width: min(600px, 50vw);
+		aspect-ratio: var(--aspect-ratio);
+	}
 
-	& > .spacer {
-		background-color: $bg1;
+	& .loader {
 		padding: 8px;
+		background-color: $bg1;
+		font-family: var(--font-mono);
 		max-height: 100%;
 		max-width: 100%;
-		font-family: var(--font-mono);
+		height: var(--height);
+		width: var(--width);
 		
 		&:before {
 			content: "";
@@ -756,10 +763,12 @@ input[type="text"] {
 	}
 
 	& img, video {
-		position: absolute;
+		display: block;
+		position: fixed;
 		top: 0;
-		max-height: 100%;
-		max-width: 100%;
+		left: 0;
+		height: 100%;
+		width: 100%;
 	}
 }
 
