@@ -1,9 +1,10 @@
 import { Accessor, createContext, useContext } from "solid-js";
-import { Client, Upload } from "sdk";
+import { Client, MessageReady, MessageSync, Upload } from "sdk";
 import { InviteT, MediaT, MemberT, RoleT } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
 import { ReactiveMap } from "@solid-primitives/map";
+import { Emitter } from "@solid-primitives/event-bus";
 
 export type Slice = {
 	start: number;
@@ -112,7 +113,13 @@ export type ChatCtx = {
 	thread_read_marker_id: ReactiveMap<string, string>;
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
+	events: Emitter<Events>,
 };
+
+export type Events = {
+	sync: MessageSync;
+	ready: MessageReady;
+}
 
 export const defaultData: Data = {
 	room_members: {},

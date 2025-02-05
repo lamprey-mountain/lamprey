@@ -48,6 +48,7 @@ export const ChatMain = (props: ChatProps) => {
 	const autoscroll = () =>
 		!messages()?.has_forward && anchor().type !== "context";
 
+	let last_thread_id: string | undefined;
 	const list = createList({
 		items: tl,
 		autoscroll,
@@ -56,6 +57,7 @@ export const ChatMain = (props: ChatProps) => {
 		onPaginate(dir) {
 			// FIXME: this tends to fire an excessive number of times
 			// it's not a problem when *actually* paginating, but is for eg. marking threads read or scrolling to replies
+			console.log("paginate", dir, messages.loading);
 			if (messages.loading) return;
 			const thread_id = props.thread.id;
 
@@ -89,6 +91,42 @@ export const ChatMain = (props: ChatProps) => {
 				});
 			}
 		},
+		onRestore() {
+			const a = anchor();
+			if (a.type === "context") {
+				// TODO: is this safe and performant?
+				const target = document.querySelector(
+					`li[data-message-id="${a.message_id}"]`,
+				);
+				console.log("scroll restore: to anchor", a.message_id, target);
+				if (target) {
+					last_thread_id = props.thread.id;
+					target.scrollIntoView({
+						behavior: "instant",
+						block: "center",
+					});
+					const hl = ctx.thread_highlight.get(props.thread.id);
+					if (hl) scrollAndHighlight(hl);
+					return true;
+				} else {
+					console.warn("couldn't find target to scroll to");
+					return false;
+				}
+			} else if (last_thread_id !== props.thread.id) {
+				const pos = ctx.thread_scroll_pos.get(props.thread.id);
+				console.log("scroll restore: load pos", pos);
+				if (pos === undefined || pos === -1) {
+					list.scrollTo(999999);
+				} else {
+					list.scrollTo(pos);
+				}
+				last_thread_id = props.thread.id;
+				return true;
+			} else {
+				console.log("nothing special");
+				return false;
+			}
+		},
 	});
 
 	// TODO: all of these effects are kind of annoying to work with - there has to be a better way
@@ -117,107 +155,50 @@ export const ChatMain = (props: ChatProps) => {
 	);
 
 	// effect to initialize new threads
-	createEffect(() => {
-		const tid = props.thread.id;
+	createEffect(on(() => props.thread.id, (thread_id) => {
 		const rid = props.thread.last_read_id ?? props.thread.last_version_id;
-		if (ctx.thread_read_marker_id.has(tid)) return;
-		ctx.thread_read_marker_id.set(tid, rid);
-	});
+		if (ctx.thread_read_marker_id.has(thread_id)) return;
+		ctx.thread_read_marker_id.set(thread_id, rid);
+	}));
 
 	// effect to update saved scroll position
 	const setPos = throttle(() => {
 		const pos = list.isAtBottom() ? -1 : list.scrollPos();
-		console.log("set pos", pos);
 		ctx.thread_scroll_pos.set(props.thread.id, pos);
 	}, 300);
 
-	createEffect(() => {
-		list.scrollPos();
-		setPos();
-	});
+	// called both during reanchor and when thread_highlight changes
+	function scrollAndHighlight(hl?: string) {
+		if (!hl) return;
+		const target = document.querySelector(
+			`li[data-message-id="${hl}"]`,
+		);
+		console.log("scroll highlight", hl, target);
+		if (!target) {
+			// console.warn("couldn't find target to scroll to");
+			return;
+		}
+		// target.scrollIntoView({
+		// 	behavior: "instant",
+		// 	block: "nearest",
+		// });
+		// target.scrollIntoView({
+		// 	behavior: "smooth",
+		// 	block: "center",
+		// });
+		target.scrollIntoView({
+			behavior: "instant",
+			block: "center",
+		});
+		highlight(target);
+		ctx.thread_highlight.delete(props.thread.id);
+	}
 
-	// effect to restore saved scroll position
-	let last_thread_id: string | undefined;
 	createEffect(
-		on(
-			() => [tl(), messages.loading, anchor()] as const,
-			([_tl, loading, anchor]) => {
-				// make sure this runs after tl renders
-				if (loading) return;
-				queueMicrotask(() => {
-					if (anchor.type === "context") {
-						console.log("scroll to anchor");
-						// TODO: is this safe and performant?
-						const target = document.querySelector(
-							`li[data-message-id="${anchor.message_id}"]`,
-						);
-						if (target) {
-							console.log("scroll into view", target);
-							target.scrollIntoView({
-								// behavior: "smooth",
-								behavior: "instant",
-								block: "center",
-							});
-							last_thread_id = props.thread.id;
-						} else {
-							console.warn("couldn't find target to scroll to");
-						}
-					} else if (last_thread_id !== props.thread.id) {
-						const pos = ctx.thread_scroll_pos.get(props.thread.id);
-						console.log("get pos", pos);
-						if (pos === undefined || pos === -1) {
-							list.scrollTo(999999);
-						} else {
-							list.scrollTo(pos);
-						}
-						last_thread_id = props.thread.id;
-					}
-				});
-			},
-		),
+		on(() => ctx.thread_highlight.get(props.thread.id), scrollAndHighlight),
 	);
 
-	// effect to highlight selected message
-	createEffect(
-		on(
-			() =>
-				[messages.loading, ctx.thread_highlight.get(props.thread.id)] as const,
-			([loading, hl]) => {
-				if (loading) return;
-				if (!hl) return;
-				console.log("scroll to anchor");
-				// TODO: is this safe and performant?
-				const target = document.querySelector(
-					`li[data-message-id="${hl}"]`,
-				);
-				console.log("scroll into view + animate", hl, target);
-				if (!target) {
-					console.warn("couldn't find target to scroll to");
-					return;
-				}
-				target.animate([
-					{
-						boxShadow: "4px 0 0 -1px inset #cc1856",
-						backgroundColor: "#cc185622",
-						offset: 0,
-					},
-					{
-						boxShadow: "4px 0 0 -1px inset #cc1856",
-						backgroundColor: "#cc185622",
-						offset: .8,
-					},
-					{
-						boxShadow: "none",
-						backgroundColor: "transparent",
-						offset: 1,
-					},
-				], {
-					duration: 1000,
-				});
-				ctx.thread_highlight.delete(props.thread.id);
-			},
-		),
-	);
+	createEffect(on(list.scrollPos, setPos));
 
 	return (
 		<div class="chat">
@@ -301,4 +282,26 @@ export function renderTimeline(
 		});
 	}
 	return newItems;
+}
+
+function highlight(el: Element) {
+	el.animate([
+		{
+			boxShadow: "4px 0 0 -1px inset #cc1856",
+			backgroundColor: "#cc185622",
+			offset: 0,
+		},
+		{
+			boxShadow: "4px 0 0 -1px inset #cc1856",
+			backgroundColor: "#cc185622",
+			offset: .8,
+		},
+		{
+			boxShadow: "none",
+			backgroundColor: "transparent",
+			offset: 1,
+		},
+	], {
+		duration: 1000,
+	});
 }

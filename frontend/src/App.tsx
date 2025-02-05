@@ -12,12 +12,13 @@ import {
 	chatctx,
 	Data,
 	defaultData,
+	Events,
 	Menu,
 	useCtx,
 } from "./context.ts";
 import { createStore } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
-import { createClient, MessageReady, MessageSync } from "sdk";
+import { createClient } from "sdk";
 import { createApi, useApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -61,10 +62,7 @@ const App: Component = () => {
 
 // TODO: refactor bootstrap code?
 export const Root: Component = (props: ParentProps) => {
-	const events = createEmitter<{
-		sync: MessageSync;
-		ready: MessageReady;
-	}>();
+	const events = createEmitter<Events>();
 	const client = createClient({
 		baseUrl: BASE_URL,
 		onSync(msg) {
@@ -91,6 +89,7 @@ export const Root: Component = (props: ParentProps) => {
 			throw new Error("oh no!");
 		},
 
+		events,
 		menu,
 		thread_anchor: new ReactiveMap(),
 		thread_attachments: new ReactiveMap(),

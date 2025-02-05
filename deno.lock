@@ -12,6 +12,7 @@
     "npm:@solid-primitives/event-bus@^1.1.0": "1.1.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/intersection-observer@^2.2.0": "2.2.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/map@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
+    "npm:@solid-primitives/resize-observer@^2.1.0": "2.1.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/scheduled@^1.5.0": "1.5.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/set@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/websocket@*": "1.2.2_solid-js@1.9.3__seroval@1.1.1",
@@ -582,6 +583,13 @@
         "solid-js"
       ]
     },
+    "@solid-primitives/event-listener@2.4.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-TSfR1PNTfojFEYGSxSMCnUhXsaYWBo4p+cm73QmWODa9YnaQAk6PB7VjzG2bOT2D817VlvuOqTj0Qdq+MZrdGg==",
+      "dependencies": [
+        "@solid-primitives/utils",
+        "solid-js"
+      ]
+    },
     "@solid-primitives/intersection-observer@2.2.0_solid-js@1.9.3__seroval@1.1.1": {
       "integrity": "sha512-Y0+1PpK0s5kvQT/0OUHWD39GPuELSke2YxXdTRADyN+KaBgDwBAjIwfVWfv3cCDP65VDlt0Cn1PHCYyqNzdirw==",
       "dependencies": [
@@ -596,6 +604,23 @@
         "solid-js"
       ]
     },
+    "@solid-primitives/resize-observer@2.1.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-tO9MDAc2pNjpcRd5B8LWbiR1qzIgvGZ5BtTuO98N7CLwd+fnuyGwtlQtJpz5hcLcTnoawpQYLpiRGNgaYW+YzQ==",
+      "dependencies": [
+        "@solid-primitives/event-listener",
+        "@solid-primitives/rootless",
+        "@solid-primitives/static-store",
+        "@solid-primitives/utils",
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/rootless@1.5.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-YJ+EveQeDv9DLqfDKfsPAAGy2x3vBruoD23yn+nD2dT84QjoBxWT1T0qA0TMFjek6/xuN3flqnHtQ4r++4zdjg==",
+      "dependencies": [
+        "@solid-primitives/utils",
+        "solid-js"
+      ]
+    },
     "@solid-primitives/scheduled@1.5.0_solid-js@1.9.3__seroval@1.1.1": {
       "integrity": "sha512-RVw24IRNh1FQ4DCMb3OahB70tXIwc5vH8nhR4nNPsXwUPQeuOkLsDI5BlxaPk0vyZgqw9lDpufgI3HnPwplgDw==",
       "dependencies": [
@@ -606,6 +631,13 @@
       "integrity": "sha512-P1Tp001m8ib5XCi/LEJHh2QsoS2uPO86HewtbrSxr2axt5te9EGc0UOwNKTPxNvNSLNHteUw5IrzDsEklW4m3g==",
       "dependencies": [
         "@solid-primitives/trigger",
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/static-store@0.1.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-6Coau0Kv/dF83UQpbBzc+gnJafOQAPe2jCbB4jmTK5UocsR5cWmFBVRm3kin+nZFVaO4WkuELw0cKANWgTVh8Q==",
+      "dependencies": [
+        "@solid-primitives/utils",
         "solid-js"
       ]
     },
@@ -3176,6 +3208,7 @@
           "npm:@solid-primitives/event-bus@^1.1.0",
           "npm:@solid-primitives/intersection-observer@^2.2.0",
           "npm:@solid-primitives/map@0.6",
+          "npm:@solid-primitives/resize-observer@^2.1.0",
           "npm:@solid-primitives/scheduled@^1.5.0",
           "npm:@solid-primitives/set@0.6",
           "npm:@solid-primitives/websocket@*",

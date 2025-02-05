@@ -1,21 +1,16 @@
 import { JSX } from "solid-js/jsx-runtime";
-import { For, on, onMount } from "solid-js";
-import {
-	Accessor,
-	createComputed,
-	createEffect,
-	createSignal,
-	onCleanup,
-} from "solid-js";
+import { createComputed, For, on } from "solid-js";
+import { Accessor, createEffect, createSignal } from "solid-js";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { createResizeObserver } from "@solid-primitives/resize-observer";
 // import { throttle } from "@solid-primitives/scheduled";
 
-export type TimelineStatus = "loading" | "update" | "ready";
+// export type TimelineStatus = "loading" | "update" | "ready";
 
-export type SliceInfo = {
-	start: number;
-	end: number;
-};
+// export type SliceInfo = {
+// 	start: number;
+// 	end: number;
+// };
 
 // TODO: dynamically calculate how many events are needed
 // const SLICE_COUNT = 100;
@@ -45,6 +40,7 @@ export function createList<T>(options: {
 	onPaginate?: (dir: "forwards" | "backwards") => void;
 	// onScroll?: (pos: number) => void;
 	onContextMenu?: (e: MouseEvent) => void;
+	onRestore?: () => boolean;
 }) {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
@@ -76,9 +72,10 @@ export function createList<T>(options: {
 		}
 	}
 
-	const resizes = new ResizeObserver((_entries) => {
+	createResizeObserver(wrapperEl, () => {
 		// NOTE: fine for instantaneous resizes, janky when trying to smoothly resize
 		if (isAtBottom() && options.autoscroll?.() || false) {
+			console.log("autoscroll on resize");
 			wrapperEl()!.scrollTo({ top: 999999, behavior: "instant" });
 		}
 	});
@@ -93,10 +90,6 @@ export function createList<T>(options: {
 		setTopEl(newTopEl);
 		setBottomEl(newBottomEl);
 	}
-
-	onCleanup(() => {
-		resizes.disconnect();
-	});
 
 	return {
 		scrollPos,
@@ -119,7 +112,7 @@ export function createList<T>(options: {
 				const wrap = wrapperEl();
 				const shouldAutoscroll = isAtBottom() &&
 					(options.autoscroll?.() || false);
-				if (!wrap) return setRefs();
+				if (!wrap || options.onRestore?.()) return setRefs();
 				if (shouldAutoscroll) {
 					console.log("autoscrolled");
 					wrap.scrollTo({ top: 999999, behavior: "instant" });
@@ -149,10 +142,6 @@ export function createList<T>(options: {
 				if (!bottomEl) return;
 				setBottomEl(bottomEl);
 			}));
-
-			onMount(() => {
-				resizes.observe(wrapperEl()!);
-			});
 
 			function handleScroll() {
 				const pos = wrapperEl()!.scrollTop;

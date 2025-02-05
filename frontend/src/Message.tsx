@@ -156,9 +156,7 @@ function ReplyView(props: ReplyProps) {
 			limit: 50, // TODO: calc dynamically
 			message_id: props.reply_id,
 		});
-		batch(() => {
-			ctx.thread_highlight.set(props.thread_id, props.reply_id);
-		});
+		ctx.thread_highlight.set(props.thread_id, props.reply_id);
 	};
 
 	return (
