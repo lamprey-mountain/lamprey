@@ -13,12 +13,9 @@ export function MessageMenu(props: { thread_id: string; message_id: string }) {
 		() => props.message_id,
 	);
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
-	const setReply = () =>
-		ctx.dispatch({
-			do: "thread.reply",
-			thread_id: props.thread_id,
-			reply_id: props.message_id,
-		});
+	const setReply = () => {
+		ctx.thread_reply_id.set(props.thread_id, props.message_id);
+	};
 
 	function markUnread() {
 		const r = api.messages.cacheRanges.get(props.thread_id)!;

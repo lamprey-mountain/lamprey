@@ -20,11 +20,12 @@ export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
 
-	const ts = () => ctx.data.thread_state[props.thread.id];
+	const read_marker_id = () => ctx.thread_read_marker_id.get(props.thread.id);
+	
 	const anchor = (): MessageListAnchor => {
 		const a = ctx.thread_anchor.get(props.thread.id);
+		const r = read_marker_id();
 		if (a) return a;
-		const r = ts()?.read_marker_id;
 		if (r) return { type: "context", limit: 50, message_id: r };
 		return { type: "backwards", limit: 50 };
 	};
@@ -89,9 +90,9 @@ export const ChatMain = (props: ChatProps) => {
 
 	// effect to update timeline
 	createRenderEffect(
-		on(() => [messages(), ts()?.read_marker_id] as const, ([m, rid]) => {
+		on(() => [messages(), read_marker_id()] as const, ([m, rid]) => {
 			if (m?.items.length) {
-				console.log("render timeline", m.items, ts);
+				console.log("render timeline", m.items, rid);
 				console.time("rendertimeline");
 				const rendered = renderTimeline({
 					items: m.items,
@@ -218,9 +219,7 @@ export const ChatMain = (props: ChatProps) => {
 			<list.List>
 				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>
-			<Show when={ts()}>
-				<Input ts={ts()!} thread={props.thread} />
-			</Show>
+			<Input thread={props.thread} />
 		</div>
 	);
 };

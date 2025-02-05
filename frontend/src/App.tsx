@@ -93,8 +93,11 @@ export const Root: Component = (props: ParentProps) => {
 
 		menu,
 		thread_anchor: new ReactiveMap(),
+		thread_attachments: new ReactiveMap(),
 		thread_editor_state: new ReactiveMap(),
 		thread_highlight: new ReactiveMap(),
+		thread_read_marker_id: new ReactiveMap(),
+		thread_reply_id: new ReactiveMap(),
 		thread_scroll_pos: new Map(),
 	};
 	const dispatch = createDispatcher(ctx, api, update);

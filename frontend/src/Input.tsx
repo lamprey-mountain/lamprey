@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch } from "solid-js/web";
-import { Attachment, ThreadState, useCtx } from "./context.ts";
+import { Attachment, useCtx } from "./context.ts";
 import { ThreadT } from "./types.ts";
 import Editor from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
@@ -7,14 +7,14 @@ import { renderAttachment } from "./Message.tsx";
 import { useApi } from "./api.tsx";
 
 type InputProps = {
-	ts: ThreadState;
 	thread: ThreadT;
 };
 
 export function Input(props: InputProps) {
 	const ctx = useCtx();
 	const api = useApi();
-	const reply = () => api.messages.cache.get(props.ts.reply_id!);
+	const reply_id = () => ctx.thread_reply_id.get(props.thread.id);
+	const reply = () => api.messages.cache.get(reply_id()!);
 
 	function handleUpload(file: File) {
 		console.log(file);
@@ -36,30 +36,26 @@ export function Input(props: InputProps) {
 	}
 
 	const editor_state = () => ctx.thread_editor_state.get(props.thread.id)!;
+	const atts = () => ctx.thread_attachments.get(props.thread.id);
 
 	return (
 		<div class="input">
-			<Show when={props.ts.attachments.length}>
+			<Show when={atts()?.length}>
 				<ul class="attachments">
-					<For each={props.ts.attachments}>
+					<For each={atts()}>
 						{(att) => (
 							<li>
-								{renderAttachment2(props.thread, props.ts, att)}
+								{renderAttachment2(props.thread, att)}
 							</li>
 						)}
 					</For>
 				</ul>
 			</Show>
-			<Show when={props.ts.reply_id}>
+			<Show when={reply_id()}>
 				<div class="reply">
 					<button
 						class="cancel"
-						onClick={() =>
-							ctx.dispatch({
-								do: "thread.reply",
-								thread_id: props.thread.id,
-								reply_id: null,
-							})}
+						onClick={() => ctx.thread_reply_id.delete(props.thread.id)}
 					>
 						cancel
 					</button>
@@ -79,7 +75,7 @@ export function Input(props: InputProps) {
 						value="upload file"
 					/>
 				</label>
-				<Show when={true || editor_state()}>
+				<Show when={editor_state()}>
 					<Editor
 						state={editor_state()}
 						onUpload={handleUpload}
@@ -91,7 +87,7 @@ export function Input(props: InputProps) {
 	);
 }
 
-function renderAttachment2(thread: ThreadT, ts: ThreadState, att: Attachment) {
+function renderAttachment2(thread: ThreadT, att: Attachment) {
 	const ctx = useCtx();
 
 	function renderInfo(att: Attachment) {
@@ -108,11 +104,12 @@ function renderAttachment2(thread: ThreadT, ts: ThreadState, att: Attachment) {
 	}
 
 	function removeAttachment(local_id: string) {
-		ctx.dispatch({
-			do: "thread.attachments",
-			thread_id: thread.id,
-			attachments: [...ts.attachments].filter((i) => i.local_id !== local_id),
-		});
+		const atts = ctx.thread_attachments.get(thread.id);
+		if (!atts) return;
+		ctx.thread_attachments.set(
+			thread.id,
+			atts.filter((i) => i.local_id !== local_id),
+		);
 	}
 
 	return (

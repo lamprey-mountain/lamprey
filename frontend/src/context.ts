@@ -17,19 +17,12 @@ export type Attachment =
 		| { status: "uploaded"; media: MediaT }
 	);
 
-export type ThreadState = {
-	reply_id: string | null;
-	attachments: Array<Attachment>;
-	read_marker_id: string | null;
-};
-
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
 	room_members: Record<string, Record<string, MemberT>>;
 	room_roles: Record<string, Record<string, RoleT>>;
 	slices: Record<string, Slice>;
 	invites: Record<string, InviteT>;
-	thread_state: Record<string, ThreadState>;
 	modals: Array<Modal>;
 	cursor: Cursor;
 	// TODO: remove thread_id requirement
@@ -77,7 +70,6 @@ export type Action =
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
 	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.send"; thread_id: string; text: string }
-	| { do: "thread.reply"; thread_id: string; reply_id: string | null }
 	| {
 		do: "thread.scroll_pos";
 		thread_id: string;
@@ -90,11 +82,6 @@ export type Action =
 		version_id?: string;
 		delay?: boolean;
 		also_local?: boolean;
-	}
-	| {
-		do: "thread.attachments";
-		thread_id: string;
-		attachments: Array<Attachment>;
 	}
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
@@ -114,9 +101,12 @@ export type ChatCtx = {
 
 	menu: Accessor<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
-	thread_highlight: Map<string, string>;
-	thread_scroll_pos: Map<string, number>;
+	thread_attachments: ReactiveMap<string, Array<Attachment>>;
 	thread_editor_state: ReactiveMap<string, EditorState>;
+	thread_highlight: Map<string, string>;
+	thread_read_marker_id: ReactiveMap<string, string>;
+	thread_reply_id: ReactiveMap<string, string>;
+	thread_scroll_pos: Map<string, number>;
 };
 
 export const defaultData: Data = {
@@ -124,7 +114,6 @@ export const defaultData: Data = {
 	room_roles: {},
 	slices: {},
 	invites: {},
-	thread_state: {},
 	modals: [],
 	uploads: {},
 	cursor: {
