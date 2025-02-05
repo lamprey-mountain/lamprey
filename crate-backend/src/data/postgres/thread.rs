@@ -21,8 +21,8 @@ impl DataThread for Postgres {
         let thread_id = Uuid::now_v7();
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, state, visibility)
+			VALUES ($1, $2, $3, $4, $5, $6, 'Active', 'Room')
         ",
             thread_id,
             thread_id,
