@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM message WHERE chat_id = ?",
+  "query": "SELECT * FROM message WHERE matrix_id = ?",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "77658f6919fefadee99816a4dfb4b03ae16e7fd002dfdce5f85292d92ab06f48"
+  "hash": "eaa9ce6caea428dce62f3514836c6434f22947c7e2f716e869e289a2004b3e22"
 }

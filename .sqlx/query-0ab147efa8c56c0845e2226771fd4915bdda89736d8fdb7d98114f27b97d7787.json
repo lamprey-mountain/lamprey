@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM attachment WHERE chat_id = ?",
+  "query": "SELECT * FROM attachment WHERE matrix_id = ?",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "96067b3d4a1cf838fdceb6d7875b53f353855ef2bd36115487e4097441af6042"
+  "hash": "0ab147efa8c56c0845e2226771fd4915bdda89736d8fdb7d98114f27b97d7787"
 }
