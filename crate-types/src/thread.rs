@@ -89,7 +89,9 @@ pub enum ThreadInfo {
 
 impl Diff<Thread> for ThreadPatch {
     fn changes(&self, other: &Thread) -> bool {
-        self.name.changes(&other.name) || self.description.changes(&other.description)
+        self.name.changes(&other.name)
+            || self.description.changes(&other.description)
+            || self.state.changes(&other.state)
     }
 }
 

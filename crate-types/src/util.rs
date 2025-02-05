@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 use crate::Permission;
 
+// TODO: derive macro
 pub trait Diff<T> {
     fn changes(&self, other: &T) -> bool;
 }
