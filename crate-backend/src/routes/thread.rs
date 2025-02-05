@@ -8,7 +8,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use types::ThreadState;
+use types::{MessageId, ThreadState};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -69,9 +69,15 @@ async fn thread_create(
         .await?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
     let starter_message = data.message_get(thread_id, starter_message_id).await?;
-    s.broadcast_room(room_id, user_id, None, MessageSync::UpsertThread {
-        thread: thread.clone(),
-    }).await?;
+    s.broadcast_room(
+        room_id,
+        user_id,
+        None,
+        MessageSync::UpsertThread {
+            thread: thread.clone(),
+        },
+    )
+    .await?;
     s.broadcast(MessageSync::UpsertMessage {
         message: starter_message,
     })?;
@@ -151,11 +157,19 @@ async fn thread_update(
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct AckReq {
+    /// The last read message id.
+    message_id: MessageId,
+
+    /// The last read id in this thread. Currently unused, may be deprecated later?
     version_id: MessageVerId,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct AckRes {
+    /// The last read message id
+    message_id: MessageId,
+
+    /// The last read id in this thread. Currently unused, may be deprecated later?.
     version_id: MessageVerId,
 }
 
@@ -180,11 +194,16 @@ async fn thread_ack(
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
     let data = s.data();
-    let version_id = json.version_id;
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    data.unread_put(user_id, thread_id, version_id).await?;
-    Ok(Json(AckRes { version_id }))
+    let message_id = json.message_id;
+    let version_id = json.version_id;
+    data.unread_put(user_id, thread_id, message_id, version_id)
+        .await?;
+    Ok(Json(AckRes {
+        message_id,
+        version_id,
+    }))
 }
 
 /// Pin thread

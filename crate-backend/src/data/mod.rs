@@ -235,6 +235,7 @@ pub trait DataUnread {
         &self,
         user_id: UserId,
         thread_id: ThreadId,
+        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()>;
 }

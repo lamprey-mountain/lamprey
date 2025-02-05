@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sqlx::query;
+use types::MessageId;
 
 use crate::error::Result;
 use crate::types::{MessageVerId, ThreadId, UserId};
@@ -14,16 +15,20 @@ impl DataUnread for Postgres {
         &self,
         user_id: UserId,
         thread_id: ThreadId,
+        message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()> {
         query!(
             r#"
-			INSERT INTO unread (thread_id, user_id, version_id)
-			VALUES ($1, $2, $3)
-			ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET version_id = excluded.version_id;
+			INSERT INTO unread (thread_id, user_id, message_id, version_id)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
+    			message_id = excluded.message_id,
+    			version_id = excluded.version_id;
         "#,
             thread_id.into_inner(),
             user_id.into_inner(),
+            message_id.into_inner(),
             version_id.into_inner()
         )
         .execute(&self.pool)
