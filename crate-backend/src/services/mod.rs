@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use media::ServiceMedia;
 use serde_json::json;
 use types::util::Diff;
 use types::{
@@ -12,17 +13,22 @@ use crate::types::MessageCreate;
 use crate::ServerState;
 use crate::{data::Data, types::RoleCreate};
 
+pub mod media;
 pub mod oauth2;
 
 pub struct Services {
     state: Arc<ServerState>,
     data: Box<dyn Data>,
+    pub media: ServiceMedia,
 }
 
-#[allow(async_fn_in_trait)]
 impl Services {
     pub fn new(state: Arc<ServerState>, data: Box<dyn Data>) -> Self {
-        Self { state, data }
+        Self {
+            state,
+            data,
+            media: ServiceMedia::new(),
+        }
     }
 
     pub async fn create_room(&self, create: RoomCreate, creator: UserId) -> Result<Room> {
@@ -144,7 +150,9 @@ impl Services {
         let msg = MessageSync::UpsertThread {
             thread: thread.clone(),
         };
-        self.state.broadcast_room(thread.room_id, user_id, None, msg).await?;
+        self.state
+            .broadcast_room(thread.room_id, user_id, None, msg)
+            .await?;
 
         Ok(thread)
     }
