@@ -21,7 +21,7 @@ export const ChatMain = (props: ChatProps) => {
 	const api = useApi();
 
 	const read_marker_id = () => ctx.thread_read_marker_id.get(props.thread.id);
-	
+
 	const anchor = (): MessageListAnchor => {
 		const a = ctx.thread_anchor.get(props.thread.id);
 		const r = read_marker_id();
@@ -43,9 +43,12 @@ export const ChatMain = (props: ChatProps) => {
 		300,
 	);
 
+	const autoscroll = () =>
+		!messages()?.has_forward && anchor().type !== "context";
+
 	const list = createList({
 		items: tl,
-		autoscroll: () => !messages()?.has_forward && anchor().type !== "context",
+		autoscroll,
 		topQuery: ".message > .content",
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
@@ -73,6 +76,7 @@ export const ChatMain = (props: ChatProps) => {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
+
 					if (list.isAtBottom()) markRead();
 				}
 			} else {
@@ -111,10 +115,12 @@ export const ChatMain = (props: ChatProps) => {
 	);
 
 	// effect to initialize new threads
-	createEffect(on(() => props.thread.id, (thread_id) => {
-		const read_id = props.thread.last_read_id ?? undefined;
-		ctx.dispatch({ do: "thread.init", thread_id, read_id });
-	}));
+	createEffect(() => {
+		const tid = props.thread.id;
+		const rid = props.thread.last_read_id ?? props.thread.last_version_id;
+		if (ctx.thread_read_marker_id.has(tid)) return;
+		ctx.thread_read_marker_id.set(tid, rid);
+	});
 
 	// effect to update saved scroll position
 	const setPos = throttle(() => {

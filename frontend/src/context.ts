@@ -68,7 +68,6 @@ export type Action =
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
 	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
-	| { do: "thread.init"; thread_id: string; read_id?: string }
 	| { do: "thread.send"; thread_id: string; text: string }
 	| {
 		do: "thread.scroll_pos";

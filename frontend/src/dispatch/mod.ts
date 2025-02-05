@@ -286,16 +286,6 @@ export function createDispatcher(
 		}
 	};
 
-	const threadInit: Middleware = (_state, _dispatch) => (next) => (action) => {
-		if (action.do === "thread.init") {
-			if (action.read_id) {
-				ctx.thread_read_marker_id.set(action.thread_id, action.read_id);
-			}
-		} else {
-			next(action);
-		}
-	};
-
 	const log: Middleware = (state, _dispatch) => (next) => (action) => {
 		console.log("dispatch", action, state);
 		next(action);
@@ -305,7 +295,6 @@ export function createDispatcher(
 		log,
 		threadMarkRead,
 		serverInitSession,
-		threadInit,
 		uploadCancel,
 		uploadInit,
 		uploadPause,
