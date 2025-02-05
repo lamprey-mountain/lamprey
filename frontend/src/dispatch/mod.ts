@@ -105,10 +105,11 @@ export function createDispatcher(
 				}
 
 				const t = api.threads.cache.get(thread_id)!;
-				const version_id = action.version_id ?? t!.last_version_id;
+				const version_id = action.version_id;
+				const message_id = action.message_id;
 				await ctx.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
 					params: { path: { thread_id } },
-					body: { version_id },
+					body: { message_id, version_id },
 				});
 				api.threads.cache.set(thread_id, {
 					...t,

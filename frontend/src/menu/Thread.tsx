@@ -9,10 +9,15 @@ export function ThreadMenu(props: { thread_id: string }) {
 	const thread = api.rooms.fetch(() => props.thread_id);
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
+		const thread = api.threads.cache.get(props.thread_id)!;
+		const message_id = api.messages.cacheRanges.get(props.thread_id)?.live.end;
+		if (!message_id) throw new Error("fixme: last message id");
 		ctx.dispatch({
 			do: "thread.mark_read",
 			thread_id: props.thread_id,
 			also_local: true,
+			message_id,
+			version_id: thread.last_version_id,
 		});
 	};
 
@@ -29,8 +34,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 		navigator.clipboard.writeText(url);
 	};
 
-	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify(thread())));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(thread())));
 
 	return (
 		<Menu>

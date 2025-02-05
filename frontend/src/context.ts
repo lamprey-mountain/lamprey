@@ -78,7 +78,8 @@ export type Action =
 	| {
 		do: "thread.mark_read";
 		thread_id: string;
-		version_id?: string;
+		message_id: string;
+		version_id: string;
 		delay?: boolean;
 		also_local?: boolean;
 	}

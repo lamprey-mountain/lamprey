@@ -34,12 +34,18 @@ export const ChatMain = (props: ChatProps) => {
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
 	const markRead = throttle(
-		() =>
+		() => {
+			const message_id = api.messages.cacheRanges.get(props.thread.id)?.live
+				.end;
+			if (!message_id) throw new Error("fixme: last message id");
 			ctx.dispatch({
 				do: "thread.mark_read",
 				thread_id: props.thread.id,
 				delay: true,
-			}),
+				message_id,
+				version_id: props.thread.last_version_id,
+			});
+		},
 		300,
 	);
 

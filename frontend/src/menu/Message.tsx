@@ -27,6 +27,7 @@ export function MessageMenu(props: { thread_id: string; message_id: string }) {
 			do: "thread.mark_read",
 			thread_id: props.thread_id,
 			version_id: next_id,
+			message_id: next_id,
 			also_local: true,
 		});
 	}
