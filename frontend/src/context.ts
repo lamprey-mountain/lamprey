@@ -102,7 +102,7 @@ export type ChatCtx = {
 	menu: Accessor<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
 	thread_attachments: ReactiveMap<string, Array<Attachment>>;
-	thread_editor_state: ReactiveMap<string, EditorState>;
+	thread_editor_state: Map<string, EditorState>;
 	thread_highlight: Map<string, string>;
 	thread_read_marker_id: ReactiveMap<string, string>;
 	thread_reply_id: ReactiveMap<string, string>;
