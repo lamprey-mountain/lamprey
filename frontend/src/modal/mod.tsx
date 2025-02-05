@@ -138,6 +138,7 @@ const ModalMedia = (props: { media: Media }) => {
 							/>
 						</div>
 					</div>
+					<a href={props.media.url}>Go to url</a>
 				</div>
 			</div>
 		</div>
