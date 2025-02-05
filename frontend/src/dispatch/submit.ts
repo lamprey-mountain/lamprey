@@ -1,6 +1,6 @@
 import { ChatCtx, Data } from "../context.ts";
 import { SetStoreFunction } from "solid-js/store";
-import { Api, useApi } from "../api.tsx";
+import { Api } from "../api.tsx";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send
@@ -8,10 +8,9 @@ export async function handleSubmit(
 	ctx: ChatCtx,
 	thread_id: string,
 	text: string,
-	update: SetStoreFunction<Data>,
+	_update: SetStoreFunction<Data>,
 	api: Api,
 ) {
-	console.log(useApi());
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
 		const { room_id } = api.threads.cache.get(thread_id)!;
@@ -69,16 +68,16 @@ export async function handleSubmit(
 		}
 		return;
 	}
-	const ts = ctx.data.thread_state[thread_id];
-	if (text.length === 0 && ts.attachments.length === 0) return false;
-	if (!ts.attachments.every((i) => i.status === "uploaded")) return false;
-	const attachments = ts.attachments.map((i) => i.media);
-	const reply_id = ts.reply_id;
+	const atts = ctx.thread_attachments.get(thread_id) ?? [];
+	const reply_id = ctx.thread_reply_id.get(thread_id);
+	if (text.length === 0 && atts.length === 0) return false;
+	if (!atts.every((i) => i.status === "uploaded")) return false;
+	const attachments = atts.map((i) => i.media);
 	api.messages.send(thread_id, {
 		content: text,
 		reply_id,
 		attachments,
 	});
-	update("thread_state", thread_id, "reply_id", null);
-	update("thread_state", thread_id, "attachments", []);
+	ctx.thread_attachments.delete(thread_id);
+	ctx.thread_reply_id.delete(thread_id);
 }

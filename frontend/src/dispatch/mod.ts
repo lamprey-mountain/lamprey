@@ -286,17 +286,8 @@ export function createDispatcher(
 		}
 	};
 
-	const threadInit: Middleware = (_state, dispatch) => (next) => (action) => {
+	const threadInit: Middleware = (_state, _dispatch) => (next) => (action) => {
 		if (action.do === "thread.init") {
-			const { thread_id } = action;
-			if (!ctx.thread_editor_state.has(thread_id)) {
-				ctx.thread_editor_state.set(
-					thread_id,
-					createEditorState((text) => {
-						dispatch({ do: "thread.send", thread_id, text });
-					}),
-				);
-			}
 			if (action.read_id) {
 				ctx.thread_read_marker_id.set(action.thread_id, action.read_id);
 			}

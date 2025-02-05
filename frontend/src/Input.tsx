@@ -35,7 +35,6 @@ export function Input(props: InputProps) {
 		}
 	}
 
-	const editor_state = () => ctx.thread_editor_state.get(props.thread.id)!;
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
 
 	return (
@@ -75,13 +74,11 @@ export function Input(props: InputProps) {
 						value="upload file"
 					/>
 				</label>
-				<Show when={editor_state()}>
-					<Editor
-						state={editor_state()}
-						onUpload={handleUpload}
-						placeholder="send a message..."
-					/>
-				</Show>
+				<Editor
+					thread_id={props.thread.id}
+					onUpload={handleUpload}
+					placeholder="send a message..."
+				/>
 			</div>
 		</div>
 	);
