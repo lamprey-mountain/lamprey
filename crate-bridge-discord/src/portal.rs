@@ -312,20 +312,6 @@ impl Portal {
                     reply_id: None,
                     override_name: None,
                 };
-                if let Some(name) = update
-                    .member
-                    .flatten()
-                    .and_then(|m| m.nick)
-                    .or_else(|| {
-                        update
-                            .author
-                            .as_ref()
-                            .and_then(|u| u.global_name.to_owned())
-                    })
-                    .or_else(|| update.author.as_ref().map(|u| u.name.to_owned()))
-                {
-                    req.override_name = Some(Some(name));
-                }
                 req.attachments = if let Some(atts) = &update.attachments {
                     let mut v = vec![];
                     for att in atts {
