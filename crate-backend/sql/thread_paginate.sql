@@ -21,7 +21,7 @@ select
     thread.state as "state: DbThreadState",
     coalesce(count, 0) as "message_count!",
     last_version_id as "last_version_id!",
-    unread.version_id as "last_read_id?",
+    unread.message_id as "last_read_id?",
     coalesce(last_version_id != unread.version_id, true) as "is_unread!"
 from thread
 join message_count on message_count.thread_id = thread.id
