@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO room_member (user_id, room_id, membership) VALUES ($1, $2, $3)",
+  "query": "\n            UPDATE room_member\n        \tSET membership = $3, membership_updated_at = now()\n            WHERE room_id = $1 AND user_id = $2\n            ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -13,7 +13,8 @@
             "kind": {
               "Enum": [
                 "Join",
-                "Ban"
+                "Ban",
+                "Leave"
               ]
             }
           }
@@ -22,5 +23,5 @@
     },
     "nullable": []
   },
-  "hash": "01d9593a72dbbc83fe3f31752e1baee428cc9c2e9d04439ba57c8dff54ad4790"
+  "hash": "4a87368696d8ea47119258c803e2878da9bf32db56e3c4a4f54ed72cbb225709"
 }

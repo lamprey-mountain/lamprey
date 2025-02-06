@@ -6,7 +6,7 @@ use axum::{extract::State, Json};
 use http::StatusCode;
 use types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, UserId,
+    RoomMemberPatch, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -63,7 +63,12 @@ pub async fn room_member_get(
     let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_get(room_id, target_user_id).await?;
-    Ok(Json(res))
+    // TODO: return `Ban`s
+    if !matches!(res.membership, RoomMembership::Join { .. }) {
+        Err(Error::NotFound)
+    } else {
+        Ok(Json(res))
+    }
 }
 
 /// Room member update
@@ -94,14 +99,23 @@ pub async fn room_member_update(
     }
 
     let start = d.room_member_get(room_id, target_user_id).await?;
+    if !matches!(start.membership, RoomMembership::Join { .. }) {
+        return Err(Error::NotFound)
+    }
     d.room_member_patch(room_id, target_user_id, patch).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     if start == res {
         Ok(StatusCode::NOT_MODIFIED.into_response())
     } else {
-        s.broadcast_room(room_id, auth_user_id, None, MessageSync::UpsertRoomMember {
-            member: res.clone(),
-        }).await?;
+        s.broadcast_room(
+            room_id,
+            auth_user_id,
+            None,
+            MessageSync::UpsertRoomMember {
+                member: res.clone(),
+            },
+        )
+        .await?;
         Ok(Json(res).into_response())
     }
 }
@@ -127,19 +141,23 @@ pub async fn room_member_delete(
     let d = s.data();
     let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
-    if target_user_id == auth_user_id {
-        d.room_member_delete(room_id, target_user_id).await?;
-        s.broadcast_room(room_id, auth_user_id, None, MessageSync::DeleteRoomMember {
-            room_id,
-            user_id: target_user_id,
-        }).await?;
-    } else {
+    if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberKick)?;
-        // d.room_member_delete(room_id, target_user_id).await?;
-        return Err(Error::BadStatic(
-            "not yet implemented: need separate membership state for kicked vs left",
-        ));
     }
+    let start = d.room_member_get(room_id, target_user_id).await?;
+    if !matches!(start.membership, RoomMembership::Join { .. }) {
+        return Err(Error::NotFound)
+    }
+    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
+        .await?;
+    let res = d.room_member_get(room_id, target_user_id).await?;
+    s.broadcast_room(
+        room_id,
+        auth_user_id,
+        None,
+        MessageSync::UpsertRoomMember { member: res },
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

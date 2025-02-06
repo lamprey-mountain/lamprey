@@ -129,6 +129,7 @@ pub enum MessageSync {
         room_id: RoomId,
         role_id: RoleId,
     },
+    #[deprecated = "use UpsertRoomMember + Membership=Leave"]
     DeleteRoomMember {
         room_id: RoomId,
         user_id: UserId,

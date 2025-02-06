@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT \n            \tr.user_id,\n            \tr.room_id,\n                r.membership as \"membership: _\",\n                r.override_name,\n                r.override_description,\n                r.membership_updated_at\n            FROM role_member AS m\n            JOIN role ON role.id = m.role_id\n            JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id\n        \tWHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3\n        \tORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban",
+                "Leave"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "override_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "membership_updated_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "840b4382f06d2c60d7618ff1e1bc262bd18f4b1e8415bf712ffdbed90a441b31"
+}

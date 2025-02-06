@@ -4,8 +4,8 @@ use media::ServiceMedia;
 use serde_json::json;
 use types::util::Diff;
 use types::{
-    MessageSync, MessageType, Permission, Room, RoomCreate, RoomMemberPut, RoomMembership, Thread,
-    ThreadId, ThreadPatch, UserId,
+    MessageSync, MessageType, Permission, Room, RoomCreate, RoomMembership, Thread, ThreadId,
+    ThreadPatch, UserId,
 };
 
 use crate::error::{Error, Result};
@@ -79,14 +79,15 @@ impl Services {
         self.data.role_create(role_moderator).await?;
         self.data.role_create(role_everyone).await?;
         self.data
-            .room_member_put(RoomMemberPut {
-                user_id: creator,
+            .room_member_put(
                 room_id,
-                membership: RoomMembership::Join,
-                override_name: None,
-                override_description: None,
-                roles: vec![],
-            })
+                creator,
+                RoomMembership::Join {
+                    override_name: None,
+                    override_description: None,
+                    roles: vec![],
+                },
+            )
             .await?;
         self.data.role_member_put(creator, admin.id).await?;
         self.data.role_apply_default(room.id, creator).await?;

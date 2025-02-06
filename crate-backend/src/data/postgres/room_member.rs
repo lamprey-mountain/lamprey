@@ -3,11 +3,12 @@ use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use types::{
     PaginationDirection, PaginationQuery, PaginationResponse, RoomMember, RoomMemberPatch,
+    RoomMembership,
 };
 
 use crate::error::Result;
 use crate::gen_paginate;
-use crate::types::{DbRoomMember, DbRoomMembership, RoomId, RoomMemberPut, UserId};
+use crate::types::{DbRoomMember, DbRoomMembership, RoomId, UserId};
 
 use crate::data::DataRoomMember;
 
@@ -15,13 +16,22 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoomMember for Postgres {
-    // FIXME: apply other attributes in RoomMemberPut
-    async fn room_member_put(&self, put: RoomMemberPut) -> Result<()> {
-        let membership: DbRoomMembership = put.membership.into();
+    async fn room_member_put(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        membership: RoomMembership,
+    ) -> Result<()> {
+        let membership: DbRoomMembership = membership.into();
         query!(
-            "INSERT INTO room_member (user_id, room_id, membership) VALUES ($1, $2, $3)",
-            put.user_id.into_inner(),
-            put.room_id.into_inner(),
+            r#"
+            INSERT INTO room_member (user_id, room_id, membership)
+            VALUES ($1, $2, $3)
+			ON CONFLICT ON CONSTRAINT room_member_pkey DO UPDATE SET
+    			membership = excluded.membership
+            "#,
+            user_id.into_inner(),
+            room_id.into_inner(),
             membership as _
         )
         .execute(&self.pool)
@@ -54,9 +64,9 @@ impl DataRoomMember for Postgres {
             query_as!(
                 DbRoomMember,
                 r#"
-            	SELECT room_id, user_id, membership as "membership: _", override_name, override_description
+            	SELECT room_id, user_id, membership as "membership: _", override_name, override_description, membership_updated_at
                 FROM room_member
-            	WHERE room_id = $1 AND user_id > $2 AND user_id < $3
+            	WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5
                 "#,
                 room_id.into_inner(),
@@ -66,7 +76,7 @@ impl DataRoomMember for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                "SELECT count(*) FROM room_member WHERE room_member.room_id = $1",
+                "SELECT count(*) FROM room_member WHERE room_member.room_id = $1 AND membership = 'Join'",
                 room_id.into_inner()
             )
         )
@@ -76,7 +86,7 @@ impl DataRoomMember for Postgres {
         let item = query_as!(
             DbRoomMember,
             r#"
-        	SELECT room_id, user_id, membership as "membership: _", override_name, override_description
+        	SELECT room_id, user_id, membership as "membership: _", override_name, override_description, membership_updated_at
             FROM room_member
             WHERE room_id = $1 AND user_id = $2
         "#,
@@ -98,14 +108,36 @@ impl DataRoomMember for Postgres {
             r#"
             UPDATE room_member
         	SET override_name = $3, override_description = $4
-            WHERE room_id = $1 AND user_id = $2
+            WHERE room_id = $1 AND user_id = $2 AND membership = 'Join'
         "#,
             room_id.into_inner(),
             user_id.into_inner(),
             patch.override_name,
             patch.override_description,
         )
-        .fetch_one(&self.pool)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn room_member_set_membership(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        membership: RoomMembership,
+    ) -> Result<()> {
+        let membership: DbRoomMembership = membership.into();
+        query!(
+            r#"
+            UPDATE room_member
+        	SET membership = $3, membership_updated_at = now()
+            WHERE room_id = $1 AND user_id = $2
+            "#,
+            room_id.into_inner(),
+            user_id.into_inner(),
+            membership as _,
+        )
+        .execute(&self.pool)
         .await?;
         Ok(())
     }

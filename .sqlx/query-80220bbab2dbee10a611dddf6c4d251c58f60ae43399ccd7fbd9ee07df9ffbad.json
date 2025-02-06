@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            \tSELECT room_id, user_id, membership as \"membership: _\", override_name, override_description\n                FROM room_member\n            \tWHERE room_id = $1 AND user_id > $2 AND user_id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5\n                ",
+  "query": "\n            \tSELECT room_id, user_id, membership as \"membership: _\", override_name, override_description, membership_updated_at\n                FROM room_member\n            \tWHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -22,7 +22,8 @@
             "kind": {
               "Enum": [
                 "Join",
-                "Ban"
+                "Ban",
+                "Leave"
               ]
             }
           }
@@ -37,6 +38,11 @@
         "ordinal": 4,
         "name": "override_description",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "membership_updated_at",
+        "type_info": "Timestamp"
       }
     ],
     "parameters": {
@@ -53,8 +59,9 @@
       false,
       false,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "1fe6132b3d864e6f4b9e0baa9cdedc86b94250454d536dcdea1f7e425e68e3b9"
+  "hash": "80220bbab2dbee10a611dddf6c4d251c58f60ae43399ccd7fbd9ee07df9ffbad"
 }

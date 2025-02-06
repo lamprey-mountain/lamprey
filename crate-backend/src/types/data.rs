@@ -1,7 +1,10 @@
 use serde::Deserialize;
 use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserState, UserType, UserVerId
+    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
+    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
+    SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User,
+    UserId, UserState, UserType, UserVerId,
 };
 use uuid::Uuid;
 
@@ -37,16 +40,8 @@ pub struct UserCreate {
 #[sqlx(type_name = "membership")]
 pub enum DbRoomMembership {
     Join,
+    Leave,
     Ban,
-}
-
-impl From<DbRoomMembership> for RoomMembership {
-    fn from(value: DbRoomMembership) -> Self {
-        match value {
-            DbRoomMembership::Join => RoomMembership::Join,
-            DbRoomMembership::Ban => RoomMembership::Ban,
-        }
-    }
 }
 
 #[derive(Deserialize, sqlx::Type)]
@@ -452,8 +447,9 @@ impl From<Permission> for DbPermission {
 impl From<RoomMembership> for DbRoomMembership {
     fn from(value: RoomMembership) -> Self {
         match value {
-            RoomMembership::Join => DbRoomMembership::Join,
-            RoomMembership::Ban => DbRoomMembership::Ban,
+            RoomMembership::Join { .. } => DbRoomMembership::Join,
+            RoomMembership::Ban {} => DbRoomMembership::Ban,
+            RoomMembership::Leave {} => DbRoomMembership::Leave,
         }
     }
 }
@@ -520,6 +516,7 @@ pub struct DbRoomMember {
     pub override_name: Option<String>,
     pub override_description: Option<String>,
     // override_avatar: z.string().url().or(z.literal("")),
+    pub membership_updated_at: time::PrimitiveDateTime,
 }
 
 impl From<DbRoomMember> for RoomMember {
@@ -527,10 +524,16 @@ impl From<DbRoomMember> for RoomMember {
         RoomMember {
             user_id: row.user_id.into(),
             room_id: row.room_id.into(),
-            membership: row.membership.into(),
-            override_name: row.override_name,
-            override_description: row.override_description,
-            roles: vec![], // FIXME
+            membership: match row.membership {
+                DbRoomMembership::Join => RoomMembership::Join {
+                    override_name: row.override_name,
+                    override_description: row.override_description,
+                    roles: vec![], // FIXME
+                },
+                DbRoomMembership::Leave => RoomMembership::Leave {},
+                DbRoomMembership::Ban => RoomMembership::Ban {},
+            },
+            membership_updated_at: row.membership_updated_at.assume_utc(),
         }
     }
 }

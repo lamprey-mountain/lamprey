@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use types::{
     AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch,
-    SearchMessageRequest, SessionPatch, SessionStatus, SessionToken,
+    RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken,
 };
 use uuid::Uuid;
 
@@ -9,9 +9,9 @@ use crate::error::Result;
 use crate::types::{
     InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId,
     MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId,
-    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomMemberPut, RoomPatch, RoomVerId, Session,
-    SessionId, Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId,
-    UserPatch, UserVerId,
+    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
+    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId, UserPatch,
+    UserVerId,
 };
 
 pub mod postgres;
@@ -54,12 +54,23 @@ pub trait DataRoom {
 
 #[async_trait]
 pub trait DataRoomMember {
-    async fn room_member_put(&self, put: RoomMemberPut) -> Result<()>;
+    async fn room_member_put(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        membership: RoomMembership,
+    ) -> Result<()>;
     async fn room_member_patch(
         &self,
         room_id: RoomId,
         user_id: UserId,
         patch: RoomMemberPatch,
+    ) -> Result<()>;
+    async fn room_member_set_membership(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        membership: RoomMembership,
     ) -> Result<()>;
     async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
     async fn room_member_get(&self, room_id: RoomId, user_id: UserId) -> Result<RoomMember>;

@@ -54,7 +54,8 @@ impl DataRoleMember for Postgres {
             	r.room_id,
                 r.membership as "membership: _",
                 r.override_name,
-                r.override_description
+                r.override_description,
+                r.membership_updated_at
             FROM role_member AS m
             JOIN role ON role.id = m.role_id
             JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id

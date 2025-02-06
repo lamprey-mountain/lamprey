@@ -923,14 +923,15 @@ export interface components {
 		};
 		PaginationResponse_RoomMember: {
 			has_more: boolean;
-			items: {
-				membership: components["schemas"]["RoomMembership"];
-				override_description?: string | null;
-				override_name?: string | null;
-				roles: components["schemas"]["Role"][];
+			items: (components["schemas"]["RoomMembership"] & {
+				/**
+				 * Format: date-time
+				 * @description When this member's membership last changed (joined, left, was kicked, or banned).
+				 */
+				membership_updated_at: string;
 				room_id: components["schemas"]["RoomId"];
 				user_id: components["schemas"]["UserId"];
-			}[];
+			})[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -1029,11 +1030,12 @@ export interface components {
 		};
 		/** Format: uuid */
 		RoomId: string;
-		RoomMember: {
-			membership: components["schemas"]["RoomMembership"];
-			override_description?: string | null;
-			override_name?: string | null;
-			roles: components["schemas"]["Role"][];
+		RoomMember: components["schemas"]["RoomMembership"] & {
+			/**
+			 * Format: date-time
+			 * @description When this member's membership last changed (joined, left, was kicked, or banned).
+			 */
+			membership_updated_at: string;
 			room_id: components["schemas"]["RoomId"];
 			user_id: components["schemas"]["UserId"];
 		};
@@ -1041,8 +1043,19 @@ export interface components {
 			override_description?: string | null;
 			override_name?: string | null;
 		};
-		/** @enum {string} */
-		RoomMembership: "Join" | "Ban";
+		RoomMembership: {
+			/** @enum {string} */
+			membership: "Join";
+			override_description?: string | null;
+			override_name?: string | null;
+			roles: components["schemas"]["RoleId"][];
+		} | {
+			/** @enum {string} */
+			membership: "Leave";
+		} | {
+			/** @enum {string} */
+			membership: "Ban";
+		};
 		/** @description An update to a room */
 		RoomPatch: {
 			description?: string | null;

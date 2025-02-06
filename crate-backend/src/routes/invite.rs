@@ -8,7 +8,7 @@ use nanoid::nanoid;
 use serde::Serialize;
 use types::{
     Invite, InviteCode, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMemberPut, RoomMembership,
+    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -131,15 +131,16 @@ pub async fn invite_use(
     match invite.invite.target {
         InviteTarget::User { user: _ } => todo!("dms aren't implemented"),
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
-            // TODO: any thread-specific invite thing?
-            d.room_member_put(RoomMemberPut {
+            // TODO: any thread-specific invite things?
+            d.room_member_put(
+                room.id,
                 user_id,
-                room_id: room.id,
-                membership: RoomMembership::Join,
-                override_name: None,
-                override_description: None,
-                roles: vec![],
-            })
+                RoomMembership::Join {
+                    override_name: None,
+                    override_description: None,
+                    roles: vec![],
+                },
+            )
             .await?;
             d.role_apply_default(room.id, user_id).await?;
             let member = d.room_member_get(room.id, user_id).await?;
