@@ -136,7 +136,7 @@ export function createApi(
 			const l = room_members._cachedListings.get(m.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
-				const idx = p.items.findIndex(i => i.user_id === m.user_id);
+				const idx = p.items.findIndex((i) => i.user_id === m.user_id);
 				if (idx !== -1) {
 					l.mutate({
 						...p,
@@ -171,7 +171,7 @@ export function createApi(
 			const l = room_members._cachedListings.get(msg.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
-				const idx = p.items.findIndex(i => i.user_id === msg.user_id);
+				const idx = p.items.findIndex((i) => i.user_id === msg.user_id);
 				if (idx !== -1) {
 					l.mutate({
 						...p,
@@ -211,6 +211,28 @@ export function createApi(
 					last_version_id: m.version_id,
 				});
 			}
+		} else if (msg.type === "DeleteMessage") {
+			batch(() => {
+				const { message_id, thread_id } = msg;
+				const ranges = messages.cacheRanges.get(thread_id);
+				const r = ranges?.find(message_id);
+				if (ranges && r) {
+					const idx = r.items.findIndex((i) => i.id === message_id);
+					if (idx !== -1) {
+						r.items.splice(idx, 1);
+					}
+					messages.cache.delete(thread_id);
+					messages._updateMutators(ranges, thread_id);
+				}
+				const t = api.threads.cache.get(msg.thread_id);
+				if (t) {
+					api.threads.cache.set(msg.thread_id, {
+						...t,
+						message_count: t.message_count - 1,
+						last_version_id: ranges?.live.end ?? t.last_version_id,
+					});
+				}
+			});
 		} else if (msg.type === "UpsertInvite") {
 			const { invite } = msg;
 			invites.cache.set(invite.code, invite);
@@ -267,7 +289,7 @@ export function createApi(
 			const l = roles._cachedListings.get(r.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
-				const idx = p.items.findIndex(i => i.id === r.id);
+				const idx = p.items.findIndex((i) => i.id === r.id);
 				if (idx !== -1) {
 					l.mutate({
 						...p,
@@ -286,7 +308,7 @@ export function createApi(
 			const l = roles._cachedListings.get(msg.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
-				const idx = p.items.findIndex(i => i.id === msg.role_id);
+				const idx = p.items.findIndex((i) => i.id === msg.role_id);
 				if (idx !== -1) {
 					l.mutate({
 						...p,
@@ -342,7 +364,7 @@ export function createApi(
 			);
 		},
 	};
-	
+
 	messages.api = api;
 	rooms.api = api;
 	threads.api = api;
@@ -381,7 +403,10 @@ export type Api = {
 		cache: ReactiveMap<string, Role>;
 	};
 	room_members: {
-		fetch: (room_id: () => string, user_id: () => string) => Resource<RoomMember>;
+		fetch: (
+			room_id: () => string,
+			user_id: () => string,
+		) => Resource<RoomMember>;
 		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
 		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
 	};
@@ -408,7 +433,7 @@ export type Api = {
 	session: Accessor<Session | null>;
 	tempCreateSession: () => void;
 	client: Client;
-	Provider: Component<ParentProps>,
+	Provider: Component<ParentProps>;
 };
 
 export type Listing<T> = {

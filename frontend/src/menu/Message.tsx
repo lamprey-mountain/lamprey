@@ -42,6 +42,17 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	}
 
+	function redact() {
+		api.client.http.DELETE("/api/v1/thread/{thread_id}/message/{message_id}", {
+			params: {
+				path: {
+					thread_id: props.thread_id,
+					message_id: props.message_id,
+				},
+			},
+		});
+	}
+	
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
 	return (
@@ -52,7 +63,7 @@ export function MessageMenu(props: MessageMenuProps) {
 			<Item>edit</Item>
 			<Item>fork</Item>
 			<Item>pin</Item>
-			<Item>redact</Item>
+			<Item onClick={redact}>redact</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
