@@ -1,6 +1,5 @@
 import { Accessor, createContext, useContext } from "solid-js";
 import { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
-import { InviteT, MediaT, MemberT, RoleT } from "./types.ts";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -15,15 +14,11 @@ export type Attachment =
 	& { file: File; local_id: string }
 	& (
 		| { status: "uploading"; progress: number; paused: boolean }
-		| { status: "uploaded"; media: MediaT }
+		| { status: "uploaded"; media: Media }
 	);
 
 // TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
-	room_members: Record<string, Record<string, MemberT>>;
-	room_roles: Record<string, Record<string, RoleT>>;
-	slices: Record<string, Slice>;
-	invites: Record<string, InviteT>;
 	modals: Array<Modal>;
 	cursor: Cursor;
 	// TODO: remove thread_id requirement
@@ -126,10 +121,6 @@ export type Events = {
 };
 
 export const defaultData: Data = {
-	room_members: {},
-	room_roles: {},
-	slices: {},
-	invites: {},
 	modals: [],
 	uploads: {},
 	cursor: {

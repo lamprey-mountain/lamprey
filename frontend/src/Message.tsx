@@ -1,6 +1,6 @@
 import { getTimestampFromUUID } from "sdk";
 import { MediaT, MessageT, MessageType } from "./types.ts";
-import { batch, For, Show } from "solid-js";
+import { For, Show } from "solid-js";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";

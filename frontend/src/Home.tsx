@@ -1,12 +1,7 @@
-import { createSignal, For, Show } from "solid-js";
+import { Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
-import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
-import { createResource } from "solid-js";
-import { MessageView } from "./Message.tsx";
-import { Message } from "sdk";
-import { flags } from "./flags.ts";
 
 export const Home = () => {
 	const ctx = useCtx();

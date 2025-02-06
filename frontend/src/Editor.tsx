@@ -1,7 +1,6 @@
 import {
 	Command,
 	EditorState,
-	Plugin,
 	TextSelection,
 } from "prosemirror-state";
 import {
