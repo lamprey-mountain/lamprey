@@ -4,6 +4,7 @@ use axum::{
     body::Body,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
+    response::IntoResponse,
     Json,
 };
 use futures_util::StreamExt;
@@ -37,7 +38,7 @@ async fn media_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
-) -> Result<(StatusCode, HeaderMap, Json<MediaCreated>)> {
+) -> Result<impl IntoResponse> {
     if r.size > MAX_SIZE {
         return Err(Error::TooBig);
     }
@@ -88,7 +89,7 @@ async fn media_upload(
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
-) -> Result<(StatusCode, HeaderMap, Json<Option<Media>>)> {
+) -> Result<impl IntoResponse> {
     let mut up = s.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
     if up.user_id != user_id {
         return Err(Error::NotFound);
@@ -173,7 +174,7 @@ async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
     Auth(_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<Media>> {
+) -> Result<impl IntoResponse> {
     let mut media = s.data().media_select(media_id).await?;
     media.url = s.presign(&media.url).await?;
     Ok(Json(media))
@@ -195,7 +196,7 @@ async fn media_check(
     Path(media_id): Path<MediaId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<(StatusCode, HeaderMap)> {
+) -> Result<impl IntoResponse> {
     if let Some(up) = s.uploads.get_mut(&media_id) {
         if up.user_id == user_id {
             let mut headers = HeaderMap::new();
@@ -209,6 +210,39 @@ async fn media_check(
     headers.insert("upload-offset", media.size.into());
     headers.insert("upload-length", media.size.into());
     Ok((StatusCode::NO_CONTENT, headers))
+}
+
+/// Media delete
+///
+/// Delete unlinked media. If its linked to a message, delete that message instead.
+#[utoipa::path(
+    delete,
+    path = "/media/{media_id}",
+    tags = ["media"],
+    params(("media_id", description = "Media id")),
+    responses(
+        (status = NO_CONTENT, description = "no content"),
+        (status = CONFLICT, description = "media is linked to another resource (ie. a message)"),
+    )
+)]
+async fn media_delete(
+    Path(media_id): Path<MediaId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    if let Some(up) = s.uploads.get_mut(&media_id) {
+        if up.user_id == user_id {
+            s.uploads.remove(&media_id);
+        }
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        let links = s.data().media_link_select(media_id).await?;
+        if links.is_empty() {
+            Ok(StatusCode::NO_CONTENT)
+        } else {
+            Ok(StatusCode::CONFLICT)
+        }
+    }
 }
 
 async fn process_upload(
@@ -266,4 +300,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_upload))
         .routes(routes!(media_get))
         .routes(routes!(media_check))
+        .routes(routes!(media_delete))
 }
