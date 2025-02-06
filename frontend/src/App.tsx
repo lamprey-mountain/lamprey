@@ -104,8 +104,25 @@ export const Root: Component = (props: ParentProps) => {
 
 	onCleanup(() => client.stop());
 
-	const handleClick = () => {
+	const handleClick = (e: MouseEvent) => {
+		if (!e.isTrusted) return;
 		setMenu(null);
+		const target = e.target as HTMLElement;
+		if (target.matches("a[download]")) {
+			const a = target as HTMLAnchorElement;
+			e.preventDefault();
+			// HACK: `download` doesn't work for cross origin links, so manually fetch and create a blob url
+			fetch(a.href).then((res) => res.blob()).then((res) => {
+				const url = URL.createObjectURL(res);
+				const fake = (
+					<a download={a.download} href={url} style="display:none"></a>
+				) as HTMLElement;
+				document.body.append(fake);
+				fake.click();
+				fake.remove();
+				URL.revokeObjectURL(url);
+			});
+		}
 	};
 
 	const handleKeypress = (e: KeyboardEvent) => {
