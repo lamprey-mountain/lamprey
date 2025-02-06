@@ -130,87 +130,72 @@ export function createDispatcher(
 	const uploadInit: Middleware =
 		(_state, _dispatch) => (next) => async (action) => {
 			if (action.do === "upload.init") {
-				const { local_id, thread_id } = action;
-				const atts = ctx.thread_attachments.get(action.thread_id) ?? [];
-				ctx.thread_attachments.set(action.thread_id, [...atts, {
+				const { local_id, thread_id, file } = action;
+				const atts = ctx.thread_attachments.get(thread_id) ?? [];
+				ctx.thread_attachments.set(thread_id, [...atts, {
 					status: "uploading",
-					file: action.file,
-					local_id: local_id,
+					file,
+					local_id,
 					progress: 0,
 					paused: false,
 				}]);
 				const up = await createUpload({
-					file: action.file,
+					file,
 					client: ctx.client,
 					onProgress(progress) {
-						const atts = ctx.thread_attachments.get(action.thread_id)!;
+						const atts = ctx.thread_attachments.get(thread_id)!;
 						const idx = atts.findIndex((i) => i.local_id === local_id);
 						if (idx === -1) return;
 						const att: Attachment = {
 							status: "uploading",
-							file: action.file,
+							file,
 							local_id: local_id,
 							progress,
 							paused: false,
 						};
-						ctx.thread_attachments.set(
-							action.thread_id,
-							atts.toSpliced(idx, 1, att),
-						);
+						ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 					},
 					onFail(error) {
-						const atts = ctx.thread_attachments.get(action.thread_id)!;
+						const atts = ctx.thread_attachments.get(thread_id)!;
 						const idx = atts.findIndex((i) => i.local_id === local_id);
 						if (idx === -1) return;
-						ctx.thread_attachments.set(
-							action.thread_id,
-							atts.toSpliced(idx, 1),
-						);
+						ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1));
 						ctx.dispatch({ do: "modal.alert", text: error.message });
 					},
 					onComplete(media) {
-						const atts = ctx.thread_attachments.get(action.thread_id)!;
+						const atts = ctx.thread_attachments.get(thread_id)!;
 						const idx = atts.findIndex((i) => i.local_id === local_id);
 						if (idx === -1) return;
 						const att: Attachment = {
 							status: "uploaded",
 							media,
 							local_id,
-							file: action.file,
+							file,
 						};
-						ctx.thread_attachments.set(
-							action.thread_id,
-							atts.toSpliced(idx, 1, att),
-						);
+						ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 					},
 					onPause() {
-						const atts = ctx.thread_attachments.get(action.thread_id)!;
+						const atts = ctx.thread_attachments.get(thread_id)!;
 						const idx = atts.findIndex((i) => i.local_id === local_id);
 						if (idx === -1) return;
 						const att = {
 							...atts[idx],
 							paused: true,
 						};
-						ctx.thread_attachments.set(
-							action.thread_id,
-							atts.toSpliced(idx, 1, att),
-						);
+						ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 					},
 					onResume() {
-						const atts = ctx.thread_attachments.get(action.thread_id)!;
+						const atts = ctx.thread_attachments.get(thread_id)!;
 						const idx = atts.findIndex((i) => i.local_id === local_id);
 						if (idx === -1) return;
 						const att = {
 							...atts[idx],
 							paused: false,
 						};
-						ctx.thread_attachments.set(
-							action.thread_id,
-							atts.toSpliced(idx, 1, att),
-						);
+						ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1, att));
 					},
 				});
-				update("uploads", local_id, { up, thread_id });
+				ctx.uploads.set(local_id, up);
 			} else {
 				next(action);
 			}
@@ -218,7 +203,7 @@ export function createDispatcher(
 
 	const uploadPause: Middleware = (_state, _dispatch) => (next) => (action) => {
 		if (action.do === "upload.pause") {
-			ctx.data.uploads[action.local_id]?.up.pause();
+			ctx.uploads.get(action.local_id)?.pause();
 		} else {
 			next(action);
 		}
@@ -227,7 +212,7 @@ export function createDispatcher(
 	const uploadResume: Middleware =
 		(_state, _dispatch) => (next) => (action) => {
 			if (action.do === "upload.resume") {
-				ctx.data.uploads[action.local_id]?.up.resume();
+				ctx.uploads.get(action.local_id)?.resume();
 			} else {
 				next(action);
 			}
@@ -236,16 +221,15 @@ export function createDispatcher(
 	const uploadCancel: Middleware =
 		(_state, _dispatch) => (next) => (action) => {
 			if (action.do === "upload.cancel") {
-				const upload = ctx.data.uploads[action.local_id];
-				upload?.up.pause();
-				delete ctx.data.uploads[action.local_id];
-				const atts = ctx.thread_attachments.get(upload.thread_id)!;
-				const idx = atts.findIndex((i) => i.local_id === action.local_id)!;
+				const { local_id, thread_id } = action;
+				const upload = ctx.uploads.get(local_id);
+				if (!upload) return;
+				upload.abort();
+				ctx.uploads.delete(action.local_id);
+				const atts = ctx.thread_attachments.get(thread_id)!;
+				const idx = atts.findIndex((i) => i.local_id === local_id)!;
 				if (idx !== -1) {
-					ctx.thread_attachments.set(
-						upload.thread_id,
-						atts.toSpliced(idx, 1),
-					);
+					ctx.thread_attachments.set(thread_id, atts.toSpliced(idx, 1));
 				}
 			} else {
 				next(action);

@@ -47,7 +47,7 @@ export function Input(props: InputProps) {
 			ctx.thread_editor_state.set(props.thread.id, state);
 		}
 		return state;
-	}
+	};
 
 	return (
 		<div class="input">
@@ -114,12 +114,7 @@ function renderAttachment2(thread: ThreadT, att: Attachment) {
 	}
 
 	function removeAttachment(local_id: string) {
-		const atts = ctx.thread_attachments.get(thread.id);
-		if (!atts) return;
-		ctx.thread_attachments.set(
-			thread.id,
-			atts.filter((i) => i.local_id !== local_id),
-		);
+		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: thread.id });
 	}
 
 	return (

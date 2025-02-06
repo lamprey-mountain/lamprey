@@ -12,8 +12,10 @@ export type UploadOptions = {
 };
 
 export type Upload = {
+	media_id: string;
 	pause(): void;
 	resume(): void;
+	abort(): void;
 };
 
 export async function createUpload(opts: UploadOptions): Promise<Upload> {
@@ -25,13 +27,10 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	});
 	if (error) {
 		opts.onFail(error);
-		return {
-			pause: () => {},
-			resume: () => {},
-		};
+		throw new Error(error);
 	}
 
-	const { upload_url } = data;
+	const { upload_url, media_id } = data;
 	let offset = 0;
 	let xhr: XMLHttpRequest;
 
@@ -108,6 +107,15 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		opts.onResume();
 	}
 
+	async function abort() {
+		xhr?.abort();
+		await opts.client.http.DELETE("/api/v1/media/{media_id}", {
+			params: {
+				path: { media_id },
+			},
+		});
+	}
+
 	resume();
-	return { pause, resume };
+	return { media_id, pause, resume, abort };
 }

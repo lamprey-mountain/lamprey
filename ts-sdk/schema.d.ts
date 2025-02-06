@@ -88,7 +88,11 @@ export interface paths {
 		get: operations["media_get"];
 		put?: never;
 		post?: never;
-		delete?: never;
+		/**
+		 * Media delete
+		 * @description Delete unlinked media. If its linked to a message, delete that message instead.
+		 */
+		delete: operations["media_delete"];
 		options?: never;
 		/**
 		 * Media check
@@ -591,6 +595,8 @@ export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
 		AckReq: {
+			message_id?: null | components["schemas"]["MessageId"];
+			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
 			version_id: components["schemas"]["MessageVerId"];
 		};
 		AuditLog: {
@@ -1325,6 +1331,34 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Media"];
 				};
+			};
+		};
+	};
+	media_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Media id */
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description no content */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description media is linked to another resource (ie. a message) */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -2193,7 +2227,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: string;
 			};
 			cookie?: never;
 		};

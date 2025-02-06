@@ -17,12 +17,9 @@ export type Attachment =
 		| { status: "uploaded"; media: Media }
 	);
 
-// TODO: use maps instead of records? they might not play as nicely with solidjs, but are nicer overall (and possibly a lil more performant)
 export type Data = {
 	modals: Array<Modal>;
 	cursor: Cursor;
-	// TODO: remove thread_id requirement
-	uploads: Record<string, { up: Upload; thread_id: string }>;
 };
 
 export type Cursor = {
@@ -68,7 +65,7 @@ export type Action =
 	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
 	| { do: "goto"; thread_id: string; event_id: string }
 	| { do: "menu.preview"; id: string | null }
-	| { do: "modal.open", modal: Modal }
+	| { do: "modal.open"; modal: Modal }
 	| { do: "modal.close" }
 	| { do: "modal.alert"; text: string }
 	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
@@ -91,7 +88,7 @@ export type Action =
 	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
 	| { do: "upload.pause"; local_id: string }
 	| { do: "upload.resume"; local_id: string }
-	| { do: "upload.cancel"; local_id: string }
+	| { do: "upload.cancel"; local_id: string; thread_id: string }
 	| { do: "server.init_session" }
 	| { do: "window.mouse_move"; e: MouseEvent };
 
@@ -104,6 +101,7 @@ export type ChatCtx = {
 	data: Data;
 	dispatch: (action: Action) => void;
 
+	events: Emitter<Events>;
 	menu: Accessor<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
 	thread_attachments: ReactiveMap<string, Array<Attachment>>;
@@ -112,7 +110,7 @@ export type ChatCtx = {
 	thread_read_marker_id: ReactiveMap<string, string>;
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
-	events: Emitter<Events>;
+	uploads: ReactiveMap<string, Upload>;
 };
 
 export type Events = {
@@ -122,7 +120,6 @@ export type Events = {
 
 export const defaultData: Data = {
 	modals: [],
-	uploads: {},
 	cursor: {
 		pos: [],
 		vel: 0,

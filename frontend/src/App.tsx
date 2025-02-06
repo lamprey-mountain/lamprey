@@ -98,6 +98,7 @@ export const Root: Component = (props: ParentProps) => {
 		thread_read_marker_id: new ReactiveMap(),
 		thread_reply_id: new ReactiveMap(),
 		thread_scroll_pos: new Map(),
+		uploads: new ReactiveMap(),
 	};
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
