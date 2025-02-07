@@ -43,16 +43,26 @@ export function MessageMenu(props: MessageMenuProps) {
 	}
 
 	function redact() {
-		api.client.http.DELETE("/api/v1/thread/{thread_id}/message/{message_id}", {
-			params: {
-				path: {
-					thread_id: props.thread_id,
-					message_id: props.message_id,
-				},
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "really delete?",
+			cont: (conf) => {
+				if (!conf) return;
+				api.client.http.DELETE(
+					"/api/v1/thread/{thread_id}/message/{message_id}",
+					{
+						params: {
+							path: {
+								thread_id: props.thread_id,
+								message_id: props.message_id,
+							},
+						},
+					},
+				);
 			},
 		});
 	}
-	
+
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
 	return (
