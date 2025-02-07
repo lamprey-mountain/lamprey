@@ -42,6 +42,7 @@ export type Menu =
 			message_id: string;
 			version_id: string;
 		}
+		| { type: "member_room"; user_id: string; room_id: string }
 	);
 
 export type Modal =

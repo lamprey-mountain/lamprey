@@ -39,6 +39,7 @@ import { ThreadMenu } from "./menu/Thread.tsx";
 import { getModal } from "./modal/mod.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { Debug } from "./Debug.tsx";
+import { RoomMemberMenu } from "./menu/RoomMember.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -135,6 +136,7 @@ export const Root: Component = (props: ParentProps) => {
 		// dispatch({ do: "window.mouse_move", e });
 	};
 
+	// TODO: refactor
 	const handleContextMenu = (e: MouseEvent) => {
 		const targetEl = e.target as HTMLElement;
 		const menuEl = targetEl.closest(".has-menu") as HTMLElement | null;
@@ -145,8 +147,12 @@ export const Root: Component = (props: ParentProps) => {
 		if (mediaEl && targetEl.contains(mediaEl)) return;
 
 		// TODO: refactor?
-		const { messageId: message_id, roomId: room_id, threadId: thread_id } =
-			menuEl.dataset;
+		const {
+			messageId: message_id,
+			roomId: room_id,
+			threadId: thread_id,
+			userId: user_id,
+		} = menuEl.dataset;
 		let menu: Partial<Menu> | null = null;
 
 		if (message_id) {
@@ -173,6 +179,17 @@ export const Root: Component = (props: ParentProps) => {
 			menu = {
 				type: "room",
 				room_id,
+			};
+		}
+
+		// TODO: member_thread
+		if (user_id && thread_id) {
+			const thread = api.threads.cache.get(thread_id);
+			if (!thread) return;
+			menu = {
+				type: "member_room",
+				room_id: thread.room_id,
+				user_id,
 			};
 		}
 
@@ -360,6 +377,9 @@ function Overlay() {
 						version_id={menu.version_id}
 					/>
 				);
+			}
+			case "member_room": {
+				return <RoomMemberMenu room_id={menu.room_id} user_id={menu.user_id} />;
 			}
 		}
 	}
