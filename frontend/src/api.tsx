@@ -132,7 +132,13 @@ export function createApi(
 			}
 		} else if (msg.type === "UpsertRoomMember") {
 			const m = msg.member;
-			room_members.cache.get(m.room_id)?.set(m.user_id, m);
+			const c = room_members.cache.get(m.room_id);
+			if (c) {
+				c.set(m.user_id, m);
+			} else {
+				room_members.cache.set(m.room_id, new ReactiveMap());
+				room_members.cache.get(m.room_id)!.set(m.user_id, m);
+			}
 			const l = room_members._cachedListings.get(m.room_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
@@ -147,36 +153,6 @@ export function createApi(
 						...p,
 						items: [...p.items, m],
 						total: p.total + 1,
-					});
-				}
-			}
-		} else if (msg.type === "DeleteRoomMember") {
-			const user_id = users.cache.get("@self")?.id;
-			if (msg.user_id === user_id) {
-				if (rooms._cachedListing?.pagination) {
-					const l = rooms._cachedListing;
-					if (l?.pagination) {
-						const p = l.pagination;
-						const idx = p.items.findIndex((i) => i.id === msg.room_id);
-						if (idx !== -1) {
-							l.mutate({
-								...p,
-								items: p.items.toSpliced(idx, 1),
-							});
-						}
-					}
-				}
-			}
-			room_members.cache.get(msg.room_id)?.delete(msg.user_id);
-			const l = room_members._cachedListings.get(msg.room_id);
-			if (l?.resource.latest) {
-				const p = l.resource.latest;
-				const idx = p.items.findIndex((i) => i.user_id === msg.user_id);
-				if (idx !== -1) {
-					l.mutate({
-						...p,
-						items: p.items.toSpliced(idx, 1),
-						total: p.total - 1,
 					});
 				}
 			}

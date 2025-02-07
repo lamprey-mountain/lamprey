@@ -1,7 +1,8 @@
-import { For, from, Show } from "solid-js";
+import { createEffect, For, from, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
+import { Room, Thread } from "sdk";
 
 export const ChatNav = () => {
 	const ctx = useCtx();
@@ -17,54 +18,7 @@ export const ChatNav = () => {
 					<A href="/" end>home</A>
 				</li>
 				<For each={rooms()?.items}>
-					{(room) => (
-						<li>
-							<A
-								class="has-menu"
-								data-room-id={room.id}
-								href={`/room/${room.id}`}
-							>
-								{room.name}
-							</A>
-							<Show when={true}>
-								<ul>
-									<li>
-										<A
-											class="has-menu"
-											href={`/room/${room.id}`}
-											data-room-id={room.id}
-										>
-											home
-										</A>
-									</li>
-									<For
-										each={[
-											...api.threads.cache.values().filter((i) =>
-												i.room_id === room.id && i.state !== "Deleted"
-											),
-										]}
-									>
-										{(thread) => (
-											<li>
-												<A
-													href={`/thread/${thread.id}`}
-													class="has-menu"
-													classList={{
-														"closed": thread.state === "Archived",
-														"unread":
-															thread.last_read_id !== thread.last_version_id,
-													}}
-													data-thread-id={thread.id}
-												>
-													{thread.name}
-												</A>
-											</li>
-										)}
-									</For>
-								</ul>
-							</Show>
-						</li>
-					)}
+					{(room) => <ItemRoom room={room} />}
 				</For>
 			</ul>
 			<div style="flex:1"></div>
@@ -72,5 +26,72 @@ export const ChatNav = () => {
 				state: {state()}
 			</div>
 		</nav>
+	);
+};
+
+const ItemRoom = (props: { room: Room }) => {
+	const api = useApi();
+
+	// TODO: send self room member in api? this works for now though
+	const shouldShow = () => {
+		const user_id = api.users.cache.get("@self")?.id;
+		const c = api.room_members.cache.get(props.room.id);
+		const m = c?.get(user_id!);
+		if (m && m.membership !== "Join") return false;
+		return true;
+	};
+
+	return (
+		<Show when={shouldShow()}>
+			<li>
+				<A
+					class="has-menu"
+					data-room-id={props.room.id}
+					href={`/room/${props.room.id}`}
+				>
+					{props.room.name}
+				</A>
+				<Show when={true}>
+					<ul>
+						<li>
+							<A
+								class="has-menu"
+								href={`/room/${props.room.id}`}
+								data-room-id={props.room.id}
+							>
+								home
+							</A>
+						</li>
+						<For
+							each={[
+								...api.threads.cache.values().filter((i) =>
+									i.room_id === props.room.id && i.state !== "Deleted"
+								),
+							]}
+						>
+							{(thread) => <ItemThread thread={thread} />}
+						</For>
+					</ul>
+				</Show>
+			</li>
+		</Show>
+	);
+};
+
+const ItemThread = (props: { thread: Thread }) => {
+	return (
+		<li>
+			<A
+				href={`/thread/${props.thread.id}`}
+				class="has-menu"
+				classList={{
+					"closed": props.thread.state === "Archived",
+					"unread": props.thread.last_read_id !== props.thread.last_version_id,
+				}}
+				data-thread-id={props.thread.id}
+			>
+				{props.thread.name}
+			</A>
+		</li>
 	);
 };
