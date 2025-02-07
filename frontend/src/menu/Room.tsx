@@ -7,7 +7,7 @@ export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => props.room_id);
-	
+
 	const copyId = () => navigator.clipboard.writeText(props.room_id);
 
 	const copyLink = () => {
@@ -15,8 +15,24 @@ export function RoomMenu(props: { room_id: string }) {
 		navigator.clipboard.writeText(url);
 	};
 
-	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify(room())));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(room())));
+
+	const leave = () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "are you sure you want to leave?",
+			cont() {
+				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
+					params: {
+						path: {
+							room_id: props.room_id,
+							user_id: api.users.cache.get("@self")!.id,
+						},
+					},
+				});
+			},
+		});
+	};
 
 	return (
 		<Menu>
@@ -30,7 +46,7 @@ export function RoomMenu(props: { room_id: string }) {
 				<Item>roles</Item>
 				<Item>members</Item>
 			</Submenu>
-			<Item>leave</Item>
+			<Item onClick={leave}>leave</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
