@@ -771,8 +771,11 @@ input[type="text"] {
 		}
 	}
 
-	& img, video {
+	& img, video, audio {
 		display: block;
+	}
+
+	& img, video {
 		position: fixed;
 		top: 0;
 		left: 0;
