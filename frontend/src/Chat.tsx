@@ -1,4 +1,4 @@
-import { createEffect, createRenderEffect, on, onMount, Show } from "solid-js";
+import { createEffect, createRenderEffect, on, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
@@ -10,7 +10,6 @@ import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import { MessageListAnchor } from "./api/messages.ts";
-import { onCleanup } from "solid-js";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -280,10 +279,10 @@ export function renderTimeline(
 			id: "spacer-bottom",
 		});
 	} else {
-		newItems.push({
-			type: "spacer-mini",
-			id: "spacer-bottom-mini",
-		});
+		// newItems.push({
+		// 	type: "spacer-mini",
+		// 	id: "spacer-bottom-mini",
+		// });
 	}
 	return newItems;
 }

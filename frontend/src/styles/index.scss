@@ -181,12 +181,10 @@ button, input[type="submit"] {
 	background-color: $bg2;
 	color: $fg2;
 	display: grid;
-	grid-template-rows: 1fr 0;
+	grid-template-rows: 1fr auto;
 	contain: strict;
 
 	& > .input {
-		position: absolute;
-		bottom: 0;
 		width: 100%;
 		background-image: linear-gradient(to top, $bg2 25%, transparent);
 		display: flex;
@@ -194,6 +192,11 @@ button, input[type="submit"] {
 		padding: 4px;
 		max-height: 50%;
 		
+		& > .typing {
+			background: $bg3;
+			padding: 0 4px;
+		}
+
 		& > .reply {
 			display: flex;
 

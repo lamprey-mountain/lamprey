@@ -49,8 +49,33 @@ export function Input(props: InputProps) {
 		return state;
 	};
 
+	const typing = () => api.typing.get(props.thread.id);
+
+	const getName = (user_id: string) => {
+		const user = api.users.fetch(() => user_id);
+		const member = api.room_members.fetch(
+			() => props.thread.room_id,
+			() => user_id,
+		);
+
+		const m = member();
+		return m?.membership === "Join" && m.override_name || user()?.name;
+	};
+
+	const getTyping = () => {
+		const fmt = new Intl.ListFormat();
+		fmt.format(["a"]);
+		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []];
+		return fmt.format(user_ids.map((i) => getName(i) ?? "someone"));
+	};
+
 	return (
 		<div class="input">
+			<div class="typing">
+				<Show when={typing() && typing()!.size > 0} fallback=" ">
+					typing: {getTyping()}
+				</Show>
+			</div>
 			<Show when={atts()?.length}>
 				<ul class="attachments">
 					<For each={atts()}>

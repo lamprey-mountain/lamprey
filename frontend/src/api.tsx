@@ -71,6 +71,8 @@ export function createApi(
 	const room_members = new RoomMembers();
 	const users = new Users();
 	const messages = new Messages();
+	const typing = new ReactiveMap<string, Set<string>>();
+	const typing_timeout = new Map<string, Map<string, number>>();
 
 	temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
@@ -187,6 +189,15 @@ export function createApi(
 					last_version_id: m.version_id,
 				});
 			}
+
+			{
+				const t = typing.get(m.thread_id);
+				if (t) {
+					t.delete(m.author.id);
+					typing.set(m.thread_id, new Set(t));
+					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author.id));
+				}
+			}
 		} else if (msg.type === "DeleteMessage") {
 			batch(() => {
 				const { message_id, thread_id } = msg;
@@ -293,6 +304,28 @@ export function createApi(
 					});
 				}
 			}
+		} else if (msg.type === "Typing") {
+			const { thread_id, user_id, until } = msg;
+			const t = typing.get(thread_id) ?? new Set();
+			typing.set(thread_id, new Set([...t, user_id]));
+
+			const timeout = setTimeout(() => {
+				console.log("remove typing");
+				const t = typing.get(thread_id)!;
+				t.delete(user_id);
+				typing.set(thread_id, new Set(t));
+			}, Date.parse(until) - Date.now());
+
+			const tt = typing_timeout.get(thread_id);
+			if (tt) {
+				const tu = tt.get(user_id);
+				if (tu) clearTimeout(tu);
+				tt.set(user_id, timeout);
+			} else {
+				const tt = new Map();
+				tt.set(user_id, timeout);
+				typing_timeout.set(thread_id, tt);
+			}
 		} else {
 			console.warn(`unknown event ${msg.type}`, msg);
 		}
@@ -330,6 +363,7 @@ export function createApi(
 		users,
 		messages,
 		session,
+		typing,
 		tempCreateSession,
 		client: client,
 		Provider(props: ParentProps) {
@@ -407,6 +441,7 @@ export type Api = {
 		cacheRanges: Map<string, MessageRanges>;
 	};
 	session: Accessor<Session | null>;
+	typing: ReactiveMap<string, Set<string>>;
 	tempCreateSession: () => void;
 	client: Client;
 	Provider: Component<ParentProps>;
