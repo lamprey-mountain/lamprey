@@ -554,6 +554,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/typing": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Send typing
+		 * @description Send a typing notification to a thread
+		 */
+		put: operations["thread_typing"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user": {
 		parameters: {
 			query?: never;
@@ -818,21 +838,17 @@ export interface components {
 			/** @enum {string} */
 			type: "DeleteRole";
 		} | {
-			room_id: components["schemas"]["RoomId"];
-			/** @enum {string} */
-			type: "DeleteRoomMember";
-			user_id: components["schemas"]["UserId"];
-		} | {
 			code: components["schemas"]["InviteCode"];
 			target: components["schemas"]["InviteTargetId"];
 			/** @enum {string} */
 			type: "DeleteInvite";
 		} | {
-			data: components["schemas"]["Value"];
-			/** Format: uuid */
-			hook_id: string;
+			thread_id: components["schemas"]["ThreadId"];
 			/** @enum {string} */
-			type: "Webhook";
+			type: "Typing";
+			/** Format: date-time */
+			until: string;
+			user_id: components["schemas"]["UserId"];
 		};
 		/** @enum {string} */
 		MessageType: "Default" | "ThreadUpdate";
@@ -1183,7 +1199,6 @@ export interface components {
 		};
 		/** Format: uuid */
 		UserVerId: string;
-		Value: unknown;
 	};
 	responses: never;
 	parameters: never;
@@ -1620,7 +1635,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: string;
+				room_id: components["schemas"]["RoomId"];
 			};
 			cookie?: never;
 		};
@@ -1646,7 +1661,7 @@ export interface operations {
 				/** @description Room id */
 				room_id: components["schemas"]["RoomId"];
 				/** @description User id */
-				user_id: components["schemas"]["UserId"];
+				user_id: string;
 			};
 			cookie?: never;
 		};
@@ -1671,7 +1686,7 @@ export interface operations {
 				/** @description Room id */
 				room_id: components["schemas"]["RoomId"];
 				/** @description User id */
-				user_id: components["schemas"]["UserId"];
+				user_id: string;
 			};
 			cookie?: never;
 		};
@@ -1694,7 +1709,7 @@ export interface operations {
 				/** @description Room id */
 				room_id: components["schemas"]["RoomId"];
 				/** @description User id */
-				user_id: components["schemas"]["UserId"];
+				user_id: string;
 			};
 			cookie?: never;
 		};
@@ -2192,9 +2207,7 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
+				content?: never;
 			};
 		};
 	};
@@ -2604,6 +2617,27 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Thread"];
 				};
+			};
+		};
+	};
+	thread_typing: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
