@@ -317,7 +317,7 @@ async fn thread_activate(
     ),
     tags = ["thread"],
     responses(
-        (status = NO_CONTENT, body = Thread, description = "success"),
+        (status = NO_CONTENT, description = "success"),
     )
 )]
 async fn thread_delete(
@@ -336,6 +336,30 @@ async fn thread_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Send typing
+///
+/// Send a typing notification to a thread
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/typing",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["thread"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn thread_typing(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
+    s.broadcast(MessageSync::Typing { thread_id, user_id, until })?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create))
@@ -347,4 +371,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_archive))
         .routes(routes!(thread_delete))
         .routes(routes!(thread_activate))
+        .routes(routes!(thread_typing))
 }

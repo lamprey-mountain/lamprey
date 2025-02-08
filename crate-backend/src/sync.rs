@@ -241,6 +241,7 @@ impl Connection {
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
+            MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::Webhook {
                 hook_id: _,
                 data: _,

@@ -133,6 +133,12 @@ pub enum MessageSync {
         code: InviteCode,
         target: InviteTargetId,
     },
+    Typing {
+        thread_id: ThreadId,
+        user_id: UserId,
+        #[serde(serialize_with = "time::serde::rfc3339::serialize")]
+        until: time::OffsetDateTime,
+    },
     Webhook {
         hook_id: Uuid,
         data: JsonValue,
