@@ -5,6 +5,7 @@ import Editor, { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { renderAttachment } from "./Message.tsx";
 import { useApi } from "./api.tsx";
+import { leading, throttle } from "@solid-primitives/scheduled";
 
 type InputProps = {
 	thread: ThreadT;
@@ -36,20 +37,36 @@ export function Input(props: InputProps) {
 	}
 
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
+	const typing = () => api.typing.get(props.thread.id);
+
+	const sendTyping = leading(throttle, () => {
+		ctx.client.http.PUT("/api/v1/thread/{thread_id}/typing", {
+			params: {
+				path: { thread_id: props.thread.id },
+			},
+		});
+	}, 8000);
 
 	const editor_state = () => {
 		let state = ctx.thread_editor_state.get(props.thread.id)!;
 		// if (!state) {
 		if (true) {
-			state = createEditorState((text) => {
-				ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
-			});
+			state = createEditorState(
+				(text) => {
+					ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+				},
+				(has_content) => {
+					if (has_content) {
+						sendTyping();
+					} else {
+						sendTyping.clear();
+					}
+				},
+			);
 			ctx.thread_editor_state.set(props.thread.id, state);
 		}
 		return state;
 	};
-
-	const typing = () => api.typing.get(props.thread.id);
 
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
@@ -72,7 +89,7 @@ export function Input(props: InputProps) {
 	return (
 		<div class="input">
 			<div class="typing">
-				<Show when={typing() && typing()!.size > 0} fallback=" ">
+				<Show when={typing() && typing()!.size > 0}>
 					typing: {getTyping()}
 				</Show>
 			</div>
@@ -144,9 +161,7 @@ function renderAttachment2(thread: ThreadT, att: Attachment) {
 
 	return (
 		<>
-			<div>
-				{renderInfo(att)}
-			</div>
+			<div>{renderInfo(att)}</div>
 			<button onClick={() => removeAttachment(att.local_id)}>
 				cancel/remove
 			</button>

@@ -1,8 +1,4 @@
-import {
-	Command,
-	EditorState,
-	TextSelection,
-} from "prosemirror-state";
+import { Command, EditorState, Plugin, TextSelection } from "prosemirror-state";
 import {
 	Decoration,
 	DecorationAttrs,
@@ -73,7 +69,10 @@ type EditorProps = {
 	onUpload?: (file: File) => void;
 };
 
-export function createEditorState(onSubmit: (text: string) => void) {
+export function createEditorState(
+	onSubmit: (text: string) => void,
+	onInput?: (has_content: boolean) => void,
+) {
 	function createWrap(wrap: string): Command {
 		const len = wrap.length;
 
@@ -155,9 +154,12 @@ export function createEditorState(onSubmit: (text: string) => void) {
 					return true;
 				},
 			}),
-			// (cfg: EditorStateConfig) => {
-			// 	return cfg.doc;
-			// },
+			new Plugin({
+				filterTransaction(tr) {
+					onInput?.(tr.doc.firstChild?.firstChild !== null);
+					return true;
+				},
+			}),
 		],
 	});
 }
