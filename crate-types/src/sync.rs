@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -10,8 +9,6 @@ use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
     SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
-
-use serde_json::Value as JsonValue;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -138,10 +135,6 @@ pub enum MessageSync {
         user_id: UserId,
         #[serde(serialize_with = "time::serde::rfc3339::serialize")]
         until: time::OffsetDateTime,
-    },
-    Webhook {
-        hook_id: Uuid,
-        data: JsonValue,
     },
 }
 

@@ -242,12 +242,6 @@ impl Connection {
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
             MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::Webhook {
-                hook_id: _,
-                data: _,
-            } => {
-                todo!()
-            }
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
