@@ -196,7 +196,9 @@ impl Connection {
                 // TODO: more user upserts?
                 AuthCheck::User(user.id)
             }
-            MessageSync::UpsertRoomMember { member } => AuthCheck::Room(member.room_id),
+            MessageSync::UpsertRoomMember { member } => {
+                AuthCheck::RoomOrUser(member.room_id, member.user_id)
+            }
             MessageSync::UpsertSession {
                 session: upserted_session,
             } => {
@@ -232,9 +234,6 @@ impl Connection {
                 }
             }
             MessageSync::DeleteRole { room_id, .. } => AuthCheck::Room(*room_id),
-            MessageSync::DeleteRoomMember { room_id, user_id } => {
-                AuthCheck::RoomOrUser(*room_id, *user_id)
-            }
             MessageSync::DeleteInvite { target, .. } => match target {
                 InviteTargetId::User { user_id } => {
                     AuthCheck::Custom(session.user_id().is_some_and(|id| id == *user_id))
@@ -258,7 +257,11 @@ impl Connection {
                 if auth_user_id == target_user_id {
                     true
                 } else {
-                    let perms = self.s.data().permission_room_get(auth_user_id, room_id).await?;
+                    let perms = self
+                        .s
+                        .data()
+                        .permission_room_get(auth_user_id, room_id)
+                        .await?;
                     perms.has(Permission::View)
                 }
             }

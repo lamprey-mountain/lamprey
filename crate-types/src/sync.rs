@@ -129,11 +129,6 @@ pub enum MessageSync {
         room_id: RoomId,
         role_id: RoleId,
     },
-    #[deprecated = "use UpsertRoomMember + Membership=Leave"]
-    DeleteRoomMember {
-        room_id: RoomId,
-        user_id: UserId,
-    },
     DeleteInvite {
         code: InviteCode,
         target: InviteTargetId,
@@ -170,7 +165,6 @@ impl MessageSync {
             MessageSync::DeleteMessage { .. } => true,
             MessageSync::DeleteMessageVersion { .. } => true,
             MessageSync::DeleteRole { .. } => true,
-            MessageSync::DeleteRoomMember { .. } => true,
             MessageSync::DeleteInvite { .. } => true,
             _ => false,
         }
