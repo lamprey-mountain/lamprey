@@ -22,7 +22,7 @@ use crate::error::{Error, Result};
     path = "/room/{room_id}/member",
     params(
         PaginationQuery<UserId>,
-        ("room_id", description = "Room id"),
+        ("room_id" = RoomId, description = "Room id"),
     ),
     tags = ["room_member"],
     responses(
@@ -47,8 +47,8 @@ pub async fn room_member_list(
     get,
     path = "/room/{room_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = String, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -81,8 +81,8 @@ pub async fn room_member_get(
     patch,
     path = "/room/{room_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = String, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -134,8 +134,8 @@ pub async fn room_member_update(
     delete,
     path = "/room/{room_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = String, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
