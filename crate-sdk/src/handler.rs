@@ -4,7 +4,6 @@ use types::{
     InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId,
     Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId,
 };
-use uuid::Uuid;
 
 #[allow(unused_variables)]
 pub trait EventHandler: Send {
@@ -105,14 +104,6 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
-    fn delete_room_member(
-        &mut self,
-        room_id: RoomId,
-        user_id: UserId,
-    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
-        ready(Ok(()))
-    }
-
     fn delete_invite(
         &mut self,
         code: InviteCode,
@@ -120,10 +111,11 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
-    fn webhook(
+    fn typing(
         &mut self,
-        hook_id: Uuid,
-        data: serde_json::Value,
+        thread_id: ThreadId,
+        user_id: UserId,
+        until: time::OffsetDateTime,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
@@ -175,11 +167,12 @@ where
                 MessageSync::DeleteRole { room_id, role_id } => {
                     self.delete_role(room_id, role_id).await
                 }
-                MessageSync::DeleteRoomMember { room_id, user_id } => {
-                    self.delete_room_member(room_id, user_id).await
-                }
                 MessageSync::DeleteInvite { code, .. } => self.delete_invite(code).await,
-                MessageSync::Webhook { hook_id, data } => self.webhook(hook_id, data).await,
+                MessageSync::Typing {
+                    thread_id,
+                    user_id,
+                    until,
+                } => self.typing(thread_id, user_id, until).await,
             },
             MessagePayload::Error { error } => self.error(error).await,
             MessagePayload::Ready { user, session, .. } => self.ready(user, session).await,
