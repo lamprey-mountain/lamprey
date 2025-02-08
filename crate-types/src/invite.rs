@@ -19,9 +19,15 @@ pub struct Invite {
     pub code: InviteCode,
     pub target: InviteTarget,
     pub creator: User,
-    #[serde(serialize_with = "time::serde::rfc3339::serialize")]
+    #[serde(
+        serialize_with = "time::serde::rfc3339::serialize",
+        deserialize_with = "time::serde::rfc3339::deserialize"
+    )]
     pub created_at: time::OffsetDateTime,
-    #[serde(serialize_with = "time_rfc3339_option_serialize")]
+    #[serde(
+        serialize_with = "time_rfc3339_option_serialize",
+        deserialize_with = "time_rfc3339_option_deserialize"
+    )]
     pub expires_at: Option<time::OffsetDateTime>,
     // invites that automatically apply a certain role?
     // pub roles: Vec<Role>,
@@ -41,6 +47,21 @@ where
         Some(dt) => serializer.serialize_some(&Wrap(*dt)),
         None => serializer.serialize_none(),
     }
+}
+
+// TODO: test
+fn time_rfc3339_option_deserialize<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<time::OffsetDateTime>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrap(
+        #[serde(deserialize_with = "time::serde::rfc3339::deserialize")] time::OffsetDateTime,
+    );
+
+    Option::<Wrap>::deserialize(deserializer).map(|o| o.map(|w| w.0))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

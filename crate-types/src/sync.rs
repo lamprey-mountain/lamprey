@@ -133,7 +133,7 @@ pub enum MessageSync {
     Typing {
         thread_id: ThreadId,
         user_id: UserId,
-        #[serde(serialize_with = "time::serde::rfc3339::serialize")]
+        #[serde(serialize_with = "time::serde::rfc3339::serialize", deserialize_with = "time::serde::rfc3339::deserialize")]
         until: time::OffsetDateTime,
     },
 }
