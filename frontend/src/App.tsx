@@ -229,6 +229,14 @@ export const Root: Component = (props: ParentProps) => {
 		});
 	}
 
+	createEffect(() => {
+		// FIXME: don't fetch all threads every time room cache changes
+		// fine for now, but will be massively less efficient the more rooms/threads there are
+		for (const room_id of api.rooms.cache.keys()) {
+			api.threads.list(() => room_id);
+		}
+	});
+
 	return (
 		<div id="root">
 			<api.Provider>
