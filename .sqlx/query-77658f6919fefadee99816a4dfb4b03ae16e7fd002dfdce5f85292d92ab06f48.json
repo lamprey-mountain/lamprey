@@ -9,7 +9,7 @@
         "type_info": "Text"
       },
       {
-        "name": "discord_id",
+        "name": "matrix_id",
         "ordinal": 1,
         "type_info": "Text"
       },
@@ -19,7 +19,7 @@
         "type_info": "Text"
       },
       {
-        "name": "discord_channel_id",
+        "name": "matrix_room_id",
         "ordinal": 3,
         "type_info": "Text"
       }
