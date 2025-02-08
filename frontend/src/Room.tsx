@@ -51,7 +51,8 @@ export const RoomHome = (props: { room: RoomT }) => {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "are you sure you want to leave?",
-			cont() {
+			cont(confirmed) {
+				if (!confirmed) return;
 				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
 					params: {
 						path: {
