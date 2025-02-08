@@ -107,8 +107,8 @@ export const Root: Component = (props: ParentProps) => {
 	onCleanup(() => client.stop());
 
 	const handleClick = (e: MouseEvent) => {
-		if (!e.isTrusted) return;
 		setMenu(null);
+		if (!e.isTrusted) return;
 		const target = e.target as HTMLElement;
 		if (target.matches("a[download]")) {
 			const a = target as HTMLAnchorElement;

@@ -74,6 +74,8 @@ export function Submenu(
 				onClick={(e) => {
 					e.stopPropagation();
 					props.onClick?.(e);
+					// HACK: close menu
+					document.getElementById("root")!.click();
 				}}
 			>
 				{props.content}

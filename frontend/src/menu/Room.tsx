@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
@@ -6,6 +7,7 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
+	const nav = useNavigate();
 	const room = api.rooms.fetch(() => props.room_id);
 
 	const copyId = () => navigator.clipboard.writeText(props.room_id);
@@ -34,17 +36,20 @@ export function RoomMenu(props: { room_id: string }) {
 		});
 	};
 
+	const settings = (to: string) => () =>
+		nav(`/room/${props.room_id}/settings/${to}`);
+
 	return (
 		<Menu>
 			<Item>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<RoomNotificationMenu />
 			<Separator />
-			<Submenu content={"edit"}>
-				<Item>info</Item>
-				<Item>invites</Item>
-				<Item>roles</Item>
-				<Item>members</Item>
+			<Submenu content={"edit"} onClick={settings("")}>
+				<Item onClick={settings("")}>info</Item>
+				<Item onClick={settings("invites")}>invites</Item>
+				<Item onClick={settings("roles")}>roles</Item>
+				<Item onClick={settings("members")}>members</Item>
 			</Submenu>
 			<Item onClick={leave}>leave</Item>
 			<Separator />
