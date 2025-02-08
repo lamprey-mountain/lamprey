@@ -10,6 +10,7 @@ use types::{
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::types::UserIdReq;
 use crate::ServerState;
 
 use super::util::Auth;
@@ -55,10 +56,14 @@ pub async fn room_member_list(
     )
 )]
 pub async fn room_member_get(
-    Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
+    Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
     let d = s.data();
     let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
@@ -86,11 +91,15 @@ pub async fn room_member_get(
     )
 )]
 pub async fn room_member_update(
-    Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
+    Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
     let d = s.data();
     let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
@@ -100,7 +109,7 @@ pub async fn room_member_update(
 
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound)
+        return Err(Error::NotFound);
     }
     d.room_member_patch(room_id, target_user_id, patch).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
@@ -134,10 +143,14 @@ pub async fn room_member_update(
     )
 )]
 pub async fn room_member_delete(
-    Path((room_id, target_user_id)): Path<(RoomId, UserId)>,
+    Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
     let d = s.data();
     let perms = d.permission_room_get(auth_user_id, room_id).await?;
     perms.ensure_view()?;
@@ -146,7 +159,7 @@ pub async fn room_member_delete(
     }
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound)
+        return Err(Error::NotFound);
     }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
         .await?;
