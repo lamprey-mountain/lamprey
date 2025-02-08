@@ -23,7 +23,8 @@ export function RoomMenu(props: { room_id: string }) {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "are you sure you want to leave?",
-			cont() {
+			cont(confirm) {
+				if (!confirm) return;
 				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
 					params: {
 						path: {
