@@ -32,6 +32,7 @@ import { Home } from "./Home.tsx";
 import { ChatNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
 import { RoomSettings } from "./RoomSettings.tsx";
+import { ThreadSettings } from "./ThreadSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { MessageMenu } from "./menu/Message.tsx";
 import { RoomMenu } from "./menu/Room.tsx";
@@ -53,6 +54,10 @@ const App: Component = () => {
 			<Route
 				path="/room/:room_id/settings/:page?"
 				component={RouteRoomSettings}
+			/>
+			<Route
+				path="/thread/:thread_id/settings/:page?"
+				component={RouteThreadSettings}
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
 			<Route path="/debug" component={Debug} />
@@ -333,6 +338,21 @@ function RouteRoomSettings(p: RouteSectionProps) {
 			<ChatNav />
 			<Show when={room()}>
 				<RoomSettings room={room()!} page={p.params.page} />
+			</Show>
+		</>
+	);
+}
+
+function RouteThreadSettings(p: RouteSectionProps) {
+	const api = useApi();
+	const thread = api.threads.fetch(() => p.params.thread_id);
+	const title = () => thread() ? `${thread()!.name} settings` : "loading...";
+	return (
+		<>
+			<Title title={title()} />
+			<ChatNav />
+			<Show when={thread()}>
+				<ThreadSettings thread={thread()!} page={p.params.page} />
 			</Show>
 		</>
 	);
