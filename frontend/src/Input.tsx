@@ -81,15 +81,16 @@ export function Input(props: InputProps) {
 
 	const getTyping = () => {
 		const fmt = new Intl.ListFormat();
-		fmt.format(["a"]);
-		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []];
+		const user_id = api.users.cache.get("@self")?.id;
+		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
+			.filter((i) => i !== user_id);
 		return fmt.format(user_ids.map((i) => getName(i) ?? "someone"));
 	};
 
 	return (
 		<div class="input">
 			<div class="typing">
-				<Show when={typing() && typing()!.size > 0}>
+				<Show when={getTyping().length}>
 					typing: {getTyping()}
 				</Show>
 			</div>
