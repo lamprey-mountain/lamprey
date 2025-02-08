@@ -19,9 +19,16 @@ export function ThreadMenu(props: { thread_id: string }) {
 	};
 
 	const deleteThread = () => {
-		ctx.client.http.DELETE("/api/v1/thread/{thread_id}", {
-			params: {
-				path: { thread_id: props.thread_id },
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "are you sure you want to leave?",
+			cont(confirmed) {
+				if (!confirmed) return;
+				ctx.client.http.DELETE("/api/v1/thread/{thread_id}", {
+					params: {
+						path: { thread_id: props.thread_id },
+					},
+				});
 			},
 		});
 	};
