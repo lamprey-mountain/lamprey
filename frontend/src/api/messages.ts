@@ -139,7 +139,9 @@ export class Messages {
 			b: { value?: MessageRange },
 		): Promise<MessageRange> => {
 			try {
-				return await _update(a, b);
+				const s = await _update(a, b);
+				console.log(s);
+				return s;
 			} catch (err) {
 				console.error(err);
 				throw err;

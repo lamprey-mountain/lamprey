@@ -1,4 +1,4 @@
-import { createEffect, createRenderEffect, on, Show } from "solid-js";
+import { createEffect, createRenderEffect, on, onMount, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import { RoomT, ThreadT } from "./types.ts";
@@ -10,6 +10,7 @@ import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import { MessageListAnchor } from "./api/messages.ts";
+import { onCleanup } from "solid-js";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -32,6 +33,8 @@ export const ChatMain = (props: ChatProps) => {
 
 	const messages = api.messages.list(() => props.thread.id, anchor);
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
+
+	createEffect(() => console.log(messages.loading, messages.latest, messages.error, messages()))
 
 	const markRead = throttle(
 		() => {
@@ -135,6 +138,7 @@ export const ChatMain = (props: ChatProps) => {
 	// effect to update timeline
 	createRenderEffect(
 		on(() => [messages(), read_marker_id()] as const, ([m, rid]) => {
+			console.log(m);
 			if (m?.items.length) {
 				console.log("render timeline", m.items, rid);
 				console.time("rendertimeline");
@@ -201,7 +205,7 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(list.scrollPos, setPos));
 
 	return (
-		<div class="chat">
+		<div class="chat" data-thread-id={props.thread.id}>
 			<Show when={messages.loading}>
 				<div class="loading">loading...</div>
 			</Show>

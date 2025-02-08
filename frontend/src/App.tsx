@@ -128,7 +128,31 @@ export const Root: Component = (props: ParentProps) => {
 	};
 
 	const handleKeypress = (e: KeyboardEvent) => {
-		if (e.key === "Escape") dispatch({ do: "modal.close" });
+		if (e.key === "Escape") {
+			const thread_id = (document.querySelector(".chat") as HTMLElement)
+				?.dataset.threadId;
+			if (ctx.data.modals.length) {
+				dispatch({ do: "modal.close" });
+			} else if (thread_id) {
+				// messages are approx. 20 px high, show 3 pages of messages
+				const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+				ctx.thread_anchor.set(thread_id, {
+					type: "backwards",
+					limit: SLICE_LEN,
+				});
+				// version_id may be undefined
+				ctx.dispatch({
+					do: "thread.mark_read",
+					thread_id: thread_id,
+					delay: false,
+					also_local: true,
+					version_id: api.threads.cache.get(thread_id)?.last_version_id!,
+				});
+				const listEl = document.querySelector(".chat > .list") as HTMLElement;
+				listEl.scrollTo(0, 99999999);
+			}
+		}
 	};
 
 	const handleMouseMove = (e: MouseEvent) => {
