@@ -60,9 +60,9 @@ macro_rules! gen_paginate {
         if $p.dir == PaginationDirection::B {
             items.reverse();
         }
-        
+
         // tx intentionally dropped to rollback here
-        
+
         Ok(PaginationResponse {
             items,
             total: total.unwrap_or(0) as u64,

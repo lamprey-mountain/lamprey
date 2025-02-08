@@ -86,7 +86,7 @@ export class RoomMembers {
 				console.error(error);
 				throw error;
 			}
-			
+
 			const room_id = room_id_sig();
 			let cache = this.cache.get(room_id);
 			if (!cache) {

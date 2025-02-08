@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use sqlx::{query, query_as};
 use types::{MediaId, MessageId, ThreadId};
 
-use crate::{common::Globals, util::{MatrixEventId, MatrixMediaUri, MatrixRoomId}};
+use crate::{
+    common::Globals,
+    util::{MatrixEventId, MatrixMediaUri, MatrixRoomId},
+};
 
 pub struct MessageMetadata {
     pub chat_id: MessageId,

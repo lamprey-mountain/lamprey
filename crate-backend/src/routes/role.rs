@@ -6,7 +6,8 @@ use axum::{extract::State, Json};
 use http::StatusCode;
 use types::util::Diff;
 use types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreateRequest, RoleId, RolePatch, RoomId, RoomMember, RoomMembership, UserId
+    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreateRequest, RoleId,
+    RolePatch, RoomId, RoomMember, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -226,7 +227,7 @@ pub async fn role_member_add(
     d.role_member_put(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound)
+        return Err(Error::NotFound);
     }
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),
@@ -261,7 +262,7 @@ pub async fn role_member_remove(
     d.role_member_delete(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound)
+        return Err(Error::NotFound);
     }
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),

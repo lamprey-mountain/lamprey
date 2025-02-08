@@ -61,7 +61,7 @@ pub struct MessagePatch {
 pub enum MessageType {
     /// a basic message
     Default,
-    
+
     /// a message logging an update to the thread
     ThreadUpdate,
 }

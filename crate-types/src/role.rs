@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::{Diff, deserialize_sorted_permissions, deserialize_sorted_permissions_option};
+use crate::util::{deserialize_sorted_permissions, deserialize_sorted_permissions_option, Diff};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
@@ -58,10 +58,10 @@ pub struct RolePatch {
 impl Diff<Role> for RolePatch {
     fn changes(&self, other: &Role) -> bool {
         self.name.changes(&other.name)
-        || self.description.changes(&other.description)
-        || self.is_self_applicable.changes(&other.is_self_applicable)
-        || self.is_mentionable.changes(&other.is_mentionable)
-        || self.is_default.changes(&other.is_default)
-        || self.permissions.changes(&other.permissions)
+            || self.description.changes(&other.description)
+            || self.is_self_applicable.changes(&other.is_self_applicable)
+            || self.is_mentionable.changes(&other.is_mentionable)
+            || self.is_default.changes(&other.is_default)
+            || self.permissions.changes(&other.permissions)
     }
 }

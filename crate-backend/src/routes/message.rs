@@ -309,9 +309,7 @@ async fn message_edit(
         data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
             .await?;
     }
-    let mut message = data
-        .message_version_get(thread_id, version_id)
-        .await?;
+    let mut message = data.message_version_get(thread_id, version_id).await?;
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
     }
@@ -415,9 +413,7 @@ async fn message_version_get(
     let data = s.data();
     let perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut message = data
-        .message_version_get(thread_id, version_id)
-        .await?;
+    let mut message = data.message_version_get(thread_id, version_id).await?;
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
     }
@@ -446,9 +442,7 @@ async fn message_version_delete(
     let data = s.data();
     let mut perms = data.permission_thread_get(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let message = data
-        .message_version_get(thread_id, version_id)
-        .await?;
+    let message = data.message_version_get(thread_id, version_id).await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
@@ -456,8 +450,7 @@ async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    data.message_version_delete(thread_id, version_id)
-        .await?;
+    data.message_version_delete(thread_id, version_id).await?;
     Ok(Json(()))
 }
 

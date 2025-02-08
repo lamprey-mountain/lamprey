@@ -99,7 +99,7 @@ impl Unnamed {
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
                 match handle(msg, &self.client.http).await {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(err) => error!("{err}"),
                 };
             }

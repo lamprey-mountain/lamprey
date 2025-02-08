@@ -79,7 +79,11 @@ impl EventHandler for Handler {
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
         globals.portal_send_dc(
-            message.thread.as_ref().map(|t| t.id).unwrap_or(message.channel_id),
+            message
+                .thread
+                .as_ref()
+                .map(|t| t.id)
+                .unwrap_or(message.channel_id),
             PortalMessage::DiscordMessageCreate { message },
         );
     }
@@ -189,7 +193,7 @@ impl Discord {
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
                 match self.handle(msg, &http).await {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(err) => error!("{err}"),
                 };
             }

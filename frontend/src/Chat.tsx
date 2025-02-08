@@ -33,7 +33,9 @@ export const ChatMain = (props: ChatProps) => {
 	const messages = api.messages.list(() => props.thread.id, anchor);
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
-	createEffect(() => console.log(messages.loading, messages.latest, messages.error, messages()))
+	createEffect(() =>
+		console.log(messages.loading, messages.latest, messages.error, messages())
+	);
 
 	const markRead = throttle(
 		() => {

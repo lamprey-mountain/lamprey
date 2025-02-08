@@ -23,15 +23,9 @@ pub struct Portal {
 
 /// portal actor message
 pub enum PortalMessage {
-    UnnamedMessageUpsert {
-        message: Message,
-    },
-    UnnamedMessageDelete {
-        message_id: MessageId,
-    },
-    MatrixMessageCreate {
-        message: RoomMessageEventContent,
-    },
+    UnnamedMessageUpsert { message: Message },
+    UnnamedMessageDelete { message_id: MessageId },
+    MatrixMessageCreate { message: RoomMessageEventContent },
     // MatrixMessageUpdate {
     //     update: DcMessageUpdate,
     // },
@@ -110,7 +104,7 @@ impl Portal {
                                 .send(MatrixMessage::SendAttachment {
                                     room_id: self.mx_room_id().clone(),
                                     payload: att,
-                                    response:send
+                                    response: send,
                                 })
                                 .await?;
                             self.globals
@@ -145,7 +139,6 @@ impl Portal {
             }
             PortalMessage::UnnamedMessageDelete { message_id } => todo!(),
             PortalMessage::MatrixMessageCreate { message } => todo!(),
-
             //     let (send, recv) = oneshot::channel();
             //     if let Some(edit) = existing {
             //         let mut files = EditAttachments::new();

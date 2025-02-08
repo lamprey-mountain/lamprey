@@ -6,11 +6,11 @@ use serde::Deserialize;
 use tokio::sync::mpsc;
 use types::ThreadId;
 
+use crate::chat::UnnamedMessage;
 use crate::data::MessageMetadata;
 use crate::matrix::MatrixMessage;
 use crate::portal::{Portal, PortalMessage};
 use crate::util::MatrixRoomId;
-use crate::chat::UnnamedMessage;
 
 #[derive(Clone)]
 pub struct Globals {

@@ -356,7 +356,11 @@ async fn thread_typing(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
-    s.broadcast(MessageSync::Typing { thread_id, user_id, until })?;
+    s.broadcast(MessageSync::Typing {
+        thread_id,
+        user_id,
+        until,
+    })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -74,22 +74,27 @@ impl DataSession for Postgres {
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>> {
         let p: Pagination<_> = pagination.try_into()?;
-        gen_paginate!(p, self.pool, query_as!(
-            DbSession,
-            r#"
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbSession,
+                r#"
         	SELECT id, user_id, token, status as "status: _", name FROM session
         	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
-            user_id.into_inner(),
-            p.after.into_inner(),
-            p.before.into_inner(),
-            p.dir.to_string(),
-            (p.limit + 1) as i32
-        ), query_scalar!(
-            "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
-            user_id.into_inner()
-        ))
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
+                user_id.into_inner()
+            )
+        )
     }
 
     async fn session_delete(&self, session_id: SessionId) -> Result<()> {
@@ -128,4 +133,3 @@ impl DataSession for Postgres {
         Ok(())
     }
 }
-

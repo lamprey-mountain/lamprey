@@ -43,7 +43,9 @@ impl ConfigPortal {
 
 impl Config {
     pub fn portal_by_discord_id(&self, id: DcChannelId) -> Option<&ConfigPortal> {
-        self.portal.iter().find(|i| i.discord_channel_or_thread_id() == id)
+        self.portal
+            .iter()
+            .find(|i| i.discord_channel_or_thread_id() == id)
     }
 
     pub fn portal_by_thread_id(&self, id: ThreadId) -> Option<&ConfigPortal> {

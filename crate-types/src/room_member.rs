@@ -14,7 +14,10 @@ pub struct RoomMember {
     pub membership: RoomMembership,
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
-    #[serde(serialize_with = "time::serde::rfc3339::serialize", deserialize_with = "time::serde::rfc3339::deserialize")]
+    #[serde(
+        serialize_with = "time::serde::rfc3339::serialize",
+        deserialize_with = "time::serde::rfc3339::deserialize"
+    )]
     pub membership_updated_at: time::OffsetDateTime,
 }
 

@@ -1,4 +1,4 @@
-import { Pagination, Invite } from "sdk";
+import { Invite, Pagination } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
@@ -16,28 +16,31 @@ export class Invites {
 	_cachedListings = new Map<string, Listing<Invite>>();
 
 	fetch(invite_code_signal: () => string): Resource<Invite> {
-		const [resource, { mutate }] = createResource(invite_code_signal, (invite_code) => {
-			const cached = this.cache.get(invite_code);
-			if (cached) return cached;
-			const existing = this._requests.get(invite_code);
-			if (existing) return existing;
+		const [resource, { mutate }] = createResource(
+			invite_code_signal,
+			(invite_code) => {
+				const cached = this.cache.get(invite_code);
+				if (cached) return cached;
+				const existing = this._requests.get(invite_code);
+				if (existing) return existing;
 
-			const req = (async () => {
-				const { data, error } = await this.api.client.http.GET(
-				  "/api/v1/invite/{invite_code}",
-					{
-						params: { path: { invite_code } },
-					},
-				);
-				if (error) throw error;
-				this._requests.delete(invite_code);
-				this.cache.set(invite_code, data);
-				return data;
-			})();
+				const req = (async () => {
+					const { data, error } = await this.api.client.http.GET(
+						"/api/v1/invite/{invite_code}",
+						{
+							params: { path: { invite_code } },
+						},
+					);
+					if (error) throw error;
+					this._requests.delete(invite_code);
+					this.cache.set(invite_code, data);
+					return data;
+				})();
 
-			this._requests.set(invite_code, req);
-			return req;
-		});
+				this._requests.set(invite_code, req);
+				return req;
+			},
+		);
 
 		createEffect(() => {
 			const invite = this.cache.get(invite_code_signal());

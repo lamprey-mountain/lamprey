@@ -20,7 +20,7 @@ export class Roles {
 			room_id: room_id(),
 			role_id: role_id(),
 		});
-		
+
 		const [resource, { mutate }] = createResource(
 			query,
 			({ room_id, role_id }) => {
@@ -33,7 +33,7 @@ export class Roles {
 					const { data, error } = await this.api.client.http.GET(
 						"/api/v1/room/{room_id}/role/{role_id}",
 						{
-							params: { path: { room_id, role_id} },
+							params: { path: { room_id, role_id } },
 						},
 					);
 					if (error) throw error;

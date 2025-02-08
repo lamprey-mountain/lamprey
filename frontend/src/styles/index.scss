@@ -191,7 +191,7 @@ button, input[type="submit"] {
 		flex-direction: column;
 		padding: 4px;
 		max-height: 50%;
-		
+
 		& > .typing {
 			background: $bg3;
 			padding: 0 4px;
@@ -220,7 +220,7 @@ button, input[type="submit"] {
 
 		& > .text {
 			display: flex;
-			
+
 			& > .upload {
 				width: 124px;
 				padding: 0 4px;
@@ -236,7 +236,7 @@ button, input[type="submit"] {
 					display: none;
 				}
 			}
-		
+
 			& > .editor {
 				flex: 1;
 				box-shadow: 2px 2px 8px #1114;
@@ -575,7 +575,7 @@ input[type="text"] {
 .message {
 	display: grid;
 	grid-template-columns: 128px 1fr max-content;
-	
+
 	&:hover {
 		& > * {
 			background-color: rgba(var(--color-bg1), 0.3);
@@ -618,7 +618,7 @@ input[type="text"] {
 			padding: 0;
 			padding-right: 8px;
 		}
-		
+
 		&:hover {
 			color: $fg4;
 		}
@@ -750,7 +750,7 @@ input[type="text"] {
 	contain: content;
 	max-height: min(50vh, 600px);
 	aspect-ratio: var(--aspect-ratio);
-	
+
 	& .inner {
 		max-width: min(600px, 50vw);
 		aspect-ratio: var(--aspect-ratio);
@@ -764,10 +764,10 @@ input[type="text"] {
 		max-width: 100%;
 		height: var(--height);
 		width: var(--width);
-		
+
 		&:before {
 			content: "";
-			animation: loading .4s linear infinite;
+			animation: loading 0.4s linear infinite;
 		}
 	}
 
@@ -785,19 +785,39 @@ input[type="text"] {
 }
 
 @keyframes loading {
-	0%   { content: "⠋ "; }
-	11%  { content: "⠙ "; }
-	23%  { content: "⠹ "; }
-	33%  { content: "⠸ "; }
-	44%  { content: "⠼ "; }
-	55%  { content: "⠴ "; }
-	66%  { content: "⠦ "; }
-	77%  { content: "⠧ "; }
-	88%  { content: "⠇ "; }
-	100% { content: "⠏ "; }
+	0% {
+		content: "⠋ ";
+	}
+	11% {
+		content: "⠙ ";
+	}
+	23% {
+		content: "⠹ ";
+	}
+	33% {
+		content: "⠸ ";
+	}
+	44% {
+		content: "⠼ ";
+	}
+	55% {
+		content: "⠴ ";
+	}
+	66% {
+		content: "⠦ ";
+	}
+	77% {
+		content: "⠧ ";
+	}
+	88% {
+		content: "⠇ ";
+	}
+	100% {
+		content: "⠏ ";
+	}
 }
 
-.modal-media > .content  {
+.modal-media > .content {
 	& > .base {
 		background: none;
 		border: none;
