@@ -149,8 +149,11 @@ export const Root: Component = (props: ParentProps) => {
 					also_local: true,
 					version_id: api.threads.cache.get(thread_id)?.last_version_id!,
 				});
-				const listEl = document.querySelector(".chat > .list") as HTMLElement;
-				listEl.scrollTo(0, 99999999);
+				// HACK: i need to make the update order less jank
+				setTimeout(() => {
+					const listEl = document.querySelector(".chat > .list") as HTMLElement;
+					listEl.scrollTo(0, 99999999);
+				});
 			}
 		}
 	};
