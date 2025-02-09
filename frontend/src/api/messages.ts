@@ -27,8 +27,6 @@ export type MessageMutator = {
 };
 
 export class MessageRange {
-	public mutators = new Set<MessageMutator>();
-
 	constructor(
 		public has_forward: boolean,
 		public has_backwards: boolean,
@@ -128,312 +126,215 @@ export class Messages {
 		thread_id_signal: () => string,
 		dir_signal: () => MessageListAnchor,
 	): Resource<MessageRange> {
-		// always have Ranges for the current thread
-		const thread_id = untrack(thread_id_signal);
-		if (!this.cacheRanges.has(thread_id)) {
-			this.cacheRanges.set(thread_id, new MessageRanges());
-		}
-
-		const update = async (
-			a: { thread_id: string; dir: MessageListAnchor },
-			b: { value?: MessageRange },
-		): Promise<MessageRange> => {
-			try {
-				const s = await _update(a, b);
-				console.log(s);
-				return s;
-			} catch (err) {
-				console.error(err);
-				throw err;
-			}
-		};
-
-		const fetchList = async (thread_id: string, query: PaginationQuery) => {
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/thread/{thread_id}/message",
-				{
-					params: {
-						path: { thread_id },
-						query,
-					},
-				},
-			);
-			if (error) throw new Error(error);
-			return data;
-		};
-
-		const fetchContext = async (
-			thread_id: string,
-			message_id: string,
-			limit: number,
-		) => {
-			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/thread/{thread_id}/context/{message_id}",
-				{
-					params: {
-						path: { thread_id, message_id },
-						query: { limit },
-					},
-				},
-			);
-			if (error) throw new Error(error);
-			return data;
-		};
-
-		/** append a set of data to a range, deduplicating ranges if there are multiple */
-		const mergeAfter = (
-			ranges: MessageRanges,
-			range: MessageRange,
-			data: PaginationResponseMessage,
-		): MessageRange => {
-			let items: Array<Message> = [];
-			for (const item of data.items) {
-				this.cache.set(item.id, item);
-				const existing = ranges.find(item.id);
-				if (existing) {
-					if (existing !== range) {
-						console.log("merge (after)!");
-						range.items.push(...items);
-						items = [];
-						range = ranges.merge(range, existing);
-					}
-				} else {
-					items.push(item);
-				}
-			}
-			range.items.push(...items);
-			range.has_forward &&= data.has_more;
-			return range;
-		};
-
-		/** prepend a set of data to a range, deduplicating ranges if there are multiple */
-		const mergeBefore = (
-			ranges: MessageRanges,
-			range: MessageRange,
-			data: PaginationResponseMessage,
-		): MessageRange => {
-			let items: Array<Message> = [];
-			for (const item of data.items) {
-				this.cache.set(item.id, item);
-				const existing = ranges.find(item.id);
-				if (existing) {
-					if (existing !== range) {
-						console.log("merge (before)!");
-						range.items.unshift(...items);
-						items = [];
-						range = ranges.merge(range, existing);
-					}
-				} else {
-					items.push(item);
-				}
-			}
-			range.items.unshift(...items);
-			range.has_backwards &&= data.has_more;
-			return range;
-		};
-
-		let old: { thread_id: string; dir: MessageListAnchor };
-		const _update = async (
-			{ thread_id, dir }: { thread_id: string; dir: MessageListAnchor },
-			{ value: oldValue }: { value?: MessageRange },
-		): Promise<MessageRange> => {
-			// ugly, but seems to work
-			if (
-				old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
-				old.dir.type === dir.type && old.dir.message_id === dir.message_id
-			) return oldValue!;
-			old = { thread_id, dir };
-
-			let ranges = this.cacheRanges.get(thread_id);
-			if (!ranges) {
-				ranges = new MessageRanges();
-				this.cacheRanges.set(thread_id, ranges);
-			}
-
-			console.log("recalculate message list", {
-				thread_id,
-				dir,
-				ranges,
-			});
-
-			if (!ranges) throw new Error("missing ranges!");
-
-			// step 1. fetch more messages if needed
-			if (dir.type === "forwards") {
-				if (dir.message_id) {
-					const r = ranges.find(dir.message_id);
-					if (r) {
-						const idx = r.items.findIndex((i) => i.id === dir.message_id);
-						if (idx !== -1) {
-							if (idx + dir.limit < r.len || !r.has_forward) {
-								console.log("messages reuse range for forwards");
-							} else {
-								console.log("messages fetch more for forwards");
-								const data = await fetchList(thread_id, {
-									dir: "f",
-									limit: 100,
-									from: r.end,
-								});
-								mergeAfter(ranges, r, data);
-							}
-						} else {
-							throw new Error("unreachable");
-						}
-					} else {
-						console.log("messages fetch initial for forwards");
-						throw new Error("todo");
-					}
-				} else {
-					console.log("messages fetch start for forwards");
-					throw new Error("todo");
-				}
-			} else if (dir.type === "backwards") {
-				if (dir.message_id) {
-					const r = ranges.find(dir.message_id);
-					if (r) {
-						const idx = r.items.findIndex((i) => i.id === dir.message_id);
-						if (idx !== -1) {
-							if (idx >= dir.limit) {
-								console.log("messages reuse range for backwards");
-							}
-
-							// fetch more
-							const data = await fetchList(thread_id, {
-								dir: "b",
-								limit: 100,
-								from: r.start,
-							});
-							mergeBefore(ranges, r, data);
-						} else {
-							throw new Error("unreachable");
-						}
-					} else {
-						// new range
-						throw new Error("todo");
-					}
-				}
-
-				const range = ranges.live;
-				if (range.isEmpty()) {
-					const data = await fetchList(thread_id, { dir: "b", limit: 100 });
-					mergeBefore(ranges, range, data);
-				} else {
-					// don't need to do anything
-				}
-			} else if (dir.type === "context") {
-				const r = ranges.find(dir.message_id);
-
-				if (r) {
-					const idx = r.items.findIndex((i) => i.id === dir.message_id);
-					if (idx !== -1) {
-						const hasEnoughForwards = (idx <= r.len - dir.limit) ||
-							!r.has_forward;
-						const hasEnoughBackwards = (idx >= dir.limit) || !r.has_backwards;
-
-						if (hasEnoughBackwards && hasEnoughForwards) {
-							console.log("messages reuse range for context");
-						} else {
-							console.log("messages fetch more for context");
-							let dataBefore: Pagination<Message>;
-							let dataAfter: Pagination<Message>;
-
-							if (!hasEnoughBackwards) {
-								dataBefore = await fetchList(thread_id, {
-									dir: "b",
-									limit: 100,
-									from: r.start,
-								});
-							}
-
-							if (!hasEnoughForwards) {
-								dataAfter = await fetchList(thread_id, {
-									dir: "f",
-									limit: 100,
-									from: r.end,
-								});
-							}
-
-							batch(() => {
-								if (dataBefore) mergeBefore(ranges, r, dataBefore);
-								if (dataAfter) mergeAfter(ranges, r, dataAfter);
-							});
-						}
-					} else {
-						// fetch thread
-						throw new Error("todo");
-					}
-				} else {
-					// new range
-					console.log("messages fetch context");
-					const data = await fetchContext(thread_id, dir.message_id, dir.limit);
-					let range = new MessageRange(false, false, []);
-					ranges.ranges.add(range);
-					batch(() => {
-						range = mergeAfter(ranges, range, {
-							items: data.items,
-							has_more: data.has_before,
-							total: data.total,
-						});
-						// TODO: unify these names
-						range.has_backwards = data.has_before;
-						range.has_forward = data.has_after;
-					});
-				}
-			}
-
-			// step 2. get a slice of the message range
-			if (dir.type === "forwards") {
-				if (dir.message_id) {
-					const r = ranges.find(dir.message_id);
-					if (!r) throw new Error("failed to fetch messages");
-					const idx = r.items.findIndex((i) => i.id === dir.message_id);
-					if (idx === -1) throw new Error("failed to fetch messages");
-					const start = idx;
-					const end = Math.min(idx + dir.limit, r.len);
-					const s = r.slice(start, end);
-					assertEq(s.start, dir.message_id);
-					return s;
-				} else {
-					throw new Error("todo");
-				}
-			} else if (dir.type === "backwards") {
-				if (dir.message_id) {
-					const r = ranges.find(dir.message_id);
-					if (!r) throw new Error("failed to fetch messages");
-					const idx = r.items.findIndex((i) => i.id === dir.message_id);
-					if (idx === -1) throw new Error("failed to fetch messages");
-					const end = idx + 1;
-					const start = Math.max(end - dir.limit, 0);
-					const s = r.slice(start, end);
-					assertEq(s.end, dir.message_id);
-					return s;
-				} else {
-					const r = ranges.live;
-					const start = Math.max(r.len - dir.limit, 0);
-					const end = Math.min(start + dir.limit, r.len);
-					return r.slice(start, end);
-				}
-			} else if (dir.type === "context") {
-				const r = ranges.find(dir.message_id);
-				if (!r) throw new Error("failed to fetch messages");
-
-				const idx = r.items.findIndex((i) => i.id === dir.message_id);
-				if (idx === -1) throw new Error("failed to fetch messages");
-				const end = Math.min(idx + dir.limit, r.len);
-				const start = Math.max(idx - dir.limit, 0);
-				const s = r.slice(start, end);
-				return s;
-			}
-
-			throw new Error("unreachable");
-		};
-
 		const query = () => ({
 			thread_id: thread_id_signal(),
 			dir: dir_signal(),
 		});
 
-		const [resource, { mutate }] = createResource(query, update);
+		let old: { thread_id: string; dir: MessageListAnchor };
+		const [resource, { mutate }] = createResource(
+			query,
+			async ({ thread_id, dir }, { value: oldValue }) => {
+				// ugly, but seems to work
+				if (
+					old && old.thread_id === thread_id && old.dir.limit === dir.limit &&
+					old.dir.type === dir.type && old.dir.message_id === dir.message_id &&
+					oldValue
+				) return oldValue!;
+				old = { thread_id, dir };
+
+				let ranges = this.cacheRanges.get(thread_id);
+				if (!ranges) {
+					ranges = new MessageRanges();
+					this.cacheRanges.set(thread_id, ranges);
+				}
+
+				console.log("recalculate message list", {
+					thread_id,
+					dir,
+					ranges,
+				});
+
+				if (!ranges) throw new Error("missing ranges!");
+
+				// step 1. fetch more messages if needed
+				if (dir.type === "forwards") {
+					if (dir.message_id) {
+						const r = ranges.find(dir.message_id);
+						if (r) {
+							const idx = r.items.findIndex((i) => i.id === dir.message_id);
+							if (idx !== -1) {
+								if (idx + dir.limit < r.len || !r.has_forward) {
+									console.log("messages reuse range for forwards");
+								} else {
+									console.log("messages fetch more for forwards");
+									const data = await this.fetchList(thread_id, {
+										dir: "f",
+										limit: 100,
+										from: r.end,
+									});
+									this.mergeAfter(ranges, r, data);
+								}
+							} else {
+								throw new Error("unreachable");
+							}
+						} else {
+							console.log("messages fetch initial for forwards");
+							throw new Error("todo");
+						}
+					} else {
+						console.log("messages fetch start for forwards");
+						throw new Error("todo");
+					}
+				} else if (dir.type === "backwards") {
+					if (dir.message_id) {
+						const r = ranges.find(dir.message_id);
+						if (r) {
+							const idx = r.items.findIndex((i) => i.id === dir.message_id);
+							if (idx !== -1) {
+								if (idx >= dir.limit) {
+									console.log("messages reuse range for backwards");
+								}
+
+								// fetch more
+								const data = await this.fetchList(thread_id, {
+									dir: "b",
+									limit: 100,
+									from: r.start,
+								});
+								this.mergeBefore(ranges, r, data);
+							} else {
+								throw new Error("unreachable");
+							}
+						} else {
+							// new range
+							throw new Error("todo");
+						}
+					}
+
+					const range = ranges.live;
+					if (range.isEmpty()) {
+						const data = await this.fetchList(thread_id, {
+							dir: "b",
+							limit: 100,
+						});
+						this.mergeBefore(ranges, range, data);
+					} else {
+						// don't need to do anything
+					}
+				} else if (dir.type === "context") {
+					const r = ranges.find(dir.message_id);
+
+					if (r) {
+						const idx = r.items.findIndex((i) => i.id === dir.message_id);
+						if (idx !== -1) {
+							const hasEnoughForwards = (idx <= r.len - dir.limit) ||
+								!r.has_forward;
+							const hasEnoughBackwards = (idx >= dir.limit) || !r.has_backwards;
+
+							if (hasEnoughBackwards && hasEnoughForwards) {
+								console.log("messages reuse range for context");
+							} else {
+								console.log("messages fetch more for context");
+								let dataBefore: Pagination<Message>;
+								let dataAfter: Pagination<Message>;
+
+								if (!hasEnoughBackwards) {
+									dataBefore = await this.fetchList(thread_id, {
+										dir: "b",
+										limit: 100,
+										from: r.start,
+									});
+								}
+
+								if (!hasEnoughForwards) {
+									dataAfter = await this.fetchList(thread_id, {
+										dir: "f",
+										limit: 100,
+										from: r.end,
+									});
+								}
+
+								batch(() => {
+									if (dataBefore) this.mergeBefore(ranges, r, dataBefore);
+									if (dataAfter) this.mergeAfter(ranges, r, dataAfter);
+								});
+							}
+						} else {
+							// fetch thread
+							throw new Error("todo");
+						}
+					} else {
+						// new range
+						console.log("messages fetch context");
+						const data = await this.fetchContext(
+							thread_id,
+							dir.message_id,
+							dir.limit,
+						);
+						console.log("messages done fetching context");
+						let range = new MessageRange(false, false, []);
+						ranges.ranges.add(range);
+						batch(() => {
+							range = this.mergeAfter(ranges, range, {
+								items: data.items,
+								has_more: data.has_before,
+								total: data.total,
+							});
+							// TODO: unify these names
+							range.has_backwards = data.has_before;
+							range.has_forward = data.has_after;
+						});
+					}
+				}
+
+				// step 2. get a slice of the message range
+				if (dir.type === "forwards") {
+					if (dir.message_id) {
+						const r = ranges.find(dir.message_id);
+						if (!r) throw new Error("failed to fetch messages");
+						const idx = r.items.findIndex((i) => i.id === dir.message_id);
+						if (idx === -1) throw new Error("failed to fetch messages");
+						const start = idx;
+						const end = Math.min(idx + dir.limit, r.len);
+						const s = r.slice(start, end);
+						assertEq(s.start, dir.message_id);
+						return s;
+					} else {
+						throw new Error("todo");
+					}
+				} else if (dir.type === "backwards") {
+					if (dir.message_id) {
+						const r = ranges.find(dir.message_id);
+						if (!r) throw new Error("failed to fetch messages");
+						const idx = r.items.findIndex((i) => i.id === dir.message_id);
+						if (idx === -1) throw new Error("failed to fetch messages");
+						const end = idx + 1;
+						const start = Math.max(end - dir.limit, 0);
+						const s = r.slice(start, end);
+						assertEq(s.end, dir.message_id);
+						return s;
+					} else {
+						const r = ranges.live;
+						const start = Math.max(r.len - dir.limit, 0);
+						const end = Math.min(start + dir.limit, r.len);
+						return r.slice(start, end);
+					}
+				} else if (dir.type === "context") {
+					const r = ranges.find(dir.message_id);
+					if (!r) throw new Error("failed to fetch messages");
+
+					const idx = r.items.findIndex((i) => i.id === dir.message_id);
+					if (idx === -1) throw new Error("failed to fetch messages");
+					const end = Math.min(idx + dir.limit, r.len);
+					const start = Math.max(idx - dir.limit, 0);
+					const s = r.slice(start, end);
+					return s;
+				}
+
+				throw new Error("unreachable");
+			},
+		);
 
 		// HACK: surely there's a better way...
 		const mut = { mutate } as unknown as MessageMutator;
@@ -521,6 +422,7 @@ export class Messages {
 	}
 
 	_updateMutators(r: MessageRanges, thread_id: string) {
+		console.log("update mutators");
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
 			if (mut.query.type !== "backwards") continue;
@@ -529,6 +431,90 @@ export class Messages {
 			const end = Math.min(start + mut.query.limit, r.live.len);
 			mut.mutate(r.live.slice(start, end));
 		}
+	}
+
+	private async fetchList(thread_id: string, query: PaginationQuery) {
+		const { data, error } = await this.api.client.http.GET(
+			"/api/v1/thread/{thread_id}/message",
+			{
+				params: {
+					path: { thread_id },
+					query,
+				},
+			},
+		);
+		if (error) throw new Error(error);
+		return data;
+	}
+
+	private async fetchContext(
+		thread_id: string,
+		message_id: string,
+		limit: number,
+	) {
+		const { data, error } = await this.api.client.http.GET(
+			"/api/v1/thread/{thread_id}/context/{message_id}",
+			{
+				params: {
+					path: { thread_id, message_id },
+					query: { limit },
+				},
+			},
+		);
+		if (error) throw new Error(error);
+		return data;
+	}
+
+	/** append a set of data to a range, deduplicating ranges if there are multiple */
+	private mergeAfter(
+		ranges: MessageRanges,
+		range: MessageRange,
+		data: PaginationResponseMessage,
+	): MessageRange {
+		let items: Array<Message> = [];
+		for (const item of data.items) {
+			this.cache.set(item.id, item);
+			const existing = ranges.find(item.id);
+			if (existing) {
+				if (existing !== range) {
+					console.log("merge (after)!");
+					range.items.push(...items);
+					items = [];
+					range = ranges.merge(range, existing);
+				}
+			} else {
+				items.push(item);
+			}
+		}
+		range.items.push(...items);
+		range.has_forward &&= data.has_more;
+		return range;
+	}
+
+	/** prepend a set of data to a range, deduplicating ranges if there are multiple */
+	private mergeBefore(
+		ranges: MessageRanges,
+		range: MessageRange,
+		data: PaginationResponseMessage,
+	): MessageRange {
+		let items: Array<Message> = [];
+		for (const item of data.items) {
+			this.cache.set(item.id, item);
+			const existing = ranges.find(item.id);
+			if (existing) {
+				if (existing !== range) {
+					console.log("merge (before)!");
+					range.items.unshift(...items);
+					items = [];
+					range = ranges.merge(range, existing);
+				}
+			} else {
+				items.push(item);
+			}
+		}
+		range.items.unshift(...items);
+		range.has_backwards &&= data.has_more;
+		return range;
 	}
 }
 
