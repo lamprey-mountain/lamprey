@@ -12,6 +12,7 @@ export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreateRequest"];
 export type PaginationResponseMessage =
 	components["schemas"]["PaginationResponse_Message"];
+export type AuditLogEntry = components["schemas"]["AuditLog"];
 
 export type Pagination<T> = {
 	total: number;

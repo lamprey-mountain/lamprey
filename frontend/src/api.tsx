@@ -13,6 +13,7 @@ import {
 } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
+	AuditLogEntry,
 	Client,
 	Invite,
 	Media,
@@ -41,6 +42,7 @@ import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
 import { RoomMembers } from "./api/room_members.ts";
 import { Roles } from "./api/roles.ts";
+import { AuditLogs } from "./api/audit_log.ts";
 
 export type Json =
 	| number
@@ -73,6 +75,7 @@ export function createApi(
 	const messages = new Messages();
 	const typing = new ReactiveMap<string, Set<string>>();
 	const typing_timeout = new Map<string, Map<string, number>>();
+	const audit_logs = new AuditLogs();
 
 	temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
@@ -364,6 +367,7 @@ export function createApi(
 		messages,
 		session,
 		typing,
+		audit_logs,
 		tempCreateSession,
 		client: client,
 		Provider(props: ParentProps) {
@@ -382,6 +386,7 @@ export function createApi(
 	room_members.api = api;
 	invites.api = api;
 	users.api = api;
+	audit_logs.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -411,6 +416,9 @@ export type Api = {
 		fetch: (room_id: () => string, role_id: () => string) => Resource<Role>;
 		list: (room_id: () => string) => Resource<Pagination<Role>>;
 		cache: ReactiveMap<string, Role>;
+	};
+	audit_logs: {
+		fetch: (room_id: () => string) => Resource<Pagination<AuditLogEntry>>;
 	};
 	room_members: {
 		fetch: (
