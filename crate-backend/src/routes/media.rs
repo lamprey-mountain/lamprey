@@ -254,10 +254,7 @@ async fn process_upload(
     let p = up.temp_file.file_path().to_owned();
     let url = format!("media/{media_id}");
     let services = s.services();
-    let (meta, mime) = tokio::try_join!(
-        services.media.get_metadata(&p),
-        services.media.get_mime_type(&p)
-    )?;
+    let (meta, mime) = services.media.get_metadata_and_mime(&p).await?;
     debug!("finish upload for {}, mime {}", media_id, mime);
     let upload_s3 = async {
         // TODO: stream upload
