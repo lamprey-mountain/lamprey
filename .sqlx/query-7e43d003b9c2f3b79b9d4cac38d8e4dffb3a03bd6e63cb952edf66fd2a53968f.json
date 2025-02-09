@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT room_id, user_id, membership as \"membership: _\", override_name, override_description, membership_updated_at\n            FROM room_member\n            WHERE room_id = $1 AND user_id = $2\n        ",
+  "query": "\n            with r as (\n                select user_id, array_agg(role_id) as roles from role_member\n                join role on role.room_id = $1 and role_member.role_id = role.id\n                group by user_id\n            )\n        \tSELECT\n            \troom_id,\n            \tm.user_id,\n            \tmembership as \"membership: _\",\n            \toverride_name,\n            \toverride_description, \n            \tmembership_updated_at, \n            \tcoalesce(r.roles, '{}') as \"roles!\"\n            FROM room_member m\n            left join r on r.user_id = m.user_id\n            WHERE room_id = $1 AND m.user_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -43,6 +43,11 @@
         "ordinal": 5,
         "name": "membership_updated_at",
         "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "roles!",
+        "type_info": "UuidArray"
       }
     ],
     "parameters": {
@@ -57,8 +62,9 @@
       false,
       true,
       true,
-      false
+      false,
+      null
     ]
   },
-  "hash": "616bee5397e2821b7e4b1cc151d595ab7f39ff5240d327bd838c9783339eb9d7"
+  "hash": "7e43d003b9c2f3b79b9d4cac38d8e4dffb3a03bd6e63cb952edf66fd2a53968f"
 }
