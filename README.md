@@ -1,3 +1,3 @@
-# chat
+# cetahe
 
-a currently unnamed "chat" app. may be a bit more than chat in the future...
+something silly
