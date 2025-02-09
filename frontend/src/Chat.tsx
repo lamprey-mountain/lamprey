@@ -19,6 +19,7 @@ type ChatProps = {
 export const ChatMain = (props: ChatProps) => {
 	const ctx = useCtx();
 	const api = useApi();
+	const { t } = useCtx();
 
 	const read_marker_id = () => ctx.thread_read_marker_id.get(props.thread.id);
 
@@ -208,7 +209,7 @@ export const ChatMain = (props: ChatProps) => {
 	return (
 		<div class="chat" data-thread-id={props.thread.id}>
 			<Show when={messages.loading}>
-				<div class="loading">loading...</div>
+				<div class="loading">{t("loading")}</div>
 			</Show>
 			<list.List>
 				{(item) => renderTimelineItem(props.thread, item)}

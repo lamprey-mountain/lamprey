@@ -4,6 +4,8 @@ import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
 import { ReactiveMap } from "@solid-primitives/map";
 import { Emitter } from "@solid-primitives/event-bus";
+import type * as i18n from "@solid-primitives/i18n";
+import type en from "./i18n/en.ts";
 
 export type Slice = {
 	start: number;
@@ -101,7 +103,8 @@ export type ChatCtx = {
 	client: Client;
 	data: Data;
 	dispatch: (action: Action) => void;
-
+	
+	t: i18n.NullableTranslator<i18n.Flatten<typeof en>>,
 	events: Emitter<Events>;
 	menu: Accessor<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;

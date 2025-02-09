@@ -41,6 +41,9 @@ import { getModal } from "./modal/mod.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { Debug } from "./Debug.tsx";
 import { RoomMemberMenu } from "./menu/RoomMember.tsx";
+import * as i18n from "@solid-primitives/i18n";
+import { createResource } from "solid-js";
+import type en from "./i18n/en.ts";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -88,6 +91,14 @@ export const Root: Component = (props: ParentProps) => {
 	const api = createApi(client, events);
 	const [data, update] = createStore<Data>(defaultData);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
+
+	type Lang = "en";
+	const [lang, _setLang] = createSignal<Lang>("en");
+	const [dict] = createResource(lang, async (lang) => {
+		const m = await import(`./i18n/${lang}.ts`);
+		return i18n.flatten(m.default as typeof en);
+	});
+
 	const ctx: ChatCtx = {
 		client,
 		data,
@@ -95,6 +106,7 @@ export const Root: Component = (props: ParentProps) => {
 			throw new Error("oh no!");
 		},
 
+		t: i18n.translator(dict),
 		events,
 		menu,
 		thread_anchor: new ReactiveMap(),
@@ -283,15 +295,16 @@ export const Root: Component = (props: ParentProps) => {
 	);
 };
 
-const Title = (props: { title: string }) => {
-	createEffect(() => document.title = props.title);
+const Title = (props: { title?: string }) => {
+	createEffect(() => document.title = props.title ?? "");
 	return undefined;
 };
 
 const RouteHome = () => {
+	const { t } = useCtx();
 	return (
 		<>
-			<Title title="Home" />
+			<Title title={t("page.home")} />
 			<ChatNav />
 			<Home />
 		</>
@@ -299,11 +312,12 @@ const RouteHome = () => {
 };
 
 function RouteSettings(p: RouteSectionProps) {
+	const { t } = useCtx();
 	const api = useApi();
 	const user = () => api.users.cache.get("@self");
 	return (
 		<>
-			<Title title={user() ? "Settings" : "loading..."} />
+			<Title title={user() ? t("page.settings_user") : t("loading")} />
 			<Show when={user()}>
 				<UserSettings user={user()!} page={p.params.page} />
 			</Show>
@@ -312,11 +326,12 @@ function RouteSettings(p: RouteSectionProps) {
 }
 
 function RouteRoom(p: RouteSectionProps) {
+	const { t } = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
 	return (
 		<>
-			<Title title={room() ? room()!.name : "loading..."} />
+			<Title title={room() ? room()!.name : t("loading")} />
 			<ChatNav />
 			<Show when={room()}>
 				<RoomHome room={room()!} />
@@ -329,9 +344,11 @@ function RouteRoom(p: RouteSectionProps) {
 }
 
 function RouteRoomSettings(p: RouteSectionProps) {
+	const { t } = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
-	const title = () => room() ? `${room()!.name} settings` : "loading...";
+	const title = () =>
+		room() ? t("page.settings_room", room()!.name) : t("loading");
 	return (
 		<>
 			<Title title={title()} />
@@ -344,9 +361,11 @@ function RouteRoomSettings(p: RouteSectionProps) {
 }
 
 function RouteThreadSettings(p: RouteSectionProps) {
+	const { t } = useCtx();
 	const api = useApi();
 	const thread = api.threads.fetch(() => p.params.thread_id);
-	const title = () => thread() ? `${thread()!.name} settings` : "loading...";
+	const title = () =>
+		thread() ? t("page.settings_thread", thread()!.name) : t("loading");
 	return (
 		<>
 			<Title title={title()} />
@@ -359,13 +378,14 @@ function RouteThreadSettings(p: RouteSectionProps) {
 }
 
 function RouteThread(p: RouteSectionProps) {
+	const { t } = useCtx();
 	const api = useApi();
 	const thread = api.threads.fetch(() => p.params.thread_id);
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
 	return (
 		<>
-			<Show when={room()} fallback={<Title title="loading..." />}>
+			<Show when={room()} fallback={<Title title={t("loading")} />}>
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
 			<ChatNav />
@@ -377,9 +397,10 @@ function RouteThread(p: RouteSectionProps) {
 }
 
 function RouteNotFound() {
+	const { t } = useCtx();
 	return (
 		<div style="padding:8px">
-			not found
+			{t("not_found")}
 		</div>
 	);
 }

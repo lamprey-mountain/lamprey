@@ -10,6 +10,7 @@
     "npm:@floating-ui/dom@*": "1.6.13",
     "npm:@solid-primitives/autofocus@0.1": "0.1.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/event-bus@^1.1.0": "1.1.0_solid-js@1.9.3__seroval@1.1.1",
+    "npm:@solid-primitives/i18n@^2.2.0": "2.2.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/intersection-observer@^2.2.0": "2.2.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/map@0.6": "0.6.0_solid-js@1.9.3__seroval@1.1.1",
     "npm:@solid-primitives/resize-observer@^2.1.0": "2.1.0_solid-js@1.9.3__seroval@1.1.1",
@@ -587,6 +588,12 @@
       "integrity": "sha512-TSfR1PNTfojFEYGSxSMCnUhXsaYWBo4p+cm73QmWODa9YnaQAk6PB7VjzG2bOT2D817VlvuOqTj0Qdq+MZrdGg==",
       "dependencies": [
         "@solid-primitives/utils",
+        "solid-js"
+      ]
+    },
+    "@solid-primitives/i18n@2.2.0_solid-js@1.9.3__seroval@1.1.1": {
+      "integrity": "sha512-OY1IvGNefg4espiv3JL7gi38rcOaDdgRsderms6cHboDfHdye6HGI1mLkdrQxonN9TrsOBHeWtP/ptLBgSevfQ==",
+      "dependencies": [
         "solid-js"
       ]
     },
@@ -3206,6 +3213,7 @@
           "npm:@floating-ui/dom@*",
           "npm:@solid-primitives/autofocus@0.1",
           "npm:@solid-primitives/event-bus@^1.1.0",
+          "npm:@solid-primitives/i18n@^2.2.0",
           "npm:@solid-primitives/intersection-observer@^2.2.0",
           "npm:@solid-primitives/map@0.6",
           "npm:@solid-primitives/resize-observer@^2.1.0",
