@@ -7,6 +7,7 @@ import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { AudioView, ImageView, VideoView } from "./media/mod.tsx";
+import { flags } from "./flags.ts";
 
 type MessageProps = {
 	message: MessageT;
@@ -207,10 +208,12 @@ export function renderAttachment(a: MediaT) {
 		);
 	} else if (b === "audio") {
 		return (
-			<li>
-				<AudioView media={a} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			<li classList={{ raw: flags.has("new_media") }}>
+				<Show when={!flags.has("new_media")} fallback={<AudioView media={a} />}>
+					<audio controls src={a.url} />
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				</Show>
 			</li>
 		);
 	} else {

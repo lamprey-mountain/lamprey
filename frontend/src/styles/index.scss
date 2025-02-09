@@ -726,7 +726,7 @@ input[type="text"] {
 	overflow-x: auto;
 	max-width: 100%;
 
-	& > li {
+	& > li:not(.raw) {
 		background-color: $bg3;
 		padding: 4px;
 	}
@@ -844,4 +844,88 @@ input[type="text"] {
 
 summary {
 	cursor: pointer;
+}
+
+.audio {
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: 8px auto auto;
+	grid-template-areas: "." "info" "controls";
+	background: $bg3;
+	width: 200px;
+	position: relative;
+	padding: 4px;
+	border: solid $bg3 1px;
+	contain: content;
+	
+	& > .progress {
+		position: absolute;
+		grid-area: progress;
+		height: 8px;
+		width: 100%;
+		background-color: $bg2;
+		
+		&:hover {
+			height: 16px;
+			box-shadow: 2px 2px 8px #1114;
+		}
+		
+		& > .preview, & > .fill {
+			position: absolute;
+			height: 100%;
+			pointer-events: none;
+		}
+	
+		& > .preview {
+			background-color: #fff3;
+		}
+		
+		& > .fill {
+			background-color: $link;
+		}
+	}
+
+	& > .info {
+		grid-area: info;
+		overflow: hidden;
+
+		& > a {
+			display: block;
+			@include truncate;
+		}
+	}
+	
+	& > .controls {
+		grid-area: controls;
+		display: flex;
+		
+		& > button {
+			background: $bg2;
+			display: grid;
+			place-items: center;
+
+			&:hover {
+				background: $bg1;
+			}
+		}
+
+		& > .space {
+			flex: 1;
+		}
+		
+		& > .time {
+			font-size: .9rem;
+			font-family: var(--font-mono);
+
+			&.preview > .progress {
+				color: $link;
+			}
+		}
+	}
+}
+
+.icon {
+	height: 1em;
+	width: 1em;
+	filter: invert(.9);
 }
