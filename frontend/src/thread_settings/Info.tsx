@@ -47,4 +47,3 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 		</>
 	);
 }
-

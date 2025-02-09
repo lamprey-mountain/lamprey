@@ -2,7 +2,13 @@ import { For, Show } from "solid-js";
 import { RoomT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { AuditLog, Info, Invites, Members, Roles } from "./room_settings/mod.tsx";
+import {
+	AuditLog,
+	Info,
+	Invites,
+	Members,
+	Roles,
+} from "./room_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },

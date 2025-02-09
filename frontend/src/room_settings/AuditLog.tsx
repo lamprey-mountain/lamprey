@@ -1,4 +1,4 @@
-import { VoidProps, Show, For } from "solid-js";
+import { For, Show, VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { RoomT } from "../types.ts";
 
