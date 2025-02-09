@@ -6,7 +6,7 @@ import { marked } from "marked";
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { AudioView, ImageView, VideoView } from "./Media.tsx";
+import { AudioView, ImageView, VideoView } from "./media/mod.tsx";
 
 type MessageProps = {
 	message: MessageT;
