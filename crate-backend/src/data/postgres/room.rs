@@ -64,7 +64,7 @@ impl DataRoom for Postgres {
                 "
             	SELECT room.id, room.version_id, room.name, room.description FROM room_member
             	JOIN room ON room_member.room_id = room.id
-            	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
+            	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
                 ",
                 user_id.into_inner(),
