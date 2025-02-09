@@ -130,6 +130,7 @@ async fn room_edit(
     get,
     path = "/room/{room_id}/logs",
     params(
+        PaginationQuery<AuditLogId>,
         ("room_id", description = "Room id"),
     ),
     tags = ["room"],

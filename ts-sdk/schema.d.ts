@@ -1602,7 +1602,12 @@ export interface operations {
 	};
 	room_audit_logs: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
 				/** @description Room id */
