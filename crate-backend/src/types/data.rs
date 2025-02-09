@@ -518,6 +518,7 @@ pub struct DbRoomMember {
     pub override_description: Option<String>,
     // override_avatar: z.string().url().or(z.literal("")),
     pub membership_updated_at: time::PrimitiveDateTime,
+    pub roles: Vec<Uuid>,
 }
 
 impl From<DbRoomMember> for RoomMember {
@@ -529,7 +530,7 @@ impl From<DbRoomMember> for RoomMember {
                 DbRoomMembership::Join => RoomMembership::Join {
                     override_name: row.override_name,
                     override_description: row.override_description,
-                    roles: vec![], // FIXME
+                    roles: row.roles.into_iter().map(Into::into).collect(),
                 },
                 DbRoomMembership::Leave => RoomMembership::Leave {},
                 DbRoomMembership::Ban => RoomMembership::Ban {},

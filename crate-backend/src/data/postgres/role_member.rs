@@ -49,16 +49,23 @@ impl DataRoleMember for Postgres {
         let items = query_as!(
             DbRoomMember,
             r#"
+            with ro as (
+                select user_id, array_agg(role_id) as roles from role_member
+                join role on role.room_id = $1 and role_member.role_id = role.id
+                group by user_id
+            )
         	SELECT 
             	r.user_id,
             	r.room_id,
                 r.membership as "membership: _",
                 r.override_name,
                 r.override_description,
-                r.membership_updated_at
+                r.membership_updated_at,
+            	coalesce(ro.roles, '{}') as "roles!"
             FROM role_member AS m
             JOIN role ON role.id = m.role_id
             JOIN room_member r ON r.room_id = role.room_id AND r.user_id = m.user_id
+            left join ro on ro.user_id = m.user_id
         	WHERE m.role_id = $1 AND r.user_id > $2 AND r.user_id < $3
         	ORDER BY (CASE WHEN $4 = 'f' THEN r.user_id END), r.user_id DESC LIMIT $5
         "#,
