@@ -857,29 +857,29 @@ summary {
 	padding: 4px;
 	border: solid $bg3 1px;
 	contain: content;
-	
+
 	& > .progress {
 		position: absolute;
 		grid-area: progress;
 		height: 8px;
 		width: 100%;
 		background-color: $bg2;
-		
+
 		&:hover {
 			height: 16px;
 			box-shadow: 2px 2px 8px #1114;
 		}
-		
+
 		& > .preview, & > .fill {
 			position: absolute;
 			height: 100%;
 			pointer-events: none;
 		}
-	
+
 		& > .preview {
 			background-color: #fff3;
 		}
-		
+
 		& > .fill {
 			background-color: $link;
 		}
@@ -894,11 +894,11 @@ summary {
 			@include truncate;
 		}
 	}
-	
+
 	& > .controls {
 		grid-area: controls;
 		display: flex;
-		
+
 		& > button {
 			background: $bg2;
 			display: grid;
@@ -912,9 +912,9 @@ summary {
 		& > .space {
 			flex: 1;
 		}
-		
+
 		& > .time {
-			font-size: .9rem;
+			font-size: 0.9rem;
 			font-family: var(--font-mono);
 
 			&.preview > .progress {
@@ -927,5 +927,5 @@ summary {
 .icon {
 	height: 1em;
 	width: 1em;
-	filter: invert(.9);
+	filter: invert(0.9);
 }

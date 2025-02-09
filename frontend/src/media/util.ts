@@ -11,4 +11,3 @@ export function formatTime(time: number): string {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	}
 }
-

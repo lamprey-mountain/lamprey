@@ -15,9 +15,8 @@ export const VideoView = (props: MediaProps) => {
 		>
 			<div class="inner">
 				<div class="loader">loading</div>
-  			<video controls src={props.media.url} />
+				<video controls src={props.media.url} />
 			</div>
 		</div>
 	);
 };
-

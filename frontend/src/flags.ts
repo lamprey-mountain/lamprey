@@ -25,7 +25,12 @@ export const allFlags = [
 
 type Flag = (typeof allFlags)[number]["id"];
 
-const flagsDev: Flag[] = ["dev", "message_search", "room_member_list", "new_media"];
+const flagsDev: Flag[] = [
+	"dev",
+	"message_search",
+	"room_member_list",
+	"new_media",
+];
 const flagsProd: Flag[] = [];
 
 export const flags = new ReactiveSet(
