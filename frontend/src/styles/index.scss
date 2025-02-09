@@ -186,6 +186,7 @@ button, input[type="submit"] {
 
 	& > .input {
 		width: 100%;
+		min-height: 100%;
 		background-image: linear-gradient(to top, $bg2 25%, transparent);
 		display: flex;
 		flex-direction: column;
