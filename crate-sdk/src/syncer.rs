@@ -77,6 +77,11 @@ impl Syncer {
                         }
                         client.close(None).await?;
                     }
+                    MessagePayload::Sync { seq, .. } => {
+                        if let Some(resume) = &mut resume {
+                            resume.seq = *seq;
+                        }
+                    }
                     _ => {}
                 }
                 self.handler.handle(msg.payload).await;

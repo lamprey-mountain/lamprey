@@ -165,7 +165,7 @@ impl Data for Globals {
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()> {
         let row: MessageMetadataRow = meta.into();
         query!(
-            "INSERT INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES ($1, $2, $3, $4)",
+            "INSERT OR IGNORE INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES ($1, $2, $3, $4)",
             row.chat_id,
             row.chat_thread_id,
             row.discord_id,
@@ -179,7 +179,7 @@ impl Data for Globals {
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()> {
         let row: AttachmentMetadataRow = meta.into();
         query!(
-            "INSERT INTO attachment (chat_id, discord_id) VALUES ($1, $2)",
+            "INSERT OR IGNORE INTO attachment (chat_id, discord_id) VALUES ($1, $2)",
             row.chat_id,
             row.discord_id
         )
@@ -202,7 +202,7 @@ impl Data for Globals {
 
     async fn delete_message(&self, message_id: MessageId) -> Result<()> {
         let b1 = message_id.to_string();
-        let row = query!("DELETE FROM message WHERE chat_id = ?", b1)
+        query!("DELETE FROM message WHERE chat_id = ?", b1)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -210,7 +210,7 @@ impl Data for Globals {
 
     async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()> {
         let b1 = message_id.to_string();
-        let row = query!("DELETE FROM message WHERE discord_id = ?", b1)
+        query!("DELETE FROM message WHERE discord_id = ?", b1)
             .execute(&self.pool)
             .await?;
         Ok(())
