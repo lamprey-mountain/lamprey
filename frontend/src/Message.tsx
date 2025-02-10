@@ -115,11 +115,13 @@ export function MessageView(props: MessageProps) {
 						<Show when={props.message.content}>
 							<MessageText message={props.message} />
 						</Show>
-						<ul class="attachments">
-							<For each={props.message.attachments}>
-								{(att) => renderAttachment(att)}
-							</For>
-						</ul>
+						<Show when={props.message.attachments.length}>
+							<ul class="attachments">
+								<For each={props.message.attachments}>
+									{(att) => renderAttachment(att)}
+								</For>
+							</ul>
+						</Show>
 					</div>
 					<span class="timestamp">{date.toDateString()}</span>
 				</>
