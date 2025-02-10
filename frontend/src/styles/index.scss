@@ -726,6 +726,7 @@ input[type="text"] {
 	display: flex;
 	overflow-x: auto;
 	max-width: 100%;
+	margin-bottom: 8px;
 
 	& > li:not(.raw) {
 		background-color: $bg3;
@@ -776,7 +777,7 @@ input[type="text"] {
 		display: block;
 	}
 
-	& img, video {
+	&.image img {
 		position: fixed;
 		top: 0;
 		left: 0;
@@ -847,6 +848,12 @@ summary {
 	cursor: pointer;
 }
 
+.icon {
+	height: 1em;
+	width: 1em;
+	filter: invert(0.9);
+}
+
 .audio {
 	display: grid;
 	grid-template-columns: 1fr;
@@ -858,33 +865,6 @@ summary {
 	padding: 4px;
 	border: solid $bg3 1px;
 	contain: content;
-
-	& > .progress {
-		position: absolute;
-		grid-area: progress;
-		height: 8px;
-		width: 100%;
-		background-color: $bg2;
-
-		&:hover {
-			height: 16px;
-			box-shadow: 2px 2px 8px #1114;
-		}
-
-		& > .preview, & > .fill {
-			position: absolute;
-			height: 100%;
-			pointer-events: none;
-		}
-
-		& > .preview {
-			background-color: #fff3;
-		}
-
-		& > .fill {
-			background-color: $link;
-		}
-	}
 
 	& > .info {
 		grid-area: info;
@@ -925,8 +905,113 @@ summary {
 	}
 }
 
-.icon {
-	height: 1em;
-	width: 1em;
-	filter: invert(0.9);
+.video {
+	position: relative;
+
+	& video {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 100%;
+		width: 100%;
+	}
+}
+
+.video > .overlay {
+	display: grid;
+	grid-template-columns: 1fr;
+	grid-template-rows: 8px auto 1fr auto;
+	grid-template-areas: "." "info" "." "controls";
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 100%;
+	width: 100%;
+	pointer-events: none;
+
+	& > .progress {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		border: solid $bg3 1px;
+		pointer-events: auto;
+	}
+
+	& > .info {
+		grid-area: info;
+		background: rgba(var(--color-bg3), 1);
+		padding: 4px;
+		pointer-events: auto;
+
+		& > a {
+			display: block;
+			@include truncate;
+		}
+	}
+
+	& > .controls {
+		grid-area: controls;
+		display: flex;
+		pointer-events: auto;
+
+		& > button {
+			background: $bg2;
+			display: grid;
+			place-items: center;
+
+			&:hover {
+				background: $bg1;
+			}
+		}
+
+		& > .space {
+			flex: 1;
+		}
+
+		& > .time {
+			font-size: 0.9rem;
+			font-family: var(--font-mono);
+
+			&.preview > .progress {
+				color: $link;
+			}
+		}
+	}
+}
+
+.audio > .progress, .video > .overlay > .progress {
+	position: absolute;
+	grid-area: progress;
+	height: 8px;
+	width: 100%;
+	background-color: $bg2;
+
+	&:hover {
+		height: 16px;
+		box-shadow: 2px 2px 8px #1114;
+	}
+
+	& > .preview, & > .fill {
+		position: absolute;
+		height: 100%;
+		pointer-events: none;
+	}
+
+	& > .preview {
+		background-color: #fff3;
+	}
+
+	& > .fill {
+		background-color: $link;
+	}
+}
+
+.media:fullscreen {
+	& .loader {
+		display: none;
+	}
+
+	& video {
+		object-fit: contain;
+	}
 }

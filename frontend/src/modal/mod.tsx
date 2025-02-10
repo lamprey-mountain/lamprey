@@ -121,7 +121,7 @@ const ModalMedia = (props: { media: Media }) => {
 				<div class="base"></div>
 				<div class="inner" role="dialog">
 					<div
-						class="media"
+						class="media image"
 						style={{
 							"--height": `${props.media.height}px`,
 							"--width": `${props.media.width}px`,

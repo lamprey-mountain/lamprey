@@ -9,7 +9,7 @@ export const ImageView = (props: MediaProps) => {
 
 	return (
 		<div
-			class="media"
+			class="media image"
 			style={{
 				"--height": `${props.media.height}px`,
 				"--width": `${props.media.width}px`,

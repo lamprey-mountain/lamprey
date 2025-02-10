@@ -6,7 +6,7 @@ import { marked } from "marked";
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { AudioView, ImageView, VideoView } from "./media/mod.tsx";
+import { AudioView, ImageView, VideoView, VideoViewOld } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
 
 type MessageProps = {
@@ -200,10 +200,12 @@ export function renderAttachment(a: MediaT) {
 		);
 	} else if (b === "video") {
 		return (
-			<li>
-				<VideoView media={a} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			<li classList={{ raw: flags.has("new_media") }}>
+				<Show when={!flags.has("new_media")} fallback={<VideoView media={a} />}>
+					<VideoViewOld media={a} />
+					<a download={a.filename} href={a.url}>download {a.filename}</a>
+					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				</Show>
 			</li>
 		);
 	} else if (b === "audio") {
