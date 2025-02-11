@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
-use ::types::{RoomId, UserId};
+use ::types::{RoomId, ThreadId, UserId};
 use axum::{extract::DefaultBodyLimit, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -14,7 +14,7 @@ use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
-use types::{MediaId, MediaUpload, MessageSync};
+use types::{MediaId, MediaUpload, MessageSync, Permissions};
 use url::Url;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -56,6 +56,9 @@ pub struct ServerState {
     pub syncers: Arc<DashMap<String, Connection>>,
     pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
     pub oauth_states: Arc<DashMap<Uuid, OauthState>>,
+    
+    pub cache_perm_room: Arc<DashMap<(UserId, RoomId), Permissions>>,
+    pub cache_perm_thread: Arc<DashMap<(UserId, RoomId, ThreadId), Permissions>>,
 
     pub pool: PgPool,
     pub blobs: opendal::Operator,
@@ -70,6 +73,8 @@ impl ServerState {
             syncers: Arc::new(DashMap::new()),
             pool,
             sushi: tokio::sync::broadcast::channel(100).0,
+            cache_perm_room: Arc::new(DashMap::new()),
+            cache_perm_thread: Arc::new(DashMap::new()),
             // channel_user: Arc::new(DashMap::new()),
             blobs,
         }

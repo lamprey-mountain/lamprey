@@ -41,7 +41,7 @@ async fn thread_create(
     Json(json): Json<ThreadCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadCreate)?;
     let thread_id = data
@@ -100,7 +100,7 @@ async fn thread_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let thread = data.thread_get(thread_id, Some(user_id)).await?;
     Ok((StatusCode::OK, Json(thread)))
@@ -123,7 +123,7 @@ async fn thread_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = data.thread_list(user_id, room_id, q).await?;
     Ok(Json(res))
@@ -194,7 +194,7 @@ async fn thread_ack(
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {

@@ -41,7 +41,7 @@ async fn message_create(
     Json(json): Json<MessageCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
@@ -130,7 +130,7 @@ async fn message_context(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let limit = q.limit.unwrap_or(10);
     if limit > 100 {
@@ -187,7 +187,7 @@ async fn message_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut res = data.message_list(thread_id, q).await?;
     for message in &mut res.items {
@@ -217,7 +217,7 @@ async fn message_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
@@ -247,7 +247,7 @@ async fn message_edit(
     Json(patch): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let data = s.data();
-    let mut perms = data.permission_thread_get(user_id, thread_id).await?;
+    let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
     if !message.message_type.is_editable() {
@@ -338,7 +338,7 @@ async fn message_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
-    let mut perms = data.permission_thread_get(user_id, thread_id).await?;
+    let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id).await?;
     if !message.message_type.is_deletable() {
@@ -380,7 +380,7 @@ async fn message_version_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut res = data.message_version_list(thread_id, message_id, q).await?;
     for message in &mut res.items {
@@ -411,7 +411,7 @@ async fn message_version_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
     let data = s.data();
-    let perms = data.permission_thread_get(user_id, thread_id).await?;
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut message = data.message_version_get(thread_id, version_id).await?;
     for media in &mut message.attachments {
@@ -440,7 +440,7 @@ async fn message_version_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let data = s.data();
-    let mut perms = data.permission_thread_get(user_id, thread_id).await?;
+    let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_version_get(thread_id, version_id).await?;
     if !message.message_type.is_deletable() {

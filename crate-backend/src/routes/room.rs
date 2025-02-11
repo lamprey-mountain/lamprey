@@ -57,7 +57,7 @@ async fn room_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let room = data.room_get(room_id).await?;
 
@@ -115,7 +115,7 @@ async fn room_edit(
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
     data.room_update(room_id, json).await?;
@@ -145,7 +145,7 @@ async fn room_audit_logs(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = data.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
     let logs = data.audit_logs_room_fetch(room_id, paginate).await?;

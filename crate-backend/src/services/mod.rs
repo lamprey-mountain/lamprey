@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use media::ServiceMedia;
+use permissions::ServicePermissions;
 use serde_json::json;
 use types::util::Diff;
 use types::{
@@ -15,19 +16,22 @@ use crate::{data::Data, types::RoleCreate};
 
 pub mod media;
 pub mod oauth2;
+pub mod permissions;
 
 pub struct Services {
     state: Arc<ServerState>,
     data: Box<dyn Data>,
     pub media: ServiceMedia,
+    pub perms: ServicePermissions,
 }
 
 impl Services {
     pub fn new(state: Arc<ServerState>, data: Box<dyn Data>) -> Self {
         Self {
-            state,
+            state: state.clone(),
             data,
             media: ServiceMedia::new(),
+            perms: ServicePermissions::new(state),
         }
     }
 
@@ -101,7 +105,7 @@ impl Services {
         patch: ThreadPatch,
     ) -> Result<Thread> {
         // check update perms
-        let mut perms = self.data.permission_thread_get(user_id, thread_id).await?;
+        let mut perms = self.state.services().perms.for_thread(user_id, thread_id).await?;
         perms.ensure_view()?;
         let thread = self.data.thread_get(thread_id, Some(user_id)).await?;
         if thread.creator_id == user_id {
