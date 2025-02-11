@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use dashmap::DashMap;
 use serde_json::json;
 use types::util::Diff;
 use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId};
@@ -10,11 +11,29 @@ use crate::ServerStateInner;
 
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
+
+    // NOTE: i need to store a custom thread per user because threads might have user-specific data (unreads)
+    // TODO: don't do this
+    cache_thread: Arc<DashMap<(ThreadId, Option<UserId>), Thread>>,
 }
 
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            cache_thread: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub async fn get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
+        if let Some(thread) = self.cache_thread.get(&(thread_id, user_id)) {
+            return Ok(thread.to_owned());
+        }
+
+        let thread = self.state.data().thread_get(thread_id, user_id).await?;
+        self.cache_thread
+            .insert((thread_id, user_id), thread.clone());
+        Ok(thread)
     }
 
     pub async fn update(
@@ -52,7 +71,8 @@ impl ServiceThreads {
         // update and refetch
         data.thread_update(thread_id, user_id, patch.clone())
             .await?;
-        let thread = data.thread_get(thread_id, Some(user_id)).await?;
+        self.cache_thread.retain(|(t, _), _| *t == thread_id);
+        let thread = self.get(thread_id, Some(user_id)).await?;
 
         // send update message to thread
         let update_message_id = data

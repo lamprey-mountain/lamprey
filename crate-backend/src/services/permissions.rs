@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -25,7 +24,7 @@ impl ServicePermissions {
 
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
         if let Some(ent) = self.cache_perm_room.get(&(user_id, room_id)) {
-            return Ok(ent.deref().clone());
+            return Ok(ent.to_owned());
         }
         let data = self.state.data();
         let perms = data.permission_room_get(user_id, room_id).await?;
@@ -35,13 +34,18 @@ impl ServicePermissions {
     }
 
     pub async fn for_thread(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
-        // TODO: cache this too
-        let data = self.state.data();
-        let t = data.thread_get(thread_id, Some(user_id)).await?;
+        let t = self
+            .state
+            .services()
+            .threads
+            .get(thread_id, Some(user_id))
+            .await?;
 
         if let Some(ent) = self.cache_perm_thread.get(&(user_id, t.room_id, thread_id)) {
-            return Ok(ent.deref().clone());
+            return Ok(ent.to_owned());
         }
+
+        let data = self.state.data();
         let perms = data.permission_thread_get(user_id, thread_id).await?;
         self.cache_perm_thread
             .insert((user_id, t.room_id, thread_id), perms.clone());

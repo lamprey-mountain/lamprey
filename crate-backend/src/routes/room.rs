@@ -56,10 +56,10 @@ async fn room_get(
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    let room = data.room_get(room_id).await?;
+    let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
     // TODO: use typedheader once the empty if-none-match bug is fixed
     // TODO: last-modified
@@ -114,12 +114,10 @@ async fn room_edit(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
-    data.room_update(room_id, json).await?;
-    let room = data.room_get(room_id).await?;
+    let room = s.services().rooms.update(room_id, user_id, json).await?;
     let msg = MessageSync::UpsertRoom { room: room.clone() };
     s.broadcast_room(room_id, user_id, None, msg).await?;
     Ok(Json(room))

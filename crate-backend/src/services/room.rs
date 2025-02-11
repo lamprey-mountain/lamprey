@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use types::{Permission, Room, RoomCreate, RoomMembership, UserId};
+use dashmap::DashMap;
+use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
 use crate::error::Result;
 use crate::types::RoleCreate;
@@ -8,11 +9,32 @@ use crate::ServerStateInner;
 
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
+    cache_room: Arc<DashMap<RoomId, Room>>,
 }
 
 impl ServiceRooms {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            cache_room: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub async fn get(&self, room_id: RoomId, _user_id: Option<UserId>) -> Result<Room> {
+        if let Some(room) = self.cache_room.get(&room_id) {
+            return Ok(room.to_owned());
+        }
+
+        let room = self.state.data().room_get(room_id).await?;
+        self.cache_room.insert(room_id, room.clone());
+        Ok(room)
+    }
+
+    pub async fn update(&self, room_id: RoomId, user_id: UserId, patch: RoomPatch) -> Result<Room> {
+        let data = self.state.data();
+        data.room_update(room_id, patch).await?;
+        self.cache_room.remove(&room_id);
+        self.get(room_id, Some(user_id)).await
     }
 
     pub async fn create(&self, create: RoomCreate, creator: UserId) -> Result<Room> {

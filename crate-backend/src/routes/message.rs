@@ -348,7 +348,7 @@ async fn message_delete(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = data.thread_get(thread_id, Some(user_id)).await?;
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
     s.broadcast(MessageSync::DeleteMessage {

@@ -67,7 +67,7 @@ async fn thread_create(
             override_name: None,
         })
         .await?;
-    let thread = data.thread_get(thread_id, Some(user_id)).await?;
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     let starter_message = data.message_get(thread_id, starter_message_id).await?;
     s.broadcast_room(
         room_id,
@@ -99,10 +99,9 @@ async fn thread_get(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let thread = data.thread_get(thread_id, Some(user_id)).await?;
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     Ok((StatusCode::OK, Json(thread)))
 }
 
