@@ -6,14 +6,14 @@ use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch,
 
 use crate::error::{Error, Result};
 use crate::types::MessageCreate;
-use crate::ServerState;
+use crate::ServerStateInner;
 
 pub struct ServiceThreads {
-    state: Arc<ServerState>,
+    state: Arc<ServerStateInner>,
 }
 
 impl ServiceThreads {
-    pub fn new(state: Arc<ServerState>) -> Self {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self { state }
     }
 

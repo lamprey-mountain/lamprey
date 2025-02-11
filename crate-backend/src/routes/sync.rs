@@ -34,7 +34,7 @@ async fn sync(State(s): State<Arc<ServerState>>, upgrade: WebSocketUpgrade) -> i
 #[tracing::instrument(skip(s, ws))]
 async fn worker(s: Arc<ServerState>, mut ws: WebSocket) {
     let mut timeout = Timeout::for_ping();
-    let mut sushi = s.sushi.subscribe();
+    let mut sushi = s.inner.sushi.subscribe();
     let mut conn = Connection::new(s.clone());
 
     loop {

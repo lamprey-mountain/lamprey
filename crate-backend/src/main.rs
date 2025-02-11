@@ -1,20 +1,25 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::{Arc, Weak},
+    time::Duration,
+};
 
-use ::types::{RoomId, ThreadId, UserId};
+use ::types::{RoomId, UserId};
 use axum::{extract::DefaultBodyLimit, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
 use serde::Deserialize;
-use services::{oauth2::OauthState, Services};
+use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use sync::Connection;
 use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
-use types::{MediaId, MediaUpload, MessageSync, Permissions};
+use types::{MediaId, MediaUpload, MessageSync};
 use url::Url;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -28,7 +33,6 @@ mod sync;
 pub mod types;
 
 use error::Result;
-use uuid::Uuid;
 
 #[derive(OpenApi)]
 #[openapi(components(schemas(
@@ -43,47 +47,38 @@ use uuid::Uuid;
 )))]
 struct ApiDoc;
 
-pub struct ServerState {
-    // should this be global?
+pub struct ServerStateInner {
     pub config: Config,
+    pub pool: PgPool,
+    pub services: Weak<Services>,
 
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
+}
+
+pub struct ServerState {
+    pub inner: Arc<ServerStateInner>,
+    pub services: Arc<Services>,
 
     // TODO: limit number of connections per user, clean up old/unused entries
-    // TODO: move some of these into the db or redis?
     pub syncers: Arc<DashMap<String, Connection>>,
     pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
-    pub oauth_states: Arc<DashMap<Uuid, OauthState>>,
-    
-    pub cache_perm_room: Arc<DashMap<(UserId, RoomId), Permissions>>,
-    pub cache_perm_thread: Arc<DashMap<(UserId, RoomId, ThreadId), Permissions>>,
 
-    pub pool: PgPool,
     pub blobs: opendal::Operator,
 }
 
-impl ServerState {
-    fn new(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
-        Self {
-            config,
-            uploads: Arc::new(DashMap::new()),
-            oauth_states: Arc::new(DashMap::new()),
-            syncers: Arc::new(DashMap::new()),
-            pool,
-            sushi: tokio::sync::broadcast::channel(100).0,
-            cache_perm_room: Arc::new(DashMap::new()),
-            cache_perm_thread: Arc::new(DashMap::new()),
-            // channel_user: Arc::new(DashMap::new()),
-            blobs,
-        }
-    }
-
+impl ServerStateInner {
     fn data(&self) -> Box<dyn Data> {
         Box::new(Postgres {
             pool: self.pool.clone(),
         })
+    }
+
+    fn services(&self) -> Arc<Services> {
+        self.services
+            .upgrade()
+            .expect("services should always exist while serverstateinner is alive")
     }
 
     // fn acquire_data(&self) -> Box<dyn Data> {
@@ -91,14 +86,6 @@ impl ServerState {
     //         pool: self.pool.clone(),
     //     })
     // }
-
-    fn services(self: &Arc<Self>) -> Services {
-        Services::new(self.clone())
-    }
-
-    fn blobs(&self) -> &opendal::Operator {
-        &self.blobs
-    }
 
     async fn broadcast_room(
         &self,
@@ -119,6 +106,65 @@ impl ServerState {
     fn broadcast(&self, msg: MessageSync) -> Result<()> {
         let _ = self.sushi.send(msg);
         Ok(())
+    }
+}
+
+impl ServerState {
+    fn new(config: Config, pool: PgPool, blobs: opendal::Operator) -> Self {
+        // a bit hacky for now since i need to work around the existing ServerState
+        // though i probably need some way to access global state/services from within them anyways
+        let services = Arc::new_cyclic(|weak| {
+            let inner = Arc::new(ServerStateInner {
+                config,
+                pool,
+                services: weak.to_owned(),
+
+                // maybe i should increase the limit at some point? or make it unlimited?
+                sushi: tokio::sync::broadcast::channel(100).0,
+            });
+            let services = Services::new(inner.clone());
+            services
+        });
+        Self {
+            inner: services.state.clone(),
+            uploads: Arc::new(DashMap::new()),
+            syncers: Arc::new(DashMap::new()),
+            // channel_user: Arc::new(DashMap::new()),
+            blobs,
+            services,
+        }
+    }
+
+    fn config(&self) -> &Config {
+        &self.inner.config
+    }
+
+    fn data(&self) -> Box<dyn Data> {
+        self.inner.data()
+    }
+
+    fn services(self: &Arc<Self>) -> Arc<Services> {
+        self.services.clone()
+    }
+
+    fn blobs(&self) -> &opendal::Operator {
+        &self.blobs
+    }
+
+    async fn broadcast_room(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        reason: Option<String>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        self.inner
+            .broadcast_room(room_id, user_id, reason, msg)
+            .await
+    }
+
+    fn broadcast(&self, msg: MessageSync) -> Result<()> {
+        self.inner.broadcast(msg)
     }
 
     async fn presign(&self, url: &str) -> Result<String> {

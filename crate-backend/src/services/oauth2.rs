@@ -1,13 +1,18 @@
 // TODO: port to https://docs.rs/oauth2/latest/oauth2/
 // TODO: make more generic
 
+use std::sync::Arc;
+
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use types::SessionId;
 use url::Url;
 use uuid::Uuid;
 
-use super::Services;
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    ServerStateInner,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OauthTokenExchange {
@@ -72,8 +77,20 @@ impl OauthState {
     }
 }
 
-impl Services {
-    pub fn oauth_create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
+pub struct ServiceOauth {
+    state: Arc<ServerStateInner>,
+    oauth_states: Arc<DashMap<Uuid, OauthState>>,
+}
+
+impl ServiceOauth {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
+        Self {
+            state,
+            oauth_states: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub fn create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
         let p = self
             .state
             .config
@@ -81,8 +98,7 @@ impl Services {
             .get(provider)
             .ok_or(Error::NotFound)?;
         let state = Uuid::new_v4();
-        self.state
-            .oauth_states
+        self.oauth_states
             .insert(state, OauthState::new(provider.to_string(), session_id));
         let redirect_uri: Url = self
             .state
@@ -100,13 +116,12 @@ impl Services {
         Ok(url)
     }
 
-    pub async fn oauth_exchange_code_for_token(
+    pub async fn exchange_code_for_token(
         &self,
         state: Uuid,
         code: String,
     ) -> Result<(OauthTokenResponse, SessionId)> {
         let (_, s) = self
-            .state
             .oauth_states
             .remove(&state)
             .ok_or(Error::BadStatic("invalid or expired state"))?;
@@ -144,7 +159,7 @@ impl Services {
         Ok((res, s.session_id))
     }
 
-    pub async fn oauth_revoke_token(&self, provider: &str, token: String) -> Result<()> {
+    pub async fn revoke_token(&self, provider: &str, token: String) -> Result<()> {
         let p = self
             .state
             .config

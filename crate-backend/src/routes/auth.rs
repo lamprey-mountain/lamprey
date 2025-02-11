@@ -47,7 +47,7 @@ pub async fn auth_oauth_init(
     AuthRelaxed(session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let url = s.services().oauth_create_url(&provider, session.id)?;
+    let url = s.services().oauth.create_url(&provider, session.id)?;
     Ok(Json(OauthInitResponse { url }))
 }
 
@@ -66,8 +66,8 @@ pub async fn auth_oauth_redirect(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let (auth, session_id) = srv.oauth_exchange_code_for_token(q.state, q.code).await?;
-    let dc = srv.discord_get_user(auth.access_token).await?;
+    let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
+    let dc = srv.oauth.discord_get_user(auth.access_token).await?;
     debug!("new discord user {:?}", dc);
     let data = s.data();
     let user_id = match data

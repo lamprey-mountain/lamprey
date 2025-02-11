@@ -49,7 +49,7 @@ async fn media_create(
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
     trace!("create temp_file {:?}", temp_file.file_path());
     let upload_url = Some(
-        s.config
+        s.config()
             .base_url
             .join(&format!("/api/v1/media/{}", media_id))?,
     );

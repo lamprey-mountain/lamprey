@@ -4,14 +4,14 @@ use types::{Permission, Room, RoomCreate, RoomMembership, UserId};
 
 use crate::error::Result;
 use crate::types::RoleCreate;
-use crate::ServerState;
+use crate::ServerStateInner;
 
 pub struct ServiceRooms {
-    state: Arc<ServerState>,
+    state: Arc<ServerStateInner>,
 }
 
 impl ServiceRooms {
-    pub fn new(state: Arc<ServerState>) -> Self {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self { state }
     }
 
@@ -63,17 +63,16 @@ impl ServiceRooms {
         let admin = data.role_create(role_admin).await?;
         data.role_create(role_moderator).await?;
         data.role_create(role_everyone).await?;
-        data
-            .room_member_put(
-                room_id,
-                creator,
-                RoomMembership::Join {
-                    override_name: None,
-                    override_description: None,
-                    roles: vec![],
-                },
-            )
-            .await?;
+        data.room_member_put(
+            room_id,
+            creator,
+            RoomMembership::Join {
+                override_name: None,
+                override_description: None,
+                roles: vec![],
+            },
+        )
+        .await?;
         data.role_member_put(creator, admin.id).await?;
         data.role_apply_default(room.id, creator).await?;
         Ok(room)
