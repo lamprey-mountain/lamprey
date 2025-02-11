@@ -1,6 +1,5 @@
 import { createSignal, onMount, VoidProps } from "solid-js";
-import { Media } from "sdk";
-import { formatTime } from "./util.ts";
+import { formatTime, MediaProps } from "./util.ts";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -8,8 +7,6 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
-
-type MediaProps = VoidProps<{ media: Media }>;
 
 export const VideoViewOld = (props: MediaProps) => {
 	return (

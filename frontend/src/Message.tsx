@@ -6,7 +6,7 @@ import { marked } from "marked";
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { AudioView, ImageView, VideoView, VideoViewOld } from "./media/mod.tsx";
+import { AudioView, FileView, ImageView, TextView, VideoView, VideoViewOld } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
 
 type MessageProps = {
@@ -179,6 +179,14 @@ function ReplyView(props: ReplyProps) {
 }
 
 export function renderAttachment(a: MediaT) {
+	if (flags.has("new_media")) {
+		return renderAttachment2(a);
+	} else {
+		return renderAttachment1(a);
+	}
+}
+
+export function renderAttachment1(a: MediaT) {
 	const b = a.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
@@ -202,22 +210,18 @@ export function renderAttachment(a: MediaT) {
 		);
 	} else if (b === "video") {
 		return (
-			<li classList={{ raw: flags.has("new_media") }}>
-				<Show when={!flags.has("new_media")} fallback={<VideoView media={a} />}>
-					<VideoViewOld media={a} />
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</Show>
+			<li>
+				<VideoViewOld media={a} />
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 			</li>
 		);
 	} else if (b === "audio") {
 		return (
-			<li classList={{ raw: flags.has("new_media") }}>
-				<Show when={!flags.has("new_media")} fallback={<AudioView media={a} />}>
-					<audio controls src={a.url} />
-					<a download={a.filename} href={a.url}>download {a.filename}</a>
-					<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
-				</Show>
+			<li>
+				<audio controls src={a.url} />
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
 			</li>
 		);
 	} else {
@@ -225,6 +229,55 @@ export function renderAttachment(a: MediaT) {
 			<li>
 				<a download={a.filename} href={a.url}>download {a.filename}</a>
 				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		);
+	}
+}
+
+export function renderAttachment2(a: MediaT) {
+	const b = a.mime.split("/")[0];
+	const byteFmt = Intl.NumberFormat("en", {
+		notation: "compact",
+		style: "unit",
+		unit: "byte",
+		unitDisplay: "narrow",
+	});
+
+	const [ty] = a.mime.split(";");
+	// const [ty, paramsRaw] = a.mime.split(";");
+	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
+	// console.log({ ty, params });
+
+	if (b === "image") {
+		return (
+			<li>
+				<ImageView media={a} />
+				<a download={a.filename} href={a.url}>download {a.filename}</a>
+				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+			</li>
+		);
+	} else if (b === "video") {
+		return (
+			<li class="raw">
+				<VideoView media={a} />
+			</li>
+		);
+	} else if (b === "audio") {
+		return (
+			<li class="raw">
+				<AudioView media={a} />
+			</li>
+		);
+	} else if (b === "text" || /^application\/json\b/.test(a.mime)) {
+		return (
+			<li>
+				<TextView media={a} />
+			</li>
+		);
+	} else {
+		return (
+			<li>
+				<FileView media={a} />
 			</li>
 		);
 	}

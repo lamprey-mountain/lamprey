@@ -1,3 +1,8 @@
+import { Media } from "sdk";
+import { VoidProps } from "solid-js";
+
+export type MediaProps = VoidProps<{ media: Media }>;
+
 export function formatTime(time: number): string {
 	const t = Math.floor(time);
 	const seconds = t % 60;

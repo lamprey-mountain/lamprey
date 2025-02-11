@@ -1,8 +1,5 @@
-import { VoidProps } from "solid-js";
-import { Media } from "sdk";
 import { useCtx } from "../context.ts";
-
-type MediaProps = VoidProps<{ media: Media }>;
+import { MediaProps } from "./util.ts";
 
 export const ImageView = (props: MediaProps) => {
 	const ctx = useCtx();

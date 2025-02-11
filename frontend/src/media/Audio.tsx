@@ -1,5 +1,4 @@
-import { createEffect, createSignal, onCleanup, VoidProps } from "solid-js";
-import { Media } from "sdk";
+import { createEffect, createSignal, onCleanup } from "solid-js";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -7,9 +6,7 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
-import { formatTime } from "./util.ts";
-
-type MediaProps = VoidProps<{ media: Media }>;
+import { formatTime, MediaProps } from "./util.ts";
 
 export const AudioView = (props: MediaProps) => {
 	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
