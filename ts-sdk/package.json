@@ -1,0 +1,15 @@
+{
+	"name": "sdk",
+	"module": "index.ts",
+	"type": "module",
+	"scripts": {
+		"generate-schema": "openapi-typescript https://chat.celery.eu.org/api/docs.json -o ./schema.d.ts"
+	},
+	"devDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"dependencies": {
+		"openapi-fetch": "^0.13.4",
+		"uuidv7": "^1.0.2"
+	}
+}

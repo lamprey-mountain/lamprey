@@ -2,8 +2,7 @@ import { getTimestampFromUUID } from "sdk";
 import { MessageT, MessageType } from "./types.ts";
 import { For, Match, Show, Switch } from "solid-js";
 import { marked } from "marked";
-// @ts-types="npm:@types/sanitize-html@^2.13.0"
-import sanitizeHtml from "npm:sanitize-html";
+import sanitizeHtml from "sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import {
