@@ -3,7 +3,7 @@ import { Attachment, useCtx } from "./context.ts";
 import { ThreadT } from "./types.ts";
 import Editor, { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { renderAttachment } from "./Message.tsx";
+import { AttachmentView } from "./Message.tsx";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
 
@@ -152,7 +152,7 @@ function renderAttachment2(thread: ThreadT, att: Attachment) {
 				return `uploading (${percent}%)`;
 			}
 		} else {
-			return renderAttachment(att.media);
+			return <AttachmentView media={att.media} />;
 		}
 	}
 

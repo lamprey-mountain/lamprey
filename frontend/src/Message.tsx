@@ -1,6 +1,6 @@
 import { getTimestampFromUUID } from "sdk";
-import { MediaT, MessageT, MessageType } from "./types.ts";
-import { For, Show } from "solid-js";
+import { MessageT, MessageType } from "./types.ts";
+import { For, Match, Show, Switch } from "solid-js";
 import { marked } from "marked";
 // @ts-types="npm:@types/sanitize-html@^2.13.0"
 import sanitizeHtml from "npm:sanitize-html";
@@ -15,6 +15,7 @@ import {
 	VideoViewOld,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
+import { MediaProps } from "./media/util.ts";
 
 type MessageProps = {
 	message: MessageT;
@@ -125,7 +126,7 @@ export function MessageView(props: MessageProps) {
 						<Show when={props.message.attachments.length}>
 							<ul class="attachments">
 								<For each={props.message.attachments}>
-									{(att) => renderAttachment(att)}
+									{(att) => <AttachmentView media={att} />}
 								</For>
 							</ul>
 						</Show>
@@ -185,16 +186,21 @@ function ReplyView(props: ReplyProps) {
 	);
 }
 
-export function renderAttachment(a: MediaT) {
-	if (flags.has("new_media")) {
-		return renderAttachment2(a);
-	} else {
-		return renderAttachment1(a);
-	}
+export function AttachmentView(props: MediaProps) {
+	return (
+		<Switch>
+			<Match when={flags.has("new_media")}>
+				<AttachmentView2 media={props.media} />
+			</Match>
+			<Match when={true}>
+				<AttachmentView1 media={props.media} />
+			</Match>
+		</Switch>
+	);
 }
 
-export function renderAttachment1(a: MediaT) {
-	const b = a.mime.split("/")[0];
+export function AttachmentView1(props: MediaProps) {
+	const b = () => props.media.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
 		style: "unit",
@@ -202,47 +208,55 @@ export function renderAttachment1(a: MediaT) {
 		unitDisplay: "narrow",
 	});
 
-	const [ty] = a.mime.split(";");
+	const ty = () => props.media.mime.split(";")[0];
 	// const [ty, paramsRaw] = a.mime.split(";");
 	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
 	// console.log({ ty, params });
 
-	if (b === "image") {
+	if (b() === "image") {
 		return (
 			<li>
-				<ImageView media={a} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				<ImageView media={props.media} />
+				<a download={props.media.filename} href={props.media.url}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
 			</li>
 		);
-	} else if (b === "video") {
+	} else if (b() === "video") {
 		return (
 			<li>
-				<VideoViewOld media={a} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				<VideoViewOld media={props.media} />
+				<a download={props.media.filename} href={props.media.url}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
 			</li>
 		);
-	} else if (b === "audio") {
+	} else if (b() === "audio") {
 		return (
 			<li>
-				<audio controls src={a.url} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				<audio controls src={props.media.url} />
+				<a download={props.media.filename} href={props.media.url}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				<a download={props.media.filename} href={props.media.url}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
 			</li>
 		);
 	}
 }
 
-export function renderAttachment2(a: MediaT) {
-	const b = a.mime.split("/")[0];
+export function AttachmentView2(props: MediaProps) {
+	const b = () => props.media.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
 		style: "unit",
@@ -250,41 +264,39 @@ export function renderAttachment2(a: MediaT) {
 		unitDisplay: "narrow",
 	});
 
-	const [ty] = a.mime.split(";");
-	// const [ty, paramsRaw] = a.mime.split(";");
-	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
-	// console.log({ ty, params });
-
-	if (b === "image") {
+	const ty = () => props.media.mime.split(";")[0];
+	if (b() === "image") {
 		return (
 			<li>
-				<ImageView media={a} />
-				<a download={a.filename} href={a.url}>download {a.filename}</a>
-				<div class="dim">{ty} - {byteFmt.format(a.size)}</div>
+				<ImageView media={props.media} />
+				<a download={props.media.filename} href={props.media.url}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
 			</li>
 		);
-	} else if (b === "video") {
+	} else if (b() === "video") {
 		return (
 			<li class="raw">
-				<VideoView media={a} />
+				<VideoView media={props.media} />
 			</li>
 		);
-	} else if (b === "audio") {
+	} else if (b() === "audio") {
 		return (
 			<li class="raw">
-				<AudioView media={a} />
+				<AudioView media={props.media} />
 			</li>
 		);
-	} else if (b === "text" || /^application\/json\b/.test(a.mime)) {
+	} else if (b() === "text" || /^application\/json\b/.test(props.media.mime)) {
 		return (
 			<li>
-				<TextView media={a} />
+				<TextView media={props.media} />
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<FileView media={a} />
+				<FileView media={props.media} />
 			</li>
 		);
 	}
