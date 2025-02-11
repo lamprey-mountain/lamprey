@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO attachment (chat_id, discord_id) VALUES ($1, $2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "aa994681328ccb83dddf8cdf0d2a2a604246a9fbbb62f3c3025207a2e2c263f8"
+}
