@@ -3,7 +3,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vite build -l info",
+		"build": "vite build",
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {

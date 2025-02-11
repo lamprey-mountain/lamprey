@@ -34,3 +34,6 @@ config.toml
 # Added by cargo
 
 /target
+
+# Build artifacts
+/result
