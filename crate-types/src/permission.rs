@@ -30,3 +30,38 @@ pub enum Permission {
     View,
     MessageEdit,
 }
+
+/// Which permissions are granted to someone with Permission::Admin
+pub const ADMIN_ROOM: &[Permission] = &[
+    Permission::RoomManage,
+    Permission::ThreadCreate,
+    Permission::ThreadManage,
+    Permission::ThreadDelete,
+    Permission::MessageCreate,
+    Permission::MessageFilesEmbeds,
+    Permission::MessagePin,
+    Permission::MessageDelete,
+    Permission::MessageMassMention,
+    Permission::MemberKick,
+    Permission::MemberBan,
+    Permission::MemberManage,
+    Permission::InviteCreate,
+    Permission::InviteManage,
+    Permission::RoleManage,
+    Permission::RoleApply,
+];
+
+// pub const ADMIN_THREAD: &[Permission] = &[
+//     Permission::ThreadManage,
+//     Permission::ThreadDelete,
+//     Permission::MessageCreate,
+//     Permission::MessageFilesEmbeds,
+//     Permission::MessagePin,
+//     Permission::MessageDelete,
+//     Permission::MessageMassMention,
+//     // Permission::MemberKick,
+//     // Permission::MemberBan,
+//     // Permission::MemberManage,
+//     Permission::InviteCreate,
+//     Permission::InviteManage,
+// ];

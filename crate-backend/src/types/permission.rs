@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use types::Permission;
+use types::{Permission, ADMIN_ROOM};
 
 use crate::error::{Error, Result};
 
@@ -17,6 +17,9 @@ impl Permissions {
 
     #[inline]
     pub fn add(&mut self, perm: Permission) {
+        if perm == Permission::Admin {
+            self.p.extend(ADMIN_ROOM);
+        }
         self.p.insert(perm);
     }
 
@@ -27,7 +30,7 @@ impl Permissions {
 
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
-        self.p.contains(&perm) || self.p.contains(&Permission::Admin)
+        self.p.contains(&perm)
     }
 
     pub fn ensure(&self, perm: Permission) -> Result<()> {
@@ -49,9 +52,14 @@ impl Permissions {
 
 impl FromIterator<Permission> for Permissions {
     fn from_iter<T: IntoIterator<Item = Permission>>(iter: T) -> Self {
-        Permissions {
-            p: iter.into_iter().collect(),
+        let mut p = HashSet::new();
+        for i in iter {
+            if i == Permission::Admin {
+                p.extend(ADMIN_ROOM);
+            }
+            p.insert(i);
         }
+        Permissions { p }
     }
 }
 
