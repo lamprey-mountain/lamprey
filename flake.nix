@@ -33,7 +33,7 @@
             tag = "latest";
             copyToRoot = [ pkgs.dockerTools.caCertificates ];
             config = {
-              Entrypoint = [ "${pkgs.tini}/bin/tini" "--" "${pkg}" ];
+              Entrypoint = [ "${pkgs.tini}/bin/tini" "--" "${pkg}/bin/${pkg.pname}" ];
             };
           };
 
