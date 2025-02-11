@@ -150,7 +150,8 @@ async fn thread_update(
 ) -> Result<impl IntoResponse> {
     let thread = s
         .services()
-        .update_thread(user_id, thread_id, patch)
+        .threads
+        .update(user_id, thread_id, patch)
         .await?;
     Ok(Json(thread))
 }
@@ -237,7 +238,8 @@ async fn thread_pin(
     };
     let thread = s
         .services()
-        .update_thread(user_id, thread_id, patch)
+        .threads
+        .update(user_id, thread_id, patch)
         .await?;
     Ok(Json(thread))
 }
@@ -269,7 +271,8 @@ async fn thread_archive(
     };
     let thread = s
         .services()
-        .update_thread(user_id, thread_id, patch)
+        .threads
+        .update(user_id, thread_id, patch)
         .await?;
     Ok(Json(thread))
 }
@@ -301,7 +304,8 @@ async fn thread_activate(
     };
     let thread = s
         .services()
-        .update_thread(user_id, thread_id, patch)
+        .threads
+        .update(user_id, thread_id, patch)
         .await?;
     Ok(Json(thread))
 }
@@ -331,7 +335,8 @@ async fn thread_delete(
         state: Some(ThreadState::Deleted),
     };
     s.services()
-        .update_thread(user_id, thread_id, patch)
+        .threads
+        .update(user_id, thread_id, patch)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -93,7 +93,7 @@ impl ServerState {
     // }
 
     fn services(self: &Arc<Self>) -> Services {
-        Services::new(self.clone(), self.data())
+        Services::new(self.clone())
     }
 
     fn blobs(&self) -> &opendal::Operator {

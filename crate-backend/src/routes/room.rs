@@ -34,7 +34,7 @@ async fn room_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
-    let room = s.services().create_room(json, user_id).await?;
+    let room = s.services().rooms.create(json, user_id).await?;
     s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
