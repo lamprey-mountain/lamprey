@@ -8,7 +8,7 @@
 /* @use "./spacing.scss"; */
 /* @use "./theme.scss"; */
 /* @use "./colors.scss"; */
-/* @use "./animation.scss"; */
+@use "./animation.scss" as *;
 
 @use "./util.scss" as *;
 
@@ -439,37 +439,6 @@ em {
 	}
 }
 
-@keyframes popup-bg {
-	from {
-		background-color: #1110;
-	}
-	to {
-		background-color: #111a;
-	}
-}
-
-@keyframes popup-content {
-	from {
-		translate: 0 6px;
-		opacity: 0.5;
-	}
-	to {
-		translate: 0 0;
-		opacity: 1;
-	}
-}
-
-@keyframes popup-base {
-	from {
-		scale: 0.9;
-		box-shadow: 0 0 0 #1110;
-	}
-	to {
-		scale: 1;
-		box-shadow: 4px 4px 8px #111f;
-	}
-}
-
 .contextmenu {
 	position: fixed;
 	pointer-events: none;
@@ -786,39 +755,6 @@ input[type="text"] {
 	}
 }
 
-@keyframes loading {
-	0% {
-		content: "⠋ ";
-	}
-	11% {
-		content: "⠙ ";
-	}
-	23% {
-		content: "⠹ ";
-	}
-	33% {
-		content: "⠸ ";
-	}
-	44% {
-		content: "⠼ ";
-	}
-	55% {
-		content: "⠴ ";
-	}
-	66% {
-		content: "⠦ ";
-	}
-	77% {
-		content: "⠧ ";
-	}
-	88% {
-		content: "⠇ ";
-	}
-	100% {
-		content: "⠏ ";
-	}
-}
-
 .modal-media > .content {
 	& > .base {
 		background: none;
@@ -907,7 +843,7 @@ summary {
 
 .video {
 	position: relative;
-	
+
 	& > .media {
 		position: relative;
 	}

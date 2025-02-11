@@ -6,7 +6,14 @@ import { marked } from "marked";
 import sanitizeHtml from "npm:sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
-import { AudioView, FileView, ImageView, TextView, VideoView, VideoViewOld } from "./media/mod.tsx";
+import {
+	AudioView,
+	FileView,
+	ImageView,
+	TextView,
+	VideoView,
+	VideoViewOld,
+} from "./media/mod.tsx";
 import { flags } from "./flags.ts";
 
 type MessageProps = {
