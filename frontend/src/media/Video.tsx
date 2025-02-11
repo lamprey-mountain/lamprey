@@ -139,25 +139,27 @@ export const VideoView = (props: MediaProps) => {
 	};
 
 	return (
-		<div
-			class="media video"
-			style={{
-				"--height": `${props.media.height}px`,
-				"--width": `${props.media.width}px`,
-				"--aspect-ratio": `${props.media.width}/${props.media.height}`,
-			}}
-			ref={wrapperEl!}
-		>
-			<div class="inner">
-				<div class="loader">loading</div>
-				<video
-					ref={videoEl!}
-					src={props.media.url}
-					onClick={togglePlayPause}
-					onDblClick={fullScreen}
-				/>
+		<div class="video">
+			<div
+				class="media"
+				style={{
+					"--height": `${props.media.height}px`,
+					"--width": `${props.media.width}px`,
+					"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+				}}
+				ref={wrapperEl!}
+			>
+				<div class="inner">
+					<div class="loader">loading</div>
+					<video
+						ref={videoEl!}
+						src={props.media.url}
+						onClick={togglePlayPause}
+						onDblClick={fullScreen}
+					/>
+				</div>
 			</div>
-			<div class="overlay">
+			<div class="footer">
 				<div
 					class="progress"
 					onWheel={handleScrubWheel}

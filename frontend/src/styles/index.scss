@@ -907,6 +907,10 @@ summary {
 
 .video {
 	position: relative;
+	
+	& > .media {
+		position: relative;
+	}
 
 	& video {
 		position: fixed;
@@ -917,31 +921,22 @@ summary {
 	}
 }
 
-.video > .overlay {
+.video > .footer {
 	display: grid;
 	grid-template-columns: 1fr;
-	grid-template-rows: 8px auto 1fr auto;
-	grid-template-areas: "." "info" "." "controls";
-	position: fixed;
-	top: 0;
-	left: 0;
-	height: 100%;
-	width: 100%;
-	pointer-events: none;
+	grid-template-rows: 1fr auto auto auto;
+	grid-template-areas: "." "progress" "info" "controls";
+	background: rgba(var(--color-bg3), 1);
 
 	& > .progress {
 		position: absolute;
-		top: 0;
-		width: 100%;
+		grid-area: progress;
 		border: solid $bg3 1px;
-		pointer-events: auto;
 	}
 
 	& > .info {
 		grid-area: info;
-		background: rgba(var(--color-bg3), 1);
 		padding: 4px;
-		pointer-events: auto;
 
 		& > a {
 			display: block;
@@ -952,7 +947,6 @@ summary {
 	& > .controls {
 		grid-area: controls;
 		display: flex;
-		pointer-events: auto;
 
 		& > button {
 			background: $bg2;
@@ -979,7 +973,7 @@ summary {
 	}
 }
 
-.audio > .progress, .video > .overlay > .progress {
+.audio > .progress, .video > .footer > .progress {
 	position: absolute;
 	grid-area: progress;
 	height: 8px;
