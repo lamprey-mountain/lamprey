@@ -9,7 +9,7 @@ use axum::{
 };
 use futures_util::StreamExt;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter};
-use tracing::{debug, info};
+use tracing::{debug, info, trace};
 use types::UserId;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -47,6 +47,7 @@ async fn media_create(
     let media_id = MediaId(uuid::Uuid::now_v7());
     let temp_file = TempFile::new().await.expect("failed to create temp file!");
     let temp_writer = BufWriter::new(temp_file.open_rw().await?);
+    trace!("create temp_file {:?}", temp_file.file_path());
     let upload_url = Some(
         s.config
             .base_url
@@ -136,12 +137,16 @@ async fn media_upload(
             Err(Error::TooBig)
         }
         Ordering::Equal => {
+            trace!("flush media");
             up.temp_writer.flush().await?;
+            trace!("flushed media");
             drop(up);
+            trace!("dropped upload");
             let (_, up) = s
                 .uploads
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
+            trace!("processing upload");
             let mut media = process_upload(up, media_id, user_id, s.clone()).await?;
             debug!("finished processing media");
             media.url = s.presign(&media.url).await?;

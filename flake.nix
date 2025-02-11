@@ -27,16 +27,6 @@
             cargoExtraArgs = "-p ${name}";
           });
 
-        mkImage = pkg:
-          pkgs.dockerTools.buildImage {
-            name = pkg.pname;
-            tag = "latest";
-            copyToRoot = [ pkgs.dockerTools.caCertificates ];
-            config = {
-              Entrypoint = [ "${pkgs.tini}/bin/tini" "--" "${pkg}/bin/${pkg.pname}" ];
-            };
-          };
-
         backend = mkCrate "backend";
         bridge-discord = mkCrate "bridge-discord";
 
@@ -65,8 +55,30 @@
         packages = rec {
           # inherit backend bridge-discord frontend;
           inherit backend bridge-discord;
-          backend-oci = mkImage backend;
-          bridge-discord-oci = mkImage bridge-discord;
+
+          backend-oci = pkgs.dockerTools.buildImage {
+            name = "backend";
+            tag = "latest";
+            copyToRoot =
+              [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless pkgs.file ];
+            config = {
+              Entrypoint =
+                [ "${pkgs.tini}/bin/tini" "--" "${backend}/bin/backend" ];
+            };
+          };
+
+          bridge-discord-oci = pkgs.dockerTools.buildImage {
+            name = "bridge-discord";
+            tag = "latest";
+            copyToRoot = [ pkgs.dockerTools.caCertificates ];
+            config = {
+              Entrypoint = [
+                "${pkgs.tini}/bin/tini"
+                "--"
+                "${bridge-discord}/bin/bridge-discord"
+              ];
+            };
+          };
         };
       });
 }
