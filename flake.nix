@@ -59,7 +59,8 @@
         # });
       in {
         packages = rec {
-          inherit backend bridge-discord frontend;
+          # inherit backend bridge-discord frontend;
+          inherit backend bridge-discord;
           backend-oci = mkImage backend;
           bridge-discord-oci = mkImage bridge-discord;
         };
