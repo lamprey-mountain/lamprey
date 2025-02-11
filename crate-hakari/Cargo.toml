@@ -16,25 +16,19 @@ publish = false
 ### BEGIN HAKARI SECTION
 [dependencies]
 base64 = { version = "0.22" }
-bitflags = { version = "2", default-features = false, features = ["serde"] }
 byteorder = { version = "1" }
 chrono = { version = "0.4", features = ["serde"] }
 crossbeam-utils = { version = "0.8" }
-crypto-common = { version = "0.1", default-features = false, features = ["getrandom", "std"] }
 deranged = { version = "0.3", default-features = false, features = ["powerfmt", "serde", "std"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 form_urlencoded = { version = "1" }
 futures = { version = "0.3", default-features = false, features = ["async-await", "std"] }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
-futures-sink = { version = "0.3" }
+futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-hashbrown-3575ec1268b04181 = { package = "hashbrown", version = "0.15" }
-hashbrown-582f2526e08bb6a0 = { package = "hashbrown", version = "0.14", default-features = false, features = ["ahash", "inline-more", "raw"] }
-hmac = { version = "0.12", default-features = false, features = ["reset"] }
+hashbrown = { version = "0.15" }
 indexmap = { version = "2", features = ["serde"] }
-js_int = { version = "0.2", features = ["serde"] }
-libsqlite3-sys = { version = "0.30", features = ["bundled", "unlock_notify"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
@@ -45,7 +39,6 @@ regex-automata = { version = "0.4", default-features = false, features = ["dfa-o
 regex-syntax = { version = "0.8" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots", "stream"] }
 ring = { version = "0.17" }
-ruma-identifiers-validation = { version = "0.10", default-features = false, features = ["compat-arbitrary-length-ids", "compat-user-id"] }
 rustls-webpki = { version = "0.102", default-features = false, features = ["ring", "std"] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
@@ -55,38 +48,29 @@ sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "sqlite", "ti
 sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline"] }
-subtle = { version = "2" }
 time = { version = "0.3", features = ["macros", "serde-well-known"] }
 tokio = { version = "1", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
-tokio-stream = { version = "0.1", features = ["fs", "sync"] }
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
-toml = { version = "0.8" }
 toml_edit = { version = "0.22", features = ["serde"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
 tungstenite = { version = "0.26", default-features = false, features = ["__rustls-tls", "handshake"] }
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4", "v7"] }
-zeroize = { version = "1", features = ["zeroize_derive"] }
 
 [build-dependencies]
 base64 = { version = "0.22" }
-bitflags = { version = "2", default-features = false, features = ["serde"] }
 byteorder = { version = "1" }
 crossbeam-utils = { version = "0.8" }
-crypto-common = { version = "0.1", default-features = false, features = ["getrandom", "std"] }
 deranged = { version = "0.3", default-features = false, features = ["powerfmt", "serde", "std"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 form_urlencoded = { version = "1" }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
-futures-sink = { version = "0.3" }
+futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-hashbrown-3575ec1268b04181 = { package = "hashbrown", version = "0.15" }
-hmac = { version = "0.12", default-features = false, features = ["reset"] }
+hashbrown = { version = "0.15" }
 indexmap = { version = "2", features = ["serde"] }
-js_int = { version = "0.2", features = ["serde"] }
-libsqlite3-sys = { version = "0.30", features = ["bundled", "unlock_notify"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
@@ -96,7 +80,6 @@ rand = { version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
 regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
 regex-syntax = { version = "0.8" }
-ruma-identifiers-validation = { version = "0.10", default-features = false, features = ["compat-arbitrary-length-ids", "compat-user-id"] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 sha2 = { version = "0.10", features = ["oid"] }
@@ -106,13 +89,9 @@ sqlx-macros = { version = "0.8", features = ["_rt-tokio", "derive", "json", "mac
 sqlx-macros-core = { version = "0.8", features = ["_rt-tokio", "derive", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
 sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline"] }
-subtle = { version = "2" }
 syn = { version = "2", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
 time = { version = "0.3", features = ["macros", "serde-well-known"] }
 tokio = { version = "1", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
-tokio-stream = { version = "0.1", features = ["fs", "sync"] }
-toml = { version = "0.8" }
-toml_edit = { version = "0.22", features = ["serde"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
 url = { version = "2", features = ["serde"] }

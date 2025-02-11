@@ -9,7 +9,7 @@
         "type_info": "Text"
       },
       {
-        "name": "matrix_id",
+        "name": "discord_id",
         "ordinal": 1,
         "type_info": "Text"
       }
