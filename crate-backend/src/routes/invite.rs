@@ -42,13 +42,17 @@ pub async fn invite_delete(
             InviteTargetId::User { user_id: user.id },
         ),
         InviteTarget::Room { room } => (
-            d.permission_room_get(user_id, room.id)
+            s.services()
+                .perms
+                .for_room(user_id, room.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Room { room_id: room.id },
         ),
         InviteTarget::Thread { room, thread } => (
-            d.permission_thread_get(user_id, thread.id)
+            s.services()
+                .perms
+                .for_thread(user_id, thread.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Thread {
@@ -87,6 +91,7 @@ pub async fn invite_resolve(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
+    let s = s.services();
     let invite = d.invite_select(code).await?;
     if invite.invite.creator.id == user_id {
         return Ok(Json(invite).into_response());
@@ -94,11 +99,11 @@ pub async fn invite_resolve(
     let should_strip = match &invite.invite.target {
         InviteTarget::User { user } => user.id != user_id,
         InviteTarget::Room { room } => {
-            let perms = d.permission_room_get(user_id, room.id).await?;
+            let perms = s.perms.for_room(user_id, room.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Thread { room: _, thread } => {
-            let perms = d.permission_thread_get(user_id, thread.id).await?;
+            let perms = s.perms.for_thread(user_id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
     };
@@ -171,7 +176,7 @@ pub async fn invite_room_create(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::InviteCreate)?;
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -215,7 +220,7 @@ pub async fn invite_room_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.invite_list_room(room_id, paginate).await?;
     let res = PaginationResponse {

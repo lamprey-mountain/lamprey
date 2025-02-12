@@ -245,7 +245,7 @@ impl Connection {
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
-                let perms = self.s.data().permission_room_get(user_id, room_id).await?;
+                let perms = self.s.services().perms.for_room(user_id, room_id).await?;
                 perms.has(Permission::View)
             }
             (Some(auth_user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
@@ -254,8 +254,9 @@ impl Connection {
                 } else {
                     let perms = self
                         .s
-                        .data()
-                        .permission_room_get(auth_user_id, room_id)
+                        .services()
+                        .perms
+                        .for_room(auth_user_id, room_id)
                         .await?;
                     perms.has(Permission::View)
                 }
@@ -263,8 +264,9 @@ impl Connection {
             (Some(user_id), AuthCheck::Thread(thread_id)) => {
                 let perms = self
                     .s
-                    .data()
-                    .permission_thread_get(user_id, thread_id)
+                    .services()
+                    .perms
+                    .for_thread(user_id, thread_id)
                     .await?;
                 perms.has(Permission::View)
             }

@@ -36,7 +36,7 @@ pub async fn room_member_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_list(room_id, paginate).await?;
     Ok(Json(res))
@@ -65,7 +65,7 @@ pub async fn room_member_get(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = d.permission_room_get(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     // TODO: return `Ban`s
@@ -101,7 +101,7 @@ pub async fn room_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = d.permission_room_get(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberManage)?;
@@ -152,7 +152,7 @@ pub async fn room_member_delete(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = d.permission_room_get(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberKick)?;

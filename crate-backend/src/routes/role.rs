@@ -36,7 +36,7 @@ pub async fn role_create(
     Json(create): Json<RoleCreateRequest>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d
@@ -76,7 +76,7 @@ pub async fn role_update(
     Json(patch): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
@@ -113,7 +113,7 @@ pub async fn role_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let existing = d.role_member_count(role_id).await?;
@@ -147,7 +147,7 @@ pub async fn role_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let role = d.role_select(room_id, role_id).await?;
     Ok(Json(role))
@@ -173,7 +173,7 @@ pub async fn role_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.role_list(room_id, paginate).await?;
     Ok(Json(res))
@@ -199,7 +199,7 @@ pub async fn role_member_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.role_member_list(role_id, paginate).await?;
     Ok(Json(res))
@@ -225,7 +225,7 @@ pub async fn role_member_add(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     d.role_member_put(target_user_id, role_id).await?;
@@ -261,7 +261,7 @@ pub async fn role_member_remove(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = d.permission_room_get(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     d.role_member_delete(target_user_id, role_id).await?;
