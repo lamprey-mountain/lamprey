@@ -56,10 +56,10 @@
           # inherit backend bridge-discord frontend;
           inherit backend bridge-discord;
 
-          backend-oci = pkgs.dockerTools.buildImage {
+          backend-oci = pkgs.dockerTools.streamLayeredImage {
             name = "backend";
             tag = "latest";
-            copyToRoot =
+            contents =
               [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless pkgs.file ];
             config = {
               Entrypoint =
@@ -67,10 +67,10 @@
             };
           };
 
-          bridge-discord-oci = pkgs.dockerTools.buildImage {
+          bridge-discord-oci = pkgs.dockerTools.streamLayeredImage {
             name = "bridge-discord";
             tag = "latest";
-            copyToRoot = [ pkgs.dockerTools.caCertificates ];
+            contents = [ pkgs.dockerTools.caCertificates ];
             config = {
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
