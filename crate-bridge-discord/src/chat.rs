@@ -25,11 +25,11 @@ pub enum UnnamedMessage {
         bytes: Vec<u8>,
         response: oneshot::Sender<Media>,
     },
-    MessageGet {
-        thread_id: ThreadId,
-        message_id: MessageId,
-        response: oneshot::Sender<types::Message>,
-    },
+    // MessageGet {
+    //     thread_id: ThreadId,
+    //     message_id: MessageId,
+    //     response: oneshot::Sender<types::Message>,
+    // },
     MessageCreate {
         thread_id: ThreadId,
         req: MessageCreateRequest,
@@ -90,8 +90,12 @@ impl EventHandler for Handle {
 impl Unnamed {
     pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<UnnamedMessage>) -> Self {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
+        let base_url = std::env::var("BASE_URL").expect("missing BASE_URL");
+        let base_url_ws = std::env::var("BASE_URL_WS").expect("missing BASE_URL_WS");
         let handle = Handle { globals };
-        let client = Client::new(token.clone().into()).with_handler(Box::new(handle));
+        let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
+        client.http = client.http.with_base_url(base_url.parse().unwrap());
+        client.syncer = client.syncer.with_base_url(base_url_ws.parse().unwrap());
         Self { client, recv }
     }
 
@@ -152,15 +156,14 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
         } => {
             http.message_delete(thread_id, message_id).await?;
             let _ = response.send(());
-        }
-        UnnamedMessage::MessageGet {
-            thread_id,
-            message_id,
-            response,
-        } => {
-            let res = http.message_get(thread_id, message_id).await?;
-            let _ = response.send(res);
-        }
+        } // UnnamedMessage::MessageGet {
+          //     thread_id,
+          //     message_id,
+          //     response,
+          // } => {
+          //     let res = http.message_get(thread_id, message_id).await?;
+          //     let _ = response.send(res);
+          // }
     }
     Ok(())
 }

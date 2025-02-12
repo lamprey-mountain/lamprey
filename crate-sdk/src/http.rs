@@ -18,6 +18,10 @@ impl Http {
         Self { token, base_url }
     }
 
+    pub fn with_base_url(self, base_url: Url) -> Self {
+        Self { base_url, ..self }
+    }
+
     pub async fn message_create(
         &self,
         thread_id: ThreadId,

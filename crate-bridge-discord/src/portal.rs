@@ -6,6 +6,7 @@ use serenity::all::CreateAttachment;
 use serenity::all::CreateEmbed;
 use serenity::all::EditAttachments;
 use serenity::all::EditWebhookMessage;
+use serenity::all::Mentionable;
 use serenity::all::{
     ChannelId as DcChannelId, Message as DcMessage, MessageId as DcMessageId,
     MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate,
@@ -86,27 +87,35 @@ impl Portal {
                     None
                 };
                 let mut embeds = vec![];
-                let thread_id = self.thread_id();
+                let mut content = message
+                    .content
+                    .to_owned()
+                    .unwrap_or_else(|| "(no content?)".to_owned());
                 if let Some(reply_ids) = reply_ids {
-                    let (discord_id, chat_id) = reply_ids;
+                    let (discord_id, _chat_id) = reply_ids;
                     let (send, recv) = oneshot::channel();
                     self.globals
-                        .ch_chan
-                        .send(UnnamedMessage::MessageGet {
-                            thread_id,
-                            message_id: chat_id,
+                        .dc_chan
+                        .send(DiscordMessage::MessageGet {
+                            channel_id: self.channel_id(),
+                            message_id: discord_id,
                             response: send,
                         })
                         .await?;
                     let reply = recv.await?;
+                    let reply_content = if !reply.content.is_empty() {
+                        &reply.content
+                    } else {
+                        "(no content?)"
+                    };
                     let description = format!(
-                        "**[replying to {}](https://canary.discord.com/channels/{}/{}/{})**\n{}",
-                        reply.override_name.unwrap_or(reply.author.name),
+                        "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
                         self.config.discord_guild_id,
                         self.channel_id(),
                         discord_id,
-                        reply.content.as_deref().unwrap_or("(no content?)")
+                        reply_content,
                     );
+                    content = format!("{} {}", reply.author.mention(), content);
                     embeds.push(CreateEmbed::new().description(description));
                 }
                 let (send, recv) = tokio::sync::oneshot::channel();
@@ -128,12 +137,12 @@ impl Portal {
                     }
                     // let files = files.into_iter().map(|i| EditAttachments::new().add()).collect();
                     let mut payload = EditWebhookMessage::new()
-                        .content(message.content.as_deref().unwrap_or("(no content?)"))
+                        .content(content)
                         .allowed_mentions(
                             CreateAllowedMentions::new()
                                 .everyone(false)
                                 .all_roles(false)
-                                .all_users(false),
+                                .all_users(true),
                         )
                         .embeds(embeds)
                         .attachments(files);
@@ -161,12 +170,12 @@ impl Portal {
                     }
                     let mut payload = ExecuteWebhook::new()
                         .username(message.override_name.unwrap_or(message.author.name))
-                        .content(message.content.as_deref().unwrap_or("(no content?)"))
+                        .content(content)
                         .allowed_mentions(
                             CreateAllowedMentions::new()
                                 .everyone(false)
                                 .all_roles(false)
-                                .all_users(false),
+                                .all_users(true),
                         )
                         .add_files(files)
                         .embeds(embeds);

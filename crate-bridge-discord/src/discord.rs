@@ -151,7 +151,6 @@ pub struct Discord {
 }
 
 /// discord actor message
-#[allow(clippy::enum_variant_names)]
 pub enum DiscordMessage {
     WebhookExecute {
         url: String,
@@ -169,6 +168,11 @@ pub enum DiscordMessage {
         message_id: MessageId,
         thread_id: Option<ChannelId>,
         response: oneshot::Sender<()>,
+    },
+    MessageGet {
+        message_id: MessageId,
+        channel_id: ChannelId,
+        response: oneshot::Sender<Message>,
     },
 }
 
@@ -237,6 +241,14 @@ impl Discord {
                 let hook = self.get_hook(url, http).await?;
                 hook.delete_message(&http, thread_id, message_id).await?;
                 response.send(()).unwrap();
+            }
+            DiscordMessage::MessageGet {
+                message_id,
+                channel_id,
+                response,
+            } => {
+                let message = http.get_message(channel_id, message_id).await?;
+                response.send(message).unwrap();
             }
         }
         Ok(())
