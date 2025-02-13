@@ -4,11 +4,29 @@ on:
     branches:
       - master
 jobs:
-  populate-cache:
+  populate-cache-deps:
     runs-on: nix
     strategy:
       matrix:
-        derivation: ["cargo-deps", "backend", "backend-oci", "bridge-discord", "bridge-discord-oci"]
+        derivation: ["cargo-deps"]
+    steps:
+      - name: setup
+        run: |
+          attic login --set-default central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+          attic use actions
+      - name: build
+        run: |
+          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}} -L |& cat
+      - name: push
+        run: |
+          attic push actions result --ignore-upstream-cache-filter
+  populate-cache:
+    runs-on: nix
+    needs:
+      - populate-cache-deps
+    strategy:
+      matrix:
+        derivation: ["backend", "backend-oci", "bridge-discord", "bridge-discord-oci"]
     steps:
       - name: setup
         run: |
