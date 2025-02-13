@@ -12,12 +12,11 @@ jobs:
     steps:
       - name: setup
         run: |
-          git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
           attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
           attic use actions
       - name: build
         run: |
-          nix build .#${{matrix.derivation}} -L |& cat
+          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}} -L |& cat
       - name: push
         run: |
           attic push actions result --ignore-upstream-cache-filter
@@ -31,13 +30,12 @@ jobs:
     steps:
       - name: setup
         run: |
-          git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
           docker login git-celery.eu.org --password ${{secrets.TOKEN}}
           attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
           attic use actions
       - name: build
         run: |
-          nix build .#${{matrix.derivation}}-oci -L |& cat
+          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}}-oci -L |& cat
       - name: push
         run: |
           ./result | docker load
