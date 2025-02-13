@@ -1,0 +1,62 @@
+name: build
+on:
+  push:
+    branches:
+      - master
+jobs:
+  backend:
+    runs-on: nix
+    steps:
+      - name: clone
+        run: git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
+      - name: cache login
+        run: attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+      - name: cache setup
+        run: attic use actions
+      - name: build
+        run: nix build .#backend -L |& cat
+      - name: cache push
+        run: attic push actions result
+  backend-oci:
+    runs-on: nix
+    needs:
+      - backend
+    steps:
+      - name: clone
+        run: git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
+      - name: cache login
+        run: attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+      - name: cache setup
+        run: attic use actions
+      - name: build
+        run: nix build .#backend-oci -L |& cat
+      - name: cache push
+        run: attic push actions result
+  bridge-discord:
+    runs-on: nix
+    steps:
+      - name: clone
+        run: git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
+      - name: cache login
+        run: attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+      - name: cache setup
+        run: attic use actions
+      - name: build
+        run: nix build .#bridge-discord -L |& cat
+      - name: cache push
+        run: attic push actions result
+  bridge-discord-oci:
+    runs-on: nix
+    needs:
+      - bridge-discord
+    steps:
+      - name: clone
+        run: git clone https://tezlm:${{secrets.TOKEN}}@git.celery.eu.org/cetahe/cetahe .
+      - name: cache login
+        run: attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+      - name: cache setup
+        run: attic use actions
+      - name: build
+        run: nix build .#bridge-discord-oci -L |& cat
+      - name: cache push
+        run: attic push actions result
