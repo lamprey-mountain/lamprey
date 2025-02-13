@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: setup
         run: |
-          attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
+          attic login --set-default central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
           attic use actions
       - name: build
         run: |
@@ -32,7 +32,7 @@ jobs:
         run: |
           podman login git.celery.eu.org --password ${{secrets.TOKEN}} --username tezlm
           attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
-          attic use actions
+          attic use --set-default actions
       - name: build
         run: |
           nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}}-oci -L |& cat
