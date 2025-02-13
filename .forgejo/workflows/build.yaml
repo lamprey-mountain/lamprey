@@ -16,7 +16,7 @@ jobs:
       - name: build
         run: nix build .#backend -L |& cat
       - name: cache push
-        run: attic push actions result
+        run: attic push actions result --ignore-upstream-cache-filter
   backend-oci:
     runs-on: nix
     needs:
@@ -31,7 +31,7 @@ jobs:
       - name: build
         run: nix build .#backend-oci -L |& cat
       - name: cache push
-        run: attic push actions result
+        run: attic push actions result --ignore-upstream-cache-filter
   bridge-discord:
     runs-on: nix
     steps:
@@ -44,7 +44,7 @@ jobs:
       - name: build
         run: nix build .#bridge-discord -L |& cat
       - name: cache push
-        run: attic push actions result
+        run: attic push actions result --ignore-upstream-cache-filter
   bridge-discord-oci:
     runs-on: nix
     needs:
@@ -59,4 +59,4 @@ jobs:
       - name: build
         run: nix build .#bridge-discord-oci -L |& cat
       - name: cache push
-        run: attic push actions result
+        run: attic push actions result --ignore-upstream-cache-filter
