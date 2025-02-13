@@ -64,10 +64,36 @@ pub async fn invite_delete(
     let can_delete = user_id == invite.invite.creator.id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
-        s.broadcast(MessageSync::DeleteInvite {
-            code,
-            target: id_target,
-        })?;
+        match id_target {
+            InviteTargetId::User { .. } => {
+                s.broadcast(MessageSync::DeleteInvite {
+                    code,
+                    target: id_target,
+                })?;
+            }
+            InviteTargetId::Room { room_id } => {
+                s.broadcast_room(
+                    room_id,
+                    user_id,
+                    None,
+                    MessageSync::DeleteInvite {
+                        code,
+                        target: id_target,
+                    },
+                ).await?;
+            }
+            InviteTargetId::Thread { thread_id, .. } => {
+                s.broadcast_thread(
+                    thread_id,
+                    user_id,
+                    None,
+                    MessageSync::DeleteInvite {
+                        code,
+                        target: id_target,
+                    },
+                ).await?;
+            }
+        };
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -150,7 +176,13 @@ pub async fn invite_use(
             d.role_apply_default(room.id, user_id).await?;
             let member = d.room_member_get(room.id, user_id).await?;
             s.services().perms.invalidate_room(user_id, room.id);
-            s.broadcast(MessageSync::UpsertRoomMember { member })?;
+            s.broadcast_room(
+                room.id,
+                user_id,
+                None,
+                MessageSync::UpsertRoomMember { member },
+            )
+            .await?;
         }
     }
     Ok(())
@@ -185,9 +217,15 @@ pub async fn invite_room_create(
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_room(room_id, user_id, code.clone()).await?;
     let invite = d.invite_select(code).await?;
-    s.broadcast(MessageSync::UpsertInvite {
-        invite: invite.clone(),
-    })?;
+    s.broadcast_room(
+        room_id,
+        user_id,
+        None,
+        MessageSync::UpsertInvite {
+            invite: invite.clone(),
+        },
+    )
+    .await?;
     Ok((StatusCode::CREATED, Json(invite)))
 }
 

@@ -88,7 +88,7 @@ async fn message_create(
     let msg = MessageSync::UpsertMessage {
         message: message.clone(),
     };
-    s.broadcast(msg)?;
+    s.broadcast_thread(thread_id, user_id, None, msg).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -313,9 +313,9 @@ async fn message_edit(
     for media in &mut message.attachments {
         media.url = s.presign(&media.url).await?;
     }
-    s.broadcast(MessageSync::UpsertMessage {
+    s.broadcast_thread(thread_id, user_id, None, MessageSync::UpsertMessage {
         message: message.clone(),
-    })?;
+    }).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -351,11 +351,11 @@ async fn message_delete(
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
-    s.broadcast(MessageSync::DeleteMessage {
+    s.broadcast_thread(thread.id, user_id, None, MessageSync::DeleteMessage {
         room_id: thread.room_id,
         thread_id,
         message_id,
-    })?;
+    }).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

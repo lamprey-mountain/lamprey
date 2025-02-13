@@ -92,9 +92,9 @@ impl ServiceThreads {
             .await?;
         let update_message = data.message_get(thread_id, update_message_id).await?;
 
-        self.state.broadcast(MessageSync::UpsertMessage {
+        self.state.broadcast_thread(thread.id, user_id, None, MessageSync::UpsertMessage {
             message: update_message,
-        })?;
+        }).await?;
         let msg = MessageSync::UpsertThread {
             thread: thread.clone(),
         };

@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use ::types::{RoomId, UserId};
+use ::types::{RoomId, ThreadId, UserId};
 use axum::{extract::DefaultBodyLimit, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -103,6 +103,27 @@ impl ServerStateInner {
         Ok(())
     }
 
+    async fn broadcast_thread(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        reason: Option<String>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        if msg.is_room_audit_loggable() {
+            let thread = self
+                .services()
+                .threads
+                .get(thread_id, Some(user_id))
+                .await?;
+            self.broadcast_room(thread.room_id, user_id, reason, msg)
+                .await?;
+        } else {
+            let _ = self.sushi.send(msg);
+        }
+        Ok(())
+    }
+
     fn broadcast(&self, msg: MessageSync) -> Result<()> {
         let _ = self.sushi.send(msg);
         Ok(())
@@ -160,6 +181,18 @@ impl ServerState {
     ) -> Result<()> {
         self.inner
             .broadcast_room(room_id, user_id, reason, msg)
+            .await
+    }
+
+    async fn broadcast_thread(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        reason: Option<String>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        self.inner
+            .broadcast_thread(thread_id, user_id, reason, msg)
             .await
     }
 
