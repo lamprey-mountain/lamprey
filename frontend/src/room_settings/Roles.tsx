@@ -35,6 +35,20 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
+	const renameRole = (role_id: string) => () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "role name?",
+			cont(name) {
+				if (!name) return;
+				api.client.http.PATCH("/api/v1/room/{room_id}/role/{role_id}", {
+					params: { path: { room_id: props.room.id, role_id: role_id } },
+					body: { name },
+				});
+			},
+		});
+	};
+
 	return (
 		<>
 			<h2>roles</h2>
@@ -43,13 +57,18 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 			<button onClick={createRole}>create role</button>
 			<br />
 			<Show when={roles()}>
-				<ul>
+				<ul class="room-settings-roles">
 					<For each={roles()!.items}>
 						{(i) => (
 							<li>
-								<details>
-									<summary>{i.name}</summary>
+								<div class="info">
+									<h3 class="name">{i.name}</h3>
+									<div class="spacer"></div>
+									<button onClick={renameRole(i.id)}>rename role</button>
 									<button onClick={deleteRole(i.id)}>delete role</button>
+								</div>
+								<details>
+									<summary>json</summary>
 									<pre>{JSON.stringify(i, null, 2)}</pre>
 								</details>
 							</li>

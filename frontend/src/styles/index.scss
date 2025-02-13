@@ -981,6 +981,38 @@ summary {
 	}
 }
 
+.room-settings-roles {
+	& > li {
+		border: solid $sep 1px;
+		background: $bg3;
+		margin-top: 4px;
+		padding: 4px;
+
+		& .info {
+			display: flex;
+			gap: 4px;
+		}
+
+		& .spacer {
+			flex: 1;
+		}
+		
+		& .name {
+			font-size: 1em;
+			font-weight: bold;
+		}
+
+		& button {
+			background: $bg2;
+			border: solid $sep 1px;
+
+			&:hover {
+				background: $bg3;
+			}
+		}
+	}
+}
+
 /* FIXME: text alignment with uuids */
 /* uuids have ascenders (tall glyphs) but no descenders (eg. qgyj) making code containing uuids look unbalanced */
 code {
