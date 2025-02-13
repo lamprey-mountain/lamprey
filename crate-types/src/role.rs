@@ -48,7 +48,7 @@ pub struct RoleCreateRequest {
 pub struct RolePatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
-    #[serde(deserialize_with = "deserialize_sorted_permissions_option")]
+    #[serde(default, deserialize_with = "deserialize_sorted_permissions_option")]
     pub permissions: Option<Vec<Permission>>,
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
