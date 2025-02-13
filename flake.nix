@@ -30,31 +30,31 @@
         backend = mkCrate "backend";
         bridge-discord = mkCrate "bridge-discord";
 
-        # FIXME
-        # frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
-        #   name = "frontend";
-        #   pname = name;
-        #   src = ./.;
+        frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
+          name = "frontend";
+          pname = name;
+          src = ./.;
+          version = "0.0.0";
 
-        #   nativeBuildInputs = [ pkgs.nodejs pkgs.pnpm.configHook ];
+          nativeBuildInputs = [ pkgs.nodejs pkgs.pnpm.configHook ];
 
-        #   pnpmDepsHash = "sha256-woA5C1airy7eKbk3EP7cggldNFpz+9y68A16QkGrmeA=";
-        #   pnpmDeps = pkgs.pnpm.fetchDeps {
-        #     inherit (finalAttrs) src pname;
-        #     hash = pnpmDepsHash;
-        #   };
+          pnpmRoot = "frontend";
+          pnpmDepsHash = "sha256-woA5C1airy7eKbk3EP7cggldNFpz+9y68A16QkGrmeA=";
+          pnpmDeps = pkgs.pnpm.fetchDeps {
+            inherit (finalAttrs) src pname version;
+            hash = pnpmDepsHash;
+            sourceRoot = "${finalAttrs.src}/frontend";
+          };
 
-        #   postBuild = ''
-        #     ls $src
-        #     cd $src/frontend
-        #     pnpm build
-        #     # mv dist $out
-        #   '';
-        # });
+          buildPhase = ''
+            cd frontend
+            pnpm run build
+            mv dist $out
+          '';
+        });
       in {
         packages = rec {
-          # inherit backend bridge-discord frontend;
-          inherit backend bridge-discord;
+          inherit backend bridge-discord frontend;
 
           backend-oci = pkgs.dockerTools.streamLayeredImage {
             name = "backend";
