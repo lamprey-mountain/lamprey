@@ -30,7 +30,7 @@ jobs:
     steps:
       - name: setup
         run: |
-          docker login git-celery.eu.org --password ${{secrets.TOKEN}}
+          docker login git.celery.eu.org --password ${{secrets.TOKEN}} --username tezlm
           attic login central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
           attic use actions
       - name: build
