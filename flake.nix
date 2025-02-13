@@ -56,6 +56,8 @@
         packages = rec {
           inherit backend bridge-discord frontend;
 
+          cargo-deps = cargoArtifacts;
+
           backend-oci = pkgs.dockerTools.streamLayeredImage {
             name = "backend";
             tag = "latest";

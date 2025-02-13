@@ -8,7 +8,7 @@ jobs:
     runs-on: nix
     strategy:
       matrix:
-        derivation: ["backend", "backend-oci", "bridge-discord", "bridge-discord-oci"]
+        derivation: ["cargo-deps", "backend", "backend-oci", "bridge-discord", "bridge-discord-oci"]
     steps:
       - name: setup
         run: |
