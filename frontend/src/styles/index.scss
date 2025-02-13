@@ -566,11 +566,14 @@ input[type="text"] {
 		color: $fg4;
 		text-align: right;
 		padding: 0 8px;
-		position: sticky;
-		top: 64px;
 
 		&:hover, &:focus {
 			text-decoration: underline;
+		}
+
+		&.sticky {
+			position: sticky;
+			top: 64px;
 		}
 
 		&.override-name {

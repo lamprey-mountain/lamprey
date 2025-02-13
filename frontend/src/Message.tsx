@@ -110,7 +110,7 @@ export function MessageView(props: MessageProps) {
 					</Show>
 					<div class="author-wrap">
 						<div
-							class="author has-menu"
+							class="author sticky has-menu"
 							classList={{ "override-name": !!props.message.override_name }}
 							data-user-id={props.message.author.id}
 							data-thread-id={props.message.thread_id}
