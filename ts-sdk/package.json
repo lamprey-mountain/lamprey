@@ -3,9 +3,11 @@
 	"module": "index.ts",
 	"type": "module",
 	"scripts": {
-		"generate-schema": "openapi-typescript https://chat.celery.eu.org/api/docs.json -o ./schema.d.ts"
+		"generate-schema-from-prod": "openapi-typescript https://chat.celery.eu.org/api/docs.json -o ./schema.d.ts",
+		"generate-schema": "openapi-typescript http://localhost:4000/api/docs.json -o ./schema.d.ts"
 	},
 	"devDependencies": {
+		"openapi-typescript": "^7.6.1",
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {

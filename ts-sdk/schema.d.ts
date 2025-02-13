@@ -620,10 +620,16 @@ export interface components {
 			version_id: components["schemas"]["MessageVerId"];
 		};
 		AuditLog: {
+			/** @description Unique id idenfitying this entry */
 			id: components["schemas"]["AuditLogId"];
+			/** @description Generated sync payload (sent in websocket) */
 			payload: components["schemas"]["MessageSync"];
+			payload_prev?: null | components["schemas"]["MessageSync"];
+			/** @description User supplied reason why this happened */
 			reason?: string | null;
+			/** @description Room this happened in */
 			room_id: components["schemas"]["RoomId"];
+			/** @description User who caused this entry to be created */
 			user_id: components["schemas"]["UserId"];
 		};
 		/** Format: uuid */
@@ -861,10 +867,16 @@ export interface components {
 		PaginationResponse_AuditLog: {
 			has_more: boolean;
 			items: {
+				/** @description Unique id idenfitying this entry */
 				id: components["schemas"]["AuditLogId"];
+				/** @description Generated sync payload (sent in websocket) */
 				payload: components["schemas"]["MessageSync"];
+				payload_prev?: null | components["schemas"]["MessageSync"];
+				/** @description User supplied reason why this happened */
 				reason?: string | null;
+				/** @description Room this happened in */
 				room_id: components["schemas"]["RoomId"];
+				/** @description User who caused this entry to be created */
 				user_id: components["schemas"]["UserId"];
 			}[];
 			/** Format: int64 */
