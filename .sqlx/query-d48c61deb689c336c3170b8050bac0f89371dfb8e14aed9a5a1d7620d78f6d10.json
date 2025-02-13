@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            \tSELECT id, user_id, reason, payload FROM audit_log\n            \tWHERE room_id = $1 AND id > $2 AND id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "query": "\n            \tSELECT id, user_id, reason, payload, payload_prev FROM audit_log\n            \tWHERE room_id = $1 AND id > $2 AND id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,11 @@
         "ordinal": 3,
         "name": "payload",
         "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "payload_prev",
+        "type_info": "Jsonb"
       }
     ],
     "parameters": {
@@ -37,8 +42,9 @@
       false,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "00e87a2f48a5cf34acc726e3170e05a1815e5c77c621188aafc860208f851019"
+  "hash": "d48c61deb689c336c3170b8050bac0f89371dfb8e14aed9a5a1d7620d78f6d10"
 }

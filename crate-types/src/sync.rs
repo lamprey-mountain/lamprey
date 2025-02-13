@@ -171,4 +171,25 @@ impl MessageSync {
             _ => false,
         }
     }
+
+    /// get id to populate payload_prev
+    pub fn get_audit_target_id(&self) -> Option<String> {
+        match self {
+            MessageSync::UpsertRoom { room } => Some(room.id.to_string()),
+            MessageSync::UpsertThread { thread } => Some(thread.id.to_string()),
+            MessageSync::UpsertMessage { message } => Some(message.id.to_string()),
+            MessageSync::UpsertRoomMember { member } => Some(member.user_id.to_string()),
+            MessageSync::UpsertRole { role } => Some(role.id.to_string()),
+            MessageSync::UpsertInvite { invite } => Some(invite.invite.code.to_string()),
+            MessageSync::DeleteRole { role_id, .. } => Some(role_id.to_string()),
+            MessageSync::DeleteInvite { code, .. } => Some(code.to_string()),
+
+            // explicitly no prev
+            MessageSync::DeleteMessage { .. } => None,
+            MessageSync::DeleteMessageVersion { .. } => None,
+
+            // not loggable
+            _ => None,
+        }
+    }
 }

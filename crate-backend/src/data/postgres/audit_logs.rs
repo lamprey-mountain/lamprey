@@ -16,6 +16,7 @@ struct DbAuditLog {
     user_id: Uuid,
     reason: Option<String>,
     payload: serde_json::Value,
+    payload_prev: Option<serde_json::Value>,
 }
 
 #[async_trait]
@@ -32,7 +33,7 @@ impl DataAuditLogs for Postgres {
             query_as!(
                 DbAuditLog,
                 "
-            	SELECT id, user_id, reason, payload FROM audit_log
+            	SELECT id, user_id, reason, payload, payload_prev FROM audit_log
             	WHERE room_id = $1 AND id > $2 AND id < $3
             	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
                 ",
@@ -52,6 +53,9 @@ impl DataAuditLogs for Postgres {
                 user_id: row.user_id.into(),
                 reason: row.reason,
                 payload: serde_json::from_value(row.payload).expect("corrupted data in db!"),
+                payload_prev: row
+                    .payload_prev
+                    .map(|p| serde_json::from_value(p).expect("corrupted data in db!")),
             }
         )
     }
@@ -64,17 +68,26 @@ impl DataAuditLogs for Postgres {
         payload: MessageSync,
     ) -> Result<()> {
         let id = Uuid::now_v7();
+        let target_id = payload.get_audit_target_id().expect("couldn't get id?");
         let payload = serde_json::to_value(payload)?;
         query!(
             "
-            insert into audit_log (id, room_id, user_id, reason, payload)
-        	values ($1, $2, $3, $4, $5)
+            insert into audit_log (id, room_id, user_id, reason, payload, payload_prev)
+        	values ($1, $2, $3, $4, $5, (
+                select payload from audit_log
+                where payload->'thread'->>'id' = $6
+                or payload->'user'->>'id' = $6
+                or payload->'role'->>'id' = $6
+                or payload->'member'->>'user_id' = $6
+                order by id desc limit 1
+        	))
         	",
             id,
             room_id.into_inner(),
             user_id.into_inner(),
             reason,
             payload,
+            target_id,
         )
         .execute(&self.pool)
         .await?;
