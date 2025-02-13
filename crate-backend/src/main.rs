@@ -19,7 +19,7 @@ use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
 use tracing_subscriber::EnvFilter;
-use types::{MediaId, MediaUpload, MessageSync};
+use types::MessageSync;
 use url::Url;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -63,7 +63,6 @@ pub struct ServerState {
 
     // TODO: limit number of connections per user, clean up old/unused entries
     pub syncers: Arc<DashMap<String, Connection>>,
-    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
 
     pub blobs: opendal::Operator,
 }
@@ -148,7 +147,6 @@ impl ServerState {
         });
         Self {
             inner: services.state.clone(),
-            uploads: Arc::new(DashMap::new()),
             syncers: Arc::new(DashMap::new()),
             // channel_user: Arc::new(DashMap::new()),
             blobs,

@@ -1,8 +1,7 @@
 use serde::Deserialize;
-use tokio::io::BufWriter;
 use types::{
-    Media, MediaCreate, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role,
-    RoleId, RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
+    Media, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId,
+    RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
     SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User,
     UserId, UserState, UserType, UserVerId,
 };
@@ -307,8 +306,6 @@ impl From<DbMessage> for Message {
     }
 }
 
-use async_tempfile::TempFile;
-
 pub struct MediaRow {
     pub id: Uuid,
     pub filename: String,
@@ -321,13 +318,6 @@ pub struct MediaRow {
     pub height: Option<i64>,
     pub width: Option<i64>,
     pub duration: Option<i64>,
-}
-
-pub struct MediaUpload {
-    pub create: MediaCreate,
-    pub user_id: UserId,
-    pub temp_file: TempFile,
-    pub temp_writer: BufWriter<TempFile>,
 }
 
 #[derive(sqlx::Type, PartialEq, Eq)]

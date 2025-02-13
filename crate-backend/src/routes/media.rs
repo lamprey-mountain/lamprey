@@ -8,14 +8,15 @@ use axum::{
     Json,
 };
 use futures_util::StreamExt;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt, BufWriter};
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tracing::{debug, info, trace};
 use types::UserId;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     error::{Error, Result},
-    types::{Media, MediaCreate, MediaCreated, MediaId, MediaUpload},
+    services::media::MediaUpload,
+    types::{Media, MediaCreate, MediaCreated, MediaId},
     ServerState,
 };
 
@@ -43,24 +44,15 @@ async fn media_create(
         return Err(Error::TooBig);
     }
 
-    use async_tempfile::TempFile;
     let media_id = MediaId(uuid::Uuid::now_v7());
-    let temp_file = TempFile::new().await.expect("failed to create temp file!");
-    let temp_writer = BufWriter::new(temp_file.open_rw().await?);
-    trace!("create temp_file {:?}", temp_file.file_path());
+    s.services()
+        .media
+        .create_upload(media_id, user_id, r.clone())
+        .await?;
     let upload_url = Some(
         s.config()
             .base_url
             .join(&format!("/api/v1/media/{}", media_id))?,
-    );
-    s.uploads.insert(
-        media_id,
-        MediaUpload {
-            create: r.clone(),
-            user_id,
-            temp_file,
-            temp_writer,
-        },
     );
     let res = MediaCreated {
         media_id,
@@ -91,7 +83,12 @@ async fn media_upload(
     headers: HeaderMap,
     body: Body,
 ) -> Result<impl IntoResponse> {
-    let mut up = s.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
+    let srv = s.services();
+    let mut up = srv
+        .media
+        .uploads
+        .get_mut(&media_id)
+        .ok_or(Error::NotFound)?;
     if up.user_id != user_id {
         return Err(Error::NotFound);
     }
@@ -132,7 +129,7 @@ async fn media_upload(
     match end_size.cmp(&up.create.size) {
         Ordering::Greater => {
             let p = up.temp_file.file_path().to_owned();
-            s.uploads.remove(&media_id);
+            s.services().media.uploads.remove(&media_id);
             tokio::fs::remove_file(p).await?;
             Err(Error::TooBig)
         }
@@ -143,6 +140,8 @@ async fn media_upload(
             drop(up);
             trace!("dropped upload");
             let (_, up) = s
+                .services()
+                .media
                 .uploads
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
@@ -202,7 +201,7 @@ async fn media_check(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    if let Some(up) = s.uploads.get_mut(&media_id) {
+    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
         if up.user_id == user_id {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
@@ -235,9 +234,9 @@ async fn media_delete(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    if let Some(up) = s.uploads.get_mut(&media_id) {
+    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
         if up.user_id == user_id {
-            s.uploads.remove(&media_id);
+            s.services().media.uploads.remove(&media_id);
         }
         Ok(StatusCode::NO_CONTENT)
     } else {

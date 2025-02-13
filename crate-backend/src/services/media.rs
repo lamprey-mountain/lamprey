@@ -1,6 +1,8 @@
 use async_tempfile::TempFile;
+use dashmap::DashMap;
 use tokio::{io::BufWriter, process::Command};
-use types::{MediaCreate, UserId};
+use tracing::trace;
+use types::{MediaCreate, MediaId, UserId};
 
 use crate::error::Result;
 
@@ -44,7 +46,9 @@ pub struct Metadata {
     pub duration: Option<u64>,
 }
 
-pub struct ServiceMedia;
+pub struct ServiceMedia {
+    pub uploads: DashMap<MediaId, MediaUpload>,
+}
 
 pub struct MediaUpload {
     pub create: MediaCreate,
@@ -53,11 +57,32 @@ pub struct MediaUpload {
     pub temp_writer: BufWriter<TempFile>,
 }
 
-// const UPLOADS: OnceCell<DashMap<MediaId, MediaUpload>> = OnceCell::const_new();
-
 impl ServiceMedia {
     pub fn new() -> Self {
-        Self
+        Self {
+            uploads: DashMap::new(),
+        }
+    }
+
+    pub async fn create_upload(
+        &self,
+        media_id: MediaId,
+        user_id: UserId,
+        create: MediaCreate,
+    ) -> Result<()> {
+        let temp_file = TempFile::new().await.expect("failed to create temp file!");
+        let temp_writer = BufWriter::new(temp_file.open_rw().await?);
+        trace!("create temp_file {:?}", temp_file.file_path());
+        self.uploads.insert(
+            media_id,
+            MediaUpload {
+                create,
+                user_id,
+                temp_file,
+                temp_writer,
+            },
+        );
+        Ok(())
     }
 
     #[tracing::instrument(skip(self))]
