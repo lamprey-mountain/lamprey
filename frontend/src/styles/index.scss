@@ -353,7 +353,7 @@ li, p {
 }
 
 pre, code {
-	background-color: #22282a;
+	background-color: $bg2;
 	font-family: var(--font-mono);
 }
 
@@ -947,4 +947,42 @@ summary {
 	& video {
 		object-fit: contain;
 	}
+}
+
+.room-settings-members {
+	& > li {
+		border: solid $sep 1px;
+		background: $bg3;
+		margin-top: 4px;
+		padding: 4px;
+		display: grid;
+
+		& > .name {
+			font-size: 1em;
+			font-weight: bold;
+		}
+
+		& > .roles {
+			display: flex;
+			gap: 4px;
+			
+			& li {
+				border: solid $sep 1px;
+			}
+			
+			& button {
+				background: $bg2;
+
+				&:hover {
+					background: $bg3;
+				}
+			}
+		}
+	}
+}
+
+/* FIXME: text alignment with uuids */
+/* uuids have ascenders (tall glyphs) but no descenders (eg. qgyj) making code containing uuids look unbalanced */
+code {
+	padding: 0px 2px;
 }
