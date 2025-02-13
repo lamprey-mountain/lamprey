@@ -24,7 +24,7 @@ export class AuditLogs {
 					params: {
 						path: { room_id: room_id_signal() },
 						query: {
-							dir: "f",
+							dir: "b",
 							limit: 100,
 							from: pagination?.items.at(-1)?.id,
 						},
