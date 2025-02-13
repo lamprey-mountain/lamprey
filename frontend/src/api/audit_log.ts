@@ -40,7 +40,7 @@ export class AuditLogs {
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items],
+				items: [...pagination?.items ?? [], ...data.items.toReversed()],
 			};
 		};
 
