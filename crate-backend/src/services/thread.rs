@@ -71,7 +71,7 @@ impl ServiceThreads {
         // update and refetch
         data.thread_update(thread_id, user_id, patch.clone())
             .await?;
-        self.cache_thread.retain(|(t, _), _| *t == thread_id);
+        self.cache_thread.retain(|(t, _), _| *t != thread_id);
         let thread = self.get(thread_id, Some(user_id)).await?;
 
         // send update message to thread
