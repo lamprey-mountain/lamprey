@@ -26,7 +26,7 @@ pub struct Services {
 impl Services {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
-            media: ServiceMedia::new(),
+            media: ServiceMedia::new(state.clone()),
             perms: ServicePermissions::new(state.clone()),
             rooms: ServiceRooms::new(state.clone()),
             threads: ServiceThreads::new(state.clone()),
