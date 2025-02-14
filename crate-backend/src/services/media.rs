@@ -2,11 +2,15 @@ use std::sync::Arc;
 
 use async_tempfile::TempFile;
 use dashmap::DashMap;
+use ffprobe::MediaType;
 use tokio::{io::BufWriter, process::Command};
 use tracing::trace;
 use types::{MediaCreate, MediaId, UserId};
 
-use crate::{error::Result, ServerStateInner};
+use crate::{
+    error::{Error, Result},
+    ServerStateInner,
+};
 
 mod ffprobe;
 
@@ -63,25 +67,15 @@ impl ServiceMedia {
         &self,
         file: &std::path::Path,
     ) -> Result<(Option<Metadata>, String)> {
-        let out = Command::new("ffprobe")
-            .args([
-                "-v",
-                "quiet",
-                "-of",
-                "json",
-                "-show_format",
-                "-show_streams",
-                "-i",
-            ])
-            .arg(file)
-            .output()
-            .await?;
-        if !out.status.success() {
-            let mime = self.get_mime(file).await?;
-            return Ok((None, mime));
-        }
-        let meta: ffprobe::Metadata = serde_json::from_slice(&out.stdout)?;
-        let mut mime = self.get_mime(file).await?;
+        let meta = match get_ffprobe_metadata(file).await {
+            Ok(meta) => meta,
+            Err(Error::Ffprobe) => {
+                let mime = get_mime(file).await?;
+                return Ok((None, mime));
+            }
+            Err(err) => return Err(err),
+        };
+        let mut mime = get_mime(file).await?;
         // HACK: fix webm
         if meta.is_video() {
             mime = mime.replace("video/webm", "audio/webm");
@@ -96,16 +90,12 @@ impl ServiceMedia {
         ))
     }
 
-    async fn get_mime(&self, file: &std::path::Path) -> Result<String> {
-        let out = Command::new("file").arg("-ib").arg(file).output().await?;
-        let mime = String::from_utf8(out.stdout).expect("file has failed me");
-        Ok(mime)
-    }
-
+    // #[tracing::instrument(skip(self))]
     // pub async fn generate_thumbnail(
     //     &self,
     //     media_id: MediaId,
-    //     path: &Path,
+    //     meta: &ffprobe::Metadata,
+    //     path: &std::path::Path,
     //     force: bool,
     // ) -> Result<()> {
     //     let data = self.state.data();
@@ -113,6 +103,18 @@ impl ServiceMedia {
     //     if media.thumbnail_url.is_some() && !force {
     //         return Ok(());
     //     }
+    //     let mime = get_mime(path).await?;
+    //     if mime.starts_with("image/") {
+    //         // image::image_dimensions()
+    //         let bytes = tokio::fs::read(path).await?;
+    //         let cursor = std::io::Cursor::new(bytes);
+    //         let img = image::ImageReader::new(cursor).decode()?;
+    //         img.thumbnail( , )
+    //     }
+    //     meta.get_main(MediaType::Attachment);
+    //     meta.get_main_video();
+
+    //     // data
     //     Ok(())
     //     // if let Some() = {}
     //     // media.url
@@ -159,3 +161,31 @@ impl ServiceMedia {
 
 //     Ok(cmd.wait_with_output().await.map_err(|_| ())?.stdout)
 // }
+
+async fn get_ffprobe_metadata(file: &std::path::Path) -> Result<ffprobe::Metadata> {
+    let out = Command::new("ffprobe")
+        .args([
+            "-v",
+            "quiet",
+            "-of",
+            "json",
+            "-show_format",
+            "-show_streams",
+            "-i",
+        ])
+        .arg(file)
+        .output()
+        .await?;
+    if out.status.success() {
+        let meta = serde_json::from_slice(&out.stdout)?;
+        Ok(meta)
+    } else {
+        Err(Error::Ffprobe)
+    }
+}
+
+async fn get_mime(file: &std::path::Path) -> Result<String> {
+    let out = Command::new("file").arg("-ib").arg(file).output().await?;
+    let mime = String::from_utf8(out.stdout).expect("file has failed me");
+    Ok(mime)
+}
