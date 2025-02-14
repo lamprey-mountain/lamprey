@@ -28,7 +28,7 @@
 		"prosemirror-state": "^1.4.3",
 		"prosemirror-view": "^1.37.2",
 		"sanitize-html": "^2.14.0",
-		"sdk": "workspace:../ts-sdk",
+		"sdk": "workspace:^",
 		"solid-floating-ui": "^0.3.1",
 		"solid-js": "^1.9.4",
 		"tailwindcss": "^4.0.6",

@@ -1018,3 +1018,39 @@ summary {
 code {
 	padding: 0px 2px;
 }
+
+.room-settings-audit-log {
+	& > li {
+		border: solid $sep 1px;
+		background: $bg3;
+		margin-top: 4px;
+		padding: 4px;
+
+		& .info {
+			display: flex;
+			gap: 4px;
+		}
+		
+		& h3 {
+			font-size: 1em;
+			font-weight: bold;
+		}
+
+		& .spacer {
+			flex: 1;
+		}
+
+		& button {
+			background: $bg2;
+			border: solid $sep 1px;
+
+			&:hover {
+				background: $bg3;
+			}
+		}
+	}
+}
+
+.light {
+	color: $fg3;
+}
