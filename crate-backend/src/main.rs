@@ -6,7 +6,7 @@ use std::{
 };
 
 use ::types::{RoomId, ThreadId, UserId};
-use axum::{extract::DefaultBodyLimit, routing::get, Json};
+use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
@@ -23,7 +23,6 @@ use types::MessageSync;
 use url::Url;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
-use utoipa_scalar::{Scalar, Servable as _};
 
 pub mod data;
 pub mod error;
@@ -285,10 +284,12 @@ async fn main() -> Result<()> {
         .nest("/api/v1", routes::routes())
         .with_state(state)
         .split_for_parts();
-    let api1 = api.clone();
     let router = router
         .route("/api/docs.json", get(|| async { Json(api) }))
-        .merge(Scalar::with_url("/api/docs", api1).custom_html(include_str!("scalar.html")))
+        .route(
+            "/api/docs",
+            get(|| async { Html(include_str!("scalar.html")) }),
+        )
         .layer(cors())
         .layer(TraceLayer::new_for_http())
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16));
