@@ -619,6 +619,13 @@ export interface components {
 			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
 			version_id: components["schemas"]["MessageVerId"];
 		};
+		/** @description metadata for audio */
+		Audio: {
+			codec: string;
+			/** Format: int64 */
+			duration: number;
+			language?: null | components["schemas"]["Language"];
+		};
 		AuditLog: {
 			/** @description Unique id idenfitying this entry */
 			id: components["schemas"]["AuditLogId"];
@@ -640,6 +647,14 @@ export interface components {
 			items: components["schemas"]["Message"][];
 			/** Format: int64 */
 			total: number;
+		};
+		/** @description metadata for images */
+		Image: {
+			/** Format: int64 */
+			height: number;
+			language?: null | components["schemas"]["Language"];
+			/** Format: int64 */
+			width: number;
 		};
 		Invite: {
 			code: components["schemas"]["InviteCode"];
@@ -685,40 +700,18 @@ export interface components {
 			/** Format: int64 */
 			uses: number;
 		};
+		Language: string;
+		/** @description A distinct logical item of media. */
 		Media: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
-			/**
-			 * Format: int64
-			 * @description The duration in milliseconds, for audio and videos
-			 */
-			duration?: number | null;
 			/** @description The original filename */
 			filename: string;
-			/**
-			 * Format: int64
-			 * @description The height, for images and videos
-			 */
-			height?: number | null;
 			id: components["schemas"]["MediaId"];
-			/** @description The mime type (file type) */
-			mime: string;
-			/**
-			 * Format: int64
-			 * @description The size (in bytes)
-			 */
-			size: number;
-			/** @description The source url this media was downloaded from, if any */
-			source_url?: string | null;
-			/** @description TODO: A url for a thumbnail, currently always null */
-			thumbnail_url?: string | null;
-			/** @description A url to download this media from */
-			url: string;
-			/**
-			 * Format: int64
-			 * @description The width, for images and videos
-			 */
-			width?: number | null;
+			/** @description The source (Uploaded, Downloaded) */
+			source: components["schemas"]["MediaTrack"];
+			/** @description The source (Extracted, Generated) */
+			tracks: components["schemas"]["MediaTrack"][];
 		};
 		MediaCreate: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -730,13 +723,8 @@ export interface components {
 			 * @description The size (in bytes)
 			 */
 			size: number;
-			/** @description TODO: The source url this media was downloaded from, if any */
+			/** @description A url to download this media from */
 			source_url?: string | null;
-			/**
-			 * Format: uri
-			 * @description A url to download this media from
-			 */
-			url?: string | null;
 		};
 		MediaCreated: {
 			media_id: components["schemas"]["MediaId"];
@@ -751,6 +739,70 @@ export interface components {
 		MediaRef: {
 			id: components["schemas"]["MediaId"];
 		};
+		MediaSize: {
+			/**
+			 * Format: int64
+			 * @description if the size is known
+			 */
+			size: number;
+			/** @enum {string} */
+			size_unit: "Bytes";
+		} | {
+			/**
+			 * Format: int64
+			 * @description approximate bandwidth if the size is unknown (media streaming)
+			 */
+			size: number;
+			/** @enum {string} */
+			size_unit: "BytesPerSecond";
+		};
+		/** @description A unique "view" of this piece of media. Could be the source, an
+		 *     audio/video track, a thumbnail, other metadata, etc. */
+		MediaTrack:
+			& components["schemas"]["MediaTrackInfo"]
+			& components["schemas"]["MediaSize"]
+			& {
+				/** @description the mime type of this view */
+				mime: string;
+				/** @description Where this track came from */
+				source: components["schemas"]["TrackSource"];
+				/** @description The url where this track may be downloaded from */
+				url: string;
+			};
+		/** @description metadata about a particular track */
+		MediaTrackInfo:
+			| (components["schemas"]["Video"] & {
+				/** @enum {string} */
+				type: "Video";
+			})
+			| (components["schemas"]["Audio"] & {
+				/** @enum {string} */
+				type: "Audio";
+			})
+			| (components["schemas"]["Image"] & {
+				/** @enum {string} */
+				type: "Image";
+			})
+			| (components["schemas"]["Image"] & {
+				/** @enum {string} */
+				type: "Thumbnail";
+			})
+			| (components["schemas"]["TimedText"] & {
+				/** @enum {string} */
+				type: "TimedText";
+			})
+			| (components["schemas"]["Text"] & {
+				/** @enum {string} */
+				type: "Text";
+			})
+			| (components["schemas"]["Mixed"] & {
+				/** @enum {string} */
+				type: "Mixed";
+			})
+			| {
+				/** @enum {string} */
+				type: "Other";
+			};
 		Message: {
 			attachments: components["schemas"]["Media"][];
 			author: components["schemas"]["User"];
@@ -860,6 +912,16 @@ export interface components {
 		MessageType: "Default" | "ThreadUpdate";
 		/** Format: uuid */
 		MessageVerId: string;
+		/** @description multiple pieces of metadata mixed together */
+		Mixed: {
+			/** Format: int64 */
+			duration?: number | null;
+			/** Format: int64 */
+			height?: number | null;
+			language?: null | components["schemas"]["Language"];
+			/** Format: int64 */
+			width?: number | null;
+		};
 		OauthInitResponse: {
 			/** Format: uri */
 			url: string;
@@ -1121,6 +1183,10 @@ export interface components {
 		SessionWithToken: components["schemas"]["Session"] & {
 			token: components["schemas"]["SessionToken"];
 		};
+		/** @description metadata for text */
+		Text: {
+			language?: null | components["schemas"]["Language"];
+		};
 		Thread: components["schemas"]["ThreadInfo"] & {
 			creator_id: components["schemas"]["UserId"];
 			description?: string | null;
@@ -1171,6 +1237,24 @@ export interface components {
 		 * @enum {string}
 		 */
 		ThreadVisibility: "Room";
+		/** @description metadata for captions/subtitles */
+		TimedText: {
+			/** Format: int64 */
+			duration: number;
+			language?: null | components["schemas"]["Language"];
+		};
+		/** @description Where this track came from. */
+		TrackSource:
+			| "Uploaded"
+			| {
+				/** @description downloaded from another url */
+				Downloaded: {
+					/** Format: uri */
+					source_url: string;
+				};
+			}
+			| "Extracted"
+			| "Generated";
 		User: components["schemas"]["UserType"] & {
 			description?: string | null;
 			id: components["schemas"]["UserId"];
@@ -1211,6 +1295,17 @@ export interface components {
 		};
 		/** Format: uuid */
 		UserVerId: string;
+		/** @description metadata for videos */
+		Video: {
+			codec: string;
+			/** Format: int64 */
+			duration: number;
+			/** Format: int64 */
+			height: number;
+			language?: null | components["schemas"]["Language"];
+			/** Format: int64 */
+			width: number;
+		};
 	};
 	responses: never;
 	parameters: never;
