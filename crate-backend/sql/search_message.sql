@@ -21,7 +21,7 @@ select
     msg.reply_id,
     msg.override_name,
     row_to_json(usr) as "author!: serde_json::Value",
-    coalesce(att_json.attachments, '[]'::json) as "attachments!: serde_json::Value",
+    coalesce(att_json.attachments, '{}') as "attachments!",
     false as "is_pinned!"
 from message_coalesced as msg
 join usr on usr.id = msg.author_id

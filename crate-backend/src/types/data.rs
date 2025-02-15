@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use types::{
-    MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId,
+    MediaId, MessageId, MessageType, Permission, Role, RoleId, RoleVerId,
     Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken,
     Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId,
     UserState, UserType, UserVerId,
@@ -234,21 +234,6 @@ pub struct RoleCreate {
     pub is_default: bool,
 }
 
-pub struct DbMessage {
-    pub message_type: DbMessageType,
-    pub id: MessageId,
-    pub thread_id: ThreadId,
-    pub version_id: MessageVerId,
-    pub ordering: i32,
-    pub content: Option<String>,
-    pub attachments: serde_json::Value,
-    pub metadata: Option<serde_json::Value>,
-    pub reply_id: Option<uuid::Uuid>,
-    pub override_name: Option<String>, // temp?
-    pub author: serde_json::Value,
-    pub is_pinned: bool,
-}
-
 pub struct MessageCreate {
     pub message_type: MessageType,
     pub thread_id: ThreadId,
@@ -258,52 +243,6 @@ pub struct MessageCreate {
     pub reply_id: Option<MessageId>,
     pub author_id: UserId,
     pub override_name: Option<String>, // temp?
-}
-
-#[derive(sqlx::Type)]
-#[sqlx(type_name = "message_type")]
-pub enum DbMessageType {
-    Default,
-    ThreadUpdate,
-}
-
-impl From<DbMessageType> for MessageType {
-    fn from(value: DbMessageType) -> Self {
-        match value {
-            DbMessageType::Default => MessageType::Default,
-            DbMessageType::ThreadUpdate => MessageType::ThreadUpdate,
-        }
-    }
-}
-
-impl From<MessageType> for DbMessageType {
-    fn from(value: MessageType) -> Self {
-        match value {
-            MessageType::Default => DbMessageType::Default,
-            MessageType::ThreadUpdate => DbMessageType::ThreadUpdate,
-        }
-    }
-}
-
-impl From<DbMessage> for Message {
-    fn from(row: DbMessage) -> Self {
-        Message {
-            id: row.id,
-            message_type: row.message_type.into(),
-            thread_id: row.thread_id,
-            version_id: row.version_id,
-            nonce: None,
-            ordering: row.ordering,
-            content: row.content,
-            attachments: serde_json::from_value(row.attachments)
-                .expect("invalid data in database!"),
-            metadata: row.metadata,
-            reply_id: row.reply_id.map(Into::into),
-            override_name: row.override_name,
-            author: serde_json::from_value(row.author).expect("invalid data in database!"),
-            is_pinned: row.is_pinned,
-        }
-    }
 }
 
 // surely there's a better way

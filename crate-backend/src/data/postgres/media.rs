@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use serde::Deserialize;
 use sqlx::{query, query_as};
 use tracing::info;
 use types::{MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
@@ -11,13 +12,15 @@ use crate::data::DataMedia;
 
 use super::Postgres;
 
-struct DbMedia {
+#[derive(Deserialize)]
+pub struct DbMedia {
     id: Uuid,
     filename: String,
     alt: Option<String>,
 }
 
-struct DbMediaTrack {
+#[derive(Deserialize)]
+pub struct DbMediaTrack {
     info: DbMediaTrackType,
     height: Option<i64>,
     width: Option<i64>,
@@ -32,14 +35,14 @@ struct DbMediaTrack {
     source: DbTrackSource,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_size_type")]
 enum DbMediaSizeType {
     Bytes,
     BytesPerSecond,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_source")]
 enum DbTrackSource {
     Uploaded,
@@ -48,7 +51,7 @@ enum DbTrackSource {
     Generated,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_track_type")]
 enum DbMediaTrackType {
     Video,
@@ -81,13 +84,11 @@ impl From<DbMediaTrack> for MediaTrack {
                 DbMediaTrackType::Image => MediaTrackInfo::Image(types::Image {
                     height: row.height.unwrap().try_into().unwrap(),
                     width: row.width.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::Thumbnail => MediaTrackInfo::Thumbnail(types::Image {
                     height: row.height.unwrap().try_into().unwrap(),
                     width: row.width.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::TimedText => MediaTrackInfo::TimedText(types::TimedText {
@@ -185,7 +186,7 @@ impl From<MediaTrack> for DbMediaTrack {
 }
 
 impl DbMedia {
-    fn upgrade(self, tracks: Vec<DbMediaTrack>) -> Media {
+    pub fn upgrade(self, tracks: Vec<DbMediaTrack>) -> Media {
         let mut source = None;
         let mut t2 = vec![];
         for track in tracks {

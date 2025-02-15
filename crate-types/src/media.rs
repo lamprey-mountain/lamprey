@@ -58,7 +58,6 @@ pub struct Audio {
 pub struct Image {
     pub height: u64,
     pub width: u64,
-    pub codec: String,
     pub language: Option<Language>,
 }
 
@@ -256,8 +255,6 @@ impl MediaTrackInfo {
         match &self {
             MediaTrackInfo::Video(video) => Some(video.codec.as_str()),
             MediaTrackInfo::Audio(audio) => Some(audio.codec.as_str()),
-            MediaTrackInfo::Image(image) => Some(image.codec.as_str()),
-            MediaTrackInfo::Thumbnail(image) => Some(image.codec.as_str()),
             _ => None,
         }
     }

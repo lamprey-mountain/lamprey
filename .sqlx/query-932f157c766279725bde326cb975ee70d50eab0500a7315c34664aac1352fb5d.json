@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nmessage_coalesced as (\n    select *\n    from (select *, row_number() over(partition by id order by version_id desc) as row_num\n        from message)\n    where row_num = 1\n)\nSELECT\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    false as \"is_pinned!\",\n    row_to_json(usr) as \"author!\",\n    coalesce(att_json.attachments, '[]'::json) as \"attachments!\"\nFROM message_coalesced AS msg\nJOIN usr ON usr.id = msg.author_id\nleft JOIN att_json ON att_json.version_id = msg.version_id\n     WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL\n",
+  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\"\nfrom message_coalesced as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nwhere thread_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -60,24 +60,27 @@
       },
       {
         "ordinal": 9,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "author!: serde_json::Value",
+        "type_info": "Json"
       },
       {
         "ordinal": 10,
-        "name": "author!",
-        "type_info": "Json"
+        "name": "attachments!",
+        "type_info": "JsonArray"
       },
       {
         "ordinal": 11,
-        "name": "attachments!",
-        "type_info": "Json"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
@@ -95,5 +98,5 @@
       null
     ]
   },
-  "hash": "511a09286e58e1bb767712786c6ea3034a8fb7de07e177948ed15f10c896505f"
+  "hash": "932f157c766279725bde326cb975ee70d50eab0500a7315c34664aac1352fb5d"
 }

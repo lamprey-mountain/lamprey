@@ -1,10 +1,4 @@
 with
-    att_json as (
-        select version_id, json_agg(row_to_json(media) order by ord) as attachments
-        from message, unnest(message.attachments) with ordinality as att(id, ord)
-        join media on att.id = media.id
-        group by message.version_id
-    ),
     message_coalesced as (
         select *
         from (select *, row_number() over(partition by id order by version_id desc) as row_num
@@ -22,7 +16,7 @@ select
     msg.reply_id,
     msg.override_name,
     row_to_json(usr) as "author!: serde_json::Value",
-    coalesce(att_json.attachments, '[]'::json) as "attachments!: serde_json::Value",
+    coalesce(att_json.attachments, '{}') as "attachments!",
     false as "is_pinned!"
 from message_coalesced as msg
 join usr on usr.id = msg.author_id
