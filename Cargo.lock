@@ -592,6 +592,7 @@ dependencies = [
 name = "crate-hakari"
 version = "0.1.0"
 dependencies = [
+ "arrayvec",
  "base64 0.22.1",
  "byteorder",
  "chrono",
@@ -609,6 +610,8 @@ dependencies = [
  "log",
  "md-5",
  "memchr",
+ "miniz_oxide",
+ "num-traits",
  "percent-encoding",
  "proc-macro2",
  "rand 0.8.5",
@@ -621,6 +624,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "simd-adler32",
  "smallvec",
  "sqlx",
  "sqlx-core",

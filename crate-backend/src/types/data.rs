@@ -1,9 +1,9 @@
 use serde::Deserialize;
 use types::{
-    Media, MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId,
-    RoleVerId, Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus,
-    SessionToken, Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User,
-    UserId, UserState, UserType, UserVerId,
+    MediaId, Message, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId,
+    Room, RoomId, RoomMember, RoomMembership, Session, SessionId, SessionStatus, SessionToken,
+    Thread, ThreadId, ThreadInfo, ThreadState, ThreadVerId, ThreadVisibility, User, UserId,
+    UserState, UserType, UserVerId,
 };
 use uuid::Uuid;
 
@@ -306,57 +306,6 @@ impl From<DbMessage> for Message {
     }
 }
 
-pub struct MediaRow {
-    pub id: Uuid,
-    pub filename: String,
-    pub url: String,
-    pub source_url: Option<String>,
-    pub thumbnail_url: Option<String>,
-    pub mime: String,
-    pub alt: Option<String>,
-    pub size: i64,
-    pub height: Option<i64>,
-    pub width: Option<i64>,
-    pub duration: Option<i64>,
-}
-
-#[derive(sqlx::Type, PartialEq, Eq)]
-#[sqlx(type_name = "media_link_type")]
-pub enum MediaLinkType {
-    Message,
-    MessageVersion,
-}
-
-pub struct MediaLink {
-    pub media_id: MediaId,
-    pub target_id: Uuid,
-    pub link_type: MediaLinkType,
-}
-
-impl From<MediaRow> for Media {
-    fn from(row: MediaRow) -> Self {
-        Media {
-            id: row.id.into(),
-            filename: row.filename,
-            url: row.url,
-            source_url: row.source_url,
-            thumbnail_url: row.thumbnail_url,
-            mime: row.mime,
-            alt: row.alt,
-            size: row.size.try_into().expect("database has negative size"),
-            height: row
-                .height
-                .map(|i| i.try_into().expect("database has negative height")),
-            width: row
-                .width
-                .map(|i| i.try_into().expect("database has negative width")),
-            duration: row
-                .duration
-                .map(|i| i.try_into().expect("database has negative duration")),
-        }
-    }
-}
-
 // surely there's a better way
 #[derive(sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "permission")]
@@ -544,4 +493,17 @@ pub enum DbThreadState {
     Temporary,
     Archived,
     Deleted,
+}
+
+#[derive(sqlx::Type, PartialEq, Eq)]
+#[sqlx(type_name = "media_link_type")]
+pub enum MediaLinkType {
+    Message,
+    MessageVersion,
+}
+
+pub struct MediaLink {
+    pub media_id: MediaId,
+    pub target_id: Uuid,
+    pub link_type: MediaLinkType,
 }

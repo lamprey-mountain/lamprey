@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP
+
 use std::collections::HashMap;
 
 use serde::Deserialize;

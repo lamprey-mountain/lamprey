@@ -125,7 +125,6 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
                 filename,
                 size: bytes.len() as u64,
                 alt: None,
-                url: None,
                 source_url: None,
             };
             let upload = http.media_create(&req).await?;

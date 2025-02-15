@@ -78,9 +78,15 @@ async fn thread_create(
         },
     )
     .await?;
-    s.broadcast_thread(thread.id, user_id, None, MessageSync::UpsertMessage {
-        message: starter_message,
-    }).await?;
+    s.broadcast_thread(
+        thread.id,
+        user_id,
+        None,
+        MessageSync::UpsertMessage {
+            message: starter_message,
+        },
+    )
+    .await?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
@@ -360,11 +366,17 @@ async fn thread_typing(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
-    s.broadcast_thread(thread_id, user_id, None, MessageSync::Typing {
+    s.broadcast_thread(
         thread_id,
         user_id,
-        until,
-    }).await?;
+        None,
+        MessageSync::Typing {
+            thread_id,
+            user_id,
+            until,
+        },
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

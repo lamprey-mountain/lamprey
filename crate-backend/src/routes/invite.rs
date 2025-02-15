@@ -80,7 +80,8 @@ pub async fn invite_delete(
                         code,
                         target: id_target,
                     },
-                ).await?;
+                )
+                .await?;
             }
             InviteTargetId::Thread { thread_id, .. } => {
                 s.broadcast_thread(
@@ -91,7 +92,8 @@ pub async fn invite_delete(
                         code,
                         target: id_target,
                     },
-                ).await?;
+                )
+                .await?;
             }
         };
     }

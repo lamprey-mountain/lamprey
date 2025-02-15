@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use async_tempfile::TempFile;
 use dashmap::DashMap;
-use ffprobe::MediaType;
 use tokio::{io::BufWriter, process::Command};
 use tracing::trace;
 use types::{MediaCreate, MediaId, UserId};
