@@ -107,9 +107,8 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            Error::NotModified => return self.get_status().into_response(),
-            _ => {}
+        if let Error::NotModified = self {
+            return self.get_status().into_response();
         };
         error!(
             "Response error: status {}, message {:?}",

@@ -158,18 +158,18 @@ pub enum MessageSync {
 
 impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {
-        match self {
-            MessageSync::UpsertRoom { .. } => true,
-            MessageSync::UpsertThread { .. } => true,
-            MessageSync::UpsertRoomMember { .. } => true,
-            MessageSync::UpsertRole { .. } => true,
-            MessageSync::UpsertInvite { .. } => true,
-            MessageSync::DeleteMessage { .. } => true,
-            MessageSync::DeleteMessageVersion { .. } => true,
-            MessageSync::DeleteRole { .. } => true,
-            MessageSync::DeleteInvite { .. } => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            MessageSync::UpsertRoom { .. }
+                | MessageSync::UpsertThread { .. }
+                | MessageSync::UpsertRoomMember { .. }
+                | MessageSync::UpsertRole { .. }
+                | MessageSync::UpsertInvite { .. }
+                | MessageSync::DeleteMessage { .. }
+                | MessageSync::DeleteMessageVersion { .. }
+                | MessageSync::DeleteRole { .. }
+                | MessageSync::DeleteInvite { .. }
+        )
     }
 
     /// get id to populate payload_prev

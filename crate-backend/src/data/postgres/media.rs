@@ -70,24 +70,24 @@ impl From<DbMediaTrack> for MediaTrack {
                     height: row.height.unwrap().try_into().unwrap(),
                     width: row.width.unwrap().try_into().unwrap(),
                     duration: row.duration.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap().try_into().unwrap(),
+                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::Audio => MediaTrackInfo::Audio(types::Audio {
                     duration: row.duration.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap().try_into().unwrap(),
+                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::Image => MediaTrackInfo::Image(types::Image {
                     height: row.height.unwrap().try_into().unwrap(),
                     width: row.width.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap().try_into().unwrap(),
+                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::Thumbnail => MediaTrackInfo::Thumbnail(types::Image {
                     height: row.height.unwrap().try_into().unwrap(),
                     width: row.width.unwrap().try_into().unwrap(),
-                    codec: row.codec.unwrap().try_into().unwrap(),
+                    codec: row.codec.unwrap(),
                     language: row.language.map(Into::into),
                 }),
                 DbMediaTrackType::TimedText => MediaTrackInfo::TimedText(types::TimedText {
@@ -169,11 +169,11 @@ impl From<MediaTrack> for DbMediaTrack {
             codec: value
                 .info
                 .codec()
-                .map(|i| i.try_into().expect("convert error")),
+                .map(|s| s.to_owned()),
             language: value
                 .info
                 .language()
-                .map(|i| i.0.try_into().expect("convert error")),
+                .map(|i| i.0.to_owned()),
             url: value.url,
             size_type,
             size,

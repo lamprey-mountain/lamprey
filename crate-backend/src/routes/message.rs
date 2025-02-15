@@ -81,8 +81,8 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
-    for mut media in &mut message.attachments {
-        s.presign(&mut media).await?;
+    for media in &mut message.attachments {
+        s.presign(media).await?;
     }
     message.nonce = json.nonce;
     let msg = MessageSync::UpsertMessage {
@@ -163,8 +163,8 @@ async fn message_context(
         has_before: before.has_more,
     };
     for message in &mut res.items {
-        for mut media in &mut message.attachments {
-            s.presign(&mut media).await?;
+        for media in &mut message.attachments {
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -191,8 +191,8 @@ async fn message_list(
     perms.ensure_view()?;
     let mut res = data.message_list(thread_id, q).await?;
     for message in &mut res.items {
-        for mut media in &mut message.attachments {
-            s.presign(&mut media).await?;
+        for media in &mut message.attachments {
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -220,8 +220,8 @@ async fn message_get(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut message = data.message_get(thread_id, message_id).await?;
-    for mut media in &mut message.attachments {
-        s.presign(&mut media).await?;
+    for media in &mut message.attachments {
+        s.presign(media).await?;
     }
     Ok(Json(message))
 }
@@ -310,8 +310,8 @@ async fn message_edit(
             .await?;
     }
     let mut message = data.message_version_get(thread_id, version_id).await?;
-    for mut media in &mut message.attachments {
-        s.presign(&mut media).await?;
+    for media in &mut message.attachments {
+        s.presign(media).await?;
     }
     s.broadcast_thread(
         thread_id,
@@ -396,8 +396,8 @@ async fn message_version_list(
     perms.ensure_view()?;
     let mut res = data.message_version_list(thread_id, message_id, q).await?;
     for message in &mut res.items {
-        for mut media in &mut message.attachments {
-            s.presign(&mut media).await?;
+        for media in &mut message.attachments {
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -426,8 +426,8 @@ async fn message_version_get(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut message = data.message_version_get(thread_id, version_id).await?;
-    for mut media in &mut message.attachments {
-        s.presign(&mut media).await?;
+    for media in &mut message.attachments {
+        s.presign(media).await?;
     }
     Ok(Json(message))
 }

@@ -63,7 +63,7 @@ impl ServiceThreads {
         }
 
         if let Some(new_state) = &patch.state {
-            if !thread.state.can_change_to(&new_state) {
+            if !thread.state.can_change_to(new_state) {
                 return Err(Error::BadStatic("can't change to that state"));
             }
         };

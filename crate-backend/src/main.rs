@@ -141,8 +141,7 @@ impl ServerState {
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
             });
-            let services = Services::new(inner.clone());
-            services
+            Services::new(inner.clone())
         });
         Self {
             inner: services.state.clone(),
