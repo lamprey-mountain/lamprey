@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
@@ -6,6 +7,8 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 export function ThreadMenu(props: { thread_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
+	const nav = useNavigate();
+	
 	const thread = api.rooms.fetch(() => props.thread_id);
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
@@ -40,14 +43,17 @@ export function ThreadMenu(props: { thread_id: string }) {
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(thread())));
 
+	const settings = (to: string) => () =>
+		nav(`/thread/${props.thread_id}/settings${to}`);
+		
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<ThreadNotificationMenu />
 			<Separator />
-			<Submenu content={"edit"}>
-				<Item>info</Item>
+			<Submenu content={"edit"} onClick={settings("")}>
+				<Item onClick={settings("")}>info</Item>
 				<Item>permissions</Item>
 				<Submenu content={"tags"}>
 					<Item>foo</Item>
