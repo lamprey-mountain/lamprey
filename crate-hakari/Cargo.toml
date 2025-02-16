@@ -15,6 +15,7 @@ publish = false
 
 ### BEGIN HAKARI SECTION
 [dependencies]
+arrayvec = { version = "0.7", features = ["serde"] }
 base64 = { version = "0.22" }
 byteorder = { version = "1" }
 chrono = { version = "0.4", features = ["serde"] }
@@ -32,6 +33,8 @@ indexmap = { version = "2", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
+miniz_oxide = { version = "0.8", features = ["simd"] }
+num-traits = { version = "0.2", features = ["i128"] }
 percent-encoding = { version = "2" }
 rand = { version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
@@ -43,6 +46,7 @@ rustls-webpki = { version = "0.102", default-features = false, features = ["ring
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
 sha2 = { version = "0.10", features = ["oid"] }
+simd-adler32 = { version = "0.3" }
 smallvec = { version = "1", default-features = false, features = ["const_new", "serde"] }
 sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "sqlite", "time", "uuid"] }
 sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
@@ -74,6 +78,7 @@ indexmap = { version = "2", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
+num-traits = { version = "0.2", features = ["i128"] }
 percent-encoding = { version = "2" }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 rand = { version = "0.8", features = ["small_rng"] }

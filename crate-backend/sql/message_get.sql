@@ -17,7 +17,7 @@ SELECT
     msg.override_name,
     false as "is_pinned!",
     row_to_json(usr) as "author!",
-    coalesce(att_json.attachments, '[]'::json) as "attachments!"
+    coalesce(att_json.attachments, '{}') as "attachments!"
 FROM message_coalesced AS msg
 JOIN usr ON usr.id = msg.author_id
 left JOIN att_json ON att_json.version_id = msg.version_id

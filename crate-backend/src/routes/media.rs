@@ -10,7 +10,7 @@ use axum::{
 use futures_util::StreamExt;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tracing::{debug, info, trace};
-use types::UserId;
+use types::{MediaSize, MediaTrack, TrackSource, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -148,10 +148,14 @@ async fn media_upload(
             trace!("processing upload");
             let mut media = process_upload(up, media_id, user_id, s.clone()).await?;
             debug!("finished processing media");
-            media.url = s.presign(&media.url).await?;
+            s.presign(&mut media).await?;
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", end_size.into());
-            headers.insert("upload-length", media.size.into());
+            let size = match media.source.size {
+                MediaSize::Bytes(b) => b,
+                MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
+            };
+            headers.insert("upload-length", size.into());
             Ok((StatusCode::OK, headers, Json(Some(media))))
         }
         Ordering::Less => {
@@ -180,7 +184,7 @@ async fn media_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let mut media = s.data().media_select(media_id).await?;
-    media.url = s.presign(&media.url).await?;
+    s.presign(&mut media).await?;
     Ok(Json(media))
 }
 
@@ -211,8 +215,12 @@ async fn media_check(
     }
     let media = s.data().media_select(media_id).await?;
     let mut headers = HeaderMap::new();
-    headers.insert("upload-offset", media.size.into());
-    headers.insert("upload-length", media.size.into());
+    let size = match media.source.size {
+        MediaSize::Bytes(b) => b,
+        MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
+    };
+    headers.insert("upload-offset", size.into());
+    headers.insert("upload-length", size.into());
     Ok((StatusCode::NO_CONTENT, headers))
 }
 
@@ -273,25 +281,26 @@ async fn process_upload(
     };
     upload_s3.await?;
     info!("uploaded {} bytes to s3", up.create.size);
-    let media = s
-        .data()
-        .media_insert(
-            user_id,
-            Media {
-                alt: up.create.alt.clone(),
-                id: media_id,
-                filename: up.create.filename.clone(),
-                url,
-                source_url: None,
-                thumbnail_url: None,
-                mime,
-                size: up.create.size,
+    let media = Media {
+        alt: up.create.alt.clone(),
+        id: media_id,
+        filename: up.create.filename.clone(),
+        source: MediaTrack {
+            url,
+            mime,
+            // TODO: use correct MediaTrackInfo type
+            info: types::MediaTrackInfo::Mixed(types::Mixed {
                 height: meta.and_then(|m| m.height),
                 width: meta.and_then(|m| m.width),
                 duration: meta.and_then(|m| m.duration),
-            },
-        )
-        .await?;
+                language: None,
+            }),
+            size: MediaSize::Bytes(up.create.size),
+            source: TrackSource::Uploaded,
+        },
+        tracks: vec![],
+    };
+    s.data().media_insert(user_id, media.clone()).await?;
     Ok(media)
 }
 

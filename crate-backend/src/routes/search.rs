@@ -30,7 +30,7 @@ pub async fn search_messages(
     let mut res = data.search_message(user_id, body, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(&media.url).await?;
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))

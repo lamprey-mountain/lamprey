@@ -26,7 +26,12 @@ jobs:
       - populate-cache-deps
     strategy:
       matrix:
-        derivation: ["backend", "backend-oci", "bridge-discord", "bridge-discord-oci"]
+        derivation: [
+          "backend",
+          "backend-oci",
+          "bridge-discord",
+          "bridge-discord-oci",
+        ]
     steps:
       - name: setup
         run: |

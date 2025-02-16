@@ -35,3 +35,4 @@ uuid = { version = "1.11.1", features = ["v7", "serde", "v4", "fast-rng", "macro
 crate-hakari = { version = "0.1", path = "../crate-hakari" }
 nanoid = "0.4.0"
 utoipa-axum = "0.2.0"
+image = "0.25.5"

@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use ::types::{RoomId, ThreadId, UserId};
+use ::types::{Media, RoomId, ThreadId, UserId};
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -141,8 +141,7 @@ impl ServerState {
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
             });
-            let services = Services::new(inner.clone());
-            services
+            Services::new(inner.clone())
         });
         Self {
             inner: services.state.clone(),
@@ -197,7 +196,8 @@ impl ServerState {
         self.inner.broadcast(msg)
     }
 
-    async fn presign(&self, url: &str) -> Result<String> {
+    /// presigns every relevant url in a piece of media
+    async fn presign(&self, media: &mut Media) -> Result<()> {
         // Ok(self
         //     .blobs
         //     .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
@@ -206,7 +206,8 @@ impl ServerState {
         //     .to_string())
         // HACK: temporary thing for better caching
         // TODO: i should use serviceworkers to cache while ignoring signature params
-        Ok(format!("https://chat-files.celery.eu.org/{url}"))
+        media.source.url = format!("https://chat-files.celery.eu.org/{}", media.source.url);
+        Ok(())
     }
 }
 

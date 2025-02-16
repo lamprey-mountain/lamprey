@@ -82,7 +82,7 @@ async fn message_create(
     }
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(&media.url).await?;
+        s.presign(media).await?;
     }
     message.nonce = json.nonce;
     let msg = MessageSync::UpsertMessage {
@@ -164,7 +164,7 @@ async fn message_context(
     };
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(&media.url).await?;
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -192,7 +192,7 @@ async fn message_list(
     let mut res = data.message_list(thread_id, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(&media.url).await?;
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -221,7 +221,7 @@ async fn message_get(
     perms.ensure_view()?;
     let mut message = data.message_get(thread_id, message_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(&media.url).await?;
+        s.presign(media).await?;
     }
     Ok(Json(message))
 }
@@ -311,11 +311,17 @@ async fn message_edit(
     }
     let mut message = data.message_version_get(thread_id, version_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(&media.url).await?;
+        s.presign(media).await?;
     }
-    s.broadcast_thread(thread_id, user_id, None, MessageSync::UpsertMessage {
-        message: message.clone(),
-    }).await?;
+    s.broadcast_thread(
+        thread_id,
+        user_id,
+        None,
+        MessageSync::UpsertMessage {
+            message: message.clone(),
+        },
+    )
+    .await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -351,11 +357,17 @@ async fn message_delete(
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
-    s.broadcast_thread(thread.id, user_id, None, MessageSync::DeleteMessage {
-        room_id: thread.room_id,
-        thread_id,
-        message_id,
-    }).await?;
+    s.broadcast_thread(
+        thread.id,
+        user_id,
+        None,
+        MessageSync::DeleteMessage {
+            room_id: thread.room_id,
+            thread_id,
+            message_id,
+        },
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -385,7 +397,7 @@ async fn message_version_list(
     let mut res = data.message_version_list(thread_id, message_id, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
-            media.url = s.presign(&media.url).await?;
+            s.presign(media).await?;
         }
     }
     Ok(Json(res))
@@ -415,7 +427,7 @@ async fn message_version_get(
     perms.ensure_view()?;
     let mut message = data.message_version_get(thread_id, version_id).await?;
     for media in &mut message.attachments {
-        media.url = s.presign(&media.url).await?;
+        s.presign(media).await?;
     }
     Ok(Json(message))
 }

@@ -965,11 +965,11 @@ summary {
 		& > .roles {
 			display: flex;
 			gap: 4px;
-			
+
 			& li {
 				border: solid $sep 1px;
 			}
-			
+
 			& button {
 				background: $bg2;
 
@@ -996,7 +996,7 @@ summary {
 		& .spacer {
 			flex: 1;
 		}
-		
+
 		& .name {
 			font-size: 1em;
 			font-weight: bold;
@@ -1030,7 +1030,7 @@ code {
 			display: flex;
 			gap: 4px;
 		}
-		
+
 		& h3 {
 			font-size: 1em;
 			font-weight: bold;

@@ -1,18 +1,96 @@
 use async_trait::async_trait;
+use serde::Deserialize;
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
+use types::MessageType;
 use uuid::Uuid;
 
+use crate::data::postgres::media::DbMediaTrack;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbMessage, DbMessageType, Message, MessageCreate, MessageId, MessageVerId, PaginationDirection,
-    PaginationQuery, PaginationResponse, ThreadId,
+    Message, MessageCreate, MessageId, MessageVerId, PaginationDirection, PaginationQuery,
+    PaginationResponse, ThreadId,
 };
 
 use crate::data::DataMessage;
 
+use super::media::DbMedia;
 use super::{Pagination, Postgres};
+
+pub struct DbMessage {
+    pub message_type: DbMessageType,
+    pub id: MessageId,
+    pub thread_id: ThreadId,
+    pub version_id: MessageVerId,
+    pub ordering: i32,
+    pub content: Option<String>,
+    pub attachments: Vec<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+    pub reply_id: Option<uuid::Uuid>,
+    pub override_name: Option<String>, // temp?
+    pub author: serde_json::Value,
+    pub is_pinned: bool,
+}
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "message_type")]
+pub enum DbMessageType {
+    Default,
+    ThreadUpdate,
+}
+
+impl From<DbMessageType> for MessageType {
+    fn from(value: DbMessageType) -> Self {
+        match value {
+            DbMessageType::Default => MessageType::Default,
+            DbMessageType::ThreadUpdate => MessageType::ThreadUpdate,
+        }
+    }
+}
+
+impl From<MessageType> for DbMessageType {
+    fn from(value: MessageType) -> Self {
+        match value {
+            MessageType::Default => DbMessageType::Default,
+            MessageType::ThreadUpdate => DbMessageType::ThreadUpdate,
+        }
+    }
+}
+
+impl From<DbMessage> for Message {
+    fn from(row: DbMessage) -> Self {
+        Message {
+            id: row.id,
+            message_type: row.message_type.into(),
+            thread_id: row.thread_id,
+            version_id: row.version_id,
+            nonce: None,
+            ordering: row.ordering,
+            content: row.content,
+            attachments: row
+                .attachments
+                .into_iter()
+                .map(|a| {
+                    #[derive(Deserialize)]
+                    struct Helper {
+                        #[serde(flatten)]
+                        media: DbMedia,
+                        tracks: Vec<DbMediaTrack>,
+                    }
+
+                    let row: Helper = serde_json::from_value(a).expect("invalid data in database!");
+                    row.media.upgrade(row.tracks)
+                })
+                .collect(),
+            metadata: row.metadata,
+            reply_id: row.reply_id.map(Into::into),
+            override_name: row.override_name,
+            author: serde_json::from_value(row.author).expect("invalid data in database!"),
+            is_pinned: row.is_pinned,
+        }
+    }
+}
 
 #[async_trait]
 impl DataMessage for Postgres {

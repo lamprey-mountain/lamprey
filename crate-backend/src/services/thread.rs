@@ -63,7 +63,7 @@ impl ServiceThreads {
         }
 
         if let Some(new_state) = &patch.state {
-            if !thread.state.can_change_to(&new_state) {
+            if !thread.state.can_change_to(new_state) {
                 return Err(Error::BadStatic("can't change to that state"));
             }
         };
@@ -92,9 +92,16 @@ impl ServiceThreads {
             .await?;
         let update_message = data.message_get(thread_id, update_message_id).await?;
 
-        self.state.broadcast_thread(thread.id, user_id, None, MessageSync::UpsertMessage {
-            message: update_message,
-        }).await?;
+        self.state
+            .broadcast_thread(
+                thread.id,
+                user_id,
+                None,
+                MessageSync::UpsertMessage {
+                    message: update_message,
+                },
+            )
+            .await?;
         let msg = MessageSync::UpsertThread {
             thread: thread.clone(),
         };

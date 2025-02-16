@@ -5,10 +5,11 @@ use types::{
     SearchMessageRequest,
 };
 
+use crate::data::postgres::message::{DbMessage, DbMessageType};
 use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
-use crate::types::{DbMessage, DbMessageType, UserId};
+use types::UserId;
 
 use crate::data::DataSearch;
 

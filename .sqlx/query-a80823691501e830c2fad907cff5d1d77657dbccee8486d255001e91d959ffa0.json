@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    SELECT id, filename, alt\n    \t    FROM media\n    \t    WHERE id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "filename",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "alt",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a80823691501e830c2fad907cff5d1d77657dbccee8486d255001e91d959ffa0"
+}

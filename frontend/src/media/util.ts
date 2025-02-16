@@ -16,3 +16,30 @@ export function formatTime(time: number): string {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	}
 }
+
+export const getDuration = (m: Media) => {
+	const t = m.source.type;
+	if (t === "Audio" || t === "Mixed" || t === "Video") {
+		return (m.source.duration ?? 0) / 1000;
+	} else {
+		return 0;
+	}
+};
+
+export const getWidth = (m: Media) => {
+	const t = m.source.type;
+	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
+		return m.source.width;
+	} else {
+		return 0;
+	}
+};
+
+export const getHeight = (m: Media) => {
+	const t = m.source.type;
+	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
+		return m.source.height;
+	} else {
+		return 0;
+	}
+};

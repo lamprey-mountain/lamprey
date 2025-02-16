@@ -153,7 +153,7 @@ pub trait DataInvite {
 
 #[async_trait]
 pub trait DataMedia {
-    async fn media_insert(&self, user_id: UserId, media: Media) -> Result<Media>;
+    async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
 
     async fn media_select(&self, media_id: MediaId) -> Result<Media>;
 

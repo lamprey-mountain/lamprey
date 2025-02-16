@@ -47,19 +47,32 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 					<For each={members()!.items}>
 						{(i) => {
 							const user = api.users.fetch(() => i.user_id);
-							const name = () => (i.membership === "Join" ? i.override_name : null) ?? user()?.name;
+							const name = () =>
+								(i.membership === "Join" ? i.override_name : null) ??
+									user()?.name;
 							return (
 								<li>
 									<h3 class="name">{name()}</h3>
 									<ul class="roles">
 										<For each={i.membership === "Join" ? i.roles : []}>
 											{(role_id) => {
-												const role = api.roles.fetch(() => props.room.id, () => role_id);
-												return <li><button onClick={removeRole(i.user_id, role_id)}>{role()?.name ?? "role"}</button></li>
+												const role = api.roles.fetch(
+													() => props.room.id,
+													() => role_id,
+												);
+												return (
+													<li>
+														<button onClick={removeRole(i.user_id, role_id)}>
+															{role()?.name ?? "role"}
+														</button>
+													</li>
+												);
 											}}
 										</For>
 										<li class="add">
-											<button onClick={addRole(i.user_id)}><em>add role...</em></button>
+											<button onClick={addRole(i.user_id)}>
+												<em>add role...</em>
+											</button>
 										</li>
 									</ul>
 									<div>
@@ -83,8 +96,8 @@ const Copyable = (props: { children: string }) => {
 	const ctx = useCtx();
 	const copy = () => {
 		navigator.clipboard.writeText(props.children);
-		ctx.dispatch({ do: "modal.alert", text: "copied!" })
-	}
+		ctx.dispatch({ do: "modal.alert", text: "copied!" });
+	};
 
-	return <code onClick={copy}>{props.children}</code>
-}
+	return <code onClick={copy}>{props.children}</code>;
+};

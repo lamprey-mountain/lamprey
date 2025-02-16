@@ -56,9 +56,15 @@ pub enum Error {
     Figment(#[from] figment::Error),
     #[error("url parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
+
     #[error("unmodified")]
     // HACK: not really an error, but still kind of helpful to have here
     NotModified,
+
+    #[error("not yet implemented...")]
+    // NOTE: also not really an error, but put here for convenience
+    Ffprobe,
+
     #[error("not yet implemented...")]
     Unimplemented,
 }
@@ -101,9 +107,8 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            Error::NotModified => return self.get_status().into_response(),
-            _ => {}
+        if let Error::NotModified = self {
+            return self.get_status().into_response();
         };
         error!(
             "Response error: status {}, message {:?}",

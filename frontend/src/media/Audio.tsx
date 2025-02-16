@@ -6,17 +6,15 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
-import { formatTime, MediaProps } from "./util.ts";
+import { formatTime, getDuration, MediaProps } from "./util.ts";
 
 export const AudioView = (props: MediaProps) => {
 	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
 	const audio = new globalThis.Audio();
-	createEffect(() => audio.src = props.media.url);
+	createEffect(() => audio.src = props.media.source.url);
 	onCleanup(() => audio.pause());
 
-	const [duration, setDuration] = createSignal(
-		(props.media.duration ?? 0) / 1000,
-	);
+	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
 	const [progressPreview, setProgressPreview] = createSignal<null | number>(
 		null,
@@ -96,7 +94,7 @@ export const AudioView = (props: MediaProps) => {
 		unitDisplay: "narrow",
 	});
 
-	const ty = () => props.media.mime.split(";")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
 
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
@@ -129,11 +127,13 @@ export const AudioView = (props: MediaProps) => {
 				<a
 					download={props.media.filename}
 					title={props.media.filename}
-					href={props.media.url}
+					href={props.media.source.url}
 				>
 					{props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</div>
 			<div class="controls">
 				<button onClick={togglePlayPause} title={playing() ? "pause" : "play"}>
