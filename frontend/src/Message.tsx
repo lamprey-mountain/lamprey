@@ -64,8 +64,8 @@ export function MessageView(props: MessageProps) {
 	function getComponent() {
 		const date =
 			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
-					props.message.id,
-				)
+				props.message.id,
+			)
 				? getTimestampFromUUID(props.message.id)
 				: new Date();
 		const authorName = props.message.override_name ?? props.message.author.name;
@@ -79,11 +79,8 @@ export function MessageView(props: MessageProps) {
 					patch.description ? `set description to ${patch.description}` : "",
 				);
 			}
-			if (patch.is_locked) {
-				updates.push(patch.is_locked ? "locked thread" : "unlocked thread");
-			}
-			if (patch.is_closed) {
-				updates.push(patch.is_closed ? "closed thread" : "unarchived thread");
+			if (patch.state) {
+				updates.push(`set state to ${patch.state}`);
 			}
 			return (
 				<>

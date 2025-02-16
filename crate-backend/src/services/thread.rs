@@ -85,6 +85,7 @@ impl ServiceThreads {
                 metadata: Some(json!({
                     "name": patch.name,
                     "description": patch.description,
+                    "state": patch.state,
                 })),
                 reply_id: None,
                 override_name: None,

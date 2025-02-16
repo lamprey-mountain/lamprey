@@ -2,14 +2,15 @@ import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
+import { Match, Switch } from "solid-js";
 
 // the context menu for threads
 export function ThreadMenu(props: { thread_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
-	
-	const thread = api.rooms.fetch(() => props.thread_id);
+
+	const thread = api.threads.fetch(() => props.thread_id);
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
 		const thread = api.threads.cache.get(props.thread_id)!;
@@ -45,7 +46,19 @@ export function ThreadMenu(props: { thread_id: string }) {
 
 	const settings = (to: string) => () =>
 		nav(`/thread/${props.thread_id}/settings${to}`);
-		
+
+	const closeThread = () => {
+		ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
+			params: { path: { thread_id: props.thread_id } }
+		});
+	}
+
+	const openThread = () => {
+		ctx.client.http.PUT("/api/v1/thread/{thread_id}/activate", {
+			params: { path: { thread_id: props.thread_id } }
+		});
+	}
+
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
@@ -62,7 +75,14 @@ export function ThreadMenu(props: { thread_id: string }) {
 				</Submenu>
 			</Submenu>
 			<Item>pin</Item>
-			<Item>close</Item>
+			<Switch>
+				<Match when={thread()?.state === "Active"}>
+					<Item onClick={closeThread}>close</Item>
+				</Match>
+				<Match when={thread()?.state === "Archived"}>
+					<Item onClick={openThread}>open</Item>
+				</Match>
+			</Switch>
 			<Item>lock</Item>
 			<Item onClick={deleteThread}>delete</Item>
 			<Separator />
