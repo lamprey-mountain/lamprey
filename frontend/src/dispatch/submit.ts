@@ -20,21 +20,14 @@ export async function handleSubmit(
 				params: { path: { room_id } },
 				body: { name },
 			});
-			// TODO: reimplement
-			// } else if (cmd === "archive") {
-			// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-			// 		params: { path: { thread_id } },
-			// 		body: {
-			// 			is_closed: true,
-			// 		},
-			// 	});
-			// } else if (cmd === "unarchive") {
-			// 	await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-			// 		params: { path: { thread_id } },
-			// 		body: {
-			// 			is_closed: false,
-			// 		},
-			// 	});
+		} else if (cmd === "archive") {
+			await ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
+				params: { path: { thread_id } },
+			});
+		} else if (cmd === "unarchive") {
+			await ctx.client.http.PUT("/api/v1/thread/{thread_id}/activate", {
+				params: { path: { thread_id } },
+			});
 		} else if (cmd === "desc") {
 			const description = args.join(" ");
 			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {

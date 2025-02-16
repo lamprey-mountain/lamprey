@@ -1,5 +1,5 @@
 // import { Tooltip } from "./Atoms.tsx";
-import { Show } from "solid-js";
+import { Match, Show, Switch } from "solid-js";
 import { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
@@ -47,8 +47,11 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 					<header>
 						<h1>{thread.name}</h1>
 						<p>
-							{thread.description ?? "(no description)"} /
-							<Show when={thread.is_closed}>(archived)</Show>
+							{thread.description ?? "(no description)"}{" / "}
+							<Switch>
+								<Match when={thread.state === "Archived"}>(archived)</Match>
+								<Match when={thread.state === "Deleted"}>(deleted)</Match>
+							</Switch>
 						</p>
 					</header>
 				</li>
