@@ -103,6 +103,6 @@ impl Diff<Thread> for ThreadState {
 
 impl ThreadState {
     pub fn can_change_to(&self, _to: &ThreadState) -> bool {
-        matches!(self, Self::Deleted)
+        !matches!(self, Self::Deleted)
     }
 }
