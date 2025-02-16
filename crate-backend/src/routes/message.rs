@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use types::{util::Diff, PaginationDirection};
+use types::{util::Diff, PaginationDirection, ThreadMembership};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -85,6 +85,15 @@ async fn message_create(
         s.presign(media).await?;
     }
     message.nonce = json.nonce;
+    data.thread_member_put(
+        thread_id,
+        user_id,
+        ThreadMembership::Join {
+            override_name: None,
+            override_description: None,
+        },
+    )
+    .await?;
     let msg = MessageSync::UpsertMessage {
         message: message.clone(),
     };
