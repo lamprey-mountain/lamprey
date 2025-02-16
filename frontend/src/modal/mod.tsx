@@ -112,8 +112,15 @@ const ModalPrompt = (
 };
 
 // currently only suports images!
+// though, it doesn't make much sense for video/audio/other media?
 const ModalMedia = (props: { media: Media }) => {
 	const ctx = useCtx();
+
+	const height = () =>
+		props.media.source.type === "Image" ? props.media.source.height : 0;
+	const width = () =>
+		props.media.source.type === "Image" ? props.media.source.width : 0;
+
 	return (
 		<div class="modal modal-media">
 			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
@@ -123,22 +130,22 @@ const ModalMedia = (props: { media: Media }) => {
 					<div
 						class="media image"
 						style={{
-							"--height": `${props.media.height}px`,
-							"--width": `${props.media.width}px`,
-							"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+							"--height": `${height()}px`,
+							"--width": `${width()}px`,
+							"--aspect-ratio": `${width()}/${height()}`,
 						}}
 					>
 						<div class="inner">
 							<div class="loader">loading</div>
 							<img
-								src={props.media.url}
+								src={props.media.source.url}
 								alt={props.media.alt ?? undefined}
-								height={props.media.height!}
-								width={props.media.width!}
+								height={height()!}
+								width={width()!}
 							/>
 						</div>
 					</div>
-					<a href={props.media.url}>Go to url</a>
+					<a href={props.media.source.url}>Go to url</a>
 				</div>
 			</div>
 		</div>

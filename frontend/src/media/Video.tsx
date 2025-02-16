@@ -1,5 +1,5 @@
 import { createSignal, onMount, VoidProps } from "solid-js";
-import { formatTime, MediaProps } from "./util.ts";
+import { formatTime, getDuration, getHeight, getWidth, MediaProps } from "./util.ts";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -9,27 +9,31 @@ import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 
 export const VideoViewOld = (props: MediaProps) => {
+	const height = () => getHeight(props.media);
+	const width = () => getWidth(props.media);
+
 	return (
 		<div
 			class="media"
 			style={{
-				"--height": `${props.media.height}px`,
-				"--width": `${props.media.width}px`,
-				"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+				"--height": `${height()}px`,
+				"--width": `${width()}px`,
+				"--aspect-ratio": `${width()}/${height()}`,
 			}}
 		>
 			<div class="inner">
 				<div class="loader">loading</div>
-				<video controls src={props.media.url} />
+				<video controls src={props.media.source.url} />
 			</div>
 		</div>
 	);
 };
 
 export const VideoView = (props: MediaProps) => {
-	const [duration, setDuration] = createSignal(
-		(props.media.duration ?? 0) / 1000,
-	);
+	const height = () => getHeight(props.media);
+	const width = () => getWidth(props.media);
+
+	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
 	const [progressPreview, setProgressPreview] = createSignal<null | number>(
 		null,
@@ -38,8 +42,8 @@ export const VideoView = (props: MediaProps) => {
 	const [volume, setVolume] = createSignal(1);
 	const [muted, setMuted] = createSignal(false);
 
-	let videoEl: HTMLVideoElement;
-	let wrapperEl: HTMLDivElement;
+	let videoEl!: HTMLVideoElement;
+	let wrapperEl!: HTMLDivElement;
 
 	onMount(() => {
 		videoEl.ondurationchange = () => setDuration(videoEl.duration);
@@ -119,7 +123,7 @@ export const VideoView = (props: MediaProps) => {
 		unitDisplay: "narrow",
 	});
 
-	const ty = () => props.media.mime.split(";")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
 
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
@@ -140,9 +144,9 @@ export const VideoView = (props: MediaProps) => {
 			<div
 				class="media"
 				style={{
-					"--height": `${props.media.height}px`,
-					"--width": `${props.media.width}px`,
-					"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+					"--height": `${height()}px`,
+					"--width": `${width()}px`,
+					"--aspect-ratio": `${width()}/${height()}`,
 				}}
 				ref={wrapperEl!}
 			>
@@ -150,7 +154,7 @@ export const VideoView = (props: MediaProps) => {
 					<div class="loader">loading</div>
 					<video
 						ref={videoEl!}
-						src={props.media.url}
+						src={props.media.source.url}
 						onClick={togglePlayPause}
 						onDblClick={fullScreen}
 					/>
@@ -173,11 +177,13 @@ export const VideoView = (props: MediaProps) => {
 					<a
 						download={props.media.filename}
 						title={props.media.filename}
-						href={props.media.url}
+						href={props.media.source.url}
 					>
 						{props.media.filename}
 					</a>
-					<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+					<div class="dim">
+						{ty()} - {byteFmt.format(props.media.source.size)}
+					</div>
 				</div>
 				<div class="controls">
 					<button

@@ -1,16 +1,21 @@
 import { useCtx } from "../context.ts";
-import { MediaProps } from "./util.ts";
+import { getHeight, getWidth, MediaProps } from "./util.ts";
 
+// TODO: ensure only images can be passed here
+// TODO: use thumbnail
 export const ImageView = (props: MediaProps) => {
 	const ctx = useCtx();
+
+	const height = () => getHeight(props.media);
+	const width = () => getWidth(props.media);
 
 	return (
 		<div
 			class="media image"
 			style={{
-				"--height": `${props.media.height}px`,
-				"--width": `${props.media.width}px`,
-				"--aspect-ratio": `${props.media.width}/${props.media.height}`,
+				"--height": `${height()}px`,
+				"--width": `${width()}px`,
+				"--aspect-ratio": `${width()}/${height()}`,
 			}}
 			onClick={() => {
 				ctx.dispatch({
@@ -22,10 +27,10 @@ export const ImageView = (props: MediaProps) => {
 			<div class="inner">
 				<div class="loader">loading</div>
 				<img
-					src={props.media.url}
+					src={props.media.source.url}
 					alt={props.media.alt ?? undefined}
-					height={props.media.height!}
-					width={props.media.width!}
+					height={height()!}
+					width={width()!}
 				/>
 			</div>
 		</div>

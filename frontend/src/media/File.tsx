@@ -8,14 +8,14 @@ export const FileView = (props: MediaProps) => {
 		unitDisplay: "narrow",
 	});
 
-	const ty = () => props.media.mime.split(";")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
 
 	return (
 		<div>
-			<a download={props.media.filename} href={props.media.url}>
+			<a download={props.media.filename} href={props.media.source.url}>
 				download {props.media.filename}
 			</a>
-			<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+			<div class="dim">{ty()} - {byteFmt.format(props.media.source.size)}</div>
 		</div>
 	);
 };

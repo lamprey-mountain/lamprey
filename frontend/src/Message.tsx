@@ -199,15 +199,14 @@ export function AttachmentView(props: MediaProps) {
 }
 
 export function AttachmentView1(props: MediaProps) {
-	const b = () => props.media.mime.split("/")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
+	const b = () => props.media.source.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
 		style: "unit",
 		unit: "byte",
 		unitDisplay: "narrow",
 	});
-
-	const ty = () => props.media.mime.split(";")[0];
 	// const [ty, paramsRaw] = a.mime.split(";");
 	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
 	// console.log({ ty, params });
@@ -216,46 +215,54 @@ export function AttachmentView1(props: MediaProps) {
 		return (
 			<li>
 				<ImageView media={props.media} />
-				<a download={props.media.filename} href={props.media.url}>
+				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</li>
 		);
 	} else if (b() === "video") {
 		return (
 			<li>
 				<VideoViewOld media={props.media} />
-				<a download={props.media.filename} href={props.media.url}>
+				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</li>
 		);
 	} else if (b() === "audio") {
 		return (
 			<li>
-				<audio controls src={props.media.url} />
-				<a download={props.media.filename} href={props.media.url}>
+				<audio controls src={props.media.source.url} />
+				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<a download={props.media.filename} href={props.media.url}>
+				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</li>
 		);
 	}
 }
 
 export function AttachmentView2(props: MediaProps) {
-	const b = () => props.media.mime.split("/")[0];
+	const b = () => props.media.source.mime.split("/")[0];
 	const byteFmt = Intl.NumberFormat("en", {
 		notation: "compact",
 		style: "unit",
@@ -263,15 +270,17 @@ export function AttachmentView2(props: MediaProps) {
 		unitDisplay: "narrow",
 	});
 
-	const ty = () => props.media.mime.split(";")[0];
+	const ty = () => props.media.source.mime.split(";")[0];
 	if (b() === "image") {
 		return (
 			<li>
 				<ImageView media={props.media} />
-				<a download={props.media.filename} href={props.media.url}>
+				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
 				</a>
-				<div class="dim">{ty()} - {byteFmt.format(props.media.size)}</div>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
 			</li>
 		);
 	} else if (b() === "video") {
@@ -286,7 +295,9 @@ export function AttachmentView2(props: MediaProps) {
 				<AudioView media={props.media} />
 			</li>
 		);
-	} else if (b() === "text" || /^application\/json\b/.test(props.media.mime)) {
+	} else if (
+		b() === "text" || /^application\/json\b/.test(props.media.source.mime)
+	) {
 		return (
 			<li>
 				<TextView media={props.media} />
