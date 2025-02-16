@@ -1,94 +1,262 @@
+use std::sync::Arc;
+
+use axum::extract::{Path, Query};
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use http::StatusCode;
+use types::{
+    MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
+    ThreadMemberPatch, ThreadMembership, UserId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::types::UserIdReq;
 use crate::ServerState;
 
-use crate::error::{Error, Result};
 use super::util::Auth;
+use crate::error::{Error, Result};
 
-/// Room member list
+/// Thread member list
 #[utoipa::path(
-    put,
-    path = "/rooms/{room_id}/member",
+    get,
+    path = "/thread/{thread_id}/member",
     params(
-        ("room_id", description = "Room id"),
+        PaginationQuery<UserId>,
+        ("thread_id" = ThreadId, description = "Thread id"),
     ),
-    tags = ["member"],
+    tags = ["thread_member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<ThreadMember>, description = "success"),
     )
 )]
-pub async fn room_member_list(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+pub async fn thread_member_list(
+    Path(thread_id): Path<ThreadId>,
+    Query(paginate): Query<PaginationQuery<UserId>>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
+    let res = d.thread_member_list(thread_id, paginate).await?;
+    Ok(Json(res))
 }
 
-/// Room member get
+/// Thread member get
 #[utoipa::path(
-    put,
-    path = "/rooms/{room_id}/member/{user_id}",
+    get,
+    path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("thread_id" = ThreadId, description = "Thread id"),
+        ("user_id" = String, description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["thread_member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = ThreadMember, description = "success"),
     )
 )]
-pub async fn room_member_get(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+pub async fn thread_member_get(
+    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+    let d = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    // TODO: return `Ban`s
+    if !matches!(res.membership, ThreadMembership::Join { .. }) {
+        Err(Error::NotFound)
+    } else {
+        Ok(Json(res))
+    }
 }
 
-/// Room member update
+/// Thread member add
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/member/{user_id}",
+    params(
+        ("thread_id" = ThreadId, description = "Thread id"),
+        ("user_id" = String, description = "User id"),
+    ),
+    tags = ["thread_member"],
+    responses(
+        (status = OK, body = ThreadMember, description = "success"),
+        (status = NOT_MODIFIED, description = "not modified"),
+    )
+)]
+pub async fn thread_member_add(
+    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<ThreadMemberPatch>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+    let d = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    if target_user_id != auth_user_id {
+        perms.ensure(Permission::MemberManage)?;
+    }
+
+    let start = d.thread_member_get(thread_id, target_user_id).await.ok();
+    d.thread_member_put(
+        thread_id,
+        target_user_id,
+        ThreadMembership::Join {
+            override_name: patch.override_name,
+            override_description: patch.override_description,
+        },
+    )
+    .await?;
+    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    if start.is_some_and(|s| s == res) {
+        Ok(StatusCode::NOT_MODIFIED.into_response())
+    } else {
+        s.broadcast_thread(
+            thread_id,
+            auth_user_id,
+            None,
+            MessageSync::UpsertThreadMember {
+                member: res.clone(),
+            },
+        )
+        .await?;
+        Ok(Json(res).into_response())
+    }
+}
+
+/// Thread member update
 #[utoipa::path(
     patch,
-    path = "/rooms/{room_id}/member/{user_id}",
+    path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("thread_id" = ThreadId, description = "Thread id"),
+        ("user_id" = String, description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["thread_member"],
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = ThreadMember, description = "success"),
+        (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn room_member_update(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+pub async fn thread_member_update(
+    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<ThreadMemberPatch>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+    let d = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    if target_user_id != auth_user_id {
+        perms.ensure(Permission::MemberManage)?;
+    }
+
+    let start = d.thread_member_get(thread_id, target_user_id).await?;
+    if !matches!(start.membership, ThreadMembership::Join { .. }) {
+        return Err(Error::NotFound);
+    }
+    d.thread_member_patch(thread_id, target_user_id, patch)
+        .await?;
+    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    if start == res {
+        Ok(StatusCode::NOT_MODIFIED.into_response())
+    } else {
+        s.broadcast_thread(
+            thread_id,
+            auth_user_id,
+            None,
+            MessageSync::UpsertThreadMember {
+                member: res.clone(),
+            },
+        )
+        .await?;
+        Ok(Json(res).into_response())
+    }
 }
 
-/// Room member delete (kick/leave)
+/// Thread member delete (kick/leave)
 #[utoipa::path(
     delete,
-    path = "/rooms/{room_id}/member/{user_id}",
+    path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("room_id", description = "Room id"),
-        ("user_id", description = "User id"),
+        ("thread_id" = ThreadId, description = "Thread id"),
+        ("user_id" = String, description = "User id"),
     ),
-    tags = ["member"],
+    tags = ["thread_member"],
     responses(
-        (status = OK, description = "success"),
+        (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn room_member_delete(
-    Auth(session): Auth,
-    State(s): State<ServerState>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+pub async fn thread_member_delete(
+    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+    let d = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    if target_user_id != auth_user_id {
+        perms.ensure(Permission::MemberKick)?;
+    }
+    let start = d.thread_member_get(thread_id, target_user_id).await?;
+    if !matches!(start.membership, ThreadMembership::Join { .. }) {
+        return Err(Error::NotFound);
+    }
+    d.thread_member_set_membership(thread_id, target_user_id, ThreadMembership::Leave {})
+        .await?;
+    s.services()
+        .perms
+        .invalidate_thread(target_user_id, thread_id);
+    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        None,
+        MessageSync::UpsertThreadMember { member: res },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-pub fn routes() -> OpenApiRouter<ServerState> {
+pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(room_member_list))
-        .routes(routes!(room_member_get))
-        .routes(routes!(room_member_update))
-        .routes(routes!(room_member_delete))
+        .routes(routes!(thread_member_list))
+        .routes(routes!(thread_member_get))
+        .routes(routes!(thread_member_add))
+        .routes(routes!(thread_member_update))
+        .routes(routes!(thread_member_delete))
 }

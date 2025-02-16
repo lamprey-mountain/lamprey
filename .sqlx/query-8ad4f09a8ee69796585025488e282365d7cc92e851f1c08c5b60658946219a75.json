@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            \tSELECT\n                \tthread_id,\n                \tuser_id,\n                \tmembership as \"membership: _\",\n                    membership_updated_at,\n                \toverride_name,\n                    override_description\n                FROM thread_member\n            \tWHERE thread_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "thread_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban",
+                "Leave"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "membership_updated_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 4,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "override_description",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "8ad4f09a8ee69796585025488e282365d7cc92e851f1c08c5b60658946219a75"
+}

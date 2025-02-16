@@ -1,8 +1,9 @@
 use serde::Deserialize;
 use types::{
-    MediaId, MessageId, MessageType, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMember,
+    MediaId, MessageId, MessageType, Permission, Role, RoleId, RoleVerId, Room, RoomId,
     RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo,
-    ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserState, UserType, UserVerId,
+    ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserState,
+    UserType, UserVerId,
 };
 use uuid::Uuid;
 
@@ -36,7 +37,7 @@ pub struct UserCreate {
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "membership")]
-pub enum DbRoomMembership {
+pub enum DbMembership {
     Join,
     Leave,
     Ban,
@@ -321,12 +322,22 @@ impl From<Permission> for DbPermission {
     }
 }
 
-impl From<RoomMembership> for DbRoomMembership {
+impl From<RoomMembership> for DbMembership {
     fn from(value: RoomMembership) -> Self {
         match value {
-            RoomMembership::Join { .. } => DbRoomMembership::Join,
-            RoomMembership::Ban {} => DbRoomMembership::Ban,
-            RoomMembership::Leave {} => DbRoomMembership::Leave,
+            RoomMembership::Join { .. } => DbMembership::Join,
+            RoomMembership::Ban {} => DbMembership::Ban,
+            RoomMembership::Leave {} => DbMembership::Leave,
+        }
+    }
+}
+
+impl From<ThreadMembership> for DbMembership {
+    fn from(value: ThreadMembership) -> Self {
+        match value {
+            ThreadMembership::Join { .. } => DbMembership::Join,
+            ThreadMembership::Ban {} => DbMembership::Ban,
+            ThreadMembership::Leave {} => DbMembership::Leave,
         }
     }
 }
@@ -385,36 +396,6 @@ pub struct DbInvite {
     pub uses: i32,
     pub created_at: time::PrimitiveDateTime,
     pub expires_at: Option<time::PrimitiveDateTime>,
-}
-
-pub struct DbRoomMember {
-    pub user_id: Uuid,
-    pub room_id: Uuid,
-    pub membership: DbRoomMembership,
-    pub override_name: Option<String>,
-    pub override_description: Option<String>,
-    // override_avatar: z.string().url().or(z.literal("")),
-    pub membership_updated_at: time::PrimitiveDateTime,
-    pub roles: Vec<Uuid>,
-}
-
-impl From<DbRoomMember> for RoomMember {
-    fn from(row: DbRoomMember) -> Self {
-        RoomMember {
-            user_id: row.user_id.into(),
-            room_id: row.room_id.into(),
-            membership: match row.membership {
-                DbRoomMembership::Join => RoomMembership::Join {
-                    override_name: row.override_name,
-                    override_description: row.override_description,
-                    roles: row.roles.into_iter().map(Into::into).collect(),
-                },
-                DbRoomMembership::Leave => RoomMembership::Leave {},
-                DbRoomMembership::Ban => RoomMembership::Ban {},
-            },
-            membership_updated_at: row.membership_updated_at.assume_utc(),
-        }
-    }
 }
 
 #[derive(Deserialize)]

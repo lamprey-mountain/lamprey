@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE thread_member\n        \tSET override_name = $3, override_description = $4\n            WHERE thread_id = $1 AND user_id = $2 AND membership = 'Join'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "639038fb7ebc8069405deb42f406a97efb48f62cc3656d9013ad7cffcfaa33a5"
+}

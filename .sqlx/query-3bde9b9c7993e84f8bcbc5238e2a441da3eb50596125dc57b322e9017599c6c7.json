@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO thread_member (user_id, thread_id, membership)\n            VALUES ($1, $2, $3)\n\t\t\tON CONFLICT ON CONSTRAINT thread_member_pkey DO UPDATE SET\n    \t\t\tmembership = excluded.membership\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban",
+                "Leave"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3bde9b9c7993e84f8bcbc5238e2a441da3eb50596125dc57b322e9017599c6c7"
+}

@@ -44,6 +44,7 @@ enum AuthCheck {
     Custom(bool),
     Room(RoomId),
     RoomOrUser(RoomId, UserId),
+    ThreadOrUser(ThreadId, UserId),
     User(UserId),
     Thread(ThreadId),
 }
@@ -199,6 +200,9 @@ impl Connection {
             MessageSync::UpsertRoomMember { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
+            MessageSync::UpsertThreadMember { member } => {
+                AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
+            }
             MessageSync::UpsertSession {
                 session: upserted_session,
             } => {
@@ -269,6 +273,19 @@ impl Connection {
                     .for_thread(user_id, thread_id)
                     .await?;
                 perms.has(Permission::View)
+            }
+            (Some(auth_user_id), AuthCheck::ThreadOrUser(thread_id, target_user_id)) => {
+                if auth_user_id == target_user_id {
+                    true
+                } else {
+                    let perms = self
+                        .s
+                        .services()
+                        .perms
+                        .for_thread(auth_user_id, thread_id)
+                        .await?;
+                    perms.has(Permission::View)
+                }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
             (_, AuthCheck::Custom(b)) => b,

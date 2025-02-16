@@ -3,33 +3,62 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::RoomMember;
+use crate::UserId;
 
 use super::ThreadId;
+
+// NOTE: maybe i could merge the room_member and thread_member types?
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ThreadMember {
-    pub room_member: RoomMember,
     pub thread_id: ThreadId,
-    pub joined_at: time::OffsetDateTime,
-    // pub updated_at: time::OffsetDateTime,
-    // pub updated_by: UserId,
-    // pub membership: ThreadMemberState ,
+    pub user_id: UserId,
+
+    #[serde(flatten)]
+    pub membership: ThreadMembership,
+
+    /// When this member's membership last changed (joined, left, was kicked, or banned).
+    #[serde(
+        serialize_with = "time::serde::rfc3339::serialize",
+        deserialize_with = "time::serde::rfc3339::deserialize"
+    )]
+    pub membership_updated_at: time::OffsetDateTime,
 }
 
-// enum ThreadMemberState {
-//     /// joined
-//     Join {
-//     },
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ThreadMemberPatch {
+    pub override_name: Option<String>,
+    pub override_description: Option<String>,
+    // override_avatar: z.string().url().or(z.literal("")),
+}
 
-//     /// kicked or left, can still view messages up until then, can rejoin
-//     Left {
-//         reason: Option<String>,
-//     },
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "membership")]
+pub enum ThreadMembership {
+    /// joined
+    Join {
+        override_name: Option<String>,
+        override_description: Option<String>,
+        // override_avatar: z.string().url().or(z.literal("")),
+    },
 
-//     /// banned, can still view messages up until they were banned
-//     Ban {
-//         reason: Option<String>,
-//     },
-// }
+    /// kicked or left, can rejoin with an invite. todo: can still view messages up until then
+    Leave {
+        // TODO: copy kick/ban reason here
+        // /// user supplied reason why this user was banned
+        // reason: Option<String>,
+        // /// which user caused the kick, or None if the user left themselves
+        // user_id: Option<UserId>,
+    },
+
+    /// banned. todo: can still view messages up until they were banned
+    Ban {
+        // /// user supplied reason why this user was banned
+        // reason: Option<String>,
+        // /// which user caused the ban
+        // user_id: Option<UserId>,
+    },
+}

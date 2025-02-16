@@ -4,10 +4,11 @@ use tracing::info;
 use types::{PaginationDirection, PaginationQuery, PaginationResponse, RoomMember};
 
 use crate::error::Result;
-use crate::types::{DbRoomMember, RoleId, UserId};
+use crate::types::{RoleId, UserId};
 
 use crate::data::DataRoleMember;
 
+use super::room_member::DbRoomMember;
 use super::{Pagination, Postgres};
 
 #[async_trait]

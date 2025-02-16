@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch,
-    RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken,
+    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership
 };
 use uuid::Uuid;
 
@@ -33,6 +32,7 @@ pub trait Data:
     + DataSearch
     + DataAuth
     + DataAuditLogs
+    + DataThreadMember
     + Send
     + Sync
 {
@@ -295,4 +295,34 @@ pub trait DataAuditLogs {
         reason: Option<String>,
         payload: MessageSync,
     ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataThreadMember {
+    /// is a no-op if membership won't change
+    async fn thread_member_put(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        membership: ThreadMembership,
+    ) -> Result<()>;
+    async fn thread_member_patch(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        patch: ThreadMemberPatch,
+    ) -> Result<()>;
+    async fn thread_member_set_membership(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        membership: ThreadMembership,
+    ) -> Result<()>;
+    async fn thread_member_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
+    async fn thread_member_get(&self, thread_id: ThreadId, user_id: UserId) -> Result<ThreadMember>;
+    async fn thread_member_list(
+        &self,
+        thread_id: ThreadId,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<ThreadMember>>;
 }

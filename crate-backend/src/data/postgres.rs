@@ -24,6 +24,7 @@ mod room_member;
 mod search;
 mod session;
 mod thread;
+mod thread_member;
 mod unread;
 mod user;
 mod util;

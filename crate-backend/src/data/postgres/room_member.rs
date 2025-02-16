@@ -5,14 +5,45 @@ use types::{
     PaginationDirection, PaginationQuery, PaginationResponse, RoomMember, RoomMemberPatch,
     RoomMembership,
 };
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::gen_paginate;
-use crate::types::{DbRoomMember, DbRoomMembership, RoomId, UserId};
+use crate::types::{DbMembership, RoomId, UserId};
 
 use crate::data::DataRoomMember;
 
 use super::{Pagination, Postgres};
+
+pub struct DbRoomMember {
+    pub user_id: Uuid,
+    pub room_id: Uuid,
+    pub membership: DbMembership,
+    pub override_name: Option<String>,
+    pub override_description: Option<String>,
+    // override_avatar: z.string().url().or(z.literal("")),
+    pub membership_updated_at: time::PrimitiveDateTime,
+    pub roles: Vec<Uuid>,
+}
+
+impl From<DbRoomMember> for RoomMember {
+    fn from(row: DbRoomMember) -> Self {
+        RoomMember {
+            user_id: row.user_id.into(),
+            room_id: row.room_id.into(),
+            membership: match row.membership {
+                DbMembership::Join => RoomMembership::Join {
+                    override_name: row.override_name,
+                    override_description: row.override_description,
+                    roles: row.roles.into_iter().map(Into::into).collect(),
+                },
+                DbMembership::Leave => RoomMembership::Leave {},
+                DbMembership::Ban => RoomMembership::Ban {},
+            },
+            membership_updated_at: row.membership_updated_at.assume_utc(),
+        }
+    }
+}
 
 #[async_trait]
 impl DataRoomMember for Postgres {
@@ -22,7 +53,7 @@ impl DataRoomMember for Postgres {
         user_id: UserId,
         membership: RoomMembership,
     ) -> Result<()> {
-        let membership: DbRoomMembership = membership.into();
+        let membership: DbMembership = membership.into();
         query!(
             r#"
             INSERT INTO room_member (user_id, room_id, membership)
@@ -89,7 +120,7 @@ impl DataRoomMember for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                "SELECT count(*) FROM room_member WHERE room_member.room_id = $1 AND membership = 'Join'",
+                "SELECT count(*) FROM room_member WHERE room_id = $1 AND membership = 'Join'",
                 room_id.into_inner()
             )
         )
@@ -152,7 +183,7 @@ impl DataRoomMember for Postgres {
         user_id: UserId,
         membership: RoomMembership,
     ) -> Result<()> {
-        let membership: DbRoomMembership = membership.into();
+        let membership: DbMembership = membership.into();
         query!(
             r#"
             UPDATE room_member

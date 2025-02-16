@@ -1,8 +1,7 @@
 use async_trait::async_trait;
 use std::future::{ready, Future};
 use types::{
-    InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId,
-    Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, User, UserId,
+    InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId
 };
 
 #[allow(unused_variables)]
@@ -46,6 +45,13 @@ pub trait EventHandler: Send {
     fn upsert_room_member(
         &mut self,
         member: RoomMember,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        ready(Ok(()))
+    }
+    
+    fn upsert_thread_member(
+        &mut self,
+        member: ThreadMember,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
@@ -145,6 +151,7 @@ where
                 MessageSync::UpsertMessage { message } => self.upsert_message(message).await,
                 MessageSync::UpsertUser { user } => self.upsert_user(user).await,
                 MessageSync::UpsertRoomMember { member } => self.upsert_room_member(member).await,
+                MessageSync::UpsertThreadMember { member } => self.upsert_thread_member(member).await,
                 MessageSync::UpsertSession { session } => self.upsert_session(session).await,
                 MessageSync::UpsertRole { role } => self.upsert_role(role).await,
                 MessageSync::UpsertInvite { invite } => self.upsert_invite(invite).await,

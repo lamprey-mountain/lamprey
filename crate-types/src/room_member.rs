@@ -10,6 +10,7 @@ use super::{RoleId, RoomId, UserId};
 pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
+
     #[serde(flatten)]
     pub membership: RoomMembership,
 
@@ -45,11 +46,17 @@ pub enum RoomMembership {
     Leave {
         // TODO: keep roles on leave?
         // TODO: copy kick/ban reason here
+        // /// user supplied reason why this user was banned
         // reason: Option<String>,
+        // /// which user caused the kick, or None if the user left themselves
+        // user_id: Option<UserId>,
     },
 
     /// banned. todo: can still view messages up until they were banned
     Ban {
+        // /// user supplied reason why this user was banned
         // reason: Option<String>,
+        // /// which user caused the ban
+        // user_id: Option<UserId>,
     },
 }

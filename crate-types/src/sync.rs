@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{InviteTargetId, InviteWithMetadata};
+use crate::{InviteTargetId, InviteWithMetadata, ThreadMember};
 
 use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
@@ -95,6 +95,9 @@ pub enum MessageSync {
     UpsertRoomMember {
         member: RoomMember,
     },
+    UpsertThreadMember {
+        member: ThreadMember,
+    },
     UpsertSession {
         session: Session,
     },
@@ -163,6 +166,7 @@ impl MessageSync {
             MessageSync::UpsertRoom { .. }
                 | MessageSync::UpsertThread { .. }
                 | MessageSync::UpsertRoomMember { .. }
+                | MessageSync::UpsertThreadMember { .. }
                 | MessageSync::UpsertRole { .. }
                 | MessageSync::UpsertInvite { .. }
                 | MessageSync::DeleteMessage { .. }
@@ -183,6 +187,11 @@ impl MessageSync {
             MessageSync::UpsertInvite { invite } => Some(invite.invite.code.to_string()),
             MessageSync::DeleteRole { role_id, .. } => Some(role_id.to_string()),
             MessageSync::DeleteInvite { code, .. } => Some(code.to_string()),
+
+            // HACK: prob. should impl thread-specific audit logs?
+            MessageSync::UpsertThreadMember { member } => {
+                Some(format!("{}-{}", member.user_id, member.thread_id))
+            }
 
             // explicitly no prev
             MessageSync::DeleteMessage { .. } => None,

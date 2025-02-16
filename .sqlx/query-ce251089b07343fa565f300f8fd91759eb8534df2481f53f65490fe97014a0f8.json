@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM room_member WHERE room_member.room_id = $1 AND membership = 'Join'",
+  "query": "SELECT count(*) FROM thread_member WHERE thread_id = $1 AND membership = 'Join'",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "ce1aadc5ee637b23e6555240218efa52efd4da3d59c0ceff573602895017ebc7"
+  "hash": "ce251089b07343fa565f300f8fd91759eb8534df2481f53f65490fe97014a0f8"
 }
