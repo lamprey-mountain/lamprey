@@ -10,3 +10,12 @@ edition = "2021"
 authors = ["tezlm"]
 description = "unnamed chat thing?"
 license = "MIT"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
+
+[profile.dev.package.serde_derive]
+opt-level = 3
+
+[profile.dev.package.utoipa-gen]
+opt-level = 3
