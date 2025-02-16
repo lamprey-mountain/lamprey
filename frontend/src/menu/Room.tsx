@@ -38,7 +38,7 @@ export function RoomMenu(props: { room_id: string }) {
 	};
 
 	const settings = (to: string) => () =>
-		nav(`/room/${props.room_id}/settings/${to}`);
+		nav(`/room/${props.room_id}/settings${to}`);
 
 	return (
 		<Menu>
@@ -48,9 +48,9 @@ export function RoomMenu(props: { room_id: string }) {
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
-				<Item onClick={settings("invites")}>invites</Item>
-				<Item onClick={settings("roles")}>roles</Item>
-				<Item onClick={settings("members")}>members</Item>
+				<Item onClick={settings("/invites")}>invites</Item>
+				<Item onClick={settings("/roles")}>roles</Item>
+				<Item onClick={settings("/members")}>members</Item>
 			</Submenu>
 			<Item onClick={leave}>leave</Item>
 			<Separator />
