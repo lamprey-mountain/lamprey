@@ -167,14 +167,8 @@ impl From<MediaTrack> for DbMediaTrack {
                 .info
                 .duration()
                 .map(|i| i.try_into().expect("convert error")),
-            codec: value
-                .info
-                .codec()
-                .map(|s| s.to_owned()),
-            language: value
-                .info
-                .language()
-                .map(|i| i.0.to_owned()),
+            codec: value.info.codec().map(|s| s.to_owned()),
+            language: value.info.language().map(|i| i.0.to_owned()),
             url: value.url,
             size_type,
             size,

@@ -61,8 +61,7 @@ impl ServicePermissions {
 
     // might be a good idea to be able to invalidate per role
     pub fn invalidate_room_all(&self, room_id: RoomId) {
-        self.cache_perm_room
-            .retain(|(_, rid), _| room_id != *rid);
+        self.cache_perm_room.retain(|(_, rid), _| room_id != *rid);
         self.cache_perm_thread
             .retain(|(_, rid, _), _| room_id != *rid);
     }

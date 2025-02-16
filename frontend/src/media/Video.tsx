@@ -1,5 +1,11 @@
 import { createSignal, onMount, VoidProps } from "solid-js";
-import { formatTime, getDuration, getHeight, getWidth, MediaProps } from "./util.ts";
+import {
+	formatTime,
+	getDuration,
+	getHeight,
+	getWidth,
+	MediaProps,
+} from "./util.ts";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
