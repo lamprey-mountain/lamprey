@@ -161,6 +161,33 @@ impl DataRoomMember for Postgres {
         user_id: UserId,
         patch: RoomMemberPatch,
     ) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let item = query_as!(
+            DbRoomMember,
+            r#"
+            with r as (
+                select user_id, array_agg(role_id) as roles from role_member
+                join role on role.room_id = $1 and role_member.role_id = role.id
+                group by user_id
+            )
+        	SELECT
+            	room_id,
+            	m.user_id,
+            	membership as "membership: _",
+            	override_name,
+            	override_description, 
+            	membership_updated_at, 
+            	coalesce(r.roles, '{}') as "roles!"
+            FROM room_member m
+            left join r on r.user_id = m.user_id
+            WHERE room_id = $1 AND m.user_id = $2
+        "#,
+            room_id.into_inner(),
+            user_id.into_inner(),
+        )
+        .fetch_one(&mut *tx)
+        .await?;
         query!(
             r#"
             UPDATE room_member
@@ -169,10 +196,10 @@ impl DataRoomMember for Postgres {
         "#,
             room_id.into_inner(),
             user_id.into_inner(),
-            patch.override_name,
-            patch.override_description,
+            patch.override_name.unwrap_or(item.override_name),
+            patch.override_description.unwrap_or(item.override_description),
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
         Ok(())
     }

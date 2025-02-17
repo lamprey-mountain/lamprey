@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use crate::Permission;
 
@@ -48,4 +48,13 @@ where
             vec
         })
     })
+}
+
+// https://github.com/serde-rs/serde/issues/904
+pub fn some_option<'de, T, D>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
 }

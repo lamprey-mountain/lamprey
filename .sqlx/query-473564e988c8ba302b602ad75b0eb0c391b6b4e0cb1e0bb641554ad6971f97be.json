@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "473564e988c8ba302b602ad75b0eb0c391b6b4e0cb1e0bb641554ad6971f97be"
+}

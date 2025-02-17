@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::{some_option, Diff};
 use crate::UserId;
 
 use super::ThreadId;
@@ -28,10 +29,22 @@ pub struct ThreadMember {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadMemberPatch {
+pub struct ThreadMemberPut {
     pub override_name: Option<String>,
     pub override_description: Option<String>,
-    // override_avatar: z.string().url().or(z.literal("")),
+    // pub override_avatar: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ThreadMemberPatch {
+    #[serde(default, deserialize_with = "some_option")]
+    pub override_name: Option<Option<String>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub override_description: Option<Option<String>>,
+    // #[serde(default, deserialize_with = "some_option")]
+    // pub override_avatar: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

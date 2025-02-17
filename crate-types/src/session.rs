@@ -45,8 +45,10 @@ pub struct SessionCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SessionPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[serde(default, deserialize_with = "some_option")]
     pub name: Option<Option<String>>,
 }
+use crate::util::some_option;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

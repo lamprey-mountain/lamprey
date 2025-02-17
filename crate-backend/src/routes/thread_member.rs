@@ -5,8 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
 use types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
-    ThreadMemberPatch, ThreadMembership, UserId,
+    MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember, ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -98,7 +97,7 @@ pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<ThreadMemberPatch>,
+    Json(req): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
@@ -120,8 +119,8 @@ pub async fn thread_member_add(
         thread_id,
         target_user_id,
         ThreadMembership::Join {
-            override_name: patch.override_name,
-            override_description: patch.override_description,
+            override_name: req.override_name,
+            override_description: req.override_description,
         },
     )
     .await?;

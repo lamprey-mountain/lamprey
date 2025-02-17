@@ -41,10 +41,12 @@ pub struct ThreadCreateRequest {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ThreadPatch {
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
     pub state: Option<ThreadState>,
 }
 
+use crate::util::some_option;
 /// lifecycle of a thread
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

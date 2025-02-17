@@ -45,15 +45,26 @@ pub struct MessageCreateRequest {
     pub override_name: Option<String>, // temp?
     pub nonce: Option<String>,
 }
+use crate::util::some_option;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePatch {
+    #[serde(default, deserialize_with = "some_option")]
     pub content: Option<Option<String>>,
+    
     pub attachments: Option<Vec<MediaRef>>,
+    
+    #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
+    
+    #[serde(default, deserialize_with = "some_option")]
     pub reply_id: Option<Option<MessageId>>,
-    pub override_name: Option<Option<String>>, // temp?
+    
+    // is this temporary, or should i keep it?
+    // removing it would break all existing bridged messages
+    #[serde(default, deserialize_with = "some_option")]
+    pub override_name: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

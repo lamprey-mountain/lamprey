@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::{deserialize_sorted_permissions, deserialize_sorted_permissions_option, Diff};
+use crate::util::{deserialize_sorted_permissions, deserialize_sorted_permissions_option, Diff, some_option};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
@@ -47,6 +47,7 @@ pub struct RoleCreateRequest {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RolePatch {
     pub name: Option<String>,
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
     #[serde(default, deserialize_with = "deserialize_sorted_permissions_option")]
     pub permissions: Option<Vec<Permission>>,

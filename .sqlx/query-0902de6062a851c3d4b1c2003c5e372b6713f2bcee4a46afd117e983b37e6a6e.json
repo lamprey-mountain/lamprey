@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, status, can_fork, type, state)\n            VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)\n            RETURNING id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\"\n        ",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\", avatar\n            FROM usr WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -65,41 +65,16 @@
             }
           }
         }
+      },
+      {
+        "ordinal": 8,
+        "name": "avatar",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Text",
-        "Text",
-        {
-          "Custom": {
-            "name": "user_type",
-            "kind": {
-              "Enum": [
-                "Default",
-                "Alias",
-                "Bot",
-                "System"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "user_state",
-            "kind": {
-              "Enum": [
-                "Active",
-                "Suspended",
-                "Deleted"
-              ]
-            }
-          }
-        }
+        "Uuid"
       ]
     },
     "nullable": [
@@ -110,8 +85,9 @@
       true,
       true,
       false,
-      false
+      false,
+      true
     ]
   },
-  "hash": "a70332580f494a2b6f1e8a786a7276bb08dc34d7a2c0d53b57ceb7aa89f44130"
+  "hash": "0902de6062a851c3d4b1c2003c5e372b6713f2bcee4a46afd117e983b37e6a6e"
 }

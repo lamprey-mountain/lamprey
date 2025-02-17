@@ -22,7 +22,8 @@
             "kind": {
               "Enum": [
                 "Message",
-                "MessageVersion"
+                "MessageVersion",
+                "AvatarUser"
               ]
             }
           }

@@ -5,6 +5,8 @@ use utoipa::ToSchema;
 
 use super::{RoleId, RoomId, UserId};
 
+use crate::util::{some_option, Diff};
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomMember {
@@ -24,10 +26,22 @@ pub struct RoomMember {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomMemberPatch {
+pub struct RoomMemberPut {
     pub override_name: Option<String>,
     pub override_description: Option<String>,
-    // override_avatar: z.string().url().or(z.literal("")),
+    // pub override_avatar: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomMemberPatch {
+    #[serde(default, deserialize_with = "some_option")]
+    pub override_name: Option<Option<String>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub override_description: Option<Option<String>>,
+    // #[serde(default, deserialize_with = "some_option")]
+    // pub override_avatar: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -75,6 +75,26 @@ impl DataThreadMember for Postgres {
         user_id: UserId,
         patch: ThreadMemberPatch,
     ) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let item = query_as!(
+            DbThreadMember,
+            r#"
+        	SELECT
+            	thread_id,
+            	user_id,
+            	membership as "membership: _",
+            	membership_updated_at,
+            	override_name,
+            	override_description 
+            FROM thread_member
+            WHERE thread_id = $1 AND user_id = $2
+        "#,
+            thread_id.into_inner(),
+            user_id.into_inner(),
+        )
+        .fetch_one(&mut *tx)
+        .await?;
         query!(
             r#"
             UPDATE thread_member
@@ -83,10 +103,10 @@ impl DataThreadMember for Postgres {
         "#,
             thread_id.into_inner(),
             user_id.into_inner(),
-            patch.override_name,
-            patch.override_description,
+            patch.override_name.unwrap_or(item.override_name),
+            patch.override_description.unwrap_or(item.override_description),
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
         Ok(())
     }
