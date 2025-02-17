@@ -1148,6 +1148,7 @@ input[type="range"] {
 
 .media-text {
 	& > .wrap {
+		position: relative;
 		overflow: hidden;
 		padding: 8px;
 		background-color: $bg2;
@@ -1161,5 +1162,39 @@ input[type="range"] {
 		&.collapsed > pre {
 			height: 10lh;
 		}
+
+		& > .copy {
+			position: absolute;
+			top: 4px;
+			right: 4px;
+			visibility: hidden;
+		}
+
+		&:hover > .copy {
+			visibility: visible;
+		}
 	}
+}
+
+pre.numbered {
+	counter-reset: line;
+
+	& > code::before {
+		counter-increment: line;
+		content: counter(line);
+		text-align: right;
+		display: inline-block;
+		color: $fg5;
+		width: 2ch;
+		margin-right: 1em;
+		user-select: none;
+	}
+}
+
+.warn {
+	color: #f9cb40;
+}
+
+.error {
+	color: #de3c4b;
 }
