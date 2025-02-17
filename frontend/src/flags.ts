@@ -31,7 +31,10 @@ const flagsDev: Flag[] = [
 	"room_member_list",
 	"new_media",
 ];
-const flagsProd: Flag[] = [];
+
+const flagsProd: Flag[] = [
+	"new_media"
+];
 
 export const flags = new ReactiveSet(
 	(import.meta as unknown as ImportMeta).env.DEV ? flagsDev : flagsProd,
