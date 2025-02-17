@@ -1,14 +1,8 @@
 @use "./reset.scss";
 @use "./fonts.scss";
 @use "./code.scss";
-
-/* splitting out different "layers" of css? maybe once this file gets "too unwieldy" */
-/* theres other ways to split out css: per component, as mixins, etc */
-/* @use "./layout.scss"; */
-/* @use "./spacing.scss"; */
 @use "./theme.scss";
 @use "./animation.scss" as *;
-
 @use "./util.scss" as *;
 
 :root {
