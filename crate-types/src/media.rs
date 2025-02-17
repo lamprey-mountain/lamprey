@@ -6,7 +6,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::MediaId;
+use crate::{util::Diff, MediaId};
 
 /// A distinct logical item of media.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,6 +25,13 @@ pub struct Media {
 
     /// The source (Extracted, Generated)
     pub tracks: Vec<MediaTrack>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MediaPatch {
+    /// Descriptive alt text, not entirely unlike a caption
+    pub alt: Option<Option<String>>,
 }
 
 // TODO: the language for this piece of media
@@ -291,5 +298,17 @@ impl MediaTrack {
 impl From<String> for Language {
     fn from(value: String) -> Self {
         Self(value)
+    }
+}
+
+impl Diff<Media> for MediaPatch {
+    fn changes(&self, other: &Media) -> bool {
+        self.alt.changes(&other.alt)
+    }
+}
+
+impl Media {
+    pub fn all_tracks(&self) -> impl Iterator<Item = &MediaTrack> {
+        self.tracks.iter().chain([&self.source])
     }
 }

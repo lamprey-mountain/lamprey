@@ -22,6 +22,8 @@ pub enum Error {
     MissingPermissions,
     #[error("bad request: {0}")]
     BadStatic(&'static str),
+    #[error("bad request: {0}")]
+    BadRequest(String),
     #[error("too big :(")]
     TooBig,
     #[error("internal error: {0}")]
@@ -67,6 +69,9 @@ pub enum Error {
 
     #[error("not yet implemented...")]
     Unimplemented,
+
+    #[error("image error: {0}")]
+    ImageError(#[from] image::ImageError),
 }
 
 impl From<sqlx::Error> for Error {
@@ -90,6 +95,7 @@ impl Error {
             Error::NotFound => StatusCode::NOT_FOUND,
             Error::BadHeader => StatusCode::BAD_REQUEST,
             Error::BadStatic(_) => StatusCode::BAD_REQUEST,
+            Error::BadRequest(_) => StatusCode::BAD_REQUEST,
             Error::Serde(_) => StatusCode::BAD_REQUEST,
             Error::MissingAuth => StatusCode::UNAUTHORIZED,
             Error::UnauthSession => StatusCode::UNAUTHORIZED,

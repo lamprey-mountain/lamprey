@@ -5,17 +5,16 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    Json,
+    routing, Json,
 };
 use futures_util::StreamExt;
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tracing::{debug, info, trace};
-use types::{MediaSize, MediaTrack, TrackSource, UserId};
+use types::MediaSize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     error::{Error, Result},
-    services::media::MediaUpload,
     types::{Media, MediaCreate, MediaCreated, MediaId},
     ServerState,
 };
@@ -52,7 +51,7 @@ async fn media_create(
     let upload_url = Some(
         s.config()
             .base_url
-            .join(&format!("/api/v1/media/{}", media_id))?,
+            .join(&format!("/api/v1/internal/media-upload/{media_id}"))?,
     );
     let res = MediaCreated {
         media_id,
@@ -64,18 +63,25 @@ async fn media_create(
     Ok((StatusCode::CREATED, res_headers, Json(res)))
 }
 
+// /// Media patch
+// #[utoipa::path(
+//     patch,
+//     path = "/media/{media_id}",
+//     tags = ["media"],
+//     params(("media_id", description = "Media id")),
+//     responses(
+//         (status = NOT_MODIFIED, description = "Not modified"),
+//         (status = OK, body = Media, description = "Success"),
+//     )
+// )]
+// async fn media_patch(
+//     Path(media_id): Path<MediaId>,
+//     Auth(user_id): Auth,
+//     State(s): State<Arc<ServerState>>,
+// ) -> Result<impl IntoResponse> {
+// }
+
 /// Media upload
-#[utoipa::path(
-    patch,
-    path = "/media/{media_id}",
-    tags = ["media"],
-    params(("media_id", description = "Media id")),
-    request_body = Vec<u8>,
-    responses(
-        (status = NO_CONTENT, description = "Upload part success"),
-        (status = OK, body = Media, description = "Upload done"),
-    )
-)]
 async fn media_upload(
     Path(media_id): Path<MediaId>,
     Auth(user_id): Auth,
@@ -146,7 +152,11 @@ async fn media_upload(
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
             trace!("processing upload");
-            let mut media = process_upload(up, media_id, user_id, s.clone()).await?;
+            let mut media = s
+                .services()
+                .media
+                .process_upload(up, media_id, user_id)
+                .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
             let mut headers = HeaderMap::new();
@@ -257,58 +267,15 @@ async fn media_delete(
     }
 }
 
-async fn process_upload(
-    up: MediaUpload,
-    media_id: MediaId,
-    user_id: UserId,
-    s: Arc<ServerState>,
-) -> Result<Media> {
-    let p = up.temp_file.file_path().to_owned();
-    let url = format!("media/{media_id}");
-    let services = s.services();
-    let (meta, mime) = services.media.get_metadata_and_mime(&p).await?;
-    debug!("finish upload for {}, mime {}", media_id, mime);
-    let upload_s3 = async {
-        // TODO: stream upload
-        let bytes = tokio::fs::read(&p).await?;
-        s.blobs()
-            .write_with(&url, bytes)
-            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-            // FIXME: sometimes this fails with "failed to parse header"
-            // .content_type(&mime)
-            .await?;
-        Result::Ok(())
-    };
-    upload_s3.await?;
-    info!("uploaded {} bytes to s3", up.create.size);
-    let media = Media {
-        alt: up.create.alt.clone(),
-        id: media_id,
-        filename: up.create.filename.clone(),
-        source: MediaTrack {
-            url,
-            mime,
-            // TODO: use correct MediaTrackInfo type
-            info: types::MediaTrackInfo::Mixed(types::Mixed {
-                height: meta.and_then(|m| m.height),
-                width: meta.and_then(|m| m.width),
-                duration: meta.and_then(|m| m.duration),
-                language: None,
-            }),
-            size: MediaSize::Bytes(up.create.size),
-            source: TrackSource::Uploaded,
-        },
-        tracks: vec![],
-    };
-    s.data().media_insert(user_id, media.clone()).await?;
-    Ok(media)
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(media_create))
-        .routes(routes!(media_upload))
+        // .routes(routes!(media_patch))
         .routes(routes!(media_get))
         .routes(routes!(media_check))
         .routes(routes!(media_delete))
+        .route(
+            "/internal/media-upload/{media_id}",
+            routing::patch(media_upload),
+        )
 }

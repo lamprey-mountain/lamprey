@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    INSERT INTO media_track (\n                media_id, url, size, mime,\n                source, source_url,\n                info, height, width, duration, codec, language\n            )\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)\n        ",
+  "query": "\n    \t    INSERT INTO media_track (\n                media_id, url, size, size_type, mime,\n                source, source_url,\n                info, height, width, duration, codec, language\n            )\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -8,6 +8,17 @@
         "Uuid",
         "Text",
         "Int8",
+        {
+          "Custom": {
+            "name": "media_size_type",
+            "kind": {
+              "Enum": [
+                "Bytes",
+                "BytesPerSecond"
+              ]
+            }
+          }
+        },
         "Text",
         {
           "Custom": {
@@ -50,5 +61,5 @@
     },
     "nullable": []
   },
-  "hash": "8661498fe8947be21d7d8cd6cc1412dbdc7eb929d0dddb29472bb380efea32a4"
+  "hash": "a39cd2998220b89c33c920d063e9a25a528cd860ca5454294381b3c32fab8a7c"
 }

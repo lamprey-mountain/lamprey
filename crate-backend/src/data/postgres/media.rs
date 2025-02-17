@@ -12,14 +12,14 @@ use crate::data::DataMedia;
 
 use super::Postgres;
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct DbMedia {
     id: Uuid,
     filename: String,
     alt: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct DbMediaTrack {
     info: DbMediaTrackType,
     height: Option<i64>,
@@ -35,14 +35,14 @@ pub struct DbMediaTrack {
     source: DbTrackSource,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Debug, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_size_type")]
 enum DbMediaSizeType {
     Bytes,
     BytesPerSecond,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Debug, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_source")]
 enum DbTrackSource {
     Uploaded,
@@ -51,7 +51,7 @@ enum DbTrackSource {
     Generated,
 }
 
-#[derive(Deserialize, sqlx::Type)]
+#[derive(Debug, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "media_track_type")]
 enum DbMediaTrackType {
     Video,
@@ -223,20 +223,21 @@ impl DataMedia for Postgres {
         )
         .execute(&mut *tx)
         .await?;
-        for track in media.tracks.into_iter().chain([media.source]) {
-            let t: DbMediaTrack = track.into();
+        for track in media.all_tracks() {
+            let t: DbMediaTrack = dbg!(track.to_owned().into());
             query!(
                 "
     	    INSERT INTO media_track (
-                media_id, url, size, mime,
+                media_id, url, size, size_type, mime,
                 source, source_url,
-                info, height, width, duration, codec, language
+                info, width, height, duration, codec, language
             )
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ",
                 media.id.into_inner(),
                 t.url,
                 t.size,
+                t.size_type as _,
                 t.mime,
                 t.source as _,
                 t.source_url,

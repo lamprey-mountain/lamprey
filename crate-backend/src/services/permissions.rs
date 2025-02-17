@@ -65,7 +65,7 @@ impl ServicePermissions {
         self.cache_perm_thread
             .retain(|(_, rid, _), _| room_id != *rid);
     }
-    
+
     pub fn invalidate_thread(&self, user_id: UserId, thread_id: ThreadId) {
         self.cache_perm_thread
             .retain(|(uid, _, tid), _| !(thread_id == *tid || user_id == *uid));

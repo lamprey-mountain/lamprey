@@ -32,6 +32,7 @@ pub struct Stream {
 #[derive(Debug, Deserialize)]
 pub struct Disposition {
     pub default: u8,
+    pub attached_pic: u8,
 }
 
 #[derive(Default, Debug, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -91,5 +92,17 @@ impl Metadata {
 
     pub fn is_video(&self) -> bool {
         self.get_main_video().is_some()
+    }
+
+    pub fn get_thumb_stream(&self) -> Option<&Stream> {
+        self.streams
+            .iter()
+            .find(|i| {
+                i.codec_type == MediaType::Attachment
+                    && i.disposition.default == 1
+                    && i.disposition.attached_pic == 1
+            })
+            .or_else(|| self.get_main(MediaType::Attachment))
+            .or_else(|| self.get_main(MediaType::Video))
     }
 }

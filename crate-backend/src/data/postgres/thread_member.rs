@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 use types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember, ThreadMemberPatch,
-    ThreadMembership, UserId,
+    PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember,
+    ThreadMemberPatch, ThreadMembership, UserId,
 };
 use uuid::Uuid;
 

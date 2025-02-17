@@ -1,10 +1,14 @@
-use std::sync::Arc;
+use std::{io::Cursor, process::Stdio, sync::Arc};
 
 use async_tempfile::TempFile;
 use dashmap::DashMap;
+use ffprobe::{MediaType, Metadata};
+use image::ImageFormat;
 use tokio::{io::BufWriter, process::Command};
-use tracing::trace;
-use types::{MediaCreate, MediaId, UserId};
+use tracing::{debug, error, info, trace};
+use types::{
+    Media, MediaCreate, MediaId, MediaSize, MediaTrack, MediaTrackInfo, TrackSource, UserId,
+};
 
 use crate::{
     error::{Error, Result},
@@ -12,13 +16,6 @@ use crate::{
 };
 
 mod ffprobe;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Metadata {
-    pub height: Option<u64>,
-    pub width: Option<u64>,
-    pub duration: Option<u64>,
-}
 
 pub struct ServiceMedia {
     pub state: Arc<ServerStateInner>,
@@ -79,87 +76,184 @@ impl ServiceMedia {
         if meta.is_video() {
             mime = mime.replace("video/webm", "audio/webm");
         }
-        Ok((
-            Some(Metadata {
-                height: meta.width(),
-                width: meta.height(),
-                duration: meta.duration().map(|i| i as u64),
-            }),
-            mime,
-        ))
+        Ok((Some(meta), mime))
     }
 
-    // #[tracing::instrument(skip(self))]
-    // pub async fn generate_thumbnail(
-    //     &self,
-    //     media_id: MediaId,
-    //     meta: &ffprobe::Metadata,
-    //     path: &std::path::Path,
-    //     force: bool,
-    // ) -> Result<()> {
-    //     let data = self.state.data();
-    //     let media = data.media_select(media_id).await?;
-    //     if media.thumbnail_url.is_some() && !force {
-    //         return Ok(());
-    //     }
-    //     let mime = get_mime(path).await?;
-    //     if mime.starts_with("image/") {
-    //         // image::image_dimensions()
-    //         let bytes = tokio::fs::read(path).await?;
-    //         let cursor = std::io::Cursor::new(bytes);
-    //         let img = image::ImageReader::new(cursor).decode()?;
-    //         img.thumbnail( , )
-    //     }
-    //     meta.get_main(MediaType::Attachment);
-    //     meta.get_main_video();
+    #[tracing::instrument(skip(self))]
+    pub async fn generate_thumbnails(
+        &self,
+        media: &mut Media,
+        meta: &ffprobe::Metadata,
+        path: &std::path::Path,
+        force: bool,
+    ) -> Result<()> {
+        if media
+            .all_tracks()
+            .any(|i| matches!(i.info, MediaTrackInfo::Thumbnail(_)))
+            && !force
+        {
+            return Ok(());
+        }
+        let media_id = media.id;
+        let mime = get_mime(path).await?;
+        let img = if mime.starts_with("image/") {
+            let bytes = tokio::fs::read(path).await?;
+            let cursor = Cursor::new(bytes);
+            image::ImageReader::new(cursor)
+                .with_guessed_format()?
+                .decode()?
+        } else if let Some(thumb) = meta.get_thumb_stream() {
+            if thumb.codec_type == MediaType::Attachment {
+                let cmd = Command::new("ffmpeg")
+                    .args([
+                        "-v",
+                        "quiet",
+                        &format!("-dump_attachment:{}", thumb.index),
+                        "/dev/stdout",
+                        "-y",
+                        "-i",
+                    ])
+                    .arg(path)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::inherit())
+                    .output()
+                    .await?;
+                let cursor = Cursor::new(cmd.stdout);
+                image::ImageReader::new(cursor)
+                    .with_guessed_format()?
+                    .decode()?
+            } else if thumb.codec_type == MediaType::Video {
+                let cmd = Command::new("ffmpeg")
+                    .args(["-v", "quiet", "-i"])
+                    .arg(path)
+                    .args([
+                        "-vf",
+                        "thumbnail,scale=300:300",
+                        "-fames:v",
+                        "1",
+                        "-f",
+                        "webp",
+                        "-",
+                    ])
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::inherit())
+                    .output()
+                    .await?;
+                let cursor = Cursor::new(cmd.stdout);
+                image::ImageReader::new(cursor)
+                    .with_guessed_format()?
+                    .decode()?
+            } else {
+                error!("no suitable thumbnail codec");
+                return Ok(());
+            }
+        } else {
+            error!("no suitable thumbnail stream");
+            return Ok(());
+        };
+        for size in [64, 320] {
+            if img.width() < size && img.width() < size {
+                continue;
+            }
+            let mut out = Cursor::new(Vec::new());
+            img.thumbnail(size, size)
+                .write_to(&mut out, ImageFormat::WebP)?;
+            let url = format!("thumb/{media_id}/{size}");
+            let len = out.get_ref().len();
+            self.state
+                .blobs
+                .write_with(&url, out.into_inner())
+                .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                .await?;
+            media.tracks.push(MediaTrack {
+                info: MediaTrackInfo::Thumbnail(types::Image {
+                    height: size as u64,
+                    width: size as u64,
+                    language: None,
+                }),
+                url,
+                size: MediaSize::Bytes(len as u64),
+                mime: "image/webp".to_owned(),
+                source: TrackSource::Generated,
+            });
+        }
+        Ok(())
+    }
 
-    //     // data
-    //     Ok(())
-    //     // if let Some() = {}
-    //     // media.url
-    //     // media_id
-    // }
+    pub async fn process_upload(
+        &self,
+        up: MediaUpload,
+        media_id: MediaId,
+        user_id: UserId,
+    ) -> Result<Media> {
+        let tmp = up.temp_file;
+        let p = tmp.file_path().to_owned();
+        let url = format!("media/{media_id}");
+        let services = self.state.services();
+        let (meta, mime) = &dbg!(services.media.get_metadata_and_mime(&p).await?);
+        let mut media = Media {
+            alt: up.create.alt.clone(),
+            id: media_id,
+            filename: up.create.filename.clone(),
+            source: MediaTrack {
+                url: url.clone(),
+                mime: mime.clone(),
+                // TODO: use correct MediaTrackInfo type
+                info: if mime.starts_with("image/") {
+                    types::MediaTrackInfo::Image(types::Image {
+                        height: meta
+                            .as_ref()
+                            .and_then(|m| m.height())
+                            .expect("all images have a height"),
+                        width: meta
+                            .as_ref()
+                            .and_then(|m| m.width())
+                            .expect("all images have a width"),
+                        language: None,
+                    })
+                } else {
+                    types::MediaTrackInfo::Mixed(types::Mixed {
+                        height: meta.as_ref().and_then(|m| m.height()),
+                        width: meta.as_ref().and_then(|m| m.width()),
+                        duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
+                        language: None,
+                    })
+                },
+                size: MediaSize::Bytes(up.create.size),
+                source: TrackSource::Uploaded,
+            },
+            tracks: vec![],
+        };
+        debug!("finish upload for {}, mime {}", media_id, mime);
+        if let Some(meta) = &meta {
+            self.generate_thumbnails(&mut media, meta, &p, false)
+                .await?;
+        }
+        debug!("finish generating thumbnails for {}", media_id);
+        let upload_s3 = async {
+            // TODO: stream upload
+            let bytes = tokio::fs::read(&p).await?;
+            self.state
+                .blobs
+                .write_with(&url, bytes)
+                .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                // FIXME: sometimes this fails with "failed to parse header"
+                // .content_type(&mime)
+                .await?;
+            Result::Ok(())
+        };
+        upload_s3.await?;
+        info!("uploaded {} bytes to s3", up.create.size);
+        drop(tmp);
+        self.state
+            .data()
+            .media_insert(user_id, media.clone())
+            .await?;
+        Ok(media)
+    }
 }
-
-// TEMP: copied from an old project
-// pub async fn thumbnail(&self, buffer: &[u8]) -> Option<Vec<u8>> {
-//     trace!("generate thumbnail");
-//     match self
-//         .streams
-//         .iter()
-//         .find(|s| s.disposition.attached_pic == 1)
-//     {
-//         Some(stream) => ffmpeg::extract(
-//             buffer,
-//             &["-map", &format!("0:{}", stream.index), "-f", "webp", "-"],
-//         )
-//         .await
-//         .ok(),
-//         None => ffmpeg::extract(buffer, &["-vframes", "1", "-f", "webp", "-"])
-//             .await
-//             .ok(),
-//     }
-// }
-
-// // FIXME: some files (mp4, mov) may fail to thumbnail with stdin
-// // they can have a MOOV atom at the end, and ffmpeg can't seek to the beginning
-// pub async fn extract(buffer: &[u8], args: &[&str]) -> Result<Vec<u8>, ()> {
-//     let mut cmd = Command::new("ffmpeg")
-//         .args([&["-v", "quiet", "-i", "-"], args].concat())
-//         .stdin(Stdio::piped())
-//         .stdout(Stdio::piped())
-//         .stderr(Stdio::inherit())
-//         .spawn()
-//         .expect("couldn't find ffmpeg");
-
-//     let mut cmd_stdin = cmd.stdin.take().expect("ffmpeg should take stdin");
-
-//     let mut cursor = Cursor::new(&buffer);
-//     let _ = tokio::io::copy(&mut cursor, &mut cmd_stdin).await;
-//     drop(cmd_stdin);
-
-//     Ok(cmd.wait_with_output().await.map_err(|_| ())?.stdout)
-// }
 
 async fn get_ffprobe_metadata(file: &std::path::Path) -> Result<ffprobe::Metadata> {
     let out = Command::new("ffprobe")

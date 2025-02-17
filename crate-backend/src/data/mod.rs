@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership
+    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch,
+    RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember,
+    ThreadMemberPatch, ThreadMembership,
 };
 use uuid::Uuid;
 
@@ -319,7 +321,8 @@ pub trait DataThreadMember {
         membership: ThreadMembership,
     ) -> Result<()>;
     async fn thread_member_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
-    async fn thread_member_get(&self, thread_id: ThreadId, user_id: UserId) -> Result<ThreadMember>;
+    async fn thread_member_get(&self, thread_id: ThreadId, user_id: UserId)
+        -> Result<ThreadMember>;
     async fn thread_member_list(
         &self,
         thread_id: ThreadId,

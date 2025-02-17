@@ -54,6 +54,7 @@ pub struct ServerStateInner {
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
+    pub blobs: opendal::Operator,
 }
 
 pub struct ServerState {
@@ -62,8 +63,6 @@ pub struct ServerState {
 
     // TODO: limit number of connections per user, clean up old/unused entries
     pub syncers: Arc<DashMap<String, Connection>>,
-
-    pub blobs: opendal::Operator,
 }
 
 impl ServerStateInner {
@@ -137,6 +136,7 @@ impl ServerState {
                 config,
                 pool,
                 services: weak.to_owned(),
+                blobs,
 
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
@@ -147,7 +147,6 @@ impl ServerState {
             inner: services.state.clone(),
             syncers: Arc::new(DashMap::new()),
             // channel_user: Arc::new(DashMap::new()),
-            blobs,
             services,
         }
     }
@@ -162,10 +161,6 @@ impl ServerState {
 
     fn services(self: &Arc<Self>) -> Arc<Services> {
         self.services.clone()
-    }
-
-    fn blobs(&self) -> &opendal::Operator {
-        &self.blobs
     }
 
     async fn broadcast_room(
@@ -207,6 +202,9 @@ impl ServerState {
         // HACK: temporary thing for better caching
         // TODO: i should use serviceworkers to cache while ignoring signature params
         media.source.url = format!("https://chat-files.celery.eu.org/{}", media.source.url);
+        for t in &mut media.tracks {
+            t.url = format!("https://chat-files.celery.eu.org/{}", t.url);
+        }
         Ok(())
     }
 }
