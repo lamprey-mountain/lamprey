@@ -8,7 +8,7 @@ import { useFloating } from "solid-floating-ui";
 type TooltipProps = {
 	// tip: ValidComponent,
 	tipText?: string;
-	component?: ValidComponent;
+	// component?: ValidComponent;
 	attrs?: Record<string, string>;
 	interactive?: boolean;
 	placement?: Placement;
@@ -18,12 +18,13 @@ type TooltipProps = {
 
 type TooltipAnimState = {
 	shouldAnim: boolean;
-	timeout: number;
+	timeout: NodeJS.Timeout;
 };
 
 const tooltipAnimSuppress = new Map<string, TooltipAnimState>();
 
 // TODO: only use one tooltip + event listener instead of per element
+// or, debug performance issues in geneal
 export function tooltip(
 	props: TooltipProps,
 	tip: ValidComponent,
@@ -33,8 +34,8 @@ export function tooltip(
 	const [tipEl, setTipEl] = createSignal<HTMLDivElement>();
 	// const [title, setTitle] = createSignal(getTitle());
 	const [visible, setVisible] = createSignal(false);
-	const [animate, setAnimate] = createSignal(false);
-	let popupRemoveTimeout: number;
+	const [animate, setAnimate] = createSignal(true);
+	let popupRemoveTimeout: NodeJS.Timeout;
 	let isHovered = false;
 	const overlayEl = document.getElementById("overlay")!;
 
@@ -43,7 +44,7 @@ export function tooltip(
 		if (!s) {
 			tooltipAnimSuppress.set(props.animGroup, {
 				shouldAnim: true,
-				timeout: 0,
+				timeout: 0 as unknown as NodeJS.Timeout,
 			});
 		}
 	}

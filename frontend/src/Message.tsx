@@ -15,6 +15,7 @@ import {
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
 import { MediaProps } from "./media/util.ts";
+import { Time } from "./Time.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -93,9 +94,9 @@ export function MessageView(props: MessageProps) {
 							{listFormatter.format(updates) || "did nothing"}
 						</span>
 					</div>
-					<span class="timestamp">
-						{date.toDateString()}
-					</span>
+					<div class="time">
+						<Time date={date} animGroup="message-ts" />
+					</div>
 				</>
 			);
 		} else {
@@ -129,7 +130,9 @@ export function MessageView(props: MessageProps) {
 							</ul>
 						</Show>
 					</div>
-					<span class="timestamp">{date.toDateString()}</span>
+					<div class="time">
+						<Time date={date} animGroup="message-ts" />
+					</div>
 				</>
 			);
 		}

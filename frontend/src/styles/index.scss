@@ -551,7 +551,7 @@ input[type="text"] {
 			background-color: rgba(var(--color-bg1), 0.3);
 		}
 
-		& > .timestamp {
+		& > .time {
 			visibility: visible;
 		}
 	}
@@ -628,7 +628,7 @@ input[type="text"] {
 		}
 	}
 
-	& > .timestamp {
+	& > .time {
 		visibility: hidden;
 		color: $fg4;
 	}
@@ -640,8 +640,11 @@ input[type="text"] {
 }
 
 .tooltip {
+	/* position: fixed; */
 	top: 0;
 	left: 0;
+	/* display: grid; */
+	/* place-items: center; */
 
 	& > .base {
 		position: absolute;
@@ -659,7 +662,7 @@ input[type="text"] {
 			forwards;
 		max-width: 500px;
 		min-width: 100px;
-		min-height: 50px;
+		min-height: 1rem;
 	}
 
 	&.interactive {
@@ -1065,4 +1068,40 @@ code {
 	/* should probably add a way to crop images in browser */
 	/* object-fit: cover; */
 	/* image-rendering: crisp-edges; */
+}
+
+.dropdown {
+  display: inline-block;
+  background: #eee;
+  border: solid #bbb 1px;
+  padding: 0 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.dropdown-items {
+  background: #eee;
+  border: solid #bbb 1px;
+}
+
+.dropdown-items > ul {
+  list-style: none;
+}
+
+.dropdown-items > ul > li {
+  padding: 2px 4px;
+  user-select: none;
+}
+
+.dropdown-items > ul > li.hovered {
+  background: #2222;
+}
+
+.dropdown-items > ul > li.selected {
+  box-shadow: inset 2px 0 0 #f0f2;
+  background: #f0f2;
+}
+
+.dropdown-items > ul > li.selected.hovered {
+  background: #7172;
 }

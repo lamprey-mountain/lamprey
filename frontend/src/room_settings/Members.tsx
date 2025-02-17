@@ -2,6 +2,7 @@ import { For, Show, VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { RoomT } from "../types.ts";
+import { Dropdown } from "../Dropdown.tsx";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();

@@ -20,6 +20,7 @@
 		"@solidjs/router": "^0.15.3",
 		"@types/node": "^22.13.4",
 		"event-emitter": "^0.3.5",
+		"fuzzysort": "^3.1.0",
 		"highlight.js": "^11.11.1",
 		"marked": "^15.0.7",
 		"prosemirror-history": "^1.4.1",
