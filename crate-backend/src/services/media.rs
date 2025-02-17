@@ -153,14 +153,15 @@ impl ServiceMedia {
             error!("no suitable thumbnail stream");
             return Ok(());
         };
-        for size in [64, 320] {
-            if img.width() < size && img.width() < size {
+        for size in [64, 320, 640] {
+            let (width, height) = (size, size);
+            if img.width() < width && img.height() < height {
                 continue;
             }
             let mut out = Cursor::new(Vec::new());
             let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 30);
-            img.thumbnail(size, size).write_with_encoder(enc)?;
-            let url = format!("thumb/{media_id}/{size}");
+            img.thumbnail(width, height).write_with_encoder(enc)?;
+            let url = format!("thumb/{media_id}/{width}x{height}");
             let len = out.get_ref().len();
             self.state
                 .blobs
@@ -169,8 +170,8 @@ impl ServiceMedia {
                 .await?;
             media.tracks.push(MediaTrack {
                 info: MediaTrackInfo::Thumbnail(types::Image {
-                    height: size as u64,
-                    width: size as u64,
+                    height: height as u64,
+                    width: width as u64,
                     language: None,
                 }),
                 url,
