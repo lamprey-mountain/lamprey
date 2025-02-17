@@ -14,7 +14,6 @@ import {
 	createResource,
 	onCleanup,
 	Resource,
-	untrack,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
@@ -116,6 +115,7 @@ function assertEq<T>(a: T, b: T) {
 	if (a !== b) throw new Error(`assert failed: ${a} !== ${b}`);
 }
 
+// TODO: save message media in cache, may need some more restructuring
 export class Messages {
 	public cache = new ReactiveMap<string, Message>();
 	public cacheRanges = new Map<string, MessageRanges>();

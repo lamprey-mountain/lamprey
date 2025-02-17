@@ -232,6 +232,10 @@ export function createApi(
 					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author.id));
 				}
 			}
+
+			for (const att of m.attachments) {
+				media.cacheInfo.set(att.id, att);
+			}
 		} else if (msg.type === "DeleteMessage") {
 			batch(() => {
 				const { message_id, thread_id } = msg;
