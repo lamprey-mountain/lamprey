@@ -1,4 +1,9 @@
-import { createEffect, createSignal, onCleanup, ValidComponent } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	onCleanup,
+	ValidComponent,
+} from "solid-js";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -40,14 +45,14 @@ export const AudioView = (props: MediaProps) => {
 		}
 	};
 
-	const toggleMute = () => setMuted(m => !m);
+	const toggleMute = () => setMuted((m) => !m);
 
 	const handleVolumeWheel = (e: WheelEvent) => {
 		e.preventDefault();
 		if (e.deltaY > 0) {
-			audio.volume = Math.max(volume() - .05, 0);
+			setVolume(Math.max(volume() - .05, 0));
 		} else {
-			audio.volume = Math.min(volume() + .05, 1);
+			setVolume(Math.min(volume() + .05, 1));
 		}
 	};
 
@@ -63,7 +68,7 @@ export const AudioView = (props: MediaProps) => {
 	const handleScrubClick = () => {
 		const p = progressPreview()!;
 		audio.currentTime = p;
-		setProgress(p)
+		setProgress(p);
 	};
 
 	const handleScrubMouseOut = () => {
@@ -77,7 +82,7 @@ export const AudioView = (props: MediaProps) => {
 		setProgressPreview(p);
 		if (e.buttons) {
 			audio.currentTime = p;
-			setProgress(p)
+			setProgress(p);
 		}
 	};
 
@@ -143,13 +148,14 @@ export const AudioView = (props: MediaProps) => {
 						alt={playing() ? "pause" : "play"}
 					/>
 				</button>
-				{tooltip({
-					placement: "top-start",
-					interactive: true,
-					doesntRetain: "input[type=range]",
-				},
+				{tooltip(
+					{
+						placement: "top-start",
+						interactive: true,
+						doesntRetain: "input[type=range]",
+					},
 					(
-						<div class="range">
+						<div class="range" onWheel={handleVolumeWheel}>
 							<input
 								type="range"
 								min={0}
@@ -157,24 +163,25 @@ export const AudioView = (props: MediaProps) => {
 								value={volume()}
 								disabled={muted()}
 								step={.001}
-								onInput={e => setVolume(e.target.valueAsNumber)}
+								onInput={(e) => setVolume(e.target.valueAsNumber)}
 							/>
 							<div class="dim">(click to mute)</div>
 							<div class="value">{getVolumeText()}</div>
 						</div>
 					) as ValidComponent,
-					(<button
-						onClick={toggleMute}
-						title={getVolumeText()}
-						onWheel={handleVolumeWheel}
-					>
-						<img
-							class="icon"
-							src={getVolumeIcon()}
-							alt={getVolumeText()}
-						/>
-					</button>
-					) as HTMLElement
+					(
+						<button
+							onClick={toggleMute}
+							title={getVolumeText()}
+							onWheel={handleVolumeWheel}
+						>
+							<img
+								class="icon"
+								src={getVolumeIcon()}
+								alt={getVolumeText()}
+							/>
+						</button>
+					) as HTMLElement,
 				)}
 				<div class="space"></div>
 				<div
