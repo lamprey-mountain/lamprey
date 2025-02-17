@@ -27,6 +27,7 @@ import {
 	RoomMember,
 	Session,
 	Thread,
+	ThreadMember,
 	User,
 } from "sdk";
 import { Emitter } from "@solid-primitives/event-bus";
@@ -43,6 +44,7 @@ import { Invites } from "./api/invite.ts";
 import { RoomMembers } from "./api/room_members.ts";
 import { Roles } from "./api/roles.ts";
 import { AuditLogs } from "./api/audit_log.ts";
+import { ThreadMembers } from "./api/thread_members.ts";
 
 export type Json =
 	| number
@@ -71,6 +73,7 @@ export function createApi(
 	const invites = new Invites();
 	const roles = new Roles();
 	const room_members = new RoomMembers();
+	const thread_members = new ThreadMembers();
 	const users = new Users();
 	const messages = new Messages();
 	const typing = new ReactiveMap<string, Set<string>>();
@@ -145,6 +148,32 @@ export function createApi(
 				room_members.cache.get(m.room_id)!.set(m.user_id, m);
 			}
 			const l = room_members._cachedListings.get(m.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex((i) => i.user_id === m.user_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, m),
+					});
+				} else {
+					l.mutate({
+						...p,
+						items: [...p.items, m],
+						total: p.total + 1,
+					});
+				}
+			}
+		} else if (msg.type === "UpsertThreadMember") {
+			const m = msg.member;
+			const c = thread_members.cache.get(m.thread_id);
+			if (c) {
+				c.set(m.user_id, m);
+			} else {
+				thread_members.cache.set(m.thread_id, new ReactiveMap());
+				thread_members.cache.get(m.thread_id)!.set(m.user_id, m);
+			}
+			const l = thread_members._cachedListings.get(m.thread_id);
 			if (l?.resource.latest) {
 				const p = l.resource.latest;
 				const idx = p.items.findIndex((i) => i.user_id === m.user_id);
@@ -363,6 +392,7 @@ export function createApi(
 		invites,
 		roles,
 		room_members,
+		thread_members,
 		users,
 		messages,
 		session,
@@ -384,6 +414,7 @@ export function createApi(
 	threads.api = api;
 	roles.api = api;
 	room_members.api = api;
+	thread_members.api = api;
 	invites.api = api;
 	users.api = api;
 	audit_logs.api = api;
@@ -427,6 +458,14 @@ export type Api = {
 		) => Resource<RoomMember>;
 		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
 		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
+	};
+	thread_members: {
+		fetch: (
+			thread_id: () => string,
+			user_id: () => string,
+		) => Resource<ThreadMember>;
+		list: (thread_id: () => string) => Resource<Pagination<ThreadMember>>;
+		cache: ReactiveMap<string, ReactiveMap<string, ThreadMember>>;
 	};
 	users: {
 		fetch: (user_id: () => string) => Resource<User>;
