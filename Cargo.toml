@@ -19,3 +19,6 @@ opt-level = 3
 
 [profile.dev.package.utoipa-gen]
 opt-level = 3
+
+[profile.dev.package.image]
+opt-level = 3

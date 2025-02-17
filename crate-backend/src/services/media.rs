@@ -3,9 +3,13 @@ use std::{io::Cursor, process::Stdio, sync::Arc};
 use async_tempfile::TempFile;
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
-use image::codecs::avif::AvifEncoder;
-use tokio::{io::BufWriter, process::Command};
-use tracing::{debug, error, info, trace};
+use futures_util::{stream::FuturesUnordered, StreamExt};
+use image::{codecs::avif::AvifEncoder, DynamicImage};
+use tokio::{
+    io::{AsyncReadExt, BufWriter},
+    process::Command,
+};
+use tracing::{debug, error, info, span, trace, Level};
 use types::{
     Media, MediaCreate, MediaId, MediaSize, MediaTrack, MediaTrackInfo, TrackSource, UserId,
 };
@@ -16,6 +20,8 @@ use crate::{
 };
 
 mod ffprobe;
+
+const MEGABYTE: usize = 1024 * 1024;
 
 pub struct ServiceMedia {
     pub state: Arc<ServerStateInner>,
@@ -153,34 +159,15 @@ impl ServiceMedia {
             error!("no suitable thumbnail stream");
             return Ok(());
         };
+        let mut fut = FuturesUnordered::new();
         for size in [64, 320, 640] {
-            let (width, height) = (size, size);
-            if img.width() < width && img.height() < height {
-                continue;
+            let state = self.state.clone();
+            fut.push(generate_and_upload_thumb(state, &img, media_id, size, size));
+        }
+        while let Some(track) = fut.next().await {
+            if let Some(track) = track? {
+                media.tracks.push(track);
             }
-            let mut out = Cursor::new(Vec::new());
-            // currently using the default
-            let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
-            img.thumbnail(width, height).write_with_encoder(enc)?;
-            let url = format!("thumb/{media_id}/{width}x{height}");
-            let len = out.get_ref().len();
-            self.state
-                .blobs
-                .write_with(&url, out.into_inner())
-                .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-                .content_type("image/avif")
-                .await?;
-            media.tracks.push(MediaTrack {
-                info: MediaTrackInfo::Thumbnail(types::Image {
-                    height: height as u64,
-                    width: width as u64,
-                    language: None,
-                }),
-                url,
-                size: MediaSize::Bytes(len as u64),
-                mime: "image/avif".to_owned(),
-                source: TrackSource::Generated,
-            });
         }
         Ok(())
     }
@@ -236,19 +223,24 @@ impl ServiceMedia {
         }
         debug!("finish generating thumbnails for {}", media_id);
         let upload_s3 = async {
-            // TODO: stream upload
-            let bytes = tokio::fs::read(&p).await?;
-            self.state
+            let mut f = tokio::fs::OpenOptions::new().read(true).open(&p).await?;
+            let mut buf = vec![0u8; MEGABYTE];
+            let mut w = self
+                .state
                 .blobs
-                .write_with(&url, bytes)
+                .writer_with(&url)
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
                 // FIXME: sometimes this fails with "failed to parse header"
                 // .content_type(&mime)
                 .await?;
+            while f.read(&mut buf).await? != 0 {
+                w.write(buf.to_vec()).await?;
+            }
+            w.close().await?;
+            info!("uploaded {} bytes to s3", up.create.size);
             Result::Ok(())
         };
         upload_s3.await?;
-        info!("uploaded {} bytes to s3", up.create.size);
         drop(tmp);
         self.state
             .data()
@@ -256,6 +248,50 @@ impl ServiceMedia {
             .await?;
         Ok(media)
     }
+}
+
+async fn generate_and_upload_thumb(
+    state: Arc<ServerStateInner>,
+    img: &DynamicImage,
+    media_id: MediaId,
+    width: u32,
+    height: u32,
+) -> Result<Option<MediaTrack>> {
+    if img.width() < width && img.height() < height {
+        return Ok(None);
+    }
+    let mut out = Cursor::new(Vec::new());
+    // currently using the default
+    let span_gen_thumb = span!(Level::INFO, "generate thumb");
+    let _s = span_gen_thumb.enter();
+    let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
+    img.thumbnail(width, height).write_with_encoder(enc)?;
+    drop(_s);
+    let url = format!("thumb/{media_id}/{width}x{height}");
+    let len = out.get_ref().len();
+    let span_upload_thumb = span!(Level::INFO, "upload thumb");
+    let _s = span_upload_thumb.enter();
+    let mut w = state
+        .blobs
+        .writer_with(&url)
+        .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+        .content_type("image/avif")
+        .await?;
+    w.write(out.into_inner()).await?;
+    w.close().await?;
+    drop(_s);
+    let track = MediaTrack {
+        info: MediaTrackInfo::Thumbnail(types::Image {
+            height: height as u64,
+            width: width as u64,
+            language: None,
+        }),
+        url,
+        size: MediaSize::Bytes(len as u64),
+        mime: "image/avif".to_owned(),
+        source: TrackSource::Generated,
+    };
+    Ok(Some(track))
 }
 
 async fn get_mime(file: &std::path::Path) -> Result<String> {

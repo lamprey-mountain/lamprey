@@ -11,6 +11,7 @@ use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
+use opendal::layers::{LoggingLayer, TimeoutLayer};
 use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -275,7 +276,10 @@ async fn main() -> Result<()> {
         .region(&config.s3.region)
         .access_key_id(&config.s3.access_key_id)
         .secret_access_key(&config.s3.secret_access_key);
-    let blobs = opendal::Operator::new(blobs_builder).unwrap().finish();
+    let blobs = opendal::Operator::new(blobs_builder)?
+        .layer(LoggingLayer::default())
+        .layer(TimeoutLayer::new().with_timeout(Duration::from_secs(60 * 60 * 5)))
+        .finish();
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
 
