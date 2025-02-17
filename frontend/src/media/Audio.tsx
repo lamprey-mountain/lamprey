@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, onCleanup, ValidComponent } from "solid-js";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -7,6 +7,7 @@ import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import { formatTime, getDuration, MediaProps } from "./util.ts";
+import { tooltip } from "../Tooltip.tsx";
 
 export const AudioView = (props: MediaProps) => {
 	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
@@ -27,9 +28,9 @@ export const AudioView = (props: MediaProps) => {
 	audio.ontimeupdate = () => setProgress(audio.currentTime);
 	audio.onplay = () => setPlaying(true);
 	audio.onpause = () => setPlaying(false);
-	audio.onvolumechange = () => setVolume(audio.volume);
 
 	createEffect(() => audio.muted = muted());
+	createEffect(() => audio.volume = volume());
 
 	const togglePlayPause = () => {
 		if (playing()) {
@@ -39,13 +40,7 @@ export const AudioView = (props: MediaProps) => {
 		}
 	};
 
-	const toggleMute = () => {
-		if (muted()) {
-			setMuted(false);
-		} else {
-			setMuted(true);
-		}
-	};
+	const toggleMute = () => setMuted(m => !m);
 
 	const handleVolumeWheel = (e: WheelEvent) => {
 		e.preventDefault();
@@ -66,7 +61,9 @@ export const AudioView = (props: MediaProps) => {
 	};
 
 	const handleScrubClick = () => {
-		audio.currentTime = progressPreview()!;
+		const p = progressPreview()!;
+		audio.currentTime = p;
+		setProgress(p)
 	};
 
 	const handleScrubMouseOut = () => {
@@ -78,7 +75,10 @@ export const AudioView = (props: MediaProps) => {
 		const { x, width } = target.getBoundingClientRect();
 		const p = ((e.clientX - x) / width) * duration();
 		setProgressPreview(p);
-		if (e.buttons) audio.currentTime = p;
+		if (e.buttons) {
+			audio.currentTime = p;
+			setProgress(p)
+		}
 	};
 
 	const progressWidth = () => `${(progress() / duration()) * 100}%`;
@@ -143,17 +143,39 @@ export const AudioView = (props: MediaProps) => {
 						alt={playing() ? "pause" : "play"}
 					/>
 				</button>
-				<button
-					onClick={toggleMute}
-					title={getVolumeText()}
-					onWheel={handleVolumeWheel}
-				>
-					<img
-						class="icon"
-						src={getVolumeIcon()}
-						alt={getVolumeText()}
-					/>
-				</button>
+				{tooltip({
+					placement: "top-start",
+					interactive: true,
+					doesntRetain: "input[type=range]",
+				},
+					(
+						<div class="range">
+							<input
+								type="range"
+								min={0}
+								max={1}
+								value={volume()}
+								disabled={muted()}
+								step={.001}
+								onInput={e => setVolume(e.target.valueAsNumber)}
+							/>
+							<div class="dim">(click to mute)</div>
+							<div class="value">{getVolumeText()}</div>
+						</div>
+					) as ValidComponent,
+					(<button
+						onClick={toggleMute}
+						title={getVolumeText()}
+						onWheel={handleVolumeWheel}
+					>
+						<img
+							class="icon"
+							src={getVolumeIcon()}
+							alt={getVolumeText()}
+						/>
+					</button>
+					) as HTMLElement
+				)}
 				<div class="space"></div>
 				<div
 					class="time"

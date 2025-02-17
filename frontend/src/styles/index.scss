@@ -640,11 +640,10 @@ input[type="text"] {
 }
 
 .tooltip {
-	/* position: fixed; */
 	top: 0;
 	left: 0;
-	/* display: grid; */
-	/* place-items: center; */
+	display: grid;
+	place-items: center;
 
 	& > .base {
 		position: absolute;
@@ -666,14 +665,12 @@ input[type="text"] {
 	}
 
 	&.interactive {
-		/* TODO: make safe area use a variable */
-		/* (and use more variables in general) */
-		padding: 8px;
-		margin: -8px;
+	  padding: var(--padding);
+	  margin: calc(-1 * var(--padding));
 
 		& > .base {
-			height: calc(100% - 16px);
-			width: calc(100% - 16px);
+ 			height: calc(100% - (var(--padding) * 2));
+			width: calc(100% - (var(--padding) * 2));
 		}
 	}
 
@@ -809,6 +806,7 @@ summary {
 	width: 200px;
 	position: relative;
 	padding: 4px;
+	/* border: solid $bg4 1px; */
 	border: solid $bg3 1px;
 	contain: content;
 
@@ -1108,4 +1106,26 @@ code {
 
 .dropdown-items > ul > li.selected.hovered {
   background: #7172;
+}
+
+input[type="range"] {
+	appearance: auto;
+	accent-color: $link;
+}
+
+.range {
+	display: grid;
+	grid-template-areas: "input input" "text dim";
+	
+	& > input {
+		grid-area: input;
+	}
+	
+	& > .dim {
+		align-self: center;
+	}
+	
+	& > .value {
+		text-align: right;
+	}
 }

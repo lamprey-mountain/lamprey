@@ -6,14 +6,12 @@ import { useFloating } from "solid-floating-ui";
 // WARNING: this is potentially very laggy
 // TODO: defer tooltip
 type TooltipProps = {
-	// tip: ValidComponent,
 	tipText?: string;
-	// component?: ValidComponent;
 	attrs?: Record<string, string>;
 	interactive?: boolean;
 	placement?: Placement;
 	animGroup?: string;
-	// "bottom-start"
+	doesntRetain?: string;
 };
 
 type TooltipAnimState = {
@@ -38,6 +36,7 @@ export function tooltip(
 	let popupRemoveTimeout: NodeJS.Timeout;
 	let isHovered = false;
 	const overlayEl = document.getElementById("overlay")!;
+	const padding = () => 8;
 
 	if (props.animGroup) {
 		const s = tooltipAnimSuppress.get(props.animGroup);
@@ -86,6 +85,7 @@ export function tooltip(
 		// maybe have global set of what is hovered and what is a parent of what
 		isHovered = false;
 		if (!props.interactive) return hideTip();
+		if (props.doesntRetain && document.activeElement?.matches(props.doesntRetain)) return hideTip();
 		if (tipEl()?.contains(document.activeElement)) return;
 		popupRemoveTimeout = setTimeout(hideTip, 0);
 	}
@@ -102,7 +102,10 @@ export function tooltip(
 		whileElementsMounted: autoUpdate,
 		strategy: "fixed",
 		placement: props.placement,
-		middleware: [shift({ padding: 8 }), offset({ mainAxis: 4 }), flip()],
+		// HACK: make volume slider work properly
+		middleware: props.placement === "top-start"
+			? [shift({ padding: padding() }), offset({ mainAxis: -8 }), flip()]
+			: [shift({ padding: padding() }), offset({ mainAxis: 4 }), flip()],
 	});
 
 	wrap.addEventListener("mouseenter", showTip);
@@ -129,6 +132,7 @@ export function tooltip(
 							position: pos.strategy,
 							translate: `${pos.x}px ${pos.y}px`,
 							visibility: visible() ? "visible" : "hidden",
+							"--padding": `${padding()}px`,
 						}}
 						class="tooltip"
 						classList={{

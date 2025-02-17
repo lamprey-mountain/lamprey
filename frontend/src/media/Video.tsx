@@ -1,4 +1,4 @@
-import { createSignal, onMount, VoidProps } from "solid-js";
+import { createEffect, createSignal, onMount, ValidComponent, VoidProps } from "solid-js";
 import {
 	formatTime,
 	getDuration,
@@ -13,6 +13,7 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
+import { tooltip } from "../Tooltip.tsx";
 
 export const VideoViewOld = (props: MediaProps) => {
 	const height = () => getHeight(props.media);
@@ -56,9 +57,11 @@ export const VideoView = (props: MediaProps) => {
 		videoEl.ontimeupdate = () => setProgress(videoEl.currentTime);
 		videoEl.onplay = () => setPlaying(true);
 		videoEl.onpause = () => setPlaying(false);
-		videoEl.onvolumechange = () => setVolume(videoEl.volume);
 	});
 
+	createEffect(() => videoEl.muted = muted());
+	createEffect(() => videoEl.volume = volume());
+	
 	const togglePlayPause = () => {
 		if (playing()) {
 			videoEl.pause();
@@ -67,13 +70,7 @@ export const VideoView = (props: MediaProps) => {
 		}
 	};
 
-	const toggleMute = () => {
-		if (muted()) {
-			setMuted(false);
-		} else {
-			setMuted(true);
-		}
-	};
+	const toggleMute = () => setMuted(m => !m);
 
 	const fullScreen = (e: MouseEvent) => {
 		e.preventDefault();
@@ -101,7 +98,9 @@ export const VideoView = (props: MediaProps) => {
 	};
 
 	const handleScrubClick = () => {
-		videoEl.currentTime = progressPreview()!;
+		const p = progressPreview()!;
+		videoEl.currentTime = p;
+		setProgress(p)
 	};
 
 	const handleScrubMouseOut = () => {
@@ -113,7 +112,10 @@ export const VideoView = (props: MediaProps) => {
 		const { x, width } = target.getBoundingClientRect();
 		const p = ((e.clientX - x) / width) * duration();
 		setProgressPreview(p);
-		if (e.buttons) videoEl.currentTime = p;
+		if (e.buttons) {
+			videoEl.currentTime = p;
+			setProgress(p)
+		}
 	};
 
 	const progressWidth = () => `${(progress() / duration()) * 100}%`;
@@ -202,17 +204,39 @@ export const VideoView = (props: MediaProps) => {
 							alt={playing() ? "pause" : "play"}
 						/>
 					</button>
-					<button
-						onClick={toggleMute}
-						title={getVolumeText()}
-						onWheel={handleVolumeWheel}
-					>
-						<img
-							class="icon"
-							src={getVolumeIcon()}
-							alt={getVolumeText()}
-						/>
-					</button>
+					{tooltip({
+						placement: "top-start",
+						interactive: true,
+						doesntRetain: "input[type=range]",
+					},
+						(
+							<div class="range">
+								<input
+									type="range"
+									min={0}
+									max={1}
+									value={volume()}
+									disabled={muted()}
+									step={.001}
+									onInput={e => setVolume(e.target.valueAsNumber)}
+								/>
+								<div class="dim">(click to mute)</div>
+								<div class="value">{getVolumeText()}</div>
+							</div>
+						) as ValidComponent,
+						(<button
+							onClick={toggleMute}
+							title={getVolumeText()}
+							onWheel={handleVolumeWheel}
+						>
+							<img
+								class="icon"
+								src={getVolumeIcon()}
+								alt={getVolumeText()}
+							/>
+						</button>
+						) as HTMLElement
+					)}
 					<div class="space"></div>
 					<div
 						class="time"
