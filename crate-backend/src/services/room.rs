@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
+use types::util::Diff;
 use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::types::RoleCreate;
 use crate::ServerStateInner;
 
@@ -32,6 +33,11 @@ impl ServiceRooms {
 
     pub async fn update(&self, room_id: RoomId, user_id: UserId, patch: RoomPatch) -> Result<Room> {
         let data = self.state.data();
+        let start = data.room_get(room_id).await?;
+        if !patch.changes(&start) {
+            return Err(Error::NotModified);
+        }
+        
         data.room_update(room_id, patch).await?;
         self.cache_room.remove(&room_id);
         self.get(room_id, Some(user_id)).await

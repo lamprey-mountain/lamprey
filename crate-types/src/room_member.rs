@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::util::some_option;
+use crate::util::{some_option, Diff};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -73,4 +73,20 @@ pub enum RoomMembership {
         // /// which user caused the ban
         // user_id: Option<UserId>,
     },
+}
+
+impl Diff<RoomMember> for RoomMemberPatch {
+    fn changes(&self, other: &RoomMember) -> bool {
+        match &other.membership {
+            RoomMembership::Join {
+                override_name,
+                override_description,
+                roles: _,
+            } => {
+                self.override_name.changes(override_name)
+                    || self.override_description.changes(override_description)
+            }
+            _ => false,
+        }
+    }
 }

@@ -56,3 +56,9 @@ use crate::util::{some_option, Diff};
 // 	Default,
 // 	Dm,
 // }
+
+impl Diff<Room> for RoomPatch {
+    fn changes(&self, other: &Room) -> bool {
+        self.name.changes(&other.name) || self.description.changes(&other.description)
+    }
+}

@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
+use types::util::Diff;
 use types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
     RoomMemberPatch, RoomMembership, UserId,
@@ -111,22 +112,21 @@ pub async fn room_member_update(
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
+    if !patch.changes(&start) {
+        return Err(Error::NotModified);
+    }
     d.room_member_patch(room_id, target_user_id, patch).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
-    if start == res {
-        Ok(StatusCode::NOT_MODIFIED.into_response())
-    } else {
-        s.broadcast_room(
-            room_id,
-            auth_user_id,
-            None,
-            MessageSync::UpsertRoomMember {
-                member: res.clone(),
-            },
-        )
-        .await?;
-        Ok(Json(res).into_response())
-    }
+    s.broadcast_room(
+        room_id,
+        auth_user_id,
+        None,
+        MessageSync::UpsertRoomMember {
+            member: res.clone(),
+        },
+    )
+    .await?;
+    Ok(Json(res).into_response())
 }
 
 /// Room member delete (kick/leave)

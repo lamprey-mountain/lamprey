@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use http::StatusCode;
+use types::util::Diff;
 use types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
     ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId,
@@ -181,23 +182,22 @@ pub async fn thread_member_update(
     if !matches!(start.membership, ThreadMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
+    if !patch.changes(&start) {
+        return Err(Error::NotModified);
+    }
     d.thread_member_patch(thread_id, target_user_id, patch)
         .await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
-    if start == res {
-        Ok(StatusCode::NOT_MODIFIED.into_response())
-    } else {
-        s.broadcast_thread(
-            thread_id,
-            auth_user_id,
-            None,
-            MessageSync::UpsertThreadMember {
-                member: res.clone(),
-            },
-        )
-        .await?;
-        Ok(Json(res).into_response())
-    }
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        None,
+        MessageSync::UpsertThreadMember {
+            member: res.clone(),
+        },
+    )
+    .await?;
+    Ok(Json(res).into_response())
 }
 
 /// Thread member delete (kick/leave)

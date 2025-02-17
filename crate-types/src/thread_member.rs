@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::some_option;
+use crate::util::{some_option, Diff};
 use crate::UserId;
 
 use super::ThreadId;
@@ -74,4 +74,19 @@ pub enum ThreadMembership {
         // /// which user caused the ban
         // user_id: Option<UserId>,
     },
+}
+
+impl Diff<ThreadMember> for ThreadMemberPatch {
+    fn changes(&self, other: &ThreadMember) -> bool {
+        match &other.membership {
+            ThreadMembership::Join {
+                override_name,
+                override_description,
+            } => {
+                self.override_name.changes(override_name)
+                    || self.override_description.changes(override_description)
+            }
+            _ => false,
+        }
+    }
 }
