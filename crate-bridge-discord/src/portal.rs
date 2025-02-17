@@ -104,9 +104,22 @@ impl Portal {
                         .await?;
                     let reply = recv.await?;
                     let reply_content = if !reply.content.is_empty() {
-                        &reply.content
+                        reply.content.to_owned()
+                    } else if !reply.attachments.is_empty() {
+                        let names: Vec<_> = reply
+                            .attachments
+                            .iter()
+                            .map(|a| a.filename.to_owned())
+                            .collect();
+                        format!(
+                            "{} attachment(s): {}",
+                            reply.attachments.len(),
+                            names.join(", ")
+                        )
+                    } else if !reply.embeds.is_empty() {
+                        format!("{} embed(s)", reply.embeds.len())
                     } else {
-                        "(no content?)"
+                        "(no content?)".to_owned()
                     };
                     let description = format!(
                         "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
@@ -117,6 +130,10 @@ impl Portal {
                     );
                     content = format!("{} {}", reply.author.mention(), content);
                     embeds.push(CreateEmbed::new().description(description));
+
+                    if let Some(att) = reply.attachments.first() {
+                        embeds.push(CreateEmbed::new().image(&att.url));
+                    }
                 }
                 let (send, recv) = tokio::sync::oneshot::channel();
                 if let Some(edit) = existing {
