@@ -327,5 +327,11 @@ function Author(props: { message: Message, thread?: Thread }) {
 		return name;
 	}
 
-	return <span class="author">{name()}</span>
+	return (
+		<span
+			class="author"
+			classList={{ "override-name": !!props.message.override_name }}
+			data-user-id={props.message.author.id}
+		>{name()}</span>
+	)
 }
