@@ -1,8 +1,9 @@
-#![allow(unused)] // TEMP
-
 use std::collections::HashMap;
 
 use serde::Deserialize;
+use tokio::process::Command;
+
+use crate::error::{Error, Result};
 
 #[derive(Debug, Deserialize)]
 pub struct Metadata {
@@ -104,5 +105,27 @@ impl Metadata {
             })
             .or_else(|| self.get_main(MediaType::Attachment))
             .or_else(|| self.get_main(MediaType::Video))
+    }
+}
+
+pub async fn extract(file: &std::path::Path) -> Result<Metadata> {
+    let out = Command::new("ffprobe")
+        .args([
+            "-v",
+            "quiet",
+            "-of",
+            "json",
+            "-show_format",
+            "-show_streams",
+            "-i",
+        ])
+        .arg(file)
+        .output()
+        .await?;
+    if out.status.success() {
+        let meta = serde_json::from_slice(&out.stdout)?;
+        Ok(meta)
+    } else {
+        Err(Error::Ffprobe)
     }
 }

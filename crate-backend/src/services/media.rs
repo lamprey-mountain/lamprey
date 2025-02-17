@@ -63,7 +63,7 @@ impl ServiceMedia {
         &self,
         file: &std::path::Path,
     ) -> Result<(Option<Metadata>, String)> {
-        let meta = match get_ffprobe_metadata(file).await {
+        let meta = match ffprobe::extract(file).await {
             Ok(meta) => meta,
             Err(Error::Ffprobe) => {
                 let mime = get_mime(file).await?;
@@ -83,7 +83,7 @@ impl ServiceMedia {
     pub async fn generate_thumbnails(
         &self,
         media: &mut Media,
-        meta: &ffprobe::Metadata,
+        meta: &Metadata,
         path: &std::path::Path,
         force: bool,
     ) -> Result<()> {
@@ -252,28 +252,6 @@ impl ServiceMedia {
             .media_insert(user_id, media.clone())
             .await?;
         Ok(media)
-    }
-}
-
-async fn get_ffprobe_metadata(file: &std::path::Path) -> Result<ffprobe::Metadata> {
-    let out = Command::new("ffprobe")
-        .args([
-            "-v",
-            "quiet",
-            "-of",
-            "json",
-            "-show_format",
-            "-show_streams",
-            "-i",
-        ])
-        .arg(file)
-        .output()
-        .await?;
-    if out.status.success() {
-        let meta = serde_json::from_slice(&out.stdout)?;
-        Ok(meta)
-    } else {
-        Err(Error::Ffprobe)
     }
 }
 
