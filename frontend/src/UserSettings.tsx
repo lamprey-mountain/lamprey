@@ -1,15 +1,15 @@
 import { For, Show } from "solid-js";
-import { UserT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import { Info, Sessions } from "./user_settings/mod.tsx";
+import { User } from "sdk";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "sessions", path: "sessions", component: Sessions },
 ];
 
-export const UserSettings = (props: { user: UserT; page: string }) => {
+export const UserSettings = (props: { user: User; page: string }) => {
 	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
 
 	return (

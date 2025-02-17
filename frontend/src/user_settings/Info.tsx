@@ -1,8 +1,10 @@
-import { VoidProps } from "solid-js";
-import { User } from "sdk";
+import { createSignal, VoidProps } from "solid-js";
+import { createUpload, User } from "sdk";
 import { useCtx } from "../context.ts";
+import { useApi } from "../api.tsx";
 
 export function Info(props: VoidProps<{ user: User }>) {
+	const api = useApi();
 	const ctx = useCtx();
 
 	const setName = () => {
@@ -33,17 +35,54 @@ export function Info(props: VoidProps<{ user: User }>) {
 		});
 	};
 
+	const [file, setFile] = createSignal<File | null>(null);
+	const setAvatar = async () => {
+		const f = file()
+		if (f) {
+			await createUpload({
+				client: api.client,
+				file: f,
+				onComplete(media) {
+					api.client.http.PATCH("/api/v1/user/{user_id}", {
+						params: { path: { user_id: "@self" } },
+						body: { avatar: media.id },
+					})
+				},
+				onFail(_error) { },
+				onPause() { },
+				onResume() { },
+				onProgress(_progress) { },
+			});
+		} else {
+			ctx.dispatch({
+				do: "modal.confirm",
+				text: "remove avatar?",
+				cont(conf) {
+					if (!conf) return;
+					ctx.client.http.PATCH("/api/v1/user/{user_id}", {
+						params: { path: { user_id: "@self" } },
+						body: { avatar: null },
+					});
+				},
+			});
+		}
+	};
+
 	return (
 		<>
 			<h2>info</h2>
 			<div>name: {props.user.name}</div>
 			<div>description: {props.user.description}</div>
+			<div>avatar: {props.user.avatar}</div>
 			<div>
 				id: <code class="select-all">{props.user.id}</code>
 			</div>
 			<button onClick={setName}>set name</button>
 			<br />
 			<button onClick={setDescription}>set description</button>
+			<br />
+			<button onClick={setAvatar}>set avatar</button>
+			<input type="file" onInput={e => setFile(e.target.files?.[0] ?? null)} />
 			<br />
 		</>
 	);
