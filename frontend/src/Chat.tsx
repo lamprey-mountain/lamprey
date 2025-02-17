@@ -10,6 +10,7 @@ import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import { MessageListAnchor } from "./api/messages.ts";
+import { getMsgTs as get_msg_ts } from "./util.ts";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -254,21 +255,24 @@ export function renderTimeline(
 	}
 	for (let i = 0; i < items.length; i++) {
 		const msg = items[i];
+		const prev = items[i - 1] as Message | undefined;
+		if (prev) {
+			const ts_a = get_msg_ts(msg);
+			const ts_b = get_msg_ts(prev);
+			if (ts_a.getDay() !== ts_b.getDay()) {
+				newItems.push({
+					type: "time-split",
+					id: `${msg.id}-timesplit`,
+					date: get_msg_ts(msg)
+				})
+			}
+		}
 		newItems.push({
 			type: "message",
 			id: msg.version_id,
 			message: msg,
-			separate: true,
-			// separate: shouldSplit(messages[i], messages[i - 1]),
+			separate: prev ? shouldSplit(msg, prev) : true,
 		});
-		// if (msg.id - prev.originTs > 1000 * 60 * 5) return true;
-		// items.push({
-		//   type: "message",
-		//   id: messages[i].id,
-		//   message: messages[i],
-		//   separate: true,
-		//   // separate: shouldSplit(messages[i], messages[i - 1]),
-		// });
 		if (msg.id === read_marker_id && i !== items.length - 1) {
 			newItems.push({
 				type: "unread-marker",
@@ -310,4 +314,22 @@ function highlight(el: Element) {
 	], {
 		duration: 1000,
 	});
+}
+
+const shouldSplitMemo = new WeakMap();
+function shouldSplit(a: Message, b: Message) {
+	const s1 = shouldSplitMemo.get(a);
+	if (s1) return s1;
+	const s2 = shouldSplitInner(a, b);
+	shouldSplitMemo.set(a, s2);
+	return s2;
+}
+
+function shouldSplitInner(a: Message, b: Message) {
+	shouldSplitMemo;
+	if (a.author.id !== b.author.id) return true;
+	const ts_a = get_msg_ts(a);
+	const ts_b = get_msg_ts(b);
+	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;
+	return false;
 }

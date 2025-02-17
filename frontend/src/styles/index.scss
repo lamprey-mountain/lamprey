@@ -1176,3 +1176,22 @@ pre.numbered {
 .error {
 	color: $error-500;
 }
+
+.chat > .list > li.time-split {
+  display: flex;
+  color: $fg-600;
+  font-size: .9rem;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px;
+
+	& > hr {
+		flex: 1;
+	  border-bottom: solid $sep-500 1px;
+	}
+
+	& > time {
+	  /* HACK: visually center text */
+	  margin-top: -1px;
+	}
+}

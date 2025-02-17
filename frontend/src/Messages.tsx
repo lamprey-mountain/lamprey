@@ -15,7 +15,7 @@ export type TimelineItemT =
 		| { type: "spacer-mini" }
 		| { type: "spacer-mini2" }
 		| { type: "unread-marker" }
-		| { type: "time-split" }
+		| { type: "time-split", date: Date }
 		| {
 			type: "message";
 			message: MessageT;
@@ -71,6 +71,15 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			return (
 				<li class="unread-marker">
 					<div class="content">new messages</div>
+				</li>
+			);
+		}
+		case "time-split": {
+			return (
+				<li class="time-split">
+					<hr />
+					<time datetime={item.date.toISOString()}>{item.date.toDateString()}</time>
+					<hr />
 				</li>
 			);
 		}
