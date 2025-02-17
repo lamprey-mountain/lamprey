@@ -2925,6 +2925,7 @@ dependencies = [
  "async-trait",
  "crate-hakari",
  "futures-util",
+ "headers",
  "reqwest 0.12.12",
  "serde_json",
  "time",

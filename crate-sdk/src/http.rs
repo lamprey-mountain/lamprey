@@ -1,5 +1,6 @@
 use anyhow::Result;
-use reqwest::{StatusCode, Url};
+use headers::HeaderMapExt;
+use reqwest::{header::HeaderMap, StatusCode, Url};
 use types::{
     Media, MediaCreate, MediaCreated, MediaId, Message, MessageCreateRequest, MessageId,
     MessagePatch, RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch,
@@ -10,106 +11,37 @@ const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 pub struct Http {
     token: SessionToken,
     base_url: Url,
+    client: reqwest::Client,
 }
 
 impl Http {
     pub fn new(token: SessionToken) -> Self {
         let base_url = Url::parse(DEFAULT_BASE).unwrap();
-        Self { token, base_url }
+        let mut h = HeaderMap::new();
+        h.typed_insert(headers::Authorization::bearer(&token.0).unwrap());
+        let client = reqwest::Client::builder()
+            .default_headers(h)
+            .build()
+            .unwrap();
+        Self {
+            token,
+            base_url,
+            client,
+        }
     }
 
     pub fn with_base_url(self, base_url: Url) -> Self {
-        Self { base_url, ..self }
-    }
-
-    pub async fn message_create(
-        &self,
-        thread_id: ThreadId,
-        body: &MessageCreateRequest,
-    ) -> Result<Message> {
-        let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/thread/{thread_id}/message"))?;
-        let res: Message = c
-            .post(url)
-            .bearer_auth(&self.token)
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
-
-    pub async fn message_update(
-        &self,
-        thread_id: ThreadId,
-        message_id: MessageId,
-        body: &MessagePatch,
-    ) -> Result<Message> {
-        let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
-        let res: Message = c
-            .patch(url)
-            .bearer_auth(&self.token)
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
-
-    pub async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message> {
-        let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
-        let res: Message = c
-            .get(url)
-            .bearer_auth(&self.token)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
-
-    pub async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
-        let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/thread/{thread_id}/message/{message_id}"))?;
-        c.delete(url)
-            .bearer_auth(&self.token)
-            .send()
-            .await?
-            .error_for_status()?;
-        Ok(())
-    }
-
-    pub async fn media_create(&self, body: &MediaCreate) -> Result<MediaCreated> {
-        let c = reqwest::Client::new();
-        let url = self.base_url.join("/api/v1/media")?;
-        let res = c
-            .post(url)
-            .bearer_auth(&self.token)
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
+        let mut h = HeaderMap::new();
+        h.typed_insert(headers::Authorization::bearer(&self.token.0).unwrap());
+        let client = reqwest::Client::builder()
+            .default_headers(h)
+            .build()
+            .unwrap();
+        Self {
+            base_url,
+            client,
+            ..self
+        }
     }
 
     pub async fn media_upload(
@@ -117,10 +49,9 @@ impl Http {
         target: &MediaCreated,
         body: Vec<u8>,
     ) -> Result<Option<Media>> {
-        let c = reqwest::Client::new();
-        let res = c
+        let res = self
+            .client
             .patch(target.upload_url.clone().unwrap())
-            .bearer_auth(&self.token)
             .header("upload-offset", "0")
             .body(body)
             .send()
@@ -132,56 +63,93 @@ impl Http {
             _ => unreachable!("technically reachable with a bad server"),
         }
     }
-
-    pub async fn thread_create(
-        &self,
-        room_id: RoomId,
-        body: &ThreadCreateRequest,
-    ) -> Result<Thread> {
-        let c = reqwest::Client::new();
-        let url = self
-            .base_url
-            .join(&format!("/api/v1/room/{room_id}/thread"))?;
-        let res: Thread = c
-            .post(url)
-            .bearer_auth(&self.token)
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
-
-    pub async fn thread_update(&self, thread_id: ThreadId, body: &ThreadPatch) -> Result<Thread> {
-        let c = reqwest::Client::new();
-        let url = self.base_url.join(&format!("/api/v1/thread/{thread_id}"))?;
-        let res: Thread = c
-            .patch(url)
-            .bearer_auth(&self.token)
-            .header("content-type", "application/json")
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
-
-    pub async fn media_info_get(&self, media_id: MediaId) -> Result<Media> {
-        let c = reqwest::Client::new();
-        let url = self.base_url.join(&format!("/api/v1/media/{media_id}"))?;
-        let res: Media = c
-            .get(url)
-            .bearer_auth(&self.token)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
-    }
 }
+
+macro_rules! route {
+    ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty, $req:ty) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type,)*
+                body: &$req,
+            ) -> Result<$res> {
+                let url = self.base_url.join(&format!($url))?;
+                let res = self.client
+                    .$method(url)
+                    .header("content-type", "application/json")
+                    .json(body)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+                Ok(res)
+            }
+        }
+    };
+
+    ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*
+            ) -> Result<$res> {
+                let url = self.base_url.join(&format!($url))?;
+                let res = self.client
+                    .$method(url)
+                    .send()
+                    .await?
+                    .error_for_status()?
+                    .json()
+                    .await?;
+                Ok(res)
+            }
+        }
+    };
+
+    ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*), $req:ty) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*,
+                body: &$req,
+            ) -> Result<()> {
+                let url = self.base_url.join(&format!($url))?;
+                self.client
+                    .$method(url)
+                    .header("content-type", "application/json")
+                    .json(body)
+                    .send()
+                    .await?
+                    .error_for_status()?;
+                Ok(())
+            }
+        }
+    };
+
+    ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*)) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*,
+            ) -> Result<()> {
+                let url = self.base_url.join(&format!($url))?;
+                self.client
+                    .$method(url)
+                    .send()
+                    .await?
+                    .error_for_status()?;
+                Ok(())
+            }
+        }
+    };
+}
+
+route!(get    "/api/v1/media/{media_id}"                        => media_info_get(media_id: MediaId) -> Media);
+route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Thread, ThreadCreateRequest);
+route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ThreadId) -> Thread, ThreadPatch);
+route!(post   "/api/v1/media"                                   => media_create() -> MediaCreated, MediaCreate);
+route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delete(thread_id: ThreadId, message_id: MessageId));
+route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ThreadId, message_id: MessageId) -> Message, MessagePatch);
+route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ThreadId, message_id: MessageId) -> Message);
+route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreateRequest);

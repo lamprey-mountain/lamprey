@@ -19,3 +19,4 @@ crate-hakari = { version = "0.1", path = "../crate-hakari" }
 anyhow = "1.0.95"
 futures-util = "0.3.31"
 time = "0.3.37"
+headers = "0.4.0"

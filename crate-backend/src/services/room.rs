@@ -37,7 +37,7 @@ impl ServiceRooms {
         if !patch.changes(&start) {
             return Err(Error::NotModified);
         }
-        
+
         data.room_update(room_id, patch).await?;
         self.cache_room.remove(&room_id);
         self.get(room_id, Some(user_id)).await
