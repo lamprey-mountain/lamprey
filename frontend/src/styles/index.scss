@@ -1054,3 +1054,15 @@ code {
 .light {
 	color: $fg3;
 }
+
+.avatar {
+	height: 64px;
+	width: 64px;
+	display: block;
+	object-fit: contain;
+	background: $bg1;
+	
+	/* should probably add a way to crop images in browser */
+	/* object-fit: cover; */
+	/* image-rendering: crisp-edges; */
+}

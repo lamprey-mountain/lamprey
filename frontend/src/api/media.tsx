@@ -36,8 +36,8 @@ export class MediaInfo {
     );
 
     createEffect(() => {
-      const member = this.cacheInfo.get(media_id());
-      if (member) mutate(member);
+      const media = this.cacheInfo.get(media_id());
+      if (media) mutate(media);
     });
 
     return resource;

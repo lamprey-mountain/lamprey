@@ -1,4 +1,4 @@
-import { createSignal, VoidProps } from "solid-js";
+import { createSignal, Show, VoidProps } from "solid-js";
 import { createUpload, User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
@@ -68,12 +68,30 @@ export function Info(props: VoidProps<{ user: User }>) {
 		}
 	};
 
+	function getThumb(media_id: string) {
+		const media = api.media.fetchInfo(() => media_id);
+		const m = media();
+		if (!m) return;
+		const tracks = [m.source, ...m.tracks];
+		const source = tracks.find(s => s.type === "Thumbnail" && s.height === 64) ?? tracks.find(s => s.type === "Image");
+		if (source) {
+			return source.url;
+		} else {
+			console.error("no valid avatar source?", m);
+		}
+	}
+
 	return (
 		<>
 			<h2>info</h2>
 			<div>name: {props.user.name}</div>
 			<div>description: {props.user.description}</div>
-			<div>avatar: {props.user.avatar}</div>
+			<Show when={props.user.avatar} fallback="avatar: none">
+				<div>
+					<div>avatar:</div>
+					<img src={getThumb(props.user.avatar!)} class="avatar" />
+				</div>
+			</Show>
 			<div>
 				id: <code class="select-all">{props.user.id}</code>
 			</div>
