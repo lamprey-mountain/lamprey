@@ -876,7 +876,7 @@ summary {
 		position: absolute;
 		grid-area: progress;
 		border: solid $bg3 1px;
-	}
+		}
 
 	& > .info {
 		grid-area: info;
@@ -891,6 +891,7 @@ summary {
 	& > .controls {
 		grid-area: controls;
 		display: flex;
+		padding: 4px;
 
 		& > button {
 			background: $bg2;
