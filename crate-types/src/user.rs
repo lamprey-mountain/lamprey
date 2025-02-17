@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::Diff;
 use crate::MediaId;
 
 use super::util::deserialize_default_true;
@@ -41,7 +42,7 @@ pub struct UserPatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
     pub status: Option<Option<String>>,
-    pub avatar: Option<MediaId>,
+    pub avatar: Option<Option<MediaId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -79,3 +80,12 @@ pub enum UserState {
 //         }
 //     }
 // }
+
+impl Diff<User> for UserPatch {
+    fn changes(&self, other: &User) -> bool {
+        self.name.changes(&other.name)
+            || self.description.changes(&other.description)
+            || self.avatar.changes(&other.avatar)
+            || self.status.changes(&other.status)
+    }
+}

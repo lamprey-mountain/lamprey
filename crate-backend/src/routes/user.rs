@@ -4,6 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use types::util::Diff;
 use types::{MessageSync, User, UserCreate, UserPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -77,7 +78,7 @@ pub async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(body): Json<UserPatch>,
+    Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
@@ -87,16 +88,20 @@ pub async fn user_update(
         return Err(Error::NotFound);
     }
     let data = s.data();
-    if let Some(avatar_media_id) = body.avatar {
+    let start = data.user_get(target_user_id).await?;
+    if !patch.changes(&start) {
+        return Err(Error::NotModified);
+    }
+    if let Some(Some(avatar_media_id)) = patch.avatar {
         let existing = data.media_link_select(avatar_media_id).await?;
         if !existing.is_empty() {
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    data.user_update(target_user_id, body.clone()).await?;
+    data.user_update(target_user_id, patch.clone()).await?;
     data.media_link_delete(target_user_id.0, MediaLinkType::AvatarUser)
         .await?;
-    if let Some(avatar_media_id) = body.avatar {
+    if let Some(Some(avatar_media_id)) = patch.avatar {
         data.media_link_insert(avatar_media_id, target_user_id.0, MediaLinkType::AvatarUser)
             .await?;
     }
