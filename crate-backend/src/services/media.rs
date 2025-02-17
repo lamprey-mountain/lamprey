@@ -130,7 +130,7 @@ impl ServiceMedia {
                     .args([
                         "-vf",
                         "thumbnail,scale=300:300",
-                        "-fames:v",
+                        "-frames:v",
                         "1",
                         "-f",
                         "webp",
