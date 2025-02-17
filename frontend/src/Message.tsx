@@ -1,4 +1,4 @@
-import { getTimestampFromUUID } from "sdk";
+import { getTimestampFromUUID, Message, Thread } from "sdk";
 import { MessageT, MessageType } from "./types.ts";
 import { For, Match, Show, Switch } from "solid-js";
 import { marked } from "marked";
@@ -61,6 +61,9 @@ function MessageText(props: MessageTextProps) {
 }
 
 export function MessageView(props: MessageProps) {
+	const api = useApi();
+	const thread = api.threads.fetch(() => props.message.thread_id);
+
 	function getComponent() {
 		const date =
 			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
@@ -68,7 +71,6 @@ export function MessageView(props: MessageProps) {
 			)
 				? getTimestampFromUUID(props.message.id)
 				: new Date();
-		const authorName = props.message.override_name ?? props.message.author.name;
 		if (props.message.type === MessageType.ThreadUpdate) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
@@ -87,7 +89,7 @@ export function MessageView(props: MessageProps) {
 					<span></span>
 					<div class="content">
 						<span class="body">
-							<span class="author">{authorName}</span> updated the thread:{" "}
+							<Author message={props.message} thread={thread()} /> updated the thread:{" "}
 							{listFormatter.format(updates) || "did nothing"}
 						</span>
 					</div>
@@ -112,7 +114,7 @@ export function MessageView(props: MessageProps) {
 							data-user-id={props.message.author.id}
 							data-thread-id={props.message.thread_id}
 						>
-							{authorName}
+							<Author message={props.message} thread={thread()} />
 						</div>
 					</div>
 					<div class="content">
@@ -145,12 +147,7 @@ function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
-
-	const name = () => {
-		const r = reply();
-		if (!r) return;
-		return r.override_name ?? r.author.name;
-	};
+	const thread = api.threads.fetch(() => props.thread_id);
 
 	const content = () => {
 		const r = reply();
@@ -173,7 +170,9 @@ function ReplyView(props: ReplyProps) {
 			<div class="reply arrow">{"\u21B1"}</div>
 			<div class="reply reply-content" onClick={scrollToReply}>
 				<Show when={!reply.loading} fallback="loading..">
-					<span class="author">{name()}:</span>
+					<Show when={reply() && thread()} fallback={<span class="author"></span>}>
+						<Author message={reply()!} thread={thread()!} />:
+					</Show>
 					{content()}
 				</Show>
 			</div>
@@ -307,4 +306,26 @@ export function AttachmentView2(props: MediaProps) {
 			</li>
 		);
 	}
+}
+
+function Author(props: { message: Message, thread?: Thread }) {
+	const api = useApi();
+	const room_member = props.thread ? api.room_members.fetch(() => props.thread!.room_id, () => props.message.author.id) : null;
+	const thread_member = api.thread_members.fetch(() => props.message.thread_id, () => props.message.author.id);
+	// const user = api.users.fetch(() => props.message.author.id);
+
+	function name() {
+		let name = props.message.override_name;
+		const tm = thread_member();
+		if (tm?.membership === "Join") name ??= tm.override_name;
+
+		const rm = room_member?.();
+		if (rm?.membership === "Join") name ??= rm.override_name;
+
+		name ??= props.message.author.name;
+
+		return name;
+	}
+
+	return <span class="author">{name()}</span>
 }

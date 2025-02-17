@@ -36,6 +36,17 @@ export class RoomMembers {
 							params: { path: { room_id, user_id } },
 						},
 					);
+					// HACK: handle 404s
+					type ErrorResp = { error: string } | undefined;
+					if ((error as ErrorResp)?.error === "not found") {
+						const placeholder: RoomMember = {
+							membership: "Leave",
+							room_id,
+							user_id,
+							membership_updated_at: new Date().toISOString(),
+						};
+						return placeholder;
+					}
 					if (error) throw error;
 					this._requests.get(room_id)?.delete(user_id);
 					if (!this.cache.has(room_id)) {
@@ -113,9 +124,9 @@ export class RoomMembers {
 		}
 
 		const l2 = {
-			resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
-			refetch: () => {},
-			mutate: () => {},
+			resource: (() => { }) as unknown as Resource<Pagination<RoomMember>>,
+			refetch: () => { },
+			mutate: () => { },
 			prom: null,
 			pagination: null,
 		};
