@@ -1,14 +1,16 @@
-$fg1: rgb(var(--color-fg1));
-$fg2: rgb(var(--color-fg2));
-$fg3: rgb(var(--color-fg3));
-$fg4: rgb(var(--color-fg4));
-$fg5: rgb(var(--color-fg5));
-$bg1: rgb(var(--color-bg1));
-$bg2: rgb(var(--color-bg2));
-$bg3: rgb(var(--color-bg3));
-$bg4: rgb(var(--color-bg4));
-$sep: rgb(var(--color-sep));
-$link: rgb(var(--color-link));
+$fg-100: oklch(var(--color-fg1));
+$fg-200: oklch(var(--color-fg2));
+$fg-300: oklch(var(--color-fg3));
+$fg-400: oklch(var(--color-fg4));
+$fg-500: oklch(var(--color-fg5));
+$bg-100: oklch(var(--color-bg1));
+$bg-200: oklch(var(--color-bg2));
+$bg-300: oklch(var(--color-bg3));
+$bg-400: oklch(var(--color-bg4));
+$sep-500: oklch(var(--color-sep));
+$link-500: oklch(var(--color-link));
+$warn-500: oklch(var(--color-warn));
+$error-500: oklch(var(--color-error));
 
 @mixin truncate {
 	overflow: hidden;

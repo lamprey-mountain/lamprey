@@ -6,35 +6,19 @@
 /* theres other ways to split out css: per component, as mixins, etc */
 /* @use "./layout.scss"; */
 /* @use "./spacing.scss"; */
-/* @use "./theme.scss"; */
-/* @use "./colors.scss"; */
+@use "./theme.scss";
 @use "./animation.scss" as *;
 
 @use "./util.scss" as *;
 
 :root {
-	--font-default:
-		"Atkinson Hyperlegible", Inter, system-ui, Avenir, Helvetica, Arial,
-		sans-serif;
-	--font-mono: "Iosevka Zesty", "Courier New", Courier, monospace;
-	--color-fg1: 255, 255, 255;
-	--color-fg2: 238, 238, 238;
-	--color-fg3: 221, 221, 221;
-	--color-fg4: 204, 204, 204;
-	--color-fg5: 170, 170, 170;
-	--color-bg1: 12, 16, 18;
-	--color-bg2: 23, 28, 31;
-	--color-bg3: 34, 41, 44;
-	--color-bg4: 48, 58, 61;
-	--color-sep: 55, 67, 69;
-	--color-link: 177, 140, 243;
 	font: 16px/1.3 var(--font-default);
 	font-synthesis: none;
 	text-rendering: optimizeLegibility;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	color: var(--color-fg);
-	background-color: var(--color-bg);
+	color: $fg-100;
+	background-color: $bg-100;
 }
 
 ::selection {
@@ -44,14 +28,14 @@
 #root {
 	display: flex;
 	height: 100vh;
-	background-color: $bg2;
-	color: $fg2;
+	background-color: $bg-200;
+	color: $fg-200;
 }
 
 #root > nav {
 	width: 16rem;
-	background-color: $bg1;
-	color: $fg2;
+	background-color: $bg-100;
+	color: $fg-200;
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
@@ -75,16 +59,16 @@
 		color: inherit;
 
 		&.active {
-			background-color: $bg3;
+			background-color: $bg-300;
 		}
 
 		&:hover,
 		&:focus {
-			background-color: $bg4;
+			background-color: $bg-400;
 		}
 
 		&.closed {
-			color: $sep;
+			color: $sep-500;
 		}
 
 		&.unread {
@@ -100,19 +84,19 @@
 button,
 input[type="submit"] {
 	padding: 0 0.25rem;
-	background-color: $bg3;
+	background-color: $bg-300;
 	cursor: pointer;
 
 	&:hover,
 	&:focus {
-		background-color: $bg4;
+		background-color: $bg-400;
 	}
 }
 
 .home {
 	flex: 1;
-	background-color: $bg2;
-	color: $fg2;
+	background-color: $bg-200;
+	color: $fg-200;
 	padding: 1rem;
 	overflow-y: auto;
 
@@ -123,16 +107,16 @@ input[type="submit"] {
 
 .room-home {
 	flex: 1;
-	background-color: $bg2;
-	color: $fg2;
+	background-color: $bg-200;
+	color: $fg-200;
 	padding: 1rem;
 	overflow-y: auto;
 
 	& .thread {
 		contain: content;
-		background-color: $bg3;
+		background-color: $bg-300;
 		margin: 8px 0;
-		border: solid 1px $sep;
+		border: solid 1px $sep-500;
 		max-width: 800px;
 
 		& > header {
@@ -140,7 +124,7 @@ input[type="submit"] {
 			flex-direction: column;
 			padding: 4px 8px;
 			cursor: pointer;
-			border-bottom: solid 1px $sep;
+			border-bottom: solid 1px $sep-500;
 
 			& > .top {
 				display: flex;
@@ -148,7 +132,7 @@ input[type="submit"] {
 				gap: 8px;
 
 				& > .icon {
-					background-color: $bg4;
+					background-color: $bg-400;
 					height: 16px;
 					width: 16px;
 					border-radius: 50%;
@@ -161,7 +145,7 @@ input[type="submit"] {
 
 				/* TODO: use actual <time> */
 				& > .time {
-					color: $fg3;
+					color: $fg-300;
 				}
 			}
 		}
@@ -181,8 +165,8 @@ input[type="submit"] {
 
 .chat {
 	flex: 1;
-	background-color: $bg2;
-	color: $fg2;
+	background-color: $bg-200;
+	color: $fg-200;
 	display: grid;
 	grid-template-rows: 1fr auto;
 	contain: strict;
@@ -190,14 +174,14 @@ input[type="submit"] {
 	& > .input {
 		width: 100%;
 		min-height: 100%;
-		background-image: linear-gradient(to top, $bg2 25%, transparent);
+		background-image: linear-gradient(to top, $bg-200 25%, transparent);
 		display: flex;
 		flex-direction: column;
 		padding: 4px;
 		max-height: 50%;
 
 		& > .typing {
-			background: $bg3;
+			background: $bg-300;
 			padding: 0 4px;
 		}
 
@@ -206,15 +190,15 @@ input[type="submit"] {
 
 			& > .info {
 				padding: 0 4px;
-				background-color: rgba(var(--color-bg1), 0.8);
+				background-color: oklch(var(--color-bg1) / 0.8);
 				flex: 1;
-				border: solid 1px $sep;
+				border: solid 1px $sep-500;
 			}
 
 			& > .cancel {
 				width: 124px;
-				border: solid 1px $sep;
-				background-color: $bg2;
+				border: solid 1px $sep-500;
+				background-color: $bg-200;
 			}
 		}
 
@@ -228,12 +212,12 @@ input[type="submit"] {
 			& > .upload {
 				width: 124px;
 				padding: 0 4px;
-				background: $bg3;
-				border: solid $bg4 1px;
+				background: $bg-300;
+				border: solid $bg-400 1px;
 				cursor: pointer;
 
 				&:hover {
-					background: $bg2;
+					background: $bg-200;
 				}
 
 				& > input[type="file"] {
@@ -259,9 +243,9 @@ input[type="submit"] {
 			z-index: 1;
 			top: 0;
 			padding: 0 144px;
-			background-color: $bg3;
+			background-color: $bg-300;
 			margin-bottom: 4px;
-			box-shadow: 0 2px 8px $bg2;
+			box-shadow: 0 2px 8px $bg-200;
 		}
 
 		& > li {
@@ -304,30 +288,30 @@ input[type="submit"] {
 		top: 8px;
 		left: 8px;
 		padding: 8px;
-		background: $bg1;
+		background: $bg-100;
 		z-index: 100;
 	}
 }
 
 .editor {
-	background-color: $bg3;
+	background-color: $bg-300;
 	flex: 1;
-	border: solid 1px $sep;
+	border: solid 1px $sep-500;
 	padding: 0 4px;
 	white-space: pre-wrap;
 	overflow-y: auto;
 
 	&.disabled {
-		background-color: $bg4;
+		background-color: $bg-400;
 	}
 
 	& .placeholder {
 		position: absolute;
-		color: $fg4;
+		color: $fg-400;
 	}
 
 	& .syn {
-		color: $fg5;
+		color: $fg-500;
 	}
 }
 
@@ -358,7 +342,7 @@ p {
 
 pre,
 code {
-	background-color: $bg2;
+	background-color: $bg-200;
 	font-family: var(--font-mono);
 }
 
@@ -369,7 +353,7 @@ pre {
 }
 
 a {
-	color: $link;
+	color: $link-500;
 	text-decoration: underline;
 	cursor: pointer;
 }
@@ -428,8 +412,8 @@ em {
 		& > .base {
 			position: absolute;
 			animation: popup-base 150ms cubic-bezier(0.42, 1.31, 0.52, 1.09) forwards;
-			background-color: $bg2;
-			border: solid 1px $sep;
+			background-color: $bg-200;
+			border: solid 1px $sep-500;
 			width: 100%;
 			height: 100%;
 		}
@@ -438,7 +422,7 @@ em {
 			animation: popup-content 100ms cubic-bezier(0.33, 1.05, 0.39, 0.92)
 				forwards;
 			padding: 8px;
-			color: $fg3;
+			color: $fg-300;
 			max-width: 500px;
 			min-width: 100px;
 			min-height: 50px;
@@ -465,10 +449,10 @@ em {
 }
 
 menu {
-	background-color: $bg3;
-	border: solid 1px $sep;
-	box-shadow: 2px 2px 8px $bg1;
-	color: $fg4;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	color: $fg-400;
 	overflow: hidden;
 	min-width: 128px;
 
@@ -480,7 +464,7 @@ menu {
 
 		&:hover,
 		&:focus {
-			background-color: rgba(var(--color-bg1), 0.5);
+			background-color: oklch(var(--color-bg1) / 0.5);
 		}
 	}
 
@@ -490,7 +474,7 @@ menu {
 	}
 
 	& .subtext {
-		color: $fg5;
+		color: $fg-500;
 		font-size: 0.8rem;
 		margin-top: -4px;
 	}
@@ -498,32 +482,32 @@ menu {
 	& hr {
 		border: none;
 		height: 1px;
-		background-color: $bg4;
+		background-color: $bg-400;
 	}
 }
 
 input[type="text"] {
-	background-color: $bg3;
-	border: solid 1px $sep;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
 }
 
 .settings {
 	flex: 1;
-	background-color: $bg2;
-	color: $fg2;
+	background-color: $bg-200;
+	color: $fg-200;
 	display: grid;
 	grid-template-rows: auto 1fr;
 	grid-template-columns: 144px 1fr;
 
 	& > header {
 		grid-column: span 2 / span 2;
-		background-color: $bg3;
-		border-bottom: solid 1px $sep;
+		background-color: $bg-300;
+		border-bottom: solid 1px $sep-500;
 		padding: 0.5rem;
 	}
 
 	& > nav {
-		background-color: $bg3;
+		background-color: $bg-300;
 		padding: 0.25rem;
 
 		& button {
@@ -532,11 +516,11 @@ input[type="text"] {
 
 			&:hover,
 			&:focus {
-				background-color: $bg4;
+				background-color: $bg-400;
 			}
 
 			&.selected {
-				background-color: $bg3;
+				background-color: $bg-300;
 			}
 		}
 	}
@@ -557,7 +541,7 @@ input[type="text"] {
 
 	&:hover {
 		& > * {
-			background-color: rgba(var(--color-bg1), 0.3);
+			background-color: oklch(var(--color-bg1) / 0.3);
 		}
 
 		& > .time {
@@ -572,7 +556,7 @@ input[type="text"] {
 	& .author {
 		@include truncate;
 		cursor: pointer;
-		color: $fg4;
+		color: $fg-400;
 		text-align: right;
 		padding: 0 8px;
 
@@ -592,7 +576,7 @@ input[type="text"] {
 	}
 
 	& > .reply {
-		color: $fg5;
+		color: $fg-500;
 		font-size: 0.8rem;
 		cursor: pointer;
 
@@ -603,7 +587,7 @@ input[type="text"] {
 		}
 
 		&:hover {
-			color: $fg4;
+			color: $fg-400;
 		}
 
 		&.arrow {
@@ -628,24 +612,24 @@ input[type="text"] {
 			max-width: 100%;
 
 			&.local {
-				color: $fg5;
+				color: $fg-500;
 			}
 		}
 
 		& .edited {
-			color: $fg5;
+			color: $fg-500;
 			font-size: 0.8rem;
 		}
 	}
 
 	& > .time {
 		visibility: hidden;
-		color: $fg4;
+		color: $fg-400;
 	}
 }
 
 .dim {
-	color: $fg5;
+	color: $fg-500;
 	font-size: 0.8rem;
 }
 
@@ -657,8 +641,8 @@ input[type="text"] {
 
 	& > .base {
 		position: absolute;
-		background-color: $bg2;
-		border: solid 1px $sep;
+		background-color: $bg-200;
+		border: solid 1px $sep-500;
 		animation: popup-base 150ms cubic-bezier(0.42, 1.31, 0.52, 1.09) forwards;
 		width: 100%;
 		height: 100%;
@@ -666,7 +650,7 @@ input[type="text"] {
 
 	& > .inner {
 		padding: 8px;
-		color: $fg3;
+		color: $fg-300;
 		animation: popup-content 100ms cubic-bezier(0.33, 1.05, 0.39, 0.92)
 			forwards;
 		max-width: 500px;
@@ -711,7 +695,7 @@ input[type="text"] {
 	margin-bottom: 8px;
 
 	& > li:not(.raw) {
-		background-color: $bg3;
+		background-color: $bg-300;
 		padding: 4px;
 	}
 }
@@ -722,7 +706,7 @@ input[type="text"] {
 
 .room-members {
 	width: 196px;
-	background: $bg1;
+	background: $bg-100;
 	padding: 4px;
 
 	& > li {
@@ -746,7 +730,7 @@ input[type="text"] {
 
 	& .loader {
 		padding: 8px;
-		background-color: $bg1;
+		background-color: $bg-100;
 		font-family: var(--font-mono);
 		max-height: 100%;
 		max-width: 100%;
@@ -814,12 +798,12 @@ summary {
 	grid-template-columns: 1fr;
 	grid-template-rows: 8px auto auto;
 	grid-template-areas: "." "info" "controls";
-	background: $bg3;
+	background: $bg-300;
 	width: 200px;
 	position: relative;
 	padding: 4px;
-	/* border: solid $bg4 1px; */
-	border: solid $bg3 1px;
+	/* border: solid $bg-400 1px; */
+	border: solid $bg-300 1px;
 	contain: content;
 
 	& > .info {
@@ -837,12 +821,12 @@ summary {
 		display: flex;
 
 		& > button {
-			background: $bg2;
+			background: $bg-200;
 			display: grid;
 			place-items: center;
 
 			&:hover {
-				background: $bg1;
+				background: $bg-100;
 			}
 		}
 
@@ -855,7 +839,7 @@ summary {
 			font-family: var(--font-mono);
 
 			&.preview > .progress {
-				color: $link;
+				color: $link-500;
 			}
 		}
 	}
@@ -883,12 +867,12 @@ summary {
 	grid-template-columns: 1fr;
 	grid-template-rows: 1fr auto auto auto;
 	grid-template-areas: "." "progress" "info" "controls";
-	background: rgba(var(--color-bg3), 1);
+	background: oklch(var(--color-bg3) / 1);
 
 	& > .progress {
 		position: absolute;
 		grid-area: progress;
-		border: solid $bg3 1px;
+		border: solid $bg-300 1px;
 	}
 
 	& > .info {
@@ -907,12 +891,12 @@ summary {
 		padding: 4px;
 
 		& > button {
-			background: $bg2;
+			background: $bg-200;
 			display: grid;
 			place-items: center;
 
 			&:hover {
-				background: $bg1;
+				background: $bg-100;
 			}
 		}
 
@@ -925,7 +909,7 @@ summary {
 			font-family: var(--font-mono);
 
 			&.preview > .progress {
-				color: $link;
+				color: $link-500;
 			}
 		}
 	}
@@ -937,7 +921,7 @@ summary {
 	grid-area: progress;
 	height: 8px;
 	width: 100%;
-	background-color: $bg2;
+	background-color: $bg-200;
 
 	&:hover {
 		height: 16px;
@@ -956,7 +940,7 @@ summary {
 	}
 
 	& > .fill {
-		background-color: $link;
+		background-color: $link-500;
 	}
 }
 
@@ -972,8 +956,8 @@ summary {
 
 .room-settings-members {
 	& > li {
-		border: solid $sep 1px;
-		background: $bg3;
+		border: solid $sep-500 1px;
+		background: $bg-300;
 		margin-top: 4px;
 		padding: 4px;
 		display: grid;
@@ -988,14 +972,14 @@ summary {
 			gap: 4px;
 
 			& li {
-				border: solid $sep 1px;
+				border: solid $sep-500 1px;
 			}
 
 			& button {
-				background: $bg2;
+				background: $bg-200;
 
 				&:hover {
-					background: $bg3;
+					background: $bg-300;
 				}
 			}
 		}
@@ -1004,8 +988,8 @@ summary {
 
 .room-settings-roles {
 	& > li {
-		border: solid $sep 1px;
-		background: $bg3;
+		border: solid $sep-500 1px;
+		background: $bg-300;
 		margin-top: 4px;
 		padding: 4px;
 
@@ -1024,11 +1008,11 @@ summary {
 		}
 
 		& button {
-			background: $bg2;
-			border: solid $sep 1px;
+			background: $bg-200;
+			border: solid $sep-500 1px;
 
 			&:hover {
-				background: $bg3;
+				background: $bg-300;
 			}
 		}
 	}
@@ -1042,8 +1026,8 @@ code {
 
 .room-settings-audit-log {
 	& > li {
-		border: solid $sep 1px;
-		background: $bg3;
+		border: solid $sep-500 1px;
+		background: $bg-300;
 		margin-top: 4px;
 		padding: 4px;
 
@@ -1062,18 +1046,18 @@ code {
 		}
 
 		& button {
-			background: $bg2;
-			border: solid $sep 1px;
+			background: $bg-200;
+			border: solid $sep-500 1px;
 
 			&:hover {
-				background: $bg3;
+				background: $bg-300;
 			}
 		}
 	}
 }
 
 .light {
-	color: $fg3;
+	color: $fg-300;
 }
 
 .avatar {
@@ -1081,7 +1065,7 @@ code {
 	width: 64px;
 	display: block;
 	object-fit: contain;
-	background: $bg1;
+	background: $bg-100;
 
 	/* should probably add a way to crop images in browser */
 	/* object-fit: cover; */
@@ -1126,7 +1110,7 @@ code {
 
 input[type="range"] {
 	appearance: auto;
-	accent-color: $link;
+	accent-color: $link-500;
 }
 
 .range {
@@ -1151,7 +1135,7 @@ input[type="range"] {
 		position: relative;
 		overflow: hidden;
 		padding: 8px;
-		background-color: $bg2;
+		background-color: $bg-200;
 
 		& > pre {
 			overflow: hidden;
@@ -1184,7 +1168,7 @@ pre.numbered {
 		content: counter(line);
 		text-align: right;
 		display: inline-block;
-		color: $fg5;
+		color: $fg-500;
 		width: 2ch;
 		margin-right: 1em;
 		user-select: none;
@@ -1192,9 +1176,9 @@ pre.numbered {
 }
 
 .warn {
-	color: #f9cb40;
+	color: $warn-500;
 }
 
 .error {
-	color: #de3c4b;
+	color: $error-500;
 }
