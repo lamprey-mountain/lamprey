@@ -2,8 +2,7 @@ use serde::Deserialize;
 use types::{
     MediaId, MessageId, MessageType, Permission, Role, RoleId, RoleVerId, Room, RoomId,
     RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo,
-    ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, User, UserId, UserState,
-    UserType, UserVerId,
+    ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
 };
 use uuid::Uuid;
 
@@ -15,19 +14,7 @@ pub struct DbRoom {
     pub description: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct DbUser {
-    pub id: UserId,
-    pub version_id: UserVerId,
-    pub parent_id: Option<uuid::Uuid>,
-    pub name: String,
-    pub description: Option<String>,
-    pub status: Option<String>,
-    pub r#type: DbUserType,
-    pub state: DbUserState,
-}
-
-pub struct UserCreate {
+pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
@@ -41,50 +28,6 @@ pub enum DbMembership {
     Join,
     Leave,
     Ban,
-}
-
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_type")]
-pub enum DbUserType {
-    Default,
-    Alias,
-    Bot,
-    System,
-}
-
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_state")]
-pub enum DbUserState {
-    Active,
-    Suspended,
-    Deleted,
-}
-
-impl From<DbUser> for User {
-    fn from(row: DbUser) -> Self {
-        User {
-            id: row.id,
-            version_id: row.version_id,
-            name: row.name,
-            description: row.description,
-            status: row.status,
-            user_type: match row.r#type {
-                DbUserType::Default => UserType::Default,
-                DbUserType::Alias => UserType::Alias {
-                    alias_id: row.parent_id.unwrap().into(),
-                },
-                DbUserType::Bot => UserType::Bot {
-                    owner_id: row.parent_id.unwrap().into(),
-                },
-                DbUserType::System => UserType::System,
-            },
-            state: match row.state {
-                DbUserState::Active => UserState::Active,
-                DbUserState::Suspended => UserState::Suspended,
-                DbUserState::Deleted => UserState::Deleted,
-            },
-        }
-    }
 }
 
 impl From<DbRoom> for Room {
@@ -419,8 +362,10 @@ pub enum DbThreadState {
 pub enum MediaLinkType {
     Message,
     MessageVersion,
+    AvatarUser,
 }
 
+// TODO: surely there's a better way than manually managing media links/references
 pub struct MediaLink {
     pub media_id: MediaId,
     pub target_id: Uuid,

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, RoomMember, RoomMemberPatch,
+    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, Role, RoomMember, RoomMemberPatch,
     RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember,
     ThreadMemberPatch, ThreadMembership,
 };
@@ -8,11 +8,10 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate, MessageId,
-    MessageVerId, PaginationQuery, PaginationResponse, Permissions, Role, RoleCreate, RoleId,
+    DbUserCreate, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
+    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleCreate, RoleId,
     RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
-    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserCreate, UserId, UserPatch,
-    UserVerId,
+    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -253,7 +252,7 @@ pub trait DataUnread {
 
 #[async_trait]
 pub trait DataUser {
-    async fn user_create(&self, patch: UserCreate) -> Result<User>;
+    async fn user_create(&self, patch: DbUserCreate) -> Result<User>;
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;

@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-use crate::types::UserCreate;
+use crate::types::DbUserCreate;
 use crate::ServerState;
 
 use crate::error::{Error, Result};
@@ -77,7 +77,7 @@ pub async fn auth_oauth_redirect(
         Ok(user_id) => user_id,
         Err(Error::NotFound) => {
             let user = data
-                .user_create(UserCreate {
+                .user_create(DbUserCreate {
                     parent_id: None,
                     name: dc.user.global_name.unwrap_or(dc.user.username),
                     description: None,

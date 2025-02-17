@@ -4,10 +4,10 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::{MessageSync, User, UserCreateRequest, UserPatch};
+use types::{MessageSync, User, UserCreate, UserPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::{UserCreate, UserIdReq};
+use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
 use super::util::Auth;
@@ -26,12 +26,12 @@ pub async fn user_create(
     // NOTE: utoipa + cargo check seems to break with _session here?
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(body): Json<UserCreateRequest>,
+    Json(body): Json<UserCreate>,
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(auth_user_id);
     let data = s.data();
     let user = data
-        .user_create(UserCreate {
+        .user_create(DbUserCreate {
             parent_id,
             name: body.name,
             description: body.description,
@@ -87,7 +87,19 @@ pub async fn user_update(
         return Err(Error::NotFound);
     }
     let data = s.data();
-    data.user_update(target_user_id, body).await?;
+    if let Some(avatar_media_id) = body.avatar {
+        let existing = data.media_link_select(avatar_media_id).await?;
+        if !existing.is_empty() {
+            return Err(Error::BadStatic("cant reuse media"));
+        }
+    }
+    data.user_update(target_user_id, body.clone()).await?;
+    data.media_link_delete(target_user_id.0, MediaLinkType::AvatarUser)
+        .await?;
+    if let Some(avatar_media_id) = body.avatar {
+        data.media_link_insert(avatar_media_id, target_user_id.0, MediaLinkType::AvatarUser)
+            .await?;
+    }
     let user = data.user_get(target_user_id).await?;
     s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
@@ -119,6 +131,8 @@ pub async fn user_delete(
     }
     let data = s.data();
     data.user_delete(target_user_id).await?;
+    data.media_link_delete(target_user_id.0, MediaLinkType::AvatarUser)
+        .await?;
     s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }

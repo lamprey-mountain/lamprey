@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::MediaId;
+
 use super::util::deserialize_default_true;
 use super::{UserId, UserVerId};
 
@@ -14,8 +16,9 @@ pub struct User {
     pub name: String,
     pub description: Option<String>,
     pub status: Option<String>,
+    // NOTE: do i want to resolve media here?
+    pub avatar: Option<MediaId>,
     // email: Option<String>,
-    // avatar: Option<String>,
     #[serde(flatten)]
     pub user_type: UserType,
     pub state: UserState,
@@ -23,7 +26,7 @@ pub struct User {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserCreateRequest {
+pub struct UserCreate {
     pub name: String,
     pub description: Option<String>,
     pub status: Option<String>,
@@ -38,6 +41,7 @@ pub struct UserPatch {
     pub name: Option<String>,
     pub description: Option<Option<String>>,
     pub status: Option<Option<String>>,
+    pub avatar: Option<MediaId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
