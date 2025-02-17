@@ -8,6 +8,7 @@ export type Role = components["schemas"]["Role"];
 export type Invite = components["schemas"]["Invite"];
 export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
+export type ThreadMember = components["schemas"]["ThreadMember"];
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreateRequest"];
 export type PaginationResponseMessage =
@@ -49,6 +50,7 @@ export type MessageSync =
 	| { type: "UpsertMessage"; message: Message }
 	| { type: "UpsertUser"; user: User }
 	| { type: "UpsertRoomMember"; member: RoomMember }
+	| { type: "UpsertThreadMember"; member: ThreadMember }
 	| { type: "UpsertSession"; session: Session }
 	| { type: "UpsertRole"; role: Role }
 	| { type: "UpsertInvite"; invite: Invite }

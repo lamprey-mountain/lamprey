@@ -99,8 +99,7 @@ export interface paths {
 		 * @description Get headers useful for resuming an upload
 		 */
 		head: operations["media_check"];
-		/** Media upload */
-		patch: operations["media_upload"];
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room": {
@@ -460,6 +459,43 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/member": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Thread member list */
+		get: operations["thread_member_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/member/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Thread member get */
+		get: operations["thread_member_get"];
+		/** Thread member add */
+		put: operations["thread_member_add"];
+		post?: never;
+		/** Thread member delete (kick/leave) */
+		delete: operations["thread_member_delete"];
+		options?: never;
+		head?: never;
+		/** Thread member update */
+		patch: operations["thread_member_update"];
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/message": {
@@ -857,6 +893,10 @@ export interface components {
 			/** @enum {string} */
 			type: "UpsertRoomMember";
 		} | {
+			member: components["schemas"]["ThreadMember"];
+			/** @enum {string} */
+			type: "UpsertThreadMember";
+		} | {
 			session: components["schemas"]["Session"];
 			/** @enum {string} */
 			type: "UpsertSession";
@@ -1049,6 +1089,20 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		PaginationResponse_ThreadMember: {
+			has_more: boolean;
+			items: (components["schemas"]["ThreadMembership"] & {
+				/**
+				 * Format: date-time
+				 * @description When this member's membership last changed (joined, left, was kicked, or banned).
+				 */
+				membership_updated_at: string;
+				thread_id: components["schemas"]["ThreadId"];
+				user_id: components["schemas"]["UserId"];
+			})[];
+			/** Format: int64 */
+			total: number;
+		};
 		/** @enum {string} */
 		Permission:
 			| "Admin"
@@ -1212,6 +1266,31 @@ export interface components {
 			/** @enum {string} */
 			type: "Chat";
 		};
+		ThreadMember: components["schemas"]["ThreadMembership"] & {
+			/**
+			 * Format: date-time
+			 * @description When this member's membership last changed (joined, left, was kicked, or banned).
+			 */
+			membership_updated_at: string;
+			thread_id: components["schemas"]["ThreadId"];
+			user_id: components["schemas"]["UserId"];
+		};
+		ThreadMemberPatch: {
+			override_description?: string | null;
+			override_name?: string | null;
+		};
+		ThreadMembership: {
+			/** @enum {string} */
+			membership: "Join";
+			override_description?: string | null;
+			override_name?: string | null;
+		} | {
+			/** @enum {string} */
+			membership: "Leave";
+		} | {
+			/** @enum {string} */
+			membership: "Ban";
+		};
 		ThreadPatch: {
 			description?: string | null;
 			name?: string | null;
@@ -1256,6 +1335,7 @@ export interface components {
 			| "Extracted"
 			| "Generated";
 		User: components["schemas"]["UserType"] & {
+			avatar?: null | components["schemas"]["MediaId"];
 			description?: string | null;
 			id: components["schemas"]["UserId"];
 			name: string;
@@ -1263,7 +1343,7 @@ export interface components {
 			status?: string | null;
 			version_id: components["schemas"]["UserVerId"];
 		};
-		UserCreateRequest: {
+		UserCreate: {
 			description?: string | null;
 			is_bot: boolean;
 			name: string;
@@ -1272,6 +1352,7 @@ export interface components {
 		/** Format: uuid */
 		UserId: string;
 		UserPatch: {
+			avatar?: null | components["schemas"]["MediaId"];
 			description?: string | null;
 			name?: string | null;
 			status?: string | null;
@@ -1514,40 +1595,6 @@ export interface operations {
 				headers: {
 					"upload-length"?: number;
 					"upload-offset"?: number;
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	media_upload: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/octet-stream": number[];
-			};
-		};
-		responses: {
-			/** @description Upload done */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Media"];
-				};
-			};
-			/** @description Upload part success */
-			204: {
-				headers: {
 					[name: string]: unknown;
 				};
 				content?: never;
@@ -2477,6 +2524,155 @@ export interface operations {
 			};
 		};
 	};
+	thread_member_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_ThreadMember"];
+				};
+			};
+		};
+	};
+	thread_member_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ThreadMember"];
+				};
+			};
+		};
+	};
+	thread_member_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ThreadMemberPatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ThreadMember"];
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_member_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_member_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["ThreadId"];
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ThreadMemberPatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ThreadMember"];
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	message_list: {
 		parameters: {
 			query?: {
@@ -2762,7 +2958,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["UserCreateRequest"];
+				"application/json": components["schemas"]["UserCreate"];
 			};
 		};
 		responses: {
