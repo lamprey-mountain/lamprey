@@ -224,7 +224,7 @@ impl DataMedia for Postgres {
         .execute(&mut *tx)
         .await?;
         for track in media.all_tracks() {
-            let t: DbMediaTrack = dbg!(track.to_owned().into());
+            let t: DbMediaTrack = track.to_owned().into();
             query!(
                 "
     	    INSERT INTO media_track (

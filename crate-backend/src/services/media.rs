@@ -192,7 +192,7 @@ impl ServiceMedia {
         let p = tmp.file_path().to_owned();
         let url = format!("media/{media_id}");
         let services = self.state.services();
-        let (meta, mime) = &dbg!(services.media.get_metadata_and_mime(&p).await?);
+        let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mut media = Media {
             alt: up.create.alt.clone(),
             id: media_id,
