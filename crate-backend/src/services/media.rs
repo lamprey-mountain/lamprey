@@ -3,7 +3,7 @@ use std::{io::Cursor, process::Stdio, sync::Arc};
 use async_tempfile::TempFile;
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
-use image::ImageFormat;
+use image::{codecs::avif::AvifEncoder, ImageEncoder, ImageFormat};
 use tokio::{io::BufWriter, process::Command};
 use tracing::{debug, error, info, trace};
 use types::{
@@ -158,8 +158,8 @@ impl ServiceMedia {
                 continue;
             }
             let mut out = Cursor::new(Vec::new());
-            img.thumbnail(size, size)
-                .write_to(&mut out, ImageFormat::WebP)?;
+            let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 30);
+            img.thumbnail(size, size).write_with_encoder(enc)?;
             let url = format!("thumb/{media_id}/{size}");
             let len = out.get_ref().len();
             self.state
@@ -175,7 +175,7 @@ impl ServiceMedia {
                 }),
                 url,
                 size: MediaSize::Bytes(len as u64),
-                mime: "image/webp".to_owned(),
+                mime: "image/avif".to_owned(),
                 source: TrackSource::Generated,
             });
         }
