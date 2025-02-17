@@ -5,7 +5,8 @@ use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
 use types::{
-    Media, MediaCreate, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId,
+    Media, MediaCreate, MediaId, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User,
+    UserId,
 };
 use uuid::uuid;
 
@@ -23,6 +24,10 @@ pub enum UnnamedMessage {
     MediaUpload {
         filename: String,
         bytes: Vec<u8>,
+        response: oneshot::Sender<Media>,
+    },
+    MediaInfo {
+        media_id: MediaId,
         response: oneshot::Sender<Media>,
     },
     // MessageGet {
@@ -130,6 +135,10 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             let upload = http.media_create(&req).await?;
             let media = http.media_upload(&upload, bytes).await?;
             let _ = response.send(media.expect("failed to upload media!"));
+        }
+        UnnamedMessage::MediaInfo { media_id, response } => {
+            let media = http.media_info_get(media_id).await?;
+            let _ = response.send(media);
         }
         UnnamedMessage::MessageCreate {
             thread_id,

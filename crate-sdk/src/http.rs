@@ -1,8 +1,8 @@
 use anyhow::Result;
 use reqwest::{StatusCode, Url};
 use types::{
-    Media, MediaCreate, MediaCreated, Message, MessageCreateRequest, MessageId, MessagePatch,
-    RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch,
+    Media, MediaCreate, MediaCreated, MediaId, Message, MessageCreateRequest, MessageId,
+    MessagePatch, RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch,
 };
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
@@ -163,6 +163,20 @@ impl Http {
             .bearer_auth(&self.token)
             .header("content-type", "application/json")
             .json(&body)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
+
+    pub async fn media_info_get(&self, media_id: MediaId) -> Result<Media> {
+        let c = reqwest::Client::new();
+        let url = self.base_url.join(&format!("/api/v1/media/{media_id}"))?;
+        let res: Media = c
+            .get(url)
+            .bearer_auth(&self.token)
             .send()
             .await?
             .error_for_status()?

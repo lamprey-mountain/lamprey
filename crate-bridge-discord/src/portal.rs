@@ -15,6 +15,7 @@ use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::error;
+use types::MediaTrackInfo;
 use types::Message;
 use types::MessageId;
 use types::ThreadId;
@@ -187,6 +188,7 @@ impl Portal {
                     }
                     let mut payload = ExecuteWebhook::new()
                         .username(message.override_name.unwrap_or(message.author.name))
+                        .avatar_url("")
                         .content(content)
                         .allowed_mentions(
                             CreateAllowedMentions::new()
@@ -199,6 +201,33 @@ impl Portal {
                     if let Some(dc_tid) = self.config.discord_thread_id {
                         payload = payload.in_thread(dc_tid);
                     }
+                    if let Some(media_id) = message.author.avatar {
+                        let (avatar_send, avatar) = oneshot::channel();
+                        self.globals
+                            .ch_chan
+                            .send(UnnamedMessage::MediaInfo {
+                                media_id,
+                                response: avatar_send,
+                            })
+                            .await?;
+                        let avatar = avatar.await?;
+                        let valid_track = avatar
+                            .all_tracks()
+                            .find(|a| {
+                                matches!(
+                                    a.info,
+                                    MediaTrackInfo::Thumbnail(types::Image { height: 64, .. })
+                                )
+                            })
+                            .or_else(|| {
+                                avatar
+                                    .all_tracks()
+                                    .find(|a| matches!(a.info, MediaTrackInfo::Image(_)))
+                            });
+                        if let Some(valid_track) = valid_track {
+                            payload = payload.avatar_url(&valid_track.url);
+                        }
+                    };
                     self.globals
                         .dc_chan
                         .send(DiscordMessage::WebhookExecute {
