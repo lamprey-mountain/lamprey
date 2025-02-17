@@ -3,7 +3,7 @@ use std::{io::Cursor, process::Stdio, sync::Arc};
 use async_tempfile::TempFile;
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
-use image::{codecs::avif::AvifEncoder, ImageEncoder, ImageFormat};
+use image::codecs::avif::AvifEncoder;
 use tokio::{io::BufWriter, process::Command};
 use tracing::{debug, error, info, trace};
 use types::{
@@ -159,7 +159,8 @@ impl ServiceMedia {
                 continue;
             }
             let mut out = Cursor::new(Vec::new());
-            let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 30);
+            // currently using the default
+            let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
             img.thumbnail(width, height).write_with_encoder(enc)?;
             let url = format!("thumb/{media_id}/{width}x{height}");
             let len = out.get_ref().len();
@@ -167,6 +168,7 @@ impl ServiceMedia {
                 .blobs
                 .write_with(&url, out.into_inner())
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+                .content_type("image/avif")
                 .await?;
             media.tracks.push(MediaTrack {
                 info: MediaTrackInfo::Thumbnail(types::Image {
