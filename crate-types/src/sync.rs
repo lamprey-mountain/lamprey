@@ -187,15 +187,13 @@ impl MessageSync {
             MessageSync::UpsertInvite { invite } => Some(invite.invite.code.to_string()),
             MessageSync::DeleteRole { role_id, .. } => Some(role_id.to_string()),
             MessageSync::DeleteInvite { code, .. } => Some(code.to_string()),
+            MessageSync::DeleteMessage { message_id, .. } => Some(message_id.to_string()),
+            MessageSync::DeleteMessageVersion { message_id, .. } => Some(message_id.to_string()),
 
             // HACK: prob. should impl thread-specific audit logs?
             MessageSync::UpsertThreadMember { member } => {
                 Some(format!("{}-{}", member.user_id, member.thread_id))
             }
-
-            // explicitly no prev
-            MessageSync::DeleteMessage { .. } => None,
-            MessageSync::DeleteMessageVersion { .. } => None,
 
             // not loggable
             _ => None,

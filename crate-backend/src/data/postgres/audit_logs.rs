@@ -70,6 +70,7 @@ impl DataAuditLogs for Postgres {
         let id = Uuid::now_v7();
         let target_id = payload.get_audit_target_id().expect("couldn't get id?");
         let payload = serde_json::to_value(payload)?;
+        // NOTE: message shouldn't have prev (works for now, but might have issues later)
         query!(
             "
             insert into audit_log (id, room_id, user_id, reason, payload, payload_prev)
