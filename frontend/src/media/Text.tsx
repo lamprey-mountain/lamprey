@@ -1,3 +1,4 @@
+import { createResource, createSignal } from "solid-js";
 import { MediaProps } from "./util.ts";
 
 export const TextView = (props: MediaProps) => {
@@ -10,8 +11,28 @@ export const TextView = (props: MediaProps) => {
 
 	const ty = () => props.media.source.mime.split(";")[0];
 
+	const [text] = createResource(() => props.media, async (media) => {
+		const req = await fetch(media.source.url, {
+			headers: {
+				// 16KiB
+				"Range": "bytes=0-16384"
+			},
+		});
+		if (!req.ok) throw req.statusText;
+		const text = await req.text();
+		return text;
+	});
+
+	const [collapsed, setCollapsed] = createSignal(true);
+
 	return (
-		<div>
+		<div class="media-text">
+			<div class="wrap" classList={{ collapsed: collapsed() }}>
+				<pre>{text()}</pre>
+				<button onClick={() => setCollapsed(c => !c)}>
+					{collapsed() ? "expand" : "collapse"}
+				</button>
+			</div>
 			<a download={props.media.filename} href={props.media.source.url}>
 				download {props.media.filename}
 			</a>

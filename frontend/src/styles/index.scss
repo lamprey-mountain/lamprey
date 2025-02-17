@@ -78,7 +78,8 @@
 			background-color: $bg3;
 		}
 
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			background-color: $bg4;
 		}
 
@@ -96,12 +97,14 @@
 	}
 }
 
-button, input[type="submit"] {
+button,
+input[type="submit"] {
 	padding: 0 0.25rem;
 	background-color: $bg3;
 	cursor: pointer;
 
-	&:hover, &:focus {
+	&:hover,
+	&:focus {
 		background-color: $bg4;
 	}
 }
@@ -348,11 +351,13 @@ s {
 	text-decoration: strikethrough;
 }
 
-li, p {
+li,
+p {
 	white-space: pre-wrap;
 }
 
-pre, code {
+pre,
+code {
 	background-color: $bg2;
 	font-family: var(--font-mono);
 }
@@ -378,10 +383,12 @@ em {
 }
 
 .markdown {
-	& ul, ol {
+	& ul,
+	ol {
 		white-space: normal;
 
-		& ul, ol {
+		& ul,
+		ol {
 			margin-left: 1rem;
 		}
 	}
@@ -471,7 +478,8 @@ menu {
 		width: 100%;
 		text-align: left;
 
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			background-color: rgba(var(--color-bg1), 0.5);
 		}
 	}
@@ -522,7 +530,8 @@ input[type="text"] {
 			width: 100%;
 			background-color: none;
 
-			&:hover, &:focus {
+			&:hover,
+			&:focus {
 				background-color: $bg4;
 			}
 
@@ -567,7 +576,8 @@ input[type="text"] {
 		text-align: right;
 		padding: 0 8px;
 
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			text-decoration: underline;
 		}
 
@@ -665,12 +675,12 @@ input[type="text"] {
 	}
 
 	&.interactive {
-	  padding: var(--padding);
-	  margin: calc(-1 * var(--padding));
+		padding: var(--padding);
+		margin: calc(-1 * var(--padding));
 
 		& > .base {
- 			height: calc(100% - (var(--padding) * 2));
-			width: calc(100% - (var(--padding) * 2));
+			height: calc(100% - var(--padding) * 2);
+			width: calc(100% - var(--padding) * 2);
 		}
 	}
 
@@ -749,7 +759,9 @@ input[type="text"] {
 		}
 	}
 
-	& img, video, audio {
+	& img,
+	video,
+	audio {
 		display: block;
 	}
 
@@ -849,7 +861,8 @@ summary {
 	}
 }
 
-.video, .media-old {
+.video,
+.media-old {
 	position: relative;
 
 	& > .media {
@@ -876,7 +889,7 @@ summary {
 		position: absolute;
 		grid-area: progress;
 		border: solid $bg3 1px;
-		}
+	}
 
 	& > .info {
 		grid-area: info;
@@ -918,7 +931,8 @@ summary {
 	}
 }
 
-.audio > .progress, .video > .footer > .progress {
+.audio > .progress,
+.video > .footer > .progress {
 	position: absolute;
 	grid-area: progress;
 	height: 8px;
@@ -930,7 +944,8 @@ summary {
 		box-shadow: 2px 2px 8px #1114;
 	}
 
-	& > .preview, & > .fill {
+	& > .preview,
+	& > .fill {
 		position: absolute;
 		height: 100%;
 		pointer-events: none;
@@ -1067,46 +1082,46 @@ code {
 	display: block;
 	object-fit: contain;
 	background: $bg1;
-	
+
 	/* should probably add a way to crop images in browser */
 	/* object-fit: cover; */
 	/* image-rendering: crisp-edges; */
 }
 
 .dropdown {
-  display: inline-block;
-  background: #eee;
-  border: solid #bbb 1px;
-  padding: 0 2px;
-  outline: none;
-  cursor: pointer;
+	display: inline-block;
+	background: #eee;
+	border: solid #bbb 1px;
+	padding: 0 2px;
+	outline: none;
+	cursor: pointer;
 }
 
 .dropdown-items {
-  background: #eee;
-  border: solid #bbb 1px;
+	background: #eee;
+	border: solid #bbb 1px;
 }
 
 .dropdown-items > ul {
-  list-style: none;
+	list-style: none;
 }
 
 .dropdown-items > ul > li {
-  padding: 2px 4px;
-  user-select: none;
+	padding: 2px 4px;
+	user-select: none;
 }
 
 .dropdown-items > ul > li.hovered {
-  background: #2222;
+	background: #2222;
 }
 
 .dropdown-items > ul > li.selected {
-  box-shadow: inset 2px 0 0 #f0f2;
-  background: #f0f2;
+	box-shadow: inset 2px 0 0 #f0f2;
+	background: #f0f2;
 }
 
 .dropdown-items > ul > li.selected.hovered {
-  background: #7172;
+	background: #7172;
 }
 
 input[type="range"] {
@@ -1117,16 +1132,34 @@ input[type="range"] {
 .range {
 	display: grid;
 	grid-template-areas: "input input" "text dim";
-	
+
 	& > input {
 		grid-area: input;
 	}
-	
+
 	& > .dim {
 		align-self: center;
 	}
-	
+
 	& > .value {
 		text-align: right;
+	}
+}
+
+.media-text {
+	& > .wrap {
+		overflow: hidden;
+		padding: 8px;
+		background-color: $bg2;
+
+		& > pre {
+			overflow: hidden;
+			line-height: 1.3;
+			padding: 0;
+		}
+
+		&.collapsed > pre {
+			height: 10lh;
+		}
 	}
 }
