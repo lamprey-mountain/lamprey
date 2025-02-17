@@ -723,6 +723,10 @@ input[type="text"] {
 	}
 }
 
+.media-old audio {
+	display: block;
+}
+
 .media {
 	contain: content;
 	max-height: min(50vh, 600px);

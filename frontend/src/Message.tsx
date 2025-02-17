@@ -236,7 +236,7 @@ export function AttachmentView1(props: MediaProps) {
 		);
 	} else if (b() === "audio") {
 		return (
-			<li>
+			<li class="media-old">
 				<audio controls src={props.media.source.url} />
 				<a download={props.media.filename} href={props.media.source.url}>
 					download {props.media.filename}
