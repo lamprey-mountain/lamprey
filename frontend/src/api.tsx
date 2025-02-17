@@ -79,7 +79,7 @@ export function createApi(
 	const messages = new Messages();
 	const media = new MediaInfo();
 	const typing = new ReactiveMap<string, Set<string>>();
-	const typing_timeout = new Map<string, Map<string, number>>();
+	const typing_timeout = new Map<string, Map<string, NodeJS.Timeout>>();
 	const audit_logs = new AuditLogs();
 
 	temp_events.on("sync", (msg) => {
