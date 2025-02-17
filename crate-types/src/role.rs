@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::{deserialize_sorted_permissions, deserialize_sorted_permissions_option, Diff, some_option};
+use crate::util::{
+    deserialize_sorted_permissions, deserialize_sorted_permissions_option, some_option, Diff,
+};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 

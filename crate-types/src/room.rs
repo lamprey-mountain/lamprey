@@ -38,11 +38,12 @@ pub struct RoomCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomPatch {
     pub name: Option<String>,
+
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 }
 
-use crate::util::some_option;
+use crate::util::{some_option, Diff};
 // enum RoomType {
 //     Default,
 //     Dm { other: User },

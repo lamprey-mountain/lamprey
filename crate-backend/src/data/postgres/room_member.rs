@@ -197,7 +197,9 @@ impl DataRoomMember for Postgres {
             room_id.into_inner(),
             user_id.into_inner(),
             patch.override_name.unwrap_or(item.override_name),
-            patch.override_description.unwrap_or(item.override_description),
+            patch
+                .override_description
+                .unwrap_or(item.override_description),
         )
         .execute(&mut *tx)
         .await?;

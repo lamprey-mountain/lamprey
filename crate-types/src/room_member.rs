@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::util::{some_option, Diff};
+use crate::util::some_option;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

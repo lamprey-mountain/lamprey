@@ -52,15 +52,15 @@ use crate::util::some_option;
 pub struct MessagePatch {
     #[serde(default, deserialize_with = "some_option")]
     pub content: Option<Option<String>>,
-    
+
     pub attachments: Option<Vec<MediaRef>>,
-    
+
     #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
-    
+
     #[serde(default, deserialize_with = "some_option")]
     pub reply_id: Option<Option<MessageId>>,
-    
+
     // is this temporary, or should i keep it?
     // removing it would break all existing bridged messages
     #[serde(default, deserialize_with = "some_option")]

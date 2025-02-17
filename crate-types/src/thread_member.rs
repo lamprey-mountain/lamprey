@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::{some_option, Diff};
+use crate::util::some_option;
 use crate::UserId;
 
 use super::ThreadId;

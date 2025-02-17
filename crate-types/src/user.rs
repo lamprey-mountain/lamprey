@@ -89,9 +89,9 @@ pub enum UserState {
 
 impl Diff<User> for UserPatch {
     fn changes(&self, other: &User) -> bool {
-        dbg!(self.name.changes(&other.name))
-            || dbg!(self.description.changes(&other.description))
-            || dbg!(dbg!(self.avatar).changes(dbg!(&other.avatar)))
-            || dbg!(self.status.changes(&other.status))
+        self.name.changes(&other.name)
+            || self.description.changes(&other.description)
+            || self.avatar.changes(&other.avatar)
+            || self.status.changes(&other.status)
     }
 }
