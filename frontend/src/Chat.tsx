@@ -10,7 +10,7 @@ import { reconcile } from "solid-js/store";
 import { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import { MessageListAnchor } from "./api/messages.ts";
-import { getMsgTs as get_msg_ts } from "./util.ts";
+import { getMsgTs as get_msg_ts } from "./util.tsx";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -263,8 +263,8 @@ export function renderTimeline(
 				newItems.push({
 					type: "time-split",
 					id: `${msg.id}-timesplit`,
-					date: get_msg_ts(msg)
-				})
+					date: get_msg_ts(msg),
+				});
 			}
 		}
 		newItems.push({

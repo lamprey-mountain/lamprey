@@ -3,6 +3,7 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { RoomT } from "../types.ts";
 import { Dropdown } from "../Dropdown.tsx";
+import { Copyable } from "../util.tsx";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -92,13 +93,3 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 		</>
 	);
 }
-
-const Copyable = (props: { children: string }) => {
-	const ctx = useCtx();
-	const copy = () => {
-		navigator.clipboard.writeText(props.children);
-		ctx.dispatch({ do: "modal.alert", text: "copied!" });
-	};
-
-	return <code onClick={copy}>{props.children}</code>;
-};

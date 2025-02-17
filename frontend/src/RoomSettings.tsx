@@ -13,7 +13,7 @@ import {
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "invites", path: "invites", component: Invites },
-	{ name: "roles", path: "roles", component: Roles },
+	{ name: "roles", path: "roles", component: Roles, noPad: true },
 	{ name: "members", path: "members", component: Members },
 	{ name: "audit log", path: "logs", component: AuditLog },
 ];
@@ -24,7 +24,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	return (
 		<div class="settings">
 			<header>
-				room settings: {currentTab()?.name}
+				room settings: {currentTab()?.name}{" "}
+				<A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>
@@ -39,7 +40,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					</For>
 				</ul>
 			</nav>
-			<main>
+			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
 						component={currentTab()?.component}

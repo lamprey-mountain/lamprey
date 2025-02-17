@@ -355,7 +355,6 @@ function RouteRoomSettings(p: RouteSectionProps) {
 	return (
 		<>
 			<Title title={title()} />
-			<ChatNav />
 			<Show when={room()}>
 				<RoomSettings room={room()!} page={p.params.page} />
 			</Show>

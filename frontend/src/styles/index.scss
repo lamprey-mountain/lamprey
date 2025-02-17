@@ -520,7 +520,10 @@ input[type="text"] {
 	}
 
 	& > main {
-		padding: 0.25rem;
+		&.padded {
+			padding: 0.25rem;
+		}
+
 		overflow-y: auto;
 	}
 
@@ -981,11 +984,36 @@ summary {
 }
 
 .room-settings-roles {
-	& > li {
+	display: flex;
+	height: 100%;
+
+	& .role-main {
+		flex: 1;
+	}
+
+	& .role-main, .role-edit {
+		padding: 0.25rem;
+		overflow-y: auto;
+	}
+
+	.role-list,
+	.role-edit {
+		& button {
+			background: $bg-200;
+			border: solid $sep-500 1px;
+
+			&:hover {
+				background: $bg-300;
+			}
+		}
+	}
+
+	& .role-list > li {
 		border: solid $sep-500 1px;
 		background: $bg-300;
 		margin-top: 4px;
 		padding: 4px;
+		cursor: pointer;
 
 		& .info {
 			display: flex;
@@ -1000,14 +1028,25 @@ summary {
 			font-size: 1em;
 			font-weight: bold;
 		}
+	}
 
-		& button {
-			background: $bg-200;
+	& .role-edit {
+		background: $bg-300;
+		min-width: 300px;
+		overflow-y: auto;
+
+		& h3 {
+			font-size: 1em;
+			font-weight: bold;
+		}
+
+		& textarea, input[type="text"] {
 			border: solid $sep-500 1px;
+			background: $bg-200;
+		}
 
-			&:hover {
-				background: $bg-300;
-			}
+		& button[disabled] {
+			background: $bg-300;
 		}
 	}
 }
@@ -1178,20 +1217,28 @@ pre.numbered {
 }
 
 .chat > .list > li.time-split {
-  display: flex;
-  color: $fg-600;
-  font-size: .9rem;
-  align-items: center;
-  gap: 8px;
-  margin: 2px 8px;
+	display: flex;
+	color: $fg-600;
+	font-size: 0.9rem;
+	align-items: center;
+	gap: 8px;
+	margin: 2px 8px;
 
 	& > hr {
 		flex: 1;
-	  border-bottom: solid $sep-500 1px;
+		border-bottom: solid $sep-500 1px;
 	}
 
 	& > time {
-	  /* HACK: visually center text */
-	  margin-top: -1px;
+		/* HACK: visually center text */
+		margin-top: -1px;
 	}
+}
+
+input[type="checkbox"] {
+	appearance: checkbox;
+}
+
+button[disabled] {
+	cursor: not-allowed;
 }
