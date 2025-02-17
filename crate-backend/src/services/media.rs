@@ -1,4 +1,8 @@
-use std::{io::Cursor, process::Stdio, sync::Arc};
+use std::{
+    io::{Cursor, SeekFrom},
+    process::Stdio,
+    sync::Arc,
+};
 
 use async_tempfile::TempFile;
 use dashmap::DashMap;
@@ -6,7 +10,7 @@ use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use image::{codecs::avif::AvifEncoder, DynamicImage};
 use tokio::{
-    io::{AsyncReadExt, BufWriter},
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter},
     process::Command,
 };
 use tracing::{debug, error, info, span, trace, Level};
@@ -22,6 +26,7 @@ use crate::{
 mod ffprobe;
 
 const MEGABYTE: usize = 1024 * 1024;
+pub const MAX_SIZE: u64 = 1024 * 1024 * 16;
 
 pub struct ServiceMedia {
     pub state: Arc<ServerStateInner>,
@@ -33,6 +38,25 @@ pub struct MediaUpload {
     pub user_id: UserId,
     pub temp_file: TempFile,
     pub temp_writer: BufWriter<TempFile>,
+    pub current_size: u64,
+}
+
+impl MediaUpload {
+    pub async fn write(&mut self, bytes: &[u8]) -> Result<()> {
+        let len = bytes.len() as u64;
+        if self.current_size + len > MAX_SIZE {
+            return Err(Error::TooBig);
+        }
+
+        self.temp_writer.write_all(bytes).await?;
+        self.current_size += len;
+        Ok(())
+    }
+
+    pub async fn seek(&mut self, off: u64) -> Result<()> {
+        self.temp_writer.seek(SeekFrom::Start(off)).await?;
+        Ok(())
+    }
 }
 
 impl ServiceMedia {
@@ -59,6 +83,7 @@ impl ServiceMedia {
                 user_id,
                 temp_file,
                 temp_writer,
+                current_size: 0,
             },
         );
         Ok(())

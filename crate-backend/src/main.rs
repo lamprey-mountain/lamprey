@@ -11,7 +11,7 @@ use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
-use opendal::layers::{LoggingLayer, TimeoutLayer};
+use opendal::layers::{ConcurrentLimitLayer, LoggingLayer, TimeoutLayer};
 use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -279,6 +279,7 @@ async fn main() -> Result<()> {
     let blobs = opendal::Operator::new(blobs_builder)?
         .layer(LoggingLayer::default())
         .layer(TimeoutLayer::new().with_timeout(Duration::from_secs(60 * 60 * 5)))
+        .layer(ConcurrentLimitLayer::new(1024))
         .finish();
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
