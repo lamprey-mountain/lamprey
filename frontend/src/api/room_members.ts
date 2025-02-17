@@ -124,9 +124,9 @@ export class RoomMembers {
 		}
 
 		const l2 = {
-			resource: (() => { }) as unknown as Resource<Pagination<RoomMember>>,
-			refetch: () => { },
-			mutate: () => { },
+			resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
+			refetch: () => {},
+			mutate: () => {},
 			prom: null,
 			pagination: null,
 		};

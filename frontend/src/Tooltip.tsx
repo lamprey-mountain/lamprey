@@ -85,7 +85,9 @@ export function tooltip(
 		// maybe have global set of what is hovered and what is a parent of what
 		isHovered = false;
 		if (!props.interactive) return hideTip();
-		if (props.doesntRetain && document.activeElement?.matches(props.doesntRetain)) return hideTip();
+		if (
+			props.doesntRetain && document.activeElement?.matches(props.doesntRetain)
+		) return hideTip();
 		if (tipEl()?.contains(document.activeElement)) return;
 		popupRemoveTimeout = setTimeout(hideTip, 0);
 	}

@@ -41,12 +41,14 @@ export const TextView = (props: MediaProps) => {
 		} else {
 			ctx.dispatch({ do: "modal.alert", text: "file not loaded yet" });
 		}
-	}
+	};
 
 	return (
 		<div class="media-text">
 			<div class="wrap" classList={{ collapsed: collapsed() }}>
-				<button class="copy" onClick={copy}>{copied() ? "copied!" : "copy"}</button>
+				<button class="copy" onClick={copy}>
+					{copied() ? "copied!" : "copy"}
+				</button>
 				<pre class="numbered">
 					<For each={text()?.split("\n")}>{l =>
 						<code>{l + "\n"}</code>

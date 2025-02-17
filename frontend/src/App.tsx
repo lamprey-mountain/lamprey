@@ -316,8 +316,8 @@ function RouteSettings(p: RouteSectionProps) {
 	const api = useApi();
 	const user = () => api.users.cache.get("@self");
 	createEffect(() => {
-		console.log(user())
-	})
+		console.log(user());
+	});
 	return (
 		<>
 			<Title title={user() ? t("page.settings_user") : t("loading")} />

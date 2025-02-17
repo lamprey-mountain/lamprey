@@ -49,15 +49,15 @@ export function ThreadMenu(props: { thread_id: string }) {
 
 	const closeThread = () => {
 		ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
-			params: { path: { thread_id: props.thread_id } }
+			params: { path: { thread_id: props.thread_id } },
 		});
-	}
+	};
 
 	const openThread = () => {
 		ctx.client.http.PUT("/api/v1/thread/{thread_id}/activate", {
-			params: { path: { thread_id: props.thread_id } }
+			params: { path: { thread_id: props.thread_id } },
 		});
-	}
+	};
 
 	return (
 		<Menu>

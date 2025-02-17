@@ -68,8 +68,8 @@ export function MessageView(props: MessageProps) {
 	function getComponent() {
 		const date =
 			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
-				props.message.id,
-			)
+					props.message.id,
+				)
 				? getTimestampFromUUID(props.message.id)
 				: new Date();
 		if (props.message.type === MessageType.ThreadUpdate) {
@@ -90,7 +90,8 @@ export function MessageView(props: MessageProps) {
 					<span></span>
 					<div class="content">
 						<span class="body">
-							<Author message={props.message} thread={thread()} /> updated the thread:{" "}
+							<Author message={props.message} thread={thread()} />{" "}
+							updated the thread:{" "}
 							{listFormatter.format(updates) || "did nothing"}
 						</span>
 					</div>
@@ -173,7 +174,10 @@ function ReplyView(props: ReplyProps) {
 			<div class="reply arrow">{"\u21B1"}</div>
 			<div class="reply reply-content" onClick={scrollToReply}>
 				<Show when={!reply.loading} fallback="loading..">
-					<Show when={reply() && thread()} fallback={<span class="author"></span>}>
+					<Show
+						when={reply() && thread()}
+						fallback={<span class="author"></span>}
+					>
 						<Author message={reply()!} thread={thread()!} />:
 					</Show>
 					{content()}
@@ -311,10 +315,18 @@ export function AttachmentView2(props: MediaProps) {
 	}
 }
 
-function Author(props: { message: Message, thread?: Thread }) {
+function Author(props: { message: Message; thread?: Thread }) {
 	const api = useApi();
-	const room_member = props.thread ? api.room_members.fetch(() => props.thread!.room_id, () => props.message.author.id) : null;
-	const thread_member = api.thread_members.fetch(() => props.message.thread_id, () => props.message.author.id);
+	const room_member = props.thread
+		? api.room_members.fetch(
+			() => props.thread!.room_id,
+			() => props.message.author.id,
+		)
+		: null;
+	const thread_member = api.thread_members.fetch(
+		() => props.message.thread_id,
+		() => props.message.author.id,
+	);
 	// const user = api.users.fetch(() => props.message.author.id);
 
 	function name() {
@@ -335,6 +347,8 @@ function Author(props: { message: Message, thread?: Thread }) {
 			class="author"
 			classList={{ "override-name": !!props.message.override_name }}
 			data-user-id={props.message.author.id}
-		>{name()}</span>
-	)
+		>
+			{name()}
+		</span>
+	);
 }

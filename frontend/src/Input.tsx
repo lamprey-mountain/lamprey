@@ -140,7 +140,7 @@ export function Input(props: InputProps) {
 	);
 }
 
-function RenderAttachment2(props: {thread: ThreadT, att: Attachment}) {
+function RenderAttachment2(props: { thread: ThreadT; att: Attachment }) {
 	const ctx = useCtx();
 
 	function renderInfo(att: Attachment) {
@@ -170,7 +170,10 @@ function RenderAttachment2(props: {thread: ThreadT, att: Attachment}) {
 				<Match when={props.att.status === "uploading" && props.att.paused}>
 					<button
 						onClick={() =>
-							ctx.dispatch({ do: "upload.resume", local_id: props.att.local_id })}
+							ctx.dispatch({
+								do: "upload.resume",
+								local_id: props.att.local_id,
+							})}
 					>
 						resume
 					</button>
@@ -178,7 +181,10 @@ function RenderAttachment2(props: {thread: ThreadT, att: Attachment}) {
 				<Match when={props.att.status === "uploading"}>
 					<button
 						onClick={() =>
-							ctx.dispatch({ do: "upload.pause", local_id: props.att.local_id })}
+							ctx.dispatch({
+								do: "upload.pause",
+								local_id: props.att.local_id,
+							})}
 					>
 						pause
 					</button>

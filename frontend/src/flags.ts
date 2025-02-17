@@ -33,7 +33,7 @@ const flagsDev: Flag[] = [
 ];
 
 const flagsProd: Flag[] = [
-	"new_media"
+	"new_media",
 ];
 
 export const flags = new ReactiveSet(

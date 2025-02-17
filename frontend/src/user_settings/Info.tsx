@@ -37,7 +37,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 
 	const [file, setFile] = createSignal<File | null>(null);
 	const setAvatar = async () => {
-		const f = file()
+		const f = file();
 		if (f) {
 			await createUpload({
 				client: api.client,
@@ -46,12 +46,12 @@ export function Info(props: VoidProps<{ user: User }>) {
 					api.client.http.PATCH("/api/v1/user/{user_id}", {
 						params: { path: { user_id: "@self" } },
 						body: { avatar: media.id },
-					})
+					});
 				},
-				onFail(_error) { },
-				onPause() { },
-				onResume() { },
-				onProgress(_progress) { },
+				onFail(_error) {},
+				onPause() {},
+				onResume() {},
+				onProgress(_progress) {},
 			});
 		} else {
 			ctx.dispatch({
@@ -73,7 +73,9 @@ export function Info(props: VoidProps<{ user: User }>) {
 		const m = media();
 		if (!m) return;
 		const tracks = [m.source, ...m.tracks];
-		const source = tracks.find(s => s.type === "Thumbnail" && s.height === 64) ?? tracks.find(s => s.type === "Image");
+		const source =
+			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
+				tracks.find((s) => s.type === "Image");
 		if (source) {
 			return source.url;
 		} else {
@@ -100,7 +102,10 @@ export function Info(props: VoidProps<{ user: User }>) {
 			<button onClick={setDescription}>set description</button>
 			<br />
 			<button onClick={setAvatar}>set avatar</button>
-			<input type="file" onInput={e => setFile(e.target.files?.[0] ?? null)} />
+			<input
+				type="file"
+				onInput={(e) => setFile(e.target.files?.[0] ?? null)}
+			/>
 			<br />
 		</>
 	);
