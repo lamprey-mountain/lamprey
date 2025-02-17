@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::util::Diff;
-use types::{MessageSync, User, UserCreate, UserPatch};
+use types::{MediaTrackInfo, MessageSync, User, UserCreate, UserPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
@@ -96,6 +96,13 @@ pub async fn user_update(
         let existing = data.media_link_select(avatar_media_id).await?;
         if !existing.is_empty() {
             return Err(Error::BadStatic("cant reuse media"));
+        }
+
+        let media = data.media_select(avatar_media_id).await?;
+        if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
+            return Err(Error::BadStatic(
+                "couldn't link media as avatar: not an image",
+            ));
         }
     }
     data.user_update(target_user_id, patch.clone()).await?;
