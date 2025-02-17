@@ -213,17 +213,7 @@ impl Portal {
                         let avatar = avatar.await?;
                         let valid_track = avatar
                             .all_tracks()
-                            .find(|a| {
-                                matches!(
-                                    a.info,
-                                    MediaTrackInfo::Thumbnail(types::Image { height: 64, .. })
-                                )
-                            })
-                            .or_else(|| {
-                                avatar
-                                    .all_tracks()
-                                    .find(|a| matches!(a.info, MediaTrackInfo::Image(_)))
-                            });
+                            .find(|a| matches!(a.info, MediaTrackInfo::Image(_)));
                         if let Some(valid_track) = valid_track {
                             payload = payload.avatar_url(&valid_track.url);
                         }
