@@ -58,8 +58,8 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		xhr = new XMLHttpRequest();
 
 		xhr.upload.onprogress = (ev) => {
-			opts.onProgress(offset);
-			offset = ev.loaded;
+			offset = ev.loaded + offset;
+			opts.onProgress(offset / opts.file.size);
 		};
 
 		xhr.onload = () => {

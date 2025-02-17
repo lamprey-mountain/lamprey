@@ -149,7 +149,7 @@ export function createDispatcher(
 						const att: Attachment = {
 							status: "uploading",
 							file,
-							local_id: local_id,
+							local_id,
 							progress,
 							paused: false,
 						};

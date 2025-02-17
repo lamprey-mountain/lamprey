@@ -37,7 +37,7 @@ export function Input(props: InputProps) {
 	}
 
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
-	const typing = () => api.typing.get(props.thread.id);
+	// const typing = () => api.typing.get(props.thread.id);
 
 	const sendTyping = leading(throttle, () => {
 		ctx.client.http.PUT("/api/v1/thread/{thread_id}/typing", {
@@ -99,7 +99,7 @@ export function Input(props: InputProps) {
 					<For each={atts()}>
 						{(att) => (
 							<li>
-								{renderAttachment2(props.thread, att)}
+								<RenderAttachment2 thread={props.thread} att={att} />
 							</li>
 						)}
 					</For>
@@ -140,15 +140,15 @@ export function Input(props: InputProps) {
 	);
 }
 
-function renderAttachment2(thread: ThreadT, att: Attachment) {
+function RenderAttachment2(props: {thread: ThreadT, att: Attachment}) {
 	const ctx = useCtx();
 
 	function renderInfo(att: Attachment) {
 		if (att.status === "uploading") {
-			if (att.progress === att.file.size) {
+			if (att.progress === 1) {
 				return `processing...`;
 			} else {
-				const percent = ((att.progress / att.file.size) * 100).toFixed(2);
+				const percent = (att.progress * 100).toFixed(2);
 				return `uploading (${percent}%)`;
 			}
 		} else {
@@ -157,28 +157,28 @@ function renderAttachment2(thread: ThreadT, att: Attachment) {
 	}
 
 	function removeAttachment(local_id: string) {
-		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: thread.id });
+		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: props.thread.id });
 	}
 
 	return (
 		<>
-			<div>{renderInfo(att)}</div>
-			<button onClick={() => removeAttachment(att.local_id)}>
+			<div>{renderInfo(props.att)}</div>
+			<button onClick={() => removeAttachment(props.att.local_id)}>
 				cancel/remove
 			</button>
 			<Switch>
-				<Match when={att.status === "uploading" && att.paused}>
+				<Match when={props.att.status === "uploading" && props.att.paused}>
 					<button
 						onClick={() =>
-							ctx.dispatch({ do: "upload.resume", local_id: att.local_id })}
+							ctx.dispatch({ do: "upload.resume", local_id: props.att.local_id })}
 					>
 						resume
 					</button>
 				</Match>
-				<Match when={att.status === "uploading"}>
+				<Match when={props.att.status === "uploading"}>
 					<button
 						onClick={() =>
-							ctx.dispatch({ do: "upload.pause", local_id: att.local_id })}
+							ctx.dispatch({ do: "upload.pause", local_id: props.att.local_id })}
 					>
 						pause
 					</button>
