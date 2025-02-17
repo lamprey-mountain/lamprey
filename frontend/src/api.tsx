@@ -45,6 +45,7 @@ import { RoomMembers } from "./api/room_members.ts";
 import { Roles } from "./api/roles.ts";
 import { AuditLogs } from "./api/audit_log.ts";
 import { ThreadMembers } from "./api/thread_members.ts";
+import { MediaInfo } from "./api/media.tsx";
 
 export type Json =
 	| number
@@ -76,6 +77,7 @@ export function createApi(
 	const thread_members = new ThreadMembers();
 	const users = new Users();
 	const messages = new Messages();
+	const media = new MediaInfo();
 	const typing = new ReactiveMap<string, Set<string>>();
 	const typing_timeout = new Map<string, Map<string, number>>();
 	const audit_logs = new AuditLogs();
@@ -395,6 +397,7 @@ export function createApi(
 		thread_members,
 		users,
 		messages,
+		media,
 		session,
 		typing,
 		audit_logs,
@@ -418,6 +421,7 @@ export function createApi(
 	invites.api = api;
 	users.api = api;
 	audit_logs.api = api;
+	media.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -486,6 +490,10 @@ export type Api = {
 		) => Resource<Message>;
 		cache: ReactiveMap<string, Message>;
 		cacheRanges: Map<string, MessageRanges>;
+	};
+	media: {
+		fetchInfo: (media_id: () => string) => Resource<Media>;
+		cacheInfo: ReactiveMap<string, Media>;
 	};
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;
