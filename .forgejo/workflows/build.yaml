@@ -8,7 +8,8 @@ jobs:
   populate-cache-deps:
     runs-on: nix
     container:
-      volumes: actions_nix_store:/nix/store
+      volumes:
+        - actions_nix_store:/nix/store
     strategy:
       matrix:
         derivation:
@@ -27,7 +28,8 @@ jobs:
   populate-cache:
     runs-on: nix
     container:
-      volumes: actions_nix_store:/nix/store
+      volumes:
+        - actions_nix_store:/nix/store
     needs:
       - populate-cache-deps
     strategy:
@@ -51,7 +53,8 @@ jobs:
   build-containers:
     runs-on: nix
     container:
-      volumes: actions_nix_store:/nix/store
+      volumes:
+        - actions_nix_store:/nix/store
     needs:
       - populate-cache
     strategy:
