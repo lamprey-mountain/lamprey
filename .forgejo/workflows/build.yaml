@@ -41,7 +41,6 @@ jobs:
           - backend-oci
           - bridge-discord
           - bridge-discord-oci
-          - frontend
     steps:
       - name: setup
         run: |
