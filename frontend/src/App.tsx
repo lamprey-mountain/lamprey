@@ -44,6 +44,7 @@ import { RoomMemberMenu } from "./menu/RoomMember.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
+import { ThreadMembers } from "./Thread.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -393,6 +394,9 @@ function RouteThread(p: RouteSectionProps) {
 			<ChatNav />
 			<Show when={room()}>
 				<ChatMain room={room()!} thread={thread()!} />
+				<Show when={flags.has("thread_member_list")}>
+					<ThreadMembers thread={thread()!} />
+				</Show>
 			</Show>
 		</>
 	);
