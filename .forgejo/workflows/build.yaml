@@ -10,7 +10,7 @@ jobs:
     container:
       image: git.celery.eu.org/tezlm/nix-builder
       volumes:
-        - actions_nix_store:/nix/store
+        - actions_nix_store:/nix
     strategy:
       matrix:
         derivation:
@@ -31,7 +31,7 @@ jobs:
     container:
       image: git.celery.eu.org/tezlm/nix-builder
       volumes:
-        - actions_nix_store:/nix/store
+        - actions_nix_store:/nix
     needs:
       - populate-cache-deps
     strategy:
@@ -57,7 +57,7 @@ jobs:
     container:
       image: git.celery.eu.org/tezlm/nix-builder
       volumes:
-        - actions_nix_store:/nix/store
+        - actions_nix_store:/nix
     needs:
       - populate-cache
     strategy:
