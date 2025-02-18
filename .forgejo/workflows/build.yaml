@@ -6,8 +6,9 @@ on:
       - master
 jobs:
   populate-cache-deps:
-    runs-on: nix
+    runs-on: docker
     container:
+      image: git.celery.eu.org/tezlm/nix-builder
       volumes:
         - actions_nix_store:/nix/store
     strategy:
@@ -26,8 +27,9 @@ jobs:
         run: |
           attic push actions result --ignore-upstream-cache-filter
   populate-cache:
-    runs-on: nix
+    runs-on: docker
     container:
+      image: git.celery.eu.org/tezlm/nix-builder
       volumes:
         - actions_nix_store:/nix/store
     needs:
@@ -51,8 +53,9 @@ jobs:
         run: |
           attic push actions result --ignore-upstream-cache-filter
   build-containers:
-    runs-on: nix
+    runs-on: docker
     container:
+      image: git.celery.eu.org/tezlm/nix-builder
       volumes:
         - actions_nix_store:/nix/store
     needs:
