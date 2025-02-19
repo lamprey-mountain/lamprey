@@ -331,6 +331,10 @@ impl Media {
     pub fn all_tracks(&self) -> impl Iterator<Item = &MediaTrack> {
         self.tracks.iter().chain([&self.source])
     }
+
+    pub fn all_tracks_mut(&mut self) -> impl Iterator<Item = &mut MediaTrack> {
+        self.tracks.iter_mut().chain([&mut self.source])
+    }
 }
 
 impl MediaCreateSource {

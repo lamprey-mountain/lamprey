@@ -55,6 +55,8 @@ pub struct ServerStateInner {
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
+
+    // TODO: write a wrapper around this
     pub blobs: opendal::Operator,
 }
 
@@ -126,6 +128,13 @@ impl ServerStateInner {
         let _ = self.sushi.send(msg);
         Ok(())
     }
+
+    fn get_s3_url(&self, path: &str) -> Result<Url> {
+        let mut u = Url::parse("s3://")?;
+        u.set_host(Some(&self.config.s3.bucket))?;
+        u.set_path(path);
+        Ok(u)
+    }
 }
 
 impl ServerState {
@@ -193,19 +202,18 @@ impl ServerState {
     }
 
     /// presigns every relevant url in a piece of media
-    async fn presign(&self, _media: &mut Media) -> Result<()> {
-        // Ok(self
-        //     .blobs
-        //     .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
-        //     .await?
-        //     .uri()
-        //     .to_string())
-        // HACK: temporary thing for better caching
+    async fn presign(&self, media: &mut Media) -> Result<()> {
         // TODO: i should use serviceworkers to cache while ignoring signature params
-        // media.source.url = format!("https://chat-files.celery.eu.org/{}", media.source.url);
-        // for t in &mut media.tracks {
-        //     t.url = format!("https://chat-files.celery.eu.org/{}", t.url);
-        // }
+        for t in media.all_tracks_mut() {
+            t.url = self
+                .inner
+                .blobs
+                .presign_read(t.url.path(), Duration::from_secs(60 * 60 * 24))
+                .await?
+                .uri()
+                .to_string()
+                .parse()?;
+        }
         Ok(())
     }
 }
@@ -281,6 +289,7 @@ async fn main() -> Result<()> {
         .layer(TimeoutLayer::new().with_timeout(Duration::from_secs(60 * 60 * 5)))
         .layer(ConcurrentLimitLayer::new(1024))
         .finish();
+    blobs.check().await?;
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
 

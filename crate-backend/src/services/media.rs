@@ -217,12 +217,7 @@ impl ServiceMedia {
     ) -> Result<Media> {
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
-        let url = self
-            .state
-            .config
-            .s3
-            .endpoint
-            .join(&format!("media/{media_id}"))?;
+        let url = self.state.get_s3_url(&format!("media/{media_id}"))?;
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mut media = Media {
@@ -314,17 +309,13 @@ async fn generate_and_upload_thumb(
     let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
     img.thumbnail(width, height).write_with_encoder(enc)?;
     drop(_s);
-    let url = state
-        .config
-        .s3
-        .endpoint
-        .join(&format!("thumb/{media_id}/{width}x{height}"))?;
+    let url = state.get_s3_url(&format!("thumb/{media_id}/{width}x{height}"))?;
     let len = out.get_ref().len();
     let span_upload_thumb = span!(Level::INFO, "upload thumb");
     let _s = span_upload_thumb.enter();
     let mut w = state
         .blobs
-        .writer_with(url.as_str())
+        .writer_with(url.path())
         .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
         .content_type("image/avif")
         .await?;
@@ -358,16 +349,12 @@ async fn upload_extracted_thumb(
     let mime: Mime = reader.format().unwrap().to_mime_type().parse()?;
     let (width, height) = reader.into_dimensions()?;
     drop(_s);
-    let url = state
-        .config
-        .s3
-        .endpoint
-        .join(&format!("thumb/{media_id}/original"))?;
+    let url = state.get_s3_url(&format!("thumb/{media_id}/original"))?;
     let span_upload = span!(Level::DEBUG, "upload thumb");
     let _s = span_upload.enter();
     let mut w = state
         .blobs
-        .writer_with(url.as_str())
+        .writer_with(url.path())
         .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
         .content_type("image/avif")
         .await?;
