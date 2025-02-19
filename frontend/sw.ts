@@ -27,8 +27,8 @@ const deleteOldCaches = async () => {
 
 const shouldCache = (req: Request) => {
 	if (req.method !== "GET" && req.method !== "HEAD") return false;
-	const url = new URL(req.url, self.location.href);
-	console.log("should cache?", url.href);
+	// const url = new URL(req.url, self.location.href);
+	// console.log("should cache?", url.href);
 	return false;
 };
 

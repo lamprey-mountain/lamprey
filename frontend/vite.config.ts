@@ -23,6 +23,18 @@ export default defineConfig({
 	},
 	build: {
 		sourcemap: true,
+		rollupOptions: {
+			input: {
+				app: "./index.html",
+				sw: "./sw.ts",
+			},
+			output: {
+				entryFileNames: (info) => {
+					if (info.name === "sw") return "[name].js";
+					return "assets/js/[name]-[hash].js";
+				},
+			},
+		},
 	},
 	css: {
 		preprocessorOptions: {
@@ -30,7 +42,5 @@ export default defineConfig({
 				api: "modern-compiler",
 			},
 		},
-		// transformer: "lightningcss"
-		// transformer: "postcss"
 	},
 });
