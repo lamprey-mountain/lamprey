@@ -24,6 +24,7 @@ import iconVolumeMax from "../assets/volume-max.png";
 import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
 import { tooltip } from "../Tooltip.tsx";
+import { useCtx } from "../context.ts";
 
 export const VideoViewOld = (props: MediaProps) => {
 	const height = () => getHeight(props.media);
@@ -47,6 +48,7 @@ export const VideoViewOld = (props: MediaProps) => {
 };
 
 export const VideoView = (props: MediaProps) => {
+	const ctx = useCtx();
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
 
@@ -58,6 +60,7 @@ export const VideoView = (props: MediaProps) => {
 	const [playing, setPlaying] = createSignal(false);
 	const [volume, setVolume] = createSignal(1);
 	const [muted, setMuted] = createSignal(false);
+	const [playbackRate, setPlaybackRate] = createSignal(1);
 	const [fullscreen, setFullscreen] = createSignal(false);
 
 	let videoEl!: HTMLVideoElement;
@@ -66,6 +69,7 @@ export const VideoView = (props: MediaProps) => {
 	onMount(() => {
 		videoEl.ondurationchange = () => setDuration(videoEl.duration);
 		videoEl.ontimeupdate = () => setProgress(videoEl.currentTime);
+		videoEl.onratechange = () => setPlaybackRate(videoEl.playbackRate);
 		videoEl.onplay = () => setPlaying(true);
 		videoEl.onpause = () => setPlaying(false);
 	});
@@ -73,11 +77,18 @@ export const VideoView = (props: MediaProps) => {
 	createEffect(() => videoEl.muted = muted());
 	createEffect(() => videoEl.volume = volume());
 
+	const play = () => {
+		ctx.currentMedia()?.element.pause();
+		ctx.setCurrentMedia({ media: props.media, element: videoEl });
+		videoEl.play();
+		setHandlers();
+	};
+
 	const togglePlayPause = () => {
 		if (playing()) {
 			videoEl.pause();
 		} else {
-			videoEl.play();
+			play();
 		}
 	};
 
@@ -163,6 +174,36 @@ export const VideoView = (props: MediaProps) => {
 	const handleFullscreenChange = () => {
 		setFullscreen(document.fullscreenElement === wrapperEl);
 	};
+
+	const setMetadata = () => {
+		navigator.mediaSession.metadata = new MediaMetadata({
+			title: props.media.filename,
+			// artist: "artist",
+			// album: "album",
+			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
+				(i) => ({ src: i.url, sizes: `${i.width}x${i.height}`, type: i.mime }),
+			),
+		});
+	};
+
+	const setHandlers = () => {
+		// navigator.mediaSession.setActionHandler("nexttrack", () => { });
+		// navigator.mediaSession.setActionHandler("previoustrack", () => { });
+	};
+
+	createEffect(() => {
+		if (playing()) setMetadata();
+	});
+
+	createEffect(() => {
+		if (playing()) {
+			navigator.mediaSession.setPositionState({
+				duration: duration(),
+				playbackRate: playbackRate(),
+				position: progress(),
+			});
+		}
+	});
 
 	onMount(() => {
 		wrapperEl.addEventListener("fullscreenchange", handleFullscreenChange);
