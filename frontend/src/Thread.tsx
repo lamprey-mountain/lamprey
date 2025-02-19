@@ -31,7 +31,6 @@ export const ThreadMembers = (props: { thread: Thread }) => {
             if (rm?.membership === "Join") name ??= rm.override_name;
 
             name ??= user()?.name;
-
             return name;
           }
 

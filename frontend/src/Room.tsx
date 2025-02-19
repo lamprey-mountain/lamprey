@@ -16,7 +16,23 @@ export const RoomMembers = (props: { room: RoomT }) => {
 			<For each={members()?.items}>
 				{(i) => {
 					const user = api.users.fetch(() => i.user_id);
-					return <li>{user()?.name}</li>;
+					const room_member = api.room_members.fetch(
+						room_id,
+						() => i.user_id,
+					);
+
+					function name() {
+						let name: string | undefined | null = null;
+						const rm = room_member?.();
+						if (rm?.membership === "Join") name ??= rm.override_name;
+
+						name ??= user()?.name;
+						return name;
+					}
+
+					return (
+						<li data-user-id={i.user_id}>{name()}</li>
+					);
 				}}
 			</For>
 		</ul>
@@ -82,7 +98,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 						...threads()?.items.filter((i) =>
 							i.room_id === props.room.id && i.state !== "Deleted"
 						) ??
-							[],
+						[],
 					]}
 				>
 					{(thread) => (
@@ -118,7 +134,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 										<details>
 											<summary>json data</summary>
 											<pre>
-						      	{JSON.stringify(thread, null, 4)}
+												{JSON.stringify(thread, null, 4)}
 											</pre>
 										</details>
 									</div>
