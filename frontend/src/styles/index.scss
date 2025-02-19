@@ -686,7 +686,8 @@ input[type="text"] {
 
 	display: grid;
 	grid-template-columns: 64px auto;
-	grid-template-rows: 64px;
+	/* grid-template-rows: 64px; */
+	grid-template-rows: auto;
 	/* grid-template-areas: "avatar name" "info info"; */
 	grid-template-areas: "avatar info";
 	gap: 8px;
@@ -703,10 +704,16 @@ input[type="text"] {
 	& > .avatar {
 		grid-area: avatar;
 		background: $bg-100;
+		height: 64px;
 	}
 
 	& > .info {
 		grid-area: info;
+	}
+
+	& h3 {
+		font-size: 1em;
+		font-weight: bold;
 	}
 }
 
