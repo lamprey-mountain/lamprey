@@ -363,6 +363,7 @@ async fn upload_extracted_thumb(
         .await?;
     // HACK: extremely ugly clone
     w.write(bytes.0.to_vec()).await?;
+    w.close().await?;
     drop(_s);
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
