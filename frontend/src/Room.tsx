@@ -30,9 +30,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						return name;
 					}
 
-					return (
-						<li data-user-id={i.user_id}>{name()}</li>
-					);
+					return <li data-user-id={i.user_id}>{name()}</li>;
 				}}
 			</For>
 		</ul>
@@ -98,7 +96,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 						...threads()?.items.filter((i) =>
 							i.room_id === props.room.id && i.state !== "Deleted"
 						) ??
-						[],
+							[],
 					]}
 				>
 					{(thread) => (

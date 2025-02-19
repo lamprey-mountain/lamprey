@@ -45,6 +45,8 @@ export type Menu =
 			version_id: string;
 		}
 		| { type: "member_room"; user_id: string; room_id: string }
+		| { type: "member_thread"; user_id: string; thread_id: string }
+		| { type: "user"; user_id: string }
 	);
 
 export type Modal =

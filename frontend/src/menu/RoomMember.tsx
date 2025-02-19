@@ -10,14 +10,14 @@ type RoomMemberMenuProps = {
 export function RoomMemberMenu(props: RoomMemberMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
-	const message = api.room_members.fetch(
+	const member = api.room_members.fetch(
 		() => props.room_id,
 		() => props.user_id,
 	);
 
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
 
-	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(member())));
 
 	const kick = () => {
 		ctx.dispatch({

@@ -45,7 +45,7 @@ const ItemRoom = (props: { room: Room }) => {
 		<Show when={shouldShow()}>
 			<li>
 				<A
-					class="has-menu"
+					class="menu-room"
 					data-room-id={props.room.id}
 					href={`/room/${props.room.id}`}
 				>
@@ -55,7 +55,7 @@ const ItemRoom = (props: { room: Room }) => {
 					<ul>
 						<li>
 							<A
-								class="has-menu"
+								class="menu-room"
 								href={`/room/${props.room.id}`}
 								data-room-id={props.room.id}
 							>
@@ -83,7 +83,7 @@ const ItemThread = (props: { thread: Thread }) => {
 		<li>
 			<A
 				href={`/thread/${props.thread.id}`}
-				class="has-menu"
+				class="menu-thread"
 				classList={{
 					"closed": props.thread.state === "Archived",
 					"unread": props.thread.last_read_id !== props.thread.last_version_id,

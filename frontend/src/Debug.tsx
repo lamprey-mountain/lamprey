@@ -47,7 +47,7 @@ const Search = () => {
 			<Show when={searchResults.loading}>loading...</Show>
 			<For each={searchResults() as any}>
 				{(m: Message) => (
-					<li class="message has-menu" data-message-id={m.id}>
+					<li class="message menu-message" data-message-id={m.id}>
 						<MessageView message={m} />
 					</li>
 				)}

@@ -34,17 +34,21 @@ import { RoomHome, RoomMembers } from "./Room.tsx";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
-import { MessageMenu } from "./menu/Message.tsx";
-import { RoomMenu } from "./menu/Room.tsx";
-import { ThreadMenu } from "./menu/Thread.tsx";
 import { getModal } from "./modal/mod.tsx";
 import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
 import { Debug } from "./Debug.tsx";
-import { RoomMemberMenu } from "./menu/RoomMember.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
 import { ThreadMembers } from "./Thread.tsx";
+import {
+	MessageMenu,
+	RoomMemberMenu,
+	RoomMenu,
+	ThreadMemberMenu,
+	ThreadMenu,
+	UserMenu,
+} from "./menu/mod.ts";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -184,24 +188,47 @@ export const Root: Component = (props: ParentProps) => {
 	// TODO: refactor
 	const handleContextMenu = (e: MouseEvent) => {
 		const targetEl = e.target as HTMLElement;
-		const menuEl = targetEl.closest(".has-menu") as HTMLElement | null;
-		const mediaEl = targetEl.closest("a:not(.has-menu), img, video, audio") as
+
+		const menuEl = targetEl.closest(
+			".menu-room, .menu-thread, .menu-message, .menu-user",
+		) as HTMLElement | null;
+		const mediaEl = targetEl.closest("a, img, video, audio") as
 			| HTMLElement
 			| null;
 		if (!menuEl) return;
-		if (mediaEl && targetEl.contains(mediaEl)) return;
+		if (mediaEl && targetEl !== menuEl) return;
 
-		// TODO: refactor?
-		const {
-			messageId: message_id,
-			roomId: room_id,
-			threadId: thread_id,
-			userId: user_id,
-		} = menuEl.dataset;
+		const getData = (key: string) => {
+			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
+			return target
+				?.dataset[
+					key.slice("data-".length).replace(
+						/-([a-z])/g,
+						(_, c) => c.toUpperCase(),
+					)
+				];
+		};
+
 		let menu: Partial<Menu> | null = null;
+		const room_id = getData("data-room-id");
+		const thread_id = getData("data-thread-id");
+		const message_id = getData("data-message-id");
+		const user_id = getData("data-user-id");
 
-		if (message_id) {
-			const message = api.messages.cache.get(message_id);
+		if (menuEl.classList.contains("menu-room")) {
+			if (!room_id) return;
+			menu = {
+				type: "room",
+				room_id,
+			};
+		} else if (menuEl.classList.contains("menu-thread")) {
+			if (!thread_id) return;
+			menu = {
+				type: "thread",
+				thread_id,
+			};
+		} else if (menuEl.classList.contains("menu-message")) {
+			const message = api.messages.cache.get(message_id!);
 			if (!message) return;
 			const thread_id = message.thread_id;
 			const version_id = message.version_id;
@@ -211,31 +238,30 @@ export const Root: Component = (props: ParentProps) => {
 				message_id,
 				version_id,
 			};
-		}
-
-		if (thread_id) {
-			menu = {
-				type: "thread",
-				thread_id,
-			};
-		}
-
-		if (room_id) {
-			menu = {
-				type: "room",
-				room_id,
-			};
-		}
-
-		// TODO: member_thread
-		if (user_id && thread_id) {
-			const thread = api.threads.cache.get(thread_id);
-			if (!thread) return;
-			menu = {
-				type: "member_room",
-				room_id: thread.room_id,
-				user_id,
-			};
+		} else if (menuEl.classList.contains("menu-user")) {
+			if (!user_id) return;
+			if (thread_id) {
+				const thread = api.threads.cache.get(thread_id);
+				if (!thread) return;
+				menu = {
+					type: "member_thread",
+					thread_id: thread.id,
+					user_id,
+				};
+			} else if (room_id) {
+				const room = api.rooms.cache.get(room_id);
+				if (!room) return;
+				menu = {
+					type: "member_room",
+					room_id: room.id,
+					user_id,
+				};
+			} else {
+				menu = {
+					type: "user",
+					user_id,
+				};
+			}
 		}
 
 		if (menu) {
@@ -462,6 +488,14 @@ function Overlay() {
 			}
 			case "member_room": {
 				return <RoomMemberMenu room_id={menu.room_id} user_id={menu.user_id} />;
+			}
+			case "member_thread": {
+				return (
+					<ThreadMemberMenu thread_id={menu.thread_id} user_id={menu.user_id} />
+				);
+			}
+			case "user": {
+				return <UserMenu user_id={menu.user_id} />;
 			}
 		}
 	}
