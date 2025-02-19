@@ -1,91 +1,81 @@
 import { assertEquals } from "@std/assert";
 
-console.log("checking permissions");
-
+const BASE_URL = `${Deno.env.get("BASE_URL")}/api/v1`;
 const USER0 = Deno.env.get("TOKEN_U0");
 const USER1 = Deno.env.get("TOKEN_U1");
-console.log(USER0)
-console.log(USER1)
 
-const BASE_URL = `${Deno.env.get("BASE_URL")}/api/v1`;
+type TesterConfig = { token: string; who: string };
 
-const mkf = (t: string) => async (url: string, init) => {
-  const who = t === USER0 ? "u0" : "u1";
-  console.log(`${who}: ${init.method ?? "GET"} ${url}`);
-  return fetch(`${BASE_URL}${url}`, {
-    headers: {
-      "authorization": `Bearer ${t}`,
-      "content-type": "application/json",
-    },
-    ...init,
-  }).then(async (r) => ({
-    status: r.status,
-    data: r.status === 204 ? null : await r.json(),
-  }));
+type TesterRequest = {
+	url: string;
+	method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+	body?: BodyInit;
+	status: number;
 };
 
-const f0 = mkf(USER0);
-const f1 = mkf(USER1);
+const makeTester =
+	({ token, who }: TesterConfig) => async (cfg: TesterRequest) => {
+		const { url, method, body, status } = cfg;
+		console.log(`${who}: ${method ?? "GET"} ${url}`);
+		const res = await fetch(`${BASE_URL}${url}`, {
+			headers: {
+				"authorization": `Bearer ${token}`,
+				"content-type": "application/json",
+			},
+			method,
+			body,
+		});
+		const data = res.status === 204 ? null : await res.json();
+		assertEquals(res.status, status);
+		return data;
+	};
 
 const room_id = "0194f5be-a340-7011-b7c9-191a29ff5658";
 const role_id = "0194f5be-a34b-75e3-9738-d6bd6dd5764c";
 const u1_id = "0194f5ba-89e0-7c62-8776-8873b37a6d0a";
 
+const f0 = makeTester({ token: USER0, who: "user0" });
+const f1 = makeTester({ token: USER1, who: "user1" });
+
 async function testPermissions() {
-  const a = await f0(
-    `/room/${room_id}/thread`,
-    {
-      method: "POST",
-      body: JSON.stringify({ name: "testing" }),
-    },
-  );
+	console.log("testing permissions");
 
-  assertEquals(a.status, 201);
-  const tid = a.data.id;
+	const thread = await f0({
+		url: `/room/${room_id}/thread`,
+		method: "POST",
+		body: JSON.stringify({ name: "testing" }),
+		status: 201,
+	});
 
-  const b = await f1(
-    `/thread/${tid}`,
-    { method: "DELETE" },
-  );
-  assertEquals(b.status, 403);
+	const tid = thread.id;
 
-  const c = await f0(
-    `/room/${room_id}/role/${role_id}/member/${u1_id}`,
-    { method: "PUT" },
-  );
-  assertEquals(c.status, 200);
+	await f1({ url: `/thread/${tid}`, method: "DELETE", status: 403 });
 
-  const d = await f1(`/thread/${tid}`, { method: "DELETE" });
-  assertEquals(d.status, 204);
+	await f0({
+		url: `/room/${room_id}/role/${role_id}/member/${u1_id}`,
+		method: "PUT",
+		status: 200,
+	});
 
-  const e = await f0(
-    `/room/${room_id}/thread`,
-    {
-      method: "POST",
-      body: JSON.stringify({ name: "testing" }),
-    },
-  );
+	await f1({ url: `/thread/${tid}`, method: "DELETE", status: 204 });
 
-  assertEquals(e.status, 201);
-  const tid2 = e.data.id;
+	const thread2 = await f0({
+		url: `/room/${room_id}/thread`,
+		method: "POST",
+		body: JSON.stringify({ name: "testing" }),
+		status: 201,
+	});
+	const tid2 = thread2.id;
 
-  const f = await f0(
-    `/room/${room_id}/role/${role_id}/member/${u1_id}`,
-    { method: "DELETE" },
-  );
-  assertEquals(f.status, 200);
+	await f0({
+		url: `/room/${room_id}/role/${role_id}/member/${u1_id}`,
+		method: "DELETE",
+		status: 200,
+	});
 
-  const g = await f1(
-    `/thread/${tid2}`,
-    { method: "DELETE" },
-  );
-  assertEquals(g.status, 403);
+	await f1({ url: `/thread/${tid2}`, method: "DELETE", status: 403 });
 
-  const h = await f0(
-    `/thread/${tid2}`,
-    { method: "DELETE" },
-  );
-  assertEquals(h.status, 204);
+	await f0({ url: `/thread/${tid2}`, method: "DELETE", status: 204 });
 }
 
 testPermissions();
