@@ -5,8 +5,7 @@ use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
 use types::{
-    Media, MediaCreate, MediaId, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User,
-    UserId,
+    Media, MediaCreate, MediaCreateSource, MediaId, MessageCreateRequest, MessageId, Session, Thread, ThreadId, User, UserId
 };
 use uuid::uuid;
 
@@ -127,10 +126,11 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             response,
         } => {
             let req = MediaCreate {
-                filename,
-                size: bytes.len() as u64,
                 alt: None,
-                source_url: None,
+                source: MediaCreateSource::Upload {
+                    filename,
+                    size: bytes.len() as u64,
+                },
             };
             let upload = http.media_create(&req).await?;
             let media = http.media_upload(&upload, bytes).await?;
