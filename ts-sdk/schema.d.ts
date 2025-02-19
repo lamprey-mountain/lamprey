@@ -749,9 +749,11 @@ export interface components {
 			/** @description The source (Extracted, Generated) */
 			tracks: components["schemas"]["MediaTrack"][];
 		};
-		MediaCreate: {
+		MediaCreate: components["schemas"]["MediaCreateSource"] & {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
+		};
+		MediaCreateSource: {
 			/** @description The original filename */
 			filename: string;
 			/**
@@ -759,8 +761,19 @@ export interface components {
 			 * @description The size (in bytes)
 			 */
 			size: number;
-			/** @description A url to download this media from */
-			source_url?: string | null;
+		} | {
+			/** @description The original filename */
+			filename?: string | null;
+			/**
+			 * Format: int64
+			 * @description The size (in bytes)
+			 */
+			size?: number | null;
+			/**
+			 * Format: uri
+			 * @description A url to download this media from
+			 */
+			source_url: string;
 		};
 		MediaCreated: {
 			media_id: components["schemas"]["MediaId"];
@@ -802,7 +815,10 @@ export interface components {
 				mime: string;
 				/** @description Where this track came from */
 				source: components["schemas"]["TrackSource"];
-				/** @description The url where this track may be downloaded from */
+				/**
+				 * Format: uri
+				 * @description The url where this track may be downloaded from
+				 */
 				url: string;
 			};
 		/** @description metadata about a particular track */
@@ -1276,6 +1292,10 @@ export interface components {
 			user_id: components["schemas"]["UserId"];
 		};
 		ThreadMemberPatch: {
+			override_description?: string | null;
+			override_name?: string | null;
+		};
+		ThreadMemberPut: {
 			override_description?: string | null;
 			override_name?: string | null;
 		};
@@ -2592,7 +2612,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["ThreadMemberPatch"];
+				"application/json": components["schemas"]["ThreadMemberPut"];
 			};
 		};
 		responses: {
