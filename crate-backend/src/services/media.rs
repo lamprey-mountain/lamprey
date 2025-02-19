@@ -356,7 +356,7 @@ async fn upload_extracted_thumb(
         .blobs
         .writer_with(url.path())
         .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-        .content_type("image/avif")
+        .content_type(mime.as_str())
         .await?;
     // HACK: extremely ugly clone
     w.write(bytes.0.to_vec()).await?;
