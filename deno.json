@@ -1,5 +1,5 @@
 {
-	"workspace": ["frontend", "ts-sdk"],
+	"workspace": ["frontend", "ts-sdk", "tests"],
 	"fmt": {
 		"useTabs": true,
 		"exclude": [".sqlx"]
