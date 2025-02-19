@@ -14,7 +14,7 @@ import {
 	VideoViewOld,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { byteFmt, MediaProps } from "./media/util.ts";
+import { byteFmt, getUrl, MediaProps } from "./media/util.ts";
 import { Time } from "./Time.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";
@@ -214,7 +214,7 @@ export function AttachmentView1(props: MediaProps) {
 		return (
 			<li>
 				<ImageView media={props.media} />
-				<a download={props.media.filename} href={props.media.source.url}>
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">
@@ -226,7 +226,7 @@ export function AttachmentView1(props: MediaProps) {
 		return (
 			<li class="media-old">
 				<VideoViewOld media={props.media} />
-				<a download={props.media.filename} href={props.media.source.url}>
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">
@@ -237,8 +237,8 @@ export function AttachmentView1(props: MediaProps) {
 	} else if (b() === "audio") {
 		return (
 			<li class="media-old">
-				<audio controls src={props.media.source.url} />
-				<a download={props.media.filename} href={props.media.source.url}>
+				<audio controls src={getUrl(props.media.source)} />
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">
@@ -249,7 +249,7 @@ export function AttachmentView1(props: MediaProps) {
 	} else {
 		return (
 			<li>
-				<a download={props.media.filename} href={props.media.source.url}>
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">
@@ -267,7 +267,7 @@ export function AttachmentView2(props: MediaProps) {
 		return (
 			<li>
 				<ImageView media={props.media} />
-				<a download={props.media.filename} href={props.media.source.url}>
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">

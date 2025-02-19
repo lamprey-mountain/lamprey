@@ -1,5 +1,6 @@
-import { Media } from "sdk";
+import { Media, MediaTrack } from "sdk";
 import { VoidProps } from "solid-js";
+import { flags } from "../flags";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 
@@ -42,6 +43,16 @@ export const getHeight = (m: Media) => {
 		return m.source.height;
 	} else {
 		return 0;
+	}
+};
+
+export const getUrl = (t: MediaTrack) => {
+	if (flags.has("service_worker_media")) {
+		const u = new URL("/_media", location.href);
+		u.searchParams.set("url", t.url);
+		return u.href;
+	} else {
+		return t.url;
 	}
 };
 

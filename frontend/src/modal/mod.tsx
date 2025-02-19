@@ -2,6 +2,7 @@ import { ParentProps } from "solid-js";
 import { Modal as ContextModal, useCtx } from "../context.ts";
 import { autofocus } from "@solid-primitives/autofocus";
 import { Media } from "sdk";
+import { getUrl } from "../media/util.ts";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -138,7 +139,7 @@ const ModalMedia = (props: { media: Media }) => {
 						<div class="inner">
 							<div class="loader">loading</div>
 							<img
-								src={props.media.source.url}
+								src={getUrl(props.media.source)}
 								alt={props.media.alt ?? undefined}
 								height={height()!}
 								width={width()!}

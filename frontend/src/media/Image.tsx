@@ -1,5 +1,5 @@
 import { useCtx } from "../context.ts";
-import { getHeight, getWidth, MediaProps } from "./util.ts";
+import { getHeight, getUrl, getWidth, MediaProps } from "./util.ts";
 
 // TODO: ensure only images can be passed here
 // TODO: use thumbnail
@@ -27,7 +27,7 @@ export const ImageView = (props: MediaProps) => {
 			<div class="inner">
 				<div class="loader">loading</div>
 				<img
-					src={props.media.source.url}
+					src={getUrl(props.media.source)}
 					alt={props.media.alt ?? undefined}
 					height={height()!}
 					width={width()!}

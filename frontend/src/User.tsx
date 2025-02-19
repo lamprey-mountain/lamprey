@@ -2,6 +2,7 @@ import { RoomMember, ThreadMember, User } from "sdk";
 import { useApi } from "./api";
 import { For, Show } from "solid-js";
 import { Copyable } from "./util";
+import { getUrl } from "./media/util";
 
 type UserProps = {
 	room_member?: RoomMember;
@@ -33,7 +34,7 @@ export function UserView(props: UserProps) {
 			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
 				tracks.find((s) => s.type === "Image");
 		if (source) {
-			return source.url;
+			return getUrl(source);
 		} else {
 			console.error("no valid avatar source?", m);
 		}

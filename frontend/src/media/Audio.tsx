@@ -11,7 +11,13 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
-import { byteFmt, formatTime, getDuration, MediaProps } from "./util.ts";
+import {
+	byteFmt,
+	formatTime,
+	getDuration,
+	getUrl,
+	MediaProps,
+} from "./util.ts";
 import { tooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
 
@@ -20,7 +26,7 @@ export const AudioView = (props: MediaProps) => {
 
 	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
 	const audio = new globalThis.Audio();
-	createEffect(() => audio.src = props.media.source.url);
+	createEffect(() => audio.src = getUrl(props.media.source));
 	onCleanup(() => audio.pause());
 
 	const [duration, setDuration] = createSignal(getDuration(props.media));
@@ -126,7 +132,11 @@ export const AudioView = (props: MediaProps) => {
 			// artist: "artist",
 			// album: "album",
 			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
-				(i) => ({ src: i.url, sizes: `${i.width}x${i.height}`, type: i.mime }),
+				(i) => ({
+					src: getUrl(i),
+					sizes: `${i.width}x${i.height}`,
+					type: i.mime,
+				}),
 			),
 		});
 	};
@@ -167,7 +177,7 @@ export const AudioView = (props: MediaProps) => {
 				<a
 					download={props.media.filename}
 					title={props.media.filename}
-					href={props.media.source.url}
+					href={getUrl(props.media.source)}
 				>
 					{props.media.filename}
 				</a>

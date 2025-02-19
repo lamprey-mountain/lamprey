@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { byteFmt, MediaProps } from "./util.ts";
+import { byteFmt, getUrl, MediaProps } from "./util.ts";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
 
@@ -15,7 +15,7 @@ export const TextView = (props: MediaProps) => {
 	const [copied, setCopied] = createSignal(false);
 
 	const [text] = createResource(() => props.media, async (media) => {
-		const req = await fetch(media.source.url, {
+		const req = await fetch(getUrl(media.source), {
 			headers: {
 				"Range": `bytes=0-${MAX_PREVIEW_SIZE}`,
 			},
@@ -55,7 +55,7 @@ export const TextView = (props: MediaProps) => {
 					<span class="warn">warning:</span> file preview truncated (too long!)
 				</Show>
 			</div>
-			<a download={props.media.filename} href={props.media.source.url}>
+			<a download={props.media.filename} href={getUrl(props.media.source)}>
 				download {props.media.filename}
 			</a>
 			<div class="dim">{ty()} - {byteFmt.format(props.media.source.size)}</div>

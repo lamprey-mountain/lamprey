@@ -2,6 +2,7 @@ import { createSignal, Show, VoidProps } from "solid-js";
 import { createUpload, User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
+import { getUrl } from "../media/util.ts";
 
 export function Info(props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -77,7 +78,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
 				tracks.find((s) => s.type === "Image");
 		if (source) {
-			return source.url;
+			return getUrl(source);
 		} else {
 			console.error("no valid avatar source?", m);
 		}

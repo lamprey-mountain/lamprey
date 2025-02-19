@@ -4,13 +4,13 @@ import {
 	onCleanup,
 	onMount,
 	ValidComponent,
-	VoidProps,
 } from "solid-js";
 import {
 	byteFmt,
 	formatTime,
 	getDuration,
 	getHeight,
+	getUrl,
 	getWidth,
 	MediaProps,
 } from "./util.ts";
@@ -41,7 +41,7 @@ export const VideoViewOld = (props: MediaProps) => {
 		>
 			<div class="inner">
 				<div class="loader">loading</div>
-				<video controls src={props.media.source.url} />
+				<video controls src={getUrl(props.media.source)} />
 			</div>
 		</div>
 	);
@@ -181,7 +181,11 @@ export const VideoView = (props: MediaProps) => {
 			// artist: "artist",
 			// album: "album",
 			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
-				(i) => ({ src: i.url, sizes: `${i.width}x${i.height}`, type: i.mime }),
+				(i) => ({
+					src: getUrl(i),
+					sizes: `${i.width}x${i.height}`,
+					type: i.mime,
+				}),
 			),
 		});
 	};
@@ -227,7 +231,7 @@ export const VideoView = (props: MediaProps) => {
 					<div class="loader">loading</div>
 					<video
 						ref={videoEl!}
-						src={props.media.source.url}
+						src={getUrl(props.media.source)}
 						onClick={togglePlayPause}
 						onDblClick={fullScreenDblClick}
 					/>
@@ -250,7 +254,7 @@ export const VideoView = (props: MediaProps) => {
 					<a
 						download={props.media.filename}
 						title={props.media.filename}
-						href={props.media.source.url}
+						href={getUrl(props.media.source)}
 					>
 						{props.media.filename}
 					</a>
