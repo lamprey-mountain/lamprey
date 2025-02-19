@@ -154,19 +154,19 @@ export const VideoView = (props: MediaProps) => {
 
 	const toggleFullscreen = () => {
 		if (fullscreen()) {
-			document.exitFullscreen()
+			document.exitFullscreen();
 		} else {
 			wrapperEl.requestFullscreen();
 		}
-	}
+	};
 
 	const handleFullscreenChange = () => {
 		setFullscreen(document.fullscreenElement === wrapperEl);
-	}
+	};
 
 	onMount(() => {
 		wrapperEl.addEventListener("fullscreenchange", handleFullscreenChange);
-	})
+	});
 
 	onCleanup(() => {
 		wrapperEl.removeEventListener("fullscreenchange", handleFullscreenChange);
@@ -263,8 +263,15 @@ export const VideoView = (props: MediaProps) => {
 							</button>
 						) as HTMLElement,
 					)}
-					<button onClick={toggleFullscreen} title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}>
-						<img class="icon" src={fullscreen() ? iconFullscreent : iconFullscreen} alt="" />
+					<button
+						onClick={toggleFullscreen}
+						title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
+					>
+						<img
+							class="icon"
+							src={fullscreen() ? iconFullscreent : iconFullscreen}
+							alt=""
+						/>
 					</button>
 					<div class="space"></div>
 					<div

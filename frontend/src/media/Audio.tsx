@@ -13,8 +13,11 @@ import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import { byteFmt, formatTime, getDuration, MediaProps } from "./util.ts";
 import { tooltip } from "../Tooltip.tsx";
+import { useCtx } from "../context.ts";
 
 export const AudioView = (props: MediaProps) => {
+	const ctx = useCtx();
+
 	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
 	const audio = new globalThis.Audio();
 	createEffect(() => audio.src = props.media.source.url);
@@ -28,20 +31,29 @@ export const AudioView = (props: MediaProps) => {
 	const [playing, setPlaying] = createSignal(false);
 	const [volume, setVolume] = createSignal(1);
 	const [muted, setMuted] = createSignal(false);
+	const [playbackRate, setPlaybackRate] = createSignal(1);
 
 	audio.ondurationchange = () => setDuration(audio.duration);
 	audio.ontimeupdate = () => setProgress(audio.currentTime);
+	audio.onratechange = () => setPlaybackRate(audio.playbackRate);
 	audio.onplay = () => setPlaying(true);
 	audio.onpause = () => setPlaying(false);
 
 	createEffect(() => audio.muted = muted());
 	createEffect(() => audio.volume = volume());
 
+	const play = () => {
+		ctx.currentMedia()?.element.pause();
+		ctx.setCurrentMedia({ media: props.media, element: audio });
+		audio.play();
+		setHandlers();
+	};
+
 	const togglePlayPause = () => {
 		if (playing()) {
 			audio.pause();
 		} else {
-			audio.play();
+			play();
 		}
 	};
 
@@ -107,6 +119,36 @@ export const AudioView = (props: MediaProps) => {
 		if (muted()) return "muted";
 		return `${Math.round(volume() * 100)}%`;
 	};
+
+	const setMetadata = () => {
+		navigator.mediaSession.metadata = new MediaMetadata({
+			title: props.media.filename,
+			// artist: "artist",
+			// album: "album",
+			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
+				(i) => ({ src: i.url, sizes: `${i.width}x${i.height}`, type: i.mime }),
+			),
+		});
+	};
+
+	const setHandlers = () => {
+		// navigator.mediaSession.setActionHandler("nexttrack", () => { });
+		// navigator.mediaSession.setActionHandler("previoustrack", () => { });
+	};
+
+	createEffect(() => {
+		if (playing()) setMetadata();
+	});
+
+	createEffect(() => {
+		if (playing()) {
+			navigator.mediaSession.setPositionState({
+				duration: duration(),
+				playbackRate: playbackRate(),
+				position: progress(),
+			});
+		}
+	});
 
 	return (
 		<div class="audio">

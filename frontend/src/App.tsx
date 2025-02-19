@@ -11,8 +11,8 @@ import {
 	ChatCtx,
 	chatctx,
 	Data,
-	defaultData,
 	Events,
+	MediaCtx,
 	Menu,
 	useCtx,
 } from "./context.ts";
@@ -94,7 +94,14 @@ export const Root: Component = (props: ParentProps) => {
 	});
 
 	const api = createApi(client, events);
-	const [data, update] = createStore<Data>(defaultData);
+	const [data, update] = createStore<Data>({
+		modals: [],
+		cursor: {
+			pos: [],
+			vel: 0,
+			preview: null,
+		},
+	});
 	const [menu, setMenu] = createSignal<Menu | null>(null);
 
 	type Lang = "en";
@@ -103,6 +110,8 @@ export const Root: Component = (props: ParentProps) => {
 		const m = await import(`./i18n/${lang}.ts`);
 		return i18n.flatten(m.default as typeof en);
 	});
+
+	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 
 	const ctx: ChatCtx = {
 		client,
@@ -122,6 +131,9 @@ export const Root: Component = (props: ParentProps) => {
 		thread_reply_id: new ReactiveMap(),
 		thread_scroll_pos: new Map(),
 		uploads: new ReactiveMap(),
+
+		currentMedia,
+		setCurrentMedia,
 	};
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;

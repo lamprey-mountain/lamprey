@@ -1,4 +1,4 @@
-import { Accessor, createContext, useContext } from "solid-js";
+import { Accessor, createContext, Setter, useContext } from "solid-js";
 import { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
 import type { EditorState } from "prosemirror-state";
 import { MessageListAnchor } from "./api/messages.ts";
@@ -117,20 +117,19 @@ export type ChatCtx = {
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
 	uploads: ReactiveMap<string, Upload>;
+
+	currentMedia: Accessor<MediaCtx | null>;
+	setCurrentMedia: Setter<MediaCtx | null>;
+};
+
+export type MediaCtx = {
+	media: Media;
+	element: HTMLMediaElement;
 };
 
 export type Events = {
 	sync: MessageSync;
 	ready: MessageReady;
-};
-
-export const defaultData: Data = {
-	modals: [],
-	cursor: {
-		pos: [],
-		vel: 0,
-		preview: null,
-	},
 };
 
 export const chatctx = createContext<ChatCtx>();
