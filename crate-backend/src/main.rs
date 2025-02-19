@@ -16,6 +16,7 @@ use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use sync::Connection;
+use time::OffsetDateTime;
 use tokio::sync::broadcast::Sender;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::debug;
@@ -58,6 +59,8 @@ pub struct ServerStateInner {
 
     // TODO: write a wrapper around this
     pub blobs: opendal::Operator,
+
+    cache_presigned: DashMap<Url, (Url, OffsetDateTime)>,
 }
 
 pub struct ServerState {
@@ -135,6 +138,51 @@ impl ServerStateInner {
         u.set_path(path);
         Ok(u)
     }
+
+    /// presigns every relevant url in a piece of media
+    async fn presign(&self, media: &mut Media) -> Result<()> {
+        // newly signed urls last for 24 hours = 1 day
+        const URL_LIFETIME: Duration = Duration::from_secs(60 * 60 * 24);
+
+        // the server will only return urls that are valid for at least 8 hours
+        const MIN_LIFETIME: Duration = Duration::from_secs(60 * 60 * 8);
+
+        let now = OffsetDateTime::now_utc();
+        let new_expires = now + URL_LIFETIME;
+
+        for t in media.all_tracks_mut() {
+            t.url = match self.cache_presigned.entry(t.url.to_owned()) {
+                dashmap::Entry::Occupied(mut occupied_entry) => {
+                    let (signed, expires) = occupied_entry.get();
+                    if *expires - now > MIN_LIFETIME {
+                        signed.to_owned()
+                    } else {
+                        let signed: Url = self
+                            .blobs
+                            .presign_read(t.url.path(), URL_LIFETIME)
+                            .await?
+                            .uri()
+                            .to_string()
+                            .parse()?;
+                        occupied_entry.insert((signed.to_owned(), new_expires));
+                        signed
+                    }
+                }
+                dashmap::Entry::Vacant(vacant_entry) => {
+                    let signed: Url = self
+                        .blobs
+                        .presign_read(t.url.path(), URL_LIFETIME)
+                        .await?
+                        .uri()
+                        .to_string()
+                        .parse()?;
+                    vacant_entry.insert((signed.to_owned(), new_expires));
+                    signed
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl ServerState {
@@ -150,6 +198,7 @@ impl ServerState {
 
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
+                cache_presigned: DashMap::new(),
             });
             Services::new(inner.clone())
         });
@@ -203,18 +252,7 @@ impl ServerState {
 
     /// presigns every relevant url in a piece of media
     async fn presign(&self, media: &mut Media) -> Result<()> {
-        // TODO: i should use serviceworkers to cache while ignoring signature params
-        for t in media.all_tracks_mut() {
-            t.url = self
-                .inner
-                .blobs
-                .presign_read(t.url.path(), Duration::from_secs(60 * 60 * 24))
-                .await?
-                .uri()
-                .to_string()
-                .parse()?;
-        }
-        Ok(())
+        self.inner.presign(media).await
     }
 }
 
