@@ -235,7 +235,7 @@ impl ServiceMedia {
             let mut w = self
                 .state
                 .blobs
-                .writer_with(&url.path())
+                .writer_with(url.path())
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
                 // FIXME: sometimes this fails with "failed to parse header"
                 // .content_type(&mime)

@@ -101,12 +101,9 @@ async fn media_create(
             // TODO: retry downloads
             let mut bytes = req.bytes_stream();
             while let Some(chunk) = bytes.next().await {
-                match up.write(&chunk?).await {
-                    Err(err) => {
-                        srv.media.uploads.remove(&media_id);
-                        return Err(err);
-                    }
-                    Ok(_) => {}
+                if let Err(err) = up.write(&chunk?).await {
+                    srv.media.uploads.remove(&media_id);
+                    return Err(err);
                 };
             }
 
@@ -230,12 +227,9 @@ async fn media_upload(
     let mut stream = body.into_data_stream();
 
     while let Some(chunk) = stream.next().await {
-        match up.write(&chunk?).await {
-            Err(err) => {
+        if let Err(err) = up.write(&chunk?).await {
                 srv.media.uploads.remove(&media_id);
                 return Err(err);
-            }
-            Ok(_) => {}
         };
     }
 

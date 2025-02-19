@@ -107,7 +107,7 @@ pub enum MediaTrackInfo {
     /// the "main" image
     Image(Image),
 
-    /// todo: trickplay/storyboard image
+    // TODO: trickplay/storyboard image
     // Trickplay(Image),
 
     /// thumbnails

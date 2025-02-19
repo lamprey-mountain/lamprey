@@ -43,6 +43,7 @@ pub struct MessageEnvelope {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
+#[allow(clippy::large_enum_variant)]
 pub enum MessagePayload {
     /// heartbeat
     Ping,

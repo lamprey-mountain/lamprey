@@ -271,7 +271,7 @@ async fn message_edit(
             "at least one of content, attachments, or embeds must be defined",
         ));
     }
-    if !patch.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
+    if patch.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
     if !patch.changes(&message) {
