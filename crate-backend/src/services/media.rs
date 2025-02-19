@@ -1,6 +1,5 @@
 use std::{
     io::{Cursor, SeekFrom},
-    process::Stdio,
     sync::Arc,
 };
 
@@ -15,7 +14,8 @@ use tokio::{
 };
 use tracing::{debug, error, info, span, trace, Level};
 use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, TrackSource, UserId
+    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo,
+    TrackSource, UserId,
 };
 
 use crate::{
@@ -23,6 +23,7 @@ use crate::{
     ServerStateInner,
 };
 
+mod ffmpeg;
 mod ffprobe;
 
 const MEGABYTE: usize = 1024 * 1024;
@@ -135,44 +136,14 @@ impl ServiceMedia {
                 .decode()?
         } else if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
-                let cmd = Command::new("ffmpeg")
-                    .args([
-                        "-v",
-                        "quiet",
-                        &format!("-dump_attachment:{}", thumb.index),
-                        "/dev/stdout",
-                        "-y",
-                        "-i",
-                    ])
-                    .arg(path)
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .await?;
-                let cursor = Cursor::new(cmd.stdout);
+                let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
+                let cursor = Cursor::new(bytes);
                 image::ImageReader::new(cursor)
                     .with_guessed_format()?
                     .decode()?
             } else if thumb.codec_type == MediaType::Video {
-                let cmd = Command::new("ffmpeg")
-                    .args(["-v", "quiet", "-i"])
-                    .arg(path)
-                    .args([
-                        "-vf",
-                        "thumbnail,scale=300:300",
-                        "-frames:v",
-                        "1",
-                        "-f",
-                        "webp",
-                        "-",
-                    ])
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .stderr(Stdio::inherit())
-                    .output()
-                    .await?;
-                let cursor = Cursor::new(cmd.stdout);
+                let bytes = ffmpeg::generate_thumb(path).await?;
+                let cursor = Cursor::new(bytes);
                 image::ImageReader::new(cursor)
                     .with_guessed_format()?
                     .decode()?
