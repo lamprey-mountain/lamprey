@@ -12,7 +12,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 	const members = api.room_members.list(room_id);
 
 	return (
-		<ul class="room-members">
+		<ul class="room-members" data-room-id={props.room.id}>
 			<For each={members()?.items}>
 				{(i) => {
 					const user = api.users.fetch(() => i.user_id);
@@ -30,7 +30,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						return name;
 					}
 
-					return <li data-user-id={i.user_id}>{name()}</li>;
+					return <li class="menu-user" data-user-id={i.user_id}>{name()}</li>;
 				}}
 			</For>
 		</ul>

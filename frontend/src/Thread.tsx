@@ -9,7 +9,7 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 	const members = api.thread_members.list(thread_id);
 
 	return (
-		<ul class="room-members">
+		<ul class="room-members" data-thread-id={props.thread.id}>
 			<For each={members()?.items}>
 				{(i) => {
 					const user = api.users.fetch(() => i.user_id);
@@ -34,7 +34,7 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 						return name;
 					}
 
-					return <li data-user-id={i.user_id}>{name()}</li>;
+					return <li class="menu-user" data-user-id={i.user_id}>{name()}</li>;
 				}}
 			</For>
 		</ul>
