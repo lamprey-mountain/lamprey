@@ -1,4 +1,4 @@
-import { createEffect, For, from, Show } from "solid-js";
+import { For, from, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";

@@ -10,18 +10,15 @@ import { tooltip } from "./Tooltip.tsx";
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
 	const room_id = () => props.room.id;
-
 	const members = api.room_members.list(room_id);
 
 	return (
 		<ul class="member-list" data-room-id={props.room.id}>
 			<For each={members()?.items}>
 				{(i) => {
-					const user = api.users.fetch(() => i.user_id);
-					const room_member = api.room_members.fetch(
-						room_id,
-						() => i.user_id,
-					);
+					const user_id = () => i.user_id;
+					const user = api.users.fetch(user_id);
+					const room_member = api.room_members.fetch(room_id, user_id);
 
 					function name() {
 						let name: string | undefined | null = null;

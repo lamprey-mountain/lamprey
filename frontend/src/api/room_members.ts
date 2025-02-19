@@ -135,7 +135,17 @@ export class RoomMembers {
 		const [resource, { refetch, mutate }] = createResource(
 			room_id_sig,
 			async (room_id) => {
-				const l = this._cachedListings.get(room_id)!;
+				let l = this._cachedListings.get(room_id)!;
+				if (!l) {
+					l = {
+						resource: (() => {}) as unknown as Resource<Pagination<RoomMember>>,
+						refetch: () => {},
+						mutate: () => {},
+						prom: null,
+						pagination: null,
+					};
+					this._cachedListings.set(room_id, l);
+				}
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;

@@ -138,7 +138,19 @@ export class ThreadMembers {
 		const [resource, { refetch, mutate }] = createResource(
 			thread_id_sig,
 			async (thread_id) => {
-				const l = this._cachedListings.get(thread_id)!;
+				let l = this._cachedListings.get(thread_id)!;
+				if (!l) {
+					l = {
+						resource: (() => {}) as unknown as Resource<
+							Pagination<ThreadMember>
+						>,
+						refetch: () => {},
+						mutate: () => {},
+						prom: null,
+						pagination: null,
+					};
+					this._cachedListings.set(thread_id, l);
+				}
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;

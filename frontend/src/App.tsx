@@ -414,11 +414,11 @@ function RouteThread(p: RouteSectionProps) {
 
 	return (
 		<>
-			<Show when={room()} fallback={<Title title={t("loading")} />}>
+			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
 			<ChatNav />
-			<Show when={room()}>
+			<Show when={room() && thread()}>
 				<ChatMain room={room()!} thread={thread()!} />
 				<Show when={flags.has("thread_member_list")}>
 					<ThreadMembers thread={thread()!} />
