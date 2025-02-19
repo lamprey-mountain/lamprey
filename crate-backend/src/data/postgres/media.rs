@@ -3,6 +3,7 @@ use serde::Deserialize;
 use sqlx::{query, query_as};
 use tracing::info;
 use types::{MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
+use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -106,7 +107,7 @@ impl From<DbMediaTrack> for MediaTrack {
                 }),
                 DbMediaTrackType::Other => MediaTrackInfo::Other,
             },
-            url: row.url,
+            url: Url::parse(&row.url).expect("invalid data in db"),
             size: match row.size_type {
                 DbMediaSizeType::Bytes => {
                     MediaSize::Bytes(row.size.try_into().expect("invalid size in db"))
@@ -169,7 +170,7 @@ impl From<MediaTrack> for DbMediaTrack {
                 .map(|i| i.try_into().expect("convert error")),
             codec: value.info.codec().map(|s| s.to_owned()),
             language: value.info.language().map(|i| i.0.to_owned()),
-            url: value.url,
+            url: value.url.to_string(),
             size_type,
             size,
             mime: value.mime,

@@ -215,7 +215,7 @@ impl Portal {
                             .all_tracks()
                             .find(|a| matches!(a.info, MediaTrackInfo::Image(_)));
                         if let Some(valid_track) = valid_track {
-                            payload = payload.avatar_url(&valid_track.url);
+                            payload = payload.avatar_url(valid_track.url.as_str());
                         }
                     };
                     self.globals

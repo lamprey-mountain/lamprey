@@ -193,7 +193,7 @@ impl ServerState {
     }
 
     /// presigns every relevant url in a piece of media
-    async fn presign(&self, media: &mut Media) -> Result<()> {
+    async fn presign(&self, _media: &mut Media) -> Result<()> {
         // Ok(self
         //     .blobs
         //     .presign_read(&media_id.to_string(), Duration::from_secs(60 * 60 * 24))
@@ -202,10 +202,10 @@ impl ServerState {
         //     .to_string())
         // HACK: temporary thing for better caching
         // TODO: i should use serviceworkers to cache while ignoring signature params
-        media.source.url = format!("https://chat-files.celery.eu.org/{}", media.source.url);
-        for t in &mut media.tracks {
-            t.url = format!("https://chat-files.celery.eu.org/{}", t.url);
-        }
+        // media.source.url = format!("https://chat-files.celery.eu.org/{}", media.source.url);
+        // for t in &mut media.tracks {
+        //     t.url = format!("https://chat-files.celery.eu.org/{}", t.url);
+        // }
         Ok(())
     }
 }
@@ -222,7 +222,7 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct ConfigS3 {
     bucket: String,
-    endpoint: String,
+    endpoint: Url,
     region: String,
     access_key_id: String,
     secret_access_key: String,
@@ -272,7 +272,7 @@ async fn main() -> Result<()> {
 
     let blobs_builder = opendal::services::S3::default()
         .bucket(&config.s3.bucket)
-        .endpoint(&config.s3.endpoint)
+        .endpoint(config.s3.endpoint.as_str())
         .region(&config.s3.region)
         .access_key_id(&config.s3.access_key_id)
         .secret_access_key(&config.s3.secret_access_key);

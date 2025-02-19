@@ -177,7 +177,12 @@ impl ServiceMedia {
     ) -> Result<Media> {
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
-        let url = format!("media/{media_id}");
+        let url = self
+            .state
+            .config
+            .s3
+            .endpoint
+            .join(&format!("media/{media_id}"))?;
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mut media = Media {
@@ -230,7 +235,7 @@ impl ServiceMedia {
             let mut w = self
                 .state
                 .blobs
-                .writer_with(&url)
+                .writer_with(&url.path())
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
                 // FIXME: sometimes this fails with "failed to parse header"
                 // .content_type(&mime)
@@ -269,13 +274,17 @@ async fn generate_and_upload_thumb(
     let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
     img.thumbnail(width, height).write_with_encoder(enc)?;
     drop(_s);
-    let url = format!("thumb/{media_id}/{width}x{height}");
+    let url = state
+        .config
+        .s3
+        .endpoint
+        .join(&format!("thumb/{media_id}/{width}x{height}"))?;
     let len = out.get_ref().len();
     let span_upload_thumb = span!(Level::INFO, "upload thumb");
     let _s = span_upload_thumb.enter();
     let mut w = state
         .blobs
-        .writer_with(&url)
+        .writer_with(url.as_str())
         .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
         .content_type("image/avif")
         .await?;

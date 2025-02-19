@@ -165,7 +165,7 @@ pub struct MediaTrack {
     pub info: MediaTrackInfo,
 
     /// The url where this track may be downloaded from
-    pub url: String,
+    pub url: Url,
 
     /// The blob's length in bytes
     #[serde(flatten)]
