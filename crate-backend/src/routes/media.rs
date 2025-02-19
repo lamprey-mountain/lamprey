@@ -10,7 +10,7 @@ use axum::{
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
-use types::MediaSize;
+use types::{MediaCreateSource, MediaSize};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -38,109 +38,128 @@ async fn media_create(
     State(s): State<Arc<ServerState>>,
     Json(r): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
-    if r.size > MAX_SIZE {
-        return Err(Error::TooBig);
-    }
+    match &r.source {
+        MediaCreateSource::Upload { size, .. } => {
+            if *size > MAX_SIZE {
+                return Err(Error::TooBig);
+            }
 
-    let media_id = MediaId(uuid::Uuid::now_v7());
-    let srv = s.services();
-    srv.media
-        .create_upload(media_id, user_id, r.clone())
-        .await?;
-    if let Some(source_url) = r.source_url {
-        let res = MediaCreated {
-            media_id,
-            upload_url: None,
-        };
-        let req = reqwest::get(&source_url).await?.error_for_status()?;
-        // if req.content_length().is_some_and(|s| s > MAX_SIZE) {
-        if req.content_length().is_some_and(|s| s > r.size) {
-            return Err(Error::TooBig);
-        }
-
-        let mut up = srv
-            .media
-            .uploads
-            .get_mut(&media_id)
-            .ok_or(Error::NotFound)?;
-
-        debug!(
-            "download media {} from {}, file {:?}",
-            media_id,
-            source_url,
-            up.temp_file.file_path()
-        );
-
-        let mut bytes = req.bytes_stream();
-        // let stat = up.temp_file.metadata().await?;
-        // let current_size = stat.len();
-        // let current_off: u64 = 0;
-        // if current_size != current_off {
-        //     return Err(Error::CantOverwrite);
-        // }
-        // up.seek(current_off).await?;
-
-        while let Some(chunk) = bytes.next().await {
-            match up.write(&chunk?).await {
-                Err(err) => {
-                    srv.media.uploads.remove(&media_id);
-                    return Err(err);
-                }
-                Ok(_) => {}
+            let media_id = MediaId(uuid::Uuid::now_v7());
+            let srv = s.services();
+            srv.media
+                .create_upload(media_id, user_id, r.clone())
+                .await?;
+            let upload_url = Some(
+                s.config()
+                    .base_url
+                    .join(&format!("/api/v1/internal/media-upload/{media_id}"))?,
+            );
+            let res = MediaCreated {
+                media_id,
+                upload_url,
             };
+            let mut res_headers = HeaderMap::new();
+            res_headers.insert("upload-length", (*size).into());
+            res_headers.insert("upload-offset", 0.into());
+            Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
-
-        info!("finished stream download end_size={}", up.current_size);
-
-        match up.current_size.cmp(&up.create.size) {
-            Ordering::Greater => {
-                s.services().media.uploads.remove(&media_id);
-                Err(Error::TooBig)
+        MediaCreateSource::Download {
+            filename,
+            size,
+            source_url,
+        } => {
+            if size.is_some_and(|s| s > MAX_SIZE) {
+                return Err(Error::TooBig);
             }
-            Ordering::Equal => {
-                trace!("flush media");
-                up.temp_writer.flush().await?;
-                trace!("flushed media");
-                drop(up);
-                trace!("dropped upload");
-                let (_, up) = s
-                    .services()
-                    .media
-                    .uploads
-                    .remove(&media_id)
-                    .expect("it was there a few milliseconds ago");
-                trace!("processing upload");
-                let mut media = s
-                    .services()
-                    .media
-                    .process_upload(up, media_id, user_id)
-                    .await?;
-                debug!("finished processing media");
-                s.presign(&mut media).await?;
-                let mut headers = HeaderMap::new();
-                let size = match media.source.size {
-                    MediaSize::Bytes(b) => b,
-                    MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
+
+            let media_id = MediaId(uuid::Uuid::now_v7());
+            let srv = s.services();
+            srv.media
+                .create_upload(media_id, user_id, r.clone())
+                .await?;
+
+            let req = reqwest::get(source_url.clone()).await?.error_for_status()?;
+            match (size, req.content_length()) {
+                (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
+                (None, Some(len)) if len > MAX_SIZE => return Err(Error::TooBig),
+                _ => {}
+            }
+
+            let mut up = srv
+                .media
+                .uploads
+                .get_mut(&media_id)
+                .ok_or(Error::NotFound)?;
+
+            debug!(
+                "download media {} from {}, file {:?}",
+                media_id,
+                source_url,
+                up.temp_file.file_path()
+            );
+
+            // TODO: retry downloads
+            let mut bytes = req.bytes_stream();
+            while let Some(chunk) = bytes.next().await {
+                match up.write(&chunk?).await {
+                    Err(err) => {
+                        srv.media.uploads.remove(&media_id);
+                        return Err(err);
+                    }
+                    Ok(_) => {}
                 };
-                headers.insert("content-length", size.into());
-                Ok((StatusCode::CREATED, HeaderMap::new(), Json(res)))
             }
-            Ordering::Less => Err(Error::BadStatic("failed to download content")),
+
+            info!("finished stream download end_size={}", up.current_size);
+
+            match size.map(|s| up.current_size.cmp(&s)) {
+                Some(Ordering::Greater) => {
+                    s.services().media.uploads.remove(&media_id);
+                    Err(Error::TooBig)
+                }
+                Some(Ordering::Less) => Err(Error::BadStatic("failed to download content")),
+                Some(Ordering::Equal) | None => {
+                    trace!("flush media");
+                    up.temp_writer.flush().await?;
+                    trace!("flushed media");
+                    drop(up);
+                    trace!("dropped upload");
+                    let (_, up) = s
+                        .services()
+                        .media
+                        .uploads
+                        .remove(&media_id)
+                        .expect("it was there a few milliseconds ago");
+                    trace!("processing upload");
+                    let filename = filename
+                        .as_deref()
+                        // TODO: try to parse name from Content-Disposition
+                        .or_else(|| source_url.path_segments().and_then(|p| p.last()))
+                        .map(|s| s.to_owned())
+                        .unwrap_or_else(|| "unknown".to_owned());
+                    let mut media = s
+                        .services()
+                        .media
+                        .process_upload(up, media_id, user_id, &filename)
+                        .await?;
+                    debug!("finished processing media");
+                    s.presign(&mut media).await?;
+                    let mut headers = HeaderMap::new();
+                    let size = match media.source.size {
+                        MediaSize::Bytes(b) => b,
+                        MediaSize::BytesPerSecond(_) => {
+                            panic!("BytesPerSecond invalid for upload?")
+                        }
+                    };
+                    headers.insert("content-length", size.into());
+                    let res = MediaCreated {
+                        media_id,
+                        upload_url: None,
+                    };
+                    Ok((StatusCode::CREATED, HeaderMap::new(), Json(res)))
+                }
+            }
         }
-    } else {
-        let upload_url = Some(
-            s.config()
-                .base_url
-                .join(&format!("/api/v1/internal/media-upload/{media_id}"))?,
-        );
-        let res = MediaCreated {
-            media_id,
-            upload_url,
-        };
-        let mut res_headers = HeaderMap::new();
-        res_headers.insert("upload-length", r.size.into());
-        res_headers.insert("upload-offset", 0.into());
-        Ok((StatusCode::CREATED, res_headers, Json(res)))
     }
 }
 
@@ -199,7 +218,12 @@ async fn media_upload(
     if current_size != current_off {
         return Err(Error::CantOverwrite);
     }
-    if current_size + part_length > up.create.size {
+    let source_size = up
+        .create
+        .source
+        .size()
+        .expect("can only patch source upload");
+    if current_size + part_length > source_size {
         return Err(Error::TooBig);
     }
     up.seek(current_off).await?;
@@ -217,7 +241,7 @@ async fn media_upload(
 
     info!("finished stream upload end_size={}", up.current_size);
 
-    match up.current_size.cmp(&up.create.size) {
+    match up.current_size.cmp(&source_size) {
         Ordering::Greater => {
             s.services().media.uploads.remove(&media_id);
             Err(Error::TooBig)
@@ -235,10 +259,14 @@ async fn media_upload(
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
             trace!("processing upload");
+            let filename = match &up.create.source {
+                MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+                MediaCreateSource::Download { .. } => panic!("can only patch upload"),
+            };
             let mut media = s
                 .services()
                 .media
-                .process_upload(up, media_id, user_id)
+                .process_upload(up, media_id, user_id, &filename)
                 .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
@@ -254,7 +282,7 @@ async fn media_upload(
         Ordering::Less => {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.current_size.into());
-            headers.insert("upload-length", up.create.size.into());
+            headers.insert("upload-length", source_size.into());
             Ok((StatusCode::NO_CONTENT, headers, Json(None)))
         }
     }
@@ -302,7 +330,14 @@ async fn media_check(
         if up.user_id == user_id {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
-            headers.insert("upload-length", up.create.size.into());
+            headers.insert(
+                "upload-length",
+                up.create
+                    .source
+                    .size()
+                    .expect("can only check media where source = upload")
+                    .into(),
+            );
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }

@@ -181,17 +181,34 @@ pub struct MediaTrack {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MediaCreate {
-    /// The original filename
-    pub filename: String,
-
     /// Descriptive alt text, not entirely unlike a caption
     pub alt: Option<String>,
 
-    /// The size (in bytes)
-    pub size: u64,
+    #[serde(flatten)]
+    pub source: MediaCreateSource,
+}
 
-    /// A url to download this media from
-    pub source_url: Option<String>,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(untagged)]
+pub enum MediaCreateSource {
+    Upload {
+        /// The original filename
+        filename: String,
+
+        /// The size (in bytes)
+        size: u64,
+    },
+    Download {
+        /// The original filename
+        filename: Option<String>,
+
+        /// The size (in bytes)
+        size: Option<u64>,
+
+        /// A url to download this media from
+        source_url: Url,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -310,5 +327,14 @@ impl Diff<Media> for MediaPatch {
 impl Media {
     pub fn all_tracks(&self) -> impl Iterator<Item = &MediaTrack> {
         self.tracks.iter().chain([&self.source])
+    }
+}
+
+impl MediaCreateSource {
+    pub fn size(&self) -> Option<u64> {
+        match self {
+            MediaCreateSource::Upload { size, .. } => Some(*size),
+            MediaCreateSource::Download { size, .. } => *size,
+        }
     }
 }

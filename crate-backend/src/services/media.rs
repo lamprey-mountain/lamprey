@@ -15,7 +15,7 @@ use tokio::{
 };
 use tracing::{debug, error, info, span, trace, Level};
 use types::{
-    Media, MediaCreate, MediaId, MediaSize, MediaTrack, MediaTrackInfo, TrackSource, UserId,
+    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, TrackSource, UserId
 };
 
 use crate::{
@@ -202,6 +202,7 @@ impl ServiceMedia {
         up: MediaUpload,
         media_id: MediaId,
         user_id: UserId,
+        filename: &str,
     ) -> Result<Media> {
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
@@ -211,13 +212,13 @@ impl ServiceMedia {
         let mut media = Media {
             alt: up.create.alt.clone(),
             id: media_id,
-            filename: up.create.filename.clone(),
+            filename: filename.to_owned(),
             source: MediaTrack {
                 url: url.clone(),
                 mime: mime.clone(),
                 // TODO: use correct MediaTrackInfo type
                 info: if mime.starts_with("image/") {
-                    types::MediaTrackInfo::Image(types::Image {
+                    MediaTrackInfo::Image(types::Image {
                         height: meta
                             .as_ref()
                             .and_then(|m| m.height())
@@ -229,15 +230,20 @@ impl ServiceMedia {
                         language: None,
                     })
                 } else {
-                    types::MediaTrackInfo::Mixed(types::Mixed {
+                    MediaTrackInfo::Mixed(types::Mixed {
                         height: meta.as_ref().and_then(|m| m.height()),
                         width: meta.as_ref().and_then(|m| m.width()),
                         duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
                         language: None,
                     })
                 },
-                size: MediaSize::Bytes(up.create.size),
-                source: TrackSource::Uploaded,
+                size: MediaSize::Bytes(up.current_size),
+                source: match up.create.source {
+                    MediaCreateSource::Upload { .. } => TrackSource::Uploaded,
+                    MediaCreateSource::Download { source_url, .. } => {
+                        TrackSource::Downloaded { source_url }
+                    }
+                },
             },
             tracks: vec![],
         };
@@ -262,7 +268,7 @@ impl ServiceMedia {
                 w.write(buf.to_vec()).await?;
             }
             w.close().await?;
-            info!("uploaded {} bytes to s3", up.create.size);
+            info!("uploaded {} bytes to s3", up.current_size);
             Result::Ok(())
         };
         upload_s3.await?;
