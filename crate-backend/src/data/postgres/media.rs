@@ -116,7 +116,7 @@ impl From<DbMediaTrack> for MediaTrack {
                     MediaSize::BytesPerSecond(row.size.try_into().expect("invalid size in db"))
                 }
             },
-            mime: row.mime,
+            mime: row.mime.parse().expect("invalid data in db"),
             source: match row.source {
                 DbTrackSource::Uploaded => TrackSource::Uploaded,
                 DbTrackSource::Downloaded => TrackSource::Downloaded {
@@ -173,7 +173,7 @@ impl From<MediaTrack> for DbMediaTrack {
             url: value.url.to_string(),
             size_type,
             size,
-            mime: value.mime,
+            mime: value.mime.to_string(),
             source,
             source_url,
         }

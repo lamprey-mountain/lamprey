@@ -12,11 +12,5 @@ description = "unnamed chat thing?"
 license = "MIT"
 
 [profile.dev.package]
-adler2.opt-level = 3
-crc32fast.opt-level = 3
 miniz_oxide.opt-level = 3
-png.opt-level = 3
-fdeflate.opt-level = 3
 sqlx-macros.opt-level = 3
-serde_derive.opt-level = 3
-utoipa-gen.opt-level = 3

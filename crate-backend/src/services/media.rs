@@ -191,7 +191,7 @@ impl ServiceMedia {
             filename: filename.to_owned(),
             source: MediaTrack {
                 url: url.clone(),
-                mime: mime.clone(),
+                mime: mime.parse()?,
                 // TODO: use correct MediaTrackInfo type
                 info: if mime.starts_with("image/") {
                     MediaTrackInfo::Image(types::Image {
@@ -299,7 +299,7 @@ async fn generate_and_upload_thumb(
         }),
         url,
         size: MediaSize::Bytes(len as u64),
-        mime: "image/avif".to_owned(),
+        mime: "image/avif".parse().expect("image/avif is always valid"),
         source: TrackSource::Generated,
     };
     Ok(Some(track))
@@ -307,6 +307,9 @@ async fn generate_and_upload_thumb(
 
 async fn get_mime(file: &std::path::Path) -> Result<String> {
     let out = Command::new("file").arg("-ib").arg(file).output().await?;
-    let mime = String::from_utf8(out.stdout).expect("file has failed me");
+    let mime = String::from_utf8(out.stdout)
+        .expect("file has failed me")
+        .trim()
+        .to_owned();
     Ok(mime)
 }

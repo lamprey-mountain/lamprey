@@ -67,6 +67,9 @@ pub enum Error {
     // NOTE: also not really an error, but put here for convenience
     Ffprobe,
 
+    #[error("media type error: {0}")]
+    Media(#[from] mediatype::MediaTypeError),
+
     #[error("not yet implemented...")]
     Unimplemented,
 

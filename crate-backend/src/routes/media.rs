@@ -228,8 +228,8 @@ async fn media_upload(
 
     while let Some(chunk) = stream.next().await {
         if let Err(err) = up.write(&chunk?).await {
-                srv.media.uploads.remove(&media_id);
-                return Err(err);
+            srv.media.uploads.remove(&media_id);
+            return Err(err);
         };
     }
 

@@ -36,3 +36,4 @@ crate-hakari = { version = "0.1", path = "../crate-hakari" }
 nanoid = "0.4.0"
 utoipa-axum = "0.2.0"
 image = "0.25.5"
+mediatype = { version = "0.19.18", features = ["serde"] }

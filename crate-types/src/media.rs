@@ -8,6 +8,10 @@ use utoipa::ToSchema;
 
 use crate::{util::Diff, MediaId};
 
+mod mime;
+
+pub use mime::Mime;
+
 /// A distinct logical item of media.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -109,7 +113,6 @@ pub enum MediaTrackInfo {
 
     // TODO: trickplay/storyboard image
     // Trickplay(Image),
-
     /// thumbnails
     Thumbnail(Image),
 
@@ -172,7 +175,7 @@ pub struct MediaTrack {
     pub size: MediaSize,
 
     /// the mime type of this view
-    pub mime: String,
+    pub mime: Mime,
 
     /// Where this track came from
     pub source: TrackSource,
