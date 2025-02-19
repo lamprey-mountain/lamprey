@@ -311,7 +311,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 			() => props.thread!.room_id,
 			() => props.message.author.id,
 		)
-		: null;
+		: () => null;
 	const thread_member = api.thread_members.fetch(
 		() => props.message.thread_id,
 		() => props.message.author.id,
