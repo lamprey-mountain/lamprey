@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { MediaProps } from "./util.ts";
+import { byteFmt, MediaProps } from "./util.ts";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
 
@@ -8,12 +8,6 @@ const MAX_PREVIEW_SIZE = 16384;
 
 export const TextView = (props: MediaProps) => {
 	const ctx = useCtx();
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
 
 	const ty = () => props.media.source.mime.split(";")[0];
 

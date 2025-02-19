@@ -7,6 +7,7 @@ import {
 	VoidProps,
 } from "solid-js";
 import {
+	byteFmt,
 	formatTime,
 	getDuration,
 	getHeight,
@@ -134,13 +135,6 @@ export const VideoView = (props: MediaProps) => {
 		progressPreview()
 			? `${(progressPreview()! / duration()) * 100}%`
 			: undefined;
-
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
 
 	const ty = () => props.media.source.mime.split(";")[0];
 

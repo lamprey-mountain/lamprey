@@ -11,7 +11,7 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
-import { formatTime, getDuration, MediaProps } from "./util.ts";
+import { byteFmt, formatTime, getDuration, MediaProps } from "./util.ts";
 import { tooltip } from "../Tooltip.tsx";
 
 export const AudioView = (props: MediaProps) => {
@@ -91,13 +91,6 @@ export const AudioView = (props: MediaProps) => {
 		progressPreview()
 			? `${(progressPreview()! / duration()) * 100}%`
 			: undefined;
-
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
 
 	const ty = () => props.media.source.mime.split(";")[0];
 

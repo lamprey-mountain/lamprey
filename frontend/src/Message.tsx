@@ -14,7 +14,7 @@ import {
 	VideoViewOld,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { MediaProps } from "./media/util.ts";
+import { byteFmt, MediaProps } from "./media/util.ts";
 import { Time } from "./Time.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";
@@ -206,12 +206,6 @@ export function AttachmentView(props: MediaProps) {
 export function AttachmentView1(props: MediaProps) {
 	const ty = () => props.media.source.mime.split(";")[0];
 	const b = () => props.media.source.mime.split("/")[0];
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
 	// const [ty, paramsRaw] = a.mime.split(";");
 	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
 	// console.log({ ty, params });
@@ -268,13 +262,6 @@ export function AttachmentView1(props: MediaProps) {
 
 export function AttachmentView2(props: MediaProps) {
 	const b = () => props.media.source.mime.split("/")[0];
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
-
 	const ty = () => props.media.source.mime.split(";")[0];
 	if (b() === "image") {
 		return (

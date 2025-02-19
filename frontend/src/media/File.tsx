@@ -1,13 +1,6 @@
-import { MediaProps } from "./util.ts";
+import { byteFmt, MediaProps } from "./util.ts";
 
 export const FileView = (props: MediaProps) => {
-	const byteFmt = Intl.NumberFormat("en", {
-		notation: "compact",
-		style: "unit",
-		unit: "byte",
-		unitDisplay: "narrow",
-	});
-
 	const ty = () => props.media.source.mime.split(";")[0];
 
 	return (
