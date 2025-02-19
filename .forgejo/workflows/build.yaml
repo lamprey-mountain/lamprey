@@ -53,9 +53,9 @@ jobs:
         run: |
           attic push actions result --ignore-upstream-cache-filter
   push-containers:
-    runs-on: nix
+    runs-on: docker
     container:
-      # image: git.celery.eu.org/tezlm/nix-builder
+      image: git.celery.eu.org/tezlm/nix-builder
       volumes:
         - actions_nix_store:/nix
     needs:
