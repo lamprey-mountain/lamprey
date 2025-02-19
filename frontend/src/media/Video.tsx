@@ -1,6 +1,7 @@
 import {
 	createEffect,
 	createSignal,
+	onCleanup,
 	onMount,
 	ValidComponent,
 	VoidProps,
@@ -19,6 +20,8 @@ import iconVolumeMedium from "../assets/volume-medium.png";
 import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
+import iconFullscreen from "../assets/fullscreen.png";
+import iconFullscreent from "../assets/fullscreent.png";
 import { tooltip } from "../Tooltip.tsx";
 
 export const VideoViewOld = (props: MediaProps) => {
@@ -54,6 +57,7 @@ export const VideoView = (props: MediaProps) => {
 	const [playing, setPlaying] = createSignal(false);
 	const [volume, setVolume] = createSignal(1);
 	const [muted, setMuted] = createSignal(false);
+	const [fullscreen, setFullscreen] = createSignal(false);
 
 	let videoEl!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
@@ -78,11 +82,12 @@ export const VideoView = (props: MediaProps) => {
 
 	const toggleMute = () => setMuted((m) => !m);
 
-	const fullScreen = (e: MouseEvent) => {
+	const fullScreenDblClick = (e: MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 		console.log(e, wrapperEl);
 		wrapperEl.requestFullscreen();
+		setFullscreen(true);
 	};
 
 	const handleScrubWheel = (e: WheelEvent) => {
@@ -153,8 +158,28 @@ export const VideoView = (props: MediaProps) => {
 		return `${Math.round(volume() * 100)}%`;
 	};
 
+	const toggleFullscreen = () => {
+		if (fullscreen()) {
+			document.exitFullscreen()
+		} else {
+			wrapperEl.requestFullscreen();
+		}
+	}
+
+	const handleFullscreenChange = () => {
+		setFullscreen(document.fullscreenElement === wrapperEl);
+	}
+
+	onMount(() => {
+		wrapperEl.addEventListener("fullscreenchange", handleFullscreenChange);
+	})
+
+	onCleanup(() => {
+		wrapperEl.removeEventListener("fullscreenchange", handleFullscreenChange);
+	});
+
 	return (
-		<div class="video">
+		<div class="video" ref={wrapperEl!}>
 			<div
 				class="media"
 				style={{
@@ -162,7 +187,6 @@ export const VideoView = (props: MediaProps) => {
 					"--width": `${width()}px`,
 					"--aspect-ratio": `${width()}/${height()}`,
 				}}
-				ref={wrapperEl!}
 			>
 				<div class="inner">
 					<div class="loader">loading</div>
@@ -170,7 +194,7 @@ export const VideoView = (props: MediaProps) => {
 						ref={videoEl!}
 						src={props.media.source.url}
 						onClick={togglePlayPause}
-						onDblClick={fullScreen}
+						onDblClick={fullScreenDblClick}
 					/>
 				</div>
 			</div>
@@ -245,6 +269,9 @@ export const VideoView = (props: MediaProps) => {
 							</button>
 						) as HTMLElement,
 					)}
+					<button onClick={toggleFullscreen} title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}>
+						<img class="icon" src={fullscreen() ? iconFullscreent : iconFullscreen} alt="" />
+					</button>
 					<div class="space"></div>
 					<div
 						class="time"

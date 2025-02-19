@@ -891,6 +891,15 @@ summary {
 	}
 }
 
+.video:fullscreen {
+	background: $bg-100;
+	
+	& > .media {
+		max-height: 80%;
+		max-width: 80%;
+	}
+}
+
 .video > .footer {
 	display: grid;
 	grid-template-columns: 1fr;
