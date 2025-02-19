@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: setup
         run: |
-          podman login git.celery.eu.org --password ${{secrets.TOKEN}} --username tezlm
+          nix run nixpkgs#podman login git.celery.eu.org --password ${{secrets.TOKEN}} --username tezlm
           attic login --set-default central ${{vars.ATTIC_URL}} ${{secrets.ATTIC_TOKEN}}
           attic use actions
       - name: build
@@ -76,6 +76,6 @@ jobs:
           nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}}-oci -L |& cat
       - name: push
         run: |
-          ./result | podman load
-          podman tag ${{matrix.derivation}}:latest git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
-          podman push git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
+          ./result | nix run nixpkgs#podman load
+          nix run nixpkgs#podman tag ${{matrix.derivation}}:latest git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
+          nix run nixpkgs#podman push git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
