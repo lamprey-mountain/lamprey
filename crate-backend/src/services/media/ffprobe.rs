@@ -21,7 +21,7 @@ pub struct Format {
 #[derive(Debug, Deserialize)]
 pub struct Stream {
     pub index: u64,
-    pub codec_name: String,
+    pub codec_name: Option<String>,
     pub codec_type: MediaType,
     pub width: Option<u64>,
     pub height: Option<u64>,
@@ -98,11 +98,7 @@ impl Metadata {
     pub fn get_thumb_stream(&self) -> Option<&Stream> {
         self.streams
             .iter()
-            .find(|i| {
-                i.codec_type == MediaType::Attachment
-                    && i.disposition.default == 1
-                    && i.disposition.attached_pic == 1
-            })
+            .find(|i| i.disposition.attached_pic == 1)
             .or_else(|| self.get_main(MediaType::Attachment))
             .or_else(|| self.get_main(MediaType::Video))
     }
@@ -126,6 +122,6 @@ pub async fn extract(file: &std::path::Path) -> Result<Metadata> {
         let meta = serde_json::from_slice(&out.stdout)?;
         Ok(meta)
     } else {
-        Err(Error::Ffprobe)
+        Err(Error::Ffmpeg)
     }
 }

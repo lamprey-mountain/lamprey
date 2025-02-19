@@ -6,7 +6,7 @@ use std::{
 use async_tempfile::TempFile;
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
-use futures_util::{stream::FuturesUnordered, StreamExt};
+use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
 use image::{codecs::avif::AvifEncoder, DynamicImage};
 use tokio::{
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter},
@@ -14,7 +14,7 @@ use tokio::{
 };
 use tracing::{debug, error, info, span, trace, Level};
 use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo,
+    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
     TrackSource, UserId,
 };
 
@@ -60,6 +60,18 @@ impl MediaUpload {
     }
 }
 
+/// web scale
+// HACK: get arc to work with cursor/imagereader
+// https://stackoverflow.com/a/77743548
+#[derive(Debug, Clone)]
+struct BigData(Arc<Vec<u8>>);
+
+impl AsRef<[u8]> for BigData {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl ServiceMedia {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
@@ -97,7 +109,7 @@ impl ServiceMedia {
     ) -> Result<(Option<Metadata>, String)> {
         let meta = match ffprobe::extract(file).await {
             Ok(meta) => meta,
-            Err(Error::Ffprobe) => {
+            Err(Error::Ffmpeg) => {
                 let mime = get_mime(file).await?;
                 return Ok((None, mime));
             }
@@ -111,7 +123,7 @@ impl ServiceMedia {
         Ok((Some(meta), mime))
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, media, meta))]
     pub async fn generate_thumbnails(
         &self,
         media: &mut Media,
@@ -119,6 +131,8 @@ impl ServiceMedia {
         path: &std::path::Path,
         force: bool,
     ) -> Result<()> {
+        trace!("media = {:?}", media);
+        trace!("meta = {:?}", meta);
         if media
             .all_tracks()
             .any(|i| matches!(i.info, MediaTrackInfo::Thumbnail(_)))
@@ -128,25 +142,52 @@ impl ServiceMedia {
         }
         let media_id = media.id;
         let mime = get_mime(path).await?;
+        let mut fut = FuturesUnordered::new();
         let img = if mime.starts_with("image/") {
+            debug!("extract thumb from image");
             let bytes = tokio::fs::read(path).await?;
             let cursor = Cursor::new(bytes);
-            image::ImageReader::new(cursor)
-                .with_guessed_format()?
-                .decode()?
+            Arc::new(
+                image::ImageReader::new(cursor)
+                    .with_guessed_format()?
+                    .decode()?,
+            )
         } else if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
+                debug!("extract thumb attachment from container");
                 let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
+                let bytes = BigData(Arc::new(bytes));
+                fut.push(
+                    upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
+                );
                 let cursor = Cursor::new(bytes);
-                image::ImageReader::new(cursor)
-                    .with_guessed_format()?
-                    .decode()?
+                Arc::new(
+                    image::ImageReader::new(cursor)
+                        .with_guessed_format()?
+                        .decode()?,
+                )
+            } else if thumb.disposition.attached_pic == 1 {
+                debug!("extract thumb stream from container");
+                let bytes = ffmpeg::extract_stream(path, thumb.index).await?;
+                let bytes = BigData(Arc::new(bytes));
+                fut.push(
+                    upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
+                );
+                let cursor = Cursor::new(bytes);
+                Arc::new(
+                    image::ImageReader::new(cursor)
+                        .with_guessed_format()?
+                        .decode()?,
+                )
             } else if thumb.codec_type == MediaType::Video {
+                debug!("generate thumb from video");
                 let bytes = ffmpeg::generate_thumb(path).await?;
                 let cursor = Cursor::new(bytes);
-                image::ImageReader::new(cursor)
-                    .with_guessed_format()?
-                    .decode()?
+                Arc::new(
+                    image::ImageReader::new(cursor)
+                        .with_guessed_format()?
+                        .decode()?,
+                )
             } else {
                 error!("no suitable thumbnail codec");
                 return Ok(());
@@ -155,10 +196,9 @@ impl ServiceMedia {
             error!("no suitable thumbnail stream");
             return Ok(());
         };
-        let mut fut = FuturesUnordered::new();
         for size in [64, 320, 640] {
             let state = self.state.clone();
-            fut.push(generate_and_upload_thumb(state, &img, media_id, size, size));
+            fut.push(generate_and_upload_thumb(state, img.clone(), media_id, size, size).boxed());
         }
         while let Some(track) = fut.next().await {
             if let Some(track) = track? {
@@ -259,7 +299,7 @@ impl ServiceMedia {
 
 async fn generate_and_upload_thumb(
     state: Arc<ServerStateInner>,
-    img: &DynamicImage,
+    img: Arc<DynamicImage>,
     media_id: MediaId,
     width: u32,
     height: u32,
@@ -301,6 +341,49 @@ async fn generate_and_upload_thumb(
         size: MediaSize::Bytes(len as u64),
         mime: "image/avif".parse().expect("image/avif is always valid"),
         source: TrackSource::Generated,
+    };
+    Ok(Some(track))
+}
+
+async fn upload_extracted_thumb(
+    state: Arc<ServerStateInner>,
+    bytes: BigData,
+    media_id: MediaId,
+) -> Result<Option<MediaTrack>> {
+    let len = bytes.0.len();
+    let span_probe = span!(Level::DEBUG, "probe thumbnail image");
+    let _s = span_probe.enter();
+    let cursor = Cursor::new(&bytes);
+    let reader = image::ImageReader::new(cursor).with_guessed_format()?;
+    let mime: Mime = reader.format().unwrap().to_mime_type().parse()?;
+    let (width, height) = reader.into_dimensions()?;
+    drop(_s);
+    let url = state
+        .config
+        .s3
+        .endpoint
+        .join(&format!("thumb/{media_id}/original"))?;
+    let span_upload = span!(Level::DEBUG, "upload thumb");
+    let _s = span_upload.enter();
+    let mut w = state
+        .blobs
+        .writer_with(url.as_str())
+        .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+        .content_type("image/avif")
+        .await?;
+    // HACK: extremely ugly clone
+    w.write(bytes.0.to_vec()).await?;
+    drop(_s);
+    let track = MediaTrack {
+        info: MediaTrackInfo::Thumbnail(types::Image {
+            height: height.into(),
+            width: width.into(),
+            language: None,
+        }),
+        url,
+        size: MediaSize::Bytes(len as u64),
+        mime,
+        source: TrackSource::Extracted,
     };
     Ok(Some(track))
 }

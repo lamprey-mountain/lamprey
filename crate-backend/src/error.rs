@@ -63,9 +63,8 @@ pub enum Error {
     // HACK: not really an error, but still kind of helpful to have here
     NotModified,
 
-    #[error("not yet implemented...")]
-    // NOTE: also not really an error, but put here for convenience
-    Ffprobe,
+    #[error("ffmpeg or ffprobe didn't like seem to like that very much")]
+    Ffmpeg,
 
     #[error("media type error: {0}")]
     Media(#[from] mediatype::MediaTypeError),
@@ -75,6 +74,9 @@ pub enum Error {
 
     #[error("image error: {0}")]
     ImageError(#[from] image::ImageError),
+
+    #[error("unknown image format")]
+    UnknownImageFormat,
 }
 
 impl From<sqlx::Error> for Error {

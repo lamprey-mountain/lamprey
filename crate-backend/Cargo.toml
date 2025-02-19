@@ -37,3 +37,4 @@ nanoid = "0.4.0"
 utoipa-axum = "0.2.0"
 image = "0.25.5"
 mediatype = { version = "0.19.18", features = ["serde"] }
+bytes = "1.10.0"
