@@ -16,6 +16,8 @@ import {
 import { flags } from "./flags.ts";
 import { MediaProps } from "./media/util.ts";
 import { Time } from "./Time.tsx";
+import { tooltip } from "./Tooltip.tsx";
+import { UserView } from "./User.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -173,12 +175,12 @@ function ReplyView(props: ReplyProps) {
 		<>
 			<div class="reply arrow">{"\u21B1"}</div>
 			<div class="reply reply-content" onClick={scrollToReply}>
-				<Show when={!reply.loading} fallback="loading..">
+				<Show when={!reply.loading} fallback="loading...">
 					<Show
 						when={reply() && thread()}
 						fallback={<span class="author"></span>}
 					>
-						<Author message={reply()!} thread={thread()!} />:
+						<Author message={reply()!} thread={thread()!} />
 					</Show>
 					{content()}
 				</Show>
@@ -343,12 +345,26 @@ function Author(props: { message: Message; thread?: Thread }) {
 	}
 
 	return (
-		<span
-			class="author"
-			classList={{ "override-name": !!props.message.override_name }}
-			data-user-id={props.message.author.id}
-		>
-			{name()}
-		</span>
+		tooltip(
+			{
+				// animGroup: "users",
+				placement: "right-start",
+				interactive: true,
+			},
+			<UserView
+				user={props.message.author}
+				room_member={room_member()}
+				thread_member={thread_member()}
+			/>,
+			(
+				<span
+					class="author"
+					classList={{ "override-name": !!props.message.override_name }}
+					data-user-id={props.message.author.id}
+				>
+					{name()}
+				</span>
+			) as HTMLElement,
+		)
 	);
 }

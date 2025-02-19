@@ -28,7 +28,7 @@ export function tooltip(
 	tip: ValidComponent,
 	wrap: HTMLElement,
 ) {
-	const [contentEl, setContentEl] = createSignal<HTMLDivElement>();
+	const [contentEl, setContentEl] = createSignal<HTMLElement>();
 	const [tipEl, setTipEl] = createSignal<HTMLDivElement>();
 	// const [title, setTitle] = createSignal(getTitle());
 	const [visible, setVisible] = createSignal(false);
@@ -107,7 +107,7 @@ export function tooltip(
 		// HACK: make volume slider work properly
 		middleware: props.placement === "top-start"
 			? [shift({ padding: padding() }), offset({ mainAxis: -8 }), flip()]
-			: [shift({ padding: padding() }), offset({ mainAxis: 4 }), flip()],
+			: [shift({ padding: padding() }), offset({ mainAxis: 8 }), flip()],
 	});
 
 	wrap.addEventListener("mouseenter", showTip);

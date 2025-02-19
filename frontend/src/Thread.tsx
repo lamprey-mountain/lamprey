@@ -1,6 +1,8 @@
-import { For } from "solid-js";
+import { For, Show } from "solid-js";
 import { Thread } from "sdk";
 import { useApi } from "./api.tsx";
+import { tooltip } from "./Tooltip.tsx";
+import { UserView } from "./User.tsx";
 
 export const ThreadMembers = (props: { thread: Thread }) => {
 	const api = useApi();
@@ -34,7 +36,19 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 						return name;
 					}
 
-					return <li class="menu-user" data-user-id={i.user_id}>{name()}</li>;
+					return tooltip(
+						{
+							placement: "left-start",
+						},
+						<Show when={user()}>
+							<UserView
+								user={user()}
+								room_member={room_member()}
+								thread_member={thread_member()}
+							/>
+						</Show>,
+						<li class="menu-user" data-user-id={i.user_id}>{name()}</li>,
+					);
 				}}
 			</For>
 		</ul>

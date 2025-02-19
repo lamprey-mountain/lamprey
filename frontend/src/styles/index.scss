@@ -683,6 +683,31 @@ input[type="text"] {
 
 .tooltip .user {
 	min-width: 200px;
+
+	display: grid;
+	grid-template-columns: 64px auto;
+	grid-template-rows: 64px;
+	/* grid-template-areas: "avatar name" "info info"; */
+	grid-template-areas: "avatar info";
+	gap: 8px;
+
+	/* & > .name { */
+	/* grid-area: name; */
+	/* } */
+
+	& .name {
+		/* grid-area: name; */
+		font-weight: bold;
+	}
+
+	& > .avatar {
+		grid-area: avatar;
+		background: $bg-100;
+	}
+
+	& > .info {
+		grid-area: info;
+	}
 }
 
 .attachments {
@@ -1093,7 +1118,7 @@ code {
 	color: $fg-300;
 }
 
-.avatar {
+img.avatar {
 	height: 64px;
 	width: 64px;
 	display: block;

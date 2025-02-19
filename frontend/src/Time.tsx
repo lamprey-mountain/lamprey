@@ -31,9 +31,13 @@ export function Time(props: VoidProps<TimeProps>) {
 	return (
 		<>
 			{tooltip(
-				{ animGroup: props.animGroup },
-				date().toISOString(),
-				<time datetime={date().toISOString()}>{timeAgo(date())}</time>,
+				{
+					animGroup: props.animGroup,
+					placement: "left-start",
+				},
+				date().toDateString(),
+				<time datetime={date().toISOString()}>{timeAgo(date())}
+				</time> as HTMLElement,
 			)}
 		</>
 	);

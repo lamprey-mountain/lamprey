@@ -4,6 +4,8 @@ import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
+import { UserView } from "./User.tsx";
+import { tooltip } from "./Tooltip.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
@@ -30,7 +32,18 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						return name;
 					}
 
-					return <li class="menu-user" data-user-id={i.user_id}>{name()}</li>;
+					return tooltip(
+						{
+							placement: "left-start",
+						},
+						<Show when={user()}>
+							<UserView
+								user={user()}
+								room_member={room_member()}
+							/>
+						</Show>,
+						<li class="menu-user" data-user-id={i.user_id}>{name()}</li>,
+					);
 				}}
 			</For>
 		</ul>
