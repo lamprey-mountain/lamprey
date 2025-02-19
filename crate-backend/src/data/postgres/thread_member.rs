@@ -110,6 +110,7 @@ impl DataThreadMember for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         Ok(())
     }
 

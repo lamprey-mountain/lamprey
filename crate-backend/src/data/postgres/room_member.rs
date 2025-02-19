@@ -203,6 +203,7 @@ impl DataRoomMember for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         Ok(())
     }
 
