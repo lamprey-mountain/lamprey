@@ -117,7 +117,7 @@ impl ServiceMedia {
         };
         let mut mime = get_mime(file).await?;
         // HACK: fix webm
-        if meta.is_video() {
+        if !meta.has_video() {
             mime = mime.replace("video/webm", "audio/webm");
         }
         Ok((Some(meta), mime))
@@ -220,16 +220,16 @@ impl ServiceMedia {
         let url = self.state.get_s3_url(&format!("media/{media_id}"))?;
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
+        let mime: Mime = mime.parse()?;
         let mut media = Media {
             alt: up.create.alt.clone(),
             id: media_id,
             filename: filename.to_owned(),
             source: MediaTrack {
                 url: url.clone(),
-                mime: mime.parse()?,
-                // TODO: use correct MediaTrackInfo type
-                info: if mime.starts_with("image/") {
-                    MediaTrackInfo::Image(types::Image {
+                mime: mime.clone(),
+                info: match mime.ty().as_str() {
+                    "image" => MediaTrackInfo::Image(types::Image {
                         height: meta
                             .as_ref()
                             .and_then(|m| m.height())
@@ -239,14 +239,17 @@ impl ServiceMedia {
                             .and_then(|m| m.width())
                             .expect("all images have a width"),
                         language: None,
-                    })
-                } else {
-                    MediaTrackInfo::Mixed(types::Mixed {
+                    }),
+                    // this is quite a bit harder than it looks...
+                    "audio" | "video" => MediaTrackInfo::Mixed(types::Mixed {
                         height: meta.as_ref().and_then(|m| m.height()),
                         width: meta.as_ref().and_then(|m| m.width()),
                         duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
                         language: None,
-                    })
+                    }),
+                    "text" => MediaTrackInfo::Text(types::Text { language: None }),
+                    // "application" => MediaTrackInfo::Other,
+                    _ => MediaTrackInfo::Other,
                 },
                 size: MediaSize::Bytes(up.current_size),
                 source: match up.create.source {
@@ -259,6 +262,7 @@ impl ServiceMedia {
             tracks: vec![],
         };
         debug!("finish upload for {}, mime {}", media_id, mime);
+        trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
             self.generate_thumbnails(&mut media, meta, &p, false)
                 .await?;
@@ -267,7 +271,6 @@ impl ServiceMedia {
         let upload_s3 = async {
             let mut f = tokio::fs::OpenOptions::new().read(true).open(&p).await?;
             let mut buf = vec![0u8; MEGABYTE];
-            let mime: Mime = mime.parse()?;
             let mut w = self
                 .state
                 .blobs

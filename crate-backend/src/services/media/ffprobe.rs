@@ -91,7 +91,7 @@ impl Metadata {
         }
     }
 
-    pub fn is_video(&self) -> bool {
+    pub fn has_video(&self) -> bool {
         self.get_main_video().is_some()
     }
 
