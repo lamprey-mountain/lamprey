@@ -267,13 +267,13 @@ impl ServiceMedia {
         let upload_s3 = async {
             let mut f = tokio::fs::OpenOptions::new().read(true).open(&p).await?;
             let mut buf = vec![0u8; MEGABYTE];
+            let mime: Mime = mime.parse()?;
             let mut w = self
                 .state
                 .blobs
                 .writer_with(url.path())
                 .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-                // FIXME: sometimes this fails with "failed to parse header"
-                // .content_type(&mime)
+                .content_type(mime.as_str())
                 .await?;
             while f.read(&mut buf).await? != 0 {
                 w.write(buf.to_vec()).await?;
