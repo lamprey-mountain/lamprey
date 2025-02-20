@@ -97,6 +97,7 @@ async fn message_create(
     let msg = MessageSync::UpsertMessage {
         message: message.clone(),
     };
+    s.services().threads.invalidate(thread_id); // message count
     s.broadcast_thread(thread_id, user_id, None, msg).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
@@ -331,6 +332,7 @@ async fn message_edit(
         },
     )
     .await?;
+    s.services().threads.invalidate(thread_id); // last version id
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -377,6 +379,7 @@ async fn message_delete(
         },
     )
     .await?;
+    s.services().threads.invalidate(thread_id); // last version id, message count
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -472,6 +475,7 @@ async fn message_version_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
     data.message_version_delete(thread_id, version_id).await?;
+    s.services().threads.invalidate(thread_id); // last version id, message count
     Ok(Json(()))
 }
 

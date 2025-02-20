@@ -210,6 +210,7 @@ async fn thread_ack(
     };
     data.unread_put(user_id, thread_id, message_id, version_id)
         .await?;
+    s.services().threads.invalidate_user(thread_id, user_id);
     Ok(Json(AckRes {
         message_id,
         version_id,
