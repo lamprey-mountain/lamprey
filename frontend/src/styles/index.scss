@@ -164,6 +164,8 @@ input[type="submit"] {
 	display: grid;
 	grid-template-rows: 1fr auto;
 	contain: strict;
+	scrollbar-color: $bg-300 $bg-150;
+	scrollbar-gutter: stable;
 
 	& > .input {
 		width: 100%;
@@ -722,6 +724,7 @@ input[type="text"] {
 	overflow-x: auto;
 	max-width: 100%;
 	margin-bottom: 8px;
+	scrollbar-width: none;
 
 	& > li:not(.raw) {
 		background-color: $bg-300;
