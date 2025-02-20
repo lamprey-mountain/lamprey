@@ -14,3 +14,6 @@ license = "MIT"
 [profile.dev.package]
 miniz_oxide.opt-level = 3
 sqlx-macros.opt-level = 3
+serde_derive.opt-level = 3
+utoipa-gen.opt-level = 3
+validator_derive.opt-level = 3

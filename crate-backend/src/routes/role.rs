@@ -10,6 +10,7 @@ use types::{
     RolePatch, RoomId, RoomMember, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::types::{RoleCreate, RoleDeleteQuery};
 use crate::ServerState;
@@ -33,8 +34,9 @@ pub async fn role_create(
     Path(room_id): Path<RoomId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(create): Json<RoleCreateRequest>,
+    Json(json): Json<RoleCreateRequest>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
@@ -42,12 +44,12 @@ pub async fn role_create(
     let role = d
         .role_create(RoleCreate {
             room_id,
-            name: create.name,
-            description: create.description,
-            permissions: create.permissions,
-            is_self_applicable: create.is_self_applicable,
-            is_mentionable: create.is_mentionable,
-            is_default: create.is_default,
+            name: json.name,
+            description: json.description,
+            permissions: json.permissions,
+            is_self_applicable: json.is_self_applicable,
+            is_mentionable: json.is_mentionable,
+            is_default: json.is_default,
         })
         .await?;
     let msg = MessageSync::UpsertRole { role: role.clone() };
@@ -73,20 +75,21 @@ pub async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<RolePatch>,
+    Json(json): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
-    if !patch.changes(&role) {
+    if !json.changes(&role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
-    d.role_update(room_id, role_id, patch.clone()).await?;
+    d.role_update(room_id, role_id, json.clone()).await?;
     let role = d.role_select(room_id, role_id).await?;
     let msg = MessageSync::UpsertRole { role: role.clone() };
-    if patch.permissions.is_some_and(|p| p != role.permissions) {
+    if json.permissions.is_some_and(|p| p != role.permissions) {
         s.services().perms.invalidate_room_all(room_id);
     }
     s.broadcast_room(room_id, user_id, None, msg).await?;

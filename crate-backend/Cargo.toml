@@ -28,7 +28,7 @@ tokio = { version = "1.42.0", features = ["macros", "process", "rt-multi-thread"
 tower-http = { version = "0.6.2", features = ["cors", "trace"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-types = { version = "0.1.0", path = "../crate-types", features = ["utoipa"] }
+types = { version = "0.1.0", path = "../crate-types", features = ["utoipa", "validator"] }
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid"] }
 uuid = { version = "1.11.1", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }
@@ -38,3 +38,4 @@ utoipa-axum = "0.2.0"
 image = "0.25.5"
 mediatype = { version = "0.19.18", features = ["serde"] }
 bytes = "1.10.0"
+validator = "0.20.0"

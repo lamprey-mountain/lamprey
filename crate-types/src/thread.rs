@@ -3,22 +3,32 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
+use crate::util::some_option;
 use crate::{util::Diff, ThreadVerId};
 
 use super::{MessageId, RoomId, ThreadId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Thread {
     pub id: ThreadId,
     pub room_id: RoomId,
     pub creator_id: UserId,
     pub version_id: ThreadVerId,
 
-    #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 2048))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
     pub state: ThreadState,
@@ -29,24 +39,40 @@ pub struct Thread {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ThreadCreateRequest {
     #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
-    #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 2048))]
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, max_length = 1, min_length = 2048)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ThreadPatch {
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 64)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
+
     pub state: Option<ThreadState>,
 }
 
-use crate::util::some_option;
 /// lifecycle of a thread
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

@@ -6,6 +6,9 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 use crate::{util::Diff, MediaId};
 
 mod mime;
@@ -15,13 +18,21 @@ pub use mime::Mime;
 /// A distinct logical item of media.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Media {
     pub id: MediaId,
 
     /// The original filename
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub filename: String,
 
     /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<String>,
 
     /// The source (Uploaded, Downloaded)
@@ -31,10 +42,20 @@ pub struct Media {
     pub tracks: Vec<MediaTrack>,
 }
 
+#[derive(ToSchema)]
+pub struct File {
+    /// The original filename
+    #[schema(min_length = 1, max_length = 256)]
+    pub filename: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaPatch {
     /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<Option<String>>,
 }
 
@@ -183,11 +204,18 @@ pub struct MediaTrack {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MediaCreate {
     /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub alt: Option<String>,
 
     #[serde(flatten)]
+    #[validate(nested)]
     pub source: MediaCreateSource,
 }
 
@@ -197,6 +225,10 @@ pub struct MediaCreate {
 pub enum MediaCreateSource {
     Upload {
         /// The original filename
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
         filename: String,
 
         /// The size (in bytes)
@@ -204,6 +236,10 @@ pub enum MediaCreateSource {
     },
     Download {
         /// The original filename
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 256)
+        )]
         filename: Option<String>,
 
         /// The size (in bytes)
@@ -212,6 +248,31 @@ pub enum MediaCreateSource {
         /// A url to download this media from
         source_url: Url,
     },
+}
+
+#[cfg(feature = "validator")]
+mod val {
+    use super::MediaCreateSource;
+    use serde_json::json;
+    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
+
+    impl Validate for MediaCreateSource {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            let mut v = ValidationErrors::new();
+            if self
+                .filename()
+                .is_none_or(|n| n.validate_length(Some(1), Some(256), None))
+            {
+                Ok(())
+            } else {
+                let mut err = ValidationError::new("length");
+                err.add_param("max".into(), &json!(256));
+                err.add_param("min".into(), &json!(1));
+                v.add("filename", err);
+                Err(v)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -342,6 +403,13 @@ impl MediaCreateSource {
         match self {
             MediaCreateSource::Upload { size, .. } => Some(*size),
             MediaCreateSource::Download { size, .. } => *size,
+        }
+    }
+
+    pub fn filename(&self) -> Option<&str> {
+        match self {
+            MediaCreateSource::Upload { filename, .. } => Some(filename.as_str()),
+            MediaCreateSource::Download { filename, .. } => filename.as_deref(),
         }
     }
 }

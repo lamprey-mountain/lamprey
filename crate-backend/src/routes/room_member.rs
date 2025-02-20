@@ -10,6 +10,7 @@ use types::{
     RoomMemberPatch, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::types::UserIdReq;
 use crate::ServerState;
@@ -95,8 +96,9 @@ pub async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<RoomMemberPatch>,
+    Json(json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(id) => id,
@@ -112,10 +114,10 @@ pub async fn room_member_update(
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
-    if !patch.changes(&start) {
+    if !json.changes(&start) {
         return Err(Error::NotModified);
     }
-    d.room_member_patch(room_id, target_user_id, patch).await?;
+    d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     s.broadcast_room(
         room_id,

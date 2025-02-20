@@ -3,16 +3,21 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 use super::{RoleId, RoomId, UserId};
 
 use crate::util::{some_option, Diff};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
+    #[validate(nested)]
     #[serde(flatten)]
     pub membership: RoomMembership,
 
@@ -26,18 +31,35 @@ pub struct RoomMember {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberPut {
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 64)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub override_name: Option<String>,
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub override_description: Option<String>,
     // pub override_avatar: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberPatch {
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     #[serde(default, deserialize_with = "some_option")]
     pub override_name: Option<Option<String>>,
 
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]
     pub override_description: Option<Option<String>>,
     // #[serde(default, deserialize_with = "some_option")]
@@ -87,6 +109,52 @@ impl Diff<RoomMember> for RoomMemberPatch {
                     || self.override_description.changes(override_description)
             }
             _ => false,
+        }
+    }
+}
+
+#[cfg(feature = "validator")]
+mod val {
+    use super::RoomMembership;
+    use serde_json::json;
+    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
+
+    impl Validate for RoomMembership {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            let mut v = ValidationErrors::new();
+            match self {
+                RoomMembership::Join {
+                    override_name,
+                    override_description,
+                    roles: _,
+                } => {
+                    if override_name
+                        .as_ref()
+                        .is_some_and(|n| n.validate_length(Some(1), Some(64), None))
+                    {
+                        let mut err = ValidationError::new("length");
+                        err.add_param("max".into(), &json!(64));
+                        err.add_param("min".into(), &json!(1));
+                        v.add("override_name", err);
+                    }
+                    if override_description
+                        .as_ref()
+                        .is_some_and(|n| n.validate_length(Some(1), Some(8192), None))
+                    {
+                        let mut err = ValidationError::new("length");
+                        err.add_param("max".into(), &json!(8192));
+                        err.add_param("min".into(), &json!(1));
+                        v.add("override_description", err);
+                    }
+                }
+                RoomMembership::Leave {} => {}
+                RoomMembership::Ban {} => {}
+            }
+            if v.is_empty() {
+                Ok(())
+            } else {
+                Err(v)
+            }
         }
     }
 }

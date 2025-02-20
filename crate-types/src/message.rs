@@ -3,12 +3,17 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
+use crate::util::some_option;
 use crate::util::Diff;
 
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Message {
     #[serde(rename = "type")]
     pub message_type: MessageType,
@@ -17,9 +22,17 @@ pub struct Message {
     pub version_id: MessageVerId,
     pub nonce: Option<String>,
     pub ordering: i32,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub attachments: Vec<Media>,
+
     pub metadata: Option<serde_json::Value>,
+
     pub reply_id: Option<MessageId>,
     // embeds: Embed.array().default([]),
     // mentions_users: UserId.array(),
@@ -36,23 +49,35 @@ pub struct Message {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreateRequest {
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
     #[serde(default)]
     pub attachments: Vec<MediaRef>,
+
     pub metadata: Option<serde_json::Value>,
     pub reply_id: Option<MessageId>,
-    pub override_name: Option<String>, // temp?
+    /// temporary?
+    pub override_name: Option<String>,
     pub nonce: Option<String>,
 }
-use crate::util::some_option;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessagePatch {
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]
     pub content: Option<Option<String>>,
 
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
     pub attachments: Option<Vec<MediaRef>>,
 
     #[serde(default, deserialize_with = "some_option")]

@@ -11,6 +11,7 @@ use types::{
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
+use validator::Validate;
 
 use crate::types::SessionIdReq;
 use crate::ServerState;
@@ -30,11 +31,12 @@ use crate::error::{Error, Result};
 )]
 pub async fn session_create(
     State(s): State<Arc<ServerState>>,
-    Json(body): Json<SessionCreate>,
+    Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let data = s.data();
     let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
-    let session = data.session_create(token.clone(), body.name).await?;
+    let session = data.session_create(token.clone(), json.name).await?;
     let session_with_token = SessionWithToken { session, token };
     Ok((StatusCode::CREATED, Json(session_with_token)))
 }
@@ -76,8 +78,9 @@ pub async fn session_update(
     Path(session_id): Path<SessionIdReq>,
     AuthRelaxed(session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<SessionPatch>,
+    Json(json): Json<SessionPatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let session_id = match session_id {
         SessionIdReq::SessionSelf => session.id,
         SessionIdReq::SessionId(session_id) => session_id,
@@ -87,10 +90,10 @@ pub async fn session_update(
     if !session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
-    if !patch.changes(&session) {
+    if !json.changes(&session) {
         return Ok((StatusCode::NOT_MODIFIED, Json(session)));
     }
-    data.session_update(session_id, patch).await?;
+    data.session_update(session_id, json).await?;
     let session = data.session_get(session_id).await?;
     s.broadcast(MessageSync::UpsertSession {
         session: session.clone(),

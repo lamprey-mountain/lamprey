@@ -77,6 +77,9 @@ pub enum Error {
 
     #[error("unknown image format")]
     UnknownImageFormat,
+
+    #[error("validation error: {0}")]
+    Validation(#[from] validator::ValidationErrors),
 }
 
 impl From<sqlx::Error> for Error {
@@ -111,6 +114,7 @@ impl Error {
             Error::ParseFloat(_) => StatusCode::BAD_REQUEST,
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
             Error::NotModified => StatusCode::NOT_MODIFIED,
+            Error::Validation(_) => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

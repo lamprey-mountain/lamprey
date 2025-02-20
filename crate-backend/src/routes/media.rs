@@ -12,6 +12,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
 use types::{MediaCreateSource, MediaSize};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     error::{Error, Result},
@@ -36,9 +37,10 @@ use super::util::Auth;
 async fn media_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(r): Json<MediaCreate>,
+    Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
-    match &r.source {
+    json.validate()?;
+    match &json.source {
         MediaCreateSource::Upload { size, .. } => {
             if *size > MAX_SIZE {
                 return Err(Error::TooBig);
@@ -47,7 +49,7 @@ async fn media_create(
             let media_id = MediaId(uuid::Uuid::now_v7());
             let srv = s.services();
             srv.media
-                .create_upload(media_id, user_id, r.clone())
+                .create_upload(media_id, user_id, json.clone())
                 .await?;
             let upload_url = Some(
                 s.config()
@@ -75,7 +77,7 @@ async fn media_create(
             let media_id = MediaId(uuid::Uuid::now_v7());
             let srv = s.services();
             srv.media
-                .create_upload(media_id, user_id, r.clone())
+                .create_upload(media_id, user_id, json.clone())
                 .await?;
 
             let req = reqwest::get(source_url.clone()).await?.error_for_status()?;
@@ -176,6 +178,7 @@ async fn media_create(
 //     Auth(user_id): Auth,
 //     State(s): State<Arc<ServerState>>,
 // ) -> Result<impl IntoResponse> {
+// json.validate()?;
 // }
 
 /// Media upload

@@ -11,6 +11,7 @@ use serde_json::json;
 use types::{MessageId, ThreadState};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     types::{
@@ -40,6 +41,7 @@ async fn thread_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ThreadCreateRequest>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
@@ -151,12 +153,13 @@ async fn thread_update(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<ThreadPatch>,
+    Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, json)
         .await?;
     Ok(Json(thread))
 }

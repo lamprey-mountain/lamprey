@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use types::{util::Diff, PaginationDirection, ThreadMembership};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     error::Error,
@@ -40,6 +41,7 @@ async fn message_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreateRequest>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -48,6 +50,7 @@ async fn message_create(
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
     // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
+    // TODO: move this to validation
     if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
@@ -254,8 +257,9 @@ async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<MessagePatch>,
+    Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
+    json.validate()?;
     let data = s.data();
     let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -267,18 +271,18 @@ async fn message_edit(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
-    if patch.content.is_none() && patch.attachments.as_ref().is_some_and(|a| a.is_empty()) {
+    if json.content.is_none() && json.attachments.as_ref().is_some_and(|a| a.is_empty()) {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
         ));
     }
-    if patch.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
+    if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
         perms.ensure(Permission::MessageFilesEmbeds)?;
     }
-    if !patch.changes(&message) {
+    if !json.changes(&message) {
         return Ok((StatusCode::NOT_MODIFIED, Json(message)));
     }
-    let attachment_ids: Vec<_> = patch
+    let attachment_ids: Vec<_> = json
         .attachments
         .map(|ats| ats.into_iter().map(|r| r.id).collect())
         .unwrap_or_else(|| {
@@ -304,13 +308,13 @@ async fn message_edit(
             message_id,
             MessageCreate {
                 thread_id,
-                content: patch.content.unwrap_or(message.content),
+                content: json.content.unwrap_or(message.content),
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
                 message_type: MessageType::Default,
-                metadata: patch.metadata.unwrap_or(message.metadata),
-                reply_id: patch.reply_id.unwrap_or(message.reply_id),
-                override_name: patch.override_name.unwrap_or(message.override_name),
+                metadata: json.metadata.unwrap_or(message.metadata),
+                reply_id: json.reply_id.unwrap_or(message.reply_id),
+                override_name: json.override_name.unwrap_or(message.override_name),
             },
         )
         .await?;

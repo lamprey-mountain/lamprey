@@ -10,6 +10,7 @@ use axum_extra::TypedHeader;
 use headers::ETag;
 use types::{AuditLog, AuditLogId};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     error::Result,
@@ -34,6 +35,7 @@ async fn room_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let room = s.services().rooms.create(json, user_id).await?;
     s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
@@ -114,6 +116,7 @@ async fn room_edit(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;

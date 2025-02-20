@@ -35,11 +35,11 @@ impl ServiceThreads {
             .insert((thread_id, user_id), thread.clone());
         Ok(thread)
     }
-    
+
     pub fn invalidate(&self, thread_id: ThreadId) {
         self.cache_thread.retain(|(t, _), _| *t != thread_id);
     }
-    
+
     pub fn invalidate_user(&self, thread_id: ThreadId, user_id: UserId) {
         self.cache_thread.remove(&(thread_id, Some(user_id)));
     }

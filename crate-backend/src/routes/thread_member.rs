@@ -10,6 +10,7 @@ use types::{
     ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::types::UserIdReq;
 use crate::ServerState;
@@ -99,8 +100,9 @@ pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(req): Json<ThreadMemberPut>,
+    Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(id) => id,
@@ -121,8 +123,8 @@ pub async fn thread_member_add(
         thread_id,
         target_user_id,
         ThreadMembership::Join {
-            override_name: req.override_name,
-            override_description: req.override_description,
+            override_name: json.override_name,
+            override_description: json.override_description,
         },
     )
     .await?;
@@ -161,8 +163,9 @@ pub async fn thread_member_update(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(patch): Json<ThreadMemberPatch>,
+    Json(json): Json<ThreadMemberPatch>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(id) => id,
@@ -182,10 +185,10 @@ pub async fn thread_member_update(
     if !matches!(start.membership, ThreadMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
-    if !patch.changes(&start) {
+    if !json.changes(&start) {
         return Err(Error::NotModified);
     }
-    d.thread_member_patch(thread_id, target_user_id, patch)
+    d.thread_member_patch(thread_id, target_user_id, json)
         .await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     s.broadcast_thread(

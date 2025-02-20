@@ -5,6 +5,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::{Message, MessageId, PaginationQuery, PaginationResponse, SearchMessageRequest};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::ServerState;
 
@@ -24,10 +25,11 @@ pub async fn search_messages(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Json(body): Json<SearchMessageRequest>,
+    Json(json): Json<SearchMessageRequest>,
 ) -> Result<impl IntoResponse> {
+    json.validate()?;
     let data = s.data();
-    let mut res = data.search_message(user_id, body, q).await?;
+    let mut res = data.search_message(user_id, json, q).await?;
     for message in &mut res.items {
         for media in &mut message.attachments {
             s.presign(media).await?;
