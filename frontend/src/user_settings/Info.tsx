@@ -2,7 +2,7 @@ import { createSignal, Show, VoidProps } from "solid-js";
 import { createUpload, User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
-import { getUrl } from "../media/util.ts";
+import { getUrl } from "../media/util.tsx";
 
 export function Info(props: VoidProps<{ user: User }>) {
 	const api = useApi();

@@ -1,5 +1,5 @@
 import { Media, MediaTrack } from "sdk";
-import { VoidProps } from "solid-js";
+import { ParentProps, VoidProps } from "solid-js";
 import { flags } from "../flags";
 
 export type MediaProps = VoidProps<{ media: Media }>;
@@ -31,7 +31,7 @@ export const getDuration = (m: Media) => {
 export const getWidth = (m: Media) => {
 	const t = m.source.type;
 	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
-		return m.source.width;
+		return m.source.width ?? 0;
 	} else {
 		return 0;
 	}
@@ -40,7 +40,7 @@ export const getWidth = (m: Media) => {
 export const getHeight = (m: Media) => {
 	const t = m.source.type;
 	if (t === "Video" || t === "Mixed" || t === "Image" || t === "Thumbnail") {
-		return m.source.height;
+		return m.source.height ?? 0;
 	} else {
 		return 0;
 	}
@@ -74,3 +74,25 @@ export const parseRanges = (b: TimeRanges) =>
 		start: b.start(idx),
 		end: b.end(idx),
 	}));
+
+type ResizeProps = {
+	height: number;
+	width: number;
+};
+
+export const Resize = (props: ParentProps<ResizeProps>) => {
+	return (
+		<div
+			class="resize"
+			style={{
+				"--height": `${props.height}px`,
+				"--width": `${props.width}px`,
+				"--aspect-ratio": `${props.width}/${props.height}`,
+			}}
+		>
+			<div class="resize-inner">
+				{props.children}
+			</div>
+		</div>
+	);
+};

@@ -11,10 +11,9 @@ import {
 	ImageView,
 	TextView,
 	VideoView,
-	VideoViewOld,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { byteFmt, getUrl, MediaProps } from "./media/util.ts";
+import { byteFmt, getUrl, MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";
@@ -191,76 +190,6 @@ function ReplyView(props: ReplyProps) {
 }
 
 export function AttachmentView(props: MediaProps) {
-	return (
-		<Switch>
-			<Match when={flags.has("new_media")}>
-				<AttachmentView2 media={props.media} />
-			</Match>
-			<Match when={true}>
-				<AttachmentView1 media={props.media} />
-			</Match>
-		</Switch>
-	);
-}
-
-export function AttachmentView1(props: MediaProps) {
-	const ty = () => props.media.source.mime.split(";")[0];
-	const b = () => props.media.source.mime.split("/")[0];
-	// const [ty, paramsRaw] = a.mime.split(";");
-	// const params = new Map(paramsRaw?.split(" ").map(i => i.trim().split("=") as [string, string]));
-	// console.log({ ty, params });
-
-	if (b() === "image") {
-		return (
-			<li>
-				<ImageView media={props.media} />
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
-					download {props.media.filename}
-				</a>
-				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
-				</div>
-			</li>
-		);
-	} else if (b() === "video") {
-		return (
-			<li class="media-old">
-				<VideoViewOld media={props.media} />
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
-					download {props.media.filename}
-				</a>
-				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
-				</div>
-			</li>
-		);
-	} else if (b() === "audio") {
-		return (
-			<li class="media-old">
-				<audio controls src={getUrl(props.media.source)} />
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
-					download {props.media.filename}
-				</a>
-				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
-				</div>
-			</li>
-		);
-	} else {
-		return (
-			<li>
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
-					download {props.media.filename}
-				</a>
-				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
-				</div>
-			</li>
-		);
-	}
-}
-
-export function AttachmentView2(props: MediaProps) {
 	const b = () => props.media.source.mime.split("/")[0];
 	const ty = () => props.media.source.mime.split(";")[0];
 	if (b() === "image") {

@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, Show } from "solid-js";
-import { byteFmt, getUrl, MediaProps } from "./util.ts";
+import { byteFmt, getUrl, MediaProps } from "./util.tsx";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
 

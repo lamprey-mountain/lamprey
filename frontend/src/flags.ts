@@ -19,9 +19,6 @@ export const allFlags = [
 		id: "room_member_list",
 	},
 	{
-		id: "new_media",
-	},
-	{
 		id: "thread_member_list",
 	},
 	{
@@ -35,13 +32,11 @@ const flagsDev: Flag[] = [
 	"dev",
 	"message_search",
 	"room_member_list",
-	"new_media",
 	"thread_member_list",
 	"service_worker_media",
 ];
 
 const flagsProd: Flag[] = [
-	"new_media",
 	"service_worker_media",
 ];
 

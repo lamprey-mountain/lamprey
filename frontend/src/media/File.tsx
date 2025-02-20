@@ -1,4 +1,4 @@
-import { byteFmt, getUrl, MediaProps } from "./util.ts";
+import { byteFmt, getUrl, MediaProps } from "./util.tsx";
 
 export const FileView = (props: MediaProps) => {
 	const ty = () => props.media.source.mime.split(";")[0];

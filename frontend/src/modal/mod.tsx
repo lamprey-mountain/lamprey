@@ -1,8 +1,8 @@
-import { ParentProps } from "solid-js";
+import { createSignal, ParentProps, Show } from "solid-js";
 import { Modal as ContextModal, useCtx } from "../context.ts";
 import { autofocus } from "@solid-primitives/autofocus";
 import { Media } from "sdk";
-import { getUrl } from "../media/util.ts";
+import { getHeight, getUrl, getWidth, Resize } from "../media/util.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -117,10 +117,9 @@ const ModalPrompt = (
 const ModalMedia = (props: { media: Media }) => {
 	const ctx = useCtx();
 
-	const height = () =>
-		props.media.source.type === "Image" ? props.media.source.height : 0;
-	const width = () =>
-		props.media.source.type === "Image" ? props.media.source.width : 0;
+	const [loaded, setLoaded] = createSignal(false);
+	const height = () => getHeight(props.media);
+	const width = () => getWidth(props.media);
 
 	return (
 		<div class="modal modal-media">
@@ -128,24 +127,29 @@ const ModalMedia = (props: { media: Media }) => {
 			<div class="content">
 				<div class="base"></div>
 				<div class="inner" role="dialog">
-					<div
-						class="media image"
-						style={{
-							"--height": `${height()}px`,
-							"--width": `${width()}px`,
-							"--aspect-ratio": `${width()}/${height()}`,
-						}}
-					>
-						<div class="inner">
-							<div class="loader">loading</div>
+					<Resize height={height()} width={width()}>
+						<div
+							class="image full"
+							onClick={() => {
+								ctx.dispatch({
+									do: "modal.open",
+									modal: { type: "media", media: props.media },
+								});
+							}}
+						>
+							<Show when={!loaded()}>
+								<div class="media-loader">loading</div>
+							</Show>
 							<img
 								src={getUrl(props.media.source)}
 								alt={props.media.alt ?? undefined}
 								height={height()!}
 								width={width()!}
+								onLoad={[setLoaded, true]}
+								onEmptied={[setLoaded, false]}
 							/>
 						</div>
-					</div>
+					</Resize>
 					<a href={props.media.source.url}>Go to url</a>
 				</div>
 			</div>

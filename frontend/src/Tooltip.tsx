@@ -12,6 +12,7 @@ type TooltipProps = {
 	placement?: Placement;
 	animGroup?: string;
 	doesntRetain?: string;
+	mount?: HTMLElement;
 };
 
 type TooltipAnimState = {
@@ -124,7 +125,7 @@ export function tooltip(
 		<>
 			{wrap}
 			<Show when={visible()}>
-				<Portal mount={overlayEl}>
+				<Portal mount={props.mount ?? overlayEl}>
 					<div
 						onMouseEnter={showTipIfInteractive}
 						onMouseLeave={considerHidingTip}

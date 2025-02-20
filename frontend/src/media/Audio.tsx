@@ -22,7 +22,7 @@ import {
 	MediaLoadingState,
 	MediaProps,
 	parseRanges,
-} from "./util.ts";
+} from "./util.tsx";
 import { tooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
 

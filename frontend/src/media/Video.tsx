@@ -17,7 +17,8 @@ import {
 	MediaLoadingState,
 	MediaProps,
 	parseRanges,
-} from "./util.ts";
+	Resize,
+} from "./util.tsx";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
 import iconVolumeLow from "../assets/volume-low.png";
@@ -29,27 +30,6 @@ import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
 import { tooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
-
-export const VideoViewOld = (props: MediaProps) => {
-	const height = () => getHeight(props.media);
-	const width = () => getWidth(props.media);
-
-	return (
-		<div
-			class="media"
-			style={{
-				"--height": `${height()}px`,
-				"--width": `${width()}px`,
-				"--aspect-ratio": `${width()}/${height()}`,
-			}}
-		>
-			<div class="inner">
-				<div class="loader">loading</div>
-				<video controls src={getUrl(props.media.source)} preload="metadata" />
-			</div>
-		</div>
-	);
-};
 
 export const VideoView = (props: MediaProps) => {
 	const ctx = useCtx();
@@ -250,133 +230,127 @@ export const VideoView = (props: MediaProps) => {
 	});
 
 	return (
-		<div class="video" ref={wrapperEl!}>
-			<div
-				class="media"
-				style={{
-					"--height": `${height()}px`,
-					"--width": `${width()}px`,
-					"--aspect-ratio": `${width()}/${height()}`,
-				}}
-			>
-				<div class="inner">
-					<div class="loader">loading</div>
-					<video
-						ref={video!}
-						src={getUrl(props.media.source)}
-						preload="metadata"
-						onClick={togglePlayPause}
-						onDblClick={fullScreenDblClick}
-					/>
-				</div>
-			</div>
-			<div class="footer">
-				<svg
-					class="progress"
-					viewBox="0 0 1 1"
-					preserveAspectRatio="none"
-					onWheel={handleScrubWheel}
-					onMouseOut={handleScrubMouseOut}
-					onMouseMove={handleScrubMouseMove}
-					onMouseDown={handleScrubClick}
-					onClick={handleScrubClick}
-				>
-					<For each={buffered()}>
-						{(r) => {
-							return (
-								<rect
-									class="loaded"
-									x={r.start / duration()}
-									width={(r.end - r.start) / duration()}
-								/>
-							);
-						}}
-					</For>
-					<rect class="current" width={progressWidth()} />
-					<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
-				</svg>
-				<div class="info">
-					<a
-						download={props.media.filename}
-						title={props.media.filename}
-						href={getUrl(props.media.source)}
-					>
-						{props.media.filename}
-					</a>
-					<div class="dim">
-						{ty()} - {byteFmt.format(props.media.source.size)}
-						<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
-					</div>
-				</div>
-				<div class="controls">
-					<button
-						onClick={togglePlayPause}
-						title={playing() ? "pause" : "play"}
-					>
-						<img
-							class="icon"
-							src={playing() ? iconPause : iconPlay}
-							alt={playing() ? "pause" : "play"}
-						/>
-					</button>
-					{tooltip(
-						{
-							placement: "top-start",
-							interactive: true,
-							doesntRetain: "input[type=range]",
-						},
-						(
-							<div class="range" onWheel={handleVolumeWheel}>
-								<input
-									type="range"
-									min={0}
-									max={1}
-									value={volume()}
-									disabled={muted()}
-									step={.001}
-									onInput={(e) => setVolume(e.target.valueAsNumber)}
-								/>
-								<div class="dim">(click to mute)</div>
-								<div class="value">{getVolumeText()}</div>
-							</div>
-						) as ValidComponent,
-						(
-							<button
-								onClick={toggleMute}
-								title={getVolumeText()}
-								onWheel={handleVolumeWheel}
-							>
-								<img
-									class="icon"
-									src={getVolumeIcon()}
-									alt={getVolumeText()}
-								/>
-							</button>
-						) as HTMLElement,
-					)}
-					<button
-						onClick={toggleFullscreen}
-						title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
-					>
-						<img
-							class="icon"
-							src={fullscreen() ? iconFullscreent : iconFullscreen}
-							alt=""
-						/>
-					</button>
-					<div class="space"></div>
-					<div
-						class="time"
-						classList={{ preview: progressPreview() !== null }}
+		<Resize height={height()} width={width()}>
+			<div class="video" ref={wrapperEl!}>
+				<Show when={loadingState() === "empty"}>
+					<div class="media-loader">loading</div>
+				</Show>
+				<video
+					ref={video!}
+					src={getUrl(props.media.source)}
+					preload="metadata"
+					onClick={togglePlayPause}
+					onDblClick={fullScreenDblClick}
+				/>
+				<div class="footer">
+					<svg
+						class="progress"
+						viewBox="0 0 1 1"
+						preserveAspectRatio="none"
 						onWheel={handleScrubWheel}
+						onMouseOut={handleScrubMouseOut}
+						onMouseMove={handleScrubMouseMove}
+						onMouseDown={handleScrubClick}
+						onClick={handleScrubClick}
 					>
-						<span class="progress">
-							{formatTime(progressPreview() ?? progress())}
-						</span>{" "}
-						/ <span class="duration">{formatTime(duration())}</span>
+						<For each={buffered()}>
+							{(r) => {
+								return (
+									<rect
+										class="loaded"
+										x={r.start / duration()}
+										width={(r.end - r.start) / duration()}
+									/>
+								);
+							}}
+						</For>
+						<rect class="current" width={progressWidth()} />
+						<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
+					</svg>
+					<div class="info">
+						<a
+							download={props.media.filename}
+							title={props.media.filename}
+							href={getUrl(props.media.source)}
+						>
+							{props.media.filename}
+						</a>
+						<div class="dim">
+							{ty()} - {byteFmt.format(props.media.source.size)}
+							<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
+						</div>
+					</div>
+					<div class="controls">
+						<button
+							onClick={togglePlayPause}
+							title={playing() ? "pause" : "play"}
+						>
+							<img
+								class="icon"
+								src={playing() ? iconPause : iconPlay}
+								alt={playing() ? "pause" : "play"}
+							/>
+						</button>
+						{tooltip(
+							{
+								placement: "top-start",
+								interactive: true,
+								doesntRetain: "input[type=range]",
+								mount: fullscreen() ? wrapperEl : undefined,
+							},
+							(
+								<div class="range" onWheel={handleVolumeWheel}>
+									<input
+										type="range"
+										min={0}
+										max={1}
+										value={volume()}
+										disabled={muted()}
+										step={.001}
+										onInput={(e) => setVolume(e.target.valueAsNumber)}
+									/>
+									<div class="dim">(click to mute)</div>
+									<div class="value">{getVolumeText()}</div>
+								</div>
+							) as ValidComponent,
+							(
+								<button
+									onClick={toggleMute}
+									title={getVolumeText()}
+									onWheel={handleVolumeWheel}
+								>
+									<img
+										class="icon"
+										src={getVolumeIcon()}
+										alt={getVolumeText()}
+									/>
+								</button>
+							) as HTMLElement,
+						)}
+						<button
+							onClick={toggleFullscreen}
+							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
+						>
+							<img
+								class="icon"
+								src={fullscreen() ? iconFullscreent : iconFullscreen}
+								alt=""
+							/>
+						</button>
+						<div class="space"></div>
+						<div
+							class="time"
+							classList={{ preview: progressPreview() !== null }}
+							onWheel={handleScrubWheel}
+						>
+							<span class="progress">
+								{formatTime(progressPreview() ?? progress())}
+							</span>{" "}
+							/ <span class="duration">{formatTime(duration())}</span>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		</Resize>
 	);
 };
