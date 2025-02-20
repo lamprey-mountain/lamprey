@@ -29,7 +29,7 @@ export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
 
 	const audio = new Audio();
-	audio.preload = "none";
+	audio.preload = "metadata";
 	createEffect(() => audio.src = getUrl(props.media.source));
 	onCleanup(() => audio.pause());
 
@@ -76,11 +76,11 @@ export const AudioView = (props: MediaProps) => {
 	audio.onemptied = () => {
 		setLoadingState("empty");
 		setBuffered(parseRanges(audio.buffered));
-	}
+	};
 	audio.oncanplay = () => {
 		setLoadingState("ready");
 		setBuffered(parseRanges(audio.buffered));
-	}
+	};
 
 	createEffect(() => audio.muted = muted());
 	createEffect(() => audio.volume = volume());
@@ -106,11 +106,11 @@ export const AudioView = (props: MediaProps) => {
 
 	const handleScrubWheel = (e: WheelEvent) => {
 		e.preventDefault();
-		if (e.deltaY > 0) {
-			audio.currentTime = Math.max(progress() - 5, 0);
-		} else {
-			audio.currentTime = Math.min(progress() + 5, duration());
-		}
+		const newt = e.deltaY > 0
+			? Math.max(progress() - 5, 0)
+			: Math.min(progress() + 5, duration());
+		audio.currentTime = newt;
+		setProgress(newt);
 	};
 
 	const handleScrubClick = () => {
@@ -244,7 +244,7 @@ export const AudioView = (props: MediaProps) => {
 				</a>
 				<div class="dim">
 					{ty()} - {byteFmt.format(props.media.source.size)}
-					<Show when={loadingState() === "stalled"}> - loading</Show>
+					<Show when={loadingState() === "stalled"}>- loading</Show>
 				</div>
 			</div>
 			<div class="controls">

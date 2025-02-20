@@ -45,7 +45,7 @@ export const VideoViewOld = (props: MediaProps) => {
 		>
 			<div class="inner">
 				<div class="loader">loading</div>
-				<video controls src={getUrl(props.media.source)} preload="none" />
+				<video controls src={getUrl(props.media.source)} preload="metadata" />
 			</div>
 		</div>
 	);
@@ -59,7 +59,9 @@ export const VideoView = (props: MediaProps) => {
 	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
 		"empty",
 	);
-	const [buffered, setBuffered] = createSignal([] as ReturnType<typeof parseRanges>);
+	const [buffered, setBuffered] = createSignal(
+		[] as ReturnType<typeof parseRanges>,
+	);
 	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
 	const [progressPreview, setProgressPreview] = createSignal<null | number>(
@@ -104,11 +106,11 @@ export const VideoView = (props: MediaProps) => {
 		video.onemptied = () => {
 			setLoadingState("empty");
 			setBuffered(parseRanges(video.buffered));
-		}
+		};
 		video.oncanplay = () => {
 			setLoadingState("ready");
 			setBuffered(parseRanges(video.buffered));
-		}
+		};
 	});
 
 	createEffect(() => video.muted = muted());
@@ -134,11 +136,11 @@ export const VideoView = (props: MediaProps) => {
 
 	const handleScrubWheel = (e: WheelEvent) => {
 		e.preventDefault();
-		if (e.deltaY > 0) {
-			video.currentTime = Math.max(progress() - 5, 0);
-		} else {
-			video.currentTime = Math.min(progress() + 5, duration());
-		}
+		const newt = e.deltaY > 0
+			? Math.max(progress() - 5, 0)
+			: Math.min(progress() + 5, duration());
+		video.currentTime = newt;
+		setProgress(newt);
 	};
 
 	const handleVolumeWheel = (e: WheelEvent) => {
@@ -262,7 +264,7 @@ export const VideoView = (props: MediaProps) => {
 					<video
 						ref={video!}
 						src={getUrl(props.media.source)}
-						preload="none"
+						preload="metadata"
 						onClick={togglePlayPause}
 						onDblClick={fullScreenDblClick}
 					/>
@@ -303,7 +305,7 @@ export const VideoView = (props: MediaProps) => {
 					</a>
 					<div class="dim">
 						{ty()} - {byteFmt.format(props.media.source.size)}
-						<Show when={loadingState() === "stalled"}> - loading</Show>
+						<Show when={loadingState() === "stalled"}>- loading</Show>
 					</div>
 				</div>
 				<div class="controls">
