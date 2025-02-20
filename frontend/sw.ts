@@ -3,7 +3,7 @@
 
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_VALID = ["v1.media", "v1.assets"];
+const CACHE_VALID = ["v2.media", "v1.assets"];
 
 const makeError = (error: string, status = 400) => {
 	return new Response(JSON.stringify({ error }), {
@@ -64,12 +64,12 @@ self.addEventListener("fetch", (e) => {
 			const cached = await caches.match(target, { ignoreSearch: true });
 			if (cached) return cached;
 
-			const res = await fetch(target, req);
+			const res = await fetch(target, { mode: "cors" });
 			if (res.status === 206) return res; // range requests are a bit h right now
 
 			const res2 = res.clone();
 			e.waitUntil((async () => {
-				const cache = await caches.open("v1.media");
+				const cache = await caches.open("v2.media");
 				cache.put(target, res2);
 			})());
 
