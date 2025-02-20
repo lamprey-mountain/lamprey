@@ -181,7 +181,7 @@ export const AudioView = (props: MediaProps) => {
 	});
 
 	createEffect(() => {
-		if (playing()) {
+		if (playing() && progress() < duration()) {
 			navigator.mediaSession.setPositionState({
 				duration: duration(),
 				playbackRate: playbackRate(),
