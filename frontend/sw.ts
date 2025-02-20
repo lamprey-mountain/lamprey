@@ -34,10 +34,10 @@ const shouldCache = (req: Request) => {
 
 self.addEventListener("install", () => {
 	console.log("serviceworker installed");
-	
+
 	// make this the active worker for all future clients immediately...
 	self.skipWaiting();
-	
+
 	// ...and all current ones, too
 	self.clients.claim();
 });
