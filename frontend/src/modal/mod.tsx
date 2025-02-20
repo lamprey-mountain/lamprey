@@ -128,15 +128,7 @@ const ModalMedia = (props: { media: Media }) => {
 				<div class="base"></div>
 				<div class="inner" role="dialog">
 					<Resize height={height()} width={width()}>
-						<div
-							class="image full"
-							onClick={() => {
-								ctx.dispatch({
-									do: "modal.open",
-									modal: { type: "media", media: props.media },
-								});
-							}}
-						>
+						<div class="image full">
 							<Show when={!loaded()}>
 								<div class="media-loader">loading</div>
 							</Show>
