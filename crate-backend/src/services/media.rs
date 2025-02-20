@@ -7,7 +7,7 @@ use async_tempfile::TempFile;
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
-use image::{codecs::avif::AvifEncoder, DynamicImage};
+use image::{codecs::avif::AvifEncoder, DynamicImage, ImageDecoder};
 use tokio::{
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter},
     process::Command,
@@ -69,6 +69,13 @@ struct BigData(Arc<Vec<u8>>);
 impl AsRef<[u8]> for BigData {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl From<Vec<u8>> for BigData {
+    fn from(value: Vec<u8>) -> Self {
+        // not great that it creates an arc every time, but eh
+        Self(Arc::new(value))
     }
 }
 
@@ -143,51 +150,29 @@ impl ServiceMedia {
         let media_id = media.id;
         let mime = get_mime(path).await?;
         let mut fut = FuturesUnordered::new();
-        let img = if mime.starts_with("image/") {
+        let bytes = if mime.starts_with("image/") {
             debug!("extract thumb from image");
-            let bytes = tokio::fs::read(path).await?;
-            let cursor = Cursor::new(bytes);
-            Arc::new(
-                image::ImageReader::new(cursor)
-                    .with_guessed_format()?
-                    .decode()?,
-            )
+            BigData::from(tokio::fs::read(path).await?)
         } else if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
                 debug!("extract thumb attachment from container");
                 let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
-                let bytes = BigData(Arc::new(bytes));
+                let bytes = BigData::from(bytes);
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
-                let cursor = Cursor::new(bytes);
-                Arc::new(
-                    image::ImageReader::new(cursor)
-                        .with_guessed_format()?
-                        .decode()?,
-                )
+                bytes
             } else if thumb.disposition.attached_pic == 1 {
                 debug!("extract thumb stream from container");
                 let bytes = ffmpeg::extract_stream(path, thumb.index).await?;
-                let bytes = BigData(Arc::new(bytes));
+                let bytes = BigData::from(bytes);
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
-                let cursor = Cursor::new(bytes);
-                Arc::new(
-                    image::ImageReader::new(cursor)
-                        .with_guessed_format()?
-                        .decode()?,
-                )
+                bytes
             } else if thumb.codec_type == MediaType::Video {
                 debug!("generate thumb from video");
-                let bytes = ffmpeg::generate_thumb(path).await?;
-                let cursor = Cursor::new(bytes);
-                Arc::new(
-                    image::ImageReader::new(cursor)
-                        .with_guessed_format()?
-                        .decode()?,
-                )
+                BigData::from(ffmpeg::generate_thumb(path).await?)
             } else {
                 error!("no suitable thumbnail codec");
                 return Ok(());
@@ -195,6 +180,16 @@ impl ServiceMedia {
         } else {
             error!("no suitable thumbnail stream");
             return Ok(());
+        };
+        let img = {
+            let cursor = Cursor::new(bytes);
+            let mut img_decoder = image::ImageReader::new(cursor)
+                .with_guessed_format()?
+                .into_decoder()?;
+            let orientation = img_decoder.orientation()?;
+            let mut img = DynamicImage::from_decoder(img_decoder)?;
+            img.apply_orientation(orientation);
+            Arc::new(img)
         };
         for size in [64, 320, 640] {
             let state = self.state.clone();
