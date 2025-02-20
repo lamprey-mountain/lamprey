@@ -310,7 +310,8 @@ async fn generate_and_upload_thumb(
     let span_gen_thumb = span!(Level::INFO, "generate thumb");
     let _s = span_gen_thumb.enter();
     let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
-    img.thumbnail(width, height).write_with_encoder(enc)?;
+    let thumb = img.thumbnail(width, height);
+    thumb.write_with_encoder(enc)?;
     drop(_s);
     let url = state.get_s3_url(&format!("thumb/{media_id}/{width}x{height}"))?;
     let len = out.get_ref().len();
@@ -327,8 +328,8 @@ async fn generate_and_upload_thumb(
     drop(_s);
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
-            height: img.height() as u64,
-            width: img.width() as u64,
+            height: thumb.height() as u64,
+            width: thumb.width() as u64,
             language: None,
         }),
         url,
