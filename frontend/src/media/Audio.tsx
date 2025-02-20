@@ -29,6 +29,7 @@ export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
 
 	const audio = new Audio();
+	audio.preload = "none";
 	createEffect(() => audio.src = getUrl(props.media.source));
 	onCleanup(() => audio.pause());
 
@@ -50,6 +51,7 @@ export const AudioView = (props: MediaProps) => {
 	audio.ontimeupdate = () => setProgress(audio.currentTime);
 	audio.onratechange = () => setPlaybackRate(audio.playbackRate);
 	audio.onvolumechange = () => setVolume(audio.volume);
+	audio.onplay = () => setPlaying(true);
 
 	audio.onplaying = () => {
 		const cur = ctx.currentMedia();
@@ -67,8 +69,7 @@ export const AudioView = (props: MediaProps) => {
 
 	audio.onloadedmetadata = () => setLoadingState("ready");
 	audio.onstalled = () => setLoadingState("stalled");
-	audio.onsuspend = () => setLoadingState("stalled");
-	audio.onseeking = () => setLoadingState("loading");
+	audio.onseeking = () => setLoadingState("stalled");
 	audio.onseeked = () => setLoadingState("ready");
 	audio.onprogress = () => setBuffered(parseRanges(audio.buffered));
 	audio.oncanplaythrough = () => setBuffered(parseRanges(audio.buffered));

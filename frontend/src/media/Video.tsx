@@ -45,7 +45,7 @@ export const VideoViewOld = (props: MediaProps) => {
 		>
 			<div class="inner">
 				<div class="loader">loading</div>
-				<video controls src={getUrl(props.media.source)} />
+				<video controls src={getUrl(props.media.source)} preload="none" />
 			</div>
 		</div>
 	);
@@ -262,6 +262,7 @@ export const VideoView = (props: MediaProps) => {
 					<video
 						ref={video!}
 						src={getUrl(props.media.source)}
+						preload="none"
 						onClick={togglePlayPause}
 						onDblClick={fullScreenDblClick}
 					/>
