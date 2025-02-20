@@ -6,6 +6,7 @@ import {
 	onCleanup,
 	ParentProps,
 	Show,
+	Suspense,
 } from "solid-js";
 import {
 	ChatCtx,
@@ -214,11 +215,11 @@ export const Root: Component = (props: ParentProps) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
 			return target
 				?.dataset[
-					key.slice("data-".length).replace(
-						/-([a-z])/g,
-						(_, c) => c.toUpperCase(),
-					)
-				];
+				key.slice("data-".length).replace(
+					/-([a-z])/g,
+					(_, c) => c.toUpperCase(),
+				)
+			];
 		};
 
 		let menu: Partial<Menu> | null = null;
@@ -326,6 +327,8 @@ export const Root: Component = (props: ParentProps) => {
 			api.threads.list(() => room_id);
 		}
 	});
+
+	// const [sw] = createResource(() => navigator.serviceWorker.ready);
 
 	return (
 		<div id="root">

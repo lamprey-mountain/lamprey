@@ -48,6 +48,7 @@ export const getHeight = (m: Media) => {
 
 export const getUrl = (t: MediaTrack) => {
 	if (flags.has("service_worker_media")) {
+		if (navigator.serviceWorker.controller?.state !== "activated") return t.url;
 		const u = new URL("/_media", location.href);
 		u.searchParams.set("url", t.url);
 		return u.href;

@@ -34,12 +34,7 @@ const shouldCache = (req: Request) => {
 
 self.addEventListener("install", () => {
 	console.log("serviceworker installed");
-
-	// make this the active worker for all future clients immediately...
 	self.skipWaiting();
-
-	// ...and all current ones, too
-	self.clients.claim();
 });
 
 self.addEventListener("activate", (e) => {
@@ -47,6 +42,7 @@ self.addEventListener("activate", (e) => {
 	e.waitUntil(Promise.all([
 		deleteOldCaches(),
 		self.registration.navigationPreload.enable(),
+		self.clients.claim(),
 	]));
 });
 
@@ -59,9 +55,6 @@ self.addEventListener("fetch", (e) => {
 		const cached = await caches.match(req);
 		if (cached) return cached;
 
-		const preload = await e.preloadResponse;
-		if (preload) return preload;
-
 		const url = new URL(e.request.url);
 		if (req.method === "GET" && url.pathname === "/_media") {
 			const target = url.searchParams.get("url");
@@ -72,15 +65,21 @@ self.addEventListener("fetch", (e) => {
 
 			const res = await fetch(target, { mode: "cors" });
 			if (res.status === 206) return res; // range requests are a bit h right now
-
-			const res2 = res.clone();
-			e.waitUntil((async () => {
-				const cache = await caches.open("v2.media");
-				cache.put(target, res2);
-			})());
+			if (res.ok) {
+				const res2 = res.clone();
+				e.waitUntil((async () => {
+					const cache = await caches.open("v2.media");
+					cache.put(target, res2);
+				})());
+			} else {
+				console.error(res);
+			}
 
 			return res;
 		}
+
+		const preload = await e.preloadResponse;
+		if (preload) return preload;
 
 		try {
 			const res = await fetch(req);
