@@ -1,11 +1,14 @@
 /* css reset */
 
-* {
+@namespace svg "http://www.w3.org/2000/svg";
+
+:not(svg|*) {
 	all: unset;
 	display: revert;
 	box-sizing: border-box;
 }
 
-ul, li {
+ul,
+li {
 	list-style: none;
 }

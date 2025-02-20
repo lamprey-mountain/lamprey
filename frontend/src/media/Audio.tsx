@@ -1,7 +1,9 @@
 import {
 	createEffect,
 	createSignal,
+	For,
 	onCleanup,
+	Show,
 	ValidComponent,
 } from "solid-js";
 import iconPlay from "../assets/play.png";
@@ -16,7 +18,9 @@ import {
 	formatTime,
 	getDuration,
 	getUrl,
+	MediaLoadingState,
 	MediaProps,
+	parseRanges,
 } from "./util.ts";
 import { tooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
@@ -24,11 +28,14 @@ import { useCtx } from "../context.ts";
 export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
 
-	// NOTE: not using audio element so i can keep audio alive while scrolling (will impl later)
-	const audio = new globalThis.Audio();
+	const audio = new Audio();
 	createEffect(() => audio.src = getUrl(props.media.source));
 	onCleanup(() => audio.pause());
 
+	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
+		"empty",
+	);
+	const [buffered, setBuffered] = createSignal(parseRanges(audio.buffered));
 	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
 	const [progressPreview, setProgressPreview] = createSignal<null | number>(
@@ -42,24 +49,46 @@ export const AudioView = (props: MediaProps) => {
 	audio.ondurationchange = () => setDuration(audio.duration);
 	audio.ontimeupdate = () => setProgress(audio.currentTime);
 	audio.onratechange = () => setPlaybackRate(audio.playbackRate);
-	audio.onplay = () => setPlaying(true);
+	audio.onvolumechange = () => setVolume(audio.volume);
+
+	audio.onplaying = () => {
+		const cur = ctx.currentMedia();
+		if (cur && cur.media.id !== props.media.id) {
+			cur.element.pause();
+		}
+
+		ctx.setCurrentMedia({ media: props.media, element: audio });
+		setHandlers();
+		setPlaying(true);
+	};
+
 	audio.onpause = () => setPlaying(false);
+	audio.onended = () => setPlaying(false);
+
+	audio.onloadedmetadata = () => setLoadingState("ready");
+	audio.onstalled = () => setLoadingState("stalled");
+	audio.onsuspend = () => setLoadingState("stalled");
+	audio.onseeking = () => setLoadingState("loading");
+	audio.onseeked = () => setLoadingState("ready");
+	audio.onprogress = () => setBuffered(parseRanges(audio.buffered));
+	audio.oncanplaythrough = () => setBuffered(parseRanges(audio.buffered));
+	audio.onemptied = () => {
+		setLoadingState("empty");
+		setBuffered(parseRanges(audio.buffered));
+	}
+	audio.oncanplay = () => {
+		setLoadingState("ready");
+		setBuffered(parseRanges(audio.buffered));
+	}
 
 	createEffect(() => audio.muted = muted());
 	createEffect(() => audio.volume = volume());
 
-	const play = () => {
-		ctx.currentMedia()?.element.pause();
-		ctx.setCurrentMedia({ media: props.media, element: audio });
-		audio.play();
-		setHandlers();
-	};
-
 	const togglePlayPause = () => {
-		if (playing()) {
-			audio.pause();
+		if (audio.paused) {
+			audio.play();
 		} else {
-			play();
+			audio.pause();
 		}
 	};
 
@@ -160,19 +189,50 @@ export const AudioView = (props: MediaProps) => {
 		}
 	});
 
+	const thumbnail = (fullSize = false) => {
+		const t = props.media.tracks;
+		const mini = fullSize
+			? null
+			: t.find((i) =>
+				i.type === "Thumbnail" && i.width === 64 && i.height === 64
+			);
+		const stream = mini ??
+			t.find((i) => i.type === "Thumbnail") ??
+			t.find((i) => i.type === "Image");
+		return stream;
+	};
+
 	return (
 		<div class="audio">
-			<div
+			<svg
 				class="progress"
+				viewBox="0 0 1 1"
+				preserveAspectRatio="none"
 				onWheel={handleScrubWheel}
 				onMouseOut={handleScrubMouseOut}
 				onMouseMove={handleScrubMouseMove}
 				onMouseDown={handleScrubClick}
 				onClick={handleScrubClick}
 			>
-				<div class="fill" style={{ width: progressWidth() }}></div>
-				<div class="preview" style={{ width: progressPreviewWidth() }}></div>
-			</div>
+				<For each={buffered()}>
+					{(r) => {
+						return (
+							<rect
+								class="loaded"
+								x={r.start / duration()}
+								width={(r.end - r.start) / duration()}
+							/>
+						);
+					}}
+				</For>
+				<rect class="current" width={progressWidth()} />
+				<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
+			</svg>
+			<Show when={thumbnail()}>
+				<a class="thumb" href={thumbnail(true)!.url}>
+					<img src={getUrl(thumbnail()!)} />
+				</a>
+			</Show>
 			<div class="info">
 				<a
 					download={props.media.filename}
@@ -183,6 +243,7 @@ export const AudioView = (props: MediaProps) => {
 				</a>
 				<div class="dim">
 					{ty()} - {byteFmt.format(props.media.source.size)}
+					<Show when={loadingState() === "stalled"}> - loading</Show>
 				</div>
 			</div>
 			<div class="controls">

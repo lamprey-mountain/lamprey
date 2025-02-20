@@ -1,8 +1,10 @@
 import {
 	createEffect,
 	createSignal,
+	For,
 	onCleanup,
 	onMount,
+	Show,
 	ValidComponent,
 } from "solid-js";
 import {
@@ -12,7 +14,9 @@ import {
 	getHeight,
 	getUrl,
 	getWidth,
+	MediaLoadingState,
 	MediaProps,
+	parseRanges,
 } from "./util.ts";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
@@ -52,6 +56,10 @@ export const VideoView = (props: MediaProps) => {
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
 
+	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
+		"empty",
+	);
+	const [buffered, setBuffered] = createSignal([] as ReturnType<typeof parseRanges>);
 	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
 	const [progressPreview, setProgressPreview] = createSignal<null | number>(
@@ -63,32 +71,54 @@ export const VideoView = (props: MediaProps) => {
 	const [playbackRate, setPlaybackRate] = createSignal(1);
 	const [fullscreen, setFullscreen] = createSignal(false);
 
-	let videoEl!: HTMLVideoElement;
+	let video!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
 
 	onMount(() => {
-		videoEl.ondurationchange = () => setDuration(videoEl.duration);
-		videoEl.ontimeupdate = () => setProgress(videoEl.currentTime);
-		videoEl.onratechange = () => setPlaybackRate(videoEl.playbackRate);
-		videoEl.onplay = () => setPlaying(true);
-		videoEl.onpause = () => setPlaying(false);
+		video.ondurationchange = () => setDuration(video.duration);
+		video.ontimeupdate = () => setProgress(video.currentTime);
+		video.onratechange = () => setPlaybackRate(video.playbackRate);
+		video.onvolumechange = () => setVolume(video.volume);
+
+		video.onplaying = () => {
+			const cur = ctx.currentMedia();
+			if (cur && cur.media.id !== props.media.id) {
+				cur.element.pause();
+			}
+
+			ctx.setCurrentMedia({ media: props.media, element: video });
+			setHandlers();
+			setPlaying(true);
+		};
+
+		video.onpause = () => setPlaying(false);
+		video.onended = () => setPlaying(false);
+
+		video.onloadedmetadata = () => setLoadingState("ready");
+		video.onstalled = () => setLoadingState("stalled");
+		video.onsuspend = () => setLoadingState("stalled");
+		video.onseeking = () => setLoadingState("loading");
+		video.onseeked = () => setLoadingState("ready");
+		video.onprogress = () => setBuffered(parseRanges(video.buffered));
+		video.oncanplaythrough = () => setBuffered(parseRanges(video.buffered));
+		video.onemptied = () => {
+			setLoadingState("empty");
+			setBuffered(parseRanges(video.buffered));
+		}
+		video.oncanplay = () => {
+			setLoadingState("ready");
+			setBuffered(parseRanges(video.buffered));
+		}
 	});
 
-	createEffect(() => videoEl.muted = muted());
-	createEffect(() => videoEl.volume = volume());
-
-	const play = () => {
-		ctx.currentMedia()?.element.pause();
-		ctx.setCurrentMedia({ media: props.media, element: videoEl });
-		videoEl.play();
-		setHandlers();
-	};
+	createEffect(() => video.muted = muted());
+	createEffect(() => video.volume = volume());
 
 	const togglePlayPause = () => {
 		if (playing()) {
-			videoEl.pause();
+			video.pause();
 		} else {
-			play();
+			video.play();
 		}
 	};
 
@@ -105,9 +135,9 @@ export const VideoView = (props: MediaProps) => {
 	const handleScrubWheel = (e: WheelEvent) => {
 		e.preventDefault();
 		if (e.deltaY > 0) {
-			videoEl.currentTime = Math.max(progress() - 5, 0);
+			video.currentTime = Math.max(progress() - 5, 0);
 		} else {
-			videoEl.currentTime = Math.min(progress() + 5, duration());
+			video.currentTime = Math.min(progress() + 5, duration());
 		}
 	};
 
@@ -122,7 +152,7 @@ export const VideoView = (props: MediaProps) => {
 
 	const handleScrubClick = () => {
 		const p = progressPreview()!;
-		videoEl.currentTime = p;
+		video.currentTime = p;
 		setProgress(p);
 	};
 
@@ -136,7 +166,7 @@ export const VideoView = (props: MediaProps) => {
 		const p = ((e.clientX - x) / width) * duration();
 		setProgressPreview(p);
 		if (e.buttons) {
-			videoEl.currentTime = p;
+			video.currentTime = p;
 			setProgress(p);
 		}
 	};
@@ -230,7 +260,7 @@ export const VideoView = (props: MediaProps) => {
 				<div class="inner">
 					<div class="loader">loading</div>
 					<video
-						ref={videoEl!}
+						ref={video!}
 						src={getUrl(props.media.source)}
 						onClick={togglePlayPause}
 						onDblClick={fullScreenDblClick}
@@ -238,18 +268,30 @@ export const VideoView = (props: MediaProps) => {
 				</div>
 			</div>
 			<div class="footer">
-				<div
+				<svg
 					class="progress"
+					viewBox="0 0 1 1"
+					preserveAspectRatio="none"
 					onWheel={handleScrubWheel}
 					onMouseOut={handleScrubMouseOut}
 					onMouseMove={handleScrubMouseMove}
 					onMouseDown={handleScrubClick}
 					onClick={handleScrubClick}
 				>
-					<div class="fill" style={{ width: progressWidth() }}></div>
-					<div class="preview" style={{ width: progressPreviewWidth() }}>
-					</div>
-				</div>
+					<For each={buffered()}>
+						{(r) => {
+							return (
+								<rect
+									class="loaded"
+									x={r.start / duration()}
+									width={(r.end - r.start) / duration()}
+								/>
+							);
+						}}
+					</For>
+					<rect class="current" width={progressWidth()} />
+					<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
+				</svg>
 				<div class="info">
 					<a
 						download={props.media.filename}
@@ -260,6 +302,7 @@ export const VideoView = (props: MediaProps) => {
 					</a>
 					<div class="dim">
 						{ty()} - {byteFmt.format(props.media.source.size)}
+						<Show when={loadingState() === "stalled"}> - loading</Show>
 					</div>
 				</div>
 				<div class="controls">

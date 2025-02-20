@@ -824,13 +824,14 @@ summary {
 
 .audio {
 	display: grid;
-	grid-template-columns: 1fr;
+	grid-template-columns: auto 1fr;
 	grid-template-rows: 8px auto auto;
-	grid-template-areas: "." "info" "controls";
+	grid-template-areas: ". ." "thumb info" "controls controls";
 	background: $bg-300;
 	width: 200px;
 	position: relative;
 	padding: 4px;
+
 	/* border: solid $bg-400 1px; */
 	border: solid $bg-300 1px;
 	contain: content;
@@ -842,6 +843,24 @@ summary {
 		& > a {
 			display: block;
 			@include truncate;
+		}
+
+		& > .dim {
+			@include truncate;
+		}
+	}
+
+	& > .thumb {
+		display: contents;
+
+		& > img {
+			grid-area: thumb;
+			margin: 4px;
+			margin-left: 0px;
+			height: 32px;
+			width: 32px;
+			object-fit: cover;
+			align-self: center;
 		}
 	}
 
@@ -959,26 +978,30 @@ summary {
 	grid-area: progress;
 	height: 8px;
 	width: 100%;
-	background-color: $bg-200;
+	background-color: $bg-100;
 
 	&:hover {
 		height: 16px;
 		box-shadow: 2px 2px 8px #1114;
 	}
-
-	& > .preview,
-	& > .fill {
-		position: absolute;
-		height: 100%;
+	
+	& > rect {
+		x: 0;
+		y: 0;
+		height: 1px;
 		pointer-events: none;
 	}
 
-	& > .preview {
-		background-color: #fff3;
+	& > .loaded {
+		fill: $bg-200;
 	}
 
-	& > .fill {
-		background-color: $link-500;
+	& > .preview {
+		fill: #fff3;
+	}
+
+	& > .current {
+		fill: $link-500;
 	}
 }
 
