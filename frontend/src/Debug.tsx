@@ -8,12 +8,26 @@ import { Message } from "sdk";
 
 export const Debug = () => {
 	return (
-		<div style="padding:8px">
-			<h3>experiments</h3>
-			<InviteView />
+		<div class="debug">
+			<h3>area 51</h3>
+			<details>
+				<summary>invite json</summary>
+				<InviteView />
+			</details>
 			<Show when={flags.has("message_search")}>
-				<Search />
+				<details>
+					<summary>message search</summary>
+					<Search />
+				</details>
 			</Show>
+			<details>
+				<summary>resizing</summary>
+				<div class="dbg-resize">
+					<div class="inner">
+						<div class="main"></div>
+					</div>
+				</div>
+			</details>
 		</div>
 	);
 };

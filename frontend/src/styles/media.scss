@@ -9,28 +9,33 @@
 }
 
 .resize {
-	contain: strict;
+	contain: content;
 	max-height: min(var(--height), 300px, round(50vh, 1px));
 	max-width: min(var(--width), 300px, round(50vw, 1px));
-	contain-intrinsic-size: var(--width) var(--height);
 	aspect-ratio: var(--aspect-ratio);
-	background-color: $bg-100;
+}
+
+.image {
+	display: contents;
 }
 
 .image > img {
 	display: block;
 	max-height: 100%;
 	max-width: 100%;
-	aspect-ratio: var(--aspect-ratio);
+	height: var(--height);
+	width: var(--width);
+	object-fit: contain;
+	overflow: hidden;
 }
 
 .video {
 	position: relative;
 
 	& > video {
-		height: 100%;
-		width: 100%;
-		aspect-ratio: var(--aspect-ratio);
+		display: block;
+		height: min(var(--height), 100%);
+		width: min(var(--width), 100%);
 	}
 
 	&:fullscreen > video {

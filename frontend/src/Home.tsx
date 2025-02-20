@@ -2,6 +2,7 @@ import { Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
+import { flags } from "./flags.ts";
 
 export const Home = () => {
 	const ctx = useCtx();
@@ -82,6 +83,11 @@ export const Home = () => {
 				<br />
 			</Show>
 			<A target="_self" href="/api/docs">api docs</A>
+			<br />
+			<Show when={flags.has("dev")}>
+				<A href="/debug">debug</A>
+				<br />
+			</Show>
 		</div>
 	);
 };
