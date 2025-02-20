@@ -9,11 +9,11 @@
 }
 
 .resize {
-	max-height: min(500px, 50vh);
+	max-height: min(300px, 50vh);
 	aspect-ratio: var(--aspect-ratio);
 
 	& > .resize-inner {
-		max-width: min(500px, 50vw);
+		max-width: min(300px, 50vw);
 		aspect-ratio: var(--aspect-ratio);
 	}
 }

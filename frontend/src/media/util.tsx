@@ -56,6 +56,30 @@ export const getUrl = (t: MediaTrack) => {
 	}
 };
 
+/**
+ * get the smallest image bigger than w by h
+ * expects Media to be an Image
+ */
+export const getThumb = (t: Media, w: number, h: number) => {
+	const ts = [t.source, ...t.tracks]
+		.filter((i) => i.type === "Thumbnail" || i.type === "Image")
+		.sort((a, b) => {
+			const at = a.type === "Thumbnail";
+			const bt = b.type === "Thumbnail";
+			if (at && !bt) return 1;
+			if (!at && bt) return -1;
+
+			const as = a.width >= w && a.height >= h;
+			const bs = b.width >= w && b.height >= h;
+			if (as && !bs) return 1;
+			if (!as && bs) return -1;
+
+			return b.width - a.width;
+		});
+	return ts.at(-1) ??
+		t.source as MediaTrack & ({ type: "Image" | "Thumbnail" });
+};
+
 export const byteFmt = Intl.NumberFormat("en", {
 	notation: "compact",
 	style: "unit",
@@ -78,6 +102,7 @@ export const parseRanges = (b: TimeRanges) =>
 type ResizeProps = {
 	height: number;
 	width: number;
+	ratio?: number;
 };
 
 export const Resize = (props: ParentProps<ResizeProps>) => {
@@ -87,7 +112,7 @@ export const Resize = (props: ParentProps<ResizeProps>) => {
 			style={{
 				"--height": `${props.height}px`,
 				"--width": `${props.width}px`,
-				"--aspect-ratio": `${props.width}/${props.height}`,
+				"--aspect-ratio": props.ratio ?? `${props.width}/${props.height}`,
 			}}
 		>
 			<div class="resize-inner">
