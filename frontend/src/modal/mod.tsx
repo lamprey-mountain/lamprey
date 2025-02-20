@@ -1,4 +1,4 @@
-import { createSignal, ParentProps, Show } from "solid-js";
+import { createEffect, createSignal, ParentProps, Show } from "solid-js";
 import { Modal as ContextModal, useCtx } from "../context.ts";
 import { autofocus } from "@solid-primitives/autofocus";
 import { Media } from "sdk";
@@ -121,6 +121,7 @@ const ModalMedia = (props: { media: Media }) => {
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
 
+	createEffect(() => console.log("loaded", loaded()));
 	return (
 		<div class="modal modal-media">
 			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
@@ -129,9 +130,9 @@ const ModalMedia = (props: { media: Media }) => {
 				<div class="inner" role="dialog">
 					<Resize height={height()} width={width()}>
 						<div class="image full">
-							<Show when={!loaded()}>
-								<div class="media-loader">loading</div>
-							</Show>
+							<div class="media-loader" classList={{ loaded: loaded() }}>
+								loading
+							</div>
 							<img
 								src={getUrl(props.media.source)}
 								alt={props.media.alt ?? undefined}

@@ -116,9 +116,7 @@ export const Resize = (props: ParentProps<ResizeProps>) => {
 				"--aspect-ratio": props.ratio ?? `${props.width}/${props.height}`,
 			}}
 		>
-			<div class="resize-inner">
-				{props.children}
-			</div>
+			{props.children}
 		</div>
 	);
 };

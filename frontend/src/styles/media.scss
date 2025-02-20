@@ -9,23 +9,19 @@
 }
 
 .resize {
-	max-height: min(300px, 50vh);
+	contain: strict;
+	max-height: min(var(--height), 300px, round(50vh, 1px));
+	max-width: min(var(--width), 300px, round(50vw, 1px));
+	contain-intrinsic-size: var(--width) var(--height);
 	aspect-ratio: var(--aspect-ratio);
-
-	& > .resize-inner {
-		max-width: min(300px, 50vw);
-		aspect-ratio: var(--aspect-ratio);
-	}
+	background-color: $bg-100;
 }
 
-.image {
-	position: relative;
-
-	& > img {
-		height: 100%;
-		width: 100%;
-		aspect-ratio: var(--aspect-ratio);
-	}
+.image > img {
+	display: block;
+	max-height: 100%;
+	max-width: 100%;
+	aspect-ratio: var(--aspect-ratio);
 }
 
 .video {
@@ -47,10 +43,10 @@
 	padding: 8px;
 	background-color: $bg-100;
 	font-family: var(--font-mono);
-	max-height: 100%;
-	max-width: 100%;
-	height: var(--height);
-	width: var(--width);
+	height: 100%;
+	width: 100%;
+	pointer-events: none;
+	position: absolute;
 
 	&:before {
 		content: "";
@@ -58,27 +54,27 @@
 	}
 
 	&.loaded {
-		display: none;
+		opacity: 0;
+		/* TODO: fade in */
+		/* transition-duration: 300ms; */
 	}
 }
 
 .modal.modal-media > .content {
 	& > .base {
-		background: none;
-		border: none;
+		display: none;
 	}
 
 	& > .inner {
 		padding: 0;
 		max-width: 100%;
+		min-width: 0;
+		min-height: 0;
 	}
 
 	& .resize {
-		max-height: 80vh;
-
-		& > .resize-inner {
-			max-width: 80vw;
-		}
+		max-height: min(var(--height), 80vh);
+		max-width: min(var(--width), 80vw);
 	}
 }
 
