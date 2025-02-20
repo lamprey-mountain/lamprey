@@ -232,9 +232,12 @@ export const VideoView = (props: MediaProps) => {
 	return (
 		<Resize height={height()} width={width()}>
 			<div class="video" ref={wrapperEl!}>
-				<Show when={loadingState() === "empty"}>
-					<div class="media-loader">loading</div>
-				</Show>
+				<div
+					class="media-loader"
+					classList={{ loaded: loadingState() !== "empty" }}
+				>
+					loading
+				</div>
 				<video
 					ref={video!}
 					src={getUrl(props.media.source)}

@@ -1,4 +1,4 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal } from "solid-js";
 import { useCtx } from "../context.ts";
 import { getThumb, getUrl, MediaProps, Resize } from "./util.tsx";
 
@@ -22,9 +22,7 @@ export const ImageView = (props: MediaProps) => {
 					});
 				}}
 			>
-				<Show when={!loaded()}>
-					<div class="media-loader">loading</div>
-				</Show>
+				<div class="media-loader" classList={{ loaded: loaded() }}>loading</div>
 				<img
 					src={url()}
 					alt={props.media.alt ?? undefined}

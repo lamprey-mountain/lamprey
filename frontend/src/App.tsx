@@ -215,11 +215,11 @@ export const Root: Component = (props: ParentProps) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
 			return target
 				?.dataset[
-				key.slice("data-".length).replace(
-					/-([a-z])/g,
-					(_, c) => c.toUpperCase(),
-				)
-			];
+					key.slice("data-".length).replace(
+						/-([a-z])/g,
+						(_, c) => c.toUpperCase(),
+					)
+				];
 		};
 
 		let menu: Partial<Menu> | null = null;
