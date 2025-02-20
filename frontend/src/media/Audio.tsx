@@ -244,7 +244,7 @@ export const AudioView = (props: MediaProps) => {
 				</a>
 				<div class="dim">
 					{ty()} - {byteFmt.format(props.media.source.size)}
-					<Show when={loadingState() === "stalled"}>- loading</Show>
+					<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
 				</div>
 			</div>
 			<div class="controls">
