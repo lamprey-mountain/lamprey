@@ -327,8 +327,8 @@ async fn generate_and_upload_thumb(
     drop(_s);
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
-            height: height as u64,
-            width: width as u64,
+            height: img.height() as u64,
+            width: img.width() as u64,
             language: None,
         }),
         url,
