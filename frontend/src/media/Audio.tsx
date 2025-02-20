@@ -1,6 +1,7 @@
 import {
 	createEffect,
 	createSignal,
+	createUniqueId,
 	For,
 	onCleanup,
 	Show,
@@ -29,7 +30,15 @@ export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
 
 	const audio = new Audio();
+	const actx = new AudioContext();
+	const gain = actx.createGain();
+	const source = actx.createMediaElementSource(audio);
+	source.connect(gain);
+	gain.connect(actx.destination);
+	actx.resume();
+
 	audio.preload = "metadata";
+	audio.crossOrigin = "anonymous";
 	createEffect(() => audio.src = getUrl(props.media.source));
 	onCleanup(() => audio.pause());
 
@@ -50,7 +59,6 @@ export const AudioView = (props: MediaProps) => {
 	audio.ondurationchange = () => setDuration(audio.duration);
 	audio.ontimeupdate = () => setProgress(audio.currentTime);
 	audio.onratechange = () => setPlaybackRate(audio.playbackRate);
-	audio.onvolumechange = () => setVolume(audio.volume);
 	audio.onplay = () => setPlaying(true);
 
 	audio.onplaying = () => {
@@ -83,7 +91,9 @@ export const AudioView = (props: MediaProps) => {
 	};
 
 	createEffect(() => audio.muted = muted());
-	createEffect(() => audio.volume = volume());
+	createEffect(() => gain.gain.value = volume());
+
+	const volumeDatalistId = createUniqueId();
 
 	const togglePlayPause = () => {
 		if (audio.paused) {
@@ -266,12 +276,16 @@ export const AudioView = (props: MediaProps) => {
 							<input
 								type="range"
 								min={0}
-								max={1}
+								max={1.5}
 								value={volume()}
 								disabled={muted()}
 								step={.001}
+								list={volumeDatalistId}
 								onInput={(e) => setVolume(e.target.valueAsNumber)}
 							/>
+							<datalist id={volumeDatalistId}>
+								<option value="1" label="100%"></option>
+							</datalist>
 							<div class="dim">(click to mute)</div>
 							<div class="value">{getVolumeText()}</div>
 						</div>
