@@ -32,10 +32,10 @@ pub struct MediaTrack {
     pub source: TrackSource,
 }
 
-#[derive(ToSchema)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct File {
     /// The original filename
-    #[schema(min_length = 1, max_length = 256)]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     pub filename: String,
 }
 

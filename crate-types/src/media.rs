@@ -57,7 +57,7 @@ pub struct MediaCreate {
     pub alt: Option<String>,
 
     #[serde(flatten)]
-    #[validate(nested)]
+    #[cfg_attr(feature = "validator", validate(nested))]
     pub source: MediaCreateSource,
 }
 

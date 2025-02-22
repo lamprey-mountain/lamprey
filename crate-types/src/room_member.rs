@@ -17,7 +17,7 @@ pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
-    #[validate(nested)]
+    #[cfg_attr(feature = "validator", validate(nested))]
     #[serde(flatten)]
     pub membership: RoomMembership,
 

@@ -20,7 +20,7 @@ pub struct ThreadMember {
     pub thread_id: ThreadId,
     pub user_id: UserId,
 
-    #[validate(nested)]
+    #[cfg_attr(feature = "validator", validate(nested))]
     #[serde(flatten)]
     pub membership: ThreadMembership,
 
