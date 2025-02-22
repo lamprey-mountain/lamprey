@@ -4,6 +4,7 @@ pub mod util;
 
 pub mod any;
 pub mod audit_logs;
+pub mod embed;
 pub mod ids;
 pub mod invite;
 pub mod media;
@@ -23,6 +24,7 @@ pub mod user;
 
 pub use any::*;
 pub use audit_logs::*;
+pub use embed::*;
 pub use ids::*;
 pub use invite::*;
 pub use media::*;

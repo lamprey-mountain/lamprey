@@ -159,19 +159,6 @@ pub struct MediaRef {
 //     maybe add lyrics? location data?
 // }
 
-// struct UrlEmbed {
-//     url: String,
-//     title: Option<String>,
-//     description: Option<String>,
-//     site_name: Option<String>,
-//     color: Option<String>,
-//     media_main: Option<Media>,
-//     media_extra: Vec<Media>,
-//     author_url: Option<String>,
-//     author_name: Option<String>,
-//     author_avatar: Option<Media>,
-// }
-
 impl From<String> for Language {
     fn from(value: String) -> Self {
         Self(value)

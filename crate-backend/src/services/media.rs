@@ -42,6 +42,7 @@ pub struct MediaUpload {
     pub temp_file: TempFile,
     pub temp_writer: BufWriter<TempFile>,
     pub current_size: u64,
+    pub max_size: u64,
 }
 
 impl MediaUpload {
@@ -106,6 +107,7 @@ impl ServiceMedia {
                 temp_file,
                 temp_writer,
                 current_size: 0,
+                max_size: MAX_SIZE,
             },
         );
         Ok(())
@@ -292,7 +294,17 @@ impl ServiceMedia {
     }
 
     pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
-        let (filename, size, source_url) = match &json.source {
+        self.import_from_url_with_max_size(user_id, json, MAX_SIZE)
+            .await
+    }
+
+    pub async fn import_from_url_with_max_size(
+        &self,
+        user_id: UserId,
+        json: MediaCreate,
+        max_size: u64,
+    ) -> Result<Media> {
+        let (_filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
             MediaCreateSource::Download {
                 filename,
@@ -304,11 +316,38 @@ impl ServiceMedia {
         let media_id = MediaId(Uuid::now_v7());
         self.create_upload(media_id, user_id, json.clone()).await?;
 
-        // let srv = self.state.services();
-        let req = reqwest::get(source_url.clone()).await?.error_for_status()?;
-        match (size, req.content_length()) {
+        let res = reqwest::get(source_url.clone()).await?.error_for_status()?;
+
+        match (size, res.content_length()) {
             (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
-            (None, Some(len)) if len > MAX_SIZE => return Err(Error::TooBig),
+            (None, Some(len)) if len > max_size => return Err(Error::TooBig),
+            _ => {}
+        }
+
+        self.import_from_response(user_id, media_id, json, res, max_size)
+            .await
+    }
+
+    pub async fn import_from_response(
+        &self,
+        user_id: UserId,
+        media_id: MediaId,
+        json: MediaCreate,
+        res: reqwest::Response,
+        max_size: u64,
+    ) -> Result<Media> {
+        let (filename, size, source_url) = match &json.source {
+            MediaCreateSource::Upload { .. } => unreachable!(),
+            MediaCreateSource::Download {
+                filename,
+                size,
+                source_url,
+            } => (filename, size, source_url),
+        };
+
+        match (size, res.content_length()) {
+            (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
+            (None, Some(len)) if len > max_size => return Err(Error::TooBig),
             _ => {}
         }
 
@@ -322,7 +361,7 @@ impl ServiceMedia {
         );
 
         // TODO: retry downloads
-        let mut bytes = req.bytes_stream();
+        let mut bytes = res.bytes_stream();
         while let Some(chunk) = bytes.next().await {
             if let Err(err) = up.write(&chunk?).await {
                 self.uploads.remove(&media_id);
@@ -365,6 +404,7 @@ impl ServiceMedia {
     }
 }
 
+#[tracing::instrument(skip(state, img, width, height))]
 async fn generate_and_upload_thumb(
     state: Arc<ServerStateInner>,
     img: Arc<DynamicImage>,
@@ -393,8 +433,11 @@ async fn generate_and_upload_thumb(
         .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
         .content_type("image/avif")
         .await?;
+    debug!("opened");
     w.write(out.into_inner()).await?;
+    debug!("wrote all");
     w.close().await?;
+    debug!("closed");
     drop(_s);
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
@@ -410,6 +453,7 @@ async fn generate_and_upload_thumb(
     Ok(Some(track))
 }
 
+#[tracing::instrument(skip(state, bytes))]
 async fn upload_extracted_thumb(
     state: Arc<ServerStateInner>,
     bytes: BigData,

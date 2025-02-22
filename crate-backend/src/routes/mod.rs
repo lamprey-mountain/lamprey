@@ -18,6 +18,7 @@ mod thread;
 mod thread_member;
 mod user;
 mod util;
+mod debug;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
@@ -34,4 +35,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(thread::routes())
         .merge(thread_member::routes())
         .merge(user::routes())
+        .merge(debug::routes())
 }
