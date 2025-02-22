@@ -364,6 +364,7 @@ export class Messages {
 			metadata: null,
 			is_pinned: false,
 			ordering: 0,
+			embeds: [],
 			...body,
 			nonce: id,
 			is_local: true,

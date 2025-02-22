@@ -17,6 +17,7 @@ import { byteFmt, getUrl, MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";
+import { UrlEmbedView } from "./UrlEmbed.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -128,6 +129,13 @@ export function MessageView(props: MessageProps) {
 							<ul class="attachments">
 								<For each={props.message.attachments}>
 									{(att) => <AttachmentView media={att} />}
+								</For>
+							</ul>
+						</Show>
+						<Show when={props.message.embeds.length}>
+							<ul class="embeds">
+								<For each={props.message.embeds}>
+									{(embed) => <UrlEmbedView embed={embed} />}
 								</For>
 							</ul>
 						</Show>

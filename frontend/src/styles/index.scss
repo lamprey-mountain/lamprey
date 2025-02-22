@@ -235,7 +235,7 @@ input[type="submit"] {
 		flex-direction: column;
 		overflow-y: auto;
 
-		& header {
+		& > .header > header {
 			grid-column: span 3;
 			position: sticky;
 			z-index: 1;
@@ -1079,11 +1079,11 @@ button[disabled] {
 		padding: 8px;
 		max-width: 320px;
 
-		& > .title {
+		& .title {
 			font-weight: bold;
 		}
 
-		& > .site {
+		& .site {
 			color: $fg-500;
 		}
 
