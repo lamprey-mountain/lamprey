@@ -5,6 +5,7 @@ use oauth2::ServiceOauth;
 use permissions::ServicePermissions;
 use room::ServiceRooms;
 use thread::ServiceThreads;
+use url_embed::ServiceUrlEmbed;
 
 use crate::ServerStateInner;
 
@@ -13,6 +14,7 @@ pub mod oauth2;
 pub mod permissions;
 pub mod room;
 pub mod thread;
+pub mod url_embed;
 
 pub struct Services {
     pub(super) state: Arc<ServerStateInner>,
@@ -21,6 +23,7 @@ pub struct Services {
     pub rooms: ServiceRooms,
     pub threads: ServiceThreads,
     pub oauth: ServiceOauth,
+    pub url_embed: ServiceUrlEmbed,
 }
 
 impl Services {
@@ -31,6 +34,7 @@ impl Services {
             rooms: ServiceRooms::new(state.clone()),
             threads: ServiceThreads::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),
+            url_embed: ServiceUrlEmbed::new(state.clone()),
             state,
         }
     }
