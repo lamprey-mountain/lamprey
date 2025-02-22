@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO url_embed (\n                id,\n                url,\n                canonical_url,\n                title,\n                description,\n                color,\n                media,\n                media_is_thumbnail,\n                author_url,\n                author_name,\n                author_avatar,\n                site_name,\n                site_avatar,\n                user_id\n            )\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Bool",
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a49871d7855ff81b82c0437239640169ff578a0b353ab0a18d567e4997435e0a"
+}
