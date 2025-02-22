@@ -178,7 +178,7 @@ pub async fn debug_embed_url(
                 MAX_SIZE_ATTACHMENT,
             )
             .await?;
-        let embed = UrlEmbed {
+        let mut embed = UrlEmbed {
             url: json.url.clone(),
             canonical_url: if json.url == canonical_url {
                 None
@@ -196,6 +196,9 @@ pub async fn debug_embed_url(
             site_name: None,
             site_avatar: None,
         };
+        if let Some(m) = &mut embed.media {
+            s.presign(m).await?;
+        }
         Ok(Json(dbg!(embed)))
     } else {
         if content_length.is_some_and(|c| c > MAX_SIZE_HTML) {
@@ -297,7 +300,7 @@ pub async fn debug_embed_url(
             None
         };
 
-        let embed = UrlEmbed {
+        let mut embed = UrlEmbed {
             url: json.url.clone(),
             canonical_url: if json.url == canonical_url {
                 None
@@ -322,6 +325,9 @@ pub async fn debug_embed_url(
             // TODO: fetch favicon
             site_avatar: None,
         };
+        if let Some(m) = &mut embed.media {
+            s.presign(m).await?;
+        }
         Ok(Json(dbg!(embed)))
     }
 }
