@@ -38,6 +38,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/debug/embed-url": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Embed a url */
+		post: operations["debug_embed_url"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/invite/{invite_code}": {
 		parameters: {
 			query?: never;
@@ -94,12 +111,9 @@ export interface paths {
 		 */
 		delete: operations["media_delete"];
 		options?: never;
-		/**
-		 * Media check
-		 * @description Get headers useful for resuming an upload
-		 */
-		head: operations["media_check"];
-		patch?: never;
+		head?: never;
+		/** Media patch */
+		patch: operations["media_patch"];
 		trace?: never;
 	};
 	"/api/v1/room": {
@@ -755,7 +769,7 @@ export interface components {
 		};
 		MediaCreateSource: {
 			/** @description The original filename */
-			filename: string;
+			filename?: string;
 			/**
 			 * Format: int64
 			 * @description The size (in bytes)
@@ -785,6 +799,10 @@ export interface components {
 		};
 		/** Format: uuid */
 		MediaId: string;
+		MediaPatch: {
+			/** @description Descriptive alt text, not entirely unlike a caption */
+			alt?: string | null;
+		};
 		MediaRef: {
 			id: components["schemas"]["MediaId"];
 		};
@@ -812,7 +830,7 @@ export interface components {
 			& components["schemas"]["MediaSize"]
 			& {
 				/** @description the mime type of this view */
-				mime: string;
+				mime: components["schemas"]["Mime"];
 				/** @description Where this track came from */
 				source: components["schemas"]["TrackSource"];
 				/**
@@ -876,6 +894,7 @@ export interface components {
 			content?: string | null;
 			metadata?: unknown;
 			nonce?: string | null;
+			/** @description temporary? */
 			override_name?: string | null;
 			reply_id?: null | components["schemas"]["MessageId"];
 		};
@@ -968,6 +987,11 @@ export interface components {
 		MessageType: "Default" | "ThreadUpdate";
 		/** Format: uuid */
 		MessageVerId: string;
+		/**
+		 * Mime
+		 * @description a mime/media type
+		 */
+		Mime: string;
 		/** @description multiple pieces of metadata mixed together */
 		Mixed: {
 			/** Format: int64 */
@@ -1223,7 +1247,7 @@ export interface components {
 		};
 		SearchMessageRequest: {
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
-			query: string;
+			query?: string;
 		};
 		Session: components["schemas"]["SessionStatus"] & {
 			id: components["schemas"]["SessionId"];
@@ -1354,6 +1378,34 @@ export interface components {
 			}
 			| "Extracted"
 			| "Generated";
+		UrlEmbed: {
+			author_avatar?: null | components["schemas"]["Media"];
+			author_name?: string | null;
+			/** Format: uri */
+			author_url?: string | null;
+			/**
+			 * Format: uri
+			 * @description the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
+			 */
+			canonical_url?: string | null;
+			color?: string | null;
+			description?: string | null;
+			media?: null | components["schemas"]["Media"];
+			/** @description if `media` should be displayed as a small thumbnail or as a full size */
+			media_is_thumbnail: boolean;
+			site_avatar?: null | components["schemas"]["Media"];
+			site_name?: string | null;
+			title?: string | null;
+			/**
+			 * Format: uri
+			 * @description the url this embed was requested for
+			 */
+			url: string;
+		};
+		UrlEmbedRequest: {
+			/** Format: uri */
+			url: string;
+		};
 		User: components["schemas"]["UserType"] & {
 			avatar?: null | components["schemas"]["MediaId"];
 			description?: string | null;
@@ -1455,6 +1507,30 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	debug_embed_url: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["UrlEmbedRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["UrlEmbed"];
+				};
 			};
 		};
 	};
@@ -1598,7 +1674,7 @@ export interface operations {
 			};
 		};
 	};
-	media_check: {
+	media_patch: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1608,13 +1684,24 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MediaPatch"];
+			};
+		};
 		responses: {
-			/** @description no content */
-			204: {
+			/** @description Success */
+			200: {
 				headers: {
-					"upload-length"?: number;
-					"upload-offset"?: number;
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Media"];
+				};
+			};
+			/** @description Not modified */
+			304: {
+				headers: {
 					[name: string]: unknown;
 				};
 				content?: never;
