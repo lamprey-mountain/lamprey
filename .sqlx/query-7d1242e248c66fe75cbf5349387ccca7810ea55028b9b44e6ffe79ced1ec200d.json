@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                u.id,\n                u.url,\n                u.canonical_url,\n                u.title,\n                u.description,\n                u.color,\n                row_to_json(m) as media,\n                u.media_is_thumbnail,\n                u.author_url,\n                u.author_name,\n                row_to_json(a) as author_avatar,\n                u.site_name,\n                row_to_json(s) as site_avatar\n            FROM url_embed u\n            JOIN media_json m ON m.id = u.media\n            JOIN media_json a ON a.id = u.author_avatar\n            JOIN media_json s ON s.id = u.site_avatar\n            WHERE u.url = $1 AND u.created_at > $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "canonical_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "media",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 7,
+        "name": "media_is_thumbnail",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "author_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "author_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "author_avatar",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 11,
+        "name": "site_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "site_avatar",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamp"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      null,
+      true,
+      null
+    ]
+  },
+  "hash": "7d1242e248c66fe75cbf5349387ccca7810ea55028b9b44e6ffe79ced1ec200d"
+}

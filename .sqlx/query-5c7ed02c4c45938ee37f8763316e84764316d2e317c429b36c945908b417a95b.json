@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nmessage_coalesced as (\n    select *\n    from (select *, row_number() over(partition by id order by version_id desc) as row_num\n        from message)\n    where row_num = 1\n)\nSELECT\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    false as \"is_pinned!\",\n    row_to_json(usr) as \"author!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\"\nFROM message_coalesced AS msg\nJOIN usr ON usr.id = msg.author_id\nleft JOIN att_json ON att_json.version_id = msg.version_id\n     WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL\n",
+  "query": "with embeds as (\n    select version_id, array_agg(row_to_json(u)) as embeds\n    from url_embed_message u\n    group by version_id\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    false as \"is_pinned!\",\n    row_to_json(usr) as \"author!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(embeds.embeds, '{}') as \"embeds!\"\nfrom message as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join embeds on embeds.version_id = msg.version_id\nwhere thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null\n",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,11 @@
         "ordinal": 11,
         "name": "attachments!",
         "type_info": "JsonArray"
+      },
+      {
+        "ordinal": 12,
+        "name": "embeds!",
+        "type_info": "JsonArray"
       }
     ],
     "parameters": {
@@ -92,8 +97,9 @@
       true,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "2e89c7fcb1005720cf7e5fca36cf6730998d58615b58f04b655f40fccffcc70a"
+  "hash": "5c7ed02c4c45938ee37f8763316e84764316d2e317c429b36c945908b417a95b"
 }

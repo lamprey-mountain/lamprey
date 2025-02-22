@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    ),\n    thread_viewer as (\n        select thread.id from thread\n        join room_member on thread.room_id = room_member.room_id\n        where room_member.user_id = $1\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\"\nfrom message_coalesced as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\njoin thread_viewer on msg.thread_id = thread_viewer.id\nwhere msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\n  and content @@ websearch_to_tsquery($6)\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
+  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    ),\n    embeds as (\n        select version_id, array_agg(row_to_json(u)) as embeds\n        from url_embed_message u\n        group by version_id\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(embeds.embeds, '{}') as \"embeds!\"\nfrom message_coalesced as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join embeds on embeds.version_id = msg.version_id\nwhere thread_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,11 @@
         "ordinal": 11,
         "name": "is_pinned!",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "embeds!",
+        "type_info": "JsonArray"
       }
     ],
     "parameters": {
@@ -80,8 +85,7 @@
         "Uuid",
         "Uuid",
         "Text",
-        "Int8",
-        "Text"
+        "Int8"
       ]
     },
     "nullable": [
@@ -96,8 +100,9 @@
       true,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "5888fd2996e3a7ca42bb90ee13e7ea0c6dd022eef04c29dbc64afac08b499eca"
+  "hash": "481936fc865256df3f64a4ee42d476f9b448c48e9d64bb2a26afc05618c445d3"
 }
