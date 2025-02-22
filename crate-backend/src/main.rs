@@ -11,7 +11,7 @@ use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
-use opendal::layers::{ConcurrentLimitLayer, LoggingLayer, TimeoutLayer};
+use opendal::layers::LoggingLayer;
 use serde::Deserialize;
 use services::Services;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -324,8 +324,6 @@ async fn main() -> Result<()> {
         .secret_access_key(&config.s3.secret_access_key);
     let blobs = opendal::Operator::new(blobs_builder)?
         .layer(LoggingLayer::default())
-        .layer(TimeoutLayer::new().with_timeout(Duration::from_secs(60 * 60 * 5)))
-        .layer(ConcurrentLimitLayer::new(1024))
         .finish();
     blobs.check().await?;
 
