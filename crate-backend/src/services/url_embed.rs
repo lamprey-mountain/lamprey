@@ -6,7 +6,7 @@ use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::Deserialize;
 use tracing::{debug, info};
-use types::UrlEmbed;
+use types::{UrlEmbedId, UrlEmbed};
 use types::UserId;
 use url::Url;
 use webpage::HTML;
@@ -163,6 +163,7 @@ impl ServiceUrlEmbed {
                 .await?;
             debug!("url embed inserted media");
             let mut embed = UrlEmbed {
+                id: UrlEmbedId::new(),
                 url: url.clone(),
                 canonical_url: if url == canonical_url {
                     None
@@ -287,6 +288,7 @@ impl ServiceUrlEmbed {
             };
 
             let mut embed = UrlEmbed {
+                id: UrlEmbedId::new(),
                 url: url.clone(),
                 canonical_url: if url == canonical_url {
                     None

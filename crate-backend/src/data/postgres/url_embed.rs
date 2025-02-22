@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use sqlx::{query, query_as};
 use tracing::debug;
-use types::{UrlEmbed, UserId};
+use types::{UrlEmbedId, MessageVerId, UrlEmbed, UserId};
 use url::Url;
 use uuid::Uuid;
 
@@ -13,6 +13,7 @@ use super::Postgres;
 use crate::{data::DataUrlEmbed, Result};
 
 struct DbUrlEmbed {
+    pub id: Uuid,
     pub url: String,
     pub canonical_url: Option<String>,
     pub title: Option<String>,
@@ -30,6 +31,7 @@ struct DbUrlEmbed {
 impl From<DbUrlEmbed> for UrlEmbed {
     fn from(row: DbUrlEmbed) -> Self {
         UrlEmbed {
+            id: row.id.into(),
             url: row.url.parse().expect("invalid data in db"),
             canonical_url: row
                 .canonical_url
@@ -108,6 +110,7 @@ impl DataUrlEmbed for Postgres {
             DbUrlEmbed,
             r#"
             SELECT
+                u.id,
                 u.url,
                 u.canonical_url,
                 u.title,
@@ -138,5 +141,20 @@ impl DataUrlEmbed for Postgres {
             debug!("found no embed url={url}");
         }
         Ok(embed)
+    }
+
+    async fn url_embed_link(&self, version_id: MessageVerId, embed_id: UrlEmbedId) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO url_embed_message (version_id, embed_id)
+    	    VALUES ($1, $2)
+        "#,
+            version_id.into_inner(),
+            embed_id.into_inner(),
+        )
+        .execute(&self.pool)
+        .await?;
+        debug!("linked embed version_id={version_id} embed_id={embed_id}");
+        Ok(())
     }
 }

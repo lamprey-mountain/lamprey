@@ -6,8 +6,10 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
 use types::{util::Diff, PaginationDirection, ThreadMembership};
+use url::Url;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -43,7 +45,8 @@ async fn message_create(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
@@ -84,6 +87,20 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
+    if let Some(content) = &message.content {
+        for link in LinkFinder::new().links(content) {
+            if let Some(url) = link.as_str().parse::<Url>().ok() {
+                let version_id = message.version_id;
+                let srv = srv.clone();
+                let data = s.data();
+                tokio::spawn(async move {
+                    let embed = dbg!(srv.url_embed.generate(user_id, url).await?);
+                    data.url_embed_link(version_id, embed.id).await?;
+                    Result::Ok(())
+                });
+            }
+        }
+    }
     for media in &mut message.attachments {
         s.presign(media).await?;
     }
@@ -100,7 +117,7 @@ async fn message_create(
     let msg = MessageSync::UpsertMessage {
         message: message.clone(),
     };
-    s.services().threads.invalidate(thread_id); // message count
+    srv.threads.invalidate(thread_id); // message count
     s.broadcast_thread(thread_id, user_id, None, msg).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }

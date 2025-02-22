@@ -1,4 +1,4 @@
-use crate::Media;
+use crate::{UrlEmbedId, Media};
 
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -13,6 +13,8 @@ use validator::Validate;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UrlEmbed {
+    pub id: UrlEmbedId,
+    
     /// the url this embed was requested for
     pub url: Url,
 

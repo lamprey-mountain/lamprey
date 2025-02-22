@@ -2,9 +2,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed,
+    AuditLog, AuditLogId, UrlEmbedId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember, RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed
 };
 use url::Url;
 use uuid::Uuid;
@@ -339,4 +337,5 @@ pub trait DataThreadMember {
 pub trait DataUrlEmbed {
     async fn url_embed_insert(&self, user_id: UserId, embed: UrlEmbed) -> Result<()>;
     async fn url_embed_find(&self, url: Url, max_age: Duration) -> Result<Option<UrlEmbed>>;
+    async fn url_embed_link(&self, version_id: MessageVerId, embed_id: UrlEmbedId) -> Result<()>;
 }
