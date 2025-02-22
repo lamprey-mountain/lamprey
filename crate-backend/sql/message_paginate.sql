@@ -4,11 +4,6 @@ with
         from (select *, row_number() over(partition by id order by version_id desc) as row_num
             from message)
         where row_num = 1
-    ),
-    embeds as (
-        select version_id, array_agg(row_to_json(u)) as embeds
-        from url_embed_message u
-        group by version_id
     )
 select
     msg.type as "message_type: DbMessageType",

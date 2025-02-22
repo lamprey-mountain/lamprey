@@ -88,14 +88,15 @@ async fn message_create(
     }
     let mut message = data.message_get(thread_id, message_id).await?;
     if let Some(content) = &message.content {
-        for link in LinkFinder::new().links(content) {
+        for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
                 let version_id = message.version_id;
                 let srv = srv.clone();
                 let data = s.data();
                 tokio::spawn(async move {
                     let embed = dbg!(srv.url_embed.generate(user_id, url).await?);
-                    data.url_embed_link(version_id, embed.id).await?;
+                    data.url_embed_link(version_id, embed.id, ordering as u32)
+                        .await?;
                     Result::Ok(())
                 });
             }

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO url_embed_message (version_id, embed_id, ordering)\n    \t    VALUES ($1, $2, $3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "51ac69489833e0d3bb79241c16c4205cd3c5e2c44fd65eabc22ff7176581cf7d"
+}

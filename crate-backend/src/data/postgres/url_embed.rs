@@ -138,14 +138,20 @@ impl DataUrlEmbed for Postgres {
         Ok(embed)
     }
 
-    async fn url_embed_link(&self, version_id: MessageVerId, embed_id: UrlEmbedId) -> Result<()> {
+    async fn url_embed_link(
+        &self,
+        version_id: MessageVerId,
+        embed_id: UrlEmbedId,
+        ordering: u32,
+    ) -> Result<()> {
         query!(
             r#"
-            INSERT INTO url_embed_message (version_id, embed_id)
-    	    VALUES ($1, $2)
+            INSERT INTO url_embed_message (version_id, embed_id, ordering)
+    	    VALUES ($1, $2, $3)
         "#,
             version_id.into_inner(),
             embed_id.into_inner(),
+            ordering as i64,
         )
         .execute(&self.pool)
         .await?;
