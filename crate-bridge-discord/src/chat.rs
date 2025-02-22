@@ -72,7 +72,7 @@ impl EventHandler for Handle {
 
     async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        if message.author.id == UserId(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+        if message.author.id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
             return Ok(());
         }
         self.globals.portal_send(

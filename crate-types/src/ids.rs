@@ -36,7 +36,7 @@ macro_rules! genid {
             Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
         )]
         #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples($example)))]
-        pub struct $name(pub Uuid);
+        pub struct $name(Uuid);
 
         impl Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -57,8 +57,18 @@ macro_rules! genid {
         }
 
         impl $name {
+            pub fn new() -> Self {
+                Self(Uuid::now_v7())
+            }
+
             pub fn into_inner(self) -> Uuid {
                 self.into()
+            }
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self::new()
             }
         }
 

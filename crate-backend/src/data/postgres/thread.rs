@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 use types::ThreadState;
-use uuid::Uuid;
 
 use crate::error::Result;
 use crate::gen_paginate;
@@ -18,14 +17,14 @@ use super::{Pagination, Postgres};
 #[async_trait]
 impl DataThread for Postgres {
     async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId> {
-        let thread_id = Uuid::now_v7();
+        let thread_id = ThreadId::new();
         query!(
             "
 			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, state, visibility)
 			VALUES ($1, $2, $3, $4, $5, $6, 'Active', 'Room')
         ",
-            thread_id,
-            thread_id,
+            thread_id.into_inner(),
+            thread_id.into_inner(),
             create.creator_id.into_inner(),
             create.room_id.into_inner(),
             create.name,
@@ -34,7 +33,7 @@ impl DataThread for Postgres {
         .execute(&self.pool)
         .await?;
         info!("inserted thread");
-        Ok(ThreadId(thread_id))
+        Ok(thread_id)
     }
 
     /// get a thread, panics if there are no messages
@@ -102,7 +101,7 @@ impl DataThread for Postgres {
             ThreadState::Archived => DbThreadState::Archived,
             ThreadState::Deleted => DbThreadState::Deleted,
         };
-        let version_id = ThreadVerId(Uuid::now_v7());
+        let version_id = ThreadVerId::new();
         query!(
             r#"
             UPDATE thread SET

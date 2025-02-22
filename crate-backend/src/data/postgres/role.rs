@@ -117,7 +117,7 @@ impl DataRole for Postgres {
         "#, room_id.into_inner(), role_id.into_inner())
     	    .fetch_one(&mut *tx)
         	.await?;
-        let version_id = RoleVerId(Uuid::now_v7());
+        let version_id = RoleVerId::new();
         query!(
             r#"
             UPDATE role SET

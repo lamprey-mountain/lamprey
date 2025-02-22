@@ -95,7 +95,7 @@ impl DataRoom for Postgres {
         )
         .fetch_one(&mut *tx)
         .await?;
-        let version_id = RoomVerId(Uuid::now_v7());
+        let version_id = RoomVerId::new();
         query!(
             "UPDATE room SET version_id = $2, name = $3, description = $4 WHERE id = $1",
             id.into_inner(),

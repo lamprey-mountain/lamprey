@@ -18,7 +18,6 @@ use types::{
     Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
     TrackSource, UserId,
 };
-use uuid::Uuid;
 
 use crate::{
     error::{Error, Result},
@@ -313,7 +312,7 @@ impl ServiceMedia {
             } => (filename, size, source_url),
         };
 
-        let media_id = MediaId(Uuid::now_v7());
+        let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
 
         let res = reqwest::get(source_url.clone()).await?.error_for_status()?;

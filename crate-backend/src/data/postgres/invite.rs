@@ -50,21 +50,21 @@ impl DataInvite for Postgres {
         .await?;
         let target = match row.target_type.as_str() {
             "room" => {
-                let room = self.room_get(RoomId(row.target_id)).await?;
+                let room = self.room_get(RoomId::from(row.target_id)).await?;
                 InviteTarget::Room { room }
             }
             "thread" => {
-                let thread = self.thread_get(ThreadId(row.target_id), None).await?;
+                let thread = self.thread_get(ThreadId::from(row.target_id), None).await?;
                 let room = self.room_get(thread.room_id).await?;
                 InviteTarget::Thread { room, thread }
             }
             "user" => {
-                let user = self.user_get(UserId(row.target_id)).await?;
+                let user = self.user_get(UserId::from(row.target_id)).await?;
                 InviteTarget::User { user }
             }
             _ => panic!("invalid data in db"),
         };
-        let creator = self.user_get(UserId(row.creator_id)).await?;
+        let creator = self.user_get(UserId::from(row.creator_id)).await?;
         let invite = Invite {
             code,
             target,
@@ -127,7 +127,7 @@ impl DataInvite for Postgres {
             assert_eq!(row.target_type, "room");
             assert_eq!(row.target_id, room_id.into_inner());
             let target = InviteTarget::Room { room: room.clone() };
-            let creator = self.user_get(UserId(row.creator_id)).await?;
+            let creator = self.user_get(UserId::from(row.creator_id)).await?;
             let invite = Invite {
                 code: InviteCode(row.code),
                 target,

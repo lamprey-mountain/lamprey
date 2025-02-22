@@ -46,7 +46,7 @@ async fn media_create(
                 return Err(Error::TooBig);
             }
 
-            let media_id = MediaId(uuid::Uuid::now_v7());
+            let media_id = MediaId::new();
             let srv = s.services();
             srv.media
                 .create_upload(media_id, user_id, json.clone())

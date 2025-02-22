@@ -106,11 +106,15 @@ pub async fn user_update(
         }
     }
     data.user_update(target_user_id, patch.clone()).await?;
-    data.media_link_delete(target_user_id.0, MediaLinkType::AvatarUser)
+    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
     if let Some(Some(avatar_media_id)) = patch.avatar {
-        data.media_link_insert(avatar_media_id, target_user_id.0, MediaLinkType::AvatarUser)
-            .await?;
+        data.media_link_insert(
+            avatar_media_id,
+            target_user_id.into_inner(),
+            MediaLinkType::AvatarUser,
+        )
+        .await?;
     }
     let user = data.user_get(target_user_id).await?;
     s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
@@ -143,7 +147,7 @@ pub async fn user_delete(
     }
     let data = s.data();
     data.user_delete(target_user_id).await?;
-    data.media_link_delete(target_user_id.0, MediaLinkType::AvatarUser)
+    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
     s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)

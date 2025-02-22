@@ -114,7 +114,7 @@ impl DataUser for Postgres {
         .fetch_one(&mut *tx)
         .await?;
         let user: User = user.into();
-        let version_id = UserVerId(Uuid::now_v7());
+        let version_id = UserVerId::new();
         let avatar = patch.avatar.unwrap_or(user.avatar).map(|i| i.into_inner());
         query!(
             "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",

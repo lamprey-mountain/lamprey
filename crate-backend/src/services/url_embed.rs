@@ -8,7 +8,6 @@ use tracing::info;
 use types::UrlEmbed;
 use types::{MediaId, UserId};
 use url::Url;
-use uuid::Uuid;
 use webpage::HTML;
 
 use crate::error::Error;
@@ -132,7 +131,7 @@ impl ServiceUrlEmbed {
         let content_length = fetched.content_length();
         let content_type = fetched.headers().get("content-type");
         // TODO: try to parse name from Content-Disposition
-        let media_id = MediaId(Uuid::now_v7());
+        let media_id = MediaId::new();
         let srv = self.state.services();
         if content_type.is_some_and(|c| c == "a") {
             let canonical_url = fetched.url().to_owned();
