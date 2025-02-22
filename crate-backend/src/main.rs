@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use ::types::{Media, RoomId, ThreadId, UserId};
+use ::types::{Media, Message, RoomId, ThreadId, UserId};
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -253,6 +253,25 @@ impl ServerState {
     /// presigns every relevant url in a piece of media
     async fn presign(&self, media: &mut Media) -> Result<()> {
         self.inner.presign(media).await
+    }
+
+    /// presigns every relevant url in a message
+    async fn presign_message(&self, message: &mut Message) -> Result<()> {
+        for media in &mut message.attachments {
+            self.presign(media).await?;
+        }
+        for emb in &mut message.embeds {
+            if let Some(m) = &mut emb.media {
+                self.presign(m).await?;
+            }
+            if let Some(m) = &mut emb.author_avatar {
+                self.presign(m).await?;
+            }
+            if let Some(m) = &mut emb.site_avatar {
+                self.presign(m).await?;
+            }
+        }
+        Ok(())
     }
 }
 
