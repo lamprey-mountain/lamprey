@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     io::{Cursor, SeekFrom},
     sync::Arc,
+    time::Duration,
 };
 
 use async_tempfile::TempFile;
@@ -23,6 +24,8 @@ use crate::{
     error::{Error, Result},
     ServerStateInner,
 };
+
+use super::url_embed::USER_AGENT;
 
 mod ffmpeg;
 mod ffprobe;
@@ -315,7 +318,17 @@ impl ServiceMedia {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
 
-        let res = reqwest::get(source_url.clone()).await?.error_for_status()?;
+        let res = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .connect_timeout(Duration::from_secs(5))
+            .redirect(reqwest::redirect::Policy::limited(10))
+            .user_agent(USER_AGENT)
+            .https_only(true)
+            .build()?
+            .get(source_url.clone())
+            .send()
+            .await?
+            .error_for_status()?;
 
         match (size, res.content_length()) {
             (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),

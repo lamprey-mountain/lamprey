@@ -71,7 +71,7 @@ impl OpenGraphType {
     }
 }
 
-const USER_AGENT: &str = "StupidTestBot (no url yet)";
+pub const USER_AGENT: &str = "StupidTestBot (no url yet)";
 
 const MAX_SIZE_HTML: u64 = 1024 * 1024 * 1;
 const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
