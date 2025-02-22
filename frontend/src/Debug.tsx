@@ -266,16 +266,18 @@ const UrlEmbed = () => {
 			</form>
 			<div>
 				<article class="embed">
-					<div class="info">
-						<header class="title">
-							<a href={data().url}>{data().title}</a>
-							<span class="site">
-								{" - "}
-								{data().site_name}
-							</span>
-						</header>
-						<p class="description">{data().description}</p>
-					</div>
+					<Show when={data().title}>
+						<div class="info">
+							<header class="title">
+								<a href={data().url}>{data().title}</a>
+								<span class="site">
+									{" - "}
+									{data().site_name}
+								</span>
+							</header>
+							<p class="description">{data().description}</p>
+						</div>
+					</Show>
 					<Show when={data().media && data().media_is_thumbnail}>
 						<div class="thumb">
 							<ImageView

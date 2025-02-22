@@ -31,6 +31,7 @@ pub struct DbMessage {
     pub override_name: Option<String>, // temp?
     pub author: serde_json::Value,
     pub is_pinned: bool,
+    pub embeds: Vec<serde_json::Value>,
 }
 
 #[derive(sqlx::Type)]
@@ -88,7 +89,11 @@ impl From<DbMessage> for Message {
             override_name: row.override_name,
             author: serde_json::from_value(row.author).expect("invalid data in database!"),
             is_pinned: row.is_pinned,
-            embeds: vec![],
+            embeds: row
+                .embeds
+                .into_iter()
+                .map(|a| serde_json::from_value(a).expect("invalid data in database!"))
+                .collect(),
         }
     }
 }

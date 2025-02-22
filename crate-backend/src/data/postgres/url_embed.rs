@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use sqlx::query;
+use serde_json::Value;
+use sqlx::{query, query_as};
 use tracing::debug;
 use types::{UrlEmbed, UserId};
 use url::Url;
@@ -10,6 +11,50 @@ use uuid::Uuid;
 use super::Postgres;
 
 use crate::{data::DataUrlEmbed, Result};
+
+struct DbUrlEmbed {
+    pub url: String,
+    pub canonical_url: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub color: Option<String>,
+    pub media: Option<Value>,
+    pub media_is_thumbnail: Option<bool>,
+    pub author_url: Option<String>,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<Value>,
+    pub site_name: Option<String>,
+    pub site_avatar: Option<Value>,
+}
+
+impl From<DbUrlEmbed> for UrlEmbed {
+    fn from(row: DbUrlEmbed) -> Self {
+        UrlEmbed {
+            url: row.url.parse().expect("invalid data in db"),
+            canonical_url: row
+                .canonical_url
+                .map(|i| i.parse().expect("invalid data in db")),
+            title: row.title,
+            description: row.description,
+            color: row.color,
+            media: row
+                .media
+                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+            media_is_thumbnail: row.media_is_thumbnail.expect("invalid data in db"),
+            author_url: row
+                .author_url
+                .map(|i| i.parse().expect("invalid data in db")),
+            author_name: row.author_name,
+            author_avatar: row
+                .author_avatar
+                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+            site_name: row.site_name,
+            site_avatar: row
+                .site_avatar
+                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+        }
+    }
+}
 
 #[async_trait]
 impl DataUrlEmbed for Postgres {
@@ -59,9 +104,11 @@ impl DataUrlEmbed for Postgres {
     async fn url_embed_find(&self, url: Url, max_age: Duration) -> Result<Option<UrlEmbed>> {
         let min_ts = time::OffsetDateTime::now_utc() - max_age;
         let min_ts = time::PrimitiveDateTime::new(min_ts.date(), min_ts.time());
-        let row = query!(
+        let row = query_as!(
+            DbUrlEmbed,
             r#"
             SELECT
+                u.url,
                 u.canonical_url,
                 u.title,
                 u.description,
@@ -84,28 +131,7 @@ impl DataUrlEmbed for Postgres {
         )
         .fetch_optional(&self.pool)
         .await?;
-        let embed = row.map(|r| UrlEmbed {
-            url: url.clone(),
-            canonical_url: r
-                .canonical_url
-                .map(|i| i.parse().expect("invalid data in db")),
-            title: r.title,
-            description: r.description,
-            color: r.color,
-            media: r
-                .media
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
-            media_is_thumbnail: r.media_is_thumbnail.expect("invalid data in db"),
-            author_url: r.author_url.map(|i| i.parse().expect("invalid data in db")),
-            author_name: r.author_name,
-            author_avatar: r
-                .author_avatar
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
-            site_name: r.site_name,
-            site_avatar: r
-                .site_avatar
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
-        });
+        let embed = row.map(|r| r.into());
         if embed.is_some() {
             debug!("found embed url={url}");
         } else {
