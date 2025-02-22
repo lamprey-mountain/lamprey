@@ -61,7 +61,6 @@ impl From<DbUrlEmbed> for UrlEmbed {
 #[async_trait]
 impl DataUrlEmbed for Postgres {
     async fn url_embed_insert(&self, user_id: UserId, embed: UrlEmbed) -> Result<()> {
-        let id = Uuid::now_v7();
         query!(
             r#"
             INSERT INTO url_embed (
@@ -82,7 +81,7 @@ impl DataUrlEmbed for Postgres {
             )
     	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
-            id,
+            embed.id.into_inner(),
             embed.url.to_string(),
             embed.canonical_url.map(|u| u.to_string()),
             embed.title,
