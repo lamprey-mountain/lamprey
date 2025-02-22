@@ -21,6 +21,10 @@ export const ImageView = (props: ImageViewProps) => {
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<div
 				class="image"
+				onMouseOver={() => {
+					// prefetch image
+					fetch(getUrl(props.media.source), { priority: "low" });
+				}}
 				onClick={() => {
 					ctx.dispatch({
 						do: "modal.open",
