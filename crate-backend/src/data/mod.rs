@@ -1,9 +1,12 @@
+use std::time::Duration;
+
 use async_trait::async_trait;
 use types::{
     AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
     RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
+    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed,
 };
+use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -34,6 +37,7 @@ pub trait Data:
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
+    + DataUrlEmbed
     + Send
     + Sync
 {
@@ -329,4 +333,10 @@ pub trait DataThreadMember {
         thread_id: ThreadId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
+}
+
+#[async_trait]
+pub trait DataUrlEmbed {
+    async fn url_embed_insert(&self, user_id: UserId, embed: UrlEmbed) -> Result<()>;
+    async fn url_embed_find(&self, url: Url, max_age: Duration) -> Result<Option<UrlEmbed>>;
 }

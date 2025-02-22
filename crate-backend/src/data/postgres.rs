@@ -26,6 +26,7 @@ mod session;
 mod thread;
 mod thread_member;
 mod unread;
+mod url_embed;
 mod user;
 mod util;
 

@@ -8,6 +8,7 @@ use validator::Validate;
 
 use crate::util::some_option;
 use crate::util::Diff;
+use crate::UrlEmbed;
 
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
 
@@ -34,7 +35,11 @@ pub struct Message {
     pub metadata: Option<serde_json::Value>,
 
     pub reply_id: Option<MessageId>,
-    // embeds: Embed.array().default([]),
+    
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    pub embeds: Vec<UrlEmbed>,
+
     // mentions_users: UserId.array(),
     // mentions_roles: RoleId.array(),
     // mentions_everyone: z.boolean(),

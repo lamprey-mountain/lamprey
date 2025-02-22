@@ -88,6 +88,7 @@ impl From<DbMessage> for Message {
             override_name: row.override_name,
             author: serde_json::from_value(row.author).expect("invalid data in database!"),
             is_pinned: row.is_pinned,
+            embeds: vec![],
         }
     }
 }
