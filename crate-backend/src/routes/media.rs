@@ -341,15 +341,15 @@ async fn media_get(
 /// Media check
 ///
 /// Get headers useful for resuming an upload
-#[utoipa::path(
-    head,
-    path = "/media/{media_id}",
-    tags = ["media"],
-    params(("media_id", description = "Media id")),
-    responses(
-        (status = NO_CONTENT, description = "no content", headers(("upload-length" = u64), ("upload-offset" = u64))),
-    )
-)]
+// #[utoipa::path(
+//     head,
+//     path = "/media/{media_id}",
+//     tags = ["media"],
+//     params(("media_id", description = "Media id")),
+//     responses(
+//         (status = NO_CONTENT, description = "no content", headers(("upload-length" = u64), ("upload-offset" = u64))),
+//     )
+// )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
     Auth(user_id): Auth,
@@ -419,10 +419,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_create))
         .routes(routes!(media_patch))
         .routes(routes!(media_get))
-        .routes(routes!(media_check))
         .routes(routes!(media_delete))
         .route(
             "/internal/media-upload/{media_id}",
-            routing::patch(media_upload),
+            routing::patch(media_upload).head(media_check),
         )
 }
