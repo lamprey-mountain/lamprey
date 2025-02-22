@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    ),\n    embeds as (\n        select version_id, array_agg(row_to_json(u)) as embeds\n        from url_embed_message u\n        group by version_id\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(embeds.embeds, '{}') as \"embeds!\"\nfrom message_coalesced as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join embeds on embeds.version_id = msg.version_id\nwhere thread_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
+  "query": "select\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\"\nfrom message as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $3 and msg.id < $4\norder by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6\n\n",
   "describe": {
     "columns": [
       {
@@ -84,6 +84,7 @@
         "Uuid",
         "Uuid",
         "Uuid",
+        "Uuid",
         "Text",
         "Int8"
       ]
@@ -104,5 +105,5 @@
       null
     ]
   },
-  "hash": "481936fc865256df3f64a4ee42d476f9b448c48e9d64bb2a26afc05618c445d3"
+  "hash": "28323e6f345bc1411c7c85f01a5bcd1983ddf8b2e1b9bc4ec0882a9b1f7862a0"
 }

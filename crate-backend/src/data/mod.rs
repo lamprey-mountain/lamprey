@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, UrlEmbedId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember, RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed
+    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
+    RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
+    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,
 };
 use url::Url;
 use uuid::Uuid;

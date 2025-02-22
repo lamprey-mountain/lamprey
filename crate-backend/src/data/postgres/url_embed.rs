@@ -1,18 +1,20 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as};
 use tracing::debug;
-use types::{UrlEmbedId, MessageVerId, UrlEmbed, UserId};
+use types::{MessageVerId, UrlEmbed, UrlEmbedId, UserId};
 use url::Url;
 use uuid::Uuid;
 
-use super::Postgres;
+use super::{util::media_from_db, Postgres};
 
 use crate::{data::DataUrlEmbed, Result};
 
-struct DbUrlEmbed {
+#[derive(Debug, Deserialize)]
+pub struct DbUrlEmbed {
     pub id: Uuid,
     pub url: String,
     pub canonical_url: Option<String>,
@@ -39,21 +41,15 @@ impl From<DbUrlEmbed> for UrlEmbed {
             title: row.title,
             description: row.description,
             color: row.color,
-            media: row
-                .media
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+            media: row.media.map(media_from_db),
             media_is_thumbnail: row.media_is_thumbnail.expect("invalid data in db"),
             author_url: row
                 .author_url
                 .map(|i| i.parse().expect("invalid data in db")),
             author_name: row.author_name,
-            author_avatar: row
-                .author_avatar
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+            author_avatar: row.author_avatar.map(media_from_db),
             site_name: row.site_name,
-            site_avatar: row
-                .site_avatar
-                .map(|m| serde_json::from_value(m).expect("invalid data in db")),
+            site_avatar: row.site_avatar.map(media_from_db),
         }
     }
 }

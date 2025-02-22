@@ -1,11 +1,9 @@
 use async_trait::async_trait;
-use serde::Deserialize;
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use types::MessageType;
 use uuid::Uuid;
 
-use crate::data::postgres::media::DbMediaTrack;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
@@ -15,7 +13,8 @@ use crate::types::{
 
 use crate::data::DataMessage;
 
-use super::media::DbMedia;
+use super::url_embed::DbUrlEmbed;
+use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
 pub struct DbMessage {
@@ -69,21 +68,7 @@ impl From<DbMessage> for Message {
             nonce: None,
             ordering: row.ordering,
             content: row.content,
-            attachments: row
-                .attachments
-                .into_iter()
-                .map(|a| {
-                    #[derive(Deserialize)]
-                    struct Helper {
-                        #[serde(flatten)]
-                        media: DbMedia,
-                        tracks: Vec<DbMediaTrack>,
-                    }
-
-                    let row: Helper = serde_json::from_value(a).expect("invalid data in database!");
-                    row.media.upgrade(row.tracks).0
-                })
-                .collect(),
+            attachments: row.attachments.into_iter().map(media_from_db).collect(),
             metadata: row.metadata,
             reply_id: row.reply_id.map(Into::into),
             override_name: row.override_name,
@@ -92,7 +77,11 @@ impl From<DbMessage> for Message {
             embeds: row
                 .embeds
                 .into_iter()
-                .map(|a| serde_json::from_value(a).expect("invalid data in database!"))
+                .map(|a| {
+                    let db: DbUrlEmbed =
+                        dbg!(serde_json::from_value(a)).expect("invalid data in database!");
+                    db.into()
+                })
                 .collect(),
         }
     }

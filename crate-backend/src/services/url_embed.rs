@@ -6,8 +6,8 @@ use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::Deserialize;
 use tracing::{debug, info};
-use types::{UrlEmbedId, UrlEmbed};
 use types::UserId;
+use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
 use webpage::HTML;
 
