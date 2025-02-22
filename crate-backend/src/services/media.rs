@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     io::{Cursor, SeekFrom},
     sync::Arc,
 };
@@ -17,6 +18,7 @@ use types::{
     Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
     TrackSource, UserId,
 };
+use uuid::Uuid;
 
 use crate::{
     error::{Error, Result},
@@ -287,6 +289,79 @@ impl ServiceMedia {
             .media_insert(user_id, media.clone())
             .await?;
         Ok(media)
+    }
+
+    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
+        let (filename, size, source_url) = match &json.source {
+            MediaCreateSource::Upload { .. } => unreachable!(),
+            MediaCreateSource::Download {
+                filename,
+                size,
+                source_url,
+            } => (filename, size, source_url),
+        };
+
+        let media_id = MediaId(Uuid::now_v7());
+        self.create_upload(media_id, user_id, json.clone()).await?;
+
+        // let srv = self.state.services();
+        let req = reqwest::get(source_url.clone()).await?.error_for_status()?;
+        match (size, req.content_length()) {
+            (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
+            (None, Some(len)) if len > MAX_SIZE => return Err(Error::TooBig),
+            _ => {}
+        }
+
+        let mut up = self.uploads.get_mut(&media_id).ok_or(Error::NotFound)?;
+
+        debug!(
+            "download media {} from {}, file {:?}",
+            media_id,
+            source_url,
+            up.temp_file.file_path()
+        );
+
+        // TODO: retry downloads
+        let mut bytes = req.bytes_stream();
+        while let Some(chunk) = bytes.next().await {
+            if let Err(err) = up.write(&chunk?).await {
+                self.uploads.remove(&media_id);
+                return Err(err);
+            };
+        }
+
+        info!("finished stream download end_size={}", up.current_size);
+
+        match size.map(|s| up.current_size.cmp(&s)) {
+            Some(Ordering::Greater) => {
+                self.uploads.remove(&media_id);
+                Err(Error::TooBig)
+            }
+            Some(Ordering::Less) => Err(Error::BadStatic("failed to download content")),
+            Some(Ordering::Equal) | None => {
+                trace!("flush media");
+                up.temp_writer.flush().await?;
+                trace!("flushed media");
+                drop(up);
+                trace!("dropped upload");
+                let (_, up) = self
+                    .uploads
+                    .remove(&media_id)
+                    .expect("it was there a few milliseconds ago");
+                trace!("processing upload");
+                let filename = filename
+                    .as_deref()
+                    // TODO: try to parse name from Content-Disposition
+                    .or_else(|| source_url.path_segments().and_then(|p| p.last()))
+                    .map(|s| s.to_owned())
+                    .unwrap_or_else(|| "unknown".to_owned());
+                let media = self
+                    .process_upload(up, media_id, user_id, &filename)
+                    .await?;
+                debug!("finished processing media");
+                Ok(media)
+            }
+        }
     }
 }
 

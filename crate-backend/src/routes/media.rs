@@ -65,99 +65,26 @@ async fn media_create(
             res_headers.insert("upload-offset", 0.into());
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
-        MediaCreateSource::Download {
-            filename,
-            size,
-            source_url,
-        } => {
+        MediaCreateSource::Download { size, .. } => {
             if size.is_some_and(|s| s > MAX_SIZE) {
                 return Err(Error::TooBig);
             }
 
-            let media_id = MediaId(uuid::Uuid::now_v7());
             let srv = s.services();
-            srv.media
-                .create_upload(media_id, user_id, json.clone())
-                .await?;
-
-            let req = reqwest::get(source_url.clone()).await?.error_for_status()?;
-            match (size, req.content_length()) {
-                (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
-                (None, Some(len)) if len > MAX_SIZE => return Err(Error::TooBig),
-                _ => {}
-            }
-
-            let mut up = srv
-                .media
-                .uploads
-                .get_mut(&media_id)
-                .ok_or(Error::NotFound)?;
-
-            debug!(
-                "download media {} from {}, file {:?}",
-                media_id,
-                source_url,
-                up.temp_file.file_path()
-            );
-
-            // TODO: retry downloads
-            let mut bytes = req.bytes_stream();
-            while let Some(chunk) = bytes.next().await {
-                if let Err(err) = up.write(&chunk?).await {
-                    srv.media.uploads.remove(&media_id);
-                    return Err(err);
-                };
-            }
-
-            info!("finished stream download end_size={}", up.current_size);
-
-            match size.map(|s| up.current_size.cmp(&s)) {
-                Some(Ordering::Greater) => {
-                    s.services().media.uploads.remove(&media_id);
-                    Err(Error::TooBig)
+            let media = srv.media.import_from_url(user_id, json).await?;
+            let mut headers = HeaderMap::new();
+            let size = match media.source.size {
+                MediaSize::Bytes(b) => b,
+                MediaSize::BytesPerSecond(_) => {
+                    panic!("BytesPerSecond invalid for upload?")
                 }
-                Some(Ordering::Less) => Err(Error::BadStatic("failed to download content")),
-                Some(Ordering::Equal) | None => {
-                    trace!("flush media");
-                    up.temp_writer.flush().await?;
-                    trace!("flushed media");
-                    drop(up);
-                    trace!("dropped upload");
-                    let (_, up) = s
-                        .services()
-                        .media
-                        .uploads
-                        .remove(&media_id)
-                        .expect("it was there a few milliseconds ago");
-                    trace!("processing upload");
-                    let filename = filename
-                        .as_deref()
-                        // TODO: try to parse name from Content-Disposition
-                        .or_else(|| source_url.path_segments().and_then(|p| p.last()))
-                        .map(|s| s.to_owned())
-                        .unwrap_or_else(|| "unknown".to_owned());
-                    let mut media = s
-                        .services()
-                        .media
-                        .process_upload(up, media_id, user_id, &filename)
-                        .await?;
-                    debug!("finished processing media");
-                    s.presign(&mut media).await?;
-                    let mut headers = HeaderMap::new();
-                    let size = match media.source.size {
-                        MediaSize::Bytes(b) => b,
-                        MediaSize::BytesPerSecond(_) => {
-                            panic!("BytesPerSecond invalid for upload?")
-                        }
-                    };
-                    headers.insert("content-length", size.into());
-                    let res = MediaCreated {
-                        media_id,
-                        upload_url: None,
-                    };
-                    Ok((StatusCode::CREATED, HeaderMap::new(), Json(res)))
-                }
-            }
+            };
+            headers.insert("content-length", size.into());
+            let res = MediaCreated {
+                media_id: media.id,
+                upload_url: None,
+            };
+            Ok((StatusCode::CREATED, HeaderMap::new(), Json(res)))
         }
     }
 }
