@@ -4,9 +4,6 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 use super::Mime;
 
 /// A unique "view" of this piece of media. Could be the source, an
@@ -37,16 +34,6 @@ pub struct File {
     /// The original filename
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     pub filename: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaPatch {
-    /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub alt: Option<Option<String>>,
 }
 
 // TODO: the language for this piece of media

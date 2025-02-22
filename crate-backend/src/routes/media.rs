@@ -10,7 +10,7 @@ use axum::{
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
-use types::{MediaCreateSource, MediaSize};
+use types::{MediaCreateSource, MediaPatch, MediaSize};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -162,24 +162,56 @@ async fn media_create(
     }
 }
 
-// /// Media patch
-// #[utoipa::path(
-//     patch,
-//     path = "/media/{media_id}",
-//     tags = ["media"],
-//     params(("media_id", description = "Media id")),
-//     responses(
-//         (status = NOT_MODIFIED, description = "Not modified"),
-//         (status = OK, body = Media, description = "Success"),
-//     )
-// )]
-// async fn media_patch(
-//     Path(media_id): Path<MediaId>,
-//     Auth(user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-// ) -> Result<impl IntoResponse> {
-// json.validate()?;
-// }
+/// Media patch
+#[utoipa::path(
+    patch,
+    path = "/media/{media_id}",
+    tags = ["media"],
+    params(("media_id", description = "Media id")),
+    responses(
+        (status = NOT_MODIFIED, description = "Not modified"),
+        (status = OK, body = Media, description = "Success"),
+    )
+)]
+async fn media_patch(
+    Path(media_id): Path<MediaId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<MediaPatch>,
+) -> Result<impl IntoResponse> {
+    json.validate()?;
+    if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
+        if up.user_id == user_id {
+            if let Some(alt) = json.alt {
+                up.create.alt = alt;
+            }
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
+            headers.insert(
+                "upload-length",
+                up.create
+                    .source
+                    .size()
+                    .expect("can only check media where source = upload")
+                    .into(),
+            );
+            return Ok((StatusCode::NO_CONTENT, headers));
+        }
+    }
+    let (media, uploader_id) = s.data().media_select(media_id).await?;
+    if uploader_id != user_id {
+        return Err(Error::MissingPermissions);
+    }
+    s.data().media_update(media_id, json).await?;
+    let mut headers = HeaderMap::new();
+    let size = match media.source.size {
+        MediaSize::Bytes(b) => b,
+        MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
+    };
+    headers.insert("upload-offset", size.into());
+    headers.insert("upload-length", size.into());
+    Ok((StatusCode::NO_CONTENT, headers))
+}
 
 /// Media upload
 async fn media_upload(
@@ -301,7 +333,7 @@ async fn media_get(
     Auth(_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let mut media = s.data().media_select(media_id).await?;
+    let (mut media, _) = s.data().media_select(media_id).await?;
     s.presign(&mut media).await?;
     Ok(Json(media))
 }
@@ -338,7 +370,7 @@ async fn media_check(
             return Ok((StatusCode::NO_CONTENT, headers));
         }
     }
-    let media = s.data().media_select(media_id).await?;
+    let (media, _) = s.data().media_select(media_id).await?;
     let mut headers = HeaderMap::new();
     let size = match media.source.size {
         MediaSize::Bytes(b) => b,
@@ -385,7 +417,7 @@ async fn media_delete(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(media_create))
-        // .routes(routes!(media_patch))
+        .routes(routes!(media_patch))
         .routes(routes!(media_get))
         .routes(routes!(media_check))
         .routes(routes!(media_delete))

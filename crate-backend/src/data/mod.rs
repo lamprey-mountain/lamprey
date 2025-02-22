@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MessageSync, Role, RoomMember, RoomMemberPatch,
-    RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus, SessionToken, ThreadMember,
-    ThreadMemberPatch, ThreadMembership,
+    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
+    RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
+    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
 use uuid::Uuid;
 
@@ -156,7 +156,9 @@ pub trait DataInvite {
 pub trait DataMedia {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
 
-    async fn media_select(&self, media_id: MediaId) -> Result<Media>;
+    async fn media_select(&self, media_id: MediaId) -> Result<(Media, UserId)>;
+
+    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
 
     async fn media_link_insert(
         &self,

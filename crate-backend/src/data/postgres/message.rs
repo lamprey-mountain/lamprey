@@ -80,7 +80,7 @@ impl From<DbMessage> for Message {
                     }
 
                     let row: Helper = serde_json::from_value(a).expect("invalid data in database!");
-                    row.media.upgrade(row.tracks)
+                    row.media.upgrade(row.tracks).0
                 })
                 .collect(),
             metadata: row.metadata,

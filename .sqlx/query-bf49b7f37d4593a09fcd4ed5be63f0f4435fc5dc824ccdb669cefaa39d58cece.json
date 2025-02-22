@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    SELECT id, filename, alt\n    \t    FROM media\n    \t    WHERE id = $1\n        ",
+  "query": "\n    \t    SELECT id, filename, alt, user_id\n    \t    FROM media\n    \t    WHERE id = $1\n    \t    FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "alt",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -27,8 +32,9 @@
     "nullable": [
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "a80823691501e830c2fad907cff5d1d77657dbccee8486d255001e91d959ffa0"
+  "hash": "bf49b7f37d4593a09fcd4ed5be63f0f4435fc5dc824ccdb669cefaa39d58cece"
 }

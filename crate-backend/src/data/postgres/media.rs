@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use sqlx::{query, query_as};
 use tracing::info;
-use types::{MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
+use types::{MediaPatch, MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
 use url::Url;
 use uuid::Uuid;
 
@@ -18,6 +18,7 @@ pub struct DbMedia {
     id: Uuid,
     filename: String,
     alt: Option<String>,
+    user_id: Uuid,
 }
 
 #[derive(Debug, Deserialize)]
@@ -181,7 +182,7 @@ impl From<MediaTrack> for DbMediaTrack {
 }
 
 impl DbMedia {
-    pub fn upgrade(self, tracks: Vec<DbMediaTrack>) -> Media {
+    pub fn upgrade(self, tracks: Vec<DbMediaTrack>) -> (Media, UserId) {
         let mut source = None;
         let mut t2 = vec![];
         for track in tracks {
@@ -198,13 +199,14 @@ impl DbMedia {
                 t2.push(t)
             }
         }
-        Media {
+        let media = Media {
             id: self.id.into(),
             filename: self.filename,
             alt: self.alt,
             source: source.expect("missing source"),
             tracks: t2,
-        }
+        };
+        (media, self.user_id.into())
     }
 }
 
@@ -257,11 +259,11 @@ impl DataMedia for Postgres {
         Ok(())
     }
 
-    async fn media_select(&self, media_id: MediaId) -> Result<Media> {
+    async fn media_select(&self, media_id: MediaId) -> Result<(Media, UserId)> {
         let media = query_as!(
             DbMedia,
             "
-    	    SELECT id, filename, alt
+    	    SELECT id, filename, alt, user_id
     	    FROM media
     	    WHERE id = $1
         ",
@@ -284,6 +286,35 @@ impl DataMedia for Postgres {
         .fetch_all(&self.pool)
         .await?;
         Ok(media.upgrade(tracks))
+    }
+
+    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        let media = query_as!(
+            DbMedia,
+            "
+    	    SELECT id, filename, alt, user_id
+    	    FROM media
+    	    WHERE id = $1
+    	    FOR UPDATE
+        ",
+            media_id.into_inner(),
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        query!(
+            r#"
+    	    UPDATE media SET
+        	    alt = $2
+    	    WHERE id = $1
+        "#,
+            media_id.into_inner(),
+            patch.alt.unwrap_or(media.alt),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     async fn media_link_insert(

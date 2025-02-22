@@ -98,7 +98,7 @@ pub async fn user_update(
             return Err(Error::BadStatic("cant reuse media"));
         }
 
-        let media = data.media_select(avatar_media_id).await?;
+        let (media, _) = data.media_select(avatar_media_id).await?;
         if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
             return Err(Error::BadStatic(
                 "couldn't link media as avatar: not an image",

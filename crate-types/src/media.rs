@@ -14,8 +14,8 @@ use crate::{util::Diff, MediaId};
 mod mime;
 mod track;
 
-pub use track::*;
 pub use mime::Mime;
+pub use track::*;
 
 /// A distinct logical item of media.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,6 +124,21 @@ pub struct MediaCreated {
 
     /// A url to download your media to
     pub upload_url: Option<Url>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaPatch {
+    /// Descriptive alt text, not entirely unlike a caption
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub alt: Option<Option<String>>,
+    // TODO: editing filename
+    // /// The original filename
+    // #[cfg_attr(feature = "utoipa", schema(required = false, min_length = 1, max_length = 256))]
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    // pub filename: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

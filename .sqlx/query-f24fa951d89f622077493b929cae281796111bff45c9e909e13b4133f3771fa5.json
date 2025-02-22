@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    UPDATE media SET\n        \t    alt = $2\n    \t    WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f24fa951d89f622077493b929cae281796111bff45c9e909e13b4133f3771fa5"
+}
