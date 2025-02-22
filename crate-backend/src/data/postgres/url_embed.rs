@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use sqlx::query;
+use tracing::debug;
 use types::{UrlEmbed, UserId};
 use url::Url;
 use uuid::Uuid;
@@ -51,6 +52,7 @@ impl DataUrlEmbed for Postgres {
         )
         .execute(&self.pool)
         .await?;
+        debug!("inserted embed");
         Ok(())
     }
 
@@ -83,7 +85,7 @@ impl DataUrlEmbed for Postgres {
         .fetch_optional(&self.pool)
         .await?;
         let embed = row.map(|r| UrlEmbed {
-            url,
+            url: url.clone(),
             canonical_url: r
                 .canonical_url
                 .map(|i| i.parse().expect("invalid data in db")),
@@ -104,6 +106,11 @@ impl DataUrlEmbed for Postgres {
                 .site_avatar
                 .map(|m| serde_json::from_value(m).expect("invalid data in db")),
         });
+        if embed.is_some() {
+            debug!("found embed url={url}");
+        } else {
+            debug!("found no embed url={url}");
+        }
         Ok(embed)
     }
 }

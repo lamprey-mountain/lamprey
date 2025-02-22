@@ -323,11 +323,24 @@ impl ServiceMedia {
             _ => {}
         }
 
-        self.import_from_response(user_id, media_id, json, res, max_size)
+        self.import_from_response_inner(user_id, media_id, json, res, max_size)
             .await
     }
 
     pub async fn import_from_response(
+        &self,
+        user_id: UserId,
+        json: MediaCreate,
+        res: reqwest::Response,
+        max_size: u64,
+    ) -> Result<Media> {
+        let media_id = MediaId::new();
+        self.create_upload(media_id, user_id, json.clone()).await?;
+        self.import_from_response_inner(user_id, media_id, json, res, max_size)
+            .await
+    }
+
+    pub async fn import_from_response_inner(
         &self,
         user_id: UserId,
         media_id: MediaId,

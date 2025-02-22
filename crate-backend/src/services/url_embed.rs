@@ -1,12 +1,13 @@
 use std::io::Write;
+use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
-use mediatype::MediaType;
+use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::Deserialize;
-use tracing::info;
+use tracing::{debug, info};
 use types::UrlEmbed;
-use types::{MediaId, UserId};
+use types::UserId;
 use url::Url;
 use webpage::HTML;
 
@@ -88,14 +89,6 @@ impl ServiceUrlEmbed {
     }
 
     pub async fn generate(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
-        if let Some(embed) = self
-            .state
-            .data()
-            .url_embed_find(url.clone(), MAX_EMBED_AGE)
-            .await?
-        {
-            return Ok(embed);
-        }
         let embed = self
             .cache
             .try_get_with_by_ref(&url, self.generate_and_insert(user_id, url.clone()))
@@ -105,6 +98,14 @@ impl ServiceUrlEmbed {
     }
 
     async fn generate_and_insert(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+        if let Some(embed) = self
+            .state
+            .data()
+            .url_embed_find(url.clone(), MAX_EMBED_AGE)
+            .await?
+        {
+            return Ok(embed);
+        }
         let embed = self.generate_inner(user_id, url).await?;
         self.state
             .data()
@@ -129,11 +130,15 @@ impl ServiceUrlEmbed {
             .await?
             .error_for_status()?;
         let content_length = fetched.content_length();
-        let content_type = fetched.headers().get("content-type");
+        let content_type = fetched
+            .headers()
+            .get("content-type")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|s| MediaTypeBuf::from_str(s).ok());
         // TODO: try to parse name from Content-Disposition
-        let media_id = MediaId::new();
         let srv = self.state.services();
-        if content_type.is_some_and(|c| c == "a") {
+        if content_type.is_some_and(is_media) {
+            debug!("got media");
             let canonical_url = fetched.url().to_owned();
             let filename = url
                 .path_segments()
@@ -144,7 +149,6 @@ impl ServiceUrlEmbed {
                 .media
                 .import_from_response(
                     user_id,
-                    media_id,
                     types::MediaCreate {
                         alt: None,
                         source: types::MediaCreateSource::Download {
@@ -157,6 +161,7 @@ impl ServiceUrlEmbed {
                     MAX_SIZE_ATTACHMENT,
                 )
                 .await?;
+            debug!("url embed inserted media");
             let mut embed = UrlEmbed {
                 url: url.clone(),
                 canonical_url: if url == canonical_url {
@@ -180,6 +185,8 @@ impl ServiceUrlEmbed {
             }
             Ok(dbg!(embed))
         } else {
+            debug!("got html");
+
             if content_length.is_some_and(|c| c > MAX_SIZE_HTML) {
                 return Err(Error::TooBig);
             }
@@ -358,4 +365,8 @@ fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
     }
 
     None
+}
+
+fn is_media(m: MediaTypeBuf) -> bool {
+    m.ty().as_str() != "text"
 }
