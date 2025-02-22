@@ -877,6 +877,7 @@ export interface components {
 			attachments: components["schemas"]["Media"][];
 			author: components["schemas"]["User"];
 			content?: string | null;
+			embeds: components["schemas"]["UrlEmbed"][];
 			id: components["schemas"]["MessageId"];
 			is_pinned: boolean;
 			metadata?: unknown;
@@ -1044,6 +1045,7 @@ export interface components {
 				attachments: components["schemas"]["Media"][];
 				author: components["schemas"]["User"];
 				content?: string | null;
+				embeds: components["schemas"]["UrlEmbed"][];
 				id: components["schemas"]["MessageId"];
 				is_pinned: boolean;
 				metadata?: unknown;
@@ -1390,6 +1392,7 @@ export interface components {
 			canonical_url?: string | null;
 			color?: string | null;
 			description?: string | null;
+			id: components["schemas"]["UrlEmbedId"];
 			media?: null | components["schemas"]["Media"];
 			/** @description if `media` should be displayed as a small thumbnail or as a full size */
 			media_is_thumbnail: boolean;
@@ -1402,6 +1405,8 @@ export interface components {
 			 */
 			url: string;
 		};
+		/** Format: uuid */
+		UrlEmbedId: string;
 		UrlEmbedRequest: {
 			/** Format: uri */
 			url: string;
