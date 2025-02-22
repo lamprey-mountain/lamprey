@@ -49,6 +49,8 @@ enum OpenGraphType {
     Profile,
     #[serde(rename = "website")]
     Website,
+    #[serde(rename = "object")]
+    Object,
     #[serde(other)]
     Other,
 }
@@ -67,7 +69,8 @@ impl OpenGraphType {
             OpenGraphType::Book => true,
             OpenGraphType::Profile => true,
             OpenGraphType::Website => true,
-            OpenGraphType::Other => true,
+            OpenGraphType::Object => false,
+            OpenGraphType::Other => false,
         }
     }
 }
