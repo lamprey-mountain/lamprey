@@ -5,6 +5,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::ServerState;
 
 mod auth;
+mod debug;
 mod invite;
 mod media;
 mod message;
@@ -18,7 +19,6 @@ mod thread;
 mod thread_member;
 mod user;
 mod util;
-mod debug;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()

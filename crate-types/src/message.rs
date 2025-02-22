@@ -35,7 +35,7 @@ pub struct Message {
     pub metadata: Option<serde_json::Value>,
 
     pub reply_id: Option<MessageId>,
-    
+
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<UrlEmbed>,
@@ -60,7 +60,10 @@ pub struct MessageCreateRequest {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, min_length = 0, max_length = 32))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 0, max_length = 32)
+    )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     #[serde(default)]
     pub attachments: Vec<MediaRef>,
@@ -81,7 +84,10 @@ pub struct MessagePatch {
     #[serde(default, deserialize_with = "some_option")]
     pub content: Option<Option<String>>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, min_length = 0, max_length = 32))]
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 0, max_length = 32)
+    )]
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     pub attachments: Option<Vec<MediaRef>>,
 

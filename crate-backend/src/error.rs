@@ -77,9 +77,12 @@ pub enum Error {
 
     #[error("unknown image format")]
     UnknownImageFormat,
-    
-    #[error("url embed error: {0}")]
+
+    #[error("url embed io error: {0}")]
     UrlEmbed(std::io::Error),
+
+    #[error("url embed error: {0}")]
+    UrlEmbedOther(String),
 
     #[error("validation error: {0}")]
     Validation(#[from] validator::ValidationErrors),

@@ -2,20 +2,22 @@ use std::io::Write;
 use std::{sync::Arc, time::Duration};
 
 use mediatype::MediaType;
+use moka::future::Cache;
 use serde::Deserialize;
 use tracing::info;
-use types::{MediaId, UserId};
 use types::UrlEmbed;
+use types::{MediaId, UserId};
 use url::Url;
 use uuid::Uuid;
 use webpage::HTML;
 
 use crate::error::Error;
-use crate::ServerStateInner;
 use crate::Result;
+use crate::ServerStateInner;
 
 pub struct ServiceUrlEmbed {
     state: Arc<ServerStateInner>,
+    cache: Cache<Url, UrlEmbed>,
 }
 
 // https://ogp.me/#types
@@ -73,16 +75,46 @@ const USER_AGENT: &str = "StupidTestBot (no url yet)";
 
 const MAX_SIZE_HTML: u64 = 1024 * 1024 * 1;
 const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
+const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
 
 impl ServiceUrlEmbed {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            // uploads: DashMap::new(),
+            cache: Cache::builder()
+                .max_capacity(1000)
+                .time_to_live(MAX_EMBED_AGE)
+                .build(),
         }
     }
 
     pub async fn generate(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+        if let Some(embed) = self
+            .state
+            .data()
+            .url_embed_find(url.clone(), MAX_EMBED_AGE)
+            .await?
+        {
+            return Ok(embed);
+        }
+        let embed = self
+            .cache
+            .try_get_with_by_ref(&url, self.generate_and_insert(user_id, url.clone()))
+            .await
+            .map_err(|err| Error::UrlEmbedOther(err.to_string()))?;
+        Ok(embed)
+    }
+
+    async fn generate_and_insert(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+        let embed = self.generate_inner(user_id, url).await?;
+        self.state
+            .data()
+            .url_embed_insert(user_id, embed.clone())
+            .await?;
+        Ok(embed)
+    }
+
+    async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
         info!("generating url embed user_id={user_id} url={}", url);
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(15))
@@ -104,8 +136,7 @@ impl ServiceUrlEmbed {
         let srv = self.state.services();
         if content_type.is_some_and(|c| c == "a") {
             let canonical_url = fetched.url().to_owned();
-            let filename = 
-                url
+            let filename = url
                 .path_segments()
                 .and_then(|p| p.last())
                 .map(|s| s.to_owned())
