@@ -2,11 +2,17 @@ import { createSignal } from "solid-js";
 import { useCtx } from "../context.ts";
 import { getThumb, getUrl, MediaProps, Resize } from "./util.tsx";
 
-export const ImageView = (props: MediaProps) => {
+type ImageViewProps = MediaProps & {
+	thumb_width?: number;
+	thumb_height?: number;
+};
+
+export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
 
 	const [loaded, setLoaded] = createSignal(false);
-	const thumb = () => getThumb(props.media, 300, 300)!;
+	const thumb = () =>
+		getThumb(props.media, props.thumb_width ?? 300, props.thumb_height ?? 300)!;
 	const url = () => getUrl(thumb());
 	const width = () => thumb().width;
 	const height = () => thumb().height;

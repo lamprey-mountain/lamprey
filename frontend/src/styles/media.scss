@@ -10,8 +10,8 @@
 
 .resize {
 	contain: content;
-	max-height: min(var(--height), 300px, round(50vh, 1px));
-	max-width: min(var(--width), 300px, round(50vw, 1px));
+	max-height: min(var(--height), 320px, round(50vh, 1px));
+	max-width: min(var(--width), 320px, round(50vw, 1px));
 	aspect-ratio: var(--aspect-ratio);
 }
 
@@ -27,6 +27,7 @@
 	width: var(--width);
 	object-fit: contain;
 	overflow: hidden;
+	cursor: pointer;
 }
 
 .video {

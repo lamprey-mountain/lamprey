@@ -484,7 +484,7 @@ menu {
 	}
 }
 
-input[type="text"] {
+input[type="text"], input[type="url"] {
 	background-color: $bg-300;
 	border: solid 1px $sep-500;
 }
@@ -1024,6 +1024,7 @@ button[disabled] {
 
 .debug {
 	padding: 16px;
+	overflow: auto;
 
 	& > details {
 		border: solid $sep-500 1px;
@@ -1056,5 +1057,47 @@ button[disabled] {
 			resize: both;
 			overflow: hidden;
 		}
+	}
+}
+
+.embed {
+	display: inline-grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-rows: auto auto auto;
+	grid-template-areas: "thumb info" "thumb info" ". media";
+	/* width: 20em; */
+	background: $bg-150;
+	border: solid $sep-500 1px;
+
+	& > .thumb {
+		grid-area: thumb;
+		width: 64px;
+	}
+
+	& > .info {
+		grid-area: info;
+		padding: 8px;
+		max-width: 320px;
+
+		& > .title {
+			font-weight: bold;
+		}
+
+		& > .site {
+			color: $fg-500;
+		}
+
+		& > .description {
+			/* yeah i have no idea what the fuck the css spec is doing either */
+			display: -webkit-box;
+			-webkit-line-clamp: 3;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+		}
+	}
+
+	& > .media {
+		grid-area: media;
+		background: #f001;
 	}
 }
