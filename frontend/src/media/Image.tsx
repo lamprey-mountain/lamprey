@@ -12,7 +12,7 @@ export const ImageView = (props: ImageViewProps) => {
 
 	const [loaded, setLoaded] = createSignal(false);
 	const thumb = () =>
-		getThumb(props.media, props.thumb_width ?? 300, props.thumb_height ?? 300)!;
+		getThumb(props.media, props.thumb_width ?? 320, props.thumb_height ?? 320)!;
 	const url = () => getUrl(thumb());
 	const width = () => thumb().width;
 	const height = () => thumb().height;

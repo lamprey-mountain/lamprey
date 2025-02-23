@@ -10,9 +10,8 @@ export function formatTime(time: number): string {
 	const minutes = Math.floor(t / 60) % 60;
 	const hours = Math.floor(t / 3600);
 	if (hours) {
-		return `${hours}:${minutes.toString().padStart(2, "0")}:${
-			seconds.toString().padStart(2, "0")
-		}`;
+		return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")
+			}`;
 	} else {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	}
@@ -61,7 +60,7 @@ export const getUrl = (t: MediaTrack) => {
  * get the smallest image bigger than w by h
  * expects Media to be an Image
  */
-export const getThumb = (t: Media, w: number, h: number) => {
+export const getThumb_ = (t: Media, w: number, h: number) => {
 	const ts = [t.source, ...t.tracks]
 		.filter((i) => i.type === "Thumbnail" || i.type === "Image")
 		.sort((a, b) => {
@@ -78,6 +77,18 @@ export const getThumb = (t: Media, w: number, h: number) => {
 			return b.width - a.width;
 		});
 	return ts.at(-1) ??
+		t.source as MediaTrack & ({ type: "Image" | "Thumbnail" });
+};
+
+/**
+ * get the largest image that fits in a w by h rect
+ * expects Media to be an Image
+ */
+export const getThumb = (t: Media, w: number, h: number) => {
+	const ts = [t.source, ...t.tracks]
+		.filter((t) => t.type === "Thumbnail" || t.type === "Image")
+		.sort((a, b) => b.width - a.width);
+	return ts.find(t => t.width <= w && t.height <= h) ??
 		t.source as MediaTrack & ({ type: "Image" | "Thumbnail" });
 };
 
