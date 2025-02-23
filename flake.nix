@@ -25,6 +25,9 @@
             inherit cargoArtifacts;
             pname = name;
             cargoExtraArgs = "-p ${name}";
+            env = {
+              VERGEN_GIT_SHA = self.rev;
+            };
           });
 
         backend = mkCrate "backend";

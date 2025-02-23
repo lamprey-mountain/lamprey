@@ -14,14 +14,12 @@ use crate::error::Result;
 
 #[derive(Serialize, ToSchema)]
 struct ServerVersion {
-    cargo_debug: bool,
-    cargo_target: &'static str,
-    git_sha: &'static str,
-    git_describe: &'static str,
-    git_branch: &'static str,
+    debug: bool,
+    target: &'static str,
+    rev: &'static str,
     rustc_semver: &'static str,
     rustc_llvm: &'static str,
-    rustc_sha: &'static str,
+    rustc_rev: &'static str,
     rustc_channel: &'static str,
 }
 
@@ -36,14 +34,12 @@ struct ServerVersion {
 )]
 pub async fn debug_version() -> Result<impl IntoResponse> {
     Ok(Json(ServerVersion {
-        cargo_debug: env!("VERGEN_CARGO_DEBUG") == "true",
-        cargo_target: env!("VERGEN_CARGO_TARGET_TRIPLE"),
-        git_sha: env!("VERGEN_GIT_SHA"),
-        git_describe: env!("VERGEN_GIT_DESCRIBE"),
-        git_branch: env!("VERGEN_GIT_BRANCH"),
+        debug: env!("VERGEN_CARGO_DEBUG") == "true",
+        target: env!("VERGEN_CARGO_TARGET_TRIPLE"),
+        rev: env!("VERGEN_GIT_SHA"),
         rustc_semver: env!("VERGEN_RUSTC_SEMVER"),
         rustc_llvm: env!("VERGEN_RUSTC_LLVM_VERSION"),
-        rustc_sha: env!("VERGEN_RUSTC_COMMIT_HASH"),
+        rustc_rev: env!("VERGEN_RUSTC_COMMIT_HASH"),
         rustc_channel: env!("VERGEN_RUSTC_CHANNEL"),
     }))
 }
