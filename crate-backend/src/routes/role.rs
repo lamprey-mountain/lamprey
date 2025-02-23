@@ -239,7 +239,10 @@ pub async fn role_member_add(
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),
     };
-    s.services().perms.invalidate_room(target_user_id, room_id);
+    s.services()
+        .perms
+        .invalidate_room(target_user_id, room_id)
+        .await;
     s.broadcast_room(room_id, auth_user_id, None, msg).await?;
     Ok(Json(member))
 }
@@ -275,7 +278,10 @@ pub async fn role_member_remove(
     let msg = MessageSync::UpsertRoomMember {
         member: member.clone(),
     };
-    s.services().perms.invalidate_room(target_user_id, room_id);
+    s.services()
+        .perms
+        .invalidate_room(target_user_id, room_id)
+        .await;
     s.broadcast_room(room_id, auth_user_id, None, msg).await?;
     Ok(Json(member))
 }

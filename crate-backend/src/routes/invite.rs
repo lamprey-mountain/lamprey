@@ -177,7 +177,7 @@ pub async fn invite_use(
             .await?;
             d.role_apply_default(room.id, user_id).await?;
             let member = d.room_member_get(room.id, user_id).await?;
-            s.services().perms.invalidate_room(user_id, room.id);
+            s.services().perms.invalidate_room(user_id, room.id).await;
             s.broadcast_room(
                 room.id,
                 user_id,

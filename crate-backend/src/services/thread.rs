@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use dashmap::DashMap;
+use moka::future::Cache;
 use serde_json::json;
 use types::util::Diff;
 use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId};
@@ -14,34 +14,40 @@ pub struct ServiceThreads {
 
     // NOTE: i need to store a custom thread per user because threads might have user-specific data (unreads)
     // TODO: don't do this
-    cache_thread: Arc<DashMap<(ThreadId, Option<UserId>), Thread>>,
+    cache_thread: Cache<(ThreadId, Option<UserId>), Thread>,
 }
 
 impl ServiceThreads {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            cache_thread: Arc::new(DashMap::new()),
+            cache_thread: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
         }
     }
 
     pub async fn get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
-        if let Some(thread) = self.cache_thread.get(&(thread_id, user_id)) {
-            return Ok(thread.to_owned());
-        }
-
-        let thread = self.state.data().thread_get(thread_id, user_id).await?;
         self.cache_thread
-            .insert((thread_id, user_id), thread.clone());
-        Ok(thread)
+            .try_get_with(
+                (thread_id, user_id),
+                self.state.data().thread_get(thread_id, user_id),
+            )
+            .await
+            .map_err(|err| err.fake_clone())
     }
 
     pub fn invalidate(&self, thread_id: ThreadId) {
-        self.cache_thread.retain(|(t, _), _| *t != thread_id);
+        self.cache_thread
+            .invalidate_entries_if(move |(t, _), _| *t == thread_id)
+            .expect("failed to invalidate");
     }
 
-    pub fn invalidate_user(&self, thread_id: ThreadId, user_id: UserId) {
-        self.cache_thread.remove(&(thread_id, Some(user_id)));
+    pub async fn invalidate_user(&self, thread_id: ThreadId, user_id: UserId) {
+        self.cache_thread
+            .invalidate(&(thread_id, Some(user_id)))
+            .await
     }
 
     pub async fn update(
@@ -79,7 +85,7 @@ impl ServiceThreads {
         // update and refetch
         data.thread_update(thread_id, user_id, patch.clone())
             .await?;
-        self.cache_thread.retain(|(t, _), _| *t != thread_id);
+        self.invalidate(thread_id);
         let thread = self.get(thread_id, Some(user_id)).await?;
 
         // send update message to thread

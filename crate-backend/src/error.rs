@@ -86,6 +86,9 @@ pub enum Error {
 
     #[error("validation error: {0}")]
     Validation(#[from] validator::ValidationErrors),
+
+    #[error("generic error: {0}")]
+    GenericError(String),
 }
 
 impl From<sqlx::Error> for Error {
@@ -122,6 +125,33 @@ impl Error {
             Error::NotModified => StatusCode::NOT_MODIFIED,
             Error::Validation(_) => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    pub fn fake_clone(&self) -> Error {
+        match self {
+            Error::MissingAuth => Error::MissingAuth,
+            Error::BadHeader => Error::BadHeader,
+            Error::UnauthSession => Error::UnauthSession,
+            Error::NotFound => Error::NotFound,
+            Error::MissingPermissions => Error::MissingPermissions,
+            Error::BadStatic(s) => Error::BadStatic(s),
+            Error::BadRequest(s) => Error::BadRequest(s.clone()),
+            Error::TooBig => Error::TooBig,
+            Error::Internal(s) => Error::Internal(s.clone()),
+            Error::CantOverwrite => Error::CantOverwrite,
+            Error::ParseInt(parse_int_error) => Error::ParseInt(parse_int_error.clone()),
+            Error::ParseFloat(parse_float_error) => Error::ParseFloat(parse_float_error.clone()),
+            Error::Figment(error) => Error::Figment(error.clone()),
+            Error::UrlParseError(parse_error) => Error::UrlParseError(*parse_error),
+            Error::NotModified => Error::NotModified,
+            Error::Ffmpeg => Error::Ffmpeg,
+            Error::Media(media_type_error) => Error::Media(*media_type_error),
+            Error::Unimplemented => Error::Unimplemented,
+            Error::UnknownImageFormat => Error::UnknownImageFormat,
+            Error::UrlEmbedOther(s) => Error::UrlEmbedOther(s.to_string()),
+            Error::Validation(validation_errors) => Error::Validation(validation_errors.clone()),
+            _ => Error::GenericError(self.to_string()),
         }
     }
 }

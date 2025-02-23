@@ -165,7 +165,10 @@ pub async fn room_member_delete(
     }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
         .await?;
-    s.services().perms.invalidate_room(target_user_id, room_id);
+    s.services()
+        .perms
+        .invalidate_room(target_user_id, room_id)
+        .await;
     let res = d.room_member_get(room_id, target_user_id).await?;
     s.broadcast_room(
         room_id,

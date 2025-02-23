@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use dashmap::DashMap;
+use moka::future::Cache;
 use types::util::Diff;
 use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
@@ -10,25 +10,25 @@ use crate::ServerStateInner;
 
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
-    cache_room: Arc<DashMap<RoomId, Room>>,
+    cache_room: Cache<RoomId, Room>,
 }
 
 impl ServiceRooms {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            cache_room: Arc::new(DashMap::new()),
+            cache_room: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
         }
     }
 
     pub async fn get(&self, room_id: RoomId, _user_id: Option<UserId>) -> Result<Room> {
-        if let Some(room) = self.cache_room.get(&room_id) {
-            return Ok(room.to_owned());
-        }
-
-        let room = self.state.data().room_get(room_id).await?;
-        self.cache_room.insert(room_id, room.clone());
-        Ok(room)
+        self.cache_room
+            .try_get_with(room_id, self.state.data().room_get(room_id))
+            .await
+            .map_err(|err| err.fake_clone())
     }
 
     pub async fn update(&self, room_id: RoomId, user_id: UserId, patch: RoomPatch) -> Result<Room> {
@@ -39,7 +39,10 @@ impl ServiceRooms {
         }
 
         data.room_update(room_id, patch).await?;
-        self.cache_room.remove(&room_id);
+        self.cache_room
+            .remove(&room_id)
+            .await
+            .expect("failed to invalidate");
         self.get(room_id, Some(user_id)).await
     }
 
