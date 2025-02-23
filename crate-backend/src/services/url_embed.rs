@@ -5,7 +5,7 @@ use std::{sync::Arc, time::Duration};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, error};
 use types::UserId;
 use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
@@ -93,7 +93,10 @@ impl ServiceUrlEmbed {
             .cache
             .try_get_with_by_ref(&url, self.generate_and_insert(user_id, url.clone()))
             .await
-            .map_err(|err| Error::UrlEmbedOther(err.to_string()))?;
+            .map_err(|err| {
+                error!("{err}");
+                Error::UrlEmbedOther(err.to_string())
+            })?;
         Ok(embed)
     }
 
@@ -241,7 +244,7 @@ impl ServiceUrlEmbed {
             }
 
             let media_type = match parsed.meta.get("twitter:card").map(|s| s.as_str()) {
-                Some("summary_large_image") => MediaInstructions::Full,
+                Some("summary_large_image" | "player") => MediaInstructions::Full,
                 Some(_) => MediaInstructions::Thumb,
                 None => {
                     let robots_instructions: Vec<&str> = parsed
@@ -319,6 +322,7 @@ impl ServiceUrlEmbed {
     }
 }
 
+#[derive(Debug)]
 struct ParsedMedia {
     url: Url,
     alt: Option<String>,
@@ -328,7 +332,7 @@ fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
     for vid in &parsed.opengraph.videos {
         let c: Option<MediaType> = vid
             .properties
-            .get("content-type")
+            .get("type")
             .and_then(|s| MediaType::parse(s).ok());
         if c.is_none_or(|c| c.ty == "video") {
             return Some(ParsedMedia {
@@ -341,7 +345,7 @@ fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
     for img in &parsed.opengraph.images {
         let c: Option<MediaType> = img
             .properties
-            .get("content-type")
+            .get("type")
             .and_then(|s| MediaType::parse(s).ok());
         if c.is_none_or(|c| c.ty == "image") {
             return Some(ParsedMedia {
@@ -354,7 +358,7 @@ fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
     for aud in &parsed.opengraph.audios {
         let c: Option<MediaType> = aud
             .properties
-            .get("content-type")
+            .get("type")
             .and_then(|s| MediaType::parse(s).ok());
         if c.is_none_or(|c| c.ty == "audio") {
             return Some(ParsedMedia {
