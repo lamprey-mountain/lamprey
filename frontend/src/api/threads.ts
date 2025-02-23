@@ -128,7 +128,11 @@ export class Threads {
 		return resource;
 	}
 
-	async ack(thread_id: string, message_id: string | undefined, version_id: string) {
+	async ack(
+		thread_id: string,
+		message_id: string | undefined,
+		version_id: string,
+	) {
 		await this.api.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
 			params: { path: { thread_id } },
 			body: { message_id, version_id },

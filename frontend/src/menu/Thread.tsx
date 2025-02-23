@@ -19,7 +19,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 			do: "thread.mark_read",
 			thread_id: props.thread_id,
 			also_local: true,
-			version_id
+			version_id,
 		});
 	};
 

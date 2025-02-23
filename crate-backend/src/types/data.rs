@@ -1,6 +1,8 @@
 use serde::Deserialize;
 use types::{
-    MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId
+    MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
+    RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId,
+    ThreadInfo, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
 };
 use uuid::Uuid;
 

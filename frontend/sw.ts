@@ -47,53 +47,55 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-	e.respondWith((async () => {
-		// const client = await self.clients.get(e.clientId);
-		// client?.postMessage("hi!! helloo!!!!");
+	e.respondWith(
+		(async () => {
+			// const client = await self.clients.get(e.clientId);
+			// client?.postMessage("hi!! helloo!!!!");
 
-		const req = e.request;
-		const cached = await caches.match(req);
-		if (cached) return cached;
-
-		const url = new URL(e.request.url);
-		if (req.method === "GET" && url.pathname === "/_media") {
-			const target = url.searchParams.get("url");
-			if (!target) return makeError("missing url");
-
-			const cached = await caches.match(target, { ignoreSearch: true });
+			const req = e.request;
+			const cached = await caches.match(req);
 			if (cached) return cached;
 
-			const res = await fetch(target, { mode: "cors" });
-			if (res.status === 206) return res; // range requests are a bit h right now
-			if (res.ok) {
+			const url = new URL(e.request.url);
+			if (req.method === "GET" && url.pathname === "/_media") {
+				const target = url.searchParams.get("url");
+				if (!target) return makeError("missing url");
+
+				const cached = await caches.match(target, { ignoreSearch: true });
+				if (cached) return cached;
+
+				const res = await fetch(target, { mode: "cors" });
+				if (res.status === 206) return res; // range requests are a bit h right now
+				if (res.ok) {
+					const res2 = res.clone();
+					e.waitUntil((async () => {
+						const cache = await caches.open("v2.media");
+						cache.put(target, res2);
+					})());
+				} else {
+					console.error(res);
+				}
+
+				return res;
+			}
+
+			const preload = await e.preloadResponse;
+			if (preload) return preload;
+
+			const res = await fetch(req);
+
+			if (res.ok && shouldCache(req)) {
 				const res2 = res.clone();
 				e.waitUntil((async () => {
-					const cache = await caches.open("v2.media");
-					cache.put(target, res2);
+					const cache = await caches.open("v1.assets");
+					await cache.put(req, res2);
 				})());
-			} else {
-				console.error(res);
 			}
 
 			return res;
-		}
-
-		const preload = await e.preloadResponse;
-		if (preload) return preload;
-
-		const res = await fetch(req);
-
-		if (res.ok && shouldCache(req)) {
-			const res2 = res.clone();
-			e.waitUntil((async () => {
-				const cache = await caches.open("v1.assets");
-				await cache.put(req, res2);
-			})());
-		}
-
-		return res;
-	})().catch(err => {
-		console.error(err);
-		return makeError("network error", 408);
-	}));
+		})().catch((err) => {
+			console.error(err);
+			return makeError("network error", 408);
+		}),
+	);
 });

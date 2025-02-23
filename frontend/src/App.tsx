@@ -180,15 +180,16 @@ export const Root: Component = (props: ParentProps) => {
 					limit: SLICE_LEN,
 				});
 
-				const version_id = api.messages.cacheRanges.get(thread.id)?.live.end ?? thread.last_version_id;
+				const version_id = api.messages.cacheRanges.get(thread.id)?.live.end ??
+					thread.last_version_id;
 				ctx.dispatch({
 					do: "thread.mark_read",
 					thread_id: thread_id,
 					delay: false,
 					also_local: true,
-					version_id
+					version_id,
 				});
-				
+
 				// HACK: i need to make the update order less jank
 				setTimeout(() => {
 					const listEl = document.querySelector(".chat > .list") as HTMLElement;
@@ -220,11 +221,11 @@ export const Root: Component = (props: ParentProps) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
 			return target
 				?.dataset[
-				key.slice("data-".length).replace(
-					/-([a-z])/g,
-					(_, c) => c.toUpperCase(),
-				)
-			];
+					key.slice("data-".length).replace(
+						/-([a-z])/g,
+						(_, c) => c.toUpperCase(),
+					)
+				];
 		};
 
 		let menu: Partial<Menu> | null = null;

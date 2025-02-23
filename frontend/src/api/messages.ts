@@ -274,11 +274,15 @@ export class Messages {
 						);
 						console.log("messages done fetching context");
 						batch(() => {
-							const range = this.mergeAfter(ranges, new MessageRange(false, false, []), {
-								items: data.items,
-								has_more: data.has_before,
-								total: data.total,
-							});
+							const range = this.mergeAfter(
+								ranges,
+								new MessageRange(false, false, []),
+								{
+									items: data.items,
+									has_more: data.has_before,
+									total: data.total,
+								},
+							);
 							// TODO: unify these names
 							range.has_backwards = data.has_before;
 							range.has_forward = data.has_after;

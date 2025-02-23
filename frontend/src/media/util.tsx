@@ -10,8 +10,9 @@ export function formatTime(time: number): string {
 	const minutes = Math.floor(t / 60) % 60;
 	const hours = Math.floor(t / 3600);
 	if (hours) {
-		return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")
-			}`;
+		return `${hours}:${minutes.toString().padStart(2, "0")}:${
+			seconds.toString().padStart(2, "0")
+		}`;
 	} else {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	}
@@ -88,7 +89,7 @@ export const getThumb = (t: Media, w: number, h: number) => {
 	const ts = [t.source, ...t.tracks]
 		.filter((t) => t.type === "Thumbnail" || t.type === "Image")
 		.sort((a, b) => b.width - a.width);
-	return ts.find(t => t.width <= w && t.height <= h) ??
+	return ts.find((t) => t.width <= w && t.height <= h) ??
 		t.source as MediaTrack & ({ type: "Image" | "Thumbnail" });
 };
 

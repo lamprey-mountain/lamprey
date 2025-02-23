@@ -265,8 +265,9 @@ export function createApi(
 				}
 				const t = api.threads.cache.get(msg.thread_id);
 				if (t) {
-					const last_version_id = ranges?.live.items.at(-1)?.version_id ?? t.last_version_id;
-					console.log({last_version_id })
+					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
+						t.last_version_id;
+					console.log({ last_version_id });
 					api.threads.cache.set(msg.thread_id, {
 						...t,
 						message_count: t.message_count - 1,
@@ -462,7 +463,11 @@ export type Api = {
 		fetch: (thread_id: () => string) => Resource<Thread>;
 		list: (room_id: () => string) => Resource<Pagination<Thread>>;
 		cache: ReactiveMap<string, Thread>;
-		ack: (thread_id: string, message_id: string | undefined, version_id: string) => Promise<void>;
+		ack: (
+			thread_id: string,
+			message_id: string | undefined,
+			version_id: string,
+		) => Promise<void>;
 	};
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;
