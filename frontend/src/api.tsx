@@ -258,15 +258,20 @@ export function createApi(
 					if (idx !== -1) {
 						r.items.splice(idx, 1);
 					}
-					messages.cache.delete(thread_id);
-					messages._updateMutators(ranges, thread_id);
+					batch(() => {
+						messages.cache.delete(thread_id);
+						messages._updateMutators(ranges, thread_id);
+					});
 				}
 				const t = api.threads.cache.get(msg.thread_id);
 				if (t) {
+					const last_version_id = ranges?.live.items.at(-1)?.version_id ?? t.last_version_id;
+					console.log({last_version_id })
 					api.threads.cache.set(msg.thread_id, {
 						...t,
 						message_count: t.message_count - 1,
-						last_version_id: ranges?.live.end ?? t.last_version_id,
+						last_version_id,
+						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
 					});
 				}
 			});
