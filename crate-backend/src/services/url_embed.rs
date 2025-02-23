@@ -181,9 +181,7 @@ impl ServiceUrlEmbed {
                 site_name: None,
                 site_avatar: None,
             };
-            if let Some(m) = &mut embed.media {
-                self.state.presign(m).await?;
-            }
+            self.state.presign_url_embed(&mut embed).await?;
             embed
         } else {
             debug!("got html");
@@ -313,9 +311,7 @@ impl ServiceUrlEmbed {
                 // TODO: fetch favicon
                 site_avatar: None,
             };
-            if let Some(m) = &mut embed.media {
-                self.state.presign(m).await?;
-            }
+            self.state.presign_url_embed(&mut embed).await?;
             embed
         };
         debug!("done! {:?}", embed);

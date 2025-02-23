@@ -1,11 +1,12 @@
 use std::{
     collections::HashMap,
+    ops::Deref,
     str::FromStr,
     sync::{Arc, Weak},
     time::Duration,
 };
 
-use ::types::{Media, Message, RoomId, ThreadId, UserId};
+use ::types::{Media, Message, RoomId, ThreadId, UrlEmbed, UserId};
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
@@ -183,6 +184,31 @@ impl ServerStateInner {
         }
         Ok(())
     }
+
+    /// presigns every relevant url in a UrlEmbed
+    async fn presign_url_embed(&self, embed: &mut UrlEmbed) -> Result<()> {
+        if let Some(m) = &mut embed.media {
+            self.presign(m).await?;
+        }
+        if let Some(m) = &mut embed.author_avatar {
+            self.presign(m).await?;
+        }
+        if let Some(m) = &mut embed.site_avatar {
+            self.presign(m).await?;
+        }
+        Ok(())
+    }
+
+    /// presigns every relevant url in a Message
+    async fn presign_message(&self, message: &mut Message) -> Result<()> {
+        for media in &mut message.attachments {
+            self.presign(media).await?;
+        }
+        for emb in &mut message.embeds {
+            self.presign_url_embed(emb).await?;
+        }
+        Ok(())
+    }
 }
 
 impl ServerState {
@@ -221,57 +247,13 @@ impl ServerState {
     fn services(self: &Arc<Self>) -> Arc<Services> {
         self.services.clone()
     }
+}
 
-    async fn broadcast_room(
-        &self,
-        room_id: RoomId,
-        user_id: UserId,
-        reason: Option<String>,
-        msg: MessageSync,
-    ) -> Result<()> {
-        self.inner
-            .broadcast_room(room_id, user_id, reason, msg)
-            .await
-    }
+impl Deref for ServerState {
+    type Target = ServerStateInner;
 
-    async fn broadcast_thread(
-        &self,
-        thread_id: ThreadId,
-        user_id: UserId,
-        reason: Option<String>,
-        msg: MessageSync,
-    ) -> Result<()> {
-        self.inner
-            .broadcast_thread(thread_id, user_id, reason, msg)
-            .await
-    }
-
-    fn broadcast(&self, msg: MessageSync) -> Result<()> {
-        self.inner.broadcast(msg)
-    }
-
-    /// presigns every relevant url in a piece of media
-    async fn presign(&self, media: &mut Media) -> Result<()> {
-        self.inner.presign(media).await
-    }
-
-    /// presigns every relevant url in a message
-    async fn presign_message(&self, message: &mut Message) -> Result<()> {
-        for media in &mut message.attachments {
-            self.presign(media).await?;
-        }
-        for emb in &mut message.embeds {
-            if let Some(m) = &mut emb.media {
-                self.presign(m).await?;
-            }
-            if let Some(m) = &mut emb.author_avatar {
-                self.presign(m).await?;
-            }
-            if let Some(m) = &mut emb.site_avatar {
-                self.presign(m).await?;
-            }
-        }
-        Ok(())
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
