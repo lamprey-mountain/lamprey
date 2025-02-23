@@ -91,18 +91,28 @@ impl From<DbMessage> for Message {
 impl DataMessage for Postgres {
     async fn message_create(&self, create: MessageCreate) -> Result<MessageId> {
         let message_id = Uuid::now_v7();
-        let atts: Vec<Uuid> = create
-            .attachment_ids
-            .iter()
-            .map(|i| i.into_inner())
-            .collect();
         let message_type: DbMessageType = create.message_type.into();
+        let mut tx = self.pool.begin().await?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, $10)
-        "#, message_id, create.thread_id.into_inner(), message_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), message_type as _, create.override_name, &atts)
-        .execute(&self.pool)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)
+        "#, message_id, create.thread_id.into_inner(), message_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), message_type as _, create.override_name)
+        .execute(&mut *tx)
         .await?;
+        for (ord, att) in create.attachment_ids.iter().enumerate() {
+            query!(
+                r#"
+        	    INSERT INTO message_attachment (version_id, media_id, ordering)
+        	    VALUES ($1, $2, $3)
+                "#,
+                message_id,
+                att.into_inner(),
+                ord as i32
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
         info!("insert message");
         Ok(message_id.into())
     }
@@ -114,15 +124,11 @@ impl DataMessage for Postgres {
         create: MessageCreate,
     ) -> Result<MessageVerId> {
         let ver_id = Uuid::now_v7();
-        let atts: Vec<Uuid> = create
-            .attachment_ids
-            .iter()
-            .map(|i| i.into_inner())
-            .collect();
         let message_type: DbMessageType = create.message_type.into();
+        let mut tx = self.pool.begin().await?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, attachments)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, $10)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)
         "#,
             message_id.into_inner(),
             create.thread_id.into_inner(),
@@ -133,10 +139,24 @@ impl DataMessage for Postgres {
             create.author_id.into_inner(),
             message_type as _,
             create.override_name,
-            &atts,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+        for (ord, att) in create.attachment_ids.iter().enumerate() {
+            query!(
+                r#"
+        	    INSERT INTO message_attachment (version_id, media_id, ordering)
+        	    VALUES ($1, $2, $3)
+                "#,
+                message_id.into_inner(),
+                att.into_inner(),
+                ord as i32
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        info!("update message");
         Ok(ver_id.into())
     }
 

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \t    INSERT INTO message_attachment (version_id, media_id, ordering)\n        \t    VALUES ($1, $2, $3)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0e472e282290a842797f28a969536c14d89f6bbe7d590cb66cf129e3accd9871"
+}
