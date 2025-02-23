@@ -81,21 +81,19 @@ self.addEventListener("fetch", (e) => {
 		const preload = await e.preloadResponse;
 		if (preload) return preload;
 
-		try {
-			const res = await fetch(req);
+		const res = await fetch(req);
 
-			if (res.ok && shouldCache(req)) {
-				const res2 = res.clone();
-				e.waitUntil((async () => {
-					const cache = await caches.open("v1.assets");
-					await cache.put(req, res2);
-				})());
-			}
-
-			return res;
-		} catch (err) {
-			console.error(err);
-			return makeError("network error", 408);
+		if (res.ok && shouldCache(req)) {
+			const res2 = res.clone();
+			e.waitUntil((async () => {
+				const cache = await caches.open("v1.assets");
+				await cache.put(req, res2);
+			})());
 		}
-	})());
+
+		return res;
+	})().catch(err => {
+		console.error(err);
+		return makeError("network error", 408);
+	}));
 });

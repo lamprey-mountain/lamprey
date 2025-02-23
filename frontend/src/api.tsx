@@ -196,6 +196,7 @@ export function createApi(
 			const m = msg.message;
 			const r = messages.cacheRanges.get(m.thread_id);
 			let is_new = false;
+			let is_unread = true;
 			if (r) {
 				if (m.nonce) {
 					// local echo
@@ -206,6 +207,7 @@ export function createApi(
 					}
 					r.live.items.push(m);
 					is_new = true;
+					is_unread = false;
 				} else {
 					// edits
 					const idx = r.live.items.findIndex((i) => i.id === m.id);
@@ -230,6 +232,7 @@ export function createApi(
 					...t,
 					message_count: t.message_count + (is_new ? 1 : 0),
 					last_version_id: m.version_id,
+					is_unread,
 				});
 			}
 
@@ -454,6 +457,7 @@ export type Api = {
 		fetch: (thread_id: () => string) => Resource<Thread>;
 		list: (room_id: () => string) => Resource<Pagination<Thread>>;
 		cache: ReactiveMap<string, Thread>;
+		ack: (thread_id: string, message_id: string | undefined, version_id: string) => Promise<void>;
 	};
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;

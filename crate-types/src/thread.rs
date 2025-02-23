@@ -7,9 +7,10 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::util::some_option;
+use crate::MessageVerId;
 use crate::{util::Diff, ThreadVerId};
 
-use super::{MessageId, RoomId, ThreadId, UserId};
+use super::{RoomId, ThreadId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -109,8 +110,8 @@ pub enum ThreadVisibility {
 pub enum ThreadInfo {
     Chat {
         is_unread: bool,
-        last_version_id: MessageId,
-        last_read_id: Option<MessageId>,
+        last_version_id: MessageVerId,
+        last_read_id: Option<MessageVerId>,
         message_count: u64,
     },
 }

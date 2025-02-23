@@ -6,7 +6,6 @@ import {
 	onCleanup,
 	ParentProps,
 	Show,
-	Suspense,
 } from "solid-js";
 import {
 	ChatCtx,
@@ -169,6 +168,10 @@ export const Root: Component = (props: ParentProps) => {
 			if (ctx.data.modals.length) {
 				dispatch({ do: "modal.close" });
 			} else if (thread_id) {
+				// version_id may be undefined
+				const thread = api.threads.cache.get(thread_id);
+				if (!thread) return;
+
 				// messages are approx. 20 px high, show 3 pages of messages
 				const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
@@ -176,14 +179,16 @@ export const Root: Component = (props: ParentProps) => {
 					type: "backwards",
 					limit: SLICE_LEN,
 				});
-				// version_id may be undefined
+
+				const version_id = api.messages.cacheRanges.get(thread.id)?.live.end ?? thread.last_version_id;
 				ctx.dispatch({
 					do: "thread.mark_read",
 					thread_id: thread_id,
 					delay: false,
 					also_local: true,
-					version_id: api.threads.cache.get(thread_id)?.last_version_id!,
+					version_id
 				});
+				
 				// HACK: i need to make the update order less jank
 				setTimeout(() => {
 					const listEl = document.querySelector(".chat > .list") as HTMLElement;
@@ -215,11 +220,11 @@ export const Root: Component = (props: ParentProps) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
 			return target
 				?.dataset[
-					key.slice("data-".length).replace(
-						/-([a-z])/g,
-						(_, c) => c.toUpperCase(),
-					)
-				];
+				key.slice("data-".length).replace(
+					/-([a-z])/g,
+					(_, c) => c.toUpperCase(),
+				)
+			];
 		};
 
 		let menu: Partial<Menu> | null = null;

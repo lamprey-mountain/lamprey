@@ -86,7 +86,7 @@ const ItemThread = (props: { thread: Thread }) => {
 				class="menu-thread"
 				classList={{
 					"closed": props.thread.state === "Archived",
-					"unread": props.thread.last_read_id !== props.thread.last_version_id,
+					"unread": props.thread.is_unread,
 				}}
 				data-thread-id={props.thread.id}
 			>

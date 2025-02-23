@@ -95,7 +95,7 @@ export function createDispatcher(
 	const threadMarkRead: Middleware =
 		(_state, _dispatch) => (next) => async (action) => {
 			if (action.do === "thread.mark_read") {
-				const { thread_id, delay, also_local } = action;
+				const { thread_id, message_id, version_id, delay, also_local } = action;
 				// NOTE: may need separate timeouts per thread
 				clearTimeout(ackGraceTimeout);
 				clearTimeout(ackDebounceTimeout);
@@ -108,20 +108,10 @@ export function createDispatcher(
 					return;
 				}
 
-				const t = api.threads.cache.get(thread_id)!;
-				const version_id = action.version_id;
-				const message_id = action.message_id;
-				await ctx.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
-					params: { path: { thread_id } },
-					body: { message_id, version_id },
-				});
-				api.threads.cache.set(thread_id, {
-					...t,
-					last_read_id: version_id,
-				});
 				if (also_local) {
-					ctx.thread_read_marker_id.set(action.thread_id, version_id);
+					ctx.thread_read_marker_id.set(thread_id, version_id);
 				}
+				await api.threads.ack(thread_id, message_id, version_id);
 			} else {
 				next(action);
 			}

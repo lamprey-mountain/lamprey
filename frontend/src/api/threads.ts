@@ -127,4 +127,19 @@ export class Threads {
 
 		return resource;
 	}
+
+	async ack(thread_id: string, message_id: string | undefined, version_id: string) {
+		await this.api.client.http.PUT("/api/v1/thread/{thread_id}/ack", {
+			params: { path: { thread_id } },
+			body: { message_id, version_id },
+		});
+		const t = this.cache.get(thread_id);
+		if (t) {
+			this.cache.set(thread_id, {
+				...t,
+				last_read_id: version_id,
+				is_unread: version_id < t.last_version_id,
+			});
+		}
+	}
 }

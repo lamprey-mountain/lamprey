@@ -1,8 +1,6 @@
 use serde::Deserialize;
 use types::{
-    MediaId, MessageId, MessageType, Permission, Role, RoleId, RoleVerId, Room, RoomId,
-    RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo,
-    ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
+    MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, Session, SessionId, SessionStatus, SessionToken, Thread, ThreadId, ThreadInfo, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId
 };
 use uuid::Uuid;
 
@@ -49,7 +47,7 @@ pub struct DbThread {
     pub version_id: ThreadVerId,
     pub name: String,
     pub description: Option<String>,
-    pub last_version_id: MessageId,
+    pub last_version_id: MessageVerId,
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
     pub is_unread: bool,
