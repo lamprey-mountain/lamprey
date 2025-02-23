@@ -5,7 +5,7 @@ use std::{sync::Arc, time::Duration};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::Deserialize;
-use tracing::{debug, info};
+use tracing::debug;
 use types::UserId;
 use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
@@ -114,8 +114,8 @@ impl ServiceUrlEmbed {
         Ok(embed)
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
-        info!("generating url embed user_id={user_id} url={}", url);
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
@@ -137,7 +137,7 @@ impl ServiceUrlEmbed {
             .and_then(|s| MediaTypeBuf::from_str(s).ok());
         // TODO: try to parse name from Content-Disposition
         let srv = self.state.services();
-        if content_type.is_some_and(is_media) {
+        let embed = if content_type.is_some_and(is_media) {
             debug!("got media");
             let canonical_url = fetched.url().to_owned();
             let filename = url
@@ -184,7 +184,7 @@ impl ServiceUrlEmbed {
             if let Some(m) = &mut embed.media {
                 self.state.presign(m).await?;
             }
-            Ok(dbg!(embed))
+            embed
         } else {
             debug!("got html");
 
@@ -207,7 +207,7 @@ impl ServiceUrlEmbed {
             let html = String::from_utf8_lossy(&buf);
             let parsed = HTML::from_string(html.into_owned(), Some(url.to_string()))
                 .map_err(Error::UrlEmbed)?;
-            dbg!(&parsed);
+            debug!("parsed {:?}", parsed);
             let canonical_url = parsed
                 .url
                 .as_ref()
@@ -316,8 +316,10 @@ impl ServiceUrlEmbed {
             if let Some(m) = &mut embed.media {
                 self.state.presign(m).await?;
             }
-            Ok(dbg!(embed))
-        }
+            embed
+        };
+        debug!("done! {:?}", embed);
+        Ok(embed)
     }
 }
 

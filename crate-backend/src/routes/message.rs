@@ -95,7 +95,7 @@ async fn message_create(
                 let srv = srv.clone();
                 let data = s.data();
                 tokio::spawn(async move {
-                    let embed = dbg!(srv.url_embed.generate(user_id, url).await?);
+                    let embed = srv.url_embed.generate(user_id, url).await?;
                     data.url_embed_link(version_id, embed.id, ordering as u32)
                         .await?;
                     let mut message = data.message_get(thread_id, message_id).await?;

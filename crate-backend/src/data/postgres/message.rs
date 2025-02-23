@@ -79,7 +79,7 @@ impl From<DbMessage> for Message {
                 .into_iter()
                 .map(|a| {
                     let db: DbUrlEmbed =
-                        dbg!(serde_json::from_value(a)).expect("invalid data in database!");
+                        serde_json::from_value(a).expect("invalid data in database!");
                     db.into()
                 })
                 .collect(),
