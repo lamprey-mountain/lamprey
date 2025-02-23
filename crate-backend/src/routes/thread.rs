@@ -372,6 +372,8 @@ async fn thread_typing(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     s.broadcast_thread(
         thread_id,
