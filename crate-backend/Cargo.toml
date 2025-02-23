@@ -42,3 +42,6 @@ validator = "0.20.0"
 webpage = { version = "2.0.1", default-features = false, features = ["serde"] }
 moka = { version = "0.12.10", features = ["future"] }
 linkify = "0.10.0"
+
+[build-dependencies]
+vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
