@@ -41,7 +41,7 @@ export const ChatMain = (props: ChatProps) => {
 
 	const markRead = throttle(
 		() => {
-			const version_id = api.messages.cacheRanges.get(props.thread.id)?.live.end ?? props.thread.last_version_id;
+			const version_id = props.thread.last_version_id;
 			ctx.dispatch({
 				do: "thread.mark_read",
 				thread_id: props.thread.id,
