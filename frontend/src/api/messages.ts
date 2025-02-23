@@ -423,7 +423,7 @@ export class Messages {
 	}
 
 	_updateMutators(r: MessageRanges, thread_id: string) {
-		console.log("update mutators");
+		console.log("update mutators", this._mutators);
 		for (const mut of this._mutators) {
 			if (mut.thread_id !== thread_id) continue;
 			if (mut.query.type !== "backwards") continue;

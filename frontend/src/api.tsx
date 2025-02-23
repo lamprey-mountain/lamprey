@@ -195,31 +195,40 @@ export function createApi(
 		} else if (msg.type === "UpsertMessage") {
 			const m = msg.message;
 			const r = messages.cacheRanges.get(m.thread_id);
+			let is_new = false;
 			if (r) {
 				if (m.nonce) {
 					// local echo
+					console.log("UpsertMessage local echo");
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
 					if (idx !== -1) {
 						r.live.items.splice(idx, 1);
 					}
-				} else if (m.version_id !== m.id) {
+					r.live.items.push(m);
+					is_new = true;
+				} else {
 					// edits
 					const idx = r.live.items.findIndex((i) => i.id === m.id);
 					if (idx !== -1) {
-						r.live.items.splice(idx, 1);
+						console.log("UpsertMessage edit");
+						r.live.items.splice(idx, 1, m);
+					} else {
+						console.log("UpsertMessage new message");
+						r.live.items.push(m);
+						is_new = true;
 					}
 				}
-				r.live.items.push(m);
 				batch(() => {
 					messages.cache.set(m.id, m);
 					messages._updateMutators(r, m.thread_id);
 				});
 			}
+
 			const t = api.threads.cache.get(m.thread_id);
 			if (t) {
 				api.threads.cache.set(m.thread_id, {
 					...t,
-					message_count: t.message_count + (m.id === m.version_id ? 1 : 0),
+					message_count: t.message_count + (is_new ? 1 : 0),
 					last_version_id: m.version_id,
 				});
 			}

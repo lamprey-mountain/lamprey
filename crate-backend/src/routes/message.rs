@@ -91,12 +91,22 @@ async fn message_create(
         for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
                 let version_id = message.version_id;
+                let s = s.clone();
                 let srv = srv.clone();
                 let data = s.data();
                 tokio::spawn(async move {
                     let embed = dbg!(srv.url_embed.generate(user_id, url).await?);
                     data.url_embed_link(version_id, embed.id, ordering as u32)
                         .await?;
+                    let mut message = data.message_get(thread_id, message_id).await?;
+                    s.presign_message(&mut message).await?;
+                    s.broadcast_thread(
+                        thread_id,
+                        user_id,
+                        None,
+                        MessageSync::UpsertMessage { message },
+                    )
+                    .await?;
                     Result::Ok(())
                 });
             }
