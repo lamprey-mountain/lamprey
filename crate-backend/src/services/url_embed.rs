@@ -4,9 +4,9 @@ use std::{sync::Arc, time::Duration};
 
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
-use types::UserId;
+use types::{Media, UserId};
 use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
 use webpage::HTML;
@@ -15,40 +15,61 @@ use crate::error::Error;
 use crate::Result;
 use crate::ServerStateInner;
 
+pub const USER_AGENT: &str = "StupidTestBot (no url yet)";
+
+const MAX_SIZE_HTML: u64 = 1024 * 1024 * 4;
+const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
+const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
+
 pub struct ServiceUrlEmbed {
     state: Arc<ServerStateInner>,
     cache: Cache<Url, UrlEmbed>,
 }
 
-// https://ogp.me/#types
-#[derive(Debug, Deserialize)]
+/// an opengraph type
+/// 
+/// https://ogp.me/#types
+#[derive(Debug, PartialEq)]
 pub enum OpenGraphType {
-    #[serde(rename = "music.song")]
     MusicSong,
-    #[serde(rename = "music.album")]
     MusicAlbum,
-    #[serde(rename = "music.playlist")]
     MusicPlaylist,
-    #[serde(rename = "music.radio_station")]
     MusicRadioStation,
-    #[serde(rename = "video.movie")]
     VideoMovie,
-    #[serde(rename = "video.episode")]
     VideoEpisode,
-    #[serde(rename = "video.other")]
     VideoOther,
-    #[serde(rename = "article")]
     Article,
-    #[serde(rename = "book")]
     Book,
-    #[serde(rename = "profile")]
     Profile,
-    #[serde(rename = "website")]
     Website,
-    #[serde(rename = "object")]
     Object,
-    #[serde(other)]
     Other,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag="type")]
+pub enum EmbedType {
+    /// a generic website embed
+    Website(UrlEmbed),
+    
+    /// a piece of media
+    Media(Media),
+    
+    // /// a custom embed
+    // Custom(UrlEmbed),
+}
+
+/// how to display the attached image
+#[derive(Debug, PartialEq)]
+enum ImageInstructions {
+    /// the image should be displayed as a thumbnail
+    Thumb,
+
+    /// the image should be displayed as the main content
+    Full,
+
+    /// the image should be ignored
+    Hide,
 }
 
 impl OpenGraphType {
@@ -71,11 +92,46 @@ impl OpenGraphType {
     }
 }
 
-pub const USER_AGENT: &str = "StupidTestBot (no url yet)";
+impl From<&str> for OpenGraphType {
+    fn from(value: &str) -> Self {
+        // NOTE: some of these aren't standard, but are used in the wild
+        match value {
+            "music.song" | "music" => Self::MusicSong,
+            "music.album" => Self::MusicAlbum,
+            "music.playlist" => Self::MusicPlaylist,
+            "music.radio_station" => Self::MusicRadioStation,
+            "video.movie" => Self::VideoMovie,
+            "video.episode" => Self::VideoEpisode,
+            "video.other" | "video" => Self::VideoOther,
+            "article" => Self::Article,
+            "book" => Self::Book,
+            "profile" => Self::Profile,
+            "website" => Self::Website,
+            "object" => Self::Object,
+            _ => Self::Other,
+        }
+    }
+}
 
-const MAX_SIZE_HTML: u64 = 1024 * 1024 * 1;
-const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
-const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
+impl From<OpenGraphType> for &'static str {
+    fn from(value: OpenGraphType) -> &'static str {
+        match value {
+            OpenGraphType::MusicSong => "music.song",
+            OpenGraphType::MusicAlbum => "music.album",
+            OpenGraphType::MusicPlaylist => "music.playlist",
+            OpenGraphType::MusicRadioStation => "music.radio.station",
+            OpenGraphType::VideoMovie => "video.movie",
+            OpenGraphType::VideoEpisode => "video.episode",
+            OpenGraphType::VideoOther => "video.other",
+            OpenGraphType::Article => "article",
+            OpenGraphType::Book => "book",
+            OpenGraphType::Profile => "profile",
+            OpenGraphType::Website => "website",
+            OpenGraphType::Object => "object",
+            OpenGraphType::Other => "other",
+        }
+    }
+}
 
 impl ServiceUrlEmbed {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
@@ -220,8 +276,9 @@ impl ServiceUrlEmbed {
             let canonical_url = parsed
                 .url
                 .as_ref()
-                .map(|u| u.parse())
-                .transpose()?
+                .and_then(|u| url.join(u).ok())
+                .or_else(|| parsed.meta.get("og:url").and_then(|u| url.join(u).ok()))
+                .or_else(|| parsed.meta.get("twitter:url").and_then(|u| url.join(u).ok()))
                 .unwrap_or(fetched.url().to_owned());
             let title = parsed
                 .opengraph
@@ -248,20 +305,15 @@ impl ServiceUrlEmbed {
                 .get("theme-color")
                 .or_else(|| parsed.meta.get("theme-color"))
                 .and_then(|s| csscolorparser::parse(s).ok());
-            let m = get_media(&parsed);
-            let og_type: OpenGraphType =
-                serde_json::from_value(serde_json::Value::String(parsed.opengraph.og_type))?;
-
-            #[derive(Debug, PartialEq)]
-            enum MediaInstructions {
-                Thumb,
-                Full,
-                Hide,
-            }
+            // let author = parsed.meta.get("author")
+            //     .map(ToOwned::to_owned);
+            let m = get_media(&url, &parsed);
+            // let m_img = get_img(&url, &parsed);
+            let og_type: OpenGraphType = parsed.opengraph.og_type.as_str().into();
 
             let media_type = match parsed.meta.get("twitter:card").map(|s| s.as_str()) {
-                Some("summary_large_image" | "player") => MediaInstructions::Full,
-                Some(_) => MediaInstructions::Thumb,
+                Some("summary_large_image" | "player") => ImageInstructions::Full,
+                Some(_) => ImageInstructions::Thumb,
                 None => {
                     let robots_instructions: Vec<&str> = parsed
                         .meta
@@ -270,15 +322,15 @@ impl ServiceUrlEmbed {
                         .unwrap_or_default();
                     // also: nosnippet, max-snippet:100, max-video-preview:100
                     if robots_instructions.contains(&"max-image-preview:none") {
-                        MediaInstructions::Hide
+                        ImageInstructions::Hide
                     } else if robots_instructions.contains(&"max-image-preview:standard") {
-                        MediaInstructions::Full
+                        ImageInstructions::Full
                     } else if robots_instructions.contains(&"max-image-preview:large") {
-                        MediaInstructions::Thumb
+                        ImageInstructions::Thumb
                     } else if og_type.is_media_probably_thumbnail() {
-                        MediaInstructions::Thumb
+                        ImageInstructions::Thumb
                     } else {
-                        MediaInstructions::Full
+                        ImageInstructions::Full
                     }
                 }
             };
@@ -303,6 +355,27 @@ impl ServiceUrlEmbed {
             } else {
                 None
             };
+            
+            // let media_thumbnail = if let Some(m) = m {
+            //     Some(
+            //         srv.media
+            //             .import_from_url_with_max_size(
+            //                 user_id,
+            //                 types::MediaCreate {
+            //                     alt: m_img.alt,
+            //                     source: types::MediaCreateSource::Download {
+            //                         filename: None,
+            //                         size: None,
+            //                         source_url: m_img.url,
+            //                     },
+            //                 },
+            //                 MAX_SIZE_ATTACHMENT,
+            //             )
+            //             .await?,
+            //     )
+            // } else {
+            //     None
+            // };
 
             let mut embed = UrlEmbed {
                 id: UrlEmbedId::new(),
@@ -317,9 +390,9 @@ impl ServiceUrlEmbed {
                 color: theme_color.map(|c| c.to_hex_string()),
                 media,
                 media_is_thumbnail: match media_type {
-                    MediaInstructions::Thumb => true,
-                    MediaInstructions::Full => false,
-                    MediaInstructions::Hide => false,
+                    ImageInstructions::Thumb => true,
+                    ImageInstructions::Full => false,
+                    ImageInstructions::Hide => false,
                 },
                 // TODO: parse author information
                 author_url: None,
@@ -343,31 +416,23 @@ struct ParsedMedia {
     alt: Option<String>,
 }
 
-fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
+fn get_media(base: &Url, parsed: &HTML) -> Option<ParsedMedia> {
     for vid in &parsed.opengraph.videos {
         let c: Option<MediaType> = vid
             .properties
             .get("type")
             .and_then(|s| MediaType::parse(s).ok());
-        if c.is_none_or(|c| c.ty == "video") {
+        if dbg!(c).is_none_or(|c| c.ty == "video") {
             return Some(ParsedMedia {
-                url: vid.url.parse().ok()?,
+                url: base.join(&vid.url).ok()?,
                 alt: vid.properties.get("alt").map(|s| s.to_owned()),
             });
         }
     }
 
-    for img in &parsed.opengraph.images {
-        let c: Option<MediaType> = img
-            .properties
-            .get("type")
-            .and_then(|s| MediaType::parse(s).ok());
-        if c.is_none_or(|c| c.ty == "image") {
-            return Some(ParsedMedia {
-                url: img.url.parse().ok()?,
-                alt: img.properties.get("alt").map(|s| s.to_owned()),
-            });
-        }
+    match get_img(base, parsed) {
+        Some(media) => return Some(media),
+        None => {}
     }
 
     for aud in &parsed.opengraph.audios {
@@ -377,8 +442,25 @@ fn get_media(parsed: &HTML) -> Option<ParsedMedia> {
             .and_then(|s| MediaType::parse(s).ok());
         if c.is_none_or(|c| c.ty == "audio") {
             return Some(ParsedMedia {
-                url: aud.url.parse().ok()?,
+                url: base.join(&aud.url).ok()?,
                 alt: aud.properties.get("alt").map(|s| s.to_owned()),
+            });
+        }
+    }
+
+    None
+}
+
+fn get_img(base: &Url, parsed: &HTML) -> Option<ParsedMedia> {
+    for img in &parsed.opengraph.images {
+        let c: Option<MediaType> = img
+            .properties
+            .get("type")
+            .and_then(|s| MediaType::parse(s).ok());
+        if c.is_none_or(|c| c.ty == "image") {
+            return Some(ParsedMedia {
+                url: base.join(&img.url).ok()?,
+                alt: img.properties.get("alt").map(|s| s.to_owned()),
             });
         }
     }
