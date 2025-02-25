@@ -47,16 +47,18 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
+	const req = e.request;
+	const url = new URL(req.url);
+	if (url.pathname.startsWith("/api")) return;
+
 	e.respondWith(
 		(async () => {
 			// const client = await self.clients.get(e.clientId);
 			// client?.postMessage("hi!! helloo!!!!");
 
-			const req = e.request;
 			const cached = await caches.match(req);
 			if (cached) return cached;
 
-			const url = new URL(e.request.url);
 			if (req.method === "GET" && url.pathname === "/_media") {
 				const target = url.searchParams.get("url");
 				if (!target) return makeError("missing url");

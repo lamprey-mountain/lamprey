@@ -25,6 +25,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			size: opts.file.size,
 		},
 	});
+
 	if (error) {
 		opts.onFail(error);
 		throw new Error(error);
@@ -32,6 +33,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 
 	const { upload_url, media_id } = data;
 	let offset = 0;
+	let currentOffset = 0;
 	let xhr: XMLHttpRequest;
 
 	async function resumeUpload() {
@@ -46,6 +48,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		});
 		if (res.ok) {
 			offset = parseInt(res.headers.get("upload-offset")!, 10);
+			currentOffset = offset;
 			attemptUpload();
 		} else {
 			opts.onFail(
@@ -58,7 +61,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		xhr = new XMLHttpRequest();
 
 		xhr.upload.onprogress = (ev) => {
-			offset = ev.loaded + offset;
+			offset = ev.loaded + currentOffset;
 			opts.onProgress(offset / opts.file.size);
 		};
 
