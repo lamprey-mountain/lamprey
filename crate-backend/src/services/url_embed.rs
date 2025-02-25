@@ -242,6 +242,12 @@ impl ServiceUrlEmbed {
                 .properties
                 .get("site_name")
                 .map(ToOwned::to_owned);
+            let theme_color = parsed
+                .opengraph
+                .properties
+                .get("theme-color")
+                .or_else(|| parsed.meta.get("theme-color"))
+                .and_then(|s| csscolorparser::parse(s).ok());
             let m = get_media(&parsed);
             let og_type: OpenGraphType =
                 serde_json::from_value(serde_json::Value::String(parsed.opengraph.og_type))?;
@@ -308,8 +314,7 @@ impl ServiceUrlEmbed {
                 },
                 title,
                 description,
-                // TODO: parse meta.get("theme-color");
-                color: None,
+                color: theme_color.map(|c| c.to_hex_string()),
                 media,
                 media_is_thumbnail: match media_type {
                     MediaInstructions::Thumb => true,

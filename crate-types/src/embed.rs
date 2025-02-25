@@ -23,6 +23,8 @@ pub struct UrlEmbed {
 
     pub title: Option<String>,
     pub description: Option<String>,
+
+    /// the theme color of the site, as a hex string (`#rrggbb`)
     pub color: Option<String>,
 
     pub media: Option<Media>,
