@@ -28,7 +28,7 @@ import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
-import { tooltip } from "../Tooltip.tsx";
+import { createTooltip, tooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
 
 export const VideoView = (props: MediaProps) => {
@@ -55,6 +55,31 @@ export const VideoView = (props: MediaProps) => {
 
 	let video!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
+	let topEl!: HTMLDivElement;
+	// const [wrapperEl]!: HTMLDivElement;
+
+	const volumeTooltip = createTooltip({
+		placement: "top-start",
+		interactive: true,
+		doesntRetain: "input[type=range]",
+		mount: () => fullscreen() ? wrapperEl : undefined,
+		tip: () => (
+			<div class="range" onWheel={handleVolumeWheel}>
+				<input
+					type="range"
+					min={0}
+					max={1}
+					value={volume()}
+					disabled={muted()}
+					step={.001}
+					onInput={(e) => setVolume(e.target.valueAsNumber)}
+				/>
+				<div class="dim">(click to mute)</div>
+				<div class="value">{getVolumeText()}</div>
+			</div>
+		),
+	});
+	const vtc = volumeTooltip.content;
 
 	onMount(() => {
 		video.ondurationchange = () => setDuration(video.duration);
@@ -185,6 +210,17 @@ export const VideoView = (props: MediaProps) => {
 
 	const handleFullscreenChange = () => {
 		setFullscreen(document.fullscreenElement === wrapperEl);
+		console.log("update");
+		volumeTooltip.update();
+		requestAnimationFrame(() => {
+			volumeTooltip.update();
+		});
+		setTimeout(() => {
+			volumeTooltip.update();
+		});
+		queueMicrotask(() => {
+			volumeTooltip.update();
+		});
 	};
 
 	const setMetadata = () => {
@@ -294,42 +330,18 @@ export const VideoView = (props: MediaProps) => {
 								alt={playing() ? "pause" : "play"}
 							/>
 						</button>
-						{tooltip(
-							{
-								placement: "top-start",
-								interactive: true,
-								doesntRetain: "input[type=range]",
-								mount: fullscreen() ? wrapperEl : undefined,
-							},
-							(
-								<div class="range" onWheel={handleVolumeWheel}>
-									<input
-										type="range"
-										min={0}
-										max={1}
-										value={volume()}
-										disabled={muted()}
-										step={.001}
-										onInput={(e) => setVolume(e.target.valueAsNumber)}
-									/>
-									<div class="dim">(click to mute)</div>
-									<div class="value">{getVolumeText()}</div>
-								</div>
-							) as ValidComponent,
-							(
-								<button
-									onClick={toggleMute}
-									title={getVolumeText()}
-									onWheel={handleVolumeWheel}
-								>
-									<img
-										class="icon"
-										src={getVolumeIcon()}
-										alt={getVolumeText()}
-									/>
-								</button>
-							) as HTMLElement,
-						)}
+						<button
+							onClick={toggleMute}
+							title={getVolumeText()}
+							onWheel={handleVolumeWheel}
+							use:vtc
+						>
+							<img
+								class="icon"
+								src={getVolumeIcon()}
+								alt={getVolumeText()}
+							/>
+						</button>
 						<button
 							onClick={toggleFullscreen}
 							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
