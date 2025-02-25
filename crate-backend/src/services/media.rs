@@ -14,7 +14,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter},
     process::Command,
 };
-use tracing::{debug, error, info, span, trace, Level};
+use tracing::{debug, error, info, span, trace, Instrument, Level};
 use types::{
     Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
     TrackSource, UserId,
@@ -443,27 +443,33 @@ async fn generate_and_upload_thumb(
     let mut out = Cursor::new(Vec::new());
     // currently using the default
     let span_gen_thumb = span!(Level::INFO, "generate thumb");
-    let _s = span_gen_thumb.enter();
-    let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
-    let thumb = img.thumbnail(width, height);
-    thumb.write_with_encoder(enc)?;
-    drop(_s);
+    let thumb = async {
+        let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
+        let thumb = img.thumbnail(width, height);
+        thumb.write_with_encoder(enc)?;
+        Result::Ok(thumb)
+    }
+    .instrument(span_gen_thumb)
+    .await?;
     let url = state.get_s3_url(&format!("thumb/{media_id}/{width}x{height}"))?;
     let len = out.get_ref().len();
     let span_upload_thumb = span!(Level::INFO, "upload thumb");
-    let _s = span_upload_thumb.enter();
-    let mut w = state
-        .blobs
-        .writer_with(url.path())
-        .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-        .content_type("image/avif")
-        .await?;
-    debug!("opened");
-    w.write(out.into_inner()).await?;
-    debug!("wrote all");
-    w.close().await?;
-    debug!("closed");
-    drop(_s);
+    async {
+        let mut w = state
+            .blobs
+            .writer_with(url.path())
+            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+            .content_type("image/avif")
+            .await?;
+        debug!("opened");
+        w.write(out.into_inner()).await?;
+        debug!("wrote all");
+        w.close().await?;
+        debug!("closed");
+        Result::Ok(())
+    }
+    .instrument(span_upload_thumb)
+    .await?;
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
             height: thumb.height() as u64,
@@ -486,25 +492,31 @@ async fn upload_extracted_thumb(
 ) -> Result<Option<MediaTrack>> {
     let len = bytes.0.len();
     let span_probe = span!(Level::DEBUG, "probe thumbnail image");
-    let _s = span_probe.enter();
-    let cursor = Cursor::new(&bytes);
-    let reader = image::ImageReader::new(cursor).with_guessed_format()?;
-    let mime: Mime = reader.format().unwrap().to_mime_type().parse()?;
-    let (width, height) = reader.into_dimensions()?;
-    drop(_s);
+    let (width, height, mime) = async {
+        let cursor = Cursor::new(&bytes);
+        let reader = image::ImageReader::new(cursor).with_guessed_format()?;
+        let mime: Mime = reader.format().unwrap().to_mime_type().parse()?;
+        let (width, height) = reader.into_dimensions()?;
+        Result::Ok((width, height, mime))
+    }
+    .instrument(span_probe)
+    .await?;
     let url = state.get_s3_url(&format!("thumb/{media_id}/original"))?;
     let span_upload = span!(Level::DEBUG, "upload thumb");
-    let _s = span_upload.enter();
-    let mut w = state
-        .blobs
-        .writer_with(url.path())
-        .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-        .content_type(mime.as_str())
-        .await?;
-    // HACK: extremely ugly clone
-    w.write(bytes.0.to_vec()).await?;
-    w.close().await?;
-    drop(_s);
+    async {
+        let mut w = state
+            .blobs
+            .writer_with(url.path())
+            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
+            .content_type(mime.as_str())
+            .await?;
+        // HACK: extremely ugly clone
+        w.write(bytes.0.to_vec()).await?;
+        w.close().await?;
+        Result::Ok(())
+    }
+    .instrument(span_upload)
+    .await?;
     let track = MediaTrack {
         info: MediaTrackInfo::Thumbnail(types::Image {
             height: height.into(),
