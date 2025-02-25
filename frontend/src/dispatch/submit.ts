@@ -67,7 +67,7 @@ export async function handleSubmit(
 	if (!atts.every((i) => i.status === "uploaded")) return false;
 	const attachments = atts.map((i) => i.media);
 	api.messages.send(thread_id, {
-		content: text,
+		content: text || null,
 		reply_id,
 		attachments,
 	});
