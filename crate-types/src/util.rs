@@ -1,6 +1,9 @@
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::Permission;
+
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
 // TODO: derive macro
 pub trait Diff<T> {
@@ -57,4 +60,52 @@ where
     D: Deserializer<'de>,
 {
     Option::<T>::deserialize(deserializer).map(Some)
+}
+
+// TODO: swap all date/time types to this
+/// A date, time, and timezone. Serialized to rfc3339.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Time(
+    #[serde(
+        serialize_with = "time::serde::rfc3339::serialize",
+        deserialize_with = "time::serde::rfc3339::deserialize"
+    )]
+    time::OffsetDateTime,
+);
+
+impl Time {
+    pub fn now_utc() -> Self {
+        Self(time::OffsetDateTime::now_utc())
+    }
+}
+
+pub fn time_rfc3339_option_serialize<S>(
+    opt: &Option<time::OffsetDateTime>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    #[derive(Serialize)]
+    struct Wrap(#[serde(serialize_with = "time::serde::rfc3339::serialize")] time::OffsetDateTime);
+
+    match opt {
+        Some(dt) => serializer.serialize_some(&Wrap(*dt)),
+        None => serializer.serialize_none(),
+    }
+}
+
+pub fn time_rfc3339_option_deserialize<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<time::OffsetDateTime>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrap(
+        #[serde(deserialize_with = "time::serde::rfc3339::deserialize")] time::OffsetDateTime,
+    );
+
+    Option::<Wrap>::deserialize(deserializer).map(|o| o.map(|w| w.0))
 }

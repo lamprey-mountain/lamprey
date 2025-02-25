@@ -58,11 +58,28 @@ pub struct RoleCreateRequest {
     #[serde(default)]
     pub is_self_applicable: bool,
 
+    /// if this role can be mentioned by members
     #[serde(default)]
     pub is_mentionable: bool,
 
+    // this might be better..?
+    // pub restrict_mentions: Option<Vec<RoleId | UserId>>,
+    /// if this role is applied by default to all new members
     #[serde(default)]
     pub is_default: bool,
+    // the main reason this doesn't exist yet is because i've seen in
+    // discord how the ui can become extremely unreadable, cluttered, and
+    // in general color vomit. plus there's the whole "illegable contrast
+    // in light/dark mode" thing.
+    //
+    // i also don't really like the psychological effects of colored names,
+    // since i've seen people act differently when someone with a differently
+    // colored name shows up (eg. moderators)
+    //
+    // still, it can be very useful. i'm not sure what's the best way to
+    // implement this though; definitely not copying discord here.
+    //
+    // pub color: Color,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

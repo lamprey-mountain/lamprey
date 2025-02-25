@@ -27,7 +27,7 @@ pub struct ServiceUrlEmbed {
 }
 
 /// an opengraph type
-/// 
+///
 /// https://ogp.me/#types
 #[derive(Debug, PartialEq)]
 pub enum OpenGraphType {
@@ -47,14 +47,13 @@ pub enum OpenGraphType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag="type")]
+#[serde(tag = "type")]
 pub enum EmbedType {
     /// a generic website embed
     Website(UrlEmbed),
-    
+
     /// a piece of media
     Media(Media),
-    
     // /// a custom embed
     // Custom(UrlEmbed),
 }
@@ -278,7 +277,12 @@ impl ServiceUrlEmbed {
                 .as_ref()
                 .and_then(|u| url.join(u).ok())
                 .or_else(|| parsed.meta.get("og:url").and_then(|u| url.join(u).ok()))
-                .or_else(|| parsed.meta.get("twitter:url").and_then(|u| url.join(u).ok()))
+                .or_else(|| {
+                    parsed
+                        .meta
+                        .get("twitter:url")
+                        .and_then(|u| url.join(u).ok())
+                })
                 .unwrap_or(fetched.url().to_owned());
             let title = parsed
                 .opengraph
@@ -355,7 +359,7 @@ impl ServiceUrlEmbed {
             } else {
                 None
             };
-            
+
             // let media_thumbnail = if let Some(m) = m {
             //     Some(
             //         srv.media

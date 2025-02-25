@@ -9,7 +9,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{util::Diff, MediaId};
+use crate::{
+    util::{Diff, Time},
+    MediaId,
+};
 
 mod mime;
 mod track;
@@ -18,6 +21,8 @@ pub use mime::Mime;
 pub use track::*;
 
 /// A distinct logical item of media.
+// NOTE: it's so close to being immutable. i want to make it immutable, but feel
+// like i might break something...
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -42,6 +47,9 @@ pub struct Media {
 
     /// The source (Extracted, Generated)
     pub tracks: Vec<MediaTrack>,
+    // /// extra metadata relevant to the media itself and not a track
+    // // NOTE: maybe derived could be its own MediaTrackInfo type. not sure how it would be to use though?
+    // pub derived: Option<MediaDerived>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -147,22 +155,30 @@ pub struct MediaRef {
     pub id: MediaId,
 }
 
-// #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
-// pub struct DeriveMedia {
-//     pub title: Option<String>,
-//     pub artist: Option<String>,
-//     pub album: Option<String>,
-//     pub comment: Option<String>,
-//     pub url: Option<String>,
-//     pub description: Option<String>,
-//     pub date: Option<String>,
-//     maybe add lyrics? location data?
-// }
+/// even more metadata about media
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MediaDerived {
+    /// name of this
+    pub title: Option<String>,
 
-impl From<String> for Language {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
+    /// person who made this
+    pub artist: Option<String>,
+
+    /// collection this is in
+    pub album: Option<String>,
+
+    /// url this can be found at
+    pub url: Option<Url>,
+
+    /// short note about this
+    pub comment: Option<String>,
+
+    /// longer note about this, usually from the author
+    pub description: Option<String>,
+
+    /// when this was published
+    pub date: Option<Time>,
 }
 
 impl Diff<Media> for MediaPatch {

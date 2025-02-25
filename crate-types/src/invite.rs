@@ -1,10 +1,11 @@
 use std::fmt;
 
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::{time_rfc3339_option_deserialize, time_rfc3339_option_serialize};
 use crate::{PaginationKey, RoomId, ThreadId, UserId};
 
 use super::{Room, Thread, User};
@@ -19,11 +20,13 @@ pub struct Invite {
     pub code: InviteCode,
     pub target: InviteTarget,
     pub creator: User,
+
     #[serde(
         serialize_with = "time::serde::rfc3339::serialize",
         deserialize_with = "time::serde::rfc3339::deserialize"
     )]
     pub created_at: time::OffsetDateTime,
+
     #[serde(
         serialize_with = "time_rfc3339_option_serialize",
         deserialize_with = "time_rfc3339_option_deserialize"
@@ -31,37 +34,6 @@ pub struct Invite {
     pub expires_at: Option<time::OffsetDateTime>,
     // invites that automatically apply a certain role?
     // pub roles: Vec<Role>,
-}
-
-fn time_rfc3339_option_serialize<S>(
-    opt: &Option<time::OffsetDateTime>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    #[derive(Serialize)]
-    struct Wrap(#[serde(serialize_with = "time::serde::rfc3339::serialize")] time::OffsetDateTime);
-
-    match opt {
-        Some(dt) => serializer.serialize_some(&Wrap(*dt)),
-        None => serializer.serialize_none(),
-    }
-}
-
-// TODO: test
-fn time_rfc3339_option_deserialize<'de, D>(
-    deserializer: D,
-) -> std::result::Result<Option<time::OffsetDateTime>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrap(
-        #[serde(deserialize_with = "time::serde::rfc3339::deserialize")] time::OffsetDateTime,
-    );
-
-    Option::<Wrap>::deserialize(deserializer).map(|o| o.map(|w| w.0))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

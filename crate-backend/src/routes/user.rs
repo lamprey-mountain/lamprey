@@ -36,7 +36,7 @@ pub async fn user_create(
             parent_id,
             name: body.name,
             description: body.description,
-            status: body.status,
+            status: None,
             is_bot: body.is_bot,
         })
         .await?;

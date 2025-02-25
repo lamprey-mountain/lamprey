@@ -145,6 +145,8 @@ pub enum MessageSync {
     },
 }
 
+// TODO: maybe split out different message types
+
 // /// messages specific to a user
 // #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 // #[serde(tag = "type")]
@@ -176,6 +178,10 @@ impl MessageSync {
                 | MessageSync::DeleteInvite { .. }
         )
     }
+
+    // pub fn is_thread_audit_loggable(&self) -> bool {
+    //     todo!()
+    // }
 
     /// get id to populate payload_prev
     pub fn get_audit_target_id(&self) -> Option<String> {

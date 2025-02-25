@@ -23,5 +23,6 @@ pub struct AuditLog {
     pub payload: MessageSync,
 
     /// The previous payload, or None if this resource is newly created
+    // theres probably a better way to do this, but its the best solution i could think of for now
     pub payload_prev: Option<MessageSync>,
 }

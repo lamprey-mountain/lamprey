@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -30,13 +31,19 @@ pub struct User {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    pub status: Option<String>,
     // NOTE: do i want to resolve media here?
+    // it's nice to have but is redundant, immutable, and common data
     pub avatar: Option<MediaId>,
+
     // email: Option<String>,
     #[serde(flatten)]
     pub user_type: UserType,
+
     pub state: UserState,
+
+    // #[serde(flatten)]
+    // pub status: Status,
+    pub status: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,10 +61,41 @@ pub struct UserCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    pub status: Option<String>,
-
     #[serde(deserialize_with = "deserialize_default_true")]
     pub is_bot: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum UserCreateType {
+    Default,
+    Bot {
+        // /// what this bot has access to
+        // scope: BotScope,
+
+        // might be simplified?
+        // url_terms_of_service: Option<Url>,
+        // url_privacy_policy: Option<Url>,
+        // url_help_docs: Vec<Url>,
+        // url_main_site: Vec<Url>,
+        // url_interactions: Vec<Url>, // webhook
+        // visibility: BotVisibility,
+    },
+    Puppet {
+        /// what platform this puppet is connected to
+        external_platform: ExternalPlatform,
+
+        /// an opaque identifier
+        // TODO: validate lengths
+        // #[cfg_attr(
+        //     feature = "utoipa",
+        //     schema(required = false, min_length = 1, max_length = 8192)
+        // )]
+        external_id: String,
+
+        /// a url on the other platform that this account can be reached at
+        external_url: Option<Url>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,10 +118,11 @@ pub struct UserPatch {
     pub description: Option<Option<String>>,
 
     #[serde(default, deserialize_with = "some_option")]
-    pub status: Option<Option<String>>,
-
-    #[serde(default, deserialize_with = "some_option")]
     pub avatar: Option<Option<MediaId>>,
+
+    // pub status: Option<Status>,
+    #[serde(default, deserialize_with = "some_option")]
+    pub status: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -94,33 +133,126 @@ pub enum UserType {
     Default,
 
     /// makes two users be considered the same user
-    Alias { alias_id: UserId },
+    Alias {
+        /// this user should be considered the same as the one at alias_id
+        /// mainly intended for bridged users
+        /// maybe it should even redirect by default?
+        /// can you alias to another alias?
+        alias_id: UserId,
+    },
 
     /// automated account
-    Bot { owner_id: UserId },
+    Bot {
+        /// the user who created this bot
+        owner_id: UserId,
+        // /// what this bot has access to
+        // scope: BotScope,
+
+        // might be simplified?
+        // url_terms_of_service: Option<Url>,
+        // url_privacy_policy: Option<Url>,
+        // url_help_docs: Vec<Url>,
+        // url_main_site: Vec<Url>,
+        // url_interactions: Vec<Url>, // webhook
+        // visibility: BotVisibility,
+    },
+
+    /// a special type of bot designed to represent a user on another platform
+    Puppet {
+        /// the user who created this puppet
+        owner_id: UserId,
+
+        /// what platform this puppet is connected to
+        external_platform: ExternalPlatform,
+
+        /// an opaque identifier
+        external_id: String,
+
+        /// a url on the other platform that this account can be reached at
+        external_url: Option<Url>,
+    },
 
     /// system/service account
     System,
+}
+
+// TODO: add platforms
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ExternalPlatform {
+    /// some other platform
+    Other(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum UserState {
     Active,
+    // maybe different "trust levels" for antispam
+    // Untrusted,
+    // Trusted,
+    // Verified,
     Suspended,
     Deleted,
 }
 
-// impl User {
-//     pub fn can_view(&self, other: &User) -> bool {
-//         match other.user_type {
-//             UserType::Default => false,
-//             UserType::Alias { alias_id } => self.id == alias_id,
-//             UserType::Bot { owner_id } => self.id == owner_id,
-//             UserType::System => true,
-//         }
-//     }
-// }
+/// what this bot can access
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum BotScope {
+    /// this bot can be used everywhere (most bots)
+    Global,
+
+    /// this bot can only access a single room (probably somewhat rare?)
+    Room { room_id: crate::RoomId },
+
+    /// this bot can only access a single thread (ie. webhooks)
+    Thread { room_id: crate::ThreadId },
+}
+
+/// the current status of the user
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Status {
+    status: StatusType,
+    status_text: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum StatusType {
+    /// offline or explicitly invisible
+    Offline,
+
+    /// connected to the service, no special status
+    Online {
+        /// how long this user has been online for
+        online_for: time::OffsetDateTime,
+    },
+
+    /// connected but not currently active (ie away from their computer)
+    Away {
+        /// how long this user has been idle for
+        idle_for: time::OffsetDateTime,
+    },
+
+    /// currently unavailable to chat
+    Busy {
+        /// how long this user will be busy for
+        until: time::OffsetDateTime,
+
+        /// busy might be set automatically when they look busy
+        /// but it might not be that important
+        /// this explicitly says "do not disturb"
+        dnd: bool,
+    },
+
+    /// currently available to chat
+    Available {
+        /// how long this user will be available for
+        until: time::OffsetDateTime,
+    },
+}
 
 impl Diff<User> for UserPatch {
     fn changes(&self, other: &User) -> bool {
@@ -130,3 +262,42 @@ impl Diff<User> for UserPatch {
             || self.status.changes(&other.status)
     }
 }
+
+/// data private to the user
+pub struct UserPrivate {
+    pub note: Option<String>,
+    pub relation: Option<Relationship>,
+    pub ignore: Option<Ignore>,
+}
+
+/// how a user is ignoring another user
+pub enum Ignore {
+    Timed { ignore_until: time::OffsetDateTime },
+    Forever,
+}
+
+/// a relationship between two users
+pub enum Relationship {
+    RequestSend,
+    RequestRecv,
+    Friend,
+    Block,
+}
+
+// #[derive(Debug, Default)]
+// pub enum BotVisibility {
+//     #[default]
+//     Private,
+//     Public,
+//     Discoverble,
+// }
+
+// // maybe could be merged with scope
+// pub enum BotOwner {
+//     User(UserId),
+//     Room(RoomId),
+//     Thread(ThreadId),
+//     // replaces other UserTypes ..?
+//     Server,
+//     Puppet(PuppetInfo),
+// }

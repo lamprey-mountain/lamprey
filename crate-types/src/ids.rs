@@ -84,6 +84,8 @@ macro_rules! genid {
     };
 }
 
+// i might not need version ids for everything
+
 genid!(RoomId, "00000000-0000-0000-0000-00000000room");
 genid!(RoomVerId, "00000000-0000-0000-0ver-00000000room");
 genid!(ThreadId, "00000000-0000-0000-0000-000000thread");
@@ -99,3 +101,9 @@ genid!(SessionId, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVerId, "00000000-0000-0000-0ver-00000session");
 genid!(AuditLogId, "00000000-0000-0000-0000-0auditlogent");
 genid!(UrlEmbedId, "00000000-0000-0000-0000-0000000embed");
+genid!(TagId, "00000000-0000-0000-0000-000000000tag");
+genid!(TagVerId, "00000000-0000-0000-0ver-000000000tag");
+genid!(CustomEmojiId, "00000000-0000-0000-0000-0customemoji");
+genid!(ReportId, "00000000-0000-0000-0000-000modreport");
+genid!(RedexId, "00000000-0000-0000-0000-0000000redex");
+genid!(CallId, "00000000-0000-0000-0000-00000000call");

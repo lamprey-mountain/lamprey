@@ -4,6 +4,8 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::text::Language;
+
 use super::Mime;
 
 /// A unique "view" of this piece of media. Could be the source, an
@@ -36,11 +38,6 @@ pub struct File {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     pub filename: String,
 }
-
-// TODO: the language for this piece of media
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Language(pub String);
 
 /// metadata for videos
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,6 +93,38 @@ pub struct Mixed {
     pub language: Option<Language>,
 }
 
+// TODO: strip exif location metadata by default?
+/// a place, somewhere.
+///
+/// all measurements are in reference to WGS-84
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Location {
+    /// in degrees
+    pub latitude: f64,
+
+    /// in degrees
+    pub longitude: f64,
+
+    /// in meters
+    pub altitude: f64,
+
+    /// human readable label
+    pub name: String,
+}
+
+impl PartialEq for Location {
+    fn eq(&self, other: &Self) -> bool {
+        const EPSILON: f64 = 0.00001;
+        (self.latitude - other.latitude).abs() < EPSILON
+            && (self.longitude - other.longitude).abs() < EPSILON
+            && (self.altitude - other.altitude).abs() < EPSILON
+            && self.name == other.name
+    }
+}
+
+impl Eq for Location {}
+
 /// metadata about a particular track
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -107,12 +136,12 @@ pub enum MediaTrackInfo {
     /// an audio stream
     Audio(Audio),
 
-    /// the "main" image
+    /// an image
     Image(Image),
 
     // TODO: trickplay/storyboard image
     // Trickplay(Image),
-    /// thumbnails
+    /// thumbnails. the source track might be a thumbnail in some cases, eg. url embeds
     Thumbnail(Image),
 
     /// subtitles/captions

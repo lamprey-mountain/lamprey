@@ -7,7 +7,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::util::{some_option, Diff};
+use crate::{
+    util::{some_option, Diff},
+    UserId,
+};
 
 use super::ids::RoomId;
 
@@ -32,8 +35,21 @@ pub struct Room {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
-    // pub room_type: RoomType,
+
+    #[serde(rename = "type")]
+    pub room_type: RoomType,
+    // pub visibility: RoomVisibility,
+
+    // pub member_count: u64,
+    // pub online_count: u64,
 }
+
+// /// User-specific room data
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct RoomPrivate {
+//     pub notifications: NotificationConfigRoom,
+// }
 
 /// Data required to create a room
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -70,10 +86,49 @@ pub struct RoomPatch {
     pub description: Option<Option<String>>,
 }
 
-// enum RoomType {
-//     Default,
-//     Dm { other: User },
-//     Reports,
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RoomType {
+    /// the default generic room type
+    #[default]
+    Default,
+
+    /// direct messages between two people
+    Dm { participants: (UserId, UserId) },
+    // /// for reports
+    // Reports,
+}
+
+/// who can view this room
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RoomVisibility {
+    /// invite only
+    #[default]
+    Private,
+
+    /// anyone can view
+    Unlisted {
+        /// whether anyone can join or if they still need an invite
+        anyone_can_join: bool,
+    },
+
+    /// anyone can find
+    Discoverable {
+        /// whether anyone can join or if they still need an invite
+        anyone_can_join: bool,
+    },
+}
+
+// unsure how these should work
+// struct SystemMessages {
+//     user_join: SystemMessagesTarget,
+//     moderation_report: SystemMessagesTarget,
+// }
+
+// enum SystemMessagesTarget {
+//     Create,
+//     Reuse(ThreadId),
 // }
 
 impl Diff<Room> for RoomPatch {

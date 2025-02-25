@@ -35,6 +35,15 @@ pub struct SearchMessageRequest {
     // #[serde(default)]
     // /// Only return messages that have these features. Defaults to returning all messages.
     // features: Vec<SearchMessageFeatures>,
+    // features_message: Vec<SearchMessageFeatures>,
+    //
+    // #[serde(default)]
+    // /// Only return messages from threads that have these features. Defaults to searching all threads.
+    // features_thread: Vec<SearchThreadFeatures>,
+    //
+    // #[serde(default)]
+    // /// Only return messages from rooms that have these features. Defaults to searching all rooms.
+    // features_room: Vec<SearchRoomFeatures>,
 
     // #[serde(default)]
     // order_by: SearchMessageOrder,
@@ -57,19 +66,19 @@ pub enum SearchMessageOrder {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SearchMessageFeatures {
-    /// Has attachment of any type
+    /// Has an attachment of any type
     Attachment,
 
-    /// Has attachment of type image/*
+    /// Has an attachment of type image/*
     Image,
 
-    /// Has attachment of type audio/*
+    /// Has an attachment of type audio/*
     Audio,
 
-    /// Has attachment of type video/*
+    /// Has an attachment of type video/*
     Video,
 
-    /// Has a hyperlink
+    /// Has a link
     Link,
 
     /// Is pinned
@@ -80,7 +89,31 @@ pub enum SearchMessageFeatures {
 
     /// Include messages from ignored users. By default these are filtered out. Implicitly includes `Ignored`.
     Blocked,
+}
 
-    /// Only return messages from unmuted threads and rooms. Explicitly providing `room_id` and `thread_id` overrides this.
-    NotMuted,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SearchThreadFeatures {
+    /// Is pinned
+    Pinned,
+
+    /// Include messages from muted threads. Explicitly providing `room_id` or `thread_id` overrides this.
+    Muted,
+}
+
+// struct MessageFilter {}
+// struct ThreadFilter {}
+// struct RoomFilter {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SearchRoomFeatures {
+    /// Is a direct message room
+    Dm,
+
+    /// Is not a direct message room (overrides Dm)
+    NotDm,
+
+    /// Include messages from muted rooms. Explicitly providing `room_id` or `thread_id` overrides this.
+    Muted,
 }
