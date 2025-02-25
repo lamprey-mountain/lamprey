@@ -35,7 +35,6 @@ export const AudioView = (props: MediaProps) => {
 	const source = actx.createMediaElementSource(audio);
 	source.connect(gain);
 	gain.connect(actx.destination);
-	actx.resume();
 
 	audio.preload = "metadata";
 	audio.crossOrigin = "anonymous";
@@ -67,6 +66,7 @@ export const AudioView = (props: MediaProps) => {
 			cur.element.pause();
 		}
 
+		actx.resume();
 		ctx.setCurrentMedia({ media: props.media, element: audio });
 		setHandlers();
 		setPlaying(true);
