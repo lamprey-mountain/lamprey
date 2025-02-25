@@ -140,6 +140,91 @@ async fn media_patch(
     Ok((StatusCode::NO_CONTENT, headers))
 }
 
+/// Media done
+///
+/// finishes a media upload. at this point, the media becomes immutable
+#[utoipa::path(
+    put,
+    path = "/media/{media_id}/done",
+    tags = ["media"],
+    params(("media_id", description = "Media id")),
+    responses(
+        // (status = NOT_MODIFIED, description = "Not modified"),
+        (status = OK, body = Media, description = "Success"),
+    )
+)]
+async fn media_done(
+    Path(media_id): Path<MediaId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let mut up = srv
+        .media
+        .uploads
+        .get_mut(&media_id)
+        .ok_or(Error::NotFound)?;
+    if up.user_id != user_id {
+        return Err(Error::NotFound);
+    }
+    debug!(
+        "done upload for {}, file {:?}",
+        media_id,
+        up.temp_file.file_path()
+    );
+    
+    let source_size = up
+        .create
+        .source
+        .size()
+        .expect("can only patch source upload");
+    match up.current_size.cmp(&source_size) {
+        Ordering::Greater => {
+            s.services().media.uploads.remove(&media_id);
+            Err(Error::TooBig)
+        }
+        Ordering::Equal => {
+            trace!("flush media");
+            up.temp_writer.flush().await?;
+            trace!("flushed media");
+            drop(up);
+            trace!("dropped upload");
+            let (_, up) = s
+                .services()
+                .media
+                .uploads
+                .remove(&media_id)
+                .expect("it was there a few milliseconds ago");
+            trace!("processing upload");
+            let filename = match &up.create.source {
+                MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+                MediaCreateSource::Download { .. } => panic!("can only patch upload"),
+            };
+            let mut media = s
+                .services()
+                .media
+                .process_upload(up, media_id, user_id, &filename)
+                .await?;
+            debug!("finished processing media");
+            s.presign(&mut media).await?;
+            let mut headers = HeaderMap::new();
+            let size = match media.source.size {
+                MediaSize::Bytes(b) => b,
+                MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
+            };
+            headers.insert("upload-offset", size.into());
+            headers.insert("upload-length", size.into());
+            Ok((StatusCode::OK, headers, Json(Some(media))))
+        }
+        Ordering::Less => {
+            let mut headers = HeaderMap::new();
+            headers.insert("upload-offset", up.current_size.into());
+            headers.insert("upload-length", source_size.into());
+            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
+        }
+    }
+}
+
 /// Media upload
 async fn media_upload(
     Path(media_id): Path<MediaId>,
@@ -347,6 +432,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_patch))
         .routes(routes!(media_get))
         .routes(routes!(media_delete))
+        .routes(routes!(media_done))
         .route(
             "/internal/media-upload/{media_id}",
             routing::patch(media_upload).head(media_check),
