@@ -15,7 +15,7 @@ export const UrlEmbedView = (props: VoidProps<UrlEmbedProps>) => {
 						<a class="title" href={props.embed.url}>{props.embed.title}</a>
 						<span class="site">
 							{" - "}
-							{props.embed.site_name}
+							{props.embed.site_name || new URL(props.embed.url).host}
 						</span>
 					</header>
 					<p class="description">{props.embed.description}</p>
