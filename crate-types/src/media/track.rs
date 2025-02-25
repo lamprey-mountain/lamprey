@@ -26,6 +26,7 @@ pub struct MediaTrack {
     pub mime: Mime,
 
     /// Where this track came from
+    #[serde(flatten)]
     pub source: TrackSource,
 }
 
@@ -130,6 +131,7 @@ pub enum MediaTrackInfo {
 /// Where this track came from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "source")]
 pub enum TrackSource {
     /// manually uploaded by the user
     Uploaded,
