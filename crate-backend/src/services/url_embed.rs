@@ -228,12 +228,14 @@ impl ServiceUrlEmbed {
                 .properties
                 .get("title")
                 .or(parsed.title.as_ref())
+                .or_else(|| parsed.meta.get("twitter:title"))
                 .map(ToOwned::to_owned);
             let description = parsed
                 .opengraph
                 .properties
                 .get("description")
                 .or(parsed.description.as_ref())
+                .or_else(|| parsed.meta.get("twitter:description"))
                 .map(ToOwned::to_owned);
             let site_name = parsed
                 .opengraph
