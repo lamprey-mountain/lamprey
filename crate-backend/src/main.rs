@@ -12,6 +12,7 @@ use dashmap::DashMap;
 use data::{postgres::Postgres, Data};
 use figment::providers::{Env, Format, Toml};
 use http::header;
+use ipnet::IpNet;
 use moka::future::Cache;
 use opendal::layers::LoggingLayer;
 use serde::Deserialize;
@@ -249,6 +250,7 @@ pub struct Config {
     base_url: Url,
     s3: ConfigS3,
     oauth_provider: HashMap<String, ConfigOauthProvider>,
+    url_preview: ConfigUrlPreview,
 }
 
 #[derive(Debug, Deserialize)]
@@ -267,6 +269,11 @@ pub struct ConfigOauthProvider {
     authorization_url: String,
     token_url: String,
     revocation_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConfigUrlPreview {
+    deny: Vec<IpNet>,
 }
 
 fn cors() -> CorsLayer {

@@ -126,12 +126,20 @@ impl ServiceUrlEmbed {
             .user_agent(USER_AGENT)
             .https_only(true)
             .build()?;
-        let mut fetched = http
+        let fetched = http
             .get(url.clone())
             .timeout(Duration::from_secs(15))
             .send()
-            .await?
-            .error_for_status()?;
+            .await?;
+        let addr = fetched
+            .remote_addr()
+            .ok_or(Error::BadStatic("request has no remote ip address"))?;
+        for denied in &self.state.config.url_preview.deny {
+            if denied.contains(&addr.ip()) {
+                return Err(Error::BadStatic("url blacklisted"));
+            }
+        }
+        let mut fetched = fetched.error_for_status()?;
         let content_length = fetched.content_length();
         let content_type = fetched
             .headers()
