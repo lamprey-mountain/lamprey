@@ -174,7 +174,7 @@ export const Editor = (props: EditorProps) => {
 			decorations(state) {
 				if (state.doc.firstChild!.firstChild === null) {
 					const placeholder = (
-						<div class="placeholder" aria-hidden="true">
+						<div class="placeholder" role="presentation">
 							{/* @once */ props.placeholder}
 						</div>
 					) as HTMLDivElement;
@@ -550,9 +550,11 @@ export const Editor = (props: EditorProps) => {
 			classList={{ "disabled": props.disabled ?? false }}
 			tabindex={0}
 			ref={editorEl!}
-			aria-placeholder={props.placeholder}
 			role="textbox"
 			aria-label="chat input"
+			aria-placeholder={props.placeholder}
+			aria-multiline="true"
+			enterkeyhint="send"
 		>
 		</div>
 	);

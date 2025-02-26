@@ -128,6 +128,9 @@ export function Dropdown<T>(
 				select(selector.getHovered()?.item ?? null);
 			} else {
 				setShown(true);
+				setTimeout(() => {
+					debugger;
+				}, 100);
 			}
 		},
 	});
@@ -192,7 +195,12 @@ export function Dropdown<T>(
 				onWheel={handleWheel}
 				role="combobox"
 				aria-autocomplete="list"
+				aria-haspopup="listbox"
 				aria-controls={shown() ? listboxId : undefined}
+				aria-expanded={shown()}
+				aria-keyshortcuts={shown()
+					? "ArrowUp ArrowDown Tab Shift+Tab Escape Enter"
+					: "Enter"}
 			/>
 			<Portal>
 				<Show when={shown()}>
@@ -202,20 +210,22 @@ export function Dropdown<T>(
 						id={listboxId}
 						class="dropdown-items floating"
 						style={{
+							position: position.strategy,
 							translate: `${position.x}px ${position.y}px`,
 							width: `${inputEl()?.offsetWidth || 0}px`,
 						}}
 					>
 						<ul>
 							<For each={selector.getFiltered()} fallback={"no options"}>
-								{(entry, idx) => (
+								{(entry) => (
 									<li
 										onMouseOver={() => selector.setHovered(entry.obj)}
 										onMouseDown={() => select(entry.obj.item)}
 										classList={{
 											hovered: entry.obj.item === selector.getHovered()?.item,
-											selected: idx() === selected(),
+											selected: entry.obj.item === selected(),
 										}}
+										aria-selected={entry.obj.item === selected()}
 									>
 										{entry.obj.view ?? entry.obj.label}
 									</li>

@@ -15,7 +15,7 @@ import {
 import { flags } from "./flags.ts";
 import { byteFmt, getUrl, MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
-import { tooltip } from "./Tooltip.tsx";
+import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
 
@@ -115,8 +115,6 @@ export function MessageView(props: MessageProps) {
 						<div
 							class="author sticky menu-user"
 							classList={{ "override-name": !!props.message.override_name }}
-							data-user-id={props.message.author.id}
-							data-thread-id={props.message.thread_id}
 						>
 							<Author message={props.message} thread={thread()} />
 						</div>
@@ -140,9 +138,7 @@ export function MessageView(props: MessageProps) {
 							</ul>
 						</Show>
 					</div>
-					<div class="time">
-						<Time date={date} animGroup="message-ts" />
-					</div>
+					<Time date={date} animGroup="message-ts" />
 				</>
 			);
 		}
@@ -268,27 +264,27 @@ function Author(props: { message: Message; thread?: Thread }) {
 		return name;
 	}
 
-	return (
-		tooltip(
-			{
-				// animGroup: "users",
-				placement: "right-start",
-				interactive: true,
-			},
+	const { content } = createTooltip({
+		// animGroup: "users",
+		placement: "right-start",
+		interactive: true,
+		tip: () => (
 			<UserView
 				user={props.message.author}
 				room_member={room_member()}
 				thread_member={thread_member()}
-			/>,
-			(
-				<span
-					class="author"
-					classList={{ "override-name": !!props.message.override_name }}
-					data-user-id={props.message.author.id}
-				>
-					{name()}
-				</span>
-			) as HTMLElement,
-		)
+			/>
+		),
+	});
+
+	return (
+		<span
+			class="user"
+			classList={{ "override-name": !!props.message.override_name }}
+			data-user-id={props.message.author.id}
+			use:content
+		>
+			{name()}
+		</span>
 	);
 }

@@ -15,6 +15,7 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 		<menu
 			onMouseDown={(e) => !props.submenu && e.stopPropagation()}
 			onMouseLeave={() => ctx.dispatch({ do: "menu.preview", id: null })}
+			role="menu"
 		>
 			<ul>
 				{props.children}
@@ -64,11 +65,16 @@ export function Submenu(
 		clearTimeout(timeout);
 	}
 
+	const visible = () => hovered() || ctx.data.cursor.preview === menuId;
+
 	return (
 		<li
 			ref={setItemEl}
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
+			aria-haspopup="menu"
+			aria-expanded={visible()}
+			aria-controls={menuId}
 		>
 			<button
 				onClick={(e) => {
@@ -87,12 +93,11 @@ export function Submenu(
 					position: dims.strategy,
 					left: `${dims.x}px`,
 					top: `${dims.y}px`,
-					visibility: hovered() || ctx.data.cursor.preview === menuId
-						? "visible"
-						: "hidden",
+					visibility: visible() ? "visible" : "hidden",
 				}}
 				onMouseEnter={() => setHovered(true)}
 				onMouseLeave={() => setHovered(false)}
+				id={menuId}
 			>
 				<Menu submenu>
 					{props.children}

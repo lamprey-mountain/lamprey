@@ -14,6 +14,7 @@ import {
 	getHeight,
 	getUrl,
 	getWidth,
+	Loader,
 	MediaLoadingState,
 	MediaProps,
 	parseRanges,
@@ -268,12 +269,7 @@ export const VideoView = (props: MediaProps) => {
 	return (
 		<Resize height={height()} width={width()}>
 			<div class="video" ref={wrapperEl!}>
-				<div
-					class="media-loader"
-					classList={{ loaded: loadingState() !== "empty" }}
-				>
-					loading
-				</div>
+				<Loader loaded={loadingState() !== "empty"} />
 				<video
 					ref={video!}
 					src={getUrl(props.media.source)}
@@ -291,6 +287,10 @@ export const VideoView = (props: MediaProps) => {
 						onMouseMove={handleScrubMouseMove}
 						onMouseDown={handleScrubClick}
 						onClick={handleScrubClick}
+						role="progressbar"
+						aria-valuemax={duration()}
+						aria-valuenow={progress()}
+						aria-label="progress"
 					>
 						<For each={buffered()}>
 							{(r) => {
@@ -357,6 +357,8 @@ export const VideoView = (props: MediaProps) => {
 							class="time"
 							classList={{ preview: progressPreview() !== null }}
 							onWheel={handleScrubWheel}
+							role="timer"
+							aria-label="position"
 						>
 							<span class="progress">
 								{formatTime(progressPreview() ?? progress())}

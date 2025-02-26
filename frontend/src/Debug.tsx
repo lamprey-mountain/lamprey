@@ -6,6 +6,7 @@ import { MessageView } from "./Message.tsx";
 import { flags } from "./flags.ts";
 import { Message, UrlEmbed } from "sdk";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
+import { Dropdown } from "./Dropdown.tsx";
 
 export const Debug = () => {
 	return (
@@ -32,6 +33,17 @@ export const Debug = () => {
 			<details open>
 				<summary>url embedder</summary>
 				<UrlEmbedDbg />
+			</details>
+			<details open>
+				<summary>dropdown</summary>
+				<Dropdown
+					selected="foo"
+					options={[
+						{ item: "foo", label: "foo" },
+						{ item: "bar", label: "bar" },
+						{ item: "baz", label: "baz" },
+					]}
+				/>
 			</details>
 		</div>
 	);

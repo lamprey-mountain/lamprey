@@ -250,6 +250,10 @@ input[type="submit"] {
 			display: grid;
 			grid-template-columns: 128px 1fr max-content;
 
+			&.message {
+				grid-template-columns: 1fr;
+			}
+
 			&:not(.message) {
 				overflow-anchor: none;
 			}
@@ -484,7 +488,8 @@ menu {
 	}
 }
 
-input[type="text"], input[type="url"] {
+input[type="text"],
+input[type="url"] {
 	background-color: $bg-300;
 	border: solid 1px $sep-500;
 }
@@ -536,7 +541,7 @@ input[type="text"], input[type="url"] {
 	}
 }
 
-.message {
+article.message {
 	display: grid;
 	grid-template-columns: 128px 1fr max-content;
 
@@ -545,7 +550,7 @@ input[type="text"], input[type="url"] {
 			background-color: oklch(var(--color-bg1) / 0.3);
 		}
 
-		& > .time {
+		& > time {
 			visibility: visible;
 		}
 	}
@@ -566,14 +571,14 @@ input[type="text"], input[type="url"] {
 			text-decoration: underline;
 		}
 
-		&.sticky {
-			position: sticky;
-			top: 64px;
-		}
-
 		&.override-name {
 			color: #9ca9db;
 		}
+	}
+
+	& .sticky {
+		position: sticky;
+		top: 64px;
 	}
 
 	& > .reply {
@@ -623,7 +628,7 @@ input[type="text"], input[type="url"] {
 		}
 	}
 
-	& > .time {
+	& > time {
 		visibility: hidden;
 		color: $fg-400;
 	}
@@ -916,16 +921,22 @@ img.avatar {
 
 .dropdown {
 	display: inline-block;
-	background: #eee;
-	border: solid #bbb 1px;
+	background: $bg-300;
+	border: solid $sep-500 1px;
 	padding: 0 2px;
 	outline: none;
 	cursor: pointer;
 }
 
 .dropdown-items {
-	background: #eee;
-	border: solid #bbb 1px;
+	background: $bg-300;
+	border: solid $sep-500 1px;
+}
+
+.floating {
+	position: fixed;
+	top: 0;
+	left: 0;
 }
 
 .dropdown-items > ul {
@@ -935,19 +946,20 @@ img.avatar {
 .dropdown-items > ul > li {
 	padding: 2px 4px;
 	user-select: none;
-}
 
-.dropdown-items > ul > li.hovered {
-	background: #2222;
-}
+	&:hover,
+	&.hovered {
+		background: $bg-200;
 
-.dropdown-items > ul > li.selected {
-	box-shadow: inset 2px 0 0 #f0f2;
-	background: #f0f2;
-}
+		&.selected {
+			background: $bg-100;
+		}
+	}
 
-.dropdown-items > ul > li.selected.hovered {
-	background: #7172;
+	&.selected {
+		/* box-shadow: inset 2px 0 0 $link-100; */
+		background: $bg-150;
+	}
 }
 
 input[type="range"] {
@@ -1100,4 +1112,9 @@ button[disabled] {
 		grid-area: media;
 		background: $bg-150;
 	}
+}
+
+a:focus-visible {
+	background: $link-500;
+	color: $fg-100;
 }

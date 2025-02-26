@@ -103,7 +103,7 @@ export const ChatMain = (props: ChatProps) => {
 			if (a.type === "context") {
 				// TODO: is this safe and performant?
 				const target = document.querySelector(
-					`li[data-message-id="${a.message_id}"]`,
+					`article[data-message-id="${a.message_id}"]`,
 				);
 				console.log("scroll restore: to anchor", a.message_id, target);
 				if (target) {
@@ -209,7 +209,7 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(list.scrollPos, setPos));
 
 	return (
-		<div class="chat" data-thread-id={props.thread.id}>
+		<div class="chat" data-thread-id={props.thread.id} role="log">
 			<Show when={messages.loading}>
 				<div class="loading">{t("loading")}</div>
 			</Show>

@@ -11,7 +11,7 @@ export const Modal = (props: ParentProps) => {
 			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
 			<div class="content">
 				<div class="base"></div>
-				<div class="inner" role="dialog">
+				<div class="inner" role="dialog" aria-modal>
 					{props.children}
 				</div>
 			</div>
@@ -127,7 +127,7 @@ const ModalMedia = (props: { media: Media }) => {
 			<div class="bg" onClick={() => ctx.dispatch({ do: "modal.close" })}></div>
 			<div class="content">
 				<div class="base"></div>
-				<div class="inner" role="dialog">
+				<div class="inner" role="dialog" aria-modal>
 					<Resize height={height()} width={width()}>
 						<div class="image full">
 							<div class="media-loader" classList={{ loaded: loaded() }}>

@@ -214,7 +214,7 @@ export const AudioView = (props: MediaProps) => {
 	};
 
 	return (
-		<div class="audio">
+		<article class="audio">
 			<svg
 				class="progress"
 				viewBox="0 0 1 1"
@@ -224,6 +224,10 @@ export const AudioView = (props: MediaProps) => {
 				onMouseMove={handleScrubMouseMove}
 				onMouseDown={handleScrubClick}
 				onClick={handleScrubClick}
+				role="progressbar"
+				aria-valuemax={duration()}
+				aria-valuenow={progress()}
+				aria-label="progress"
 			>
 				<For each={buffered()}>
 					{(r) => {
@@ -309,6 +313,8 @@ export const AudioView = (props: MediaProps) => {
 					class="time"
 					classList={{ preview: progressPreview() !== null }}
 					onWheel={handleScrubWheel}
+					role="timer"
+					aria-label="position"
 				>
 					<span class="progress">
 						{formatTime(progressPreview() ?? progress())}
@@ -316,6 +322,6 @@ export const AudioView = (props: MediaProps) => {
 					/ <span class="duration">{formatTime(duration())}</span>
 				</div>
 			</div>
-		</div>
+		</article>
 	);
 };

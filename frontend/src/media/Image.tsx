@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { useCtx } from "../context.ts";
-import { getThumb, getUrl, MediaProps, Resize } from "./util.tsx";
+import { getThumb, getUrl, Loader, MediaProps, Resize } from "./util.tsx";
 
 type ImageViewProps = MediaProps & {
 	thumb_width?: number;
@@ -19,7 +19,7 @@ export const ImageView = (props: ImageViewProps) => {
 
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
-			<div
+			<article
 				class="image"
 				onMouseOver={() => {
 					// prefetch image
@@ -32,7 +32,7 @@ export const ImageView = (props: ImageViewProps) => {
 					});
 				}}
 			>
-				<div class="media-loader" classList={{ loaded: loaded() }}>loading</div>
+				<Loader loaded={loaded()} />
 				<img
 					src={url()}
 					alt={props.media.alt ?? undefined}
@@ -41,7 +41,7 @@ export const ImageView = (props: ImageViewProps) => {
 					onLoad={[setLoaded, true]}
 					onEmptied={[setLoaded, false]}
 				/>
-			</div>
+			</article>
 		</Resize>
 	);
 };

@@ -117,6 +117,7 @@ type ResizeProps = {
 	width: number;
 	ratio?: number;
 };
+type LoaderProps = { loaded: boolean };
 
 export const Resize = (props: ParentProps<ResizeProps>) => {
 	return (
@@ -129,6 +130,20 @@ export const Resize = (props: ParentProps<ResizeProps>) => {
 			}}
 		>
 			{props.children}
+		</div>
+	);
+};
+
+export const Loader = (props: VoidProps<LoaderProps>) => {
+	return (
+		<div
+			class="media-loader"
+			classList={{ loaded: props.loaded }}
+			role="status"
+			aria-label="loading"
+			aria-hidden={props.loaded}
+		>
+			loading
 		</div>
 	);
 };
