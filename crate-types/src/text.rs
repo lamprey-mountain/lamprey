@@ -94,6 +94,35 @@ pub enum KnownTag<'a> {
     /// spoiler (optional reason)
     Spoiler(Text<'a>, Option<String>),
 
+    /// keyboard shortcut
+    Keyboard(Text<'a>),
+
+    /// abbreviation
+    Abbr(Text<'a>, Text<'a>),
+
+    // math/latex (how do i standardize this?)
+    Math(&'a str),
+
+    /// custom emoji
+    Emoji(Emoji),
+
+    /// timestamp
+    Time(Time, TimeFormat),
+
+    Mention(MentionTag),
+    // Document(DocumentTag<'a>),
+    // Interactive(InteractiveTag<'a>),
+}
+
+// /// only usable in larger documents
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum DocumentTag<'a> {
+//     /// footnote/sidenote
+//     Aside(Box<Block<'a>>),
+// }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MentionTag {
     /// mention a user
     MentionUser(UserId),
 
@@ -111,12 +140,6 @@ pub enum KnownTag<'a> {
 
     /// mention everyone in the thread
     MentionAllThread,
-
-    /// custom emoji
-    Emoji(Emoji),
-
-    /// timestamp
-    Time(Time, TimeFormat),
 }
 
 /// how the time should be displayed
@@ -157,7 +180,7 @@ impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
 }
 
 /// block level formatting (WIP)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block<'a> {
     /// inline text, can be a plain string
     Text(Text<'a>),
@@ -170,10 +193,82 @@ pub enum Block<'a> {
     H6(Text<'a>),
     Blockquote(Text<'a>),
     Code(Text<'a>),
-    Ul(Vec<Text<'a>>),
-    Ol(Vec<Text<'a>>),
+    ListUnordered(Vec<Text<'a>>),
+    ListOrdered(Vec<Text<'a>>),
+    ListDefinition(Vec<(Text<'a>, Text<'a>)>),
+    ListCheckable(Vec<(Text<'a>, bool)>),
     Table(Vec<Vec<Text<'a>>>),
+    Math(&'a str),
+
+    // Interactive(BlockInteractive),
 }
+
+// idk about *any* of these, just throwing random ideas out here
+// i'm probably not going to implement them
+
+// /// interactive, probably will be limited to bots
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum BlockInteractive<'a> {
+//     /// a clickable button
+//     Button(Text<'a>, ButtonStyle),
+    
+//     /// a text input
+//     Input(Text<'a>, InputStyle),
+    
+//     /// collapseable summary and details
+//     Details(Text<'a>, Box<Block>),
+
+//     Radio,
+//     Checkbox,
+//     Form,
+// }
+
+// #[derive(Debug, Default, Clone, PartialEq, Eq)]
+// pub enum ButtonStyle {
+//     #[default]
+//     Default,
+//     Primary,
+//     Danger,
+// }
+
+// #[derive(Debug, Default, Clone, PartialEq, Eq)]
+// pub enum InputStyle {
+//     #[default]
+//     Singleline,
+    
+//     // Multiline,
+//     // RichText,
+//     // Url,
+//     // Time,
+//     // Date,
+//     // DateTime,
+//     // Number,
+//     // File,
+//     // Color,
+//     // Search,
+//     // Select,
+    
+//     // User,
+//     // MemberThread,
+//     // MemberRoom,
+//     // Room,
+//     // Message,
+//     // Thread,
+// }
+
+// /// for layout
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum LayoutBlock<'a> {
+//     /// footnote/sidenote
+//     Aside(Box<Block<'a>>),
+//     Row(Vec<Block<'a>, StyleFlex>),
+//     Column(Vec<Block<'a>, StyleFlex>),
+//     Grid(Vec<Block<'a>>, StyleGrid),
+//     Box(Vec<Block<'a>>, StyleBox),
+// }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Blocks<'a>(Vec<Block<'a>>);
 
 impl From<String> for Language {
     fn from(value: String) -> Self {
