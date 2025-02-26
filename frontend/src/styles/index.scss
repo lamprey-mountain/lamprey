@@ -1130,3 +1130,14 @@ a:focus-visible {
 	background: $link-500;
 	color: $fg-100;
 }
+
+/* HACK: blockquote markdown parsing */
+blockquote {
+	white-space: normal;
+}
+
+blockquote {
+	border-left: solid $sep-800 3px;
+	margin: 2px 0;
+	padding-left: 8px;
+}
