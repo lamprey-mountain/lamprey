@@ -1,9 +1,12 @@
-use std::str::FromStr;
+use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
+use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
+
+use crate::{emoji::Emoji, util::Time, RoleId, RoomId, ThreadId, UserId};
 
 /// a language
 // TODO: determine which format to use. probably either ietf bcp-47 or a custom enum.
@@ -12,22 +15,204 @@ use utoipa::ToSchema;
 pub struct Language(pub String);
 
 /// any piece of text intended for humans to read; only has light formatting
-pub struct Text(String);
+pub struct PlainText(pub String);
+
+mod parse;
+mod render;
 
 /// any piece of text intended for humans to read; may be formatted (eg. messages)
-/// uses my as of yet unspecced tagged text format
-pub struct FormattedText<'a> {
-    s: &'a str,
+/// uses my as of yet unspecced (and unnamed) text format
+/// formatted inline text
+// TODO: make generic over KnownTag? and string format?
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Text<'a>(pub Vec<Span<'a>>);
+
+/// a single span of parsed text
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Span<'a> {
+    /// a raw string
+    Text(Cow<'a, str>),
+
+    /// a formatting tag
+    Tag(Tag<'a>),
 }
 
-impl<'a> FormattedText<'a> {
-    pub fn parse(s: &'a str) -> Result<FormattedText<'a>, ()> {
-        Ok(Self { s })
+/// a piece of tagged text. tags have a type and multiple parameters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Tag<'a> {
+    pub name: Cow<'a, str>,
+    pub params: Vec<Text<'a>>,
+}
+
+/// a container that holds a string. pretty much a workaround for rust's
+/// borrowing/lifetimes etc here
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextRaw(Box<str>);
+
+impl TextRaw {
+    pub fn parse(&self) -> Text {
+        Text::parse(&self.0)
     }
+
+    pub fn into_inner(self) -> Box<str> {
+        self.0
+    }
+}
+
+impl<'a> From<&'a TextRaw> for Text<'a> {
+    fn from(value: &'a TextRaw) -> Self {
+        Text::parse(&value.0)
+    }
+}
+
+// TODO: stronger typing
+// some of these could have less cloning
+/// currently supported tags
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum KnownTag<'a> {
+    /// bold text
+    Bold(Text<'a>),
+
+    /// emphasized
+    Emphasis(Text<'a>),
+
+    /// subscript (may be removed?)
+    Sub(Text<'a>),
+
+    /// superscript (may be removed?)
+    Sup(Text<'a>),
+
+    /// strikethrough
+    Strikethrough(Text<'a>),
+
+    /// link (optional custom text)
+    Link(Url, Option<Text<'a>>),
+
+    /// inline code (optional programming language)
+    Code(Text<'a>, Option<String>),
+
+    /// spoiler (optional reason)
+    Spoiler(Text<'a>, Option<String>),
+
+    /// mention a user
+    MentionUser(UserId),
+
+    /// mention/link a room
+    MentionRoom(RoomId),
+
+    /// mention/link a thread
+    MentionThread(ThreadId),
+
+    /// mention everyone with a role
+    MentionRole(RoleId),
+
+    /// mention everyone in the room
+    MentionAllRoom,
+
+    /// mention everyone in the thread
+    MentionAllThread,
+
+    /// custom emoji
+    Emoji(Emoji),
+
+    /// timestamp
+    Time(Time, TimeFormat),
+}
+
+/// how the time should be displayed
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TimeFormat {
+    TimeShort,
+    TimeLong,
+    DateShort,
+    DateLong,
+    DateTimeShort,
+    DateTimeLong,
+    Relative,
+}
+
+impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
+    type Error = ();
+
+    fn try_from(value: Tag<'a>) -> Result<Self, Self::Error> {
+        match (&*value.name, value.params.as_slice()) {
+            ("b", [t]) => Ok(KnownTag::Bold(t.clone())),
+            ("em", [t]) => Ok(KnownTag::Emphasis(t.clone())),
+            ("a", [l]) => Ok(KnownTag::Link(
+                l.as_plain().to_string().parse().map_err(|_| ())?,
+                None,
+            )),
+            ("a", [l, t]) => Ok(KnownTag::Link(
+                l.as_plain().to_string().parse().map_err(|_| ())?,
+                Some(t.clone()),
+            )),
+            ("sub", [t]) => Ok(KnownTag::Sub(t.clone())),
+            ("sup", [t]) => Ok(KnownTag::Sup(t.clone())),
+            ("s", [t]) => Ok(KnownTag::Strikethrough(t.clone())),
+            ("code", [t]) => Ok(KnownTag::Code(t.clone(), None)),
+            ("code", [t, l]) => Ok(KnownTag::Code(t.clone(), Some(l.as_plain().to_string()))),
+            _ => Err(()),
+        }
+    }
+}
+
+/// block level formatting (WIP)
+#[derive(Debug, Clone)]
+pub enum Block<'a> {
+    /// inline text, can be a plain string
+    Text(Text<'a>),
+
+    H1(Text<'a>),
+    H2(Text<'a>),
+    H3(Text<'a>),
+    H4(Text<'a>),
+    H5(Text<'a>),
+    H6(Text<'a>),
+    Blockquote(Text<'a>),
+    Code(Text<'a>),
+    Ul(Vec<Text<'a>>),
+    Ol(Vec<Text<'a>>),
+    Table(Vec<Vec<Text<'a>>>),
 }
 
 impl From<String> for Language {
     fn from(value: String) -> Self {
         Self(value)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::text::Text;
+    use std::fmt::Write;
+
+    #[test]
+    fn test_html() {
+        let t = Text::parse("hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}");
+        let mut s = String::new();
+        write!(s, "{}", t.as_html()).unwrap();
+        assert_eq!(
+            s,
+            "hello <b>world</b> <a href=\"https://example.com/\">text</a> <em>nested <b>text</b></em>"
+        );
+    }
+
+    #[test]
+    fn test_plain() {
+        let t = Text::parse("hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}");
+        let mut s = String::new();
+        write!(s, "{}", t.as_plain()).unwrap();
+        assert_eq!(s, "hello world text (https://example.com/) nested text");
+    }
+
+    #[test]
+    fn test_tagged_text() {
+        let t = Text::parse("hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}");
+        let mut s = String::new();
+        write!(s, "{}", t.as_tagged_text()).unwrap();
+        assert_eq!(
+            s,
+            "hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}"
+        );
     }
 }
