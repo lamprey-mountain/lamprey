@@ -1,12 +1,9 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 
 use serde::{Deserialize, Serialize};
 
-use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-
-use crate::{emoji::Emoji, util::Time, RoleId, RoomId, ThreadId, UserId};
 
 /// a language
 // TODO: determine which format to use. probably either ietf bcp-47 or a custom enum.
@@ -17,8 +14,9 @@ pub struct Language(pub String);
 /// any piece of text intended for humans to read; only has light formatting
 pub struct PlainText(pub String);
 
-mod parse;
-mod render;
+pub mod parse;
+pub mod render;
+pub mod tags;
 
 /// any piece of text intended for humans to read; may be formatted (eg. messages)
 /// uses my as of yet unspecced (and unnamed) text format
@@ -44,231 +42,66 @@ pub struct Tag<'a> {
     pub params: Vec<Text<'a>>,
 }
 
-/// a container that holds a string. pretty much a workaround for rust's
-/// borrowing/lifetimes etc here
+/// an owned Text
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TextRaw(Box<str>);
+pub struct OwnedText(Text<'static>);
 
-impl TextRaw {
-    pub fn parse(&self) -> Text {
-        Text::parse(&self.0)
-    }
+// ======= impls =======
 
-    pub fn into_inner(self) -> Box<str> {
-        self.0
+impl Borrow<Text<'static>> for OwnedText {
+    fn borrow(&self) -> &Text<'static> {
+        &self.0
     }
 }
 
-impl<'a> From<&'a TextRaw> for Text<'a> {
-    fn from(value: &'a TextRaw) -> Self {
-        Text::parse(&value.0)
+impl Text<'static> {
+    /// get an OwnedText from this text
+    pub fn to_owned(&self) -> OwnedText {
+        OwnedText(self.to_static())
     }
 }
 
-// TODO: stronger typing
-// some of these could have less cloning
-/// currently supported tags
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum KnownTag<'a> {
-    /// bold text
-    Bold(Text<'a>),
-
-    /// emphasized
-    Emphasis(Text<'a>),
-
-    /// subscript (may be removed?)
-    Sub(Text<'a>),
-
-    /// superscript (may be removed?)
-    Sup(Text<'a>),
-
-    /// strikethrough
-    Strikethrough(Text<'a>),
-
-    /// link (optional custom text)
-    Link(Url, Option<Text<'a>>),
-
-    /// inline code (optional programming language)
-    Code(Text<'a>, Option<String>),
-
-    /// spoiler (optional reason)
-    Spoiler(Text<'a>, Option<String>),
-
-    /// keyboard shortcut
-    Keyboard(Text<'a>),
-
-    /// abbreviation
-    Abbr(Text<'a>, Text<'a>),
-
-    // math/latex (how do i standardize this?)
-    Math(&'a str),
-
-    /// custom emoji
-    Emoji(Emoji),
-
-    /// timestamp
-    Time(Time, TimeFormat),
-
-    Mention(MentionTag),
-    // Document(DocumentTag<'a>),
-    // Interactive(InteractiveTag<'a>),
+impl AsRef<Text<'static>> for OwnedText {
+    fn as_ref(&self) -> &Text<'static> {
+        &self.0
+    }
 }
 
-// /// only usable in larger documents
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub enum DocumentTag<'a> {
-//     /// footnote/sidenote
-//     Aside(Box<Block<'a>>),
-// }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum MentionTag {
-    /// mention a user
-    MentionUser(UserId),
-
-    /// mention/link a room
-    MentionRoom(RoomId),
-
-    /// mention/link a thread
-    MentionThread(ThreadId),
-
-    /// mention everyone with a role
-    MentionRole(RoleId),
-
-    /// mention everyone in the room
-    MentionAllRoom,
-
-    /// mention everyone in the thread
-    MentionAllThread,
+impl From<Text<'_>> for OwnedText {
+    fn from(value: Text<'_>) -> Self {
+        Self(value.to_static())
+    }
 }
 
-/// how the time should be displayed
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TimeFormat {
-    TimeShort,
-    TimeLong,
-    DateShort,
-    DateLong,
-    DateTimeShort,
-    DateTimeLong,
-    Relative,
+impl From<OwnedText> for Text<'_> {
+    fn from(value: OwnedText) -> Self {
+        value.0
+    }
 }
 
-impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
-    type Error = ();
-
-    fn try_from(value: Tag<'a>) -> Result<Self, Self::Error> {
-        match (&*value.name, value.params.as_slice()) {
-            ("b", [t]) => Ok(KnownTag::Bold(t.clone())),
-            ("em", [t]) => Ok(KnownTag::Emphasis(t.clone())),
-            ("a", [l]) => Ok(KnownTag::Link(
-                l.as_plain().to_string().parse().map_err(|_| ())?,
-                None,
-            )),
-            ("a", [l, t]) => Ok(KnownTag::Link(
-                l.as_plain().to_string().parse().map_err(|_| ())?,
-                Some(t.clone()),
-            )),
-            ("sub", [t]) => Ok(KnownTag::Sub(t.clone())),
-            ("sup", [t]) => Ok(KnownTag::Sup(t.clone())),
-            ("s", [t]) => Ok(KnownTag::Strikethrough(t.clone())),
-            ("code", [t]) => Ok(KnownTag::Code(t.clone(), None)),
-            ("code", [t, l]) => Ok(KnownTag::Code(t.clone(), Some(l.as_plain().to_string()))),
-            _ => Err(()),
+impl Tag<'_> {
+    pub fn to_static(&self) -> Tag<'static> {
+        Tag {
+            name: Cow::Owned(self.name.clone().into_owned()),
+            params: self.params.iter().map(|p| p.to_static()).collect(),
         }
     }
 }
 
-/// block level formatting (WIP)
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Block<'a> {
-    /// inline text, can be a plain string
-    Text(Text<'a>),
-
-    H1(Text<'a>),
-    H2(Text<'a>),
-    H3(Text<'a>),
-    H4(Text<'a>),
-    H5(Text<'a>),
-    H6(Text<'a>),
-    Blockquote(Text<'a>),
-    Code(Text<'a>),
-    ListUnordered(Vec<Text<'a>>),
-    ListOrdered(Vec<Text<'a>>),
-    ListDefinition(Vec<(Text<'a>, Text<'a>)>),
-    ListCheckable(Vec<(Text<'a>, bool)>),
-    Table(Vec<Vec<Text<'a>>>),
-    Math(&'a str),
-
-    // Interactive(BlockInteractive),
+impl Span<'_> {
+    pub fn to_static(&self) -> Span<'static> {
+        match self {
+            Span::Text(cow) => Span::Text(Cow::Owned(cow.clone().into_owned())),
+            Span::Tag(tag) => Span::Tag(tag.to_static()),
+        }
+    }
 }
 
-// idk about *any* of these, just throwing random ideas out here
-// i'm probably not going to implement them
-
-// /// interactive, probably will be limited to bots
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub enum BlockInteractive<'a> {
-//     /// a clickable button
-//     Button(Text<'a>, ButtonStyle),
-    
-//     /// a text input
-//     Input(Text<'a>, InputStyle),
-    
-//     /// collapseable summary and details
-//     Details(Text<'a>, Box<Block>),
-
-//     Radio,
-//     Checkbox,
-//     Form,
-// }
-
-// #[derive(Debug, Default, Clone, PartialEq, Eq)]
-// pub enum ButtonStyle {
-//     #[default]
-//     Default,
-//     Primary,
-//     Danger,
-// }
-
-// #[derive(Debug, Default, Clone, PartialEq, Eq)]
-// pub enum InputStyle {
-//     #[default]
-//     Singleline,
-    
-//     // Multiline,
-//     // RichText,
-//     // Url,
-//     // Time,
-//     // Date,
-//     // DateTime,
-//     // Number,
-//     // File,
-//     // Color,
-//     // Search,
-//     // Select,
-    
-//     // User,
-//     // MemberThread,
-//     // MemberRoom,
-//     // Room,
-//     // Message,
-//     // Thread,
-// }
-
-// /// for layout
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub enum LayoutBlock<'a> {
-//     /// footnote/sidenote
-//     Aside(Box<Block<'a>>),
-//     Row(Vec<Block<'a>, StyleFlex>),
-//     Column(Vec<Block<'a>, StyleFlex>),
-//     Grid(Vec<Block<'a>>, StyleGrid),
-//     Box(Vec<Block<'a>>, StyleBox),
-// }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Blocks<'a>(Vec<Block<'a>>);
+impl Text<'_> {
+    pub fn to_static(&self) -> Text<'static> {
+        Text(self.0.iter().map(|p| p.to_static()).collect())
+    }
+}
 
 impl From<String> for Language {
     fn from(value: String) -> Self {

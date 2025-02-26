@@ -106,13 +106,13 @@ pub struct CustomEmbed {
 #[serde(tag = "type")]
 pub enum EmbedType {
     /// a generic website embed
-    Website(UrlEmbed),
+    Website(Box<UrlEmbed>),
 
     /// a piece of media
-    Media(Media),
+    Media(Box<Media>),
 
     /// a custom embed
-    Custom(CustomEmbed),
+    Custom(Box<CustomEmbed>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

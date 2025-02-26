@@ -2,7 +2,7 @@
 
 pub mod util;
 
-pub mod any;
+// pub mod any;
 pub mod audit_logs;
 pub mod embed;
 pub mod emoji;
@@ -11,7 +11,7 @@ pub mod invite;
 pub mod media;
 pub mod message;
 pub mod moderation;
-pub mod notifications;
+// pub mod notifications;
 pub mod pagination;
 pub mod permission;
 pub mod profile;
@@ -30,7 +30,7 @@ pub mod user;
 pub mod voice;
 
 // TODO: probably should stop exporting *everything*
-pub use any::*;
+// pub use any::*;
 pub use audit_logs::*;
 pub use embed::*;
 pub use ids::*;

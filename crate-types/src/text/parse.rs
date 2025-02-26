@@ -49,7 +49,7 @@ impl<'a, 'src> Parser<'a, 'src> {
     }
 }
 
-fn parse<'a, 'b>(a: &'a mut Parser, s: &'b str) -> ParseRes<'b> {
+fn parse<'b>(a: &mut Parser, s: &'b str) -> ParseRes<'b> {
     let mut parts = vec![];
     loop {
         match parse_text(a, s) {
@@ -65,7 +65,7 @@ fn parse<'a, 'b>(a: &'a mut Parser, s: &'b str) -> ParseRes<'b> {
     ParseRes::EndOfInput(parts)
 }
 
-fn parse_attr<'a, 'b>(a: &'a mut Parser, s: &'b str) -> Option<Text<'b>> {
+fn parse_attr<'b>(a: &mut Parser, s: &'b str) -> Option<Text<'b>> {
     match a.lex.peek() {
         Some(t) => match t.as_ref().unwrap() {
             Token::Open => {
@@ -88,7 +88,7 @@ fn parse_attr<'a, 'b>(a: &'a mut Parser, s: &'b str) -> Option<Text<'b>> {
     }
 }
 
-fn parse_text<'a, 'b>(a: &'a mut Parser, s: &'b str) -> ParseSpan<'b> {
+fn parse_text<'b>(a: &mut Parser, s: &'b str) -> ParseSpan<'b> {
     match a.lex.next() {
         Some(t) => match t.unwrap() {
             Token::Open => {

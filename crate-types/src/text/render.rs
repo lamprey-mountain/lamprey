@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use super::{KnownTag, Span, Tag, Text};
+use super::{tags::KnownTag, Span, Tag, Text};
 
 /// a struct whos Display impl outputs html
 pub struct HtmlFormatter<'a>(&'a Text<'a>);
@@ -21,7 +21,7 @@ pub struct TaggedTextFormatter<'a>(&'a Text<'a>);
 
 struct TaggedTextFormatterInner<'a>(&'a Span<'a>);
 
-impl<'a> Text<'a> {
+impl Text<'_> {
     pub fn as_html(&self) -> HtmlFormatter {
         HtmlFormatter(self)
     }
@@ -38,7 +38,7 @@ impl<'a> Text<'a> {
 impl Display for HtmlFormatter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for i in &self.0 .0 {
-            write!(f, "{}", HtmlFormatterInner(&i))?;
+            write!(f, "{}", HtmlFormatterInner(i))?;
         }
         Ok(())
     }
@@ -47,7 +47,7 @@ impl Display for HtmlFormatter<'_> {
 impl Display for PlainFormatter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for i in &self.0 .0 {
-            write!(f, "{}", PlainFormatterInner(&i))?;
+            write!(f, "{}", PlainFormatterInner(i))?;
         }
         Ok(())
     }
@@ -56,7 +56,7 @@ impl Display for PlainFormatter<'_> {
 impl Display for TaggedTextFormatter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for i in &self.0 .0 {
-            write!(f, "{}", TaggedTextFormatterInner(&i))?;
+            write!(f, "{}", TaggedTextFormatterInner(i))?;
         }
         Ok(())
     }
