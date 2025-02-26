@@ -556,7 +556,7 @@ article.message {
 	}
 
 	&.reply {
-		grid-template-rows: auto auto;
+		/* grid-template-rows: auto auto; */
 	}
 
 	& .author {
@@ -585,24 +585,36 @@ article.message {
 		color: $fg-500;
 		font-size: 0.8rem;
 		cursor: pointer;
-
-		& > .author {
-			position: static;
-			padding: 0;
-			padding-right: 8px;
-		}
+		grid-column: 1 / span 3;
+		display: grid;
+		grid-template-columns: 128px 1fr;
 
 		&:hover {
 			color: $fg-400;
 		}
 
-		&.arrow {
-			text-align: right;
-			padding-right: 4px;
+		& > .arrow {
+			display: grid;
+			place-items: center;
+
+			& > svg {
+				height: 1em;
+				width: calc(100% - 16px);
+				stroke: $sep-800;
+				fill: none;
+			}
 		}
 
-		&.reply-content {
-			@include truncate;
+		& > .content {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			padding-right: 4em;
+
+			& > .user {
+				color: $fg-300;
+				padding-right: 4px;
+			}
 		}
 	}
 

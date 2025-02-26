@@ -104,7 +104,10 @@ export function MessageView(props: MessageProps) {
 			);
 		} else {
 			return (
-				<>
+				<article
+					class="message menu-message"
+					data-message-id={props.message.id}
+				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
 							thread_id={props.message.thread_id}
@@ -139,7 +142,7 @@ export function MessageView(props: MessageProps) {
 						</Show>
 					</div>
 					<Time date={date} animGroup="message-ts" />
-				</>
+				</article>
 			);
 		}
 	}
@@ -174,21 +177,33 @@ function ReplyView(props: ReplyProps) {
 		ctx.thread_highlight.set(props.thread_id, props.reply_id);
 	};
 
+	// <div class="arrow">{"\u21B1"}</div>
 	return (
 		<>
-			<div class="reply arrow">{"\u21B1"}</div>
-			<div class="reply reply-content" onClick={scrollToReply}>
-				<Show when={!reply.loading} fallback="loading...">
-					<Show
-						when={reply() && thread()}
-						fallback={<span class="author"></span>}
-					>
-						<Author message={reply()!} thread={thread()!} />
+			<div class="reply">
+				<div class="arrow">
+					<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+						<path
+							vector-effect="non-scaling-stroke"
+							shape-rendering="crispEdges"
+							// M = move to x y
+							// L = line to x y
+							d="M 70 100 L 70 50 L 100 50"
+						/>
+					</svg>
+				</div>
+				<div class="content" onClick={scrollToReply}>
+					<Show when={!reply.loading} fallback="loading...">
+						<Show
+							when={reply() && thread()}
+							fallback={<span class="author"></span>}
+						>
+							<Author message={reply()!} thread={thread()!} />
+						</Show>
+						{content()}
 					</Show>
-					{content()}
-				</Show>
+				</div>
 			</div>
-			<div class="reply"></div>
 		</>
 	);
 }

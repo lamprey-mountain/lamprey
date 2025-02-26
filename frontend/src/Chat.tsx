@@ -179,7 +179,7 @@ export const ChatMain = (props: ChatProps) => {
 	function scrollAndHighlight(hl?: string) {
 		if (!hl) return;
 		const target = document.querySelector(
-			`li[data-message-id="${hl}"]`,
+			`li:has(article.message[data-message-id="${hl}"])`,
 		);
 		console.log("scroll highlight", hl, target);
 		if (!target) {

@@ -28,19 +28,15 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "message": {
 			const ctx = useCtx();
 			return (
-				<li class="message">
-					<article
-						class="message menu-message"
-						data-message-id={item.message.id}
-						classList={{
-							"selected":
-								item.message.id === ctx.thread_reply_id.get(thread.id),
-							// "context": a()?.type === "context" &&
-							// 	item.message.id === a()!.message_id,
-						}}
-					>
-						<MessageView message={item.message} />
-					</article>
+				<li
+					class="message"
+					classList={{
+						"selected": item.message.id === ctx.thread_reply_id.get(thread.id),
+						// "context": a()?.type === "context" &&
+						// 	item.message.id === a()!.message_id,
+					}}
+				>
+					<MessageView message={item.message} />
 				</li>
 			);
 		}
