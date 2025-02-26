@@ -143,4 +143,15 @@ mod test {
             "hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}"
         );
     }
+
+    #[test]
+    fn test_markdown() {
+        let t = Text::parse("hello ~b{world} ~a{https://example.com/}{text} ~em{nested ~b{text}}");
+        let mut s = String::new();
+        write!(s, "{}", t.as_markdown()).unwrap();
+        assert_eq!(
+            s,
+            "hello **world** [text](https://example.com/) *nested **text***"
+        );
+    }
 }

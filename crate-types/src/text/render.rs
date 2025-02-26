@@ -7,6 +7,7 @@ use super::{tags::KnownTag, Span, Tag, Text};
 /// a struct whos Display impl outputs html
 pub struct HtmlFormatter<'a>(&'a Text<'a>);
 
+/// sanitizes text in its display impl to prevent accidental html formatting
 struct HtmlSanitized<'a>(&'a str);
 
 struct HtmlFormatterInner<'a>(&'a Span<'a>);
@@ -21,6 +22,14 @@ pub struct TaggedTextFormatter<'a>(&'a Text<'a>);
 
 struct TaggedTextFormatterInner<'a>(&'a Span<'a>);
 
+/// a struct whos Display impl outputs tagged text (the native wire format)
+pub struct MarkdownFormatter<'a>(&'a Text<'a>);
+
+/// sanitizes text in its display impl to prevent accidental markdown formatting
+struct MarkdownSanitized<'a>(&'a str);
+
+struct MarkdownFormatterInner<'a>(&'a Span<'a>);
+
 impl Text<'_> {
     pub fn as_html(&self) -> HtmlFormatter {
         HtmlFormatter(self)
@@ -32,6 +41,10 @@ impl Text<'_> {
 
     pub fn as_tagged_text(&self) -> TaggedTextFormatter {
         TaggedTextFormatter(self)
+    }
+
+    pub fn as_markdown(&self) -> MarkdownFormatter {
+        MarkdownFormatter(self)
     }
 }
 
@@ -62,6 +75,15 @@ impl Display for TaggedTextFormatter<'_> {
     }
 }
 
+impl Display for MarkdownFormatter<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for i in &self.0 .0 {
+            write!(f, "{}", MarkdownFormatterInner(i))?;
+        }
+        Ok(())
+    }
+}
+
 impl Display for HtmlSanitized<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // kind of ugly but it works
@@ -70,6 +92,30 @@ impl Display for HtmlSanitized<'_> {
             .replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;");
+        write!(f, "{s}")?;
+        Ok(())
+    }
+}
+
+impl Display for MarkdownSanitized<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // kind of ugly but it works
+        // TODO: use aho corasick
+        // TODO: escape less aggressively
+        let s = self
+            .0
+            .replace("\\", "\\\\")
+            .replace("*", "\\*")
+            .replace("_", "\\_")
+            .replace("`", "\\`")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+            .replace("<", "\\<")
+            .replace(">", "\\>")
+            .replace("+", "\\+")
+            .replace("!", "\\!")
+            .replace(".", "\\.")
+            .replace("|", "\\|");
         write!(f, "{s}")?;
         Ok(())
     }
@@ -140,6 +186,37 @@ impl Display for TaggedTextFormatterInner<'_> {
                         write!(f, "{}", TaggedTextFormatterInner(span))?;
                     }
                     write!(f, "}}")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Display for MarkdownFormatterInner<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            Span::Text(t) => write!(f, "{}", MarkdownSanitized(t))?,
+            Span::Tag(tag) => {
+                let known: KnownTag = tag.clone().try_into().unwrap();
+                match known {
+                    KnownTag::Bold(text) => write!(f, "**{}**", MarkdownFormatter(&text))?,
+                    KnownTag::Emphasis(text) => write!(f, "*{}*", MarkdownFormatter(&text))?,
+                    KnownTag::Strikethrough(text) => write!(f, "~~{}~~", MarkdownFormatter(&text))?,
+                    KnownTag::Link(url, Some(text)) => {
+                        write!(f, "[{}]({url})", MarkdownFormatter(&text))?
+                    }
+                    KnownTag::Link(url, None) => write!(f, "[{url}]({url})")?,
+                    KnownTag::Code(text, _lang) => write!(f, "`{}`", MarkdownFormatter(&text))?,
+                    KnownTag::Spoiler(text, None) => write!(f, "||{}||", MarkdownFormatter(&text))?,
+                    KnownTag::Spoiler(text, Some(why)) => write!(
+                        f,
+                        "||{}|| ({})",
+                        MarkdownFormatter(&text),
+                        MarkdownSanitized(&why)
+                    )?,
+                    KnownTag::Math(m) => write!(f, "`{}`", MarkdownSanitized(m))?,
+                    _ => todo!(),
                 }
             }
         }
