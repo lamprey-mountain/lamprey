@@ -81,7 +81,6 @@ pub async fn auth_oauth_redirect(
                     parent_id: None,
                     name: dc.user.global_name.unwrap_or(dc.user.username),
                     description: None,
-                    status: None,
                     is_bot: false,
                 })
                 .await?;

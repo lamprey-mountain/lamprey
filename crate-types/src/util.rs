@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::Permission;
@@ -108,4 +110,18 @@ where
     );
 
     Option::<Wrap>::deserialize(deserializer).map(|o| o.map(|w| w.0))
+}
+
+impl Deref for Time {
+    type Target = time::OffsetDateTime;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Time {
+    pub fn into_inner(self) -> time::OffsetDateTime {
+        self.0
+    }
 }

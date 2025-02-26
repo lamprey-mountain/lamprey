@@ -19,7 +19,6 @@ pub struct DbUser {
     pub name: String,
     pub description: Option<String>,
     pub avatar: Option<uuid::Uuid>,
-    pub status: Option<String>,
     pub r#type: DbUserType,
     pub state: DbUserState,
 }
@@ -48,7 +47,7 @@ impl From<DbUser> for User {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            status: row.status,
+            status: types::user_status::Status::default(),
             avatar: row.avatar.map(Into::into),
             user_type: match row.r#type {
                 DbUserType::Default => UserType::Default,
@@ -81,16 +80,15 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, status, can_fork, type, state)
-            VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)
-            RETURNING id, version_id, parent_id, name, description, status, state as "state: _", type as "type: _", avatar
+            INSERT INTO usr (id, version_id, parent_id, name, description, can_fork, type, state)
+            VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+            RETURNING id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
         "#,
             user_id,
             user_id,
             patch.parent_id.map(|i| i.into_inner()),
             patch.name,
             patch.description,
-            patch.status,
             user_type as _,
             DbUserState::Active as _,
         )
@@ -105,7 +103,7 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, status, state as "state: _", type as "type: _", avatar
+            SELECT id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
@@ -147,7 +145,7 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, status, state as "state: _", type as "type: _", avatar
+            SELECT id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
             FROM usr WHERE id = $1
         "#,
             id.into_inner()

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{InviteTargetId, InviteWithMetadata, ThreadMember};
+use crate::{user_status::StatusPatch, InviteTargetId, InviteWithMetadata, ThreadMember};
 
 use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
@@ -18,9 +18,14 @@ pub enum MessageClient {
     Hello {
         token: SessionToken,
 
+        status: Option<StatusPatch>,
+
         #[serde(flatten)]
         resume: Option<SyncResume>,
     },
+
+    /// set status
+    Status { status: StatusPatch },
 
     /// heartbeat
     Pong,

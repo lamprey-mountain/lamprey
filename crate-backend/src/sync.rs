@@ -111,6 +111,7 @@ impl Connection {
             MessageClient::Hello {
                 token,
                 resume: reconnect,
+                status,
             } => {
                 let data = self.s.data();
                 let session = data
@@ -146,9 +147,16 @@ impl Connection {
                 }
 
                 let user = match session.user_id() {
-                    Some(user_id) => Some(data.user_get(user_id).await?),
+                    Some(user_id) => {
+                        let srv = self.s.services();
+                        srv.user_status.ping(user_id);
+                        let mut user = data.user_get(user_id).await?;
+                        user.status = srv.user_status.get(user_id);
+                        Some(data.user_get(user_id).await?)
+                    }
                     None => None,
                 };
+
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
                         user,
@@ -163,6 +171,9 @@ impl Connection {
 
                 self.seq_server += 1;
                 self.state = ConnectionState::Authenticated { session };
+            }
+            MessageClient::Status { status: _ } => {
+                todo!()
             }
             MessageClient::Pong => {
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
