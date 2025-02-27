@@ -5,6 +5,7 @@ use tokio::task::JoinHandle;
 use tracing::{debug, error};
 use types::user_status::Status;
 use types::user_status::StatusType;
+use types::User;
 use types::UserId;
 
 use crate::error::Error;
@@ -28,7 +29,7 @@ impl ServiceUserStatus {
         }
     }
 
-    pub fn ping(&self, user_id: UserId) {
+    pub async fn ping(&self, user_id: UserId) -> Result<User> {
         let s = self.state.clone();
         let handle = tokio::spawn(async move {
             tokio::time::sleep(Duration::from_secs(60)).await;
@@ -41,8 +42,13 @@ impl ServiceUserStatus {
                 expire_handle: handle,
             },
         );
-        // TODO: broadcast
+        let data = self.state.data();
+        let mut user = data.user_get(user_id).await?;
+        user.status = Status {
+            status: StatusType::Online,
+        };
         // self.state.broadcast(types::MessageSync::UpsertUser { user: () });
+        Ok(user)
     }
 
     pub fn get(&self, user_id: UserId) -> Status {

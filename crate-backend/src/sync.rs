@@ -146,15 +146,12 @@ impl Connection {
                     return Err(Error::BadStatic("bad or expired reconnection info"));
                 }
 
-                let user = match session.user_id() {
-                    Some(user_id) => {
-                        let srv = self.s.services();
-                        srv.user_status.ping(user_id);
-                        let mut user = data.user_get(user_id).await?;
-                        user.status = srv.user_status.get(user_id);
-                        Some(data.user_get(user_id).await?)
-                    }
-                    None => None,
+                let user = if let Some(user_id) = session.user_id() {
+                    let srv = self.s.services();
+                    let user = srv.user_status.ping(user_id).await?;
+                    Some(user)
+                } else {
+                    None
                 };
 
                 let msg = MessageEnvelope {
@@ -173,7 +170,17 @@ impl Connection {
                 self.state = ConnectionState::Authenticated { session };
             }
             MessageClient::Status { status: _ } => {
-                todo!()
+                // self.state.session();
+                let session = match &self.state {
+                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Authenticated { session } => session,
+                    ConnectionState::Disconnected { .. } => {
+                        panic!("somehow recv msg while disconnected?")
+                    }
+                };
+                let srv = self.s.services();
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                srv.user_status.ping(user_id).await?;
             }
             MessageClient::Pong => {
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
