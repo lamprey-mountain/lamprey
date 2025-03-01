@@ -4,7 +4,7 @@ import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { UserView } from "./User.tsx";
+import { StatusIndicator, UserView } from "./User.tsx";
 import { tooltip } from "./Tooltip.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
@@ -39,7 +39,10 @@ export const RoomMembers = (props: { room: RoomT }) => {
 								room_member={room_member()}
 							/>
 						</Show>,
-						<li class="menu-user" data-user-id={i.user_id}>{name()}</li>,
+						<li class="menu-user" data-user-id={i.user_id}>
+							<StatusIndicator user={user()} />
+							{name()}
+						</li>,
 					);
 				}}
 			</For>

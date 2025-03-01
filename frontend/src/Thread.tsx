@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { Thread } from "sdk";
 import { useApi } from "./api.tsx";
 import { tooltip } from "./Tooltip.tsx";
-import { UserView } from "./User.tsx";
+import { StatusIndicator, UserView } from "./User.tsx";
 
 export const ThreadMembers = (props: { thread: Thread }) => {
 	const api = useApi();
@@ -42,7 +42,10 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 								thread_member={thread_member()}
 							/>
 						</Show>,
-						<li class="menu-user" data-user-id={i.user_id}>{name()}</li>,
+						<li class="menu-user" data-user-id={i.user_id}>
+							<StatusIndicator user={user()} />
+							{name()}
+						</li>,
 					);
 				}}
 			</For>

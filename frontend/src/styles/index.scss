@@ -1141,3 +1141,23 @@ blockquote {
 	margin: 2px 0;
 	padding-left: 8px;
 }
+
+.status-indicator {
+	height: 12px;
+	aspect-ratio: 1/1;
+	line-height: 1;
+
+	&[data-status="Online"] {
+		fill: $status-online;
+	}
+
+	&[data-status="Offline"] {
+		fill: $status-offline;
+	}
+}
+
+.member-list > .menu-user {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
