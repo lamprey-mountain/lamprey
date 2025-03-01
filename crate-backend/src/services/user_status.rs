@@ -33,6 +33,7 @@ impl ServiceUserStatus {
     }
 
     /// keep the status for a user alive
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn ping(&self, user_id: UserId) -> Result<User> {
         match self.statuses.remove(&user_id) {
             Some((_, s)) => {
@@ -44,10 +45,12 @@ impl ServiceUserStatus {
     }
 
     /// set the status for a user
+    #[tracing::instrument(level = "trace", skip(self))]
     pub async fn set(&self, user_id: UserId, status: Status) -> Result<User> {
         self.set_inner(user_id, status, false).await
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     async fn set_inner(
         &self,
         user_id: UserId,
