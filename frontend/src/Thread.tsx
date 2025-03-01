@@ -42,7 +42,15 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 								thread_member={thread_member()}
 							/>
 						</Show>,
-						<li class="menu-user" data-user-id={i.user_id}>{name()}</li>,
+						<li class="menu-user" data-user-id={i.user_id}>
+							<AvatarWithStatus user={user()} />
+							<span class="text">
+								<span class="name">{name()}</span>
+								<Show when={false}>
+									<span class="status-message">asdf</span>
+								</Show>
+							</span>
+						</li>,
 					);
 				}}
 			</For>

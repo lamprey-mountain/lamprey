@@ -36,7 +36,6 @@ pub async fn user_create(
             parent_id,
             name: body.name,
             description: body.description,
-            status: None,
             is_bot: body.is_bot,
         })
         .await?;
@@ -175,7 +174,9 @@ pub async fn user_get(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let data = s.data();
-    let user = data.user_get(target_user_id).await?;
+    let mut user = data.user_get(target_user_id).await?;
+    let srv = s.services();
+    user.status = srv.user_status.get(target_user_id);
     Ok(Json(user))
 }
 

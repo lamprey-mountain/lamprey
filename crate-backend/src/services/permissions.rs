@@ -11,10 +11,13 @@ pub struct ServicePermissions {
     state: Arc<ServerStateInner>,
     cache_perm_room: Cache<(UserId, RoomId), Permissions>,
     cache_perm_thread: Cache<(UserId, RoomId, ThreadId), Permissions>,
+    cache_is_mutual: Cache<(UserId, UserId), bool>,
 }
 
 impl ServicePermissions {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
+        // not sure what the best way to configure these caches are
+        // (userid, roomid) seems a bit inefficient, maybe caching roles would be better
         Self {
             state,
             cache_perm_room: Cache::builder()
@@ -22,6 +25,10 @@ impl ServicePermissions {
                 .support_invalidation_closures()
                 .build(),
             cache_perm_thread: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
+            cache_is_mutual: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
@@ -77,6 +84,26 @@ impl ServicePermissions {
     pub fn invalidate_thread(&self, user_id: UserId, thread_id: ThreadId) {
         self.cache_perm_thread
             .invalidate_entries_if(move |(uid, _, tid), _| thread_id == *tid && user_id == *uid)
+            .expect("failed to invalidate");
+    }
+
+    // FIXME: cache
+    /// check if two users share a common room
+    pub async fn is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
+        if a == b {
+            return Ok(true);
+        }
+        let (a, b) = if a < b { (a, b) } else { (b, a) };
+        let data = self.state.data();
+        self.cache_is_mutual
+            .try_get_with((a, b), data.permission_is_mutual(a, b))
+            .await
+            .map_err(|err| err.fake_clone())
+    }
+
+    pub fn invalidate_is_mutual(&self, user_id: UserId) {
+        self.cache_is_mutual
+            .invalidate_entries_if(move |(a, b), _| *a == user_id || *b == user_id)
             .expect("failed to invalidate");
     }
 }

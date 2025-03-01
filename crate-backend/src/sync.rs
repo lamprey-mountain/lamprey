@@ -4,6 +4,7 @@ use std::{collections::VecDeque, sync::Arc};
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
+use types::user_status::Status;
 use types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -46,6 +47,7 @@ enum AuthCheck {
     RoomOrUser(RoomId, UserId),
     ThreadOrUser(ThreadId, UserId),
     User(UserId),
+    UserMutual(UserId),
     Thread(ThreadId),
 }
 
@@ -111,6 +113,7 @@ impl Connection {
             MessageClient::Hello {
                 token,
                 resume: reconnect,
+                status,
             } => {
                 let data = self.s.data();
                 let session = data
@@ -145,10 +148,22 @@ impl Connection {
                     return Err(Error::BadStatic("bad or expired reconnection info"));
                 }
 
-                let user = match session.user_id() {
-                    Some(user_id) => Some(data.user_get(user_id).await?),
-                    None => None,
+                let user = if let Some(user_id) = session.user_id() {
+                    let srv = self.s.services();
+                    let user = srv
+                        .user_status
+                        .set(
+                            user_id,
+                            status
+                                .map(|s| s.apply(Status::offline()))
+                                .unwrap_or(Status::online()),
+                        )
+                        .await?;
+                    Some(user)
+                } else {
+                    None
                 };
+
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
                         user,
@@ -164,7 +179,31 @@ impl Connection {
                 self.seq_server += 1;
                 self.state = ConnectionState::Authenticated { session };
             }
+            MessageClient::Status { status } => {
+                let session = match &self.state {
+                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Authenticated { session } => session,
+                    ConnectionState::Disconnected { .. } => {
+                        panic!("somehow recv msg while disconnected?")
+                    }
+                };
+                let srv = self.s.services();
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                srv.user_status
+                    .set(user_id, status.apply(Status::offline()))
+                    .await?;
+            }
             MessageClient::Pong => {
+                let session = match &self.state {
+                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Authenticated { session } => session,
+                    ConnectionState::Disconnected { .. } => {
+                        panic!("somehow recv msg while disconnected?")
+                    }
+                };
+                let srv = self.s.services();
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                srv.user_status.ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
         }
@@ -193,10 +232,7 @@ impl Connection {
             MessageSync::UpsertRoom { room } => AuthCheck::Room(room.id),
             MessageSync::UpsertThread { thread } => AuthCheck::Thread(thread.id),
             MessageSync::UpsertMessage { message } => AuthCheck::Thread(message.thread_id),
-            MessageSync::UpsertUser { user } => {
-                // TODO: more user upserts?
-                AuthCheck::User(user.id)
-            }
+            MessageSync::UpsertUser { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UpsertRoomMember { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
@@ -222,10 +258,7 @@ impl Connection {
             },
             MessageSync::DeleteMessage { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::DeleteMessageVersion { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::DeleteUser { id } => {
-                // TODO
-                AuthCheck::User(*id)
-            }
+            MessageSync::DeleteUser { id } => AuthCheck::UserMutual(*id),
             MessageSync::DeleteSession { id, user_id } => {
                 // TODO: send message when other sessions from the same user are deleted
                 if *id == session.id {
@@ -288,6 +321,17 @@ impl Connection {
                 }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
+            (Some(auth_user_id), AuthCheck::UserMutual(target_user_id)) => {
+                if auth_user_id == target_user_id {
+                    true
+                } else {
+                    self.s
+                        .services()
+                        .perms
+                        .is_mutual(auth_user_id, target_user_id)
+                        .await?
+                }
+            }
             (_, AuthCheck::Custom(b)) => b,
             (None, _) => false,
         };

@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::user_status::Status;
 use crate::util::{some_option, Diff};
 use crate::MediaId;
 
@@ -41,9 +42,7 @@ pub struct User {
 
     pub state: UserState,
 
-    // #[serde(flatten)]
-    // pub status: Status,
-    pub status: Option<String>,
+    pub status: Status,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,10 +119,6 @@ pub struct UserPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub avatar: Option<Option<MediaId>>,
-
-    // pub status: Option<Status>,
-    #[serde(default, deserialize_with = "some_option")]
-    pub status: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -212,56 +207,11 @@ pub enum BotScope {
     Thread { room_id: crate::ThreadId },
 }
 
-/// the current status of the user
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Status {
-    status: StatusType,
-    status_text: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum StatusType {
-    /// offline or explicitly invisible
-    Offline,
-
-    /// connected to the service, no special status
-    Online {
-        /// how long this user has been online for
-        online_for: time::OffsetDateTime,
-    },
-
-    /// connected but not currently active (ie away from their computer)
-    Away {
-        /// how long this user has been idle for
-        idle_for: time::OffsetDateTime,
-    },
-
-    /// currently unavailable to chat
-    Busy {
-        /// how long this user will be busy for
-        until: time::OffsetDateTime,
-
-        /// busy might be set automatically when they look busy
-        /// but it might not be that important
-        /// this explicitly says "do not disturb"
-        dnd: bool,
-    },
-
-    /// currently available to chat
-    Available {
-        /// how long this user will be available for
-        until: time::OffsetDateTime,
-    },
-}
-
 impl Diff<User> for UserPatch {
     fn changes(&self, other: &User) -> bool {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.avatar.changes(&other.avatar)
-            || self.status.changes(&other.status)
     }
 }
 

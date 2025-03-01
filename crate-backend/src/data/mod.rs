@@ -125,6 +125,7 @@ pub trait DataPermission {
         user_id: UserId,
         thread_id: ThreadId,
     ) -> Result<Permissions>;
+    async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool>;
 }
 
 #[async_trait]

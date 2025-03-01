@@ -18,7 +18,6 @@ pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
-    pub status: Option<String>,
     pub is_bot: bool,
 }
 

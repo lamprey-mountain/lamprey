@@ -17,6 +17,9 @@ $sep-800: oklch(var(--color-sep-800));
 $link-500: oklch(var(--color-link));
 $warn-500: oklch(var(--color-warn));
 $error-500: oklch(var(--color-error));
+$success-500: oklch(var(--color-green));
+$status-offline: oklch(var(--color-sep));
+$status-online: oklch(var(--color-green));
 
 @mixin truncate {
 	overflow: hidden;
