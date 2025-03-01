@@ -79,7 +79,37 @@ export function UserView(props: UserProps) {
 	);
 }
 
-export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
+export function getColor(id: string) {
+	const last = id.at(-1);
+	if (!last) return "#ffffff";
+	// if (!last) return "oklch(var(--color-bg1))";
+	switch (parseInt(last, 16) % 8) {
+		case 0:
+			return "oklch(var(--color-red))";
+		case 1:
+			return "oklch(var(--color-green))";
+		case 2:
+			return "oklch(var(--color-yellow))";
+		case 3:
+			return "oklch(var(--color-blue))";
+		case 4:
+			return "oklch(var(--color-magenta))";
+		case 5:
+			return "oklch(var(--color-cyan))";
+		case 6:
+			return "oklch(var(--color-orange))";
+		case 7:
+			return "oklch(var(--color-teal))";
+	}
+}
+
+type AvatarProps = {
+	user?: User;
+	// room_member?: RoomMember,
+	// thread_member?: ThreadMember,
+};
+
+export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 	const api = useApi();
 
 	function fetchThumb(media_id: string) {
@@ -87,30 +117,6 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 		const m = media();
 		if (!m) return;
 		return getUrl(getThumb(m, 64, 64));
-	}
-
-	function getColor() {
-		const last = props.user?.id.at(-1);
-		if (!last) return "#ffffff";
-		// if (!last) return "oklch(var(--color-bg1))";
-		switch (parseInt(last, 16) % 8) {
-			case 0:
-				return "oklch(var(--color-red))";
-			case 1:
-				return "oklch(var(--color-green))";
-			case 2:
-				return "oklch(var(--color-yellow))";
-			case 3:
-				return "oklch(var(--color-blue))";
-			case 4:
-				return "oklch(var(--color-magenta))";
-			case 5:
-				return "oklch(var(--color-cyan))";
-			case 6:
-				return "oklch(var(--color-orange))";
-			case 7:
-				return "oklch(var(--color-teal))";
-		}
 	}
 
 	const size = 64;
@@ -128,21 +134,8 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 			style={{ "--pad": `${pad}px` }}
 		>
 			{/* not sure if i want avatars to be boxes, circles, rounded boxes, ..? */}
-			<mask id="box">
-				<rect width={totalSize} height={totalSize} fill="white" />
-				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
-			</mask>
 			<mask id="rbox">
-				<rect rx="4" width={size} height={size} x={pad} y={pad} fill="white" />
-				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
-			</mask>
-			<mask id="circle">
-				<circle
-					cx={totalSize / 2}
-					cy={totalSize / 2}
-					r={size / 2}
-					fill="white"
-				/>
+				<rect rx="6" width={size} height={size} x={pad} y={pad} fill="white" />
 				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
 			</mask>
 			<g mask="url(#rbox)">
@@ -151,7 +144,7 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 					height={size}
 					x={pad}
 					y={pad}
-					fill={getColor()}
+					fill={getColor(props.user?.id ?? "")}
 				/>
 				<Show when={props.user?.avatar}>
 					<image
