@@ -20,7 +20,7 @@ pub struct ServiceUserStatus {
 }
 
 struct OnlineState {
-    expire_handle: JoinHandle<()>,
+    expire_handle: JoinHandle<Result<()>>,
     status: Status,
 }
 
@@ -60,8 +60,15 @@ impl ServiceUserStatus {
             let had = s.services().user_status.statuses.remove(&user_id);
             debug!(
                 "expire status for {user_id}, had {:?}",
-                had.map(|h| h.1.status)
+                had.as_ref().map(|h| &h.1.status)
             );
+            if had.is_none_or(|(_, s)| s.status != Status::offline()) {
+                let data = s.data();
+                let mut user = data.user_get(user_id).await?;
+                user.status = Status::offline();
+                s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
+            }
+            Result::Ok(())
         });
 
         let old = self.statuses.insert(
