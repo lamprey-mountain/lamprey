@@ -1188,7 +1188,7 @@ svg.avatar {
 
 	& > .avatar {
 		height: 36px;
-		padding: 4px;
+		padding: 4px 8px;
 	}
 
 	&:hover {
@@ -1197,5 +1197,45 @@ svg.avatar {
 		& > .text > .name {
 			color: $fg-100;
 		}
+	}
+}
+
+.debug-colors > li > div {
+	display: inline-block;
+	height: 30px;
+	width: 30px;
+}
+
+.colored {
+	&.red {
+		background: $color-red;
+	}
+
+	&.yellow {
+		background: $color-yellow;
+	}
+
+	&.green {
+		background: $color-green;
+	}
+
+	&.magenta {
+		background: $color-magenta;
+	}
+
+	&.blue {
+		background: $color-blue;
+	}
+
+	&.cyan {
+		background: $color-cyan;
+	}
+
+	&.orange {
+		background: $color-orange;
+	}
+
+	&.teal {
+		background: $color-teal;
 	}
 }

@@ -19,7 +19,16 @@ $warn-500: oklch(var(--color-warn));
 $error-500: oklch(var(--color-error));
 $success-500: oklch(var(--color-green));
 $status-offline: oklch(var(--color-sep));
-$status-online: oklch(var(--color-green));
+$status-online: oklch(var(--color-status-online));
+
+$color-red: oklch(var(--color-red));
+$color-green: oklch(var(--color-green));
+$color-yellow: oklch(var(--color-yellow));
+$color-blue: oklch(var(--color-blue));
+$color-magenta: oklch(var(--color-magenta));
+$color-cyan: oklch(var(--color-cyan));
+$color-orange: oklch(var(--color-orange));
+$color-teal: oklch(var(--color-teal));
 
 @mixin truncate {
 	overflow: hidden;

@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { Thread } from "sdk";
 import { useApi } from "./api.tsx";
 import { tooltip } from "./Tooltip.tsx";
-import { UserView } from "./User.tsx";
+import { AvatarWithStatus, UserView } from "./User.tsx";
 
 export const ThreadMembers = (props: { thread: Thread }) => {
 	const api = useApi();

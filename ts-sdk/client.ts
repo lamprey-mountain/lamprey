@@ -123,7 +123,7 @@ export function createClient(opts: ClientOptions): Client {
 		http,
 		start,
 		stop,
-		_debugGetWebsocket: () => ws
+		_debugGetWebsocket: () => ws,
 	};
 }
 

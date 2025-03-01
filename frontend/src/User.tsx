@@ -89,6 +89,30 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 		return getUrl(getThumb(m, 64, 64));
 	}
 
+	function getColor() {
+		const last = props.user?.id.at(-1);
+		if (!last) return "#ffffff";
+		// if (!last) return "oklch(var(--color-bg1))";
+		switch (parseInt(last, 16) % 8) {
+			case 0:
+				return "oklch(var(--color-red))";
+			case 1:
+				return "oklch(var(--color-green))";
+			case 2:
+				return "oklch(var(--color-yellow))";
+			case 3:
+				return "oklch(var(--color-blue))";
+			case 4:
+				return "oklch(var(--color-magenta))";
+			case 5:
+				return "oklch(var(--color-cyan))";
+			case 6:
+				return "oklch(var(--color-orange))";
+			case 7:
+				return "oklch(var(--color-teal))";
+		}
+	}
+
 	const size = 64;
 	const pad = 4;
 	const totalSize = size + pad * 2;
@@ -109,7 +133,7 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
 			</mask>
 			<mask id="rbox">
-				<rect rx="12" width={size} height={size} x={pad} y={pad} fill="white" />
+				<rect rx="4" width={size} height={size} x={pad} y={pad} fill="white" />
 				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
 			</mask>
 			<mask id="circle">
@@ -121,13 +145,13 @@ export const AvatarWithStatus = (props: VoidProps<{ user?: User }>) => {
 				/>
 				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
 			</mask>
-			<g mask="url(#box)">
+			<g mask="url(#rbox)">
 				<rect
 					width={size}
 					height={size}
 					x={pad}
 					y={pad}
-					fill="oklch(var(--color-bg1))"
+					fill={getColor()}
 				/>
 				<Show when={props.user?.avatar}>
 					<image

@@ -30,11 +30,11 @@ export const Debug = () => {
 					</div>
 				</div>
 			</details>
-			<details open>
+			<details>
 				<summary>url embedder</summary>
 				<UrlEmbedDbg />
 			</details>
-			<details open>
+			<details>
 				<summary>dropdown</summary>
 				<Dropdown
 					selected="foo"
@@ -44,6 +44,35 @@ export const Debug = () => {
 						{ item: "baz", label: "baz" },
 					]}
 				/>
+			</details>
+			<details open>
+				<summary>colors</summary>
+				<ul class="debug-colors">
+					<li>
+						<div class="colored red"></div> red
+					</li>
+					<li>
+						<div class="colored green"></div> green
+					</li>
+					<li>
+						<div class="colored yellow"></div> yellow
+					</li>
+					<li>
+						<div class="colored blue"></div> blue
+					</li>
+					<li>
+						<div class="colored magenta"></div> magenta
+					</li>
+					<li>
+						<div class="colored cyan"></div> cyan
+					</li>
+					<li>
+						<div class="colored orange"></div> orange
+					</li>
+					<li>
+						<div class="colored teal"></div> teal
+					</li>
+				</ul>
 			</details>
 		</div>
 	);
