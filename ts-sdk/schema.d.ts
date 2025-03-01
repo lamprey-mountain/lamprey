@@ -55,6 +55,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/debug/version": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Get server version */
+		get: operations["debug_version"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/invite/{invite_code}": {
 		parameters: {
 			query?: never;
@@ -114,6 +131,26 @@ export interface paths {
 		head?: never;
 		/** Media patch */
 		patch: operations["media_patch"];
+		trace?: never;
+	};
+	"/api/v1/media/{media_id}/done": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Media done
+		 * @description finishes a media upload. at this point, the media becomes immutable
+		 */
+		put: operations["media_done"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room": {
@@ -698,6 +735,10 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		ExternalPlatform: {
+			/** @description some other platform */
+			Other: string;
+		};
 		/** @description metadata for images */
 		Image: {
 			/** Format: int64 */
@@ -750,6 +791,7 @@ export interface components {
 			/** Format: int64 */
 			uses: number;
 		};
+		/** @description a language */
 		Language: string;
 		/** @description A distinct logical item of media. */
 		Media: {
@@ -828,11 +870,10 @@ export interface components {
 		MediaTrack:
 			& components["schemas"]["MediaTrackInfo"]
 			& components["schemas"]["MediaSize"]
+			& components["schemas"]["TrackSource"]
 			& {
 				/** @description the mime type of this view */
 				mime: components["schemas"]["Mime"];
-				/** @description Where this track came from */
-				source: components["schemas"]["TrackSource"];
 				/**
 				 * Format: uri
 				 * @description The url where this track may be downloaded from
@@ -875,15 +916,20 @@ export interface components {
 			};
 		Message: {
 			attachments: components["schemas"]["Media"][];
+			/** @description who sent this message */
 			author: components["schemas"]["User"];
 			content?: string | null;
 			embeds: components["schemas"]["UrlEmbed"][];
 			id: components["schemas"]["MessageId"];
 			is_pinned: boolean;
+			/** @description arbitrary metadata attached to this message */
 			metadata?: unknown;
+			/** @description unique string sent by the client to identify this message
+			 *     maybe i will replace with a header so nonces can be used everywhere */
 			nonce?: string | null;
 			/** Format: int32 */
 			ordering: number;
+			/** @description override the name of the user who sent this message. will probably be remved soon! */
 			override_name?: string | null;
 			reply_id?: null | components["schemas"]["MessageId"];
 			thread_id: components["schemas"]["ThreadId"];
@@ -1043,15 +1089,20 @@ export interface components {
 			has_more: boolean;
 			items: {
 				attachments: components["schemas"]["Media"][];
+				/** @description who sent this message */
 				author: components["schemas"]["User"];
 				content?: string | null;
 				embeds: components["schemas"]["UrlEmbed"][];
 				id: components["schemas"]["MessageId"];
 				is_pinned: boolean;
+				/** @description arbitrary metadata attached to this message */
 				metadata?: unknown;
+				/** @description unique string sent by the client to identify this message
+				 *     maybe i will replace with a header so nonces can be used everywhere */
 				nonce?: string | null;
 				/** Format: int32 */
 				ordering: number;
+				/** @description override the name of the user who sent this message. will probably be remved soon! */
 				override_name?: string | null;
 				reply_id?: null | components["schemas"]["MessageId"];
 				thread_id: components["schemas"]["ThreadId"];
@@ -1084,6 +1135,7 @@ export interface components {
 				/** @description A unique identifier for this room */
 				id: components["schemas"]["RoomId"];
 				name: string;
+				type: components["schemas"]["RoomType"];
 				/**
 				 * Format: uuid
 				 * @description A monotonically increasing id that is updated every time this room is modified.
@@ -1145,7 +1197,10 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		/** @enum {string} */
+		/**
+		 * @description a permission that lets a user do something
+		 * @enum {string}
+		 */
 		Permission:
 			| "Admin"
 			| "RoomManage"
@@ -1179,7 +1234,9 @@ export interface components {
 		};
 		RoleCreateRequest: {
 			description?: string | null;
+			/** @description if this role is applied by default to all new members */
 			is_default?: boolean;
+			/** @description if this role can be mentioned by members */
 			is_mentionable?: boolean;
 			is_self_applicable?: boolean;
 			name: string;
@@ -1203,6 +1260,7 @@ export interface components {
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["RoomId"];
 			name: string;
+			type: components["schemas"]["RoomType"];
 			/**
 			 * Format: uuid
 			 * @description A monotonically increasing id that is updated every time this room is modified.
@@ -1247,9 +1305,27 @@ export interface components {
 			description?: string | null;
 			name?: string | null;
 		};
+		RoomType: "Default" | {
+			/** @description direct messages between two people */
+			Dm: {
+				participants: [
+					string,
+					string,
+				];
+			};
+		};
 		SearchMessageRequest: {
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string;
+		};
+		ServerVersion: {
+			debug: boolean;
+			rev: string;
+			rustc_channel: string;
+			rustc_llvm: string;
+			rustc_rev: string;
+			rustc_semver: string;
+			target: string;
 		};
 		Session: components["schemas"]["SessionStatus"] & {
 			id: components["schemas"]["SessionId"];
@@ -1279,6 +1355,12 @@ export interface components {
 		SessionWithToken: components["schemas"]["Session"] & {
 			token: components["schemas"]["SessionToken"];
 		};
+		/** @description the current status of the user */
+		Status: {
+			type: components["schemas"]["StatusType"];
+		};
+		/** @enum {string} */
+		StatusType: "Offline" | "Online";
 		/** @description metadata for text */
 		Text: {
 			language?: null | components["schemas"]["Language"];
@@ -1301,8 +1383,8 @@ export interface components {
 		ThreadId: string;
 		ThreadInfo: {
 			is_unread: boolean;
-			last_read_id?: null | components["schemas"]["MessageId"];
-			last_version_id: components["schemas"]["MessageId"];
+			last_read_id?: null | components["schemas"]["MessageVerId"];
+			last_version_id: components["schemas"]["MessageVerId"];
 			/** Format: int64 */
 			message_count: number;
 			/** @enum {string} */
@@ -1337,24 +1419,29 @@ export interface components {
 			/** @enum {string} */
 			membership: "Ban";
 		};
-		ThreadPatch: {
+		ThreadPatch: (null | components["schemas"]["ThreadState"]) & {
 			description?: string | null;
 			name?: string | null;
-			state?: null | components["schemas"]["ThreadState"];
 		};
 		/** @description lifecycle of a thread */
-		ThreadState:
-			| {
-				/** @description always remains active */
-				Pinned: {
-					/** Format: int32 */
-					pin_order: number;
-				};
-			}
-			| "Active"
-			| "Temporary"
-			| "Archived"
-			| "Deleted";
+		ThreadState: {
+			/** Format: int32 */
+			pin_order: number;
+			/** @enum {string} */
+			state: "Pinned";
+		} | {
+			/** @enum {string} */
+			state: "Active";
+		} | {
+			/** @enum {string} */
+			state: "Temporary";
+		} | {
+			/** @enum {string} */
+			state: "Archived";
+		} | {
+			/** @enum {string} */
+			state: "Deleted";
+		};
 		/** Format: uuid */
 		ThreadVerId: string;
 		/**
@@ -1369,17 +1456,21 @@ export interface components {
 			language?: null | components["schemas"]["Language"];
 		};
 		/** @description Where this track came from. */
-		TrackSource:
-			| "Uploaded"
-			| {
-				/** @description downloaded from another url */
-				Downloaded: {
-					/** Format: uri */
-					source_url: string;
-				};
-			}
-			| "Extracted"
-			| "Generated";
+		TrackSource: {
+			/** @enum {string} */
+			source: "Uploaded";
+		} | {
+			/** @enum {string} */
+			source: "Downloaded";
+			/** Format: uri */
+			source_url: string;
+		} | {
+			/** @enum {string} */
+			source: "Extracted";
+		} | {
+			/** @enum {string} */
+			source: "Generated";
+		};
 		UrlEmbed: {
 			author_avatar?: null | components["schemas"]["Media"];
 			author_name?: string | null;
@@ -1390,6 +1481,7 @@ export interface components {
 			 * @description the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
 			 */
 			canonical_url?: string | null;
+			/** @description the theme color of the site, as a hex string (`#rrggbb`) */
 			color?: string | null;
 			description?: string | null;
 			id: components["schemas"]["UrlEmbedId"];
@@ -1417,14 +1509,13 @@ export interface components {
 			id: components["schemas"]["UserId"];
 			name: string;
 			state: components["schemas"]["UserState"];
-			status?: string | null;
+			status: components["schemas"]["Status"];
 			version_id: components["schemas"]["UserVerId"];
 		};
 		UserCreate: {
 			description?: string | null;
 			is_bot: boolean;
 			name: string;
-			status?: string | null;
 		};
 		/** Format: uuid */
 		UserId: string;
@@ -1432,7 +1523,6 @@ export interface components {
 			avatar?: null | components["schemas"]["MediaId"];
 			description?: string | null;
 			name?: string | null;
-			status?: string | null;
 		};
 		/** @enum {string} */
 		UserState: "Active" | "Suspended" | "Deleted";
@@ -1440,13 +1530,32 @@ export interface components {
 			/** @enum {string} */
 			type: "Default";
 		} | {
+			/** @description this user should be considered the same as the one at alias_id
+			 *     mainly intended for bridged users
+			 *     maybe it should even redirect by default?
+			 *     can you alias to another alias? */
 			alias_id: components["schemas"]["UserId"];
 			/** @enum {string} */
 			type: "Alias";
 		} | {
+			/** @description the user who created this bot */
 			owner_id: components["schemas"]["UserId"];
 			/** @enum {string} */
 			type: "Bot";
+		} | {
+			/** @description an opaque identifier */
+			external_id: string;
+			/** @description what platform this puppet is connected to */
+			external_platform: components["schemas"]["ExternalPlatform"];
+			/**
+			 * Format: uri
+			 * @description a url on the other platform that this account can be reached at
+			 */
+			external_url?: string | null;
+			/** @description the user who created this puppet */
+			owner_id: components["schemas"]["UserId"];
+			/** @enum {string} */
+			type: "Puppet";
 		} | {
 			/** @enum {string} */
 			type: "System";
@@ -1535,6 +1644,26 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["UrlEmbed"];
+				};
+			};
+		};
+	};
+	debug_version: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ServerVersion"];
 				};
 			};
 		};
@@ -1710,6 +1839,29 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	media_done: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Media id */
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Media"];
+				};
 			};
 		};
 	};
