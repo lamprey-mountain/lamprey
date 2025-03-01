@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, status, can_fork, type, state)\n            VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)\n            RETURNING id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\", avatar\n        ",
+  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, can_fork, type, state)\n            VALUES ($1, $2, $3, $4, $5, false, $6, $7)\n            RETURNING id, version_id, parent_id, name, description, state as \"state: _\", type as \"type: _\", avatar\n        ",
   "describe": {
     "columns": [
       {
@@ -30,11 +30,6 @@
       },
       {
         "ordinal": 5,
-        "name": "status",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 6,
         "name": "state: _",
         "type_info": {
           "Custom": {
@@ -50,7 +45,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -67,7 +62,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "avatar",
         "type_info": "Uuid"
       }
@@ -77,7 +72,6 @@
         "Uuid",
         "Uuid",
         "Uuid",
-        "Text",
         "Text",
         "Text",
         {
@@ -113,11 +107,10 @@
       true,
       false,
       true,
-      true,
       false,
       false,
       true
     ]
   },
-  "hash": "1b49890a71b3d65e9d6d8dc5716a1aa817bf1896dc05dd6a8427b179842f2392"
+  "hash": "b3251b56b39623bab570a385ad4c2f9f6f9164c4b6d48163f057b76b15f165dd"
 }

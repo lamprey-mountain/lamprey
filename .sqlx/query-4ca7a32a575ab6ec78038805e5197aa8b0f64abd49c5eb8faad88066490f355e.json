@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, version_id, parent_id, name, description, status, state as \"state: _\", type as \"type: _\", avatar\n            FROM usr WHERE id = $1\n        ",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, state as \"state: _\", type as \"type: _\", avatar\n            FROM usr WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -30,11 +30,6 @@
       },
       {
         "ordinal": 5,
-        "name": "status",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 6,
         "name": "state: _",
         "type_info": {
           "Custom": {
@@ -50,7 +45,7 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -67,7 +62,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "avatar",
         "type_info": "Uuid"
       }
@@ -83,11 +78,10 @@
       true,
       false,
       true,
-      true,
       false,
       false,
       true
     ]
   },
-  "hash": "0902de6062a851c3d4b1c2003c5e372b6713f2bcee4a46afd117e983b37e6a6e"
+  "hash": "4ca7a32a575ab6ec78038805e5197aa8b0f64abd49c5eb8faad88066490f355e"
 }
