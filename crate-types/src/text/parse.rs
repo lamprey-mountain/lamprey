@@ -93,7 +93,7 @@ fn parse_text<'b>(a: &mut Parser, s: &'b str) -> ParseSpan<'b> {
         Some(t) => match t.unwrap() {
             Token::Open => {
                 if STRICT {
-                    panic!("unexpected open bracket")
+                    panic!("unexpected open brace")
                 } else {
                     // i'll assume
                     ParseSpan::Text("{")
@@ -134,7 +134,7 @@ impl<'a> Text<'a> {
         let spans = match parse(&mut parser, s) {
             ParseRes::EndOfAttr(mut vec) => {
                 if STRICT {
-                    panic!("unexpected eof")
+                    panic!("unexpected close brace")
                 } else {
                     // its probably better to send the raw text than to truncate
                     // maybe i could start parsing again, but if the text is broken then dont bother

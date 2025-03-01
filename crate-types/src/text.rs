@@ -154,4 +154,36 @@ mod test {
             "hello **world** [text](https://example.com/) *nested **text***"
         );
     }
+
+    #[test]
+    fn test_escape() {
+        assert_eq!(
+            Text::parse("~{~~~}~~~}~b{a~}b}~{~}").as_html().to_string(),
+            "{~}~}<b>a}b</b>{}"
+        );
+    }
+
+    #[test]
+    fn test_bad_start_brace() {
+        assert_eq!(
+            Text::parse("{foo ~b{bar}").as_html().to_string(),
+            "{foo <b>bar</b>"
+        );
+    }
+
+    #[test]
+    fn test_bad_end_brace() {
+        assert_eq!(
+            Text::parse("~b{foo}} bar").as_html().to_string(),
+            "<b>foo</b> bar"
+        );
+    }
+
+    #[test]
+    fn test_bad_eof() {
+        assert_eq!(
+            Text::parse("foo ~b{bar").as_html().to_string(),
+            "foo <b>bar</b>"
+        );
+    }
 }
