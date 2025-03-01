@@ -724,7 +724,6 @@ article.message {
 
 	& > .avatar {
 		grid-area: avatar;
-		background: $bg-100;
 		height: 64px;
 	}
 
@@ -753,16 +752,6 @@ article.message {
 
 .input li .media {
 	max-height: min(30vh, 500px);
-}
-
-.member-list {
-	width: 196px;
-	background: $bg-100;
-	padding: 4px;
-
-	& > li {
-		@include truncate;
-	}
 }
 
 summary {
@@ -1145,19 +1134,67 @@ blockquote {
 .status-indicator {
 	height: 12px;
 	aspect-ratio: 1/1;
-	line-height: 1;
 
-	&[data-status="Online"] {
+	&[data-status="Online"] .indicator {
 		fill: $status-online;
 	}
 
-	&[data-status="Offline"] {
+	&[data-status="Offline"] .indicator {
 		fill: $status-offline;
+	}
+}
+
+svg.avatar {
+	margin: calc(-1 * var(--pad));
+}
+
+.member-list {
+	padding: 4px 0;
+	width: 196px;
+	background: $bg-100;
+
+	& > li {
+		@include truncate;
 	}
 }
 
 .member-list > .menu-user {
 	display: flex;
 	align-items: center;
-	gap: 3px;
+	padding: 2px;
+	cursor: pointer; /* make these buttons? */
+
+	& > .text {
+		grid-area: name;
+		display: flex;
+		flex-direction: column;
+		padding: 2px 4px;
+		flex: 1;
+		overflow: hidden;
+
+		& > .name {
+			@include truncate;
+			line-height: 1;
+		}
+
+		& > .status-message {
+			@include truncate;
+			line-height: 1;
+			font-size: 0.9em;
+			color: $fg-400;
+		}
+	}
+
+	& > .avatar {
+		height: 36px;
+		padding: 4px;
+	}
+
+	&:hover {
+		background: #fff1;
+
+		& > .text > .name {
+			color: $fg-100;
+		}
+	}
 }
