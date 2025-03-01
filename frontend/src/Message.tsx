@@ -1,6 +1,6 @@
 import { getTimestampFromUUID, Message, Thread } from "sdk";
 import { MessageT, MessageType } from "./types.ts";
-import { For, Match, Show, Switch } from "solid-js";
+import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { useApi } from "./api.tsx";
@@ -103,6 +103,15 @@ export function MessageView(props: MessageProps) {
 				</>
 			);
 		} else {
+			const [arrow_width, set_arrow_width] = createSignal(0);
+			const set_w = (e: HTMLElement) => {
+				onMount(() => {
+					set_arrow_width(
+						e.querySelector(".user")!.getBoundingClientRect().width,
+					);
+				});
+			};
+
 			return (
 				<article
 					class="message menu-message"
@@ -112,12 +121,14 @@ export function MessageView(props: MessageProps) {
 						<ReplyView
 							thread_id={props.message.thread_id}
 							reply_id={props.message.reply_id!}
+							arrow_width={arrow_width()}
 						/>
 					</Show>
 					<div class="author-wrap">
 						<div
 							class="author sticky menu-user"
 							classList={{ "override-name": !!props.message.override_name }}
+							ref={set_w}
 						>
 							<Author message={props.message} thread={thread()} />
 						</div>
@@ -153,6 +164,7 @@ export function MessageView(props: MessageProps) {
 type ReplyProps = {
 	thread_id: string;
 	reply_id: string;
+	arrow_width?: number;
 };
 
 function ReplyView(props: ReplyProps) {
@@ -177,18 +189,21 @@ function ReplyView(props: ReplyProps) {
 		ctx.thread_highlight.set(props.thread_id, props.reply_id);
 	};
 
-	// <div class="arrow">{"\u21B1"}</div>
 	return (
 		<>
 			<div class="reply">
 				<div class="arrow">
-					<svg viewBox="0 0 100 100" preserveAspectRatio="none">
+					<svg
+						viewBox="0 0 100 100"
+						preserveAspectRatio="none"
+						style={{ width: `${props.arrow_width}px` }}
+					>
 						<path
 							vector-effect="non-scaling-stroke"
 							shape-rendering="crispEdges"
 							// M = move to x y
 							// L = line to x y
-							d="M 70 100 L 70 50 L 100 50"
+							d="M 50 100 L 50 50 L 100 50"
 						/>
 					</svg>
 				</div>

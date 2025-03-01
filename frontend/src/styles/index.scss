@@ -596,10 +596,11 @@ article.message {
 		& > .arrow {
 			display: grid;
 			place-items: center;
+			justify-content: end;
 
 			& > svg {
 				height: 1em;
-				width: calc(100% - 16px);
+				margin-right: 8px;
 				stroke: $sep-800;
 				fill: none;
 			}
