@@ -47,7 +47,7 @@ impl From<DbUser> for User {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            status: types::user_status::Status::default(),
+            status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
             user_type: match row.r#type {
                 DbUserType::Default => UserType::Default,

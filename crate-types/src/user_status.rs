@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 // use validator::Validate;
 
 /// the current status of the user
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Status {
     // #[serde(flatten)]
@@ -29,12 +29,11 @@ pub struct Status {
 //     pub clear_at: Option<Time>,
 // }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 // #[serde(rename = "type")]
 pub enum StatusType {
     /// offline or explicitly invisible
-    #[default]
     Offline,
 
     /// connected to the service, no special status
@@ -91,14 +90,30 @@ pub enum StatusTypePatch {
     Online,
 }
 
-// impl Status {
-//     fn apply(self, patch: &StatusPatch) -> Status {
-//         Self {
-//             status: match patch.status {
-//                 Some(StatusTypePatch::Offline) => StatusType::Offline,
-//                 Some(StatusTypePatch::Online) => StatusType::Online,
-//                 None => self.status,
-//             },
-//         }
-//     }
-// }
+impl Status {
+    /// construct a default online status
+    pub fn online() -> Status {
+        Status {
+            status: StatusType::Online,
+        }
+    }
+
+    /// construct a default offline status
+    pub fn offline() -> Status {
+        Status {
+            status: StatusType::Offline,
+        }
+    }
+}
+
+impl StatusPatch {
+    pub fn apply(self, to: Status) -> Status {
+        Status {
+            status: match self.status {
+                Some(StatusTypePatch::Offline) => StatusType::Offline,
+                Some(StatusTypePatch::Online) => StatusType::Online,
+                None => to.status,
+            },
+        }
+    }
+}

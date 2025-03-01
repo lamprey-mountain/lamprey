@@ -4,7 +4,7 @@ use std::{collections::VecDeque, sync::Arc};
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
-use types::user_status::{Status, StatusType, StatusTypePatch};
+use types::user_status::Status;
 use types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -154,17 +154,8 @@ impl Connection {
                         .set(
                             user_id,
                             status
-                                .and_then(|s| {
-                                    Some(Status {
-                                        status: match s.status? {
-                                            StatusTypePatch::Offline => StatusType::Offline,
-                                            StatusTypePatch::Online => StatusType::Online,
-                                        },
-                                    })
-                                })
-                                .unwrap_or(Status {
-                                    status: StatusType::Online,
-                                }),
+                                .map(|s| s.apply(Status::offline()))
+                                .unwrap_or(Status::online()),
                         )
                         .await?;
                     Some(user)
@@ -198,21 +189,7 @@ impl Connection {
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 srv.user_status
-                    .set(
-                        user_id,
-                        Some(status)
-                            .and_then(|s| {
-                                Some(Status {
-                                    status: match s.status? {
-                                        StatusTypePatch::Offline => StatusType::Offline,
-                                        StatusTypePatch::Online => StatusType::Online,
-                                    },
-                                })
-                            })
-                            .unwrap_or(Status {
-                                status: StatusType::Online,
-                            }),
-                    )
+                    .set(user_id, status.apply(Status::offline()))
                     .await?;
             }
             MessageClient::Pong => {

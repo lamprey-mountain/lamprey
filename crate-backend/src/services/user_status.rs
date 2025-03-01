@@ -33,7 +33,7 @@ impl ServiceUserStatus {
     pub async fn ping(&self, user_id: UserId) -> Result<User> {
         match self.statuses.remove(&user_id) {
             Some((_, s)) => self.set_inner(user_id, s.status, true).await,
-            None => self.set_inner(user_id, Status::default(), false).await,
+            None => self.set_inner(user_id, Status::offline(), false).await,
         }
     }
 
@@ -83,7 +83,7 @@ impl ServiceUserStatus {
         if let Some(s) = self.statuses.get(&user_id) {
             s.status.clone()
         } else {
-            Status::default()
+            Status::offline()
         }
     }
 }
