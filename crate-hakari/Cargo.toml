@@ -22,13 +22,15 @@ chrono = { version = "0.4", features = ["serde"] }
 crossbeam-utils = { version = "0.8" }
 deranged = { version = "0.3", default-features = false, features = ["powerfmt", "serde", "std"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
+flate2 = { version = "1" }
 form_urlencoded = { version = "1" }
 futures = { version = "0.3", default-features = false, features = ["async-await", "std"] }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
 futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-hashbrown = { version = "0.15" }
+hashbrown-3575ec1268b04181 = { package = "hashbrown", version = "0.15" }
+hashbrown-582f2526e08bb6a0 = { package = "hashbrown", version = "0.14", features = ["raw"] }
 idna = { version = "1" }
 indexmap = { version = "2", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
@@ -39,21 +41,21 @@ num-traits = { version = "0.2", features = ["i128"] }
 percent-encoding = { version = "2" }
 rand = { version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "dfa-search", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
 regex-syntax = { version = "0.8" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots", "stream"] }
 ring = { version = "0.17" }
 rustls-webpki = { version = "0.102", default-features = false, features = ["ring", "std"] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
-serde_json = { version = "1", features = ["raw_value"] }
+serde_json = { version = "1", features = ["raw_value", "unbounded_depth"] }
 sha2 = { version = "0.10", features = ["oid"] }
 simd-adler32 = { version = "0.3" }
-smallvec = { version = "1", default-features = false, features = ["const_new", "serde"] }
+smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "write"] }
 sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "sqlite", "time", "uuid"] }
 sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline"] }
-time = { version = "0.3", features = ["macros", "serde-well-known"] }
+time = { version = "0.3", features = ["local-offset", "macros", "serde-well-known"] }
 tokio = { version = "1", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 toml_edit = { version = "0.22", features = ["serde"] }
@@ -69,35 +71,40 @@ byteorder = { version = "1" }
 crossbeam-utils = { version = "0.8" }
 deranged = { version = "0.3", default-features = false, features = ["powerfmt", "serde", "std"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
+flate2 = { version = "1" }
 form_urlencoded = { version = "1" }
 futures-channel = { version = "0.3", features = ["sink"] }
 futures-core = { version = "0.3" }
 futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-hashbrown = { version = "0.15" }
+hashbrown-3575ec1268b04181 = { package = "hashbrown", version = "0.15" }
+hashbrown-582f2526e08bb6a0 = { package = "hashbrown", version = "0.14", features = ["raw"] }
 idna = { version = "1" }
 indexmap = { version = "2", features = ["serde"] }
 log = { version = "0.4", default-features = false, features = ["std"] }
 md-5 = { version = "0.10" }
 memchr = { version = "2" }
+miniz_oxide = { version = "0.8", features = ["simd"] }
 num-traits = { version = "0.2", features = ["i128"] }
 percent-encoding = { version = "2" }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 rand = { version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "dfa-search", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
 regex-syntax = { version = "0.8" }
+semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
-serde_json = { version = "1", features = ["raw_value"] }
+serde_json = { version = "1", features = ["raw_value", "unbounded_depth"] }
 sha2 = { version = "0.10", features = ["oid"] }
-smallvec = { version = "1", default-features = false, features = ["const_new", "serde"] }
+simd-adler32 = { version = "0.3" }
+smallvec = { version = "1", default-features = false, features = ["const_new", "serde", "write"] }
 sqlx-core = { version = "0.8", features = ["_rt-tokio", "any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-macros = { version = "0.8", features = ["_rt-tokio", "derive", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
 sqlx-macros-core = { version = "0.8", features = ["_rt-tokio", "derive", "json", "macros", "migrate", "postgres", "sqlite", "time", "uuid"] }
 sqlx-postgres = { version = "0.8", default-features = false, features = ["any", "json", "migrate", "offline", "time", "uuid"] }
 sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "bundled", "json", "migrate", "offline"] }
 syn = { version = "2", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }
-time = { version = "0.3", features = ["macros", "serde-well-known"] }
+time = { version = "0.3", features = ["local-offset", "macros", "serde-well-known"] }
 tokio = { version = "1", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
