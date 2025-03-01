@@ -49,4 +49,21 @@ impl DataPermission for Postgres {
         let perms = self.permission_room_get(user_id, room_id.into()).await?;
         Ok(perms.into_iter().collect())
     }
+
+    async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
+        let exists = query_scalar!(
+            r#"
+            select 1
+            from room_member a
+            join room_member b on a.room_id = b.room_id
+            where a.user_id = $1 and b.user_id = $2
+            "#,
+            a.into_inner(),
+            b.into_inner(),
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .is_some();
+        Ok(exists)
+    }
 }

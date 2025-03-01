@@ -169,6 +169,7 @@ pub async fn room_member_delete(
         .perms
         .invalidate_room(target_user_id, room_id)
         .await;
+    s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
     s.broadcast_room(
         room_id,

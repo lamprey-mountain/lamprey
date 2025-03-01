@@ -47,6 +47,7 @@ enum AuthCheck {
     RoomOrUser(RoomId, UserId),
     ThreadOrUser(ThreadId, UserId),
     User(UserId),
+    UserMutual(UserId),
     Thread(ThreadId),
 }
 
@@ -231,10 +232,7 @@ impl Connection {
             MessageSync::UpsertRoom { room } => AuthCheck::Room(room.id),
             MessageSync::UpsertThread { thread } => AuthCheck::Thread(thread.id),
             MessageSync::UpsertMessage { message } => AuthCheck::Thread(message.thread_id),
-            MessageSync::UpsertUser { user } => {
-                // TODO: more user upserts?
-                AuthCheck::User(user.id)
-            }
+            MessageSync::UpsertUser { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UpsertRoomMember { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
@@ -260,10 +258,7 @@ impl Connection {
             },
             MessageSync::DeleteMessage { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::DeleteMessageVersion { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::DeleteUser { id } => {
-                // TODO
-                AuthCheck::User(*id)
-            }
+            MessageSync::DeleteUser { id } => AuthCheck::UserMutual(*id),
             MessageSync::DeleteSession { id, user_id } => {
                 // TODO: send message when other sessions from the same user are deleted
                 if *id == session.id {
@@ -326,6 +321,17 @@ impl Connection {
                 }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
+            (Some(auth_user_id), AuthCheck::UserMutual(target_user_id)) => {
+                if auth_user_id == target_user_id {
+                    true
+                } else {
+                    self.s
+                        .services()
+                        .perms
+                        .is_mutual(auth_user_id, target_user_id)
+                        .await?
+                }
+            }
             (_, AuthCheck::Custom(b)) => b,
             (None, _) => false,
         };

@@ -11,13 +11,16 @@ use types::UserId;
 use crate::Result;
 use crate::ServerStateInner;
 
+// currently relies on sync heartbeat time
+const STATUS_EXPIRE: Duration = Duration::from_secs(40);
+
 pub struct ServiceUserStatus {
     state: Arc<ServerStateInner>,
     statuses: DashMap<UserId, OnlineState>,
 }
 
 struct OnlineState {
-    _expire_handle: JoinHandle<()>,
+    expire_handle: JoinHandle<()>,
     status: Status,
 }
 
@@ -32,7 +35,10 @@ impl ServiceUserStatus {
     /// keep the status for a user alive
     pub async fn ping(&self, user_id: UserId) -> Result<User> {
         match self.statuses.remove(&user_id) {
-            Some((_, s)) => self.set_inner(user_id, s.status, true).await,
+            Some((_, s)) => {
+                s.expire_handle.abort();
+                self.set_inner(user_id, s.status, true).await
+            }
             None => self.set_inner(user_id, Status::offline(), false).await,
         }
     }
@@ -50,7 +56,7 @@ impl ServiceUserStatus {
     ) -> Result<User> {
         let s = self.state.clone();
         let handle = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(60)).await;
+            tokio::time::sleep(STATUS_EXPIRE).await;
             let had = s.services().user_status.statuses.remove(&user_id);
             debug!(
                 "expire status for {user_id}, had {:?}",
@@ -61,10 +67,14 @@ impl ServiceUserStatus {
         let old = self.statuses.insert(
             user_id,
             OnlineState {
-                _expire_handle: handle,
+                expire_handle: handle,
                 status: status.clone(),
             },
         );
+
+        if let Some(old) = &old {
+            old.expire_handle.abort();
+        }
 
         let data = self.state.data();
         let mut user = data.user_get(user_id).await?;
