@@ -4,6 +4,7 @@ use std::{collections::VecDeque, sync::Arc};
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
 use tracing::debug;
+use types::user_status::{Status, StatusType, StatusTypePatch};
 use types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -148,7 +149,24 @@ impl Connection {
 
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
-                    let user = srv.user_status.ping(user_id).await?;
+                    let user = srv
+                        .user_status
+                        .set(
+                            user_id,
+                            status
+                                .and_then(|s| {
+                                    Some(Status {
+                                        status: match s.status? {
+                                            StatusTypePatch::Offline => StatusType::Offline,
+                                            StatusTypePatch::Online => StatusType::Online,
+                                        },
+                                    })
+                                })
+                                .unwrap_or(Status {
+                                    status: StatusType::Online,
+                                }),
+                        )
+                        .await?;
                     Some(user)
                 } else {
                     None
@@ -169,8 +187,35 @@ impl Connection {
                 self.seq_server += 1;
                 self.state = ConnectionState::Authenticated { session };
             }
-            MessageClient::Status { status: _ } => {
-                // self.state.session();
+            MessageClient::Status { status } => {
+                let session = match &self.state {
+                    ConnectionState::Unauthed => return Err(Error::MissingAuth),
+                    ConnectionState::Authenticated { session } => session,
+                    ConnectionState::Disconnected { .. } => {
+                        panic!("somehow recv msg while disconnected?")
+                    }
+                };
+                let srv = self.s.services();
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                srv.user_status
+                    .set(
+                        user_id,
+                        Some(status)
+                            .and_then(|s| {
+                                Some(Status {
+                                    status: match s.status? {
+                                        StatusTypePatch::Offline => StatusType::Offline,
+                                        StatusTypePatch::Online => StatusType::Online,
+                                    },
+                                })
+                            })
+                            .unwrap_or(Status {
+                                status: StatusType::Online,
+                            }),
+                    )
+                    .await?;
+            }
+            MessageClient::Pong => {
                 let session = match &self.state {
                     ConnectionState::Unauthed => return Err(Error::MissingAuth),
                     ConnectionState::Authenticated { session } => session,
@@ -181,8 +226,6 @@ impl Connection {
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 srv.user_status.ping(user_id).await?;
-            }
-            MessageClient::Pong => {
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
         }
