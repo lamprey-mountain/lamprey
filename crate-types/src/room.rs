@@ -15,6 +15,7 @@ use crate::{
 use super::ids::RoomId;
 
 /// A room
+// chose this name arbitrarily, maybe should be renamed to something like channel
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -42,6 +43,7 @@ pub struct Room {
 
     // pub member_count: u64,
     // pub online_count: u64,
+    // pub views: RoomView,
 }
 
 // /// User-specific room data
@@ -49,6 +51,18 @@ pub struct Room {
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 // pub struct RoomPrivate {
 //     pub notifications: NotificationConfigRoom,
+// }
+
+// a room represents a single logical system of access control (members,
+// roles, etc) but people might want to have "multiple rooms". a roomview would
+// essentially be a (search? tag?) filter displayed as a separate "place".
+//
+// the reasons why this should exist pretty much boil down to how the ui
+// is designed. depending on how i design everything, this might not even be
+// necessary.
+//
+// struct RoomView {
+//     filter: (),
 // }
 
 /// Data required to create a room
@@ -95,8 +109,13 @@ pub enum RoomType {
 
     /// direct messages between two people
     Dm { participants: (UserId, UserId) },
-    // /// for reports
-    // Reports,
+
+    /// for reports
+    Reports { report: crate::moderation::Report },
+
+    /// system messages
+    // or maybe these are dms from a System user
+    System,
 }
 
 /// who can view this room

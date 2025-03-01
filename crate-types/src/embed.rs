@@ -48,14 +48,23 @@ pub struct UrlEmbed {
     // pub thumbnail: Option<Media>,
     // pub video: Option<Media>,
     // pub footer: Option<String>,
+
+    // // discord compatibility? these aren't really used for url embeds though, and
+    // // from my experience seem somewhat rarely used for bots. i could probably do
+    // // something better with the rich text system, but idk.
+    // pub field: Vec<name, value, inline?>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum UrlTargetKind {
+    /// generic website
     Website,
+
+    /// a text document, from news, blogs, etc
     Article,
-    Other,
+    // TODO: add other opengraph types? add custom types? idk how much
+    // time/effort i really want to invest into url embeds
 }
 
 // /// an opengraph type

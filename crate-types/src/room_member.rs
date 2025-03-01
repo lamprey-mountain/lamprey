@@ -58,6 +58,9 @@ pub struct RoomMemberPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub override_name: Option<Option<String>>,
 
+    // NOTE: maybe i don't want to let moderators update this?
+    // NOTE: it might also be useful to be able to have "shared notes" for
+    // moderators, but idk if it should be here or somewhere else
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]

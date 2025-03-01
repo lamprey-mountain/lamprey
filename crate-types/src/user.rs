@@ -61,6 +61,7 @@ pub struct UserCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
+    // TODO: replace with UserCreateType
     #[serde(deserialize_with = "deserialize_default_true")]
     pub is_bot: bool,
 }
@@ -158,6 +159,7 @@ pub enum UserType {
     },
 
     /// a special type of bot designed to represent a user on another platform
+    // maybe all bots/user types can create puppets, but there's an extra permission for bridging?
     Puppet {
         /// the user who created this puppet
         owner_id: UserId,

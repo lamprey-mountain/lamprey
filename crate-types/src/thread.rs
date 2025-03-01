@@ -46,6 +46,15 @@ pub struct Thread {
     // pub state_updated_at: time::OffsetDateTime,
     // pub default_order: ThreadsOrder,
     // pub default_layout: ThreadsLayout,
+    // pub link: Vec<ThreadLink>, // probably will limit the number of links
+    // pub forward: Option<ThreadForward>,
+
+    // // this is something i've been wondering about for a while
+    // // `locked` would be easier to implement and could have custom acls, but
+    // // it might add extra complexity (it's an extra thing that can affect
+    // // auth that doesn't use the "standard" roles system)
+    // // alternative would be to let moderators edit permissions for threads,
+    // pub locked: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,6 +114,11 @@ pub enum ThreadState {
 
     /// will be permanently deleted soon, visible to moderators
     Deleted,
+    // // for Event threads
+    // // special case of Archived? maybe have something like is_cancelled for archived?
+    // // might be good to be able to have something like github's "closed as not planned"
+    // // alternatively, i could use special purpose tags
+    // Cancelled,
 }
 
 /// who can view this thread
@@ -146,7 +160,164 @@ pub enum ThreadInfo {
 
     // /// call
     // Voice(ThreadInfoVoice),
+
+    // /// event
+    // // seems surprisingly hard to get right
+    // Event(ThreadInfoEvent),
+
+    // /// document
+    // // maybe some crdt document/wiki page...?
+    // // another far future thing that needs design
+    // Document(ThreadInfoDocument),
 }
+
+// /// tell everyone viewing this thread to go to another thread (maybe redirect automatically in some places?)
+// // (stolen from irc)
+// struct ThreadForward {
+//     thread_id: ThreadId,
+//     reason: Option<String>,
+//     forwarded_by: UserId,
+//     forwarded_at: Time,
+// }
+
+// need a way to define access control for linking threads
+// linked threads need to be in the same room
+// pub struct ThreadLink {
+//     pub thread_id: ThreadId,
+//     pub link_type: ThreadLinkType,
+//     pub purpose: ThreadLinkPurpose,
+// }
+
+// pub enum ThreadLinkType {
+//     Outgoing,
+//     Incoming,
+//     Bidirectional,
+// }
+
+// pub enum ThreadLinkPurpose {
+//     /// ThreadInfoChat threads -> any thread (eg. commenting)
+//     Discussion,
+//
+//     /// any thread -> ThreadInfoVoice threads
+//     Call,
+//
+//     /// any thread <-> any thread
+//     Related,
+//
+//     /// any thread -> any thread
+//     // maybe have some special handling? (eg. make searches return messages in both threads)
+//     Duplicate,
+//
+//     // what else?
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum ThreadInfoEventLocation {
+//     Geo(crate::media::Location),
+//     Url(url::Url),
+// }
+
+// // probably need a better repr
+// // doesn't need to be fully vanilla cron, can be more typesafe/user friendly if needed
+// // or use lib.rs/cron
+// // also figure out how i18n works for other calendar systems
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct CronStr(String);
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct Cron {
+//     minutes: Vec<CronValue<60>>,
+//     hours: Vec<CronValue<60>>,
+//     days: Vec<CronValue<31>>,
+//     months: Vec<CronValue<12>>,
+//     year: Vec<CronValue<12>>,
+//     days_of_week: Vec<CronValue<7>>,
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum CronValue<const MAX: u8> {
+//     All,
+//     Single(u8),
+//     Range(u8, u8),
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum TimeGranularity {
+//     Day,
+//     Hour,
+//     Minute,
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum EventDuration {
+//     AllDay,
+//     Minutes(u64),
+// }
+
+// // could be part of ThreadState? unsure how to do this appropriately though
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// enum EventStatus {
+//     Scheduled,
+//     Active,
+//     // maybe these two are the same as archived
+//     Finished,
+//     Cancelled {
+//         cancelled_reason: Text,
+//         cancelled_at: Time,
+//         cancelled_by: UserId,
+//     },
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct ThreadInfoEvent {
+//     pub name: Text,
+//     pub description: Text,
+//     pub color: Color,
+//     pub icon: Media,
+//     pub banner: Media,
+
+//     pub location: ThreadInfoEventLocation,
+//     pub url: Url,
+
+//     pub time: Time,
+//     pub timezone: Option<Timezone>, // maybe i want this in more fields?
+//     pub time_granularity: TimeGranularity,
+//     pub repeats: Cron,
+//     pub until: Time,
+//     pub duration: EventDuration,
+
+//     pub user_limit: Option<u64>,
+//     pub user_rsvp_yes: u64,
+//     pub user_rsvp_no: u64,
+//     pub user_rsvp_maybe: u64,
+//     pub user_rsvp_invited: u64,
+//     pub user_rsvp_waitlisted: u64,
+//     pub autofill_waitlist: bool,
+//     pub status: EventStatus,
+// }
+
+// // could be extension of ThreadMembership
+// enum EventRsvpType {
+//     Yes,
+//     No,
+//     Maybe,
+//     Invited,
+//     Waitlisted,
+// }
+
+// struct EventRsvp {
+//     thread_id: ThreadId,
+//     user_id: UserId,
+//     status: EventRsvpType,
+// }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

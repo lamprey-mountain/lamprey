@@ -43,3 +43,6 @@ pub struct Tag {
     /// if this tag includes other tags (composition). ie. tag `fruits` might include `apples` and `oranges`
     pub includes: Option<Vec<TagId>>,
 }
+
+// hmm, should i be able to apply tags to other tags?
+// tagception!

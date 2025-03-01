@@ -23,6 +23,15 @@ pub use track::*;
 /// A distinct logical item of media.
 // NOTE: it's so close to being immutable. i want to make it immutable, but feel
 // like i might break something...
+//
+// update: yeah, if i want to be able to change the thumbnail, subtitles,
+// etc of a video, then i need to be able to mutate this.
+// `MediaTrack` can be made immutable (...i think? unless i want to be able to
+// append to media...? i'm not planning on needing that (streaming would be done
+// with webrtc) but idk)
+//
+// `Media` in general is starting to seem like kind of a bad abstraction tbh
+// i also might want type safety, eg. "this is definitely an image" or "this is definitely a video"
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -212,3 +221,24 @@ impl MediaCreateSource {
         }
     }
 }
+
+// maybe this could work?
+//
+// use std::marker::PhantomData;
+//
+// struct Image {}
+// struct Video {}
+// struct Audio {}
+// trait MediaType {}
+// impl MediaType for Image {}
+// impl MediaType for Video {}
+// impl MediaType for Audio {}
+// enum MediaKnownType {
+//     Image(Media<Image>),
+//     Video(Media<Video>),
+//     Audio(Media<Audio>),
+// }
+// struct Media<T: MediaType> {
+//     name: String,
+//     _phantom: PhantomData<T>,
+// }

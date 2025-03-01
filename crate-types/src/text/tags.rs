@@ -81,6 +81,7 @@ pub enum MentionTag {
 }
 
 /// how the time should be displayed
+// also might be useful to have a duration format?
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TimeFormat {
     TimeShort,
@@ -206,3 +207,95 @@ pub enum Block<'a> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Blocks<'a>(Vec<Block<'a>>);
+
+#[allow(unused)]
+// i really should stop trying to overengineer this stuff
+// maybe i'll do a v1 static/no interaction version then a v2 format with interactivity
+// so that i at least have *some* way of formatting text for now
+//
+// another note: i want to let people add custom styles for user/room profiles.
+// i'd use css, but its kind of a pain to sanitize and scope properly. so i
+// might *also* end up making my own styling as well...
+//
+// plus theres the whole "maybe i want to let people run arbitrary code" thing.
+// might as well bite the bullet and figure out a way to safely let people do
+// *anything*, instead of incrementally/manually adding more and more features as
+// people ask for them.
+//
+/// the planning never ceases
+mod more_random_ideas {
+    use crate::text::{Language, Text};
+
+    /// a reference to another Block in a Document
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct BlockIdx(u64);
+
+    /// block level formatting (WIP, new version?)
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum Block<'a> {
+        /// usually the root level container. allows combining multiple other block level elements.
+        Container(Vec<u64>),
+
+        /// inline text, can be a plain string
+        Text(Text<'a>),
+
+        H1(Text<'a>),
+        H2(Text<'a>),
+        H3(Text<'a>),
+        H4(Text<'a>),
+        H5(Text<'a>),
+        H6(Text<'a>),
+        Blockquote(BlockIdx),
+        Code(Language, Text<'a>),
+        ListUnordered(Vec<BlockIdx>),
+        ListOrdered(Vec<BlockIdx>),
+        ListDefinition(Vec<(BlockIdx, BlockIdx)>),
+        ListCheckable(Vec<(BlockIdx, bool)>),
+        Table(Vec<Vec<BlockIdx>>),
+        Math(&'a str),
+
+        /// for templates, a hole thats filled in later
+        Data(Box<str>),
+
+        /// causes/emits effects
+        // bubble or capture?
+        Effect(Effect),
+
+        /// catches and transforms/handles effects
+        // TODO: ?????
+        // this is becoming very overcomplicated very quickly
+        // i also want to limit the amount of "special" components and push more
+        // stuff into "userspace", which is absolutely going to increase the
+        // complexity here
+        Handle(Input, Output),
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct Input;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct Output;
+
+    // also should look at https://adaptivecards.io/ for ideas
+    // ...though i'll probably not copy it exactly
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub enum Effect {
+        /// send an event to whoever sent this
+        Event(Box<str>),
+
+        /// do something to another thing
+        Something(BlockIdx),
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct Document {
+        /// is None, is assumed to be (thread, room, user)'s language
+        pub lang: Option<Language>,
+
+        /// first block is the root node. is a graph, not a tree.
+        pub blocks: Vec<Block<'static>>,
+
+        /// fills in Data
+        pub data: std::collections::HashMap<Box<str>, BlockIdx>,
+    }
+}

@@ -33,11 +33,29 @@ pub struct Profile {
     /// list of preferred locales, in order of most to least preferred
     pub languages: Vec<Language>,
 
-    // a color? could be useful, unsure what it would be used for
+    // a color? could be useful, unsure what it would be used for. needs ui design.
     pub color: Color,
 
     /// links to other websites
     pub links: Vec<ProfileUrl>,
+}
+
+/// minor profile for things like tags/roles
+// NOTE: what do i remove, what do i keep? is it this even necessary to have a separate struct?
+// well, i guess banner and languages don't make much sense for roles and tags.
+// or i guess i could create separate "topic"(?) pages for them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ProfileMinor {
+    pub name: String,
+
+    pub description: Option<String>,
+
+    /// always a square image
+    pub icon: Option<MediaId>,
+
+    // a color? could be useful, unsure what it would be used for. needs ui design.
+    pub color: Color,
 }
 
 // does it make sense to allow overriding to `null`? eg. description, avatar, etc
@@ -60,6 +78,7 @@ pub struct ProfileOverride {
 }
 
 /// a link to another website
+// maybe parse some types of urls, extract usernames, generate embeds, idk
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ProfileUrl {

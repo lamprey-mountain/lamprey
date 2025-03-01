@@ -226,6 +226,12 @@ pub enum MessageType2 {
     ModerationReport(MessageModerationReport),
 
     SystemMessage(MessageSystemMessage),
+    // /// a message referencing another thread (ie. linking two threads, mentioning another thread. see github.)
+    // // needs some sort of antispam system. again, see github.
+    // // doesnt need to reference a thread in the same room
+    // ReferenceSend(MessageLink),
+    // ReferenceRecv(MessageLink),
+    // ReferenceBidi(MessageLink), // not sure if this makes sense to have...?
 }
 
 /// Information about a message being pinned or unpinned

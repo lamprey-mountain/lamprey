@@ -114,6 +114,7 @@ async fn thread_get(
 }
 
 /// List threads in a room
+// maybe in the future i'll replace this with a more flexible "thread query/search" api
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread",

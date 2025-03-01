@@ -18,7 +18,10 @@ pub struct Report {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ReportDestination {
+    /// send to room moderators
     Room,
+
+    /// send to server moderators
     Server,
 }
 
