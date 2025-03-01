@@ -63,7 +63,7 @@ pub struct Message {
     pub override_name: Option<String>,
 
     /// who sent this message
-    // #[deprecated = "use author_id and fetch manually, better caching"]
+    #[deprecated = "use author_id and fetch manually, better caching and easier server impl"]
     pub author: User,
 
     // /// the id of who sent this message

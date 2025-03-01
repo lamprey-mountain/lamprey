@@ -14,6 +14,7 @@ use crate::types::{
 use crate::data::DataMessage;
 
 use super::url_embed::DbUrlEmbed;
+use super::user::DbUser;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -72,7 +73,11 @@ impl From<DbMessage> for Message {
             metadata: row.metadata,
             reply_id: row.reply_id.map(Into::into),
             override_name: row.override_name,
-            author: serde_json::from_value(row.author).expect("invalid data in database!"),
+            author: {
+                let a: DbUser =
+                    serde_json::from_value(row.author).expect("invalid data in database!");
+                a.into()
+            },
             is_pinned: row.is_pinned,
             embeds: row
                 .embeds
