@@ -38,6 +38,8 @@ const flagsDev: Flag[] = [
 
 const flagsProd: Flag[] = [
 	"service_worker_media",
+	"room_member_list",
+	"thread_member_list",
 ];
 
 export const flags = new ReactiveSet(
