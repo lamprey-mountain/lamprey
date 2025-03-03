@@ -6,7 +6,7 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::PaginationKey;
+use crate::{util::Time, PaginationKey};
 
 #[cfg(not(feature = "utoipa"))]
 pub trait Identifier:
@@ -77,6 +77,15 @@ macro_rules! genid {
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 Ok(Self(s.parse()?))
+            }
+        }
+
+        impl TryInto<Time> for $name {
+            type Error = ();
+
+            fn try_into(self) -> Result<Time, Self::Error> {
+                let uuid: Uuid = self.into();
+                Ok(uuid.get_timestamp().ok_or(())?.try_into().map_err(|_| ())?)
             }
         }
 

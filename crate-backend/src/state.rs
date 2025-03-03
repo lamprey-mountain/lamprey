@@ -9,7 +9,7 @@ use dashmap::DashMap;
 use moka::future::Cache;
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
-use types::MessageSync;
+use types::{MessageSync, MessageType};
 use url::Url;
 
 use crate::{
@@ -154,11 +154,16 @@ impl ServerStateInner {
 
     /// presigns every relevant url in a Message
     pub async fn presign_message(&self, message: &mut Message) -> Result<()> {
-        for media in &mut message.attachments {
-            self.presign(media).await?;
-        }
-        for emb in &mut message.embeds {
-            self.presign_url_embed(emb).await?;
+        match &mut message.message_type {
+            MessageType::DefaultMarkdown(message) => {
+                for media in &mut message.attachments {
+                    self.presign(media).await?;
+                }
+                for emb in &mut message.embeds {
+                    self.presign_url_embed(emb).await?;
+                }
+            }
+            _ => {}
         }
         Ok(())
     }

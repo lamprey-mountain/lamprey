@@ -137,14 +137,14 @@ export function MessageView(props: MessageProps) {
 						<Show when={props.message.content}>
 							<MessageText message={props.message} />
 						</Show>
-						<Show when={props.message.attachments.length}>
+						<Show when={props.message.attachments?.length}>
 							<ul class="attachments">
 								<For each={props.message.attachments}>
 									{(att) => <AttachmentView media={att} />}
 								</For>
 							</ul>
 						</Show>
-						<Show when={props.message.embeds.length}>
+						<Show when={props.message.embeds?.length}>
 							<ul class="embeds">
 								<For each={props.message.embeds}>
 									{(embed) => <UrlEmbedView embed={embed} />}

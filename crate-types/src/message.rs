@@ -15,11 +15,13 @@ use crate::util::Diff;
 use crate::util::Time;
 use crate::RedexId;
 use crate::{
-    AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadCreateRequest, ThreadMember,
-    ThreadPatch, UrlEmbed, UserId,
+    AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadCreate, ThreadMember, ThreadPatch,
+    UrlEmbed, UserId,
 };
 
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
+
+// FIXME: uncomment #[deprecated] attrs (disabled to prevent extraneous warnings for now)
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -35,17 +37,17 @@ pub struct Message {
     /// maybe i will replace with a header so nonces can be used everywhere
     pub nonce: Option<String>,
 
-    #[deprecated = "not that useful"]
+    // #[deprecated = "not that useful"]
     pub ordering: i32,
 
     /// who sent this message
-    #[deprecated = "use author_id and fetch manually, better caching and easier server impl"]
+    // #[deprecated = "use author_id and fetch manually, better caching and easier server impl"]
     pub author: User,
 
     /// the id of who sent this message
-    pub author_id: User,
+    pub author_id: UserId,
 
-    #[deprecated = "use message.state"]
+    // #[deprecated = "use message.state"]
     pub is_pinned: bool,
 
     #[serde(flatten)]
@@ -113,11 +115,10 @@ pub struct Resolved {
     // pub emoji: Vec<Emoji>,
 }
 
-// TODO: rename -> MessageCreate
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MessageCreateRequest {
+pub struct MessageCreate {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
@@ -134,7 +135,7 @@ pub struct MessageCreateRequest {
     #[serde(default)]
     pub attachments: Vec<MediaRef>,
 
-    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
     pub metadata: Option<serde_json::Value>,
 
     pub reply_id: Option<MessageId>,
@@ -165,7 +166,7 @@ pub struct MessagePatch {
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     pub attachments: Option<Vec<MediaRef>>,
 
-    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
     #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
 
@@ -183,7 +184,7 @@ pub struct MessagePatch {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename = "type")]
+#[serde(tag = "type")]
 pub enum MessageType {
     /// a basic message, using the legacy markdown syntax
     /// previously called "Default"!
@@ -223,7 +224,7 @@ pub enum MessageType {
     // why have a separate event instead of ThreadUpdate? semantics i guess
     // ThreadCreate(ThreadPatch),
     /// (TODO) a message at the beginning of a thread
-    ThreadCreate(ThreadCreateRequest),
+    ThreadCreate(ThreadCreate),
 
     /// (TODO) receive announcement threads from this room
     RoomFollowed(MessageRoomFollowed),
@@ -309,7 +310,7 @@ pub struct MessageModerationAuto {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(no_recursion))]
 #[serde(tag = "type", content = "data")]
 pub enum AutomodContext {
     Message(Message),
@@ -373,11 +374,12 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
+    // TODO(#325): use MediaRef here
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub attachments: Vec<Media>,
 
-    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
     pub metadata: Option<serde_json::Value>,
 
     pub reply_id: Option<MessageId>,
@@ -386,7 +388,7 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<UrlEmbed>,
 
-    #[deprecated = "create new puppets for each bridged user instead"]
+    // #[deprecated = "create new puppets for each bridged user instead"]
     /// override the name of the user who sent this message. will be removed soon!
     pub override_name: Option<String>,
     // NOTE: new message features won't be backported here

@@ -157,7 +157,7 @@ pub enum ThreadPrivate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadCreateRequest {
+pub struct ThreadCreate {
     #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,

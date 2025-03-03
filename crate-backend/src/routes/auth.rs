@@ -9,6 +9,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
 use types::SessionStatus;
+use types::UserType;
 use url::Url;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
@@ -81,7 +82,7 @@ pub async fn auth_oauth_redirect(
                     parent_id: None,
                     name: dc.user.global_name.unwrap_or(dc.user.username),
                     description: None,
-                    is_bot: false,
+                    user_type: UserType::Default,
                 })
                 .await?;
             data.auth_oauth_put("discord".into(), user.id, dc.user.id, true)

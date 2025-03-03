@@ -8,7 +8,7 @@ use axum::{
 };
 use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
-use types::{util::Diff, PaginationDirection, ThreadMembership};
+use types::{util::Diff, MessageDefaultMarkdown, PaginationDirection, ThreadMembership};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -17,7 +17,7 @@ use validator::Validate;
 use crate::{
     error::Error,
     types::{
-        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch,
+        DbMessageCreate, MediaLinkType, Message, MessageCreate, MessageId, MessagePatch,
         MessageSync, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission,
         ThreadId,
     },
@@ -41,7 +41,7 @@ async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessageCreateRequest>,
+    Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
@@ -67,16 +67,24 @@ async fn message_create(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    let message_id = data
-        .message_create(MessageCreate {
-            thread_id,
+    let body = if json.use_new_text_formatting {
+        return Err(Error::Unimplemented);
+    } else {
+        MessageDefaultMarkdown {
             content: json.content,
-            attachment_ids: attachment_ids.clone(),
-            author_id: user_id,
-            message_type: MessageType::Default,
+            attachments: vec![],
+            embeds: vec![],
             metadata: json.metadata,
             reply_id: json.reply_id,
             override_name: json.override_name,
+        }
+    };
+    let message_id = data
+        .message_create(DbMessageCreate {
+            thread_id,
+            attachment_ids: attachment_ids.clone(),
+            author_id: user_id,
+            message_type: MessageType::DefaultMarkdown(body.clone()),
         })
         .await?;
     let message_uuid = message_id.into_inner();
@@ -87,7 +95,7 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
-    if let Some(content) = &message.content {
+    if let Some(content) = &body.content {
         for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
                 let version_id = message.version_id;
@@ -305,12 +313,11 @@ async fn message_edit(
     let attachment_ids: Vec<_> = json
         .attachments
         .map(|ats| ats.into_iter().map(|r| r.id).collect())
-        .unwrap_or_else(|| {
-            message
-                .attachments
-                .into_iter()
-                .map(|media| media.id)
-                .collect()
+        .unwrap_or_else(|| match &message.message_type {
+            MessageType::DefaultMarkdown(msg) => {
+                msg.attachments.iter().map(|media| media.id).collect()
+            }
+            _ => vec![],
         });
     for id in &attachment_ids {
         data.media_select(*id).await?;
@@ -322,19 +329,26 @@ async fn message_edit(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
+    let body = match message.message_type {
+        MessageType::DefaultMarkdown(msg) => Result::Ok(MessageDefaultMarkdown {
+            content: json.content.unwrap_or(msg.content),
+            attachments: vec![],
+            embeds: vec![],
+            metadata: json.metadata.unwrap_or(msg.metadata),
+            reply_id: json.reply_id.unwrap_or(msg.reply_id),
+            override_name: json.override_name.unwrap_or(msg.override_name),
+        }),
+        _ => return Err(Error::Unimplemented),
+    }?;
     let version_id = data
         .message_update(
             thread_id,
             message_id,
-            MessageCreate {
+            DbMessageCreate {
                 thread_id,
-                content: json.content.unwrap_or(message.content),
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
-                message_type: MessageType::Default,
-                metadata: json.metadata.unwrap_or(message.metadata),
-                reply_id: json.reply_id.unwrap_or(message.reply_id),
-                override_name: json.override_name.unwrap_or(message.override_name),
+                message_type: MessageType::DefaultMarkdown(body.clone()),
             },
         )
         .await?;

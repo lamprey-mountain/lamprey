@@ -39,7 +39,7 @@ pub struct Role {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct RoleCreateRequest {
+pub struct RoleCreate {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,

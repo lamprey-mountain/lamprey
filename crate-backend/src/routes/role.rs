@@ -6,13 +6,13 @@ use axum::{extract::State, Json};
 use http::StatusCode;
 use types::util::Diff;
 use types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreateRequest, RoleId,
+    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId,
     RolePatch, RoomId, RoomMember, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::types::{RoleCreate, RoleDeleteQuery};
+use crate::types::{DbRoleCreate, RoleDeleteQuery};
 use crate::ServerState;
 
 use super::util::Auth;
@@ -34,7 +34,7 @@ pub async fn role_create(
     Path(room_id): Path<RoomId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<RoleCreateRequest>,
+    Json(json): Json<RoleCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let d = s.data();
@@ -42,7 +42,7 @@ pub async fn role_create(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d
-        .role_create(RoleCreate {
+        .role_create(DbRoleCreate {
             room_id,
             name: json.name,
             description: json.description,

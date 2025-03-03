@@ -40,7 +40,7 @@ impl From<DbRoomMember> for RoomMember {
                 DbMembership::Leave => RoomMembership::Leave {},
                 DbMembership::Ban => RoomMembership::Ban {},
             },
-            membership_updated_at: row.membership_updated_at.assume_utc(),
+            membership_updated_at: row.membership_updated_at.assume_utc().into(),
         }
     }
 }

@@ -11,10 +11,11 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbUserCreate, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
-    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleCreate, RoleId,
-    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
-    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserId, UserPatch, UserVerId,
+    DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media, MediaId,
+    MediaLink, MediaLinkType, Message, MessageId, MessageVerId, PaginationQuery,
+    PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId, User,
+    UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -88,7 +89,7 @@ pub trait DataRoomMember {
 
 #[async_trait]
 pub trait DataRole {
-    async fn role_create(&self, create: RoleCreate) -> Result<Role>;
+    async fn role_create(&self, create: DbRoleCreate) -> Result<Role>;
     async fn role_list(
         &self,
         room_id: RoomId,
@@ -181,12 +182,12 @@ pub trait DataMedia {
 
 #[async_trait]
 pub trait DataMessage {
-    async fn message_create(&self, create: MessageCreate) -> Result<MessageId>;
+    async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId>;
     async fn message_update(
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
-        create: MessageCreate,
+        create: DbMessageCreate,
     ) -> Result<MessageVerId>;
     async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message>;
     async fn message_list(
@@ -230,7 +231,7 @@ pub trait DataSession {
 
 #[async_trait]
 pub trait DataThread {
-    async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId>;
+    async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId>;
     async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread>;
     async fn thread_list(
         &self,

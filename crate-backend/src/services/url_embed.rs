@@ -6,6 +6,7 @@ use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
+use types::misc::Color;
 use types::{Media, UserId};
 use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
@@ -391,7 +392,7 @@ impl ServiceUrlEmbed {
                 },
                 title,
                 description,
-                color: theme_color.map(|c| c.to_hex_string()),
+                color: theme_color.map(|c| Color::from_hex_string(c.to_hex_string())),
                 media,
                 media_is_thumbnail: match media_type {
                     ImageInstructions::Thumb => true,

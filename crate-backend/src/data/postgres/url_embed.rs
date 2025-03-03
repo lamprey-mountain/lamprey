@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as};
 use tracing::debug;
-use types::{MessageVerId, UrlEmbed, UrlEmbedId, UserId};
+use types::{misc::Color, MessageVerId, UrlEmbed, UrlEmbedId, UserId};
 use url::Url;
 use uuid::Uuid;
 
@@ -40,7 +40,7 @@ impl From<DbUrlEmbed> for UrlEmbed {
                 .map(|i| i.parse().expect("invalid data in db")),
             title: row.title,
             description: row.description,
-            color: row.color,
+            color: row.color.map(Color::from_hex_string),
             media: row.media.map(media_from_db),
             media_is_thumbnail: row.media_is_thumbnail.expect("invalid data in db"),
             author_url: row
@@ -82,7 +82,7 @@ impl DataUrlEmbed for Postgres {
             embed.canonical_url.map(|u| u.to_string()),
             embed.title,
             embed.description,
-            embed.color,
+            embed.color.map(|c| c.as_ref().to_string()),
             embed.media.map(|m| m.id.into_inner()),
             embed.media_is_thumbnail,
             embed.author_url.map(|u| u.to_string()),

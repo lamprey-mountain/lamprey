@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 use sqlx::{query, query_as, Acquire};
-use types::{UserState, UserType};
+use types::{BotOwner, BotVisibility, UserState, UserType};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -30,6 +30,8 @@ pub enum DbUserType {
     Alias,
     Bot,
     System,
+    // FIXME
+    // Puppet,
 }
 
 #[derive(Deserialize, sqlx::Type)]
@@ -51,11 +53,12 @@ impl From<DbUser> for User {
             avatar: row.avatar.map(Into::into),
             user_type: match row.r#type {
                 DbUserType::Default => UserType::Default,
-                DbUserType::Alias => UserType::Alias {
-                    alias_id: row.parent_id.unwrap().into(),
-                },
+                DbUserType::Alias => panic!("there shouldn't be any Alias users right now"),
                 DbUserType::Bot => UserType::Bot {
-                    owner_id: row.parent_id.unwrap().into(),
+                    owner: BotOwner::User {
+                        user_id: row.parent_id.unwrap().into(),
+                    },
+                    visibility: BotVisibility::Private,
                 },
                 DbUserType::System => UserType::System,
             },
@@ -72,10 +75,11 @@ impl From<DbUser> for User {
 impl DataUser for Postgres {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User> {
         let user_id = Uuid::now_v7();
-        let user_type = if patch.is_bot {
-            DbUserType::Bot
-        } else {
-            DbUserType::Default
+        let user_type: DbUserType = match patch.user_type {
+            UserType::Default => DbUserType::Default,
+            UserType::Bot { .. } => DbUserType::Bot,
+            UserType::Puppet { .. } => todo!(),
+            UserType::System => DbUserType::System,
         };
         let row = query_as!(
             DbUser,

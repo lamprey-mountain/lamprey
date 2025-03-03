@@ -25,6 +25,21 @@ pub enum ColorNamed {
     // or both?
 }
 
+impl Color {
+    pub fn from_hex_string(s: String) -> Color {
+        // TODO: ensure hex
+        Color::Srgb(s)
+    }
+}
+
+impl AsRef<str> for Color {
+    fn as_ref(&self) -> &str {
+        match self {
+            Color::Srgb(c) => c.as_str(),
+        }
+    }
+}
+
 // the below types are unlikely to be added, but worth mentioning anyways
 
 // /// maybe add a way to automatically create links from some text

@@ -38,7 +38,7 @@ impl From<DbThreadMember> for ThreadMember {
                 DbMembership::Leave => ThreadMembership::Leave {},
                 DbMembership::Ban => ThreadMembership::Ban {},
             },
-            membership_updated_at: row.membership_updated_at.assume_utc(),
+            membership_updated_at: row.membership_updated_at.assume_utc().into(),
         }
     }
 }

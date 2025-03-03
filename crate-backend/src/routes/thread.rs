@@ -7,7 +7,6 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use types::{MessageId, ThreadState};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -15,8 +14,8 @@ use validator::Validate;
 
 use crate::{
     types::{
-        MessageCreate, MessageSync, MessageType, MessageVerId, PaginationQuery, PaginationResponse,
-        Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest, ThreadId, ThreadPatch,
+        DbMessageCreate, DbThreadCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
+        PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
     ServerState,
 };
@@ -39,7 +38,7 @@ async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ThreadCreateRequest>,
+    Json(json): Json<ThreadCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
@@ -47,7 +46,7 @@ async fn thread_create(
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadCreate)?;
     let thread_id = data
-        .thread_create(ThreadCreate {
+        .thread_create(DbThreadCreate {
             room_id,
             creator_id: user_id,
             name: json.name.clone(),
@@ -55,18 +54,15 @@ async fn thread_create(
         })
         .await?;
     let starter_message_id = data
-        .message_create(MessageCreate {
+        .message_create(DbMessageCreate {
             thread_id,
-            content: Some("(thread create)".to_string()),
             attachment_ids: vec![],
             author_id: user_id,
-            message_type: MessageType::ThreadUpdate,
-            metadata: Some(json!({
-                "name": json.name,
-                "description": json.description,
-            })),
-            reply_id: None,
-            override_name: None,
+            message_type: MessageType::ThreadUpdate(ThreadPatch {
+                name: Some(json.name),
+                description: Some(json.description),
+                state: None,
+            }),
         })
         .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;

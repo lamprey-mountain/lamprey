@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::util::Diff;
-use types::{MediaTrackInfo, MessageSync, User, UserCreate, UserPatch};
+use types::{BotOwner, MediaTrackInfo, MessageSync, User, UserCreate, UserPatch, UserType};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
@@ -31,12 +31,35 @@ pub async fn user_create(
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(auth_user_id);
     let data = s.data();
+    let parent = data.user_get(auth_user_id).await?;
+    if !parent.user_type.can_create(&body.user_type) {
+        return Err(Error::BadStatic("can't create that user"));
+    };
+    match &body.user_type {
+        UserType::Bot { owner, .. } => match owner {
+            BotOwner::User { user_id } if *user_id != auth_user_id => {
+                return Err(Error::BadStatic("bad owner id"));
+            }
+            _ => {}
+        },
+        UserType::Puppet {
+            owner_id, alias_id, ..
+        } => {
+            if alias_id.is_some() {
+                return Err(Error::Unimplemented);
+            }
+            if *owner_id != auth_user_id {
+                return Err(Error::BadStatic("bad owner id"));
+            }
+        }
+        _ => {}
+    };
     let user = data
         .user_create(DbUserCreate {
             parent_id,
             name: body.name,
             description: body.description,
-            is_bot: body.is_bot,
+            user_type: body.user_type,
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))

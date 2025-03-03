@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use serde::{Deserialize, Deserializer, Serialize};
+use time::OffsetDateTime;
 
 use crate::Permission;
 
@@ -73,17 +74,17 @@ pub struct Time(
         serialize_with = "time::serde::rfc3339::serialize",
         deserialize_with = "time::serde::rfc3339::deserialize"
     )]
-    time::OffsetDateTime,
+    OffsetDateTime,
 );
 
 impl Time {
     pub fn now_utc() -> Self {
-        Self(time::OffsetDateTime::now_utc())
+        Self(OffsetDateTime::now_utc())
     }
 }
 
 impl Deref for Time {
-    type Target = time::OffsetDateTime;
+    type Target = OffsetDateTime;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -91,7 +92,23 @@ impl Deref for Time {
 }
 
 impl Time {
-    pub fn into_inner(self) -> time::OffsetDateTime {
+    pub fn into_inner(self) -> OffsetDateTime {
         self.0
+    }
+}
+
+impl TryInto<Time> for uuid::Timestamp {
+    type Error = time::error::ComponentRange;
+
+    fn try_into(self) -> Result<Time, Self::Error> {
+        let (secs, nanos) = self.to_unix();
+        let ts = secs as i128 * 1000000000 + nanos as i128;
+        Ok(Time(OffsetDateTime::from_unix_timestamp_nanos(ts)?))
+    }
+}
+
+impl Into<Time> for OffsetDateTime {
+    fn into(self) -> Time {
+        Time(self)
     }
 }

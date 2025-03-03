@@ -5,8 +5,8 @@ use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
 use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MessageCreateRequest, MessageId, Session,
-    Thread, ThreadId, User, UserId,
+    Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session, Thread,
+    ThreadId, User, UserId,
 };
 use uuid::uuid;
 
@@ -37,7 +37,7 @@ pub enum UnnamedMessage {
     // },
     MessageCreate {
         thread_id: ThreadId,
-        req: MessageCreateRequest,
+        req: MessageCreate,
         response: oneshot::Sender<types::Message>,
     },
     MessageUpdate {

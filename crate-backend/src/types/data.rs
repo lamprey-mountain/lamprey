@@ -1,8 +1,10 @@
 use serde::Deserialize;
 use types::{
+    thread::text::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,
-    ThreadId, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
+    ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
+    ThreadVisibility, UserId, UserType,
 };
 use uuid::Uuid;
 
@@ -18,7 +20,7 @@ pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
-    pub is_bot: bool,
+    pub user_type: UserType,
 }
 
 #[derive(sqlx::Type)]
@@ -64,7 +66,7 @@ pub struct DbThread {
     pub state: DbThreadState,
 }
 
-pub struct ThreadCreate {
+pub struct DbThreadCreate {
     pub room_id: RoomId,
     pub creator_id: UserId,
     pub name: String,
@@ -85,12 +87,6 @@ impl From<DbThread> for Thread {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            info: ThreadInfo::Chat {
-                is_unread: row.is_unread,
-                last_version_id: row.last_version_id,
-                last_read_id: row.last_read_id.map(Into::into),
-                message_count: row.message_count.try_into().expect("count is negative?"),
-            },
             state: match row.state {
                 DbThreadState::Pinned => todo!(),
                 DbThreadState::Active => ThreadState::Active,
@@ -99,12 +95,23 @@ impl From<DbThread> for Thread {
                 DbThreadState::Deleted => ThreadState::Deleted,
             },
             visibility: ThreadVisibility::Room,
+            info: ThreadPublic::Chat(ThreadTypeChatPublic {
+                last_version_id: row.last_version_id,
+                message_count: row.message_count.try_into().expect("count is negative?"),
+            }),
+            private: Some(ThreadPrivate::Chat(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                // FIXME: add field to db schema
+                mention_count: 0,
+            })),
 
-            // FIXME: add to db, calculate
-            state_updated_at: Default::default(),
-            private: Default::default(),
-            member_count: Default::default(),
-            online_count: Default::default(),
+            // FIXME: add field to db schema
+            state_updated_at: row.id.try_into().unwrap(),
+            // FIXME: add field to db schema or calculate
+            member_count: 0,
+            // FIXME: calculate field
+            online_count: 0,
         }
     }
 }
@@ -181,7 +188,7 @@ impl From<DbRole> for Role {
     }
 }
 
-pub struct RoleCreate {
+pub struct DbRoleCreate {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
@@ -191,15 +198,44 @@ pub struct RoleCreate {
     pub is_default: bool,
 }
 
-pub struct MessageCreate {
+pub struct DbMessageCreate {
     pub message_type: MessageType,
     pub thread_id: ThreadId,
-    pub content: Option<String>,
     pub attachment_ids: Vec<MediaId>,
-    pub metadata: Option<serde_json::Value>,
-    pub reply_id: Option<MessageId>,
     pub author_id: UserId,
-    pub override_name: Option<String>, // temp?
+}
+
+// TODO: move to types
+impl DbMessageCreate {
+    pub fn content(&self) -> Option<String> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.content.clone(),
+            MessageType::ThreadUpdate(_patch) => Some("(thread update)".to_owned()),
+            _ => None,
+        }
+    }
+
+    pub fn metadata(&self) -> Option<serde_json::Value> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
+            MessageType::ThreadUpdate(patch) => Some(serde_json::to_value(patch).ok()?),
+            _ => None,
+        }
+    }
+
+    pub fn reply_id(&self) -> Option<MessageId> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.reply_id,
+            _ => None,
+        }
+    }
+
+    pub fn override_name(&self) -> Option<String> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.override_name.clone(),
+            _ => None,
+        }
+    }
 }
 
 // surely there's a better way

@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use moka::future::Cache;
-use serde_json::json;
 use types::util::Diff;
 use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId};
 
 use crate::error::{Error, Result};
-use crate::types::MessageCreate;
+use crate::types::DbMessageCreate;
 use crate::ServerStateInner;
 
 pub struct ServiceThreads {
@@ -90,19 +89,15 @@ impl ServiceThreads {
 
         // send update message to thread
         let update_message_id = data
-            .message_create(MessageCreate {
+            .message_create(DbMessageCreate {
                 thread_id,
-                content: Some("(thread update)".to_string()),
                 attachment_ids: vec![],
                 author_id: user_id,
-                message_type: MessageType::ThreadUpdate,
-                metadata: Some(json!({
-                    "name": patch.name,
-                    "description": patch.description,
-                    "state": patch.state,
-                })),
-                reply_id: None,
-                override_name: None,
+                message_type: MessageType::ThreadUpdate(ThreadPatch {
+                    name: patch.name,
+                    description: patch.description,
+                    state: patch.state,
+                }),
             })
             .await?;
         let update_message = data.message_get(thread_id, update_message_id).await?;

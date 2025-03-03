@@ -98,13 +98,18 @@ pub enum UserType {
         /// who/what has control over this bot
         #[serde(flatten)]
         owner: BotOwner,
-        // could probably be simplified?
+
+        /// who can use the bot
+        visibility: BotVisibility,
+        // /// enables managing Puppet users
+        // is_bridge: bool,
+
+        // do i really need all these urls?
         // url_terms_of_service: Option<Url>,
         // url_privacy_policy: Option<Url>,
         // url_help_docs: Vec<Url>,
         // url_main_site: Vec<Url>,
         // url_interactions: Vec<Url>, // webhook
-        // visibility: BotVisibility,
     },
 
     /// a special type of bot designed to represent a user on another platform
@@ -163,13 +168,12 @@ pub enum BotVisibility {
     /// only the creator can use the bot
     #[default]
     Private,
+    // /// anyone can use the bot (Unlisted)
+    // // TODO: unify public/unlisted/discoverable terminology
+    // Public,
 
-    /// anyone can use the bot (Unlisted)
-    // TODO: unify public/unlisted/discoverable terminology
-    Public,
-
-    /// anyone can find the bot
-    Discoverble,
+    // /// anyone can find the bot
+    // Discoverble,
 }
 
 // TODO: add platforms
@@ -185,6 +189,7 @@ pub enum ExternalPlatform {
 pub enum UserState {
     Active,
     // maybe different "trust levels" for antispam
+    // Guest,
     // Untrusted,
     // Trusted,
     // Verified,
@@ -230,12 +235,14 @@ impl UserType {
             (UserType::Default, UserType::Default) => true,
 
             // TODO: ensure that user_id is correct
+            // users can create bots
             (UserType::Default, UserType::Bot { .. }) => true,
 
-            // manual bridging?
-            (UserType::Default, UserType::Puppet { .. }) => true,
+            // if you want to use a bridge, create a bot
+            (UserType::Default, UserType::Puppet { .. }) => false,
 
             // for bridging
+            // (UserType::Bot { is_bridge, .. }, UserType::Puppet { .. }) => *is_bridge,
             (UserType::Bot { .. }, UserType::Puppet { .. }) => true,
 
             // doesn't really make sense for a bot to be able to create more non-puppet users

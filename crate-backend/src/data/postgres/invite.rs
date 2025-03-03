@@ -68,9 +68,10 @@ impl DataInvite for Postgres {
         let invite = Invite {
             code,
             target,
+            creator_id: creator.id,
             creator,
-            created_at: row.created_at.assume_utc(),
-            expires_at: row.expires_at.map(|t| t.assume_utc()),
+            created_at: row.created_at.assume_utc().into(),
+            expires_at: row.expires_at.map(|t| t.assume_utc().into()),
         };
         let invite_with_meta = InviteWithMetadata {
             invite,
@@ -131,9 +132,10 @@ impl DataInvite for Postgres {
             let invite = Invite {
                 code: InviteCode(row.code),
                 target,
+                creator_id: creator.id,
                 creator,
-                created_at: row.created_at.assume_utc(),
-                expires_at: row.expires_at.map(|t| t.assume_utc()),
+                created_at: row.created_at.assume_utc().into(),
+                expires_at: row.expires_at.map(|t| t.assume_utc().into()),
             };
             let invite_with_meta = InviteWithMetadata {
                 invite,

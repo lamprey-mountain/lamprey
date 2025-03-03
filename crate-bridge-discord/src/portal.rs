@@ -267,7 +267,7 @@ impl Portal {
                 if existing.is_some() {
                     return Ok(());
                 }
-                let mut req = types::MessageCreateRequest {
+                let mut req = types::MessageCreate {
                     content: None,
                     attachments: vec![],
                     metadata: None,

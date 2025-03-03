@@ -14,13 +14,15 @@ use super::{Room, Thread, User};
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 
+// FIXME: uncomment #[deprecated] attrs (disabled to prevent extraneous warnings for now)
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Invite {
     pub code: InviteCode,
     pub target: InviteTarget,
 
-    #[deprecated = "use creator_id"]
+    // #[deprecated = "use creator_id"]
     pub creator: User,
     pub creator_id: UserId,
 

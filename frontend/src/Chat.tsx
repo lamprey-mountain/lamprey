@@ -270,7 +270,7 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: `${msg.version_id}-${msg.embeds.length}`,
+			id: `${msg.version_id}-${msg.embeds?.length}`,
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});

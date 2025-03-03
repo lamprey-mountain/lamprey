@@ -5,7 +5,7 @@ use types::util::Diff;
 use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
 use crate::error::{Error, Result};
-use crate::types::RoleCreate;
+use crate::types::DbRoleCreate;
 use crate::ServerStateInner;
 
 pub struct ServiceRooms {
@@ -50,7 +50,7 @@ impl ServiceRooms {
         let data = self.state.data();
         let room = data.room_create(create).await?;
         let room_id = room.id;
-        let role_admin = RoleCreate {
+        let role_admin = DbRoleCreate {
             room_id,
             name: "admin".to_owned(),
             description: None,
@@ -59,7 +59,7 @@ impl ServiceRooms {
             is_mentionable: false,
             is_default: false,
         };
-        let role_moderator = RoleCreate {
+        let role_moderator = DbRoleCreate {
             room_id,
             name: "moderator".to_owned(),
             description: None,
@@ -77,7 +77,7 @@ impl ServiceRooms {
             is_mentionable: false,
             is_default: false,
         };
-        let role_everyone = RoleCreate {
+        let role_everyone = DbRoleCreate {
             room_id,
             name: "everyone".to_owned(),
             description: None,
