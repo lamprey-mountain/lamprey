@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
-use types::{Mentions, MessageDefaultMarkdown, MessageType, User};
+use types::{Mentions, MessageDefaultMarkdown, MessageType, ThreadUpdate, User};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -76,9 +76,9 @@ impl From<DbMessage> for Message {
                         })
                         .collect(),
                 }),
-                DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(
-                    serde_json::from_value(row.metadata.unwrap()).unwrap(),
-                ),
+                DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(ThreadUpdate {
+                    patch: serde_json::from_value(row.metadata.unwrap()).unwrap(),
+                }),
             },
             thread_id: row.thread_id,
             version_id: row.version_id,

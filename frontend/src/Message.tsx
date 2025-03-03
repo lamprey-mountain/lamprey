@@ -77,15 +77,19 @@ export function MessageView(props: MessageProps) {
 		if (props.message.type === MessageType.ThreadUpdate) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
-			const patch = props.message.metadata as any;
-			if (patch.name) updates.push(`set name to ${patch.name}`);
-			if (patch.description) {
-				updates.push(
-					patch.description ? `set description to ${patch.description}` : "",
-				);
-			}
-			if (patch.state) {
-				updates.push(`set state to ${patch.state}`);
+			const patch = props.message.patch as any;
+			if (patch) {
+				if (patch.name) updates.push(`set name to ${patch.name}`);
+				if (patch.description) {
+					updates.push(
+						patch.description ? `set description to ${patch.description}` : "",
+					);
+				}
+				if (patch.state) {
+					updates.push(`set state to ${patch.state}`);
+				}
+			} else {
+				console.warn("missing patch", props.message);
 			}
 			return (
 				<>

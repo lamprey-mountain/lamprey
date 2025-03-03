@@ -15,8 +15,7 @@ use crate::util::Diff;
 use crate::util::Time;
 use crate::RedexId;
 use crate::{
-    AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadCreate, ThreadMember, ThreadPatch,
-    UrlEmbed, UserId,
+    AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UrlEmbed, UserId,
 };
 
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
@@ -219,12 +218,12 @@ pub enum MessageType {
     MemberRemove(MessageMember),
 
     /// a message logging an update to the thread
-    ThreadUpdate(ThreadPatch),
+    ThreadUpdate(ThreadUpdate),
 
     // why have a separate event instead of ThreadUpdate? semantics i guess
     // ThreadCreate(ThreadPatch),
     /// (TODO) a message at the beginning of a thread
-    ThreadCreate(ThreadCreate),
+    ThreadCreate(ThreadUpdate),
 
     /// (TODO) receive announcement threads from this room
     RoomFollowed(MessageRoomFollowed),
@@ -258,6 +257,13 @@ pub struct MessagePin {
     pub message_id: MessageId,
     pub user_id: UserId,
     pub reason: Option<String>,
+}
+
+/// Information about a thread being updated
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ThreadUpdate {
+    pub patch: ThreadPatch,
 }
 
 #[cfg(feature = "feat_move_messages")]

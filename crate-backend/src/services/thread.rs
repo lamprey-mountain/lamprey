@@ -93,10 +93,12 @@ impl ServiceThreads {
                 thread_id,
                 attachment_ids: vec![],
                 author_id: user_id,
-                message_type: MessageType::ThreadUpdate(ThreadPatch {
-                    name: patch.name,
-                    description: patch.description,
-                    state: patch.state,
+                message_type: MessageType::ThreadUpdate(types::ThreadUpdate {
+                    patch: ThreadPatch {
+                        name: patch.name,
+                        description: patch.description,
+                        state: patch.state,
+                    },
                 }),
             })
             .await?;
