@@ -29,7 +29,7 @@ import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
-import { createTooltip, tooltip } from "../Tooltip.tsx";
+import { createTooltip } from "../Tooltip.tsx";
 import { useCtx } from "../context.ts";
 
 export const VideoView = (props: MediaProps) => {
@@ -63,6 +63,7 @@ export const VideoView = (props: MediaProps) => {
 		placement: "top-start",
 		interactive: true,
 		doesntRetain: "input[type=range]",
+		altBoundary: true,
 		mount: () => fullscreen() ? wrapperEl : undefined,
 		tip: () => (
 			<div class="range" onWheel={handleVolumeWheel}>

@@ -21,6 +21,9 @@ type TooltipProps = {
 	animGroup?: string;
 	doesntRetain?: string;
 	mount?: HTMLElement;
+
+	// https://floating-ui.com/docs/detectoverflow#altboundary
+	altBoundary?: boolean;
 };
 
 type TooltipAnimState = {
@@ -253,9 +256,7 @@ export function createTooltip(props: CreateTooltipProps) {
 			placement: props.placement,
 			// HACK: make volume slider work properly
 			middleware: [
-				// NOTE: i probably don't want altBoundry to always be true, but it works for now
-				// https://floating-ui.com/docs/detectoverflow#altboundary
-				shift({ padding: padding(), altBoundary: true }),
+				shift({ padding: padding(), altBoundary: props.altBoundary }),
 				offset({ mainAxis: props.placement === "top-start" ? -8 : 8 }),
 				flip(),
 			],

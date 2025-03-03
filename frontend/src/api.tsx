@@ -409,7 +409,6 @@ export function createApi(
 		client.start(session.token);
 	}
 
-	// FIXME: make reactive again
 	const api: Api = {
 		rooms,
 		threads,
