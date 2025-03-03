@@ -14,8 +14,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Status {
-    // #[serde(flatten)]
-    #[serde(rename = "type")]
+    #[serde(flatten)]
     pub status: StatusType,
     // #[serde(flatten)]
     // pub status_text: Option<StatusText>,
@@ -31,7 +30,7 @@ pub struct Status {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// #[serde(rename = "type")]
+#[serde(tag = "type")]
 pub enum StatusType {
     /// offline or explicitly invisible
     Offline,
@@ -81,7 +80,7 @@ pub struct StatusPatch {
 /// data user sends to update StatusType
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename = "type")]
+#[serde(tag = "type")]
 pub enum StatusTypePatch {
     /// offline or explicitly invisible
     Offline,

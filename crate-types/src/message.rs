@@ -6,10 +6,13 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+#[cfg(feature = "feat_reactions")]
 use crate::emoji::Emoji;
+
 use crate::moderation::Report;
 use crate::util::some_option;
 use crate::util::Diff;
+use crate::util::Time;
 use crate::RedexId;
 use crate::{
     AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadCreateRequest, ThreadMember,
@@ -22,10 +25,8 @@ use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Message {
-    #[serde(rename = "type")]
+    #[serde(flatten)]
     pub message_type: MessageType,
-    // #[serde(flatten)]
-    // pub message_type: MessageType2,
     pub id: MessageId,
     pub thread_id: ThreadId,
     pub version_id: MessageVerId,
@@ -34,48 +35,25 @@ pub struct Message {
     /// maybe i will replace with a header so nonces can be used everywhere
     pub nonce: Option<String>,
 
-    // #[deprecated = "not that useful"]
+    #[deprecated = "not that useful"]
     pub ordering: i32,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub content: Option<String>,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub attachments: Vec<Media>,
-
-    // matrix does this and its pretty useful for bots, but idk if its a good idea to always have this...
-    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
-    /// arbitrary metadata attached to this message
-    pub metadata: Option<serde_json::Value>,
-
-    // TODO: replying to multiple messages at once? might be useful, needs ui design
-    pub reply_id: Option<MessageId>,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<UrlEmbed>,
-
-    // #[deprecated = "create new puppets for each unique combination"]
-    // new puppets every time may be expensive for some use cases, but eh idk
-    /// override the name of the user who sent this message. will probably be remved soon!
-    pub override_name: Option<String>,
 
     /// who sent this message
     #[deprecated = "use author_id and fetch manually, better caching and easier server impl"]
     pub author: User,
 
-    // /// the id of who sent this message
-    // pub author_id: User,
+    /// the id of who sent this message
+    pub author_id: User,
 
-    // #[deprecated = "use message.state"]
+    #[deprecated = "use message.state"]
     pub is_pinned: bool,
-    // #[serde(flatten)]
-    // pub mentions: Mentions,
 
-    // #[serde(flatten)]
-    // pub state: MessageState,
+    #[serde(flatten)]
+    pub mentions: Mentions,
+
+    #[serde(flatten)]
+    pub state: MessageState,
+    pub state_updated_at: Time,
 }
 
 /// lifecycle of a message
@@ -88,25 +66,24 @@ pub enum MessageState {
     Default,
 
     /// message is pinned to the thread
-    Pinned {
-        pin_order: u32,
-        pin_at: time::OffsetDateTime,
-    },
+    Pinned { pin_order: u32 },
 
-    /// message is not stored
+    /// (TODO) message is not stored
     Ephemeral,
 
-    // /// message was moved from another thread
-    // Moved { move_info: MessageId },
+    #[cfg(feature = "feat_move_messages")]
+    /// message was moved from another thread
+    Moved {
+        /// the relevant MessagesMoved message in this thread
+        move_info: MessageId,
+    },
 
-    // /// message was moved from another thread
-    // Copied { move_info: MessageId, source_id: MessageId },
-    /// will be permanently deleted soon, visible to moderators
+    /// will be permanently deleted soon, visible to moderators for now
     Deleted,
 }
 
 /// who/what this message notified on send
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     pub mentions_users: Vec<UserId>,
@@ -122,7 +99,8 @@ pub struct Mentions {
 }
 
 /// data that has been resolved from the ids, provided on request
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// maybe don't put it in messages, this could be useful elsewhere
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Resolved {
     pub users: Vec<User>,
@@ -132,8 +110,10 @@ pub struct Resolved {
     pub rooms: Vec<Room>,
     pub threads: Vec<Thread>,
     pub messages: Vec<Message>,
+    // pub emoji: Vec<Emoji>,
 }
 
+// TODO: rename -> MessageCreate
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -141,6 +121,10 @@ pub struct MessageCreateRequest {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
+
+    // TEMP: opt in to the new formatting system
+    #[serde(default)]
+    pub use_new_text_formatting: bool,
 
     #[cfg_attr(
         feature = "utoipa",
@@ -150,11 +134,19 @@ pub struct MessageCreateRequest {
     #[serde(default)]
     pub attachments: Vec<MediaRef>,
 
+    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
     pub metadata: Option<serde_json::Value>,
+
     pub reply_id: Option<MessageId>,
-    /// temporary?
+
+    /// temporary!
     pub override_name: Option<String>,
+
+    // #[deprecated = "Ideompotency-Key"]
     pub nonce: Option<String>,
+
+    #[cfg(feature = "feat_custom_embeds")]
+    pub embeds: Vec<UrlEmbed>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,6 +165,7 @@ pub struct MessagePatch {
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     pub attachments: Option<Vec<MediaRef>>,
 
+    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
     #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
 
@@ -183,48 +176,71 @@ pub struct MessagePatch {
     // removing it would break all existing bridged messages
     #[serde(default, deserialize_with = "some_option")]
     pub override_name: Option<Option<String>>,
-}
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MessageType {
-    /// a basic message
-    Default,
-
-    /// a message logging an update to the thread
-    ThreadUpdate,
+    #[cfg(feature = "feat_custom_embeds")]
+    pub embeds: Vec<UrlEmbed>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename = "type")]
-pub enum MessageType2 {
+pub enum MessageType {
     /// a basic message, using the legacy markdown syntax
+    /// previously called "Default"!
+    // NOTE: i don't know how soon i want to commit to the new format - there
+    // might be some rough edges, we'll see. i'll support markdown for at least
+    // a while.
+    // #[deprecated = "use the new text format"]
     DefaultMarkdown(MessageDefaultMarkdown),
 
+    #[cfg(feature = "feat_messages_new_text")]
     /// a basic message, using the new tagged text format
     DefaultTagged(MessageDefaultTagged),
 
-    /// a message copied from somewhere else
+    #[cfg(feature = "feat_messages_new_text")]
+    /// (TODO) a message copied from somewhere else
     Forward(MessageDefaultTagged),
 
+    /// (TODO) a message was pinned
     MessagePinned(MessagePin),
+
+    /// (TODO) a message was unpinned
     MessageUnpinned(MessagePin),
+
+    #[cfg(feature = "feat_move_messages")]
+    /// (TODO) one or more messages were moved
+    MessagesMoved(MessagesMoved),
+
+    /// (TODO) a member was added to the thread (what about room?)
     MemberAdd(MessageMember),
+
+    /// (TODO) a member was removed fromthe thread (what about room?)
     MemberRemove(MessageMember),
 
     /// a message logging an update to the thread
     ThreadUpdate(ThreadPatch),
+
+    // why have a separate event instead of ThreadUpdate? semantics i guess
+    // ThreadCreate(ThreadPatch),
+    /// (TODO) a message at the beginning of a thread
     ThreadCreate(ThreadCreateRequest),
 
+    /// (TODO) receive announcement threads from this room
     RoomFollowed(MessageRoomFollowed),
 
+    /// (TODO) interact with a bot, uncertain if i'll go this route
     BotCommand(MessageBotCommand),
 
+    /// (TODO) repost audit log to a thread? uncertain
     ModerationLog(MessageModerationLog),
+
+    /// (TODO) implement some sort of automoderator? uncertain
     ModerationAuto(MessageModerationAuto),
+
+    /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
     ModerationReport(MessageModerationReport),
 
+    /// (TODO) important message from the system/server
     SystemMessage(MessageSystemMessage),
     // /// a message referencing another thread (ie. linking two threads, mentioning another thread. see github.)
     // // needs some sort of antispam system. again, see github.
@@ -240,6 +256,21 @@ pub enum MessageType2 {
 pub struct MessagePin {
     pub message_id: MessageId,
     pub user_id: UserId,
+    pub reason: Option<String>,
+}
+
+#[cfg(feature = "feat_move_messages")]
+/// Information about one or more messages being moved between threads
+/// probably want this being sent in both the source and target threads, maybe
+/// with a bit of different styling depending on whether its source/target
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessagesMoved {
+    // do messages keep their ids when being moved?
+    pub start_id: MessageId,
+    pub end_id: MessageId,
+    pub source_id: ThreadId,
+    pub target_id: ThreadId,
     pub reason: Option<String>,
 }
 
@@ -321,6 +352,7 @@ pub struct MessageSystemMessage {
     pub embeds: Vec<UrlEmbed>,
 }
 
+#[cfg(feature = "feat_reactions")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Reactions {
@@ -353,8 +385,14 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<UrlEmbed>,
+
+    #[deprecated = "create new puppets for each bridged user instead"]
+    /// override the name of the user who sent this message. will be removed soon!
+    pub override_name: Option<String>,
+    // NOTE: new message features won't be backported here
 }
 
+#[cfg(feature = "feat_messages_new_text")]
 /// a basic message, using the shiny new and very experimental tagged text format
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -377,47 +415,91 @@ pub struct MessageDefaultTagged {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<UrlEmbed>,
 
+    #[cfg(feature = "feat_reactions")]
     pub reactions: Reactions,
+
+    #[cfg(feature = "feat_interactions")]
+    pub interactions: Interactions,
 }
 
-// mod v {
-//     impl Validate for MessageType2 {}
-// }
-
-/// a basic message, using the shiny new and very experimental tagged text format
+#[cfg(feature = "feat_interactions")]
+/// ways to interact with a message
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Interactions {
+    #[cfg(feature = "feat_reactions")]
     /// show placeholder reactions (they appear with zero total reactions) for these emoji
     pub reactions_default: Vec<Emoji>,
 }
 
-impl Diff<Message> for MessagePatch {
-    fn changes(&self, other: &Message) -> bool {
-        self.content.changes(&other.content)
-            || self.metadata.changes(&other.metadata)
-            || self.reply_id.changes(&other.reply_id)
-            || self.override_name.changes(&other.override_name)
-            || self.attachments.as_ref().is_some_and(|a| {
-                a.len() != other.attachments.len()
-                    || a.iter().zip(&other.attachments).any(|(a, b)| a.id != b.id)
-            })
+#[cfg(feature = "validator")]
+mod v {
+    use validator::Validate;
+
+    use super::MessageType;
+
+    impl Validate for MessageType {
+        fn validate(&self) -> Result<(), validator::ValidationErrors> {
+            todo!()
+        }
     }
+}
+
+impl Diff<Message> for MessagePatch {
+    // FIXME
+    fn changes(&self, _other: &Message) -> bool {
+        true
+    }
+
+    // fn changes(&self, other: &Message) -> bool {
+    //     self.content.changes(&other.content)
+    //         || self.metadata.changes(&other.metadata)
+    //         || self.reply_id.changes(&other.reply_id)
+    //         || self.override_name.changes(&other.override_name)
+    //         || self.attachments.as_ref().is_some_and(|a| {
+    //             a.len() != other.attachments.len()
+    //                 || a.iter().zip(&other.attachments).any(|(a, b)| a.id != b.id)
+    //         })
+    // }
 }
 
 impl MessageType {
     pub fn is_deletable(&self) -> bool {
         match self {
-            MessageType::Default => true,
-            MessageType::ThreadUpdate => false,
+            MessageType::DefaultMarkdown(_) => true,
+            #[cfg(feature = "feat_messages_new_text")]
+            MessageType::DefaultTagged(_) => true,
+            #[cfg(feature = "feat_messages_new_text")]
+            MessageType::Forward(_) => true,
+            MessageType::MessagePinned(_) => true,
+            MessageType::MessageUnpinned(_) => true,
+            MessageType::MemberAdd(_) => false,
+            MessageType::MemberRemove(_) => false,
+            MessageType::ThreadUpdate(_) => false,
+            MessageType::ThreadCreate(_) => false,
+            MessageType::RoomFollowed(_) => true,
+            MessageType::BotCommand(_) => true,
+
+            // these ones probably need special permission checks
+            MessageType::ModerationLog(_) => true,
+            MessageType::ModerationAuto(_) => true,
+            MessageType::ModerationReport(_) => true,
+            MessageType::SystemMessage(_) => true,
+
+            #[cfg(feature = "feat_move_messages")]
+            MessageType::MessagesMoved(_) => false,
         }
     }
 
     pub fn is_editable(&self) -> bool {
-        match self {
-            MessageType::Default => true,
-            MessageType::ThreadUpdate => false,
-        }
+        #[cfg(feature = "feat_messages_new_text")]
+        return matches!(
+            self,
+            MessageType::DefaultMarkdown(_) | MessageType::DefaultTagged(_)
+        );
+
+        #[cfg(not(feature = "feat_messages_new_text"))]
+        matches!(self, MessageType::DefaultMarkdown(_))
     }
 }

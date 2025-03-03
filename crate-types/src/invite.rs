@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::util::{time_rfc3339_option_deserialize, time_rfc3339_option_serialize};
+use crate::util::Time;
 use crate::{PaginationKey, RoomId, ThreadId, UserId};
 
 use super::{Room, Thread, User};
@@ -19,19 +19,14 @@ pub struct InviteCode(pub String);
 pub struct Invite {
     pub code: InviteCode,
     pub target: InviteTarget,
+
+    #[deprecated = "use creator_id"]
     pub creator: User,
+    pub creator_id: UserId,
 
-    #[serde(
-        serialize_with = "time::serde::rfc3339::serialize",
-        deserialize_with = "time::serde::rfc3339::deserialize"
-    )]
-    pub created_at: time::OffsetDateTime,
+    pub created_at: Time,
 
-    #[serde(
-        serialize_with = "time_rfc3339_option_serialize",
-        deserialize_with = "time_rfc3339_option_deserialize"
-    )]
-    pub expires_at: Option<time::OffsetDateTime>,
+    pub expires_at: Option<Time>,
     // invites that automatically apply a certain role?
     // pub roles: Vec<Role>,
 }

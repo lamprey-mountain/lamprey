@@ -1,4 +1,4 @@
-use crate::{Media, UrlEmbedId};
+use crate::{misc::Color, Media, UrlEmbedId};
 
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+// FIXME: max lengths
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -25,7 +26,8 @@ pub struct UrlEmbed {
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
-    pub color: Option<String>,
+    // pub color: Option<String>,
+    pub color: Option<Color>,
 
     // TODO: Media with trackinfo Thumbnail
     pub media: Option<Media>,
@@ -33,17 +35,21 @@ pub struct UrlEmbed {
     /// if `media` should be displayed as a small thumbnail or as a full size
     pub media_is_thumbnail: bool,
     // pub media_extra: Vec<Media>, // maybe sites have extra media?
-    pub author_url: Option<Url>,
+
+    // pub media: Option<Media>,
+    // pub thumbnail: Option<Media>,
     pub author_name: Option<String>,
+    pub author_url: Option<Url>,
     pub author_avatar: Option<Media>,
 
+    /// the name of the website
     pub site_name: Option<String>,
 
     /// aka favicon
     pub site_avatar: Option<Media>,
     // /// what kind of thing this is
     // pub kind: UrlTargetKind,
-    // pub timestamp: Option<time::OffsetDateTime>,
+    // pub timestamp: Option<Time>,
     // pub image: Option<Media>,
     // pub thumbnail: Option<Media>,
     // pub video: Option<Media>,
@@ -55,17 +61,19 @@ pub struct UrlEmbed {
     // pub field: Vec<name, value, inline?>
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum UrlTargetKind {
-    /// generic website
-    Website,
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum UrlTargetKind {
+//     /// generic website
+//     Website,
 
-    /// a text document, from news, blogs, etc
-    Article,
-    // TODO: add other opengraph types? add custom types? idk how much
-    // time/effort i really want to invest into url embeds
-}
+//     /// a text document, from news, blogs, etc
+//     Article,
+//     // /// display this as generic media
+//     // Media
+//     // TODO: add other opengraph types? add custom types? idk how much
+//     // time/effort i really want to invest into url embeds
+// }
 
 // /// an opengraph type
 // ///
@@ -100,12 +108,10 @@ pub struct CustomEmbed {
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
-    pub color: Option<String>,
+    pub color: Option<Color>,
 
-    // /// if `media` should be displayed as a small thumbnail or as a full size
-    // pub media_is_thumbnail: bool,
     pub media: Vec<Media>,
-
+    // pub thumbnail: Option<Media>,
     pub author_url: Option<Url>,
     pub author_name: Option<String>,
     pub author_avatar: Option<Media>,
@@ -129,4 +135,26 @@ pub enum EmbedType {
 // #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UrlEmbedRequest {
     pub url: Url,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CustomEmbedRequest {
+    /// the url this embed was requested for
+    pub url: Option<Url>,
+
+    pub title: Option<String>,
+    pub description: Option<String>,
+
+    /// the theme color of the site, as a hex string (`#rrggbb`)
+    pub color: Option<String>,
+
+    // /// if `media` should be displayed as a small thumbnail or as a full size
+    // pub media_is_thumbnail: bool,
+    pub media: Vec<Media>,
+
+    pub author_url: Option<Url>,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<Media>,
 }

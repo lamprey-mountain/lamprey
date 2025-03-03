@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::util::{some_option, Diff};
+use crate::util::{some_option, Diff, Time};
 use crate::UserId;
 
 use super::ThreadId;
@@ -25,11 +25,7 @@ pub struct ThreadMember {
     pub membership: ThreadMembership,
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
-    #[serde(
-        serialize_with = "time::serde::rfc3339::serialize",
-        deserialize_with = "time::serde::rfc3339::deserialize"
-    )]
-    pub membership_updated_at: time::OffsetDateTime,
+    pub membership_updated_at: Time,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

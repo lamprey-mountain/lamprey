@@ -68,7 +68,7 @@ enum NotificationLevelRoom {
 
     /// This thread does not create any notifications
     /// This setting overrides any thread specific level
-    Muted { until: Option<time::OffsetDateTime> },
+    Muted { until: Option<Time> },
 }
 
 enum NotificationLevelThread {
@@ -85,7 +85,7 @@ enum NotificationLevelThread {
     Mentions,
 
     /// This thread does not create any notifications
-    Muted { until: Option<time::OffsetDateTime> },
+    Muted { until: Option<Time> },
 }
 
 /// the naive solution?

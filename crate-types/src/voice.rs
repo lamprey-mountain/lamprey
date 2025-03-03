@@ -1,3 +1,5 @@
+// TODO: either copy thread/voice.rs to this or copy this to thread/voice.rs
+
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]

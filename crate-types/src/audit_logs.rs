@@ -20,9 +20,9 @@ pub struct AuditLog {
     pub reason: Option<String>,
 
     /// Generated sync payload (sent in websocket)
-    pub payload: MessageSync,
+    pub payload: Box<MessageSync>,
 
     /// The previous payload, or None if this resource is newly created
     // theres probably a better way to do this, but its the best solution i could think of for now
-    pub payload_prev: Option<MessageSync>,
+    pub payload_prev: Option<Box<MessageSync>>,
 }

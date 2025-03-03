@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use super::{tags::KnownTag, Span, Tag, Text};
 
-/// a struct whos Display impl outputs html
+/// a struct whose Display impl outputs html
 pub struct HtmlFormatter<'a>(&'a Text<'a>);
 
 /// sanitizes text in its display impl to prevent accidental html formatting
@@ -12,17 +12,17 @@ struct HtmlSanitized<'a>(&'a str);
 
 struct HtmlFormatterInner<'a>(&'a Span<'a>);
 
-/// a struct whos Display impl outputs plain text
+/// a struct whose Display impl outputs plain text
 pub struct PlainFormatter<'a>(&'a Text<'a>);
 
 struct PlainFormatterInner<'a>(&'a Span<'a>);
 
-/// a struct whos Display impl outputs tagged text (the native wire format)
+/// a struct whose Display impl outputs tagged text (the native wire format)
 pub struct TaggedTextFormatter<'a>(&'a Text<'a>);
 
 struct TaggedTextFormatterInner<'a>(&'a Span<'a>);
 
-/// a struct whos Display impl outputs tagged text (the native wire format)
+/// a struct whose Display impl outputs tagged text (the native wire format)
 pub struct MarkdownFormatter<'a>(&'a Text<'a>);
 
 /// sanitizes text in its display impl to prevent accidental markdown formatting
@@ -130,7 +130,9 @@ impl Display for HtmlFormatterInner<'_> {
                 match known {
                     KnownTag::Bold(text) => write!(f, "<b>{}</b>", HtmlFormatter(&text))?,
                     KnownTag::Emphasis(text) => write!(f, "<em>{}</em>", HtmlFormatter(&text))?,
+                    #[cfg(feature = "formatting_extra")]
                     KnownTag::Sub(text) => write!(f, "<sub>{}</sub>", HtmlFormatter(&text))?,
+                    #[cfg(feature = "formatting_extra")]
                     KnownTag::Sup(text) => write!(f, "<sup>{}</sup>", HtmlFormatter(&text))?,
                     KnownTag::Strikethrough(text) => write!(f, "<s>{}</s>", HtmlFormatter(&text))?,
                     KnownTag::Link(url, Some(text)) => {
@@ -208,13 +210,16 @@ impl Display for MarkdownFormatterInner<'_> {
                     }
                     KnownTag::Link(url, None) => write!(f, "[{url}]({url})")?,
                     KnownTag::Code(text, _lang) => write!(f, "`{}`", MarkdownFormatter(&text))?,
+                    #[cfg(feature = "formatting_extra")]
                     KnownTag::Spoiler(text, None) => write!(f, "||{}||", MarkdownFormatter(&text))?,
+                    #[cfg(feature = "formatting_extra")]
                     KnownTag::Spoiler(text, Some(why)) => write!(
                         f,
                         "||{}|| ({})",
                         MarkdownFormatter(&text),
                         MarkdownSanitized(&why)
                     )?,
+                    #[cfg(feature = "formatting_extra")]
                     KnownTag::Math(m) => write!(f, "`{}`", MarkdownSanitized(m))?,
                     _ => todo!(),
                 }

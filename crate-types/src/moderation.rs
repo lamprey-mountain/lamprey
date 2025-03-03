@@ -56,7 +56,7 @@ pub enum ReportReason {
     /// Illegal hacking activity
     IllegalHacking,
 
-    /// Extreme violence, gore, or animal cruelty With exception to violence potrayed in media / creative arts
+    /// Extreme violence, gore, or animal cruelty With exception to violence portrayed in media / creative arts
     ExtremeViolence,
 
     /// Content that promotes harm to others / self

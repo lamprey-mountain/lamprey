@@ -9,9 +9,8 @@ use validator::Validate;
 
 use crate::user_status::Status;
 use crate::util::{some_option, Diff};
-use crate::MediaId;
+use crate::{MediaId, RoomId, ThreadId};
 
-use super::util::deserialize_default_true;
 use super::{UserId, UserVerId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,42 +59,8 @@ pub struct UserCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    // TODO: replace with UserCreateType
-    #[serde(deserialize_with = "deserialize_default_true")]
-    pub is_bot: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum UserCreateType {
-    Default,
-    Bot {
-        // /// what this bot has access to
-        // scope: BotScope,
-
-        // might be simplified?
-        // url_terms_of_service: Option<Url>,
-        // url_privacy_policy: Option<Url>,
-        // url_help_docs: Vec<Url>,
-        // url_main_site: Vec<Url>,
-        // url_interactions: Vec<Url>, // webhook
-        // visibility: BotVisibility,
-    },
-    Puppet {
-        /// what platform this puppet is connected to
-        external_platform: ExternalPlatform,
-
-        /// an opaque identifier
-        // TODO: validate lengths
-        // #[cfg_attr(
-        //     feature = "utoipa",
-        //     schema(required = false, min_length = 1, max_length = 8192)
-        // )]
-        external_id: String,
-
-        /// a url on the other platform that this account can be reached at
-        external_url: Option<Url>,
-    },
+    #[serde(flatten)]
+    pub user_type: UserType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,23 +93,12 @@ pub enum UserType {
     /// a normal user
     Default,
 
-    /// makes two users be considered the same user
-    Alias {
-        /// this user should be considered the same as the one at alias_id
-        /// mainly intended for bridged users
-        /// maybe it should even redirect by default?
-        /// can you alias to another alias?
-        alias_id: UserId,
-    },
-
     /// automated account
     Bot {
-        /// the user who created this bot
-        owner_id: UserId,
-        // /// what this bot has access to
-        // scope: BotScope,
-
-        // might be simplified?
+        /// who/what has control over this bot
+        #[serde(flatten)]
+        owner: BotOwner,
+        // could probably be simplified?
         // url_terms_of_service: Option<Url>,
         // url_privacy_policy: Option<Url>,
         // url_help_docs: Vec<Url>,
@@ -163,14 +117,59 @@ pub enum UserType {
         external_platform: ExternalPlatform,
 
         /// an opaque identifier
+        // TODO: validate lengths
+        // #[cfg_attr(
+        //     feature = "utoipa",
+        //     schema(required = false, min_length = 1, max_length = 8192)
+        // )]
         external_id: String,
 
         /// a url on the other platform that this account can be reached at
         external_url: Option<Url>,
+
+        /// makes two users be considered the same user, for importing
+        /// stuff from other platforms
+        /// can you alias to another puppet?
+        alias_id: Option<UserId>,
     },
 
     /// system/service account
     System,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "owner_type")]
+pub enum BotOwner {
+    /// owned by a thread (ie. for webhooks)
+    Thread { thread_id: ThreadId },
+
+    /// owned by a room (one off room-specific bot account)
+    Room { room_id: RoomId },
+
+    /// owned by a user (most bots)
+    User { user_id: UserId },
+
+    /// an official system bot
+    ///
+    /// avoid using the system user directly since its effectively root. create
+    /// Server bots instead.
+    Server,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum BotVisibility {
+    /// only the creator can use the bot
+    #[default]
+    Private,
+
+    /// anyone can use the bot (Unlisted)
+    // TODO: unify public/unlisted/discoverable terminology
+    Public,
+
+    /// anyone can find the bot
+    Discoverble,
 }
 
 // TODO: add platforms
@@ -193,20 +192,6 @@ pub enum UserState {
     Deleted,
 }
 
-/// what this bot can access
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum BotScope {
-    /// this bot can be used everywhere (most bots)
-    Global,
-
-    /// this bot can only access a single room (probably somewhat rare?)
-    Room { room_id: crate::RoomId },
-
-    /// this bot can only access a single thread (ie. webhooks)
-    Thread { room_id: crate::ThreadId },
-}
-
 impl Diff<User> for UserPatch {
     fn changes(&self, other: &User) -> bool {
         self.name.changes(&other.name)
@@ -215,41 +200,56 @@ impl Diff<User> for UserPatch {
     }
 }
 
-/// data private to the user
-pub struct UserPrivate {
-    pub note: Option<String>,
-    pub relation: Option<Relationship>,
-    pub ignore: Option<Ignore>,
-}
-
-/// how a user is ignoring another user
-pub enum Ignore {
-    Timed { ignore_until: time::OffsetDateTime },
-    Forever,
-}
-
-/// a relationship between two users
-pub enum Relationship {
-    RequestSend,
-    RequestRecv,
-    Friend,
-    Block,
-}
-
-// #[derive(Debug, Default)]
-// pub enum BotVisibility {
-//     #[default]
-//     Private,
-//     Public,
-//     Discoverble,
+// /// data private to the user
+// pub struct UserPrivate {
+//     pub note: Option<String>,
+//     pub relation: Option<Relationship>,
+//     pub ignore: Option<Ignore>,
 // }
 
-// // maybe could be merged with scope
-// pub enum BotOwner {
-//     User(UserId),
-//     Room(RoomId),
-//     Thread(ThreadId),
-//     // replaces other UserTypes ..?
-//     Server,
-//     Puppet(PuppetInfo),
+// /// how a user is ignoring another user
+// pub enum Ignore {
+//     Timed { ignore_until: Time },
+//     Forever,
 // }
+
+// // TODO: user relationships
+// /// a relationship between two users
+// pub enum Relationship {
+//     RequestSend,
+//     RequestRecv,
+//     Friend,
+//     Block,
+// }
+
+impl UserType {
+    pub fn can_create(&self, other: &UserType) -> bool {
+        match (self, other) {
+            // allowed as a fast path (maybe get to skip some captchas)
+            // though this might be abusable
+            (UserType::Default, UserType::Default) => true,
+
+            // TODO: ensure that user_id is correct
+            (UserType::Default, UserType::Bot { .. }) => true,
+
+            // manual bridging?
+            (UserType::Default, UserType::Puppet { .. }) => true,
+
+            // for bridging
+            (UserType::Bot { .. }, UserType::Puppet { .. }) => true,
+
+            // doesn't really make sense for a bot to be able to create more non-puppet users
+            // maybe creating accounts for users, idk
+            (UserType::Bot { .. }, UserType::Default | UserType::Bot { .. }) => false,
+
+            // puppets cant create new accounts, but their owner can
+            (UserType::Puppet { .. }, _) => false,
+
+            // system user is root and can do anything
+            (UserType::System, _) => true,
+
+            // there is only one system user
+            (_, UserType::System) => false,
+        }
+    }
+}

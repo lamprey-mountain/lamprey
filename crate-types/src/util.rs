@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::Permission;
 
@@ -80,36 +80,6 @@ impl Time {
     pub fn now_utc() -> Self {
         Self(time::OffsetDateTime::now_utc())
     }
-}
-
-pub fn time_rfc3339_option_serialize<S>(
-    opt: &Option<time::OffsetDateTime>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    #[derive(Serialize)]
-    struct Wrap(#[serde(serialize_with = "time::serde::rfc3339::serialize")] time::OffsetDateTime);
-
-    match opt {
-        Some(dt) => serializer.serialize_some(&Wrap(*dt)),
-        None => serializer.serialize_none(),
-    }
-}
-
-pub fn time_rfc3339_option_deserialize<'de, D>(
-    deserializer: D,
-) -> std::result::Result<Option<time::OffsetDateTime>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct Wrap(
-        #[serde(deserialize_with = "time::serde::rfc3339::deserialize")] time::OffsetDateTime,
-    );
-
-    Option::<Wrap>::deserialize(deserializer).map(|o| o.map(|w| w.0))
 }
 
 impl Deref for Time {

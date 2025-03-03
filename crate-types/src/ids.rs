@@ -107,3 +107,4 @@ genid!(CustomEmojiId, "00000000-0000-0000-0000-0customemoji");
 genid!(ReportId, "00000000-0000-0000-0000-000modreport");
 genid!(RedexId, "00000000-0000-0000-0000-0000000redex");
 genid!(CallId, "00000000-0000-0000-0000-00000000call");
+genid!(EmojiId, "00000000-0000-0000-0000-0000000emoji");

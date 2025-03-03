@@ -1,6 +1,8 @@
-// mod media2;
-
+/// utility stuff
 pub mod util;
+
+/// miscellaneous types
+pub mod misc;
 
 // pub mod any;
 pub mod audit_logs;
@@ -15,7 +17,7 @@ pub mod moderation;
 pub mod pagination;
 pub mod permission;
 pub mod profile;
-pub mod redex;
+// pub mod redex;
 pub mod role;
 pub mod room;
 pub mod room_member;
@@ -40,7 +42,6 @@ pub use media::*;
 pub use message::*;
 pub use pagination::*;
 pub use permission::*;
-pub use profile::*;
 pub use role::*;
 pub use room::*;
 pub use room_member::*;

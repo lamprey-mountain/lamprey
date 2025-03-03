@@ -8,7 +8,7 @@ use validator::Validate;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::util::{some_option, Diff};
+use crate::util::{some_option, Diff, Time};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -22,11 +22,7 @@ pub struct RoomMember {
     pub membership: RoomMembership,
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
-    #[serde(
-        serialize_with = "time::serde::rfc3339::serialize",
-        deserialize_with = "time::serde::rfc3339::deserialize"
-    )]
-    pub membership_updated_at: time::OffsetDateTime,
+    pub membership_updated_at: Time,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,6 +43,7 @@ pub struct RoomMemberPut {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub override_description: Option<String>,
     // pub override_avatar: Option<String>,
+    // maybe flair: Option<String> as a short bit of extra text by the name
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

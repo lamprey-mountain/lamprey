@@ -12,12 +12,14 @@ use crate::{util::deserialize_sorted_permissions, RoleId, UserId};
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Permission {
     // this is a major footgun. i'd like to remove it, but theres legit purposes for it right now...
+    // rename -> RoomAdmin? but thread scoped admin exists
     Admin,
 
+    // rename -> RoomEdit
     RoomManage,
     // RoomEdit,
-    // BotsAdd,
-    // BotsManage,
+    // BotsAdd, // can add users with type Bot
+    // BotsManage, // can kick users with type Bot
     // EmojiManage,
     // EmojiUseExternal,
     ThreadCreate,
@@ -43,12 +45,14 @@ pub enum Permission {
     MessageDelete,
     MessageMassMention,
     // MessageReactAdd,
-    // MessageReactExisting,
+    // MessageReactAddExisting,
     MemberKick,
     MemberBan,
-    MemberManage,
-    // ProfileOverrideRoom,
-    // ProfileOverrideThread,
+    MemberManage, // change nickname
+    // MemberBridge, // allow adding users with type Puppet (and use timestamp massaging if its implemented?)
+    // ProfileOverride,
+    // ProfileStatus, // hidden if not allowed
+    // ProfileAvatar, // hidden if not allowed
     InviteCreate,
     InviteManage,
     RoleManage,
@@ -75,6 +79,8 @@ pub enum Permission {
     MessageEdit,
     // user level permissions
     // UserStatus, // set status
+    // UserProfile,
+    // UserSessions,
 
     // server level permissions
     // ServerUserList,

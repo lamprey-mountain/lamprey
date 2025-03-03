@@ -2,7 +2,7 @@ use serde::Deserialize;
 use types::{
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,
-    ThreadId, ThreadInfo, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
+    ThreadId, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
 };
 use uuid::Uuid;
 
@@ -37,6 +37,14 @@ impl From<DbRoom> for Room {
             name: row.name,
             description: row.description,
             room_type: RoomType::Default,
+
+            // FIXME: add to db, calculate
+            visibility: Default::default(),
+            member_count: Default::default(),
+            online_count: Default::default(),
+            thread_count: Default::default(),
+            default_order: Default::default(),
+            default_layout: Default::default(),
         }
     }
 }
@@ -91,6 +99,12 @@ impl From<DbThread> for Thread {
                 DbThreadState::Deleted => ThreadState::Deleted,
             },
             visibility: ThreadVisibility::Room,
+
+            // FIXME: add to db, calculate
+            state_updated_at: Default::default(),
+            private: Default::default(),
+            member_count: Default::default(),
+            online_count: Default::default(),
         }
     }
 }

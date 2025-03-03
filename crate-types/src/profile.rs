@@ -1,19 +1,12 @@
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{text::Language, MediaId};
+use crate::{misc::Color, text::Language, MediaId};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
 // TODO: switch to a common profile structure between room, thread, user, etc info?
-
-// what format is this? hex code? css-style linear srgb?
-// maybe i need a version that explicitly drops some brightness and saturation (keeping hue)
-// since in frontend i'll want to modify colors to be readable despite the theme
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Color(pub String);
 
 /// generic profile data thing
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

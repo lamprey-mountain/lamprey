@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{Color, RoleId, RoleVerId, RoomId, TagId};
+use crate::{misc::Color, RoleId, RoleVerId, RoomId, TagId};
 
 /// a tag that can be applied to things
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
