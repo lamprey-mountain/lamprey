@@ -65,6 +65,8 @@ pub enum KnownTag<'a> {
     /// timestamp
     // TODO: accepted, needs impl
     Time(Time, TimeFormat),
+    // Measurement(Unit<'a>),
+    // Silence(Text<'a>), // suppress mentions, link embeds (or make them separate)
     // Document(DocumentTag<'a>),
     // Interactive(InteractiveTag<'a>),
 }
@@ -103,6 +105,31 @@ pub enum TimeFormat {
     DateTimeLong,
     Relative,
 }
+
+// /// what unit this is, automatically localized if necessary
+// // do i let people send units losslessly (original unit)
+// // honestly, this is probably excessive overkill
+// // #[cfg(feature = "formatting_extra")]
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum Unit {
+//     Duration { seconds: f64 },
+//     Length { meters: f64 },
+//     Mass { kilograms: f64 },
+//     Current { ampere: f64 },
+//     Temperature { kelvin: f64 },
+//     Matter { mole: f64 },
+//     Lumosity { candela: f64 },
+//     Color { color: Color },
+//     Angle { rad: f64 },
+//     Speed { meters_per_second: f64 },
+//     Area { square_meters: f64 },
+//     Volume { cube_meters: f64 },
+//     Custom {
+//         name: String,
+//         /// suffix
+//         short: String,
+//     },
+// }
 
 impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
     type Error = ();
@@ -303,8 +330,12 @@ mod doc {
 
 #[cfg(feature = "formatting_extra")]
 mod doc {
+    use crate::{misc::Color, text::Text, Media};
+
+    pub struct Document<'a>(Vec<Block<'a>>);
+
     /// block level formatting (WIP)
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    // #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum Block<'a> {
         /// inline text, can be a plain string
         Text(Text<'a>),
@@ -315,16 +346,134 @@ mod doc {
         H4(Text<'a>),
         H5(Text<'a>),
         H6(Text<'a>),
-        Blockquote(Text<'a>),
-        Code(Text<'a>),
+
+        Blockquote {
+            quote: Document<'a>,
+            author: Option<Text<'a>>,
+        },
+
+        Code {
+            /// if None, try to guess lang (Language("Plain") to explicitly prevent syntax hl)
+            lang: Option<Language>,
+            code: Text<'a>,
+            caption: Text<'a>,
+        },
+
         ListUnordered(Vec<Text<'a>>),
         ListOrdered(Vec<Text<'a>>),
-        ListDefinition(Vec<(Text<'a>, Text<'a>)>),
-        ListCheckable(Vec<(Text<'a>, bool)>),
-        Table(Vec<Vec<Text<'a>>>),
+        ListDefinition(Vec<ListDefinitionItem<'a>>),
+        ListTodo(Vec<ListTodoItem<'a>>),
+
+        File {
+            /// has at least one item
+            media: Vec<Media>,
+            caption: Option<Text<'a>>,
+        },
+
+        Callout {
+            inner: Document<'a>,
+            callout_type: CalloutType<'a>,
+        },
+
+        Table {
+            header_row: Option<Vec<Text<'a>>>,
+            header_column: Option<Vec<Text<'a>>>,
+            cells: Vec<Vec<TableCell<'a>>>,
+            // cells: Vec<TableCell2<'a>>,
+            /// shown to everyone
+            caption: Option<Document<'a>>,
+            // /// shown to (only?) screen readers
+            // alt: Option<Document<'a>>,
+        },
+
+        // katex? id prefer something standardizable/standardized though,
+        // similar to mathml. but speccing that would be a lot of work...
+        // NOTE: katex doesn't support tikz (for diagrams)
+        // also everyone might want their own extensions lol, chemistry, music, etc
         Math(&'a str),
         // Aside(Box<Block<'a>>),
         // Interactive(BlockInteractive),
+        // Embed stuff from somewhere else
+        Embed(Embeddable),
+    }
+
+    struct ListDefinitionItem<'a> {
+        term: Document<'a>,
+        definition: Document<'a>,
+    }
+
+    struct ListTodoItem<'a> {
+        content: Document<'a>,
+    }
+
+    struct TableCell<'a> {
+        content: Document<'a>,
+        colspan: u64,
+        rowspan: u64,
+    }
+
+    // what if two cells try to be in the same place?
+    struct TableCell2<'a> {
+        content: Document<'a>,
+        x: u64, // if none, use normal flow
+        y: u64, // if none, use normal flow
+        w: u64, // defaults to 1
+        h: u64, // defaults to 1
+    }
+
+    enum TableCellAlign {
+        Default,
+        Left,
+        Center,
+        Right,
+        Char(usize), // ?
+    }
+
+    // #[serde(untagged)]
+    enum CalloutType<'a> {
+        Custom {
+            semantic: Option<CalloutTypeSemantic>,
+            color: Option<Color>,
+            label: Option<Document<'a>>,
+            icon: Option<Media>,
+        },
+        Semantic {
+            semantic: CalloutTypeSemantic,
+        },
+    }
+
+    enum CalloutTypeSemantic {
+        /// something worth pointing out
+        Note,
+
+        /// something with useful information
+        Info,
+
+        /// instructions or tips
+        Help,
+
+        /// very important to read
+        Important,
+
+        /// very important to read, bad things happen if you don't
+        Warning,
+
+        /// very important to read, dangerous things happen if you don't
+        Danger,
+
+        /// something went wrong
+        Error,
+
+        /// something went right
+        Success,
+    }
+
+    enum Embeddable {
+        // Room(Room),
+        // Thread(Thread),
+        // User(User),
+        // Message(Message),
+        // Url(UrlEmbed),
     }
 
     // idk about *any* of these, just throwing random ideas out here
@@ -391,9 +540,9 @@ mod doc {
     //     Box(Vec<Block<'a>>, StyleBox),
     // }
 
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    #[cfg(feature = "formatting_extra")]
-    pub struct Blocks<'a>(Vec<Block<'a>>);
+    // #[derive(Debug, Clone, PartialEq, Eq)]
+    // #[cfg(feature = "formatting_extra")]
+    // pub struct Blocks<'a>(Vec<Block<'a>>);
 
     #[allow(unused)]
     #[cfg(feature = "formatting_extra")]

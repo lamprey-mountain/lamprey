@@ -114,6 +114,16 @@ pub struct Resolved {
     // pub emoji: Vec<Emoji>,
 }
 
+// /// resolve the final profile details for a user (after overrides)
+// #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct ResolvedProfile {
+//     id: UserId,
+//     name: String,
+//     description: Option<String>,
+//     avatar: Option<MediaId>,
+// }
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
