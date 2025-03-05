@@ -29,7 +29,7 @@ pub struct ServiceUrlEmbed {
 
 /// an opengraph type
 ///
-/// https://ogp.me/#types
+/// <https://ogp.me/#types>
 #[derive(Debug, PartialEq)]
 pub enum OpenGraphType {
     MusicSong,
