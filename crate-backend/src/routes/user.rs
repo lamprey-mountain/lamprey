@@ -5,7 +5,9 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use types::util::Diff;
-use types::{BotOwner, MediaTrackInfo, MessageSync, User, UserCreate, UserPatch, UserType};
+use types::{
+    BotOwner, MediaTrackInfo, MessageSync, Room, User, UserCreate, UserId, UserPatch, UserType,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
@@ -23,7 +25,7 @@ use crate::error::{Error, Result};
         (status = CREATED, body = User, description = "success"),
     )
 )]
-pub async fn user_create(
+async fn user_create(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreate>,
@@ -65,22 +67,18 @@ pub async fn user_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-// TODO: not sure how to implement this
-// /// User list
-// #[utoipa::path(
-//     get,
-//     path = "/user",
-//     tags = ["user"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn user_list(
-//     Auth(_session): Auth,
-// State(s): State<Arc<ServerState>>,
-// ) -> Result<Json<()>> {
-//     todo!()
-// }
+/// User list (TODO)
+#[utoipa::path(
+    get,
+    path = "/user",
+    tags = ["user"],
+    responses(
+        (status = OK, description = "success"),
+    )
+)]
+async fn user_list(Auth(_session): Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 /// User update
 // TODO: updating/deleting bots
@@ -96,7 +94,7 @@ pub async fn user_create(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn user_update(
+async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -157,7 +155,7 @@ pub async fn user_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn user_delete(
+async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -191,7 +189,7 @@ pub async fn user_delete(
         (status = OK, body = User, description = "success"),
     )
 )]
-pub async fn user_get(
+async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -208,7 +206,7 @@ pub async fn user_get(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_create))
-        // .routes(routes!(user_list))
+        .routes(routes!(user_list))
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))

@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::user_status::Status;
-use crate::util::{some_option, Diff};
+use crate::util::{some_option, Diff, Time};
 use crate::{MediaId, RoomId, ThreadId};
 
 use super::{UserId, UserVerId};
@@ -207,27 +207,77 @@ impl Diff<User> for UserPatch {
     }
 }
 
-// /// data private to the user
-// pub struct UserPrivate {
-//     pub note: Option<String>,
-//     pub relation: Option<Relationship>,
-//     pub ignore: Option<Ignore>,
-// }
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct Relationship {
+    /// whatever you want to write
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub note: Option<String>,
 
-// /// how a user is ignoring another user
-// pub enum Ignore {
-//     Timed { ignore_until: Time },
-//     Forever,
-// }
+    /// relationship with other user
+    pub relation: Option<RelationshipType>,
 
-// // TODO: user relationships
-// /// a relationship between two users
-// pub enum Relationship {
-//     RequestSend,
-//     RequestRecv,
-//     Friend,
-//     Block,
-// }
+    /// personal petname for this user
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub petname: Option<String>,
+
+    #[serde(flatten)]
+    pub ignore: Option<Ignore>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RelationshipPatch {
+    /// whatever you want to write
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub note: Option<Option<String>>,
+
+    /// relationship with other user
+    #[serde(default, deserialize_with = "some_option")]
+    pub relation: Option<Option<RelationshipType>>,
+
+    /// personal petname for this user
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub petname: Option<Option<String>>,
+
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[serde(default, flatten, deserialize_with = "some_option")]
+    pub ignore: Option<Option<Ignore>>,
+}
+
+/// how a user is ignoring another user
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "ignore")]
+pub enum Ignore {
+    Timed { ignore_until: Time },
+    Forever,
+}
+
+/// a relationship between two users
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RelationshipType {
+    /// friends :D
+    Friend,
+
+    /// outgoing friend request
+    Outgoing,
+
+    /// incoming friend request
+    Incoming,
+
+    /// blocked
+    Block,
+}
 
 impl UserType {
     pub fn can_create(&self, other: &UserType) -> bool {
@@ -260,5 +310,14 @@ impl UserType {
             // there is only one system user
             (_, UserType::System) => false,
         }
+    }
+}
+
+impl Diff<Relationship> for RelationshipPatch {
+    fn changes(&self, other: &Relationship) -> bool {
+        self.note.changes(&other.note)
+            || self.relation.changes(&other.relation)
+            || self.petname.changes(&other.petname)
+            || self.ignore.changes(&other.ignore)
     }
 }

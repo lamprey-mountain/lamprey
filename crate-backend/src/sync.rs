@@ -280,6 +280,8 @@ impl Connection {
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
             MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            // FIXME: implement new event types
+            _ => unimplemented!(),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

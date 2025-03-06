@@ -6,8 +6,8 @@ use utoipa::{IntoParams, ToSchema};
 use std::collections::HashMap;
 
 use crate::{
-    Invite, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
-    Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
+    Invite, InviteCode, Message, MessageId, MessageVerId, Relationship, Role, RoleId, Room, RoomId,
+    RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,6 +142,8 @@ pub enum SyncTransport {
 pub struct MessageSynchronizeGlobal {
     pub room: HashMap<RoomId, Option<Room>>,
     pub user: HashMap<UserId, Option<User>>,
+    pub dm: HashMap<UserId, Option<Room>>,
+    pub relationship: HashMap<UserId, Option<Relationship>>,
     pub session: HashMap<SessionId, Option<Session>>,
     pub invite: HashMap<InviteCode, Option<Invite>>,
 }

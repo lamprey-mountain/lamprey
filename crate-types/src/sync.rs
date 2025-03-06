@@ -3,12 +3,18 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{user_status::StatusPatch, InviteTargetId, InviteWithMetadata, ThreadMember};
+use crate::{
+    user_status::StatusPatch, InviteTargetId, InviteWithMetadata, Relationship, ThreadMember,
+};
 
 use super::{
     InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
     SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
+
+mod sync2;
+
+pub use sync2::{SyncCompression, SyncFormat, SyncParams, SyncVersion};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -148,11 +154,19 @@ pub enum MessageSync {
         )]
         until: time::OffsetDateTime,
     },
-    // ThreadAck {
-    //     thread_id: ThreadId,
-    //     message_id: MessageId,
-    //     version_id: MessageVerId,
-    // },
+
+    ThreadAck {
+        thread_id: ThreadId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    },
+    RelationshipUpsert {
+        user_id: UserId,
+        relationship: Relationship,
+    },
+    RelationshipDelete {
+        user_id: UserId,
+    },
 }
 
 // TODO: maybe split out different message types
@@ -171,10 +185,6 @@ pub enum MessageSync {
 // #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
 // #[serde(tag = "type")]
 // enum MessageRoom {}
-
-mod sync2;
-
-pub use sync2::{SyncCompression, SyncFormat, SyncParams, SyncVersion};
 
 impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {
