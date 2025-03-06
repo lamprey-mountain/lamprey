@@ -24,7 +24,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::{Auth, HeaderReason};
+use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
 use crate::error::Result;
 
 /// Create a message
@@ -42,6 +42,7 @@ async fn message_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -125,7 +126,7 @@ async fn message_create(
         }
     }
     s.presign_message(&mut message).await?;
-    message.nonce = json.nonce;
+    message.nonce = nonce.or(json.nonce);
     data.thread_member_put(
         thread_id,
         user_id,
