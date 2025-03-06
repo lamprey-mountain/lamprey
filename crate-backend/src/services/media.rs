@@ -16,8 +16,8 @@ use tokio::{
 };
 use tracing::{debug, error, info, span, trace, Instrument, Level};
 use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
-    TrackSource, UserId,
+    util::truncate::truncate_filename, Media, MediaCreate, MediaCreateSource, MediaId, MediaSize,
+    MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
 };
 
 use crate::{
@@ -420,7 +420,7 @@ impl ServiceMedia {
                     .map(|s| s.to_owned())
                     .unwrap_or_else(|| "unknown".to_owned());
                 let media = self
-                    .process_upload(up, media_id, user_id, &filename)
+                    .process_upload(up, media_id, user_id, &truncate_filename(&filename, 256))
                     .await?;
                 debug!("finished processing media");
                 Ok(media)

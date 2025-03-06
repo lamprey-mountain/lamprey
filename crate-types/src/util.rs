@@ -8,6 +8,8 @@ use crate::Permission;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+pub mod truncate;
+
 // TODO: derive macro
 pub trait Diff<T> {
     fn changes(&self, other: &T) -> bool;

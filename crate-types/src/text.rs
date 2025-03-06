@@ -207,7 +207,7 @@ mod schema {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::text::Text;
     use std::fmt::Write;
 
