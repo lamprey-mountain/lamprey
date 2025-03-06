@@ -168,12 +168,12 @@ pub enum BotVisibility {
     /// only the creator can use the bot
     #[default]
     Private,
-    // /// anyone can use the bot (Unlisted)
-    // // TODO: unify public/unlisted/discoverable terminology
-    // Public,
 
-    // /// anyone can find the bot
-    // Discoverble,
+    /// anyone can use the bot
+    Public {
+        /// anyone can search for and find this; otherwise, this is unlisted
+        is_discoverable: bool,
+    },
 }
 
 // TODO: add platforms

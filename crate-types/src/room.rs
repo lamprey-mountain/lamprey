@@ -141,22 +141,22 @@ pub enum RoomVisibility {
     #[default]
     Private,
 
-    Unlisted {
-        /// whether anyone can join without an invite
-        is_free_for_all: bool,
-    },
-
     /// anyone can view
-    Applicable {
-        /// whether anyone can join without an invite
-        application: bool,
-    },
+    Public {
+        /// anyone can search for and find this; otherwise, this is unlisted
+        is_discoverable: bool,
 
-    /// anyone can find
-    Discoverable {
-        /// whether anyone can join without an invite
+        /// whether anyone can join without an invite; otherwise, this is view only
         is_free_for_all: bool,
     },
+    // /// anyone can apply to join
+    // Applicable {
+    //     /// anyone can search for and find this; otherwise, this is unlisted
+    //     is_discoverable: bool,
+    //
+    //     /// the application they have to fill out
+    //     application: (),
+    // },
 }
 
 // unsure how these should work

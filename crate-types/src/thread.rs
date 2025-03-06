@@ -277,14 +277,20 @@ pub enum ThreadVisibility {
     /// Inherit visibility from this (the parent) room
     // maybe use Room(RoomId) instead?,
     Room,
-    // /// anyone with a direct link can view
-    // PublicUnlisted,
 
-    // /// anyone can find
-    // PublicDiscoverable,
+    /// anyone can view
+    Public {
+        /// anyone can search for and find this; otherwise, this is unlisted
+        is_discoverable: bool,
 
-    // /// only visible to existing thread members
-    // Private,
+        /// whether anyone can join without an invite; otherwise, this is view only
+        is_free_for_all: bool,
+    },
+
+    /// only visible to existing thread members
+    Private {
+        // anything here?
+    },
 }
 
 #[cfg(feature = "feat_thread_linking")]
