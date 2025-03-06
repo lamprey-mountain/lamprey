@@ -24,7 +24,6 @@ use crate::error::{Error, Result};
     )
 )]
 pub async fn user_create(
-    // NOTE: utoipa + cargo check seems to break with _session here?
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreate>,

@@ -26,7 +26,7 @@ pub struct DbUser {
     pub puppet_external_id: Option<String>,
     pub puppet_external_url: Option<String>,
     pub puppet_alias_id: Option<Uuid>,
-    pub bot_is_bridge: Option<bool>,
+    pub bot_is_bridge: bool,
     pub bot_visibility: DbBotVisibility,
 }
 
@@ -48,7 +48,7 @@ pub enum DbUserState {
 }
 
 #[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "bot_visibility")]
+#[sqlx(type_name = "bot_visibility_type")]
 pub enum DbBotVisibility {
     Private,
     Public,
@@ -65,6 +65,41 @@ impl From<DbBotVisibility> for BotVisibility {
             DbBotVisibility::PublicDiscoverable => BotVisibility::Public {
                 is_discoverable: true,
             },
+        }
+    }
+}
+
+impl From<BotVisibility> for DbBotVisibility {
+    fn from(value: BotVisibility) -> Self {
+        match value {
+            BotVisibility::Private => DbBotVisibility::Private,
+            BotVisibility::Public { is_discoverable } => {
+                if is_discoverable {
+                    DbBotVisibility::Public
+                } else {
+                    DbBotVisibility::PublicDiscoverable
+                }
+            }
+        }
+    }
+}
+
+impl From<DbUserState> for UserState {
+    fn from(value: DbUserState) -> Self {
+        match value {
+            DbUserState::Active => UserState::Active,
+            DbUserState::Suspended => UserState::Suspended,
+            DbUserState::Deleted => UserState::Deleted,
+        }
+    }
+}
+
+impl From<UserState> for DbUserState {
+    fn from(value: UserState) -> Self {
+        match value {
+            UserState::Active => DbUserState::Active,
+            UserState::Suspended => DbUserState::Suspended,
+            UserState::Deleted => DbUserState::Deleted,
         }
     }
 }
@@ -98,15 +133,70 @@ impl From<DbUser> for User {
                         user_id: row.parent_id.unwrap().into(),
                     },
                     visibility: row.bot_visibility.into(),
-                    is_bridge: row.bot_is_bridge.unwrap_or(false),
+                    is_bridge: row.bot_is_bridge,
                 },
                 DbUserType::System => UserType::System,
             },
-            state: match row.state {
-                DbUserState::Active => UserState::Active,
-                DbUserState::Suspended => UserState::Suspended,
-                DbUserState::Deleted => UserState::Deleted,
+            state: row.state.into(),
+        }
+    }
+}
+
+impl From<User> for DbUser {
+    fn from(u: User) -> Self {
+        let base = DbUser {
+            id: u.id,
+            version_id: u.version_id,
+            parent_id: None,
+            name: u.name,
+            description: u.description,
+            avatar: u.avatar.map(|i| i.into_inner()),
+            r#type: match &u.user_type {
+                UserType::Default => DbUserType::Default,
+                UserType::Bot { .. } => DbUserType::Bot,
+                UserType::Puppet { .. } => DbUserType::Puppet,
+                UserType::System => DbUserType::System,
             },
+            state: u.state.into(),
+            puppet_external_platform: None,
+            puppet_external_id: None,
+            puppet_external_url: None,
+            puppet_alias_id: None,
+            bot_is_bridge: false,
+            bot_visibility: DbBotVisibility::Private,
+        };
+        match u.user_type {
+            UserType::Bot {
+                owner,
+                visibility,
+                is_bridge,
+            } => DbUser {
+                parent_id: match owner {
+                    BotOwner::User { user_id } => Some(user_id.into_inner()),
+                    _ => todo!(),
+                },
+                bot_visibility: visibility.into(),
+                bot_is_bridge: is_bridge,
+                ..base
+            },
+            UserType::Puppet {
+                owner_id,
+                external_platform,
+                external_id,
+                external_url,
+                alias_id,
+            } => DbUser {
+                parent_id: Some(owner_id.into_inner()),
+                puppet_external_id: Some(external_id),
+                puppet_external_url: external_url.map(|u| u.to_string()),
+                puppet_external_platform: Some(match external_platform {
+                    ExternalPlatform::Discord => "Discord".to_string(),
+                    ExternalPlatform::Other(p) => p,
+                }),
+                puppet_alias_id: alias_id.map(Into::into),
+                ..base
+            },
+            _ => base,
         }
     }
 }
@@ -115,28 +205,43 @@ impl From<DbUser> for User {
 impl DataUser for Postgres {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User> {
         let user_id = Uuid::now_v7();
-        let user_type: DbUserType = match patch.user_type {
-            UserType::Default => DbUserType::Default,
-            UserType::Bot { .. } => DbUserType::Bot,
-            UserType::Puppet { .. } => DbUserType::Puppet,
-            UserType::System => DbUserType::System,
-        };
+        let user: DbUser = User {
+            id: user_id.into(),
+            version_id: user_id.into(),
+            name: patch.name,
+            description: patch.description,
+            avatar: None,
+            user_type: patch.user_type,
+            state: UserState::Active,
+            status: types::user_status::Status::online(),
+        }
+        .into();
         let row = query_as!(
             DbUser,
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, can_fork, type, state)
-            VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+            INSERT INTO usr (
+                id, version_id, parent_id, name, description, state, type, avatar,
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility
+            )
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING
                 id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
         "#,
-            user_id,
-            user_id,
-            patch.parent_id.map(|i| i.into_inner()),
-            patch.name,
-            patch.description,
-            user_type as _,
-            DbUserState::Active as _,
+            user.id.into_inner(),
+            user.version_id.into_inner(),
+            user.parent_id,
+            user.name,
+            user.description,
+            user.state as _,
+            user.r#type as _,
+            user.avatar,
+            user.puppet_external_platform,
+            user.puppet_external_id,
+            user.puppet_external_url,
+            user.puppet_alias_id,
+            user.bot_is_bridge,
+            user.bot_visibility as _,
         )
         .fetch_one(&self.pool)
         .await?;
