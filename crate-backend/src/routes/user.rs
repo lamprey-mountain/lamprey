@@ -4,10 +4,13 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use serde::{Deserialize, Serialize};
 use types::util::Diff;
 use types::{
-    BotOwner, MediaTrackInfo, MessageSync, Room, User, UserCreate, UserId, UserPatch, UserType,
+    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, User,
+    UserCreate, UserId, UserPatch, UserType,
 };
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
@@ -67,13 +70,31 @@ async fn user_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+enum UserListFilter {
+    Default,
+    Puppet,
+    Bot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
+struct UserListParams {
+    ty: UserListFilter,
+}
+
 /// User list (TODO)
+///
+/// List bots you have created or people in mutual rooms
 #[utoipa::path(
     get,
     path = "/user",
     tags = ["user"],
+    params(
+        UserListParams,
+        PaginationQuery<UserId>,
+    ),
     responses(
-        (status = OK, description = "success"),
+        (status = OK, body = PaginationResponse<User>, description = "success"),
     )
 )]
 async fn user_list(Auth(_session): Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
