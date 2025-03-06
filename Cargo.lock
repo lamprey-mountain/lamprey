@@ -5327,6 +5327,7 @@ dependencies = [
  "crate-hakari",
  "logos",
  "mediatype",
+ "paste",
  "serde",
  "serde_json",
  "strum",

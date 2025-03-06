@@ -85,7 +85,7 @@ macro_rules! genid {
 
             fn try_into(self) -> Result<Time, Self::Error> {
                 let uuid: Uuid = self.into();
-                Ok(uuid.get_timestamp().ok_or(())?.try_into().map_err(|_| ())?)
+                uuid.get_timestamp().ok_or(())?.try_into().map_err(|_| ())
             }
         }
 
@@ -110,6 +110,7 @@ genid!(SessionId, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVerId, "00000000-0000-0000-0ver-00000session");
 genid!(AuditLogId, "00000000-0000-0000-0000-0auditlogent");
 genid!(UrlEmbedId, "00000000-0000-0000-0000-0000000embed");
+genid!(EmbedId, "00000000-0000-0000-0new-0000000embed");
 genid!(TagId, "00000000-0000-0000-0000-000000000tag");
 genid!(TagVerId, "00000000-0000-0000-0ver-000000000tag");
 genid!(CustomEmojiId, "00000000-0000-0000-0000-0customemoji");

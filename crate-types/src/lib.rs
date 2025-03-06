@@ -34,13 +34,16 @@ pub mod user;
 pub mod user_status;
 pub mod voice;
 
+pub use media::{
+    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaSize, MediaTrack,
+    MediaTrackInfo, Mime, Mixed, Text, TimedText, TrackSource, Video,
+};
+
 // TODO: probably should stop exporting *everything*
-// pub use any::*;
 pub use audit_logs::*;
 pub use embed::*;
 pub use ids::*;
 pub use invite::*;
-pub use media::*;
 pub use message::*;
 pub use pagination::*;
 pub use permission::*;

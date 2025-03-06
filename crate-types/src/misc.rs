@@ -49,7 +49,7 @@ impl AsRef<str> for Color {
 // }
 
 // /// not really planned, bots can be used instead
-// /// maybe special compatability message send endpoints and a ?token=... query parameter could be added
+// /// maybe special compatibility message send endpoints and a ?token=... query parameter could be added
 // /// or ?compat=[platform], or a header
 // /// if this is added, it paobably would be another user type
 // struct Webhook {

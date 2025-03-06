@@ -400,7 +400,7 @@ mod next {
         type Tag<'a>;
         type Error;
 
-        fn parse_tag<'a>(tag: TagRef<'a>) -> Result<Self::Tag<'a>, Self::Error>;
+        fn parse_tag(tag: TagRef<'_>) -> Result<Self::Tag<'_>, Self::Error>;
     }
 
     /// inline formatting
@@ -410,7 +410,7 @@ mod next {
         type Tag<'a> = KnownTag<'a>;
         type Error = ();
 
-        fn parse_tag<'a>(tag: TagRef<'a>) -> Result<Self::Tag<'a>, Self::Error> {
+        fn parse_tag(tag: TagRef<'_>) -> Result<Self::Tag<'_>, Self::Error> {
             super::Tag {
                 name: tag.name,
                 params: todo!(),

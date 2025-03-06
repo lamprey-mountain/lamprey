@@ -11,7 +11,7 @@ use crate::{PaginationKey, RoomId, ThreadId, UserId};
 use super::{Room, Thread, User};
 
 /// a short, unique identifier. knowing the code grants access to the invite's target.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
+#[derive(Debug, Hash, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 

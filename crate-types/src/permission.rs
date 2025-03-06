@@ -286,6 +286,7 @@ pub enum Permission {
 //   ones, eg. changing name/topic vs changing visibility. i'll probably dump
 //   everything into RoomEdit for now, until i hear of a use case.
 // - MessageEmail: sending messages by email?
+// - MessageTodos: check/uncheck checkboxes in messages
 //
 // would i rename ThreadCreateFoo to FooCreate? maybe!
 // also, i don't want it to become too complicated or have too many perms!

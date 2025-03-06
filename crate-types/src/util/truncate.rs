@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, cmp::Ordering};
 
 /// trim and truncate a string to a maximum length, while attempting to avoid
 /// splitting in the middle of a word
@@ -41,15 +41,15 @@ pub fn truncate_filename(a: &str, max_len: usize) -> Cow<'_, str> {
     match dbg!(a.rfind('.')) {
         Some(idx) => {
             let ext = dbg!(&a[idx..]);
-            if ext.len() > max_len {
+            match ext.len().cmp(&max_len) {
                 // the file extension would be mangled anyways
-                Cow::Borrowed(truncate(a, max_len))
-            } else if ext.len() == max_len {
+                Ordering::Less => Cow::Borrowed(truncate(a, max_len)),
                 // remove extension to avoid returning dotfile
-                Cow::Borrowed(truncate(a, max_len))
-            } else {
-                let name = dbg!(truncate(&a[0..idx], dbg!(max_len - ext.len())));
-                Cow::Owned(format!("{}{}", name, ext))
+                Ordering::Equal => Cow::Borrowed(truncate(a, max_len)),
+                Ordering::Greater => {
+                    let name = dbg!(truncate(&a[0..idx], dbg!(max_len - ext.len())));
+                    Cow::Owned(format!("{}{}", name, ext))
+                }
             }
         }
         _ => Cow::Borrowed(truncate(a, max_len)),

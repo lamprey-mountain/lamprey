@@ -430,7 +430,7 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
-    // FIXME(): in
+    // FIXME(#230): link media to embeds
     // Embed,
 }
 

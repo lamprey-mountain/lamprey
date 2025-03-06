@@ -177,3 +177,46 @@ struct RoomConfig {
     new_message: Option<Action>,
     // new_message: Option<Action>,
 }
+
+enum NotificationType {
+    /// when the thread is updated (name, description)
+    ThreadUpdate,
+    
+    /// when the thread state is updated (archive, pin, unpin)
+    ThreadStatus,
+
+    /// message that mentions you
+    MessageMention,
+
+    /// message that replies to one of your messages
+    MessageReply,
+
+    /// message in a thread you're watching
+    MessageWatching,
+    
+    /// message in a dm
+    MessageDm,
+}
+
+enum NotificationAction {
+    /// add to 
+    Inbox,
+    Notify,
+}
+
+struct NotificationConfig {
+    config: Vec<(NotificationType, NotificationAction)>,
+}
+
+fn default_notification_config() -> NotificationConfig {
+    NotificationConfig {
+        config: vec![
+            (NotificationType::MessageMention, NotificationAction::Notify),
+            (NotificationType::MessageReply, NotificationAction::Inbox),
+            (NotificationType::MessageWatching, NotificationAction::Inbox),
+            (NotificationType::MessageDm, NotificationAction::Notify),
+            (NotificationType::ThreadStatus, NotificationAction::Inbox),
+            (NotificationType::ThreadUpdate, NotificationAction::Inbox),
+        ]
+    }
+}

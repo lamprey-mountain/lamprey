@@ -109,8 +109,8 @@ impl TryInto<Time> for uuid::Timestamp {
     }
 }
 
-impl Into<Time> for OffsetDateTime {
-    fn into(self) -> Time {
-        Time(self)
+impl From<OffsetDateTime> for Time {
+    fn from(value: OffsetDateTime) -> Self {
+        Time(value)
     }
 }

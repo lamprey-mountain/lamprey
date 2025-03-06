@@ -172,6 +172,10 @@ pub enum MessageSync {
 // #[serde(tag = "type")]
 // enum MessageRoom {}
 
+mod sync2;
+
+pub use sync2::{SyncParams, SyncVersion, SyncFormat, SyncCompression};
+
 impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {
         matches!(

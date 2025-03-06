@@ -1,5 +1,3 @@
-// future alternative media thing
-
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -16,6 +14,10 @@ use crate::{
 
 mod mime;
 mod track;
+
+#[allow(unused)]
+/// yet more media testing
+pub(crate) mod media3;
 
 pub use mime::Mime;
 pub use track::*;
@@ -221,24 +223,3 @@ impl MediaCreateSource {
         }
     }
 }
-
-// maybe this could work?
-//
-// use std::marker::PhantomData;
-//
-// struct Image {}
-// struct Video {}
-// struct Audio {}
-// trait MediaType {}
-// impl MediaType for Image {}
-// impl MediaType for Video {}
-// impl MediaType for Audio {}
-// enum MediaKnownType {
-//     Image(Media<Image>),
-//     Video(Media<Video>),
-//     Audio(Media<Audio>),
-// }
-// struct Media<T: MediaType> {
-//     name: String,
-//     _phantom: PhantomData<T>,
-// }
