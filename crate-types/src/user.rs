@@ -40,7 +40,7 @@ pub struct User {
     pub user_type: UserType,
 
     pub state: UserState,
-
+    // pub state_updated_at: Time,
     pub status: Status,
 }
 
@@ -101,9 +101,9 @@ pub enum UserType {
 
         /// who can use the bot
         visibility: BotVisibility,
-        // /// enables managing Puppet users
-        // is_bridge: bool,
 
+        /// enables managing Puppet users
+        is_bridge: bool,
         // do i really need all these urls?
         // url_terms_of_service: Option<Url>,
         // url_privacy_policy: Option<Url>,
@@ -121,12 +121,11 @@ pub enum UserType {
         /// what platform this puppet is connected to
         external_platform: ExternalPlatform,
 
-        /// an opaque identifier
-        // TODO: validate lengths
-        // #[cfg_attr(
-        //     feature = "utoipa",
-        //     schema(required = false, min_length = 1, max_length = 8192)
-        // )]
+        /// an opaque identifier from the other platform
+        #[cfg_attr(
+            feature = "utoipa",
+            schema(required = false, min_length = 1, max_length = 8192)
+        )]
         external_id: String,
 
         /// a url on the other platform that this account can be reached at
@@ -176,10 +175,13 @@ pub enum BotVisibility {
     },
 }
 
-// TODO: add platforms
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(untagged)]
 pub enum ExternalPlatform {
+    /// discord
+    Discord,
+
     /// some other platform
     Other(String),
 }

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 use sqlx::{query, query_as, Acquire};
-use types::{BotOwner, BotVisibility, UserState, UserType};
+use types::{BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
+use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -15,23 +16,27 @@ use super::Postgres;
 pub struct DbUser {
     pub id: UserId,
     pub version_id: UserVerId,
-    pub parent_id: Option<uuid::Uuid>,
+    pub parent_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
-    pub avatar: Option<uuid::Uuid>,
+    pub avatar: Option<Uuid>,
     pub r#type: DbUserType,
     pub state: DbUserState,
+    pub puppet_external_platform: Option<String>,
+    pub puppet_external_id: Option<String>,
+    pub puppet_external_url: Option<String>,
+    pub puppet_alias_id: Option<Uuid>,
+    pub bot_is_bridge: Option<bool>,
+    pub bot_visibility: DbBotVisibility,
 }
 
 #[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "user_type")]
 pub enum DbUserType {
     Default,
-    Alias,
     Bot,
     System,
-    // FIXME
-    // Puppet,
+    Puppet,
 }
 
 #[derive(Deserialize, sqlx::Type)]
@@ -40,6 +45,28 @@ pub enum DbUserState {
     Active,
     Suspended,
     Deleted,
+}
+
+#[derive(Deserialize, sqlx::Type)]
+#[sqlx(type_name = "bot_visibility")]
+pub enum DbBotVisibility {
+    Private,
+    Public,
+    PublicDiscoverable,
+}
+
+impl From<DbBotVisibility> for BotVisibility {
+    fn from(value: DbBotVisibility) -> Self {
+        match value {
+            DbBotVisibility::Private => BotVisibility::Private,
+            DbBotVisibility::Public => BotVisibility::Public {
+                is_discoverable: false,
+            },
+            DbBotVisibility::PublicDiscoverable => BotVisibility::Public {
+                is_discoverable: true,
+            },
+        }
+    }
 }
 
 impl From<DbUser> for User {
@@ -53,12 +80,25 @@ impl From<DbUser> for User {
             avatar: row.avatar.map(Into::into),
             user_type: match row.r#type {
                 DbUserType::Default => UserType::Default,
-                DbUserType::Alias => panic!("there shouldn't be any Alias users right now"),
+                DbUserType::Puppet => UserType::Puppet {
+                    owner_id: row.parent_id.unwrap().into(),
+                    external_platform: match row.puppet_external_platform {
+                        Some(p) => match p.as_str() {
+                            "discord" => ExternalPlatform::Discord,
+                            _ => ExternalPlatform::Other(p),
+                        },
+                        None => panic!("no platform set for puppet"),
+                    },
+                    external_id: row.puppet_external_id.expect("no id set for puppet"),
+                    external_url: row.puppet_external_url.map(|s| Url::parse(&s).unwrap()),
+                    alias_id: row.puppet_alias_id.map(Into::into),
+                },
                 DbUserType::Bot => UserType::Bot {
                     owner: BotOwner::User {
                         user_id: row.parent_id.unwrap().into(),
                     },
-                    visibility: BotVisibility::Private,
+                    visibility: row.bot_visibility.into(),
+                    is_bridge: row.bot_is_bridge.unwrap_or(false),
                 },
                 DbUserType::System => UserType::System,
             },
@@ -78,7 +118,7 @@ impl DataUser for Postgres {
         let user_type: DbUserType = match patch.user_type {
             UserType::Default => DbUserType::Default,
             UserType::Bot { .. } => DbUserType::Bot,
-            UserType::Puppet { .. } => todo!(),
+            UserType::Puppet { .. } => DbUserType::Puppet,
             UserType::System => DbUserType::System,
         };
         let row = query_as!(
@@ -86,7 +126,9 @@ impl DataUser for Postgres {
             r#"
             INSERT INTO usr (id, version_id, parent_id, name, description, can_fork, type, state)
             VALUES ($1, $2, $3, $4, $5, false, $6, $7)
-            RETURNING id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
+            RETURNING
+                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
         "#,
             user_id,
             user_id,
@@ -107,7 +149,9 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
+            SELECT
+                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
@@ -149,7 +193,9 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar
+            SELECT
+                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
             FROM usr WHERE id = $1
         "#,
             id.into_inner()
