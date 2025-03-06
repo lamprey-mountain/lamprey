@@ -65,6 +65,8 @@ async fn tag_patch(
     Err(Error::Unimplemented)
 }
 
+// TEMP: while scaffolding
+#[allow(unused)]
 #[derive(Deserialize)]
 struct TagDeleteQuery {
     #[serde(default)]

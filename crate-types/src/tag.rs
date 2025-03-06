@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{misc::Color, util::some_option, RoleId, RoleVerId, RoomId, TagId, TagVerId};
+use crate::{misc::Color, util::some_option, RoomId, TagId, TagVerId};
 
 // hmm, should i be able to apply tags to other tags?
 // tagception!

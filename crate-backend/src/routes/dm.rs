@@ -1,17 +1,11 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::util::Diff;
-use types::{
-    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, User,
-    UserCreate, UserId, UserPatch, UserType,
-};
+use types::{PaginationQuery, PaginationResponse, Room, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
+use crate::types::UserIdReq;
 use crate::ServerState;
 
 use super::util::Auth;

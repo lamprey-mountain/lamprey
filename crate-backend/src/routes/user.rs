@@ -7,8 +7,8 @@ use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use types::util::Diff;
 use types::{
-    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, User,
-    UserCreate, UserId, UserPatch, UserType,
+    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, User, UserCreate,
+    UserId, UserPatch, UserType,
 };
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
