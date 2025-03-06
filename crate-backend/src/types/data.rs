@@ -238,82 +238,99 @@ impl DbMessageCreate {
     }
 }
 
-// surely there's a better way
-#[derive(sqlx::Type, PartialEq, Eq)]
-#[sqlx(type_name = "permission")]
-pub enum DbPermission {
+macro_rules! impl_perms {
+    ($($e:ident,)*) => {
+        #[derive(sqlx::Type, PartialEq, Eq)]
+        #[sqlx(type_name = "permission")]
+        pub enum DbPermission {
+            $($e,)*
+        }
+
+        impl From<DbPermission> for Permission {
+            fn from(value: DbPermission) -> Self {
+                match value {
+                    $(DbPermission::$e => Permission::$e,)*
+                }
+            }
+        }
+
+        impl From<Permission> for DbPermission {
+            fn from(value: Permission) -> Self {
+                match value {
+                    $(Permission::$e => DbPermission::$e,)*
+                }
+            }
+        }
+    }
+}
+
+// surely there's a better way without copypasta
+impl_perms!(
     Admin,
-    RoomManage,
-    ThreadCreate,
-    ThreadManage,
-    ThreadDelete,
-    MessageCreate,
-    MessageFilesEmbeds,
-    MessagePin,
-    MessageDelete,
-    MessageMassMention,
-    MemberKick,
-    MemberBan,
-    MemberManage,
+    BotsAdd,
+    BotsManage,
+    EmojiAdd,
+    EmojiManage,
+    EmojiUseExternal,
     InviteCreate,
     InviteManage,
-    RoleManage,
-    RoleApply,
-    View,
+    MemberBan,
+    MemberBanManage,
+    MemberBridge,
+    MemberKick,
+    MemberManage,
+    MessageCreate,
+    MessageDelete,
     MessageEdit,
-}
-
-impl From<DbPermission> for Permission {
-    fn from(value: DbPermission) -> Self {
-        match value {
-            DbPermission::Admin => Permission::Admin,
-            DbPermission::RoomManage => Permission::RoomManage,
-            DbPermission::ThreadCreate => Permission::ThreadCreate,
-            DbPermission::ThreadManage => Permission::ThreadManage,
-            DbPermission::ThreadDelete => Permission::ThreadDelete,
-            DbPermission::MessageCreate => Permission::MessageCreate,
-            DbPermission::MessageFilesEmbeds => Permission::MessageFilesEmbeds,
-            DbPermission::MessagePin => Permission::MessagePin,
-            DbPermission::MessageDelete => Permission::MessageDelete,
-            DbPermission::MessageMassMention => Permission::MessageMassMention,
-            DbPermission::MemberKick => Permission::MemberKick,
-            DbPermission::MemberBan => Permission::MemberBan,
-            DbPermission::MemberManage => Permission::MemberManage,
-            DbPermission::InviteCreate => Permission::InviteCreate,
-            DbPermission::InviteManage => Permission::InviteManage,
-            DbPermission::RoleManage => Permission::RoleManage,
-            DbPermission::RoleApply => Permission::RoleApply,
-            DbPermission::View => Permission::View,
-            DbPermission::MessageEdit => Permission::MessageEdit,
-        }
-    }
-}
-
-impl From<Permission> for DbPermission {
-    fn from(value: Permission) -> Self {
-        match value {
-            Permission::Admin => DbPermission::Admin,
-            Permission::RoomManage => DbPermission::RoomManage,
-            Permission::ThreadCreate => DbPermission::ThreadCreate,
-            Permission::ThreadManage => DbPermission::ThreadManage,
-            Permission::ThreadDelete => DbPermission::ThreadDelete,
-            Permission::MessageCreate => DbPermission::MessageCreate,
-            Permission::MessageFilesEmbeds => DbPermission::MessageFilesEmbeds,
-            Permission::MessagePin => DbPermission::MessagePin,
-            Permission::MessageDelete => DbPermission::MessageDelete,
-            Permission::MessageMassMention => DbPermission::MessageMassMention,
-            Permission::MemberKick => DbPermission::MemberKick,
-            Permission::MemberBan => DbPermission::MemberBan,
-            Permission::MemberManage => DbPermission::MemberManage,
-            Permission::InviteCreate => DbPermission::InviteCreate,
-            Permission::InviteManage => DbPermission::InviteManage,
-            Permission::RoleManage => DbPermission::RoleManage,
-            Permission::RoleApply => DbPermission::RoleApply,
-            Permission::View => DbPermission::View,
-            Permission::MessageEdit => DbPermission::MessageEdit,
-        }
-    }
-}
+    MessageEmbeds,
+    MessageMassMention,
+    MessageAttachments,
+    MessageMove,
+    MessagePin,
+    ReactionAdd,
+    ReactionClear,
+    ProfileAvatar,
+    ProfileOverride,
+    RoleApply,
+    RoleManage,
+    RoomManage,
+    ServerAdmin,
+    ServerMetrics,
+    ServerOversee,
+    ServerReports,
+    TagApply,
+    TagManage,
+    ThreadArchive,
+    ThreadCreateChat,
+    ThreadCreateDocument,
+    ThreadCreateEvent,
+    ThreadCreateForumLinear,
+    ThreadCreateForumTree,
+    ThreadCreateTable,
+    ThreadCreateVoice,
+    ThreadCreatePublic,
+    ThreadCreatePrivate,
+    ThreadDelete,
+    ThreadEdit,
+    ThreadForward,
+    ThreadLock,
+    ThreadPin,
+    ThreadPublish,
+    UserDms,
+    UserProfile,
+    UserSessions,
+    UserStatus,
+    View,
+    ViewAuditLog,
+    VoiceConnect,
+    VoiceDeafen,
+    VoiceDisconnect,
+    VoiceMove,
+    VoiceMute,
+    VoicePriority,
+    VoiceSpeak,
+    VoiceVideo,
+);
 
 impl From<RoomMembership> for DbMembership {
     fn from(value: RoomMembership) -> Self {
@@ -413,6 +430,8 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
+    // FIXME(): in
+    // Embed,
 }
 
 // TODO: surely there's a better way than manually managing media links/references

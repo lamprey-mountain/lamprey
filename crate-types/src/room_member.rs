@@ -76,6 +76,7 @@ pub enum RoomMembership {
         override_description: Option<String>,
         // override_avatar: z.string().url().or(z.literal("")),
         roles: Vec<RoleId>,
+        // muted_until: Option<Time>,
     },
 
     /// kicked or left, can rejoin with an invite. todo: can still view messages up until then

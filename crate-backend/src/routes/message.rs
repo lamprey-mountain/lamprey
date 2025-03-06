@@ -50,8 +50,11 @@ async fn message_create(
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
-        perms.ensure(Permission::MessageFilesEmbeds)?;
+        perms.ensure(Permission::MessageAttachments)?;
     }
+    // if !json.embeds.is_empty() {
+    //     perms.ensure(Permission::MessageEmbeds)?;
+    // }
     // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
     // TODO: move this to validation
     if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
@@ -305,8 +308,11 @@ async fn message_edit(
         ));
     }
     if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
-        perms.ensure(Permission::MessageFilesEmbeds)?;
+        perms.ensure(Permission::MessageAttachments)?;
     }
+    // if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
+    //     perms.ensure(Permission::MessageEmbeds)?;
+    // }
     if !json.changes(&message) {
         return Ok((StatusCode::NOT_MODIFIED, Json(message)));
     }

@@ -17,6 +17,7 @@ crate-hakari = { version = "0.1", path = "../crate-hakari" }
 mediatype = { version = "0.19.18", features = ["serde"] }
 validator = { version = "0.20.0", features = ["derive"], optional = true }
 logos = "0.15.0"
+strum = { version = "0.27.1", features = ["derive"] }
 
 [features]
 utoipa = ["dep:utoipa"]
@@ -31,4 +32,6 @@ feat_thread_type_forums = []
 feat_thread_type_event = []
 feat_thread_type_voice = []
 feat_thread_type_document = []
+feat_thread_type_table = []
 feat_move_messages = []
+feat_forward_threads = []

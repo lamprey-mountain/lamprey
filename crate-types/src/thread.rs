@@ -64,10 +64,9 @@ pub struct Thread {
 
     /// number of people who are online in this room
     pub online_count: u64,
-    // TODO: tags
-    // do i use TagId or Tag?
-    // pub tags: Vec<Tag>,
-    // pub is_tag_required: bool,
+    // TODO(#72): tags
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+    // pub tags: Vec<TagId>,
 
     // pub link: Vec<ThreadLink>, // probably will limit the number of links
     // pub forward: Option<ThreadForward>,
@@ -76,7 +75,8 @@ pub struct Thread {
     // // `locked` would be easier to implement and could have custom acls, but
     // // it might add extra complexity (it's an extra thing that can affect
     // // auth that doesn't use the "standard" roles system)
-    // // alternative would be to let moderators edit permissions for threads,
+    // // alternative would be to let moderators edit permissions for threads
+    // // TODO(#243): implement this. it makes life much easier.
     // pub locked: bool,
 
     // /// if this should be treated as an announcement
@@ -92,6 +92,8 @@ pub struct Thread {
 
 /// type-specific data for threads
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[derive(strum::EnumDiscriminants)]
+// #[strum_discriminants(vis(pub), name(ThreadType))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum ThreadPublic {
@@ -100,6 +102,7 @@ pub enum ThreadPublic {
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// linear long form chat history, similar to github/forgejo issues
+    // TODO: come up with a less terrible name
     ForumLinear(ThreadTypeChatPublic),
 
     #[cfg(feature = "feat_thread_type_forums")]
@@ -120,6 +123,10 @@ pub enum ThreadPublic {
     // maybe some crdt document/wiki page...?
     // another far future thing that needs design
     Document(ThreadTypeDocumentPublic),
+
+    #[cfg(feature = "feat_thread_type_table")]
+    // arbitrary data storage? like a spreadsheet or database table?
+    Table(()),
 }
 
 /// user-specific data for threads
@@ -152,6 +159,46 @@ pub enum ThreadPrivate {
     // maybe some crdt document/wiki page...?
     // another far future thing that needs design
     Document(ThreadTypeDocumentPrivate),
+
+    #[cfg(feature = "feat_thread_type_table")]
+    // arbitrary data storage? like a spreadsheet or database table?
+    Table(()),
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ThreadType {
+    /// instant messaging
+    #[default]
+    Chat,
+
+    #[cfg(feature = "feat_thread_type_forums")]
+    /// linear long form chat history, similar to github/forgejo issues
+    // TODO: come up with a less terrible name
+    ForumLinear,
+
+    #[cfg(feature = "feat_thread_type_forums")]
+    /// tree-style chat history
+    ForumTree,
+
+    #[cfg(feature = "feat_thread_type_voice")]
+    /// call
+    Voice,
+
+    #[cfg(feature = "feat_thread_type_event")]
+    /// event
+    // seems surprisingly hard to get right
+    Event,
+
+    #[cfg(feature = "feat_thread_type_document")]
+    /// document
+    // maybe some crdt document/wiki page...?
+    // another far future thing that needs design
+    Document,
+
+    #[cfg(feature = "feat_thread_type_table")]
+    // arbitrary data storage? like a spreadsheet or database table?
+    Table,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,7 +216,12 @@ pub struct ThreadCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
     // pub icon: Option<Media>,
-    // pub tags: Vec<Tag>,
+    /// The type of this thread
+    #[serde(default, rename = "type")]
+    pub ty: ThreadType,
+    // /// tags to apply to this thread
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+    // pub tags: Vec<TagId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,6 +242,9 @@ pub struct ThreadPatch {
 
     #[serde(flatten)]
     pub state: Option<ThreadState>,
+    // /// tags to apply to this thread
+    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
+    // pub tags: Vec<TagId>,
 }
 
 /// lifecycle of a thread
@@ -219,7 +274,7 @@ pub enum ThreadState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ThreadVisibility {
-    /// Everyone in the room can view
+    /// Inherit visibility from this (the parent) room
     // maybe use Room(RoomId) instead?,
     Room,
     // /// anyone with a direct link can view
@@ -240,41 +295,44 @@ pub mod thread_linking {
     // linked threads need to be in the same room
     pub struct ThreadLink {
         pub thread_id: ThreadId,
-        pub link_type: ThreadLinkDirection,
-        pub purpose: ThreadLinkType,
+        #[serde(flatten)]
+        pub info: ThreadLinkInfo,
         pub reason: Option<String>,
         /// None if automated
         pub by: Option<UserId>,
         pub at: Time,
     }
 
-    pub enum ThreadLinkDirection {
-        Outgoing,
-        Incoming,
-        Bidirectional,
-    }
-
-    pub enum ThreadLinkType {
-        /// ThreadInfoChat threads -> any thread (eg. commenting)
+    pub enum ThreadLinkInfo {
+        /// discussion, comments, calls
+        /// what if there are lots of threads? eg. a thread for every suggestion in a document?
+        /// maybe also need a way to hide threads with certain links
         Discussion,
 
-        /// any thread -> ThreadInfoVoice threads
-        Call,
-
-        /// any thread <-> any thread
-        Related,
-
-        /// any thread -> any thread
-        // maybe have some special handling? (eg. make searches return messages in both threads)
-        Duplicate,
-
-        /// tell everyone viewing this thread to go to another thread (maybe redirect automatically in some places?)
+        /// show a button/link to view this other thread instead of this one
+        /// (maybe redirect automatically in some places?)
         // (stolen from irc)
         Forward,
 
-        /// the source announcement thread (one way, Incoming link wont be added to source)
-        Source,
-        // what else?
+        /// Forward + special handling? (eg. search in both threads by default)
+        Duplicate,
+
+        /// the source announcement thread
+        Announcement,
+
+        /// a child thread (creates a hierarchy). possibly unnecessary, might be
+        /// useful for Voice threads.
+        Child,
+
+        // not sure about these "generic relations/links"
+        /// generic unidirectional relationship (source)
+        Incoming,
+
+        /// generic unidirectional relationship (target)
+        Outgoing,
+
+        /// generic bidirectional relationship
+        Related,
     }
 }
 

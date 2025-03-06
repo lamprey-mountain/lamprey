@@ -34,6 +34,8 @@ pub struct Role {
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
     pub is_default: bool,
+    // FIXME(#114): at least some sort of hierarchy
+    // pub priority: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

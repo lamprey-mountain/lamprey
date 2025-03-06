@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use types::{MessageId, ThreadState};
+use types::{MessageId, ThreadState, ThreadType};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -44,7 +44,11 @@ async fn thread_create(
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::ThreadCreate)?;
+    match json.ty {
+        ThreadType::Chat => {
+            perms.ensure(Permission::ThreadCreateChat)?;
+        }
+    };
     let thread_id = data
         .thread_create(DbThreadCreate {
             room_id,

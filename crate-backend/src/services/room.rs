@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use moka::future::Cache;
+use types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use types::util::Diff;
 use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
@@ -63,16 +64,7 @@ impl ServiceRooms {
             room_id,
             name: "moderator".to_owned(),
             description: None,
-            permissions: vec![
-                Permission::ThreadManage,
-                Permission::ThreadDelete,
-                Permission::MessagePin,
-                Permission::MessageDelete,
-                Permission::MemberKick,
-                Permission::MemberBan,
-                Permission::MemberManage,
-                Permission::InviteManage,
-            ],
+            permissions: MODERATOR.to_vec(),
             is_self_applicable: false,
             is_mentionable: false,
             is_default: false,
@@ -81,12 +73,7 @@ impl ServiceRooms {
             room_id,
             name: "everyone".to_owned(),
             description: None,
-            permissions: vec![
-                Permission::MessageCreate,
-                Permission::MessageFilesEmbeds,
-                Permission::ThreadCreate,
-                Permission::InviteCreate,
-            ],
+            permissions: EVERYONE_TRUSTED.to_vec(),
             is_self_applicable: false,
             is_mentionable: false,
             is_default: true,

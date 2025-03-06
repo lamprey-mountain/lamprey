@@ -113,12 +113,12 @@ impl DataMessage for Postgres {
             message_id,
             create.thread_id.into_inner(),
             message_id,
-            create.content().unwrap(),
-            create.metadata().unwrap(),
+            create.content(),
+            create.metadata(),
             create.reply_id().map(|i| i.into_inner()),
             create.author_id.into_inner(),
             message_type as _,
-            create.override_name().unwrap(),
+            create.override_name(),
         )
         .execute(&mut *tx)
         .await?;
@@ -156,12 +156,12 @@ impl DataMessage for Postgres {
             message_id.into_inner(),
             create.thread_id.into_inner(),
             ver_id,
-            create.content().unwrap(),
-            create.metadata().unwrap(),
+            create.content(),
+            create.metadata(),
             create.reply_id().map(|i| i.into_inner()),
             create.author_id.into_inner(),
             message_type as _,
-            create.override_name().unwrap(),
+            create.override_name(),
         )
         .execute(&mut *tx)
         .await?;

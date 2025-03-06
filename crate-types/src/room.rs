@@ -141,16 +141,21 @@ pub enum RoomVisibility {
     #[default]
     Private,
 
-    /// anyone can view
     Unlisted {
-        /// whether anyone can join or if they still need an invite
-        anyone_can_join: bool,
+        /// whether anyone can join without an invite
+        is_free_for_all: bool,
+    },
+
+    /// anyone can view
+    Applicable {
+        /// whether anyone can join without an invite
+        application: bool,
     },
 
     /// anyone can find
     Discoverable {
-        /// whether anyone can join or if they still need an invite
-        anyone_can_join: bool,
+        /// whether anyone can join without an invite
+        is_free_for_all: bool,
     },
 }
 

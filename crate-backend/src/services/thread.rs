@@ -66,9 +66,9 @@ impl ServiceThreads {
         let data = self.state.data();
         let thread = data.thread_get(thread_id, Some(user_id)).await?;
         if thread.creator_id == user_id {
-            perms.add(Permission::ThreadManage);
+            perms.add(Permission::ThreadEdit);
         }
-        perms.ensure(Permission::ThreadManage)?;
+        perms.ensure(Permission::ThreadEdit)?;
 
         // shortcut if it wont modify the thread
         if !patch.changes(&thread) {

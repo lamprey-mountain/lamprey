@@ -1,3 +1,5 @@
+// TODO(#242): make serde optional
+
 /// utility stuff
 pub mod util;
 
