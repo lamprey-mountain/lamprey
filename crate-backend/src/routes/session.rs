@@ -86,7 +86,8 @@ pub async fn session_update(
         SessionIdReq::SessionId(session_id) => session_id,
     };
     let data = s.data();
-    let target_session = data.session_get(session_id).await?;
+    let srv = s.services();
+    let target_session = srv.sessions.get(session_id).await?;
     if !session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
@@ -94,7 +95,9 @@ pub async fn session_update(
         return Ok((StatusCode::NOT_MODIFIED, Json(session)));
     }
     data.session_update(session_id, json).await?;
-    let session = data.session_get(session_id).await?;
+    let srv = s.services();
+    srv.sessions.invalidate(session_id).await;
+    let session = srv.sessions.get(session_id).await?;
     s.broadcast(MessageSync::UpsertSession {
         session: session.clone(),
     })?;
@@ -126,12 +129,14 @@ pub async fn session_delete(
         return Err(Error::NotFound);
     }
     let data = s.data();
-    let target_session = data.session_get(session_id).await?;
+    let srv = s.services();
+    let target_session = srv.sessions.get(session_id).await?;
     if !session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(session_id).await?;
+    srv.sessions.invalidate(session_id).await;
     s.broadcast(MessageSync::DeleteSession {
         id: session_id,
         user_id: target_session.user_id(),
@@ -160,8 +165,8 @@ pub async fn session_get(
         SessionIdReq::SessionSelf => session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
-    let data = s.data();
-    let target_session = data.session_get(session_id).await?;
+    let srv = s.services();
+    let target_session = srv.sessions.get(session_id).await?;
     if !session.can_see(&target_session) {
         return Err(Error::NotFound);
     }

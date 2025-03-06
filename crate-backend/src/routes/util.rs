@@ -33,8 +33,9 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
             .typed_get()
             .ok_or_else(|| Error::MissingAuth)?;
         let session = s
-            .data()
-            .session_get_by_token(SessionToken(auth.token().to_string()))
+            .services()
+            .sessions
+            .get_by_token(SessionToken(auth.token().to_string()))
             .await
             .map_err(|err| match err {
                 Error::NotFound => Error::MissingAuth,

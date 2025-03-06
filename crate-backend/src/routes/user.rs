@@ -31,7 +31,8 @@ pub async fn user_create(
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(auth_user_id);
     let data = s.data();
-    let parent = data.user_get(auth_user_id).await?;
+    let srv = s.services();
+    let parent = srv.users.get(auth_user_id).await?;
     if !parent.user_type.can_create(&body.user_type) {
         return Err(Error::BadStatic("can't create that user"));
     };
@@ -110,7 +111,8 @@ pub async fn user_update(
         return Err(Error::NotFound);
     }
     let data = s.data();
-    let start = data.user_get(target_user_id).await?;
+    let srv = s.services();
+    let start = srv.users.get(target_user_id).await?;
     if !patch.changes(&start) {
         return Err(Error::NotModified);
     }
@@ -138,7 +140,8 @@ pub async fn user_update(
         )
         .await?;
     }
-    let user = data.user_get(target_user_id).await?;
+    srv.users.invalidate(target_user_id).await;
+    let user = srv.users.get(target_user_id).await?;
     s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -171,6 +174,8 @@ pub async fn user_delete(
     data.user_delete(target_user_id).await?;
     data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
+    let srv = s.services();
+    srv.users.invalidate(target_user_id).await;
     s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -196,10 +201,8 @@ pub async fn user_get(
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    let data = s.data();
-    let mut user = data.user_get(target_user_id).await?;
     let srv = s.services();
-    user.status = srv.user_status.get(target_user_id);
+    let user = srv.users.get(target_user_id).await?;
     Ok(Json(user))
 }
 

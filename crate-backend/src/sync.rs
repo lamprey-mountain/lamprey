@@ -115,9 +115,10 @@ impl Connection {
                 resume: reconnect,
                 status,
             } => {
-                let data = self.s.data();
-                let session = data
-                    .session_get_by_token(token)
+                let srv = self.s.services();
+                let session = srv
+                    .sessions
+                    .get_by_token(token)
                     .await
                     .map_err(|err| match err {
                         Error::NotFound => Error::MissingAuth,
@@ -151,8 +152,8 @@ impl Connection {
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
                     let user = srv
-                        .user_status
-                        .set(
+                        .users
+                        .status_set(
                             user_id,
                             status
                                 .map(|s| s.apply(Status::offline()))
@@ -189,8 +190,8 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.user_status
-                    .set(user_id, status.apply(Status::offline()))
+                srv.users
+                    .status_set(user_id, status.apply(Status::offline()))
                     .await?;
             }
             MessageClient::Pong => {
@@ -203,7 +204,7 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.user_status.ping(user_id).await?;
+                srv.users.status_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
         }

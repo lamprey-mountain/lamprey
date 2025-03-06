@@ -12,7 +12,8 @@ use crate::util::Diff;
 
 use super::{ids::SessionId, UserId};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// TODO(#250): verify Hash here is timing safe?
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(
     feature = "utoipa",
     derive(ToSchema),
