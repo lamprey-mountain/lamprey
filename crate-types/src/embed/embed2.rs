@@ -1,5 +1,8 @@
 use crate::{
-    media::{media3::{self, File, MediaFile}, Media},
+    media::{
+        media3::{self, File, MediaFile},
+        Media,
+    },
     misc::Color,
     util::truncate::truncate_with_ellipsis,
     UrlEmbedId,
@@ -187,7 +190,7 @@ pub struct Author {
 #[cfg(feature = "validator")]
 fn sane_url_length(url: &Url) -> Result<(), validator::ValidationError> {
     let l = url.as_str().len();
-    if l >= 1 && l <= 2048  {
+    if l >= 1 && l <= 2048 {
         Ok(())
     } else {
         let mut err = validator::ValidationError::new("length");

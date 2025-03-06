@@ -24,7 +24,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
 /// Create a message
@@ -41,6 +41,7 @@ async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -138,7 +139,7 @@ async fn message_create(
         message: message.clone(),
     };
     srv.threads.invalidate(thread_id); // message count
-    s.broadcast_thread(thread_id, user_id, None, msg).await?;
+    s.broadcast_thread(thread_id, user_id, reason, msg).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -288,6 +289,7 @@ async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     json.validate()?;
@@ -368,7 +370,7 @@ async fn message_edit(
     s.broadcast_thread(
         thread_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertMessage {
             message: message.clone(),
         },
@@ -394,6 +396,7 @@ async fn message_edit(
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
@@ -413,7 +416,7 @@ async fn message_delete(
     s.broadcast_thread(
         thread.id,
         user_id,
-        None,
+        reason,
         MessageSync::DeleteMessage {
             room_id: thread.room_id,
             thread_id,

@@ -54,6 +54,7 @@ impl ServiceThreads {
         user_id: UserId,
         thread_id: ThreadId,
         patch: ThreadPatch,
+        reason: Option<String>,
     ) -> Result<Thread> {
         // check update perms
         let mut perms = self
@@ -118,7 +119,7 @@ impl ServiceThreads {
             thread: thread.clone(),
         };
         self.state
-            .broadcast_room(thread.room_id, user_id, None, msg)
+            .broadcast_room(thread.room_id, user_id, reason, msg)
             .await?;
 
         Ok(thread)

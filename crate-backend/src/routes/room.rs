@@ -21,7 +21,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 
 /// Create a room
 #[utoipa::path(
@@ -114,6 +114,7 @@ async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -122,7 +123,7 @@ async fn room_edit(
     perms.ensure(Permission::RoomManage)?;
     let room = s.services().rooms.update(room_id, user_id, json).await?;
     let msg = MessageSync::UpsertRoom { room: room.clone() };
-    s.broadcast_room(room_id, user_id, None, msg).await?;
+    s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok(Json(room))
 }
 

@@ -15,7 +15,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::error::Result;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 
 /// Invite delete
 #[utoipa::path(
@@ -32,6 +32,7 @@ use super::util::Auth;
 pub async fn invite_delete(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -75,7 +76,7 @@ pub async fn invite_delete(
                 s.broadcast_room(
                     room_id,
                     user_id,
-                    None,
+                    reason,
                     MessageSync::DeleteInvite {
                         code,
                         target: id_target,
@@ -87,7 +88,7 @@ pub async fn invite_delete(
                 s.broadcast_thread(
                     thread_id,
                     user_id,
-                    None,
+                    reason,
                     MessageSync::DeleteInvite {
                         code,
                         target: id_target,
@@ -157,6 +158,7 @@ pub async fn invite_resolve(
 pub async fn invite_use(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -182,7 +184,7 @@ pub async fn invite_use(
             s.broadcast_room(
                 room.id,
                 user_id,
-                None,
+                reason,
                 MessageSync::UpsertRoomMember { member },
             )
             .await?;
@@ -208,6 +210,7 @@ pub async fn invite_use(
 pub async fn invite_room_create(
     Path(room_id): Path<RoomId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -223,7 +226,7 @@ pub async fn invite_room_create(
     s.broadcast_room(
         room_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertInvite {
             invite: invite.clone(),
         },

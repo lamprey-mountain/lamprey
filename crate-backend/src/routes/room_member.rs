@@ -15,7 +15,7 @@ use validator::Validate;
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 /// Room member list
@@ -96,6 +96,7 @@ pub async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -122,7 +123,7 @@ pub async fn room_member_update(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertRoomMember {
             member: res.clone(),
         },
@@ -147,6 +148,7 @@ pub async fn room_member_update(
 pub async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -174,7 +176,7 @@ pub async fn room_member_delete(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertRoomMember { member: res },
     )
     .await?;

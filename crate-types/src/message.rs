@@ -18,7 +18,10 @@ use crate::{
     AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UrlEmbed, UserId,
 };
 
-use super::{media::{Media, MediaRef}, MessageId, MessageVerId, ThreadId, User};
+use super::{
+    media::{Media, MediaRef},
+    MessageId, MessageVerId, ThreadId, User,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

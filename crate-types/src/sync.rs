@@ -174,7 +174,7 @@ pub enum MessageSync {
 
 mod sync2;
 
-pub use sync2::{SyncParams, SyncVersion, SyncFormat, SyncCompression};
+pub use sync2::{SyncCompression, SyncFormat, SyncParams, SyncVersion};
 
 impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {

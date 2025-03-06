@@ -20,7 +20,7 @@ use crate::{
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
 /// Create a thread
@@ -38,6 +38,7 @@ async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -76,7 +77,7 @@ async fn thread_create(
     s.broadcast_room(
         room_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertThread {
             thread: thread.clone(),
         },
@@ -156,13 +157,14 @@ async fn thread_update(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, json)
+        .update(user_id, thread_id, json, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -244,6 +246,7 @@ async fn thread_ack(
 async fn thread_pin(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
@@ -254,7 +257,7 @@ async fn thread_pin(
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -277,6 +280,7 @@ async fn thread_pin(
 async fn thread_archive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
@@ -287,7 +291,7 @@ async fn thread_archive(
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -310,6 +314,7 @@ async fn thread_archive(
 async fn thread_activate(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
@@ -320,7 +325,7 @@ async fn thread_activate(
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -342,6 +347,7 @@ async fn thread_activate(
 async fn thread_delete(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
@@ -351,7 +357,7 @@ async fn thread_delete(
     };
     s.services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -373,6 +379,7 @@ async fn thread_delete(
 async fn thread_typing(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
@@ -381,7 +388,7 @@ async fn thread_typing(
     s.broadcast_thread(
         thread_id,
         user_id,
-        None,
+        reason,
         MessageSync::Typing {
             thread_id,
             user_id,
