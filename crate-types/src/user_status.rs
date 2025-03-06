@@ -1,8 +1,6 @@
-// use std::{any::Any, cmp::Ordering};
-
 use serde::{Deserialize, Serialize};
 
-// use crate::util::Time;
+use crate::util::Time;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -16,17 +14,16 @@ use utoipa::ToSchema;
 pub struct Status {
     #[serde(flatten)]
     pub status: StatusType,
-    // #[serde(flatten)]
-    // pub status_text: Option<StatusText>,
+    #[serde(flatten)]
+    pub status_text: Option<StatusText>,
 }
 
-// TODO
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct StatusText {
-//     pub text: String,
-//     pub clear_at: Option<Time>,
-// }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct StatusText {
+    pub text: String,
+    pub clear_at: Option<Time>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -36,45 +33,42 @@ pub enum StatusType {
     Offline,
 
     /// connected to the service, no special status
-    Online,
-    // TODO: online_for
-    // Online {
-    //     /// how long this user has been online for
-    //     online_for: Time,
-    // },
+    Online {
+        // /// how long this user has been online for
+        // online_for: Time,
+    },
 
-    // TODO: Away
-    // /// connected but not currently active (ie away from their computer)
-    // Away {
-    //     /// how long this user has been idle for
-    //     away_for: Time,
-    // },
+    /// connected but not currently active (ie away from their computer)
+    Away {
+        // /// how long this user has been idle for
+        // away_for: Time,
+    },
 
-    // TODO: Busy
-    // /// currently unavailable to chat
-    // Busy {
-    //     /// how long this user will be busy for
-    //     until: Time,
+    /// currently unavailable to chat
+    Busy {
+        // /// how long this user will be busy for
+        // until: Time,
+        /// busy might be set automatically when they look busy
+        /// but it might not be that important
+        /// this explicitly says "do not disturb"
+        dnd: bool,
+    },
 
-    //     /// busy might be set automatically when they look busy
-    //     /// but it might not be that important
-    //     /// this explicitly says "do not disturb"
-    //     dnd: bool,
-    // },
-
-    // TODO: Available
-    // /// currently available to chat
-    // Available {
-    //     /// how long this user will be available for
-    //     until: Time,
-    // },
+    /// currently available to chat
+    Available {
+        // /// how long this user will be available for
+        // until: Time,
+    },
 }
 
+/// an update to a user's status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct StatusPatch {
     #[serde(flatten)]
     pub status: Option<StatusTypePatch>,
+    #[serde(flatten)]
+    pub status_text: Option<Option<StatusText>>,
 }
 
 /// data user sends to update StatusType
@@ -87,13 +81,36 @@ pub enum StatusTypePatch {
 
     /// connected to the service, no special status
     Online,
+
+    /// connected but not currently active (ie away from their computer)
+    Away {
+        // /// how long this user has been idle for
+        // away_for: Time,
+    },
+
+    /// currently unavailable to chat
+    Busy {
+        // /// how long this user will be busy for
+        // until: Time,
+        /// busy might be set automatically when they look busy
+        /// but it might not be that important
+        /// this explicitly says "do not disturb"
+        dnd: bool,
+    },
+
+    /// currently available to chat
+    Available {
+        // /// how long this user will be available for
+        // until: Time,
+    },
 }
 
 impl Status {
     /// construct a default online status
     pub fn online() -> Status {
         Status {
-            status: StatusType::Online,
+            status: StatusType::Online {},
+            status_text: None,
         }
     }
 
@@ -101,18 +118,24 @@ impl Status {
     pub fn offline() -> Status {
         Status {
             status: StatusType::Offline,
+            status_text: None,
         }
     }
 }
 
 impl StatusPatch {
+    // should keep times? idk
     pub fn apply(self, to: Status) -> Status {
         Status {
             status: match self.status {
                 Some(StatusTypePatch::Offline) => StatusType::Offline,
-                Some(StatusTypePatch::Online) => StatusType::Online,
+                Some(StatusTypePatch::Online) => StatusType::Online {},
+                Some(StatusTypePatch::Away {}) => StatusType::Away {},
+                Some(StatusTypePatch::Busy { dnd }) => StatusType::Busy { dnd },
+                Some(StatusTypePatch::Available {}) => StatusType::Available {},
                 None => to.status,
             },
+            status_text: self.status_text.unwrap_or(to.status_text),
         }
     }
 }

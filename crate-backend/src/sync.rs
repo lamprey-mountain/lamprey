@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
 use tokio::time::Instant;
-use tracing::debug;
+use tracing::{debug, trace};
 use types::user_status::Status;
 use types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
@@ -109,6 +109,7 @@ impl Connection {
         ws: &mut WebSocket,
         timeout: &mut Timeout,
     ) -> Result<()> {
+        trace!("{:#?}", msg);
         match msg {
             MessageClient::Hello {
                 token,
