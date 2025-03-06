@@ -20,8 +20,6 @@ use crate::{
 
 use super::{Media, MediaRef, MessageId, MessageVerId, ThreadId, User};
 
-// FIXME: uncomment #[deprecated] attrs (disabled to prevent extraneous warnings for now)
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -36,17 +34,25 @@ pub struct Message {
     /// maybe i will replace with a header so nonces can be used everywhere
     pub nonce: Option<String>,
 
-    // #[deprecated = "not that useful"]
+    /// the index/position/ordering of this message in the thread
+    ///
+    /// deprecated: not that useful
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub ordering: i32,
 
     /// who sent this message
-    // #[deprecated = "use author_id and fetch manually, better caching and easier server impl"]
+    ///
+    /// deprecated: use author_id and fetch manually, better caching and easier server impl
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub author: User,
 
     /// the id of who sent this message
     pub author_id: UserId,
 
-    // #[deprecated = "use message.state"]
+    /// if this message is pinned
+    ///
+    /// deprecated: use message.state
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub is_pinned: bool,
 
     #[serde(flatten)]
@@ -128,10 +134,12 @@ pub struct Resolved {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreate {
+    /// the message's content, in either markdown or the new format depending on if use_new_text_formatting is true
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
+    /// uses the new new formatting system if true, otherwise uses markdown
     // TEMP: opt in to the new formatting system
     #[serde(default)]
     pub use_new_text_formatting: bool,
@@ -144,15 +152,27 @@ pub struct MessageCreate {
     #[serde(default)]
     pub attachments: Vec<MediaRef>,
 
-    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    /// arbitrary metadata associated with a message
+    ///
+    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub metadata: Option<serde_json::Value>,
 
+    /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
-    /// temporary!
+    /// override the name of this message's sender
+    ///
+    /// deprecated: create new puppets for each bridged user instead
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<String>,
 
-    // #[deprecated = "Ideompotency-Key"]
+    /// used so the client can know if the message was sent or not
+    ///
+    /// deprecated: Ideompotency-Key
+    // TODO(#87): actually support Ideompotency-Key
+    // TODO(#246): use this to deduplicate messages
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub nonce: Option<String>,
 
     #[cfg(feature = "feat_custom_embeds")]
@@ -163,6 +183,7 @@ pub struct MessageCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessagePatch {
+    /// the new message content. whether its markdown/new format depends on the target message's format
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]
@@ -175,16 +196,21 @@ pub struct MessagePatch {
     #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
     pub attachments: Option<Vec<MediaRef>>,
 
-    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    /// arbitrary metadata associated with a message
+    ///
+    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     #[serde(default, deserialize_with = "some_option")]
     pub metadata: Option<Option<serde_json::Value>>,
 
+    /// the message this message is replying to
     #[serde(default, deserialize_with = "some_option")]
     pub reply_id: Option<Option<MessageId>>,
 
-    // is this temporary, or should i keep it?
-    // removing it would break all existing bridged messages
-    #[serde(default, deserialize_with = "some_option")]
+    /// override the name of this message's sender
+    ///
+    /// deprecated: create new puppets for each bridged user instead
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<Option<String>>,
 
     #[cfg(feature = "feat_custom_embeds")]
@@ -381,33 +407,40 @@ pub struct Reactions {
 }
 
 /// a basic message, using the legacy markdown syntax
-// #[deprecated = "markdown is GONE, baby! long live markdown!"]
+///
+/// NOTE: new message features won't be backported here!
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageDefaultMarkdown {
+    /// the message's content in markdown
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
 
-    // TODO(#325): use MediaRef here
+    // TODO(#325): use MediaRef here during create
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub attachments: Vec<Media>,
 
-    // #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    /// arbitrary metadata associated with a message
+    ///
+    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub metadata: Option<serde_json::Value>,
 
+    /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<UrlEmbed>,
 
-    // #[deprecated = "create new puppets for each bridged user instead"]
-    /// override the name of the user who sent this message. will be removed soon!
+    /// override the name of this message's sender
+    ///
+    /// deprecated: create new puppets for each bridged user instead
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<String>,
-    // NOTE: new message features won't be backported here
 }
 
 #[cfg(feature = "feat_messages_new_text")]
@@ -416,6 +449,7 @@ pub struct MessageDefaultMarkdown {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageDefaultTagged {
+    /// the message's content in the new format
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
@@ -424,9 +458,13 @@ pub struct MessageDefaultTagged {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub attachments: Vec<Media>,
 
-    #[deprecated = "arbitrary metadata is too dubious, sorry. will come up with a better solution later."]
+    /// arbitrary metadata associated with a message
+    ///
+    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub metadata: Option<serde_json::Value>,
 
+    /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
@@ -451,18 +489,18 @@ pub struct Interactions {
     pub reactions_default: Vec<Emoji>,
 }
 
-#[cfg(feature = "validator")]
-mod v {
-    use validator::Validate;
+// #[cfg(feature = "validator")]
+// mod v {
+//     use validator::Validate;
 
-    use super::MessageType;
+//     use super::MessageType;
 
-    impl Validate for MessageType {
-        fn validate(&self) -> Result<(), validator::ValidationErrors> {
-            todo!()
-        }
-    }
-}
+//     impl Validate for MessageType {
+//         fn validate(&self) -> Result<(), validator::ValidationErrors> {
+//             todo!()
+//         }
+//     }
+// }
 
 impl Diff<Message> for MessagePatch {
     // FIXME

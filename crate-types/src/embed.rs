@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-// FIXME: max lengths
+// FIXME(#247): max lengths
 // maybe allow iframes for some sites? probably could be done client side though
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
