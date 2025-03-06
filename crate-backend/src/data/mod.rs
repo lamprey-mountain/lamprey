@@ -1,10 +1,11 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use types::search::SearchMessageRequest;
 use types::{
     AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,
+    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
+    ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,
 };
 use url::Url;
 use uuid::Uuid;

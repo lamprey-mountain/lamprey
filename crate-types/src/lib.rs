@@ -50,7 +50,6 @@ pub use permission::*;
 pub use role::*;
 pub use room::*;
 pub use room_member::*;
-pub use search::*;
 pub use session::*;
 pub use sync::*;
 pub use thread::*;

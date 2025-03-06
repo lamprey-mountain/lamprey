@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use sqlx::{query_file_as, query_file_scalar, Acquire};
-use types::{
-    Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
-    SearchMessageRequest,
-};
+use types::search::SearchMessageRequest;
+use types::{Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse};
 
 use crate::data::postgres::message::{DbMessage, DbMessageType};
 use crate::data::postgres::Pagination;
