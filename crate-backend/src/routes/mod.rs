@@ -17,6 +17,7 @@ mod room_member;
 mod search;
 mod session;
 mod sync;
+mod tag;
 mod thread;
 mod thread_member;
 mod user;
@@ -37,6 +38,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(search::routes())
         .merge(session::routes())
         .merge(sync::routes())
+        .merge(tag::routes())
         .merge(thread::routes())
         .merge(thread_member::routes())
         .merge(user::routes())
