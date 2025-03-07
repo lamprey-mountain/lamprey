@@ -8,6 +8,7 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
+use types::auth::AuthStatus;
 use types::auth::TotpRecoveryCodes;
 use types::auth::TotpState;
 use types::auth::TotpStateWithSecret;
@@ -276,6 +277,20 @@ async fn auth_totp_delete(
     Err(Error::Unimplemented)
 }
 
+/// Auth status
+#[utoipa::path(
+    get,
+    path = "/auth",
+    tags = ["auth"],
+    responses((status = OK, body = AuthStatus, description = "success")),
+)]
+async fn auth_status(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
@@ -291,7 +306,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_totp_delete))
         .routes(routes!(auth_totp_recovery_get))
         .routes(routes!(auth_totp_recovery_rotate))
-    // .routes(routes!(auth_list))
+        .routes(routes!(auth_status))
 }
 
 // planning

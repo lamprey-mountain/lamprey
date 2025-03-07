@@ -64,6 +64,7 @@ pub struct EmailInfoPatch {
 /// what someone can do with this email address
 pub enum EmailTrust {
     /// can't be used for any auth
+    /// the only trust levels unverified emails can have
     Never,
 
     /// can be used to log in

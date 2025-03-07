@@ -56,7 +56,12 @@ pub struct TotpRecoveryCodeUsed {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuthStatus {
+    /// if there is at least one verified email address
     pub has_verified_email: bool,
-    pub has_oauth: bool,
+
+    /// if local totp state is_valid
     pub has_totp: bool,
+
+    /// the oauth providers this user has authenticated with
+    pub oauth_providers: Vec<String>,
 }
