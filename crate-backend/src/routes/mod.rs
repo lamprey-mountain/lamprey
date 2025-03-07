@@ -19,7 +19,6 @@ mod room;
 mod room_member;
 // mod moderation;
 mod permission_overwrite;
-// mod user_config;
 mod search;
 mod session;
 mod sync;
@@ -27,6 +26,7 @@ mod tag;
 mod thread;
 mod thread_member;
 mod user;
+mod user_config;
 mod util;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -52,4 +52,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(thread_member::routes())
         .merge(permission_overwrite::routes())
         .merge(user::routes())
+        .merge(user_config::routes())
 }
