@@ -5,14 +5,33 @@ use crate::{MediaId, MessageId, ReportId, RoomId, ThreadId, UserId};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 /// moderation report
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Report {
     pub id: ReportId,
-    pub creator_id: UserId,
+
+    /// user id of who reported this
+    // do i want to make this an Option and allow anonymous reports?
+    pub reporter_id: UserId,
+
+    /// built in reason
     pub reason: ReportReason,
+
+    /// user supplied note
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 4096)
+    )]
+    pub note: Option<String>,
+
+    /// where the report is being sent to
     pub destination: ReportDestination,
+
+    /// what's being reported
     pub target: ReportTarget,
 }
 
@@ -104,14 +123,26 @@ pub enum ReportReason {
     /// user: not old enough
     Underage,
 
-    /// user specified
-    Other(String),
+    /// something else; see note
+    Other,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ReportCreate {
+    /// built in reason
     pub reason: ReportReason,
+
+    /// user supplied note
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 4096)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub note: Option<String>,
+
+    /// where the report is being sent to
     pub destination: ReportDestination,
 }
 
