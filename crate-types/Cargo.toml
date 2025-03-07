@@ -21,10 +21,10 @@ strum = { version = "0.27.1", features = ["derive"] }
 paste = "1.0.15"
 
 [features]
+# serde = []
 utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
 formatting_extra = []
-feat_messages_new_text = []
 feat_reactions = []
 feat_interactions = []
 feat_custom_embeds = []
@@ -34,5 +34,16 @@ feat_thread_type_event = []
 feat_thread_type_voice = []
 feat_thread_type_document = []
 feat_thread_type_table = []
-feat_move_messages = []
+feat_thread_type_report = []
 feat_forward_threads = []
+feat_custom_emoji = []
+# TODO: rename to be more consistent
+feat_move_messages = []
+feat_messages_new_text = []
+feat_message_forwarding = ["feat_messages_new_text"]
+feat_automod = []
+
+default = [
+  "utoipa",
+  "validator",
+]

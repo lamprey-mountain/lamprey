@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{RoomId, ThreadId, UserId};
+use crate::{RoomId, TagId, ThreadId, UserId};
 
 // TODO(#256): fancier searching
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -157,6 +157,11 @@ pub struct SearchThreadsRequest {
     #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
     pub room_id: Vec<RoomId>,
+
+    /// Only return threads with these tags.
+    #[cfg_attr(feature = "utoipa", schema(ignore))]
+    #[serde(default)]
+    pub tag_id: Vec<TagId>,
 
     #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]

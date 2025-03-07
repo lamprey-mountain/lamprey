@@ -3,19 +3,20 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::CallId;
+use crate::{moderation::Report, MessageVerId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadTypeVoicePublic {
-    pub call_id: Option<CallId>,
-    pub bitrate: u64,
-    pub user_limit: u64,
+pub struct ThreadTypeReportPublic {
+    pub last_version_id: MessageVerId,
+    pub message_count: u64,
+    pub report: Report,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadTypeVoicePrivate {
-    // what to put here?
-    // pub voice_state: Option<VoiceState>,
+pub struct ThreadTypeReportPrivate {
+    pub is_unread: bool,
+    pub last_read_id: Option<MessageVerId>,
+    pub mention_count: u64,
 }

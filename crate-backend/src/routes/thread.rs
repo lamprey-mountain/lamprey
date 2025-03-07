@@ -63,7 +63,7 @@ async fn thread_create(
             thread_id,
             attachment_ids: vec![],
             author_id: user_id,
-            message_type: MessageType::ThreadUpdate(types::ThreadUpdate {
+            message_type: MessageType::ThreadUpdate(types::MessageThreadUpdate {
                 patch: ThreadPatch {
                     name: Some(json.name),
                     description: Some(json.description),

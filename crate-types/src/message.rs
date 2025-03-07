@@ -9,11 +9,17 @@ use validator::Validate;
 #[cfg(feature = "feat_reactions")]
 use crate::emoji::Emoji;
 
+#[cfg(feature = "feat_reactions")]
+use crate::reaction::ReactionCounts;
+
+#[cfg(feature = "feat_automod")]
+use crate::RedexId;
+
 use crate::moderation::Report;
 use crate::util::some_option;
 use crate::util::Diff;
 use crate::util::Time;
-use crate::RedexId;
+use crate::RoomId;
 use crate::{
     AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UrlEmbed, UserId,
 };
@@ -220,6 +226,7 @@ pub struct MessagePatch {
     pub embeds: Vec<UrlEmbed>,
 }
 
+// FIXME: utoipa doesnt seem to like #[deprecated] here
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -236,7 +243,7 @@ pub enum MessageType {
     /// a basic message, using the new tagged text format
     DefaultTagged(MessageDefaultTagged),
 
-    #[cfg(feature = "feat_messages_new_text")]
+    #[cfg(feature = "feat_message_forwarding")]
     /// (TODO) a message copied from somewhere else
     Forward(MessageDefaultTagged),
 
@@ -253,40 +260,44 @@ pub enum MessageType {
     /// (TODO) a member was added to the thread (what about room?)
     MemberAdd(MessageMember),
 
-    /// (TODO) a member was removed fromthe thread (what about room?)
+    /// (TODO) a member was removed from the thread (what about room?)
     MemberRemove(MessageMember),
 
     /// a message logging an update to the thread
-    ThreadUpdate(ThreadUpdate),
+    ThreadUpdate(MessageThreadUpdate),
 
     // why have a separate event instead of ThreadUpdate? semantics i guess
-    // ThreadCreate(ThreadPatch),
     /// (TODO) a message at the beginning of a thread
-    ThreadCreate(ThreadUpdate),
+    ThreadCreate(MessageThreadUpdate),
+
+    /// someone mentioned this thread
+    // needs some sort of antispam system. again, see github.
+    // doesnt necessarily reference a thread in the same room, but usually should
+    ThreadPingback(MessageThreadPingback),
 
     /// (TODO) receive announcement threads from this room
+    // but where does this get sent to???
     RoomFollowed(MessageRoomFollowed),
 
     /// (TODO) interact with a bot, uncertain if i'll go this route
     BotCommand(MessageBotCommand),
 
     /// (TODO) repost audit log to a thread? uncertain
+    // ...or display the audit log as a thread
+    // #[deprecated = "use audit log"]
     ModerationLog(MessageModerationLog),
 
     /// (TODO) implement some sort of automoderator? uncertain
+    #[cfg(feature = "feat_automod")]
     ModerationAuto(MessageModerationAuto),
 
     /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
+    // #[deprecated = "reports will be impl'd as threads"]
     ModerationReport(MessageModerationReport),
 
     /// (TODO) important message from the system/server
+    // #[deprecated = "check if user.type is System"]
     SystemMessage(MessageSystemMessage),
-    // /// a message referencing another thread (ie. linking two threads, mentioning another thread. see github.)
-    // // needs some sort of antispam system. again, see github.
-    // // doesnt need to reference a thread in the same room
-    // ReferenceSend(MessageLink),
-    // ReferenceRecv(MessageLink),
-    // ReferenceBidi(MessageLink), // not sure if this makes sense to have...?
 }
 
 /// Information about a message being pinned or unpinned
@@ -301,8 +312,16 @@ pub struct MessagePin {
 /// Information about a thread being updated
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadUpdate {
+pub struct MessageThreadUpdate {
     pub patch: ThreadPatch,
+}
+
+/// Information about the pingback
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MessageThreadPingback {
+    pub source_room_id: RoomId,
+    pub source_thread_id: ThreadId,
 }
 
 #[cfg(feature = "feat_move_messages")]
@@ -346,6 +365,7 @@ pub struct MessageModerationLog {
 }
 
 /// automatic moderation reports
+#[cfg(feature = "feat_automod")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationAuto {
@@ -398,17 +418,6 @@ pub struct MessageSystemMessage {
     pub embeds: Vec<UrlEmbed>,
 }
 
-#[cfg(feature = "feat_reactions")]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Reactions {
-    pub emoji: Emoji,
-    pub count: u64,
-
-    #[serde(rename = "self")]
-    pub self_reacted: bool,
-}
-
 /// a basic message, using the legacy markdown syntax
 ///
 /// NOTE: new message features won't be backported here!
@@ -446,8 +455,8 @@ pub struct MessageDefaultMarkdown {
     pub override_name: Option<String>,
 }
 
-#[cfg(feature = "feat_messages_new_text")]
 /// a basic message, using the shiny new and very experimental tagged text format
+#[cfg(feature = "feat_messages_new_text")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -475,14 +484,14 @@ pub struct MessageDefaultTagged {
     pub embeds: Vec<UrlEmbed>,
 
     #[cfg(feature = "feat_reactions")]
-    pub reactions: Reactions,
+    pub reactions: ReactionCounts,
 
     #[cfg(feature = "feat_interactions")]
     pub interactions: Interactions,
 }
 
-#[cfg(feature = "feat_interactions")]
 /// ways to interact with a message
+#[cfg(feature = "feat_interactions")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -492,35 +501,33 @@ pub struct Interactions {
     pub reactions_default: Vec<Emoji>,
 }
 
-// #[cfg(feature = "validator")]
-// mod v {
-//     use validator::Validate;
-
-//     use super::MessageType;
-
-//     impl Validate for MessageType {
-//         fn validate(&self) -> Result<(), validator::ValidationErrors> {
-//             todo!()
-//         }
-//     }
-// }
-
 impl Diff<Message> for MessagePatch {
-    // FIXME
-    fn changes(&self, _other: &Message) -> bool {
-        true
+    fn changes(&self, other: &Message) -> bool {
+        match &other.message_type {
+            MessageType::DefaultMarkdown(m) => {
+                self.content.changes(&m.content)
+                    || self.metadata.changes(&m.metadata)
+                    || self.reply_id.changes(&m.reply_id)
+                    || self.override_name.changes(&m.override_name)
+                    || self.attachments.as_ref().is_some_and(|a| {
+                        a.len() != m.attachments.len()
+                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
+                    })
+            }
+            #[cfg(feature = "feat_messages_new_text")]
+            MessageType::DefaultTagged(m) => {
+                self.content.changes(&m.content)
+                    || self.metadata.changes(&m.metadata)
+                    || self.reply_id.changes(&m.reply_id)
+                    || self.attachments.as_ref().is_some_and(|a| {
+                        a.len() != m.attachments.len()
+                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
+                    })
+            }
+            // this edit is invalid!
+            _ => false,
+        }
     }
-
-    // fn changes(&self, other: &Message) -> bool {
-    //     self.content.changes(&other.content)
-    //         || self.metadata.changes(&other.metadata)
-    //         || self.reply_id.changes(&other.reply_id)
-    //         || self.override_name.changes(&other.override_name)
-    //         || self.attachments.as_ref().is_some_and(|a| {
-    //             a.len() != other.attachments.len()
-    //                 || a.iter().zip(&other.attachments).any(|(a, b)| a.id != b.id)
-    //         })
-    // }
 }
 
 impl MessageType {
@@ -529,7 +536,7 @@ impl MessageType {
             MessageType::DefaultMarkdown(_) => true,
             #[cfg(feature = "feat_messages_new_text")]
             MessageType::DefaultTagged(_) => true,
-            #[cfg(feature = "feat_messages_new_text")]
+            #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => true,
             MessageType::MessagePinned(_) => true,
             MessageType::MessageUnpinned(_) => true,
@@ -541,7 +548,9 @@ impl MessageType {
             MessageType::BotCommand(_) => true,
 
             // these ones probably need special permission checks
+            MessageType::ThreadPingback(_) => true,
             MessageType::ModerationLog(_) => true,
+            #[cfg(feature = "feat_automod")]
             MessageType::ModerationAuto(_) => true,
             MessageType::ModerationReport(_) => true,
             MessageType::SystemMessage(_) => true,

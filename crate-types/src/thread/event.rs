@@ -80,10 +80,11 @@ pub enum EventStatus {
 }
 
 // are events a type of thread or their own thing? what if i want to tag events? maybe there might be one logical (repeating) event that creates multiple threads?
+// i need a better name for Event/EventId before it makes everything confusing
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Event {
-    // pub id: EventId,
+    // pub id: EventId, // same as thread id?
     pub name: OwnedText,
     pub description: Option<OwnedText>,
     pub color: Option<Color>,
@@ -111,6 +112,8 @@ pub struct Event {
 }
 
 // maybe it could be an extension of ThreadMembership? eh maybe not
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum EventRsvpType {
     Yes,
     No,
@@ -119,6 +122,8 @@ pub enum EventRsvpType {
     Waitlisted,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EventRsvp {
     pub thread_id: ThreadId,
     pub user_id: UserId,

@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    user_status::StatusPatch, InviteTargetId, InviteWithMetadata, Relationship, ThreadMember,
+    user_status::StatusPatch, util::Time, InviteTargetId, InviteWithMetadata, Relationship,
+    ThreadMember,
 };
 
 use super::{
@@ -87,6 +88,8 @@ pub enum MessagePayload {
     Reconnect { can_resume: bool },
 }
 
+// TODO(#259): rename to NounVerb
+// maybe replace *Delete with *Upsert with state = deleted (but don't send actual full item content)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -120,11 +123,15 @@ pub enum MessageSync {
         invite: InviteWithMetadata,
     },
     DeleteMessage {
+        /// deprecated = "keyed by thread_id"
+        #[cfg_attr(feature = "utoipa", schema(deprecated))]
         room_id: RoomId,
         thread_id: ThreadId,
         message_id: MessageId,
     },
     DeleteMessageVersion {
+        /// deprecated = "keyed by thread_id"
+        #[cfg_attr(feature = "utoipa", schema(deprecated))]
         room_id: RoomId,
         thread_id: ThreadId,
         message_id: MessageId,
@@ -145,28 +152,97 @@ pub enum MessageSync {
         code: InviteCode,
         target: InviteTargetId,
     },
+
     Typing {
         thread_id: ThreadId,
         user_id: UserId,
-        #[serde(
-            serialize_with = "time::serde::rfc3339::serialize",
-            deserialize_with = "time::serde::rfc3339::deserialize"
-        )]
-        until: time::OffsetDateTime,
+        until: Time,
     },
 
+    /// read receipt update
     ThreadAck {
         thread_id: ThreadId,
         message_id: MessageId,
         version_id: MessageVerId,
     },
+
     RelationshipUpsert {
         user_id: UserId,
         relationship: Relationship,
     },
+
     RelationshipDelete {
         user_id: UserId,
     },
+    // snip... ----- >8 ----
+    // everything below is TODO
+
+    // /// remove multiple messages at once
+    // MessageDeleteBulk {
+    //     thread_id: ThreadId,
+    //     message_ids: Vec<MessageId>,
+    // },
+
+    // ReactionUpsert {
+    //     thread_id: ThreadId,
+    //     message_id: MessageId,
+    //     reaction: Reaction,
+    // },
+
+    // ReactionDelete {
+    //     thread_id: ThreadId,
+    //     message_id: MessageId,
+    //     reaction: Reaction,
+    // },
+
+    // /// remove all reactions
+    // ReactionPurge {
+    //     thread_id: ThreadId,
+    //     message_id: MessageId,
+    // },
+
+    // VoiceUpsert {
+    //     thread_id: ThreadId,
+    //     user_id: UserId,
+    //     voice_state: VoiceState,
+    // },
+
+    // VoiceDelete {
+    //     thread_id: ThreadId,
+    //     user_id: UserId,
+    // },
+
+    // EventRsvp {
+    //     thread_id: ThreadId,
+    //     user_id: UserId,
+    //     status: EventRsvpType,
+    // },
+
+    // DocumentEdit {
+    //     thread_id: ThreadId,
+    //     edit: DocumentEdit,
+    // },
+
+    // TableRowUpsert {
+    //     thread_id: ThreadId,
+    //     row: Row,
+    // },
+
+    // TableRowDelete {
+    //     thread_id: ThreadId,
+    //     row_id: RowId,
+    // },
+
+    // ReportUpsert {
+    //     report: Report,
+    // },
+
+    // /// arbitrary user defined event
+    // Dispatch {
+    //     user_id: UserId,
+    //     action: String,
+    //     payload: Option<serde_json::Value>,
+    // },
 }
 
 // TODO: maybe split out different message types

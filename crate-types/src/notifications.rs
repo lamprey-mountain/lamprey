@@ -1,222 +1,244 @@
-#![allow(unused)]
+use serde::{Deserialize, Serialize};
 
-use crate::{MessageId, MessageVerId, RoomId, ThreadId};
+#[cfg(feature = "utoipa")]
+use utoipa::ToSchema;
 
-// a bunch of random ideas from past things
-// TODO: pare and reduce these down
+/// a bunch of random ideas from past/old projects that i might reuse
+#[allow(unused)]
+mod old {
+    // TODO: pare/reduce these down until i get somewhat decent types
+    use crate::{util::Time, MessageId, MessageVerId, RoomId, ThreadId};
 
-enum InboxFilter {
-    /// The default filter: MentionsUser | MentionsBulk | ThreadsParticipating | ThreadsInteresting
-    Default,
+    enum InboxFilter {
+        /// The default filter: MentionsUser | MentionsBulk | ThreadsParticipating | ThreadsInteresting
+        Default,
 
-    /// Get user mentions.
-    MentionsUser,
+        /// Get user mentions.
+        MentionsUser,
 
-    /// Get "bulk" (@room, @thread) mentions.
-    MentionsBulk,
+        /// Get "bulk" (@room, @thread) mentions.
+        MentionsBulk,
 
-    /// Get threads that the user is participating in.
-    ThreadsParticipating,
+        /// Get threads that the user is participating in.
+        ThreadsParticipating,
 
-    /// Get "interesting" threads.
-    ThreadsInteresting,
+        /// Get "interesting" threads.
+        ThreadsInteresting,
 
-    /// Include read threads.
-    IncludeRead,
+        /// Include read threads.
+        IncludeRead,
 
-    /// Include read threads.
-    IncludeIgnored,
-}
+        /// Include read threads.
+        IncludeIgnored,
+    }
 
-struct Notification {
-    pub room_id: RoomId,
-    pub thread_id: ThreadId,
-    pub message_id: MessageId,
-    pub message_version_id: MessageVerId,
-    pub read: bool,
-}
+    struct Notification {
+        pub room_id: RoomId,
+        pub thread_id: ThreadId,
+        pub message_id: MessageId,
+        pub message_version_id: MessageVerId,
+        pub read: bool,
+    }
 
-enum NotificationLevelGlobal {
-    /// You will be notified of new replies in threads.
-    Replies,
+    enum NotificationLevelGlobal {
+        /// You will be notified of new replies in threads.
+        Replies,
 
-    /// You will be notified of new threads.
-    Creation,
+        /// You will be notified of new threads.
+        Creation,
 
-    /// New threads and thread updates show up in your inbox.
-    Watching,
+        /// New threads and thread updates show up in your inbox.
+        Watching,
 
-    /// You will only be notified on @mention
-    Mentions,
-}
+        /// You will only be notified on @mention
+        Mentions,
+    }
 
-enum NotificationLevelRoom {
-    /// Uses your global default notification config
-    Default,
+    enum NotificationLevelRoom {
+        /// Uses your global default notification config
+        Default,
 
-    /// You will be notified of new replies in threads
-    Replies,
+        /// You will be notified of new replies in threads
+        Replies,
 
-    /// You will be notified of new threads
-    Creation,
+        /// You will be notified of new threads
+        Creation,
 
-    /// New threads and thread updates show up in your inbox
-    Watching,
+        /// New threads and thread updates show up in your inbox
+        Watching,
 
-    /// You will only be notified on @mention
-    Mentions,
+        /// You will only be notified on @mention
+        Mentions,
 
-    /// This thread does not create any notifications
-    /// This setting overrides any thread specific level
-    Muted { until: Option<Time> },
-}
+        /// This thread does not create any notifications
+        /// This setting overrides any thread specific level
+        Muted { until: Option<Time> },
+    }
 
-enum NotificationLevelThread {
-    /// Uses the room's default notifications
-    Default,
+    enum NotificationLevelThread {
+        /// Uses the room's default notifications
+        Default,
 
-    /// You will be notified of new replies in this thread
-    Replies,
+        /// You will be notified of new replies in this thread
+        Replies,
 
-    /// Updates to this thread will show up in your inbox
-    Watching,
+        /// Updates to this thread will show up in your inbox
+        Watching,
 
-    /// You will only be notified on @mention
-    Mentions,
+        /// You will only be notified on @mention
+        Mentions,
 
-    /// This thread does not create any notifications
-    Muted { until: Option<Time> },
-}
+        /// This thread does not create any notifications
+        Muted { until: Option<Time> },
+    }
 
-/// the naive solution?
-enum Setting {
-    Default,
+    /// the naive solution?
+    enum Setting {
+        Default,
 
-    /// notify on all new threads + all messages in watched threads
-    ThreadsAndEverything,
+        /// notify on all new threads + all messages in watched threads
+        ThreadsAndEverything,
 
-    /// notify on all new threads + all mentions in watched threads
-    ThreadsAndMentions,
+        /// notify on all new threads + all mentions in watched threads
+        ThreadsAndMentions,
 
-    /// notify on all messages in watched threads
-    Everything,
+        /// notify on all messages in watched threads
+        Everything,
 
-    /// notify on all mentions in watched threads (a good default)
-    Mentions,
+        /// notify on all mentions in watched threads (a good default)
+        Mentions,
 
-    /// don't notify
-    Subdued,
-    Muted,
-}
+        /// don't notify
+        Subdued,
+        Muted,
+    }
 
-/// the better solution?
-enum RoomSetting {
-    Default,
+    /// the better solution?
+    enum RoomSetting {
+        Default,
 
-    /// notify on new threads
-    Everything,
+        /// notify on new threads
+        Everything,
 
-    /// notify on all new voice threads (for dm calls?)
-    Voice,
+        /// notify on all new voice threads (for dm calls?)
+        Voice,
 
-    /// don't notify on new threads (a good default)
-    Mentions,
+        /// don't notify on new threads (a good default)
+        Mentions,
 
-    /// don't notify
-    Subdued,
-    Muted,
-}
+        /// don't notify
+        Subdued,
+        Muted,
+    }
 
-enum ThreadSetting {
-    Default,
+    enum ThreadSetting {
+        Default,
 
-    /// notify on all new messages (also a good default?)
-    Everything,
+        /// notify on all new messages (also a good default?)
+        Everything,
 
-    /// notify on all mentions (default?)
-    Mentions,
+        /// notify on all mentions (default?)
+        Mentions,
 
-    /// don't notify
-    Muted,
-}
+        /// don't notify
+        Muted,
+    }
 
-/// another solution? (i prefer this one)
+    /// another solution? (i prefer this one)
+    struct RoomSettings {
+        /// notify when any new thread is created
+        notify_on_thread: bool,
+        // notify_on_thread: None | VoiceOnly | All,
+        /// notify when any new message is created
+        notify_on_message: bool,
 
-struct RoomSettings {
-    /// notify when any new thread is created
-    notify_on_thread: bool,
-    // notify_on_thread: None | VoiceOnly | All,
-    /// notify when any new message is created
-    notify_on_message: bool,
+        /// don't receive notifications
+        mute: MuteOptions,
+    }
 
-    /// don't receive notifications
-    mute: MuteOptions,
-}
+    struct MuteOptions {
+        /// should this fully hide any mention ui
+        full: bool,
 
-struct MuteOptions {
-    /// should this fully hide any mention ui
-    full: bool,
+        /// how long to mute for
+        duration: MuteDuration,
+    }
 
-    /// how long to mute for
-    duration: MuteDuration,
-}
+    enum MuteDuration {
+        Forever,
+        Until(u64),
+    }
 
-enum MuteDuration {
-    Forever,
-    Until(u64),
-}
+    enum Action {
+        None,
+        Inbox,
+        Notify,
+    }
 
-enum Action {
-    None,
-    Inbox,
-    Notify,
-}
+    struct RoomConfig {
+        new_thread: Option<Action>,
+        new_message: Option<Action>,
+        // new_message: Option<Action>,
+    }
 
-struct RoomConfig {
-    new_thread: Option<Action>,
-    new_message: Option<Action>,
-    // new_message: Option<Action>,
-}
+    enum NotificationType {
+        /// when the thread is updated (name, description)
+        ThreadUpdate,
 
-enum NotificationType {
-    /// when the thread is updated (name, description)
-    ThreadUpdate,
-    
-    /// when the thread state is updated (archive, pin, unpin)
-    ThreadStatus,
+        /// when the thread state is updated (archive, pin, unpin)
+        ThreadStatus,
 
-    /// message that mentions you
-    MessageMention,
+        /// message that mentions you
+        MessageMention,
 
-    /// message that replies to one of your messages
-    MessageReply,
+        /// message that replies to one of your messages
+        MessageReply,
 
-    /// message in a thread you're watching
-    MessageWatching,
-    
-    /// message in a dm
-    MessageDm,
-}
+        /// message in a thread you're watching
+        MessageWatching,
 
-enum NotificationAction {
-    /// add to 
-    Inbox,
-    Notify,
-}
+        /// message in a dm
+        MessageDm,
+    }
 
-struct NotificationConfig {
-    config: Vec<(NotificationType, NotificationAction)>,
-}
+    enum NotificationAction {
+        /// add to
+        Inbox,
+        Notify,
+    }
 
-fn default_notification_config() -> NotificationConfig {
-    NotificationConfig {
-        config: vec![
-            (NotificationType::MessageMention, NotificationAction::Notify),
-            (NotificationType::MessageReply, NotificationAction::Inbox),
-            (NotificationType::MessageWatching, NotificationAction::Inbox),
-            (NotificationType::MessageDm, NotificationAction::Notify),
-            (NotificationType::ThreadStatus, NotificationAction::Inbox),
-            (NotificationType::ThreadUpdate, NotificationAction::Inbox),
-        ]
+    struct NotificationConfig {
+        config: Vec<(NotificationType, NotificationAction)>,
+    }
+
+    fn default_notification_config() -> NotificationConfig {
+        NotificationConfig {
+            config: vec![
+                (NotificationType::MessageMention, NotificationAction::Notify),
+                (NotificationType::MessageReply, NotificationAction::Inbox),
+                (NotificationType::MessageWatching, NotificationAction::Inbox),
+                (NotificationType::MessageDm, NotificationAction::Notify),
+                (NotificationType::ThreadStatus, NotificationAction::Inbox),
+                (NotificationType::ThreadUpdate, NotificationAction::Inbox),
+            ],
+        }
     }
 }
+
+// TODO: notifications config
+
+/// notification config for a user
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotifsGlobal {}
+
+/// notification config for a room
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotifsRoom {}
+
+/// notification config for a thread
+// how do i deal with different thread types
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotifsThread {}

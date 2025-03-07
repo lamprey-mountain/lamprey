@@ -5,6 +5,7 @@ use crate::{MediaId, MessageId, ReportId, RoomId, ThreadId, UserId};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+/// moderation report
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Report {
@@ -36,6 +37,16 @@ pub enum ReportTarget {
     Media { target_id: MediaId },
 }
 
+/// synced with thread if there is any
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ReportStatus {
+    Open,
+    Duplicate,
+    Invalid,
+    Resolved,
+}
+
 // these reasons are more or less copied from revolt.chat for now
 // (theres quite a lot considering ui design, it looks like they're meant to be nested inside subcategories?)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +74,7 @@ pub enum ReportReason {
     PromotesHarm,
 
     /// Unsolicited advertisements
+    // seems too similar to SpamAbuse?
     UnsolicitedSpam,
 
     /// This is a raid
@@ -94,4 +106,10 @@ pub enum ReportReason {
 
     /// user specified
     Other(String),
+}
+
+impl ReportStatus {
+    pub fn is_active(&self) -> bool {
+        *self == ReportStatus::Open
+    }
 }

@@ -77,6 +77,9 @@ pub enum RoomMembership {
         // override_avatar: z.string().url().or(z.literal("")),
         roles: Vec<RoleId>,
         // muted_until: Option<Time>,
+        // /// how this member joined the room
+        // #[serde(flatten)]
+        // origin: RoomMemberOrigin,
     },
 
     /// kicked or left, can rejoin with an invite. todo: can still view messages up until then
@@ -95,8 +98,23 @@ pub enum RoomMembership {
         // reason: Option<String>,
         // /// which user caused the ban
         // user_id: Option<UserId>,
+        // banned_until: Option<Time>,
     },
 }
+
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// #[serde(tag = "origin")]
+// pub enum RoomMemberOrigin {
+//     /// joined via invite
+//     Invite { origin_code: InviteCode },
+
+//     /// joined via invite which is now expired
+//     InviteExpired { origin_code: InviteCode },
+
+//     /// added by another user (puppet)
+//     Added { origin_user_id: UserId },
+// }
 
 impl Diff<RoomMember> for RoomMemberPatch {
     fn changes(&self, other: &RoomMember) -> bool {

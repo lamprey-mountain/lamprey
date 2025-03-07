@@ -11,13 +11,17 @@ use validator::Validate;
 
 use crate::{text::Language, EmbedId, MediaId, MessageId, MessageVerId, Mime, UserId};
 
+pub mod animated;
 pub mod embed;
 pub mod file;
 pub mod stream;
+pub mod thumb;
 
+pub use animated::Animated;
 pub use embed::Embed;
 pub use file::*;
 pub use stream::Streamable;
+pub use thumb::Thumb;
 
 /// a piece of media. becomes immutable after being linked to something.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -40,7 +44,7 @@ pub struct Media<T: MediaType> {
     pub link: Option<MediaLink>,
 
     /// who created this piece of media
-    // (should i really expose this publically, or make it an Option?)
+    // (should i really expose this publicly, or make it an Option?)
     pub user_id: UserId,
 
     /// info/metadata about this media
@@ -76,6 +80,11 @@ pub enum MediaLink {
         user_id: UserId,
     },
 
+    // /// linked to a room's avatar
+    // AvatarRoom {
+    //     /// the id of the room this is linked to
+    //     room_id: RoomId,
+    // },
     /// linked to a url or custom embed
     Embed {
         /// the id of the embed this is linked to
@@ -114,6 +123,7 @@ impl_media_type!(Streamable);
 impl_media_type!(Text);
 impl_media_type!(Generic);
 impl_media_type!(Embed);
+impl_media_type!(Animated);
 
 /// Any file
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -179,7 +189,9 @@ mod tests {
                 "filename": "test.png",
                 "size": 1234,
                 "mime": "image/png",
+                "url": "https://example.com",
                 "source_url": null,
+                "thumbs": [],
                 "height": 123,
                 "width": 456,
             }

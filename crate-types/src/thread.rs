@@ -8,6 +8,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::util::{some_option, Time};
+use crate::TagId;
 use crate::{util::Diff, ThreadVerId};
 
 use super::{RoomId, ThreadId, UserId};
@@ -23,6 +24,30 @@ pub mod event;
 #[cfg(feature = "feat_thread_type_document")]
 pub mod document;
 
+#[cfg(feature = "feat_thread_type_table")]
+pub mod table;
+
+#[cfg(feature = "feat_thread_type_report")]
+pub mod report;
+
+#[cfg(feature = "feat_thread_type_voice")]
+use voice::{ThreadTypeVoicePrivate, ThreadTypeVoicePublic};
+
+#[cfg(feature = "feat_thread_type_event")]
+use event::{ThreadTypeEventPrivate, ThreadTypeEventPublic};
+
+#[cfg(feature = "feat_thread_type_document")]
+use document::{ThreadTypeDocumentPrivate, ThreadTypeDocumentPublic};
+
+#[cfg(feature = "feat_thread_type_table")]
+use table::{ThreadTypeTablePrivate, ThreadTypeTablePublic};
+
+#[cfg(feature = "feat_thread_type_report")]
+use report::{ThreadTypeReportPrivate, ThreadTypeReportPublic};
+
+#[cfg(feature = "feat_reactions")]
+use crate::reaction::ReactionCounts;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -30,6 +55,8 @@ pub struct Thread {
     pub id: ThreadId,
     pub room_id: RoomId,
     pub creator_id: UserId,
+
+    /// only updates when the thread itself is updated, not the stuff in the thread
     pub version_id: ThreadVerId,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
@@ -60,34 +87,34 @@ pub struct Thread {
     pub private: Option<ThreadPrivate>,
 
     /// number of people in this room
+    /// does not not update with ThreadSync
     pub member_count: u64,
 
     /// number of people who are online in this room
+    /// does not not update with ThreadSync
     pub online_count: u64,
+
     // TODO(#72): tags
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
-    // pub tags: Vec<TagId>,
+    /// tags that are applied to this thread
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    pub tags: Vec<TagId>,
 
-    // pub link: Vec<ThreadLink>, // probably will limit the number of links
-    // pub forward: Option<ThreadForward>,
+    /// other threads related to this thread
+    #[cfg(feature = "feat_thread_linking")]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    pub link: Vec<ThreadLink>,
 
-    // // this is something i've been wondering about for a while
-    // // `locked` would be easier to implement and could have custom acls, but
-    // // it might add extra complexity (it's an extra thing that can affect
-    // // auth that doesn't use the "standard" roles system)
-    // // alternative would be to let moderators edit permissions for threads
-    // // TODO(#243): implement this. it makes life much easier.
-    // pub locked: bool,
+    /// if this thread is locked and cannot be interacted with anymore
+    // TODO(#243): implement this. it makes life much easier.
+    pub is_locked: bool,
 
-    // /// if this should be treated as an announcement
-    // // TODO: define what an announcement thread does
-    // // pretty much copy/forward the thread to any following rooms
-    // // (is it a copy or reference? ie. does each followed room get its
-    // // own discussion thread or is there one big discussion thread shared
-    // // everywhere? the latter sounds like it could be extremely painful,
-    // // but maybe i could do both. create a new copy for every follower,
-    // // and include a link to the source.)
-    // pub is_announcement: bool,
+    /// if this should be treated as an announcement
+    /// contents will be copied into a new room in all following room
+    pub is_announcement: bool,
+
+    /// emoji reactions to this thread
+    #[cfg(feature = "feat_reactions")]
+    pub reactions: ReactionCounts,
 }
 
 /// type-specific data for threads
@@ -126,7 +153,10 @@ pub enum ThreadPublic {
 
     #[cfg(feature = "feat_thread_type_table")]
     // arbitrary data storage? like a spreadsheet or database table?
-    Table(()),
+    Table(ThreadTypeTablePublic),
+
+    #[cfg(feature = "feat_thread_type_report")]
+    Report(ThreadTypeReportPublic),
 }
 
 /// user-specific data for threads
@@ -162,7 +192,10 @@ pub enum ThreadPrivate {
 
     #[cfg(feature = "feat_thread_type_table")]
     // arbitrary data storage? like a spreadsheet or database table?
-    Table(()),
+    Table(ThreadTypeTablePrivate),
+
+    #[cfg(feature = "feat_thread_type_report")]
+    Report(ThreadTypeReportPrivate),
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -199,6 +232,9 @@ pub enum ThreadType {
     #[cfg(feature = "feat_thread_type_table")]
     // arbitrary data storage? like a spreadsheet or database table?
     Table,
+
+    #[cfg(feature = "feat_thread_type_report")]
+    Report,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -318,6 +354,7 @@ pub mod thread_linking {
         /// show a button/link to view this other thread instead of this one
         /// (maybe redirect automatically in some places?)
         // (stolen from irc)
+        #[cfg(feature = "feat_forward_threads")]
         Forward,
 
         /// Forward + special handling? (eg. search in both threads by default)
@@ -380,5 +417,14 @@ impl Thread {
             private: Some(data),
             ..self
         }
+    }
+}
+
+impl ThreadState {
+    pub fn is_active(&self) -> bool {
+        matches!(
+            self,
+            ThreadState::Pinned { .. } | ThreadState::Active | ThreadState::Temporary
+        )
     }
 }

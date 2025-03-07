@@ -1,4 +1,8 @@
+// TEMP: suppress warnings before i remove everything
+#![allow(deprecated)]
+
 // TODO(#242): make serde optional
+// maybe merge util and misc?
 
 /// utility stuff
 pub mod util;
@@ -6,7 +10,12 @@ pub mod util;
 /// miscellaneous types
 pub mod misc;
 
-// pub mod any;
+/// random ideas for the future
+/// most probably won't be implemented, but i'll keep track of them anyways
+#[doc(hidden)]
+#[allow(unused)]
+mod ideas;
+
 pub mod audit_logs;
 pub mod embed;
 pub mod emoji;
@@ -15,10 +24,14 @@ pub mod invite;
 pub mod media;
 pub mod message;
 pub mod moderation;
-// pub mod notifications;
+pub mod notifications;
 pub mod pagination;
 pub mod permission;
 pub mod profile;
+
+#[cfg(feature = "feat_reactions")]
+pub mod reaction;
+
 // pub mod redex;
 pub mod role;
 pub mod room;
@@ -31,6 +44,7 @@ pub mod text;
 pub mod thread;
 pub mod thread_member;
 pub mod user;
+pub mod user_config;
 pub mod user_status;
 pub mod voice;
 

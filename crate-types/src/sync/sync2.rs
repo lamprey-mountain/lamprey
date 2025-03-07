@@ -6,8 +6,8 @@ use utoipa::{IntoParams, ToSchema};
 use std::collections::HashMap;
 
 use crate::{
-    Invite, InviteCode, Message, MessageId, MessageVerId, Relationship, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
+    util::Time, Invite, InviteCode, Message, MessageId, MessageVerId, Relationship, Role, RoleId,
+    Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -213,11 +213,7 @@ pub enum Payload {
     Typing {
         thread_id: ThreadId,
         user_id: UserId,
-        #[serde(
-            serialize_with = "time::serde::rfc3339::serialize",
-            deserialize_with = "time::serde::rfc3339::deserialize"
-        )]
-        until: time::OffsetDateTime,
+        until: Time,
     },
 
     /// arbitrary custom event

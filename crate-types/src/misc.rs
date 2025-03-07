@@ -1,4 +1,7 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -9,7 +12,6 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(untagged)]
 pub enum Color {
-    // /// a builtin named colow
     // Named(ColorNamed),
     /// sRGB (not linear) compatible with css
     // FIXME: this should be a hex code, not arbitrary string
@@ -17,12 +19,57 @@ pub enum Color {
     // with alpha as separate ver? Srgba(String),
 }
 
+/// a color that changes depending on theme
+/// color names currently unstable and may change
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ColorNamed {
-    // Red, Green, Blue,
-    // Error, Warning, Info
-    // or both?
+pub enum ColorThemed {
+    /// default text color
+    FgMain,
+
+    /// low priority text color
+    FgDim,
+
+    /// default background color (for this item)
+    BgMain,
+
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    Orange,
+    Teal,
+}
+
+/// color with semantic meaning
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ColorSemantic {
+    /// something worth pointing out
+    Note,
+
+    /// something with useful information
+    Info,
+
+    /// instructions or tips
+    Help,
+
+    /// very important to read, generic
+    Important,
+
+    /// very important to read, bad things happen if you don't
+    Warning,
+
+    /// very important to read, dangerous things happen if you don't
+    Danger,
+
+    /// something went wrong
+    Error,
+
+    /// something went right
+    Success,
 }
 
 impl Color {
@@ -40,25 +87,50 @@ impl AsRef<str> for Color {
     }
 }
 
-// the below types are unlikely to be added, but worth mentioning anyways
+// TODO: swap all date/time types to this
+/// A date, time, and timezone. Serialized to rfc3339.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Time(
+    #[serde(
+        serialize_with = "time::serde::rfc3339::serialize",
+        deserialize_with = "time::serde::rfc3339::deserialize"
+    )]
+    OffsetDateTime,
+);
 
-// /// maybe add a way to automatically create links from some text
-// struct Autolink {
-//     prefix: String,
-//     template: Url,
-// }
+impl Time {
+    pub fn now_utc() -> Self {
+        Self(OffsetDateTime::now_utc())
+    }
+}
 
-// /// not really planned, bots can be used instead
-// /// maybe special compatibility message send endpoints and a ?token=... query parameter could be added
-// /// or ?compat=[platform], or a header
-// /// if this is added, it paobably would be another user type
-// struct Webhook {
-//     url: Url,
-//     token: String,
-//     name: String,
-// }
+impl Deref for Time {
+    type Target = OffsetDateTime;
 
-// /// split out members/roles into its own type
-// /// rooms are already meant for auth, but have extra stuff
-// /// doesn't seem that useful, and if it is necessary it could be a new minimal room type
-// struct Team {}
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Time {
+    pub fn into_inner(self) -> OffsetDateTime {
+        self.0
+    }
+}
+
+impl TryInto<Time> for uuid::Timestamp {
+    type Error = time::error::ComponentRange;
+
+    fn try_into(self) -> Result<Time, Self::Error> {
+        let (secs, nanos) = self.to_unix();
+        let ts = secs as i128 * 1000000000 + nanos as i128;
+        Ok(Time(OffsetDateTime::from_unix_timestamp_nanos(ts)?))
+    }
+}
+
+impl From<OffsetDateTime> for Time {
+    fn from(value: OffsetDateTime) -> Self {
+        Time(value)
+    }
+}

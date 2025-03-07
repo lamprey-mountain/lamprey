@@ -37,8 +37,15 @@ pub struct Invite {
 
     /// the time when this invite will stop working
     pub expires_at: Option<Time>,
-    // invites that automatically apply a certain role?
-    // pub roles: Vec<Role>,
+
+    /// a description for this invite
+    pub description: Option<String>,
+
+    /// if this invite cannot be used
+    pub is_dead: bool,
+
+    /// if this invite's code is custom (instead of random)
+    pub is_vanity: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,10 +71,19 @@ pub enum InviteTarget {
     User { user: User },
 
     /// join a room
-    Room { room: Room },
+    Room {
+        room: Room,
+        // invites that automatically apply a certain role?
+        // roles: Vec<Role>,
+    },
 
     /// join a room and automatically open a thread
-    Thread { room: Room, thread: Thread },
+    Thread {
+        room: Room,
+        thread: Thread,
+        // invites that automatically apply a certain role?
+        // roles: Vec<Role>,
+    },
 }
 
 /// the type and id of this invite's target
@@ -89,13 +105,19 @@ pub enum InviteTargetId {
     },
 }
 
-// more flexible invite restrictions?
-// seems like the wrong way to implement invites...
-// enum InviteRestriction {
-//     MaxUses(u64),
-//     Expires(u64),
-//     UserIds(Vec<User>),
-// }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct InvitePatch {
+    /// a description for this invite
+    pub description: Option<Option<String>>,
+
+    /// the time when this invite will stop working
+    pub expires_at: Option<Option<Time>>,
+
+    /// the maximum number of times this invite can be used
+    /// be sure to account for existing `uses` and `max_uses` when patching
+    pub max_uses: Option<Option<u64>>,
+}
 
 impl fmt::Display for InviteCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

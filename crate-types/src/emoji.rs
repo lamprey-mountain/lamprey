@@ -13,8 +13,13 @@ use utoipa::ToSchema;
 #[serde(untagged)]
 pub enum Emoji {
     Custom(EmojiCustom),
-    Unicode { id: String },
+    Unicode(EmojiUnicode),
 }
+
+/// a single unicode emoji
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct EmojiUnicode(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

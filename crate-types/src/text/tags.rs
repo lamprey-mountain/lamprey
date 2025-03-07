@@ -452,7 +452,7 @@ mod doc {
         /// instructions or tips
         Help,
 
-        /// very important to read
+        /// very important to read, generic
         Important,
 
         /// very important to read, bad things happen if you don't

@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{misc::Color, util::some_option, RoomId, TagId, TagVerId};
+use crate::{misc::Color, util::some_option, Room, RoomId, TagId, TagVerId, Thread};
 
 // hmm, should i be able to apply tags to other tags?
 // tagception!
@@ -89,4 +89,13 @@ pub struct TagPatch {
     /// whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists.
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub is_archived: Option<bool>,
+}
+
+/// something that can a tag can be applied to
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum Taggable {
+    Room(Room),
+    Thread(Thread),
+    Tag(Tag),
 }

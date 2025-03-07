@@ -11,6 +11,8 @@ use validator::Validate;
 
 use crate::{text::Language, EmbedId, MediaId, MessageId, MessageVerId, Mime, UrlEmbed, UserId};
 
+use super::thumb::Thumbs;
+
 /// Represents metadata about a single file
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -27,8 +29,14 @@ pub struct File<T> {
     /// Mime type of the file
     pub mime: Mime,
 
+    /// Where this file can be downloaded from
+    pub url: Url,
+
     /// Where this file was downloaded from, if it was downloaded instead of uploaded
     pub source_url: Option<Url>,
+
+    /// Thumbnails for this file
+    pub thumbs: Thumbs,
 
     /// metadata about this file
     #[serde(flatten)]

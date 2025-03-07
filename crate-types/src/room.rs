@@ -8,8 +8,10 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::{
+    notifications::NotifsRoom,
+    text::Language,
     util::{some_option, Diff},
-    UserId,
+    Permission, TagId, ThreadId, UserId,
 };
 
 use super::ids::RoomId;
@@ -53,19 +55,38 @@ pub struct Room {
 
     pub default_order: ThreadsOrder,
     pub default_layout: ThreadsLayout,
-    // pub views: RoomView,
-    // pub available_tags: Vec, // to be used in threads
-    // pub applied_tags: Vec, // added to this room
-    // pub language: Language,
+
+    // kind of useless since there is a route to list list room tags (but is saving 1 rtt worth it?)
+    // estimate approximate upper limit, 201018 tags exist on danbooru
+    // https://rd.celery.eu.org/r/comfyui/comments/1amo41u/updated_danbooru_tag_list_and_counts_for/
+    /// tags that can be used in threads
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[deprecated]
+    pub tags_available: Vec<TagId>,
+
+    /// tags that are applied to this room
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    pub tags_applied: Vec<TagId>,
+
+    /// list of preferred locales, in order of most to least preferred
+    pub languages: Vec<Language>,
+
+    // experimental! don't touch yet.
+    #[cfg_attr(feature = "utoipa", schema(ignore))]
+    pub views: Vec<RoomView>,
+
+    /// where system messages are sent, or None to **disable** them
+    pub system_messages: Option<ThreadId>,
 }
 
-// /// User-specific room data
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct RoomPrivate {
-//     pub notifications: NotificationConfigRoom,
-//     pub permissions: Vec<Permission>,
-// }
+/// User-specific room data
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomPrivate {
+    pub notifications: NotifsRoom,
+    /// resolved notifications for you
+    pub permissions: Vec<Permission>,
+}
 
 // a room represents a single logical system of access control (members,
 // roles, etc) but people might want to have "multiple rooms". a roomview would
@@ -74,10 +95,13 @@ pub struct Room {
 // the reasons why this should exist pretty much boil down to how the ui
 // is designed. depending on how i design everything, this might not even be
 // necessary.
-//
-// struct RoomView {
-//     filter: (),
-// }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomView {
+    pub tags: Vec<TagId>,
+    pub order: Option<ThreadsOrder>,
+}
 
 /// Data required to create a room
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -125,9 +149,6 @@ pub enum RoomType {
     /// direct messages between two people
     Dm { participants: (UserId, UserId) },
 
-    /// for reports
-    Reports { report: crate::moderation::Report },
-
     /// system messages
     // or maybe these are dms from a System user
     System,
@@ -159,17 +180,6 @@ pub enum RoomVisibility {
     // },
 }
 
-// unsure how these should work
-// struct SystemMessages {
-//     user_join: SystemMessagesTarget,
-//     moderation_report: SystemMessagesTarget,
-// }
-
-// enum SystemMessagesTarget {
-//     Create,
-//     Reuse(ThreadId),
-// }
-
 /// how to sort the room's thread list
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -177,9 +187,9 @@ pub enum ThreadsOrder {
     #[default]
     /// newest threads first
     Time,
+    // /// latest activity first
+    // Activity,
 
-    /// latest activity first
-    Activity,
     // /// weights based on activity and time
     // Hot,
 

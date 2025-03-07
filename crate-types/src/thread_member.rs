@@ -92,6 +92,7 @@ pub enum ThreadMembership {
         // reason: Option<String>,
         // /// which user caused the ban
         // user_id: Option<UserId>,
+        // banned_until: Option<Time>,
     },
 }
 
