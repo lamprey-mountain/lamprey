@@ -15,7 +15,7 @@ use super::{Room, Thread, User};
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Invite {
     /// the invite code for this invite
@@ -46,9 +46,8 @@ pub struct Invite {
     // TODO(#263): vanity (custom) invite codes
     pub is_vanity: bool,
 
-    #[cfg_attr(feature = "utoipa", schema(rename = "is_dead", value_type = bool))]
     #[serde(skip)]
-    _is_dead: (),
+    is_dead: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -171,31 +170,33 @@ impl Invite {
             expires_at,
             description,
             is_vanity,
-            _is_dead: (),
+            is_dead: false,
         }
     }
 
+    // FIXME: get serde to serialize this
     pub fn is_dead(&self) -> bool {
         todo!()
     }
 }
 
-#[derive(Serialize)]
-struct InviteSer<'a> {
-    #[serde(flatten)]
-    invite: &'a Invite,
-    is_dead: bool,
-}
+// this runs into a recursion problem
+// #[derive(Serialize)]
+// struct InviteSer<'a> {
+//     #[serde(flatten)]
+//     invite: &'a Invite,
+//     is_dead: bool,
+// }
 
-impl Serialize for Invite {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let s = InviteSer {
-            invite: self,
-            is_dead: self.is_dead(),
-        };
-        s.serialize(serializer)
-    }
-}
+// impl Serialize for Invite {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         let s = InviteSer {
+//             invite: self,
+//             is_dead: self.is_dead(),
+//         };
+//         s.serialize(serializer)
+//     }
+// }

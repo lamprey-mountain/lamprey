@@ -113,7 +113,6 @@ genid!(UrlEmbedId, "00000000-0000-0000-0000-0000000embed");
 genid!(EmbedId, "00000000-0000-0000-0new-0000000embed");
 genid!(TagId, "00000000-0000-0000-0000-000000000tag");
 genid!(TagVerId, "00000000-0000-0000-0ver-000000000tag");
-genid!(CustomEmojiId, "00000000-0000-0000-0000-0customemoji");
 genid!(ReportId, "00000000-0000-0000-0000-000modreport");
 genid!(RedexId, "00000000-0000-0000-0000-0000000redex");
 genid!(CallId, "00000000-0000-0000-0000-00000000call");

@@ -47,4 +47,5 @@ default = [
   "utoipa",
   "validator",
   "feat_reactions",
+  "feat_custom_emoji",
 ]

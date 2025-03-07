@@ -7,6 +7,7 @@ use crate::ServerState;
 mod auth;
 mod debug;
 mod dm;
+mod emoji;
 mod invite;
 mod media;
 mod message;
@@ -15,7 +16,6 @@ mod relationship;
 mod role;
 mod room;
 mod room_member;
-// mod emoji;
 // mod notifications;
 // mod moderation;
 // mod thread_overwrite;
@@ -34,9 +34,11 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(auth::routes())
         .merge(debug::routes())
         .merge(dm::routes())
+        .merge(emoji::routes())
         .merge(invite::routes())
         .merge(media::routes())
         .merge(message::routes())
+        .merge(reaction::routes())
         .merge(relationship::routes())
         .merge(role::routes())
         .merge(room::routes())
@@ -48,5 +50,4 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(thread::routes())
         .merge(thread_member::routes())
         .merge(user::routes())
-        .merge(reaction::routes())
 }

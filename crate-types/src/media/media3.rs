@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::{text::Language, EmbedId, MediaId, MessageId, MessageVerId, Mime, UserId};
+use crate::{text::Language, EmbedId, EmojiId, MediaId, MessageId, MessageVerId, Mime, UserId};
 
 pub mod animated;
 pub mod embed;
@@ -89,6 +89,12 @@ pub enum MediaLink {
     Embed {
         /// the id of the embed this is linked to
         embed_id: EmbedId,
+    },
+
+    /// linked to a custom emoji
+    Emoji {
+        /// the id of the embed this is linked to
+        emoji_id: EmojiId,
     },
 }
 
