@@ -68,6 +68,7 @@ async fn thread_create(
                     name: Some(json.name),
                     description: Some(json.description),
                     state: None,
+                    tags: None,
                 },
             }),
         })
@@ -253,6 +254,7 @@ async fn thread_pin(
         name: None,
         description: None,
         state: Some(ThreadState::Pinned { pin_order: 0 }),
+        tags: None,
     };
     let thread = s
         .services()
@@ -287,6 +289,7 @@ async fn thread_archive(
         name: None,
         description: None,
         state: Some(ThreadState::Archived),
+        tags: None,
     };
     let thread = s
         .services()
@@ -321,6 +324,7 @@ async fn thread_activate(
         name: None,
         description: None,
         state: Some(ThreadState::Active),
+        tags: None,
     };
     let thread = s
         .services()
@@ -354,6 +358,7 @@ async fn thread_delete(
         name: None,
         description: None,
         state: Some(ThreadState::Deleted),
+        tags: None,
     };
     s.services()
         .threads

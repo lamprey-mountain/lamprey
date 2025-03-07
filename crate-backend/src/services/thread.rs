@@ -99,6 +99,8 @@ impl ServiceThreads {
                         name: patch.name,
                         description: patch.description,
                         state: patch.state,
+                        // tags: patch.tags,
+                        tags: None,
                     },
                 }),
             })

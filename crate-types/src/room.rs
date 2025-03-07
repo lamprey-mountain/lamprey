@@ -60,12 +60,12 @@ pub struct Room {
     // estimate approximate upper limit, 201018 tags exist on danbooru
     // https://rd.celery.eu.org/r/comfyui/comments/1amo41u/updated_danbooru_tag_list_and_counts_for/
     /// tags that can be used in threads
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     #[deprecated]
     pub tags_available: Vec<TagId>,
 
     /// tags that are applied to this room
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub tags_applied: Vec<TagId>,
 
     /// list of preferred locales, in order of most to least preferred

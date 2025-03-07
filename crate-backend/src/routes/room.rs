@@ -154,7 +154,7 @@ async fn room_audit_logs(
     Ok(Json(logs))
 }
 
-/// ack message (TODO)
+/// Ack room (TODO)
 ///
 /// Mark all threads in a room as read.
 #[utoipa::path(
@@ -165,7 +165,7 @@ async fn room_audit_logs(
     ),
     tags = ["room"],
     responses(
-        (status = NO_CONTENT, description = "success"),
+        (status = OK, description = "success"),
     )
 )]
 async fn room_ack(

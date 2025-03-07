@@ -11,12 +11,12 @@ mod emoji;
 mod invite;
 mod media;
 mod message;
+mod notifications;
 mod reaction;
 mod relationship;
 mod role;
 mod room;
 mod room_member;
-// mod notifications;
 // mod moderation;
 // mod thread_overwrite;
 // mod user_config;
@@ -38,6 +38,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(invite::routes())
         .merge(media::routes())
         .merge(message::routes())
+        .merge(notifications::routes())
         .merge(reaction::routes())
         .merge(relationship::routes())
         .merge(role::routes())

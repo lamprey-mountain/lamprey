@@ -48,6 +48,7 @@ use report::{ThreadTypeReportPrivate, ThreadTypeReportPublic};
 #[cfg(feature = "feat_reactions")]
 use crate::reaction::ReactionCounts;
 
+/// A thread
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -255,9 +256,10 @@ pub struct ThreadCreate {
     /// The type of this thread
     #[serde(default, rename = "type")]
     pub ty: ThreadType,
-    // /// tags to apply to this thread
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
-    // pub tags: Vec<TagId>,
+
+    /// tags to apply to this thread (overwrite, not append)
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub tags: Option<Vec<TagId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -278,9 +280,10 @@ pub struct ThreadPatch {
 
     #[serde(flatten)]
     pub state: Option<ThreadState>,
-    // /// tags to apply to this thread
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32)))]
-    // pub tags: Vec<TagId>,
+
+    /// tags to apply to this thread (overwrite, not append)
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    pub tags: Option<Vec<TagId>>,
 }
 
 /// lifecycle of a thread

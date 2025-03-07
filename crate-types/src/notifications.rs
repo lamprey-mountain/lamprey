@@ -3,42 +3,13 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::{util::Time, MessageId, RoomId, ThreadId};
+
 /// a bunch of random ideas from past/old projects that i might reuse
 #[allow(unused)]
 mod old {
     // TODO: pare/reduce these down until i get somewhat decent types
     use crate::{util::Time, MessageId, MessageVerId, RoomId, ThreadId};
-
-    enum InboxFilter {
-        /// The default filter: MentionsUser | MentionsBulk | ThreadsParticipating | ThreadsInteresting
-        Default,
-
-        /// Get user mentions.
-        MentionsUser,
-
-        /// Get "bulk" (@room, @thread) mentions.
-        MentionsBulk,
-
-        /// Get threads that the user is participating in.
-        ThreadsParticipating,
-
-        /// Get "interesting" threads.
-        ThreadsInteresting,
-
-        /// Include read threads.
-        IncludeRead,
-
-        /// Include read threads.
-        IncludeIgnored,
-    }
-
-    struct Notification {
-        pub room_id: RoomId,
-        pub thread_id: ThreadId,
-        pub message_id: MessageId,
-        pub message_version_id: MessageVerId,
-        pub read: bool,
-    }
 
     enum NotificationLevelGlobal {
         /// You will be notified of new replies in threads.
@@ -168,77 +139,262 @@ mod old {
         Forever,
         Until(u64),
     }
-
-    enum Action {
-        None,
-        Inbox,
-        Notify,
-    }
-
-    struct RoomConfig {
-        new_thread: Option<Action>,
-        new_message: Option<Action>,
-        // new_message: Option<Action>,
-    }
-
-    enum NotificationType {
-        /// when the thread is updated (name, description)
-        ThreadUpdate,
-
-        /// when the thread state is updated (archive, pin, unpin)
-        ThreadStatus,
-
-        /// message that mentions you
-        MessageMention,
-
-        /// message that replies to one of your messages
-        MessageReply,
-
-        /// message in a thread you're watching
-        MessageWatching,
-
-        /// message in a dm
-        MessageDm,
-    }
-
-    enum NotificationAction {
-        /// add to
-        Inbox,
-        Notify,
-    }
-
-    struct NotificationConfig {
-        config: Vec<(NotificationType, NotificationAction)>,
-    }
-
-    fn default_notification_config() -> NotificationConfig {
-        NotificationConfig {
-            config: vec![
-                (NotificationType::MessageMention, NotificationAction::Notify),
-                (NotificationType::MessageReply, NotificationAction::Inbox),
-                (NotificationType::MessageWatching, NotificationAction::Inbox),
-                (NotificationType::MessageDm, NotificationAction::Notify),
-                (NotificationType::ThreadStatus, NotificationAction::Inbox),
-                (NotificationType::ThreadUpdate, NotificationAction::Inbox),
-            ],
-        }
-    }
 }
 
-// TODO: notifications config
-
-/// notification config for a user
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// how to handle an event
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsGlobal {}
+pub enum NotifAction {
+    /// Notifications are created when this event happens
+    Notify,
+
+    /// Notifications are added to the inbox when this event happens
+    Watching,
+
+    /// This event is ignored entirely
+    Ignore,
+}
+
+/// notification config for a user (works globally)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotifsGlobal {
+    pub mute: Option<MuteDuration>,
+    pub messages: NotifAction,
+    pub mentions: NotifAction,
+    pub threads: NotifAction,
+    pub room_public: NotifAction,
+    pub room_private: NotifAction,
+    pub room_dm: NotifAction,
+}
 
 /// notification config for a room
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsRoom {}
+pub struct NotifsRoom {
+    pub mute: Option<MuteDuration>,
+    pub messages: Option<NotifAction>,
+    pub mentions: Option<NotifAction>,
+    pub threads: Option<NotifAction>,
+}
 
 /// notification config for a thread
 // how do i deal with different thread types
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsThread {}
+pub struct NotifsThread {
+    pub mute: Option<MuteDuration>,
+    pub messages: Option<NotifAction>,
+    pub mentions: Option<NotifAction>,
+}
+
+/// how long to mute for
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MuteDuration {
+    Forever,
+
+    #[serde(untagged)]
+    Until(Time),
+}
+
+/// a notification; a unit of stuff that may show up in your inbox or be pushed to you
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Notification {
+    #[serde(flatten)]
+    pub info: NotificationInfo,
+
+    /// when this was read
+    pub read_at: Option<Time>,
+
+    /// when this notification was created
+    /// can be set in the future to create a reminder
+    pub added_at: Time,
+    // bookmarks? how do they behave differently?
+    // pub is_bookmark: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum NotificationInfo {
+    Thread {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        reason: NotificationReasonThread,
+        // summary: Summary,
+    },
+    Message {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        reason: NotificationReasonMessage,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct InboxPatch {
+    /// mark notifications as read
+    #[serde(default)]
+    pub mark_read: Vec<InboxPatchRead>,
+
+    /// mark notifications as unread
+    #[serde(default)]
+    pub mark_unread: Vec<InboxPatchUnread>,
+
+    /// add something to the thread as a notification
+    #[serde(default)]
+    pub add: Vec<InboxPatchAdd>,
+
+    /// remove all old notifications before this timestamp
+    pub prune_before: Option<Time>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum InboxPatchRead {
+    Thread {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        read_at: Option<Time>,
+    },
+    Message {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        read_at: Option<Time>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum InboxPatchUnread {
+    Thread {
+        room_id: RoomId,
+        thread_id: ThreadId,
+    },
+    Message {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum InboxPatchAdd {
+    Thread {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        /// defaults to now
+        added_at: Option<Time>,
+    },
+    Message {
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        /// defaults to now
+        added_at: Option<Time>,
+    },
+}
+
+#[non_exhaustive] // remove for v1
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum NotificationReasonMessage {
+    // /// this is a bookmark
+    // Bookmark,
+    /// this is a reminder
+    Reminder,
+
+    /// this message mentioned you
+    MentionsUser,
+
+    /// this message mentioned @room, @thread, or roles
+    MentionsBulk,
+
+    /// this message replied to one of your own messages
+    Reply,
+}
+
+#[non_exhaustive] // remove for v1
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum NotificationReasonThread {
+    /// this is a reminder
+    Reminder,
+
+    /// you are a thread member and there are new messages
+    JoinedUnread,
+
+    /// suggested thread you might like
+    Suggestion,
+}
+
+/// Which notifications to include
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct InboxFilters(pub Vec<InboxFilter>);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum InboxFilter {
+    /// Get reminders.
+    Reminder,
+
+    /// Get user mentions.
+    MentionsUser,
+
+    /// Get "bulk" (@room, @thread) mentions.
+    MentionsBulk,
+
+    /// Get replies
+    Reply,
+
+    /// Get threads that the user is participating in.
+    JoinedUnread,
+
+    /// Get "interesting" threads.
+    Suggestion,
+
+    /// Include already read notifications.
+    IncludeRead,
+
+    /// Include muted threads and rooms.
+    IncludeMuted,
+    // probably not a good idea
+    // /// Include ignored users.
+    // IncludeIgnored,
+}
+
+impl Default for InboxFilters {
+    fn default() -> Self {
+        Self(vec![
+            InboxFilter::Reminder,
+            InboxFilter::MentionsUser,
+            InboxFilter::MentionsBulk,
+            InboxFilter::Reply,
+            InboxFilter::JoinedUnread,
+            InboxFilter::Suggestion,
+        ])
+    }
+}
+
+impl Default for NotifsGlobal {
+    fn default() -> Self {
+        NotifsGlobal {
+            mute: None,
+            messages: NotifAction::Watching,
+            mentions: NotifAction::Notify,
+            threads: NotifAction::Watching,
+            room_public: NotifAction::Watching,
+            room_private: NotifAction::Watching,
+            room_dm: NotifAction::Watching,
+        }
+    }
+}
