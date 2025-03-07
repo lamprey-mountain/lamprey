@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::notifications::NotifsGlobal;
+
 // use crate::notifications::NotifsGlobal;
 
 // #[cfg(feature = "validator")]
@@ -16,9 +18,8 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfig {
-    // TODO
-    // /// global notification config
-    // pub notifs: NotifsGlobal,
+    /// global notification config
+    pub notifs: NotifsGlobal,
 
     // TODO
     // /// privacy and safety config
