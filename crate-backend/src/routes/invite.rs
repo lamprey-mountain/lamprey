@@ -62,7 +62,7 @@ pub async fn invite_delete(
             },
         ),
     };
-    let can_delete = user_id == invite.invite.creator.id || has_perm;
+    let can_delete = user_id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
         match id_target {
@@ -122,7 +122,7 @@ pub async fn invite_resolve(
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(code).await?;
-    if invite.invite.creator.id == user_id {
+    if invite.invite.creator_id == user_id {
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
@@ -272,7 +272,7 @@ pub async fn invite_room_list(
             .items
             .into_iter()
             .map(|i| {
-                if i.invite.creator.id != user_id && !perms.has(Permission::InviteManage) {
+                if i.invite.creator_id != user_id && !perms.has(Permission::InviteManage) {
                     InviteWithPotentialMetadata::Invite(i.strip_metadata())
                 } else {
                     InviteWithPotentialMetadata::InviteWithMetadata(i)

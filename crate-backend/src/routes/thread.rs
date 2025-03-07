@@ -392,7 +392,7 @@ async fn thread_typing(
         MessageSync::Typing {
             thread_id,
             user_id,
-            until,
+            until: until.into(),
         },
     )
     .await?;

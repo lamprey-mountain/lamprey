@@ -15,7 +15,7 @@ use super::{Room, Thread, User};
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Invite {
     /// the invite code for this invite
@@ -25,8 +25,7 @@ pub struct Invite {
     pub target: InviteTarget,
 
     /// the user who created this invite
-    ///
-    /// deprecated: use creator_id
+    #[deprecated = "use creator_id"]
     pub creator: User,
 
     /// the id of the user who created this invite
@@ -36,22 +35,27 @@ pub struct Invite {
     pub created_at: Time,
 
     /// the time when this invite will stop working
+    // FIXME(#262): enforce expiration
     pub expires_at: Option<Time>,
 
     /// a description for this invite
+    // FIXME(#260): invite description
     pub description: Option<String>,
 
-    /// if this invite cannot be used
-    pub is_dead: bool,
-
     /// if this invite's code is custom (instead of random)
+    // TODO(#263): vanity (custom) invite codes
     pub is_vanity: bool,
+
+    #[cfg_attr(feature = "utoipa", schema(rename = "is_dead", value_type = bool))]
+    #[serde(skip)]
+    _is_dead: (),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct InviteWithMetadata {
     /// the maximum number of times this invite can be used
+    // FIXME(#261): enforce max uses
     pub max_uses: Option<u64>,
 
     /// the number of time this invite has been used
@@ -144,5 +148,54 @@ impl From<InviteWithMetadata> for Invite {
 impl InviteWithMetadata {
     pub fn strip_metadata(self) -> Invite {
         self.into()
+    }
+}
+
+impl Invite {
+    pub fn new(
+        code: InviteCode,
+        target: InviteTarget,
+        creator: User,
+        creator_id: UserId,
+        created_at: Time,
+        expires_at: Option<Time>,
+        description: Option<String>,
+        is_vanity: bool,
+    ) -> Self {
+        Self {
+            code,
+            target,
+            creator,
+            creator_id,
+            created_at,
+            expires_at,
+            description,
+            is_vanity,
+            _is_dead: (),
+        }
+    }
+
+    pub fn is_dead(&self) -> bool {
+        todo!()
+    }
+}
+
+#[derive(Serialize)]
+struct InviteSer<'a> {
+    #[serde(flatten)]
+    invite: &'a Invite,
+    is_dead: bool,
+}
+
+impl Serialize for Invite {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let s = InviteSer {
+            invite: self,
+            is_dead: self.is_dead(),
+        };
+        s.serialize(serializer)
     }
 }

@@ -33,6 +33,7 @@ pub enum DbMembership {
 
 impl From<DbRoom> for Room {
     fn from(row: DbRoom) -> Self {
+        #[allow(deprecated)]
         Room {
             id: row.id.into(),
             version_id: row.version_id,
@@ -47,6 +48,11 @@ impl From<DbRoom> for Room {
             thread_count: Default::default(),
             default_order: Default::default(),
             default_layout: Default::default(),
+            tags_available: Default::default(),
+            tags_applied: Default::default(),
+            languages: Default::default(),
+            views: Default::default(),
+            system_messages: Default::default(),
         }
     }
 }
@@ -104,6 +110,7 @@ impl From<DbThread> for Thread {
                 last_read_id: row.last_read_id.map(Into::into),
                 // FIXME: add field to db schema
                 mention_count: 0,
+                notifications: Default::default(),
             })),
 
             // FIXME: add field to db schema
@@ -112,6 +119,10 @@ impl From<DbThread> for Thread {
             member_count: 0,
             // FIXME: calculate field
             online_count: 0,
+            tags: Default::default(),
+            is_locked: Default::default(),
+            is_announcement: Default::default(),
+            reactions: Default::default(),
         }
     }
 }

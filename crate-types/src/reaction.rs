@@ -6,9 +6,9 @@ use utoipa::ToSchema;
 use crate::emoji::Emoji;
 
 /// the total reaction counts for all emoji
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ReactionCounts(Vec<ReactionCount>);
+pub struct ReactionCounts(pub Vec<ReactionCount>);
 
 /// the total reaction counts for an emoji
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
