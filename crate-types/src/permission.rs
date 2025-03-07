@@ -295,25 +295,12 @@ pub enum Permission {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverrides {
     #[serde(flatten)]
-    inner: Vec<PermissionOverride>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum PermissionOverridable {
-    /// permission overrides for a role
-    Role(RoleId),
-
-    /// permission overrides for a user
-    User(UserId),
+    inner: Vec<PermissionOverrideWithTarget>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverride {
-    #[serde(flatten)]
-    pub target: PermissionOverridable,
-
     /// extra permissions allowed here
     #[serde(deserialize_with = "deserialize_sorted_permissions")]
     pub allow: Vec<Permission>,
@@ -321,4 +308,25 @@ pub struct PermissionOverride {
     /// permissions denied here
     #[serde(deserialize_with = "deserialize_sorted_permissions")]
     pub deny: Vec<Permission>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum PermissionOverridable {
+    /// permission overrides for a role
+    Role { role_id: RoleId },
+
+    /// permission overrides for a user
+    User { user_id: UserId },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PermissionOverrideWithTarget {
+    #[serde(flatten)]
+    pub target: PermissionOverridable,
+
+    #[serde(flatten)]
+    pub perms: PermissionOverride,
 }

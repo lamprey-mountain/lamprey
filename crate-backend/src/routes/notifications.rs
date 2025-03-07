@@ -33,8 +33,8 @@ struct InboxListParams {
     path = "/inbox",
     params(
         PaginationQuery<MessageId>,
-    InboxListParams,
-),
+        InboxListParams,
+    ),
     tags = ["notification"],
     responses((status = OK, body = PaginationResponse<Notification>, description = "success"))
 )]
