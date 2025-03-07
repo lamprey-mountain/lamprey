@@ -8,7 +8,7 @@ use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
-/// User config set
+/// User config set (TODO)
 ///
 /// Set user config
 #[utoipa::path(
@@ -26,7 +26,7 @@ async fn user_config_set(
     Err(Error::Unimplemented)
 }
 
-/// User config get
+/// User config get (TODO)
 ///
 /// Get user config
 #[utoipa::path(

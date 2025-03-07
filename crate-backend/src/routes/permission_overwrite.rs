@@ -8,7 +8,7 @@ use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
-/// Thread override upsert
+/// Thread permission override upsert (TODO)
 ///
 /// Upsert a thread permission override
 #[utoipa::path(
@@ -29,7 +29,7 @@ async fn permission_thread_override(
     Err(Error::Unimplemented)
 }
 
-/// Thread override delete
+/// Thread permission override delete (TODO)
 ///
 /// Delete a thread permission override
 #[utoipa::path(
@@ -49,7 +49,7 @@ async fn permission_thread_delete(
     Err(Error::Unimplemented)
 }
 
-/// Tag override upsert
+/// Tag permission override upsert(TODO)
 ///
 /// Upsert a tag permission override
 #[utoipa::path(
@@ -71,7 +71,7 @@ async fn permission_tag_override(
     Err(Error::Unimplemented)
 }
 
-/// Tag override delete
+/// Tag permission override delete (TODO)
 ///
 /// Delete a tag permission override
 #[utoipa::path(
