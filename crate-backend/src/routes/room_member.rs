@@ -6,8 +6,7 @@ use axum::{extract::State, Json};
 use http::StatusCode;
 use types::util::Diff;
 use types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, RoomMembership, UserId,
+    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomMembership, UserId
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -76,6 +75,32 @@ pub async fn room_member_get(
     } else {
         Ok(Json(res))
     }
+}
+
+/// Room member add
+///
+/// Only `Puppet` users can be added to rooms (via MemberBridge permission)
+#[utoipa::path(
+    put,
+    path = "/room/{room_id}/member/{user_id}",
+    params(
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = String, description = "User id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = OK, body = RoomMember, description = "success"),
+        (status = NOT_MODIFIED, description = "not modified"),
+    )
+)]
+pub async fn room_member_add(
+    Path((_room_id, _target_user_id)): Path<(RoomId, UserIdReq)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<RoomMemberPut>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
 }
 
 /// Room member update
@@ -187,6 +212,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_member_list))
         .routes(routes!(room_member_get))
+        .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
 }

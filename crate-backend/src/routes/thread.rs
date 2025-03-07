@@ -370,6 +370,7 @@ async fn thread_delete(
 /// Send typing
 ///
 /// Send a typing notification to a thread
+// should this be POST?
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/typing",
