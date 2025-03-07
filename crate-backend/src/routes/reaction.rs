@@ -16,8 +16,6 @@ pub struct ReactionListItem {
     pub user_id: UserId,
 }
 
-// FIXME: redesign routes
-
 /// Message reaction add (TODO)
 ///
 /// Add a reaction to a message.
@@ -67,30 +65,28 @@ async fn reaction_message_remove(
     Err(Error::Unimplemented)
 }
 
-// /// Message reaction get (TODO)
-// ///
-// /// Get a reaction from a message.
-// #[utoipa::path(
-//     get,
-//     path = "/thread/{thread_id}/message/{message_id}/reaction/{key}",
-//     params(
-//         ("thread_id", description = "Thread id"),
-//         ("message_id", description = "Message id"),
-//         ("key", description = "Reaction key"),
-//     ),
-//     tags = ["reaction"],
-//     responses(
-//         (status = OK, description = "reaction exists"),
-//         (status = NOT_FOUND, description = "reaction doesnt exist"),
-//     )
-// )]
-// async fn reaction_message_get(
-//     Path((_thread_id, _message_id, _key)): Path<(ThreadId, MessageId, String)>,
-//     Auth(_auth_user_id): Auth,
-//     State(_s): State<Arc<ServerState>>,
-// ) -> Result<Json<()>> {
-//     Err(Error::Unimplemented)
-// }
+/// Message reaction purge (TODO)
+///
+/// Remove all reactions from a message.
+#[utoipa::path(
+    delete,
+    path = "/thread/{thread_id}/message/{message_id}/reaction",
+    params(
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id"),
+    ),
+    tags = ["reaction"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn reaction_message_purge(
+    Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 /// Message reaction list (TODO)
 ///
@@ -165,29 +161,27 @@ async fn reaction_thread_remove(
     Err(Error::Unimplemented)
 }
 
-// /// Thread reaction get (TODO)
-// ///
-// /// Get a reaction from a thread.
-// #[utoipa::path(
-//     get,
-//     path = "/thread/{thread_id}/reaction/{key}",
-//     params(
-//         ("thread_id", description = "Thread id"),
-//         ("key", description = "Reaction key"),
-//     ),
-//     tags = ["reaction"],
-//     responses(
-//         (status = OK, description = "reaction exists"),
-//         (status = NOT_FOUND, description = "reaction doesnt exist"),
-//     )
-// )]
-// async fn reaction_thread_get(
-//     Path((_thread_id, _key)): Path<(ThreadId, String)>,
-//     Auth(_auth_user_id): Auth,
-//     State(_s): State<Arc<ServerState>>,
-// ) -> Result<Json<()>> {
-//     Err(Error::Unimplemented)
-// }
+/// Thread reaction purge (TODO)
+///
+/// Remove all reactions from a thread.
+#[utoipa::path(
+    delete,
+    path = "/thread/{thread_id}/reaction",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["reaction"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn reaction_thread_purge(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 /// Thread reaction list (TODO)
 ///
@@ -217,11 +211,11 @@ async fn reaction_thread_list(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(reaction_message_add))
-        // .routes(routes!(reaction_message_get))
         .routes(routes!(reaction_message_remove))
+        .routes(routes!(reaction_message_purge))
         .routes(routes!(reaction_message_list))
         .routes(routes!(reaction_thread_add))
-        // .routes(routes!(reaction_thread_get))
         .routes(routes!(reaction_thread_remove))
+        .routes(routes!(reaction_thread_purge))
         .routes(routes!(reaction_thread_list))
 }
