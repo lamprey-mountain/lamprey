@@ -8,6 +8,10 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
+use types::auth::TotpRecoveryCodes;
+use types::auth::TotpState;
+use types::auth::TotpStateWithSecret;
+use types::auth::TotpVerificationRequest;
 use types::email::EmailAddr;
 use types::SessionStatus;
 use types::UserType;
@@ -187,6 +191,91 @@ async fn auth_email_reset(
     Err(Error::Unimplemented)
 }
 
+/// Auth totp init
+#[utoipa::path(
+    post,
+    path = "/auth/totp/init",
+    tags = ["auth"],
+    responses((status = OK, body = TotpStateWithSecret, description = "success")),
+)]
+async fn auth_totp_init(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth totp execute
+#[utoipa::path(
+    post,
+    path = "/auth/totp",
+    tags = ["auth"],
+    responses((status = OK, body = TotpState, description = "success")),
+)]
+async fn auth_totp_exec(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<TotpVerificationRequest>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth totp get
+#[utoipa::path(
+    get,
+    path = "/auth/totp",
+    tags = ["auth"],
+    responses((status = OK, body = TotpState, description = "success")),
+)]
+async fn auth_totp_get(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth totp recovery codes get
+#[utoipa::path(
+    get,
+    path = "/auth/totp/recovery",
+    tags = ["auth"],
+    responses((status = OK, body = TotpRecoveryCodes, description = "success")),
+)]
+async fn auth_totp_recovery_get(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth totp recovery codes rotate
+#[utoipa::path(
+    post,
+    path = "/auth/totp/recovery",
+    tags = ["auth"],
+    responses((status = OK, body = TotpRecoveryCodes, description = "success")),
+)]
+async fn auth_totp_recovery_rotate(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth totp delete
+#[utoipa::path(
+    delete,
+    path = "/auth/totp",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn auth_totp_delete(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
@@ -196,8 +285,12 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_oauth_get))
         .routes(routes!(auth_email_exec))
         .routes(routes!(auth_email_reset))
-    // .routes(routes!(auth_totp_set))
-    // .routes(routes!(auth_totp_exec))
+        .routes(routes!(auth_totp_init))
+        .routes(routes!(auth_totp_exec))
+        .routes(routes!(auth_totp_get))
+        .routes(routes!(auth_totp_delete))
+        .routes(routes!(auth_totp_recovery_get))
+        .routes(routes!(auth_totp_recovery_rotate))
     // .routes(routes!(auth_list))
 }
 
