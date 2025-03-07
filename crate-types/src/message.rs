@@ -6,9 +6,11 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+#[allow(unused_imports)]
 #[cfg(feature = "feat_reactions")]
 use crate::emoji::Emoji;
 
+#[allow(unused_imports)]
 #[cfg(feature = "feat_reactions")]
 use crate::reaction::ReactionCounts;
 

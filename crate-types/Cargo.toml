@@ -46,4 +46,5 @@ feat_automod = []
 default = [
   "utoipa",
   "validator",
+  "feat_reactions",
 ]

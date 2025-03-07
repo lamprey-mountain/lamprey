@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 
-use crate::{emoji::Emoji, UserId};
+use crate::emoji::Emoji;
 
 /// the total reaction counts for all emoji
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,19 +19,4 @@ pub struct ReactionCount {
 
     #[serde(rename = "self")]
     pub self_reacted: bool,
-}
-
-/// a reaction from a user
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Reaction {
-    pub emoji: Emoji,
-    pub user_id: UserId,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct ReactionListParams {
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    pub emoji: Option<Emoji>,
 }
