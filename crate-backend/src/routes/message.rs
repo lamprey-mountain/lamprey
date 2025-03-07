@@ -381,7 +381,7 @@ async fn message_edit(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
-/// delete a message
+/// Delete message
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/message/{message_id}",
@@ -521,6 +521,37 @@ async fn message_version_delete(
     Ok(Json(()))
 }
 
+/// Message delete bulk
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/messages/bulk-delete",
+    params(
+        ("message_id", description = "Message id")
+    ),
+    tags = ["message"],
+    responses(
+        (status = NO_CONTENT, description = "bulk delete success"),
+    )
+)]
+async fn message_delete_bulk(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(json): Json<MessageDeleteBulk>,
+) -> Result<()> {
+    json.validate()?;
+    Err(Error::Unimplemented)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct MessageDeleteBulk {
+    /// which messages to delete
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    message_id: Vec<MessageId>,
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
@@ -532,4 +563,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
         .routes(routes!(message_version_delete))
+        .routes(routes!(message_delete_bulk))
 }
