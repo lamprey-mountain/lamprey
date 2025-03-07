@@ -11,14 +11,14 @@ mod emoji;
 mod invite;
 mod media;
 mod message;
+mod moderation;
 mod notifications;
+mod permission_overwrite;
 mod reaction;
 mod relationship;
 mod role;
 mod room;
 mod room_member;
-// mod moderation;
-mod permission_overwrite;
 mod search;
 mod session;
 mod sync;
@@ -38,7 +38,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(invite::routes())
         .merge(media::routes())
         .merge(message::routes())
+        .merge(moderation::routes())
         .merge(notifications::routes())
+        .merge(permission_overwrite::routes())
         .merge(reaction::routes())
         .merge(relationship::routes())
         .merge(role::routes())
@@ -50,7 +52,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(tag::routes())
         .merge(thread::routes())
         .merge(thread_member::routes())
-        .merge(permission_overwrite::routes())
         .merge(user::routes())
         .merge(user_config::routes())
 }

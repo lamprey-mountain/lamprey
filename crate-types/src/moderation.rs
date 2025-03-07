@@ -108,6 +108,13 @@ pub enum ReportReason {
     Other(String),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ReportCreate {
+    pub reason: ReportReason,
+    pub destination: ReportDestination,
+}
+
 impl ReportStatus {
     pub fn is_active(&self) -> bool {
         *self == ReportStatus::Open
