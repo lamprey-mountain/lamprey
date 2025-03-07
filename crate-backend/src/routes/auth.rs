@@ -8,6 +8,7 @@ use axum::Json;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
+use types::email::EmailAddr;
 use types::SessionStatus;
 use types::UserType;
 use url::Url;
@@ -21,6 +22,7 @@ use crate::ServerState;
 
 use crate::error::{Error, Result};
 
+use super::util::Auth;
 use super::util::AuthRelaxed;
 
 #[derive(Debug, Deserialize, IntoParams)]
@@ -38,12 +40,13 @@ pub struct OauthInitResponse {
 #[utoipa::path(
     post,
     path = "/auth/oauth/{provider}",
-    tags = ["session"],
+    params(("provider", description = "oauth provider")),
+    tags = ["auth"],
     responses(
         (status = OK, body = OauthInitResponse, description = "ready"),
     )
 )]
-pub async fn auth_oauth_init(
+async fn auth_oauth_init(
     Path(provider): Path<String>,
     AuthRelaxed(session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
@@ -56,12 +59,13 @@ pub async fn auth_oauth_init(
 #[utoipa::path(
     get,
     path = "/auth/oauth/{provider}/redirect",
-    tags = ["session"],
+    params(("provider", description = "oauth provider")),
+    tags = ["auth"],
     responses(
         (status = OK, description = "success; responds with html + javascript"),
     )
 )]
-pub async fn auth_oauth_redirect(
+async fn auth_oauth_redirect(
     Path(_provider): Path<String>,
     Query(q): Query<OauthRedirectQuery>,
     State(s): State<Arc<ServerState>>,
@@ -99,140 +103,102 @@ pub async fn auth_oauth_redirect(
     Ok(Html(include_str!("../oauth.html")))
 }
 
-// /// Auth discord logout
-// #[utoipa::path(
-//     delete,
-//     path = "/session/{session_id}/auth/discord",
-//     params(
-//         ("session_id", description = "Session id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn auth_discord_logout(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
+/// Auth oauth logout
+#[utoipa::path(
+    post,
+    path = "/auth/oauth/{provider}/logout",
+    params(("provider", description = "oauth provider")),
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn auth_oauth_logout(
+    Path(_provider): Path<String>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Auth discord get
-// #[utoipa::path(
-//     get,
-//     path = "/users/{user_id}/auth/discord",
-//     params(
-//         ("session_id", description = "Session id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn auth_discord_get(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
+/// Auth oauth delete
+#[utoipa::path(
+    delete,
+    path = "/auth/oauth/{provider}",
+    params(("provider", description = "oauth provider")),
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn auth_oauth_delete(
+    Path(_provider): Path<String>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Auth discord delete
-// ///
-// /// Delete the link between discord and this user
-// #[utoipa::path(
-//     delete,
-//     path = "/users/{user_id}/auth/discord",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn auth_discord_delete(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
+/// Auth oauth get
+#[utoipa::path(
+    get,
+    path = "/auth/oauth/{provider}",
+    params(("provider", description = "oauth provider")),
+    tags = ["auth"],
+    responses((status = OK, description = "success"))
+)]
+async fn auth_oauth_get(
+    Path(_provider): Path<String>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Auth email set
-// #[utoipa::path(
-//     put,
-//     path = "/users/{user_id}/auth/email",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = CREATED, description = "success"),
-//         (status = OK, description = "already exists"),
-//     )
-// )]
-// pub async fn auth_email_set(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
+/// Auth email exec
+///
+/// Send a "magic link" email to login
+#[utoipa::path(
+    post,
+    path = "/auth/email/{addr}",
+    params(("addr", description = "Email address")),
+    tags = ["auth"],
+    responses((status = ACCEPTED, description = "success")),
+)]
+async fn auth_email_exec(
+    Path(_email): Path<EmailAddr>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Auth email get
-// #[utoipa::path(
-//     get,
-//     path = "/users/{user_id}/auth/email",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = OK, description = "success"),
-//         (status = NOT_FOUND, description = "doesn't exist"),
-//     )
-// )]
-// pub async fn auth_email_set(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
-
-// /// Auth email delete
-// #[utoipa::path(
-//     delete,
-//     path = "/users/{user_id}/auth/email",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["session"],
-//     responses(
-//         (status = CREATED, description = "success"),
-//         (status = OK, description = "already exists"),
-//     )
-// )]
-// pub async fn auth_email_delete(
-//     Auth(session): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<impl IntoResponse> {
-//     todo!()
-// }
+/// Auth email reset
+///
+/// Like exec, but the link also resets the password
+#[utoipa::path(
+    post,
+    path = "/auth/email/{addr}/reset",
+    params(("addr", description = "Email address")),
+    tags = ["auth"],
+    responses((status = ACCEPTED, description = "success")),
+)]
+async fn auth_email_reset(
+    Path(_email): Path<EmailAddr>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        // .routes(routes!(auth_discord_init))
-        // .routes(routes!(auth_discord_redirect))
         .routes(routes!(auth_oauth_init))
         .routes(routes!(auth_oauth_redirect))
-    // .routes(routes!(auth_discord_logout))
-    // .routes(routes!(auth_discord_delete))
-    // .routes(routes!(auth_discord_get))
-    // .routes(routes!(auth_email_exec))
-    // .routes(routes!(auth_email_set))
-    // .routes(routes!(auth_email_get))
-    // .routes(routes!(auth_email_delete))
+        .routes(routes!(auth_oauth_logout))
+        .routes(routes!(auth_oauth_delete))
+        .routes(routes!(auth_oauth_get))
+        .routes(routes!(auth_email_exec))
+        .routes(routes!(auth_email_reset))
     // .routes(routes!(auth_totp_set))
     // .routes(routes!(auth_totp_exec))
+    // .routes(routes!(auth_list))
 }
 
 // planning

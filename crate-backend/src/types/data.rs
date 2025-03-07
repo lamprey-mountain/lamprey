@@ -6,6 +6,7 @@ use types::{
     ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
     ThreadVisibility, UserId, UserType,
 };
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -363,8 +364,7 @@ impl From<ThreadMembership> for DbMembership {
     }
 }
 
-// TODO: ToSchema
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(untagged)]
 pub enum UserIdReq {
     #[serde(deserialize_with = "const_self")]
@@ -372,7 +372,7 @@ pub enum UserIdReq {
     UserId(UserId),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(untagged)]
 pub enum SessionIdReq {
     #[serde(deserialize_with = "const_self")]

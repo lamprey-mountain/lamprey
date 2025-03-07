@@ -35,7 +35,6 @@ pub struct User {
     // it's nice to have but is redundant, immutable, and common data
     pub avatar: Option<MediaId>,
 
-    // email: Option<String>,
     #[serde(flatten)]
     pub user_type: UserType,
 

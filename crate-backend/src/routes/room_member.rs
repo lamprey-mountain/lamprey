@@ -6,7 +6,8 @@ use axum::{extract::State, Json};
 use http::StatusCode;
 use types::util::Diff;
 use types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomMembership, UserId
+    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
+    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;

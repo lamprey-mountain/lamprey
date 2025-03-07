@@ -17,6 +17,7 @@ pub mod misc;
 mod ideas;
 
 pub mod audit_logs;
+pub mod email;
 pub mod embed;
 pub mod emoji;
 pub mod ids;
