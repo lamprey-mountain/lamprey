@@ -13,7 +13,7 @@ use types::{
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
-use crate::ServerState;
+use crate::{Error, ServerState};
 
 use super::util::{Auth, HeaderReason};
 
@@ -285,47 +285,45 @@ pub async fn invite_room_list(
     Ok(Json(res))
 }
 
-// /// Invite user create
-// ///
-// /// Create an invite that goes to a user
-// #[utoipa::path(
-//     post,
-//     path = "/users/{user_id}/invite",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["invite"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn invite_user_create(
-//     Auth(user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-// ) -> Result<impl IntoResponse> {
-//     Ok(StatusCode::NOT_IMPLEMENTED)
-// }
+/// Invite user create
+///
+/// Create an invite that goes to a user
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/invite",
+    params(("user_id", description = "User id")),
+    tags = ["invite"],
+    responses((status = OK, body = Invite, description = "success")),
+)]
+pub async fn invite_user_create(
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Invite user list
-// ///
-// /// List invites that go to a user
-// #[utoipa::path(
-//     get,
-//     path = "/users/{user_id}/invite",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["invite"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn invite_user_list(
-//     Auth(user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-// ) -> Result<impl IntoResponse> {
-//     Ok(StatusCode::NOT_IMPLEMENTED)
-// }
+/// Invite user list
+///
+/// List invites that go to a user
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/invite",
+    params(
+        PaginationQuery<InviteCode>,
+        ("user_id", description = "User id"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
+    )
+)]
+pub async fn invite_user_list(
+    Query(_paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
@@ -334,6 +332,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(invite_use))
         .routes(routes!(invite_room_create))
         .routes(routes!(invite_room_list))
-    // .routes(routes!(invite_user_create))
-    // .routes(routes!(invite_user_list))
+        .routes(routes!(invite_user_create))
+        .routes(routes!(invite_user_list))
 }
