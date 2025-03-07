@@ -263,6 +263,8 @@ pub enum MessageType {
     /// (TODO) a member was removed from the thread (what about room?)
     MemberRemove(MessageMember),
 
+    // /// call ended (duration, participants)
+    // CallEnd(MessagesCallEnd),
     /// a message logging an update to the thread
     ThreadUpdate(MessageThreadUpdate),
 
