@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, can_fork, type, state)\n            VALUES ($1, $2, $3, $4, $5, false, $6, $7)\n            RETURNING id, version_id, parent_id, name, description, state as \"state: _\", type as \"type: _\", avatar\n        ",
+  "query": "\n            SELECT\n                id, version_id, parent_id, name, description, state as \"state: _\", type as \"type: _\", avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as \"bot_visibility: _\"\n            FROM usr WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -53,7 +53,7 @@
             "kind": {
               "Enum": [
                 "Default",
-                "Alias",
+                "Puppet",
                 "Bot",
                 "System"
               ]
@@ -65,40 +65,52 @@
         "ordinal": 7,
         "name": "avatar",
         "type_info": "Uuid"
-      }
-    ],
-    "parameters": {
-      "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Text",
-        {
+      },
+      {
+        "ordinal": 8,
+        "name": "puppet_external_platform",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "puppet_external_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "puppet_external_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "puppet_alias_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 12,
+        "name": "bot_is_bridge",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "bot_visibility: _",
+        "type_info": {
           "Custom": {
-            "name": "user_type",
+            "name": "bot_visibility_type",
             "kind": {
               "Enum": [
-                "Default",
-                "Alias",
-                "Bot",
-                "System"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "user_state",
-            "kind": {
-              "Enum": [
-                "Active",
-                "Suspended",
-                "Deleted"
+                "Private",
+                "Public",
+                "PublicDiscoverable"
               ]
             }
           }
         }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
       ]
     },
     "nullable": [
@@ -109,8 +121,14 @@
       true,
       false,
       false,
-      true
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
     ]
   },
-  "hash": "b3251b56b39623bab570a385ad4c2f9f6f9164c4b6d48163f057b76b15f165dd"
+  "hash": "737814cba221ddbdd9b19b8739a0a53260c92fa4f9a7eed0c084bc194cfb06f1"
 }
