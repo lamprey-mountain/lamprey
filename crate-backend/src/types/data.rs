@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use types::{
     thread::text::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
+    util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,
     ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
@@ -155,6 +156,7 @@ impl From<DbSession> for Session {
                 },
                 DbSessionStatus::Sudo => SessionStatus::Sudo {
                     user_id: row.user_id.expect("invalid data in db!").into(),
+                    expires_at: Time::now_utc(),
                 },
             },
             name: row.name,

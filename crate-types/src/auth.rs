@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::{util::Time, SessionId};
+use crate::{email::EmailAddr, util::Time, SessionId, UserId};
 
 // #[cfg(feature = "validator")]
 // use validator::Validate;
@@ -53,6 +53,43 @@ pub struct TotpRecoveryCodeUsed {
     pub used_by: Option<SessionId>,
 }
 
+// TODO(#267): look into zeroing out/erasing passwords after handling
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PasswordSet {
+    pub password: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PasswordExec {
+    pub password: String,
+
+    #[serde(flatten)]
+    pub ident: PasswordExecIdent,
+}
+
+/// who's logging in
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum PasswordExecIdent {
+    UserId { user_id: UserId },
+    Email { email: EmailAddr },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct CaptchaChallenge {
+    pub code: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct CaptchaResponse {
+    pub code: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuthStatus {
@@ -61,6 +98,9 @@ pub struct AuthStatus {
 
     /// if local totp state is_valid
     pub has_totp: bool,
+
+    /// if a password has been set
+    pub has_password: bool,
 
     /// the oauth providers this user has authenticated with
     pub oauth_providers: Vec<String>,

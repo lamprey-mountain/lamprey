@@ -9,6 +9,10 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
 use types::auth::AuthStatus;
+use types::auth::CaptchaChallenge;
+use types::auth::CaptchaResponse;
+use types::auth::PasswordExec;
+use types::auth::PasswordSet;
 use types::auth::TotpRecoveryCodes;
 use types::auth::TotpState;
 use types::auth::TotpStateWithSecret;
@@ -29,6 +33,7 @@ use crate::error::{Error, Result};
 
 use super::util::Auth;
 use super::util::AuthRelaxed;
+use super::util::AuthSudo;
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct OauthRedirectQuery {
@@ -168,7 +173,7 @@ async fn auth_oauth_get(
 )]
 async fn auth_email_exec(
     Path(_email): Path<EmailAddr>,
-    Auth(_auth_user_id): Auth,
+    AuthRelaxed(_session): AuthRelaxed,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -186,7 +191,7 @@ async fn auth_email_exec(
 )]
 async fn auth_email_reset(
     Path(_email): Path<EmailAddr>,
-    Auth(_auth_user_id): Auth,
+    AuthRelaxed(_session): AuthRelaxed,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -200,7 +205,7 @@ async fn auth_email_reset(
     responses((status = OK, body = TotpStateWithSecret, description = "success")),
 )]
 async fn auth_totp_init(
-    Auth(_auth_user_id): Auth,
+    AuthSudo(_auth_user_id): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -221,20 +226,6 @@ async fn auth_totp_exec(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp get
-#[utoipa::path(
-    get,
-    path = "/auth/totp",
-    tags = ["auth"],
-    responses((status = OK, body = TotpState, description = "success")),
-)]
-async fn auth_totp_get(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// Auth totp recovery codes get
 #[utoipa::path(
     get,
@@ -243,7 +234,7 @@ async fn auth_totp_get(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_get(
-    Auth(_auth_user_id): Auth,
+    AuthSudo(_auth_user_id): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -257,7 +248,7 @@ async fn auth_totp_recovery_get(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_rotate(
-    Auth(_auth_user_id): Auth,
+    AuthSudo(_auth_user_id): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -271,8 +262,52 @@ async fn auth_totp_recovery_rotate(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_totp_delete(
+    AuthSudo(_auth_user_id): AuthSudo,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth password set
+#[utoipa::path(
+    put,
+    path = "/auth/password",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn auth_password_set(
+    AuthSudo(_auth_user_id): AuthSudo,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<PasswordSet>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth password delete
+#[utoipa::path(
+    delete,
+    path = "/auth/password",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn auth_password_delete(
+    AuthSudo(_auth_user_id): AuthSudo,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth password exec
+#[utoipa::path(
+    post,
+    path = "/auth/password",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn auth_password_exec(
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<PasswordExec>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
@@ -291,6 +326,38 @@ async fn auth_status(
     Err(Error::Unimplemented)
 }
 
+/// Auth captcha init
+#[utoipa::path(
+    post,
+    path = "/auth/captcha/init",
+    tags = ["auth"],
+    responses((status = OK, body = CaptchaChallenge, description = "success")),
+)]
+async fn auth_captcha_init(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Auth captcha submit
+#[utoipa::path(
+    post,
+    path = "/auth/captcha/submit",
+    tags = ["auth"],
+    responses(
+        (status = NO_CONTENT, description = "captcha ok"),
+        (status = UNAUTHORIZED, description = "captcha failure"),
+    ),
+)]
+async fn auth_captcha_submit(
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<CaptchaResponse>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
@@ -302,36 +369,13 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_email_reset))
         .routes(routes!(auth_totp_init))
         .routes(routes!(auth_totp_exec))
-        .routes(routes!(auth_totp_get))
         .routes(routes!(auth_totp_delete))
         .routes(routes!(auth_totp_recovery_get))
         .routes(routes!(auth_totp_recovery_rotate))
+        .routes(routes!(auth_password_set))
+        .routes(routes!(auth_password_delete))
+        .routes(routes!(auth_password_exec))
+        .routes(routes!(auth_captcha_init))
+        .routes(routes!(auth_captcha_submit))
         .routes(routes!(auth_status))
 }
-
-// planning
-// enum AuthAction {
-//     OauthStart { provider: String },
-//     // -> Authorized
-//     OauthFinish { state: Uuid, code: String },
-//     // -> Authorized
-//     EmailPassword { email: String, password: String },
-//     // -> Authorized
-//     EmailLink { email: String },
-//     // -> Sudo
-//     Totp { code: String },
-//     // -> Sudo
-//     SudoPassword { password: String },
-//     Captcha { code: String },
-// }
-
-// // requires sudo mode; cannot change auth in a way that locks you out of sudo mode
-// enum AuthUpdate {
-//     LinkTotp,                   // -> code
-//     LinkEmail { addr: String }, // -> send verification email
-//     LinkPassword { pass: String },
-//     UnlinkOauth { provider: String },
-//     UnlinkTotp {},
-//     UnlinkEmail {},
-//     UnlinkPassword {},
-// }

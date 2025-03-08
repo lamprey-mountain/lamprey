@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::util::Diff;
+use crate::util::{Diff, Time};
 
 use super::{ids::SessionId, UserId};
 
@@ -66,7 +66,7 @@ pub struct SessionPatch {
 }
 use crate::util::some_option;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "status")]
 pub enum SessionStatus {
@@ -77,7 +77,12 @@ pub enum SessionStatus {
     Authorized { user_id: UserId },
 
     /// The session exists and can do administrative actions
-    Sudo { user_id: UserId },
+    Sudo {
+        user_id: UserId,
+
+        /// given ~5 minutes after auth to do stuff?
+        expires_at: Time,
+    },
 }
 
 // Granular session capability flags?
@@ -85,6 +90,24 @@ pub enum SessionStatus {
 //     Default,
 //     Trusted,
 //     Sudo,
+// }
+
+// the actual api design for usertrust pretty heavily depends on how antispam
+// is implemented
+
+// /// how trusted a user is
+// enum UserTrust {
+//     /// low permissions/trust, but intentionally
+//     Guest,
+
+//     /// likely spam
+//     Suspicious,
+
+//     /// don't know if its spam
+//     Untrusted,
+
+//     /// probably not spam
+//     Trusted,
 // }
 
 impl From<String> for SessionToken {
@@ -106,11 +129,11 @@ impl Diff<Session> for SessionPatch {
 }
 
 impl SessionStatus {
-    pub fn user_id(self) -> Option<UserId> {
+    pub fn user_id(&self) -> Option<UserId> {
         match self {
             SessionStatus::Unauthorized => None,
-            SessionStatus::Authorized { user_id } => Some(user_id),
-            SessionStatus::Sudo { user_id } => Some(user_id),
+            SessionStatus::Authorized { user_id } => Some(*user_id),
+            SessionStatus::Sudo { user_id, .. } => Some(*user_id),
         }
     }
 }

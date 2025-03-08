@@ -189,11 +189,6 @@ pub enum ExternalPlatform {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum UserState {
     Active,
-    // maybe different "trust levels" for antispam
-    // Guest,
-    // Untrusted,
-    // Trusted,
-    // Verified,
     Suspended,
     Deleted,
 }
