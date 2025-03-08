@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use common::v1::types::{RoomId, ThreadId, UserId};
 use moka::future::Cache;
-use types::{RoomId, ThreadId, UserId};
 
 use crate::error::Result;
 use crate::types::Permissions;

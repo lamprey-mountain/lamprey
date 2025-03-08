@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use common::v1::types::{
+    self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session,
+    Thread, ThreadId, User, UserId,
+};
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
-use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session, Thread,
-    ThreadId, User, UserId,
-};
 use uuid::uuid;
 
 use crate::{

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::ThreadState;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
-use types::ThreadState;
 
 use crate::error::Result;
 use crate::gen_paginate;

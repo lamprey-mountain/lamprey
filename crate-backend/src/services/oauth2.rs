@@ -3,9 +3,9 @@
 
 use std::sync::Arc;
 
+use common::v1::types::SessionId;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use types::SessionId;
 use url::Url;
 use uuid::Uuid;
 

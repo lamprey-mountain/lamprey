@@ -1,12 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
+use common::v1::types::user_status::Status;
+use common::v1::types::MessageSync;
+use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::debug;
-use types::user_status::Status;
-use types::MessageSync;
-use types::{User, UserId};
 
 use crate::{Result, ServerStateInner};
 

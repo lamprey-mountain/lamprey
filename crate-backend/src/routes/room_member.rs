@@ -3,12 +3,12 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use http::StatusCode;
-use types::util::Diff;
-use types::{
+use common::v1::types::util::Diff;
+use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
     RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
 };
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 

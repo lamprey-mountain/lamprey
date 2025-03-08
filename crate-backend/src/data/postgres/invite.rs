@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
-use types::{
+use common::v1::types::{
     InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery, PaginationResponse,
     ThreadId,
 };
+use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
 use crate::data::{DataInvite, DataRoom, DataThread, DataUser};

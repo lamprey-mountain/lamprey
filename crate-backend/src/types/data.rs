@@ -1,5 +1,4 @@
-use serde::Deserialize;
-use types::{
+use common::v1::types::{
     thread::text::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
@@ -7,6 +6,7 @@ use types::{
     ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
     ThreadVisibility, UserId, UserType,
 };
+use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 

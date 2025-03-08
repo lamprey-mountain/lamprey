@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, Json};
-use types::{PermissionOverride, PermissionOverrideWithTarget};
+use common::v1::types::{PermissionOverride, PermissionOverrideWithTarget};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;

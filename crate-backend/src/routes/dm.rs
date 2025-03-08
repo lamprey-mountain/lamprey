@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
-use types::{PaginationQuery, PaginationResponse, Room, UserId};
+use common::v1::types::{PaginationQuery, PaginationResponse, Room, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::UserIdReq;

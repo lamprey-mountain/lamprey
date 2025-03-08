@@ -1,6 +1,6 @@
+use common::v1::types::SessionToken;
 use handler::ErasedHandler;
 use syncer::Syncer;
-use types::SessionToken;
 
 mod handler;
 mod http;

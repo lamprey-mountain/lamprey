@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use common::v1::types::ThreadId;
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::mpsc;
-use types::ThreadId;
 
 use crate::data::MessageMetadata;
 use crate::portal::{Portal, PortalMessage};

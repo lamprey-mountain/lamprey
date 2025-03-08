@@ -6,9 +6,11 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::{
+    util::Diff, MessageDefaultMarkdown, PaginationDirection, ThreadMembership,
+};
 use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
-use types::{util::Diff, MessageDefaultMarkdown, PaginationDirection, ThreadMembership};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};

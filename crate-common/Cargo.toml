@@ -1,0 +1,51 @@
+[package]
+name = "common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.135"
+time = "0.3.37"
+url = { version = "2.5.4", features = ["serde"] }
+utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
+uuid = { version = "1.12.0", features = ["serde"] }
+crate-hakari = { version = "0.1", path = "../crate-hakari" }
+mediatype = { version = "0.19.18", features = ["serde"] }
+validator = { version = "0.20.0", features = ["derive"], optional = true }
+logos = "0.15.0"
+strum = { version = "0.27.1", features = ["derive"] }
+paste = "1.0.15"
+
+[features]
+# serde = []
+utoipa = ["dep:utoipa"]
+validator = ["dep:validator"]
+formatting_extra = []
+feat_reactions = []
+feat_interactions = []
+feat_custom_embeds = []
+feat_thread_linking = []
+feat_thread_type_forums = []
+feat_thread_type_event = []
+feat_thread_type_voice = []
+feat_thread_type_document = []
+feat_thread_type_table = []
+feat_thread_type_report = []
+feat_forward_threads = []
+feat_custom_emoji = []
+# TODO: rename to be more consistent
+feat_move_messages = []
+feat_messages_new_text = []
+feat_message_forwarding = ["feat_messages_new_text"]
+feat_automod = []
+
+default = [
+  "utoipa",
+  "validator",
+  "feat_reactions",
+  "feat_custom_emoji",
+]

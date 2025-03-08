@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
+use common::v1::types::util::Diff;
+use common::v1::types::{
+    MessageSync, MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch,
+    UserId,
+};
 use moka::future::Cache;
-use types::util::Diff;
-use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId};
 
 use crate::error::{Error, Result};
 use crate::types::DbMessageCreate;
@@ -94,7 +97,7 @@ impl ServiceThreads {
                 thread_id,
                 attachment_ids: vec![],
                 author_id: user_id,
-                message_type: MessageType::ThreadUpdate(types::MessageThreadUpdate {
+                message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
                     patch: ThreadPatch {
                         name: patch.name,
                         description: patch.description,

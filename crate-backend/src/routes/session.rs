@@ -4,8 +4,8 @@ use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::util::Diff;
-use types::{
+use common::v1::types::util::Diff;
+use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId,
     SessionPatch, SessionStatus, SessionToken, SessionWithToken,
 };

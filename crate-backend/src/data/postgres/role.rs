@@ -1,7 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::{PaginationDirection, UserId};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
-use types::{PaginationDirection, UserId};
 use uuid::Uuid;
 
 use crate::data::postgres::Pagination;

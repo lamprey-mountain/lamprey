@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
 use sqlx::{query, query_as, query_scalar, Acquire};
-use types::{SessionPatch, SessionStatus, SessionToken};
 use uuid::Uuid;
 
 use crate::error::Result;

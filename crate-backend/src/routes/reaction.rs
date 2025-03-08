@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
+use common::v1::types::{MessageId, PaginationQuery, PaginationResponse, ThreadId, UserId};
 use serde::{Deserialize, Serialize};
-use types::{MessageId, PaginationQuery, PaginationResponse, ThreadId, UserId};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 

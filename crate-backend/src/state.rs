@@ -4,12 +4,12 @@ use std::{
     time::Duration,
 };
 
-use ::types::{Media, Message, RoomId, ThreadId, UrlEmbed, UserId};
+use common::v1::types::{Media, Message, RoomId, ThreadId, UrlEmbed, UserId};
+use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 use moka::future::Cache;
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
-use types::{MessageSync, MessageType};
 use url::Url;
 
 use crate::{

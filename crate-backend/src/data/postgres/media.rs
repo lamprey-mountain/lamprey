@@ -1,8 +1,8 @@
 use async_trait::async_trait;
+use common::v1::types::{self, MediaPatch, MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
 use serde::Deserialize;
 use sqlx::{query, query_as};
 use tracing::info;
-use types::{MediaPatch, MediaSize, MediaTrack, MediaTrackInfo, TrackSource};
 use url::Url;
 use uuid::Uuid;
 

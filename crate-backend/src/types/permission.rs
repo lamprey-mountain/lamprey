@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-use types::{defaults::ADMIN_ROOM, Permission};
+use common::v1::types::{defaults::ADMIN_ROOM, Permission};
 
 use crate::error::{Error, Result};
 

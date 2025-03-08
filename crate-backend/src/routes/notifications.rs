@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
+use common::v1::types::notifications::{
+    InboxFilters, InboxPatch, Notification, NotifsRoom, NotifsThread,
+};
+use common::v1::types::{PaginationQuery, PaginationResponse, RoomId, ThreadId, UserId};
 use serde::{Deserialize, Serialize};
-use types::notifications::{InboxFilters, InboxPatch, Notification, NotifsRoom, NotifsThread};
-use types::{PaginationQuery, PaginationResponse, RoomId, ThreadId, UserId};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 

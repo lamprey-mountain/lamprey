@@ -2,13 +2,14 @@ use std::io::Write;
 use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
+use common::v1::types;
+use common::v1::types::misc::Color;
+use common::v1::types::{Media, UserId};
+use common::v1::types::{UrlEmbed, UrlEmbedId};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error};
-use types::misc::Color;
-use types::{Media, UserId};
-use types::{UrlEmbed, UrlEmbedId};
 use url::Url;
 use webpage::HTML;
 

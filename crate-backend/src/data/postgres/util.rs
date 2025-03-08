@@ -1,8 +1,8 @@
 use std::result::Result;
 
+use common::v1::types::{Media, PaginationKey};
 use serde::Deserialize;
 use serde_json::Value;
-use types::{Media, PaginationKey};
 
 use crate::{
     data::postgres::media::{DbMedia, DbMediaTrack},

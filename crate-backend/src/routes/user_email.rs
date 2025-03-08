@@ -3,8 +3,8 @@ use std::sync::Arc;
 use axum::extract::Path;
 use axum::extract::State;
 use axum::Json;
-use types::email::EmailAddr;
-use types::email::EmailInfo;
+use common::v1::types::email::EmailAddr;
+use common::v1::types::email::EmailInfo;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::UserIdReq;

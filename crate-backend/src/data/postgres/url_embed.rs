@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use common::v1::types::{misc::Color, MessageVerId, UrlEmbed, UrlEmbedId, UserId};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as};
 use tracing::debug;
-use types::{misc::Color, MessageVerId, UrlEmbed, UrlEmbedId, UserId};
 use url::Url;
 use uuid::Uuid;
 

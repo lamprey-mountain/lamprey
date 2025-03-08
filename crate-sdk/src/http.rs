@@ -1,10 +1,10 @@
 use anyhow::Result;
+use common::v1::types::{
+    media::MediaCreated, Media, MediaCreate, MediaId, Message, MessageCreate, MessageId,
+    MessagePatch, RoomId, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch,
+};
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
-use types::{
-    Media, MediaCreate, MediaCreated, MediaId, Message, MessageCreate, MessageId, MessagePatch,
-    RoomId, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch,
-};
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 

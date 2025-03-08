@@ -7,10 +7,10 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
+use common::v1::types::{MediaCreateSource, MediaPatch, MediaSize};
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
-use types::{MediaCreateSource, MediaPatch, MediaSize};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 

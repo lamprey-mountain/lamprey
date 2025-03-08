@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use types::search::SearchMessageRequest;
-use types::{
+use common::v1::types::search::SearchMessageRequest;
+use common::v1::types::{
     AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
     RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
     ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,

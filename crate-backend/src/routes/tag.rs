@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
+use common::v1::types::tag::{Tag, TagCreate, TagPatch};
+use common::v1::types::{PaginationQuery, PaginationResponse, TagId};
 use serde::Deserialize;
-use types::tag::{Tag, TagCreate, TagPatch};
-use types::{PaginationQuery, PaginationResponse, TagId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;

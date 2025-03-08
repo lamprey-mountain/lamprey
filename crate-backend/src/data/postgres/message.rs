@@ -1,7 +1,9 @@
 use async_trait::async_trait;
+use common::v1::types::{
+    self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, User,
+};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
-use types::{Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, User};
 use uuid::Uuid;
 
 use crate::error::Result;

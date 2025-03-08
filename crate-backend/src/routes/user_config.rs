@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, Json};
-use types::user_config::UserConfig;
+use common::v1::types::user_config::UserConfig;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;

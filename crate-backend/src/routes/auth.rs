@@ -5,21 +5,22 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
+use common::v1::types::auth::AuthStatus;
+use common::v1::types::auth::CaptchaChallenge;
+use common::v1::types::auth::CaptchaResponse;
+use common::v1::types::auth::PasswordExec;
+use common::v1::types::auth::PasswordSet;
+use common::v1::types::auth::TotpRecoveryCodes;
+use common::v1::types::auth::TotpState;
+use common::v1::types::auth::TotpStateWithSecret;
+use common::v1::types::auth::TotpVerificationRequest;
+use common::v1::types::email::EmailAddr;
+use common::v1::types::MessageSync;
+use common::v1::types::SessionStatus;
+use common::v1::types::UserType;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::debug;
-use types::auth::AuthStatus;
-use types::auth::CaptchaChallenge;
-use types::auth::CaptchaResponse;
-use types::auth::PasswordExec;
-use types::auth::PasswordSet;
-use types::auth::TotpRecoveryCodes;
-use types::auth::TotpState;
-use types::auth::TotpStateWithSecret;
-use types::auth::TotpVerificationRequest;
-use types::email::EmailAddr;
-use types::SessionStatus;
-use types::UserType;
 use url::Url;
 use utoipa::IntoParams;
 use utoipa::ToSchema;
@@ -109,7 +110,7 @@ async fn auth_oauth_redirect(
         .await?;
     srv.sessions.invalidate(session_id).await;
     let session = srv.sessions.get(session_id).await?;
-    s.broadcast(types::MessageSync::UpsertSession { session })?;
+    s.broadcast(MessageSync::UpsertSession { session })?;
     Ok(Html(include_str!("../oauth.html")))
 }
 

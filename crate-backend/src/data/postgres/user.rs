@@ -1,7 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::{self, BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
 use serde::Deserialize;
 use sqlx::{query, query_as, Acquire};
-use types::{BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
 use url::Url;
 use uuid::Uuid;
 

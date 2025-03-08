@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use common::v1::types::{Session, SessionId, SessionToken};
 use moka::future::Cache;
-use types::{Session, SessionId, SessionToken};
 
 use crate::{Result, ServerStateInner};
 

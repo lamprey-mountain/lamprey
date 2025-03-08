@@ -3,8 +3,8 @@ use std::sync::Arc;
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::search::{SearchMessageRequest, SearchRoomsRequest, SearchThreadsRequest};
-use types::{
+use common::v1::types::search::{SearchMessageRequest, SearchRoomsRequest, SearchThreadsRequest};
+use common::v1::types::{
     Message, MessageId, PaginationQuery, PaginationResponse, Room, RoomId, Thread, ThreadId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};

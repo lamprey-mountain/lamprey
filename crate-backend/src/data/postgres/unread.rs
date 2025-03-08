@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use common::v1::types::MessageId;
 use sqlx::query;
-use types::MessageId;
 
 use crate::error::Result;
 use crate::types::{MessageVerId, ThreadId, UserId};

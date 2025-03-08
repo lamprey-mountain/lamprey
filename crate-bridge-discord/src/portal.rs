@@ -1,6 +1,13 @@
 use std::sync::Arc;
 
+use crate::common::ConfigPortal;
+use crate::common::Globals;
+use crate::data::AttachmentMetadata;
+use crate::data::Data;
+use crate::data::MessageMetadata;
+use crate::{chat::UnnamedMessage, discord::DiscordMessage};
 use anyhow::Result;
+use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
 use serenity::all::CreateAllowedMentions;
 use serenity::all::CreateAttachment;
 use serenity::all::CreateEmbed;
@@ -15,17 +22,6 @@ use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::error;
-use types::MediaTrackInfo;
-use types::Message;
-use types::MessageId;
-use types::ThreadId;
-
-use crate::common::ConfigPortal;
-use crate::common::Globals;
-use crate::data::AttachmentMetadata;
-use crate::data::Data;
-use crate::data::MessageMetadata;
-use crate::{chat::UnnamedMessage, discord::DiscordMessage};
 
 /// a bidirectional portal to a sinister realm
 pub struct Portal {

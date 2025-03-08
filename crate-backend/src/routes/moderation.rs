@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, Json};
-use types::moderation::{Report, ReportCreate};
+use common::v1::types::moderation::{Report, ReportCreate};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;

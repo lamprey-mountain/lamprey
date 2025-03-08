@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
-use types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
-use types::{EmojiId, PaginationQuery, PaginationResponse, RoomId};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
+use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, RoomId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;

@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::{UrlEmbed, UrlEmbedRequest};
 use serde::Serialize;
-use types::{UrlEmbed, UrlEmbedRequest};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 

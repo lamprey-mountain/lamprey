@@ -2,13 +2,14 @@ use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
-use tokio::time::Instant;
-use tracing::{debug, trace};
-use types::user_status::Status;
-use types::{
+use common::v1::types;
+use common::v1::types::user_status::Status;
+use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
 };
+use tokio::time::Instant;
+use tracing::{debug, trace};
 
 use crate::error::{Error, Result};
 use crate::ServerState;

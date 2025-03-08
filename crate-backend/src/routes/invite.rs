@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use http::StatusCode;
-use nanoid::nanoid;
-use serde::Serialize;
-use types::{
+use common::v1::types::{
     Invite, InviteCode, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
     PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
 };
+use http::StatusCode;
+use nanoid::nanoid;
+use serde::Serialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;

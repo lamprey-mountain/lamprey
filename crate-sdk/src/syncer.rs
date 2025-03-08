@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use common::v1::types::{MessageClient, MessageEnvelope, MessagePayload, SessionToken, SyncResume};
 use futures_util::{SinkExt, StreamExt};
 use reqwest::Url;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::{error, warn};
-use types::{MessageClient, MessageEnvelope, MessagePayload, SessionToken, SyncResume};
 
 use crate::handler::{EmptyHandler, ErasedHandler};
 

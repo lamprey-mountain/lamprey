@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::{extract::FromRequestParts, http::request::Parts};
+use common::v1::types::{SessionToken, UserId};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
-use types::{SessionToken, UserId};
 
 use crate::{
     error::Error,

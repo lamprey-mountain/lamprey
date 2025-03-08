@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
+use common::v1::types::util::Diff;
+use common::v1::types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 use moka::future::Cache;
-use types::defaults::{EVERYONE_TRUSTED, MODERATOR};
-use types::util::Diff;
-use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
 use crate::error::{Error, Result};
 use crate::types::DbRoleCreate;

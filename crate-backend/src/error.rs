@@ -1,9 +1,9 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
+use common::v1::types::{MessageEnvelope, MessagePayload};
 use serde_json::json;
 use tracing::error;
-use types::MessageEnvelope;
 
 use crate::types::MessageSync;
 
@@ -178,7 +178,7 @@ impl From<Error> for Message {
     fn from(val: Error) -> Self {
         Message::text(
             serde_json::to_string(&MessageEnvelope {
-                payload: types::MessagePayload::Error {
+                payload: MessagePayload::Error {
                     error: val.to_string(),
                 },
             })

@@ -4,12 +4,12 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use serde::{Deserialize, Serialize};
-use types::util::Diff;
-use types::{
+use common::v1::types::util::Diff;
+use common::v1::types::{
     BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, User, UserCreate,
     UserId, UserPatch, UserType,
 };
+use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 

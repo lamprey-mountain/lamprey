@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
-use tracing::info;
-use types::{
+use common::v1::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember,
     ThreadMemberPatch, ThreadMembership, UserId,
 };
+use sqlx::{query, query_as, query_scalar, Acquire};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::data::postgres::Pagination;

@@ -6,8 +6,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::{MessageId, MessageThreadUpdate, ThreadState, ThreadType};
 use serde::{Deserialize, Serialize};
-use types::{MessageId, ThreadState, ThreadType};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -63,7 +63,7 @@ async fn thread_create(
             thread_id,
             attachment_ids: vec![],
             author_id: user_id,
-            message_type: MessageType::ThreadUpdate(types::MessageThreadUpdate {
+            message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
                 patch: ThreadPatch {
                     name: Some(json.name),
                     description: Some(json.description),

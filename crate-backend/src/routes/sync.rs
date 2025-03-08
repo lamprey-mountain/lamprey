@@ -5,9 +5,9 @@ use axum::extract::State;
 use axum::extract::WebSocketUpgrade;
 use axum::response::IntoResponse;
 use axum::routing::any;
+use common::v1::types::{MessageEnvelope, MessagePayload};
 use futures_util::SinkExt;
 use tracing::{debug, error};
-use types::{MessageEnvelope, MessagePayload};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Error;

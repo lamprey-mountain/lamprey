@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
+use common::v1::types::{AuditLog, AuditLogId};
 use headers::ETag;
-use types::{AuditLog, AuditLogId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
