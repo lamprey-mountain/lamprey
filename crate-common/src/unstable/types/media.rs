@@ -1,7 +1,6 @@
 //! media schema v3
 
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -9,9 +8,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    text::Language, EmbedId, EmojiId, MediaId, MessageId, MessageVerId, Mime, UserId,
-};
+use super::{EmbedId, EmojiId, MediaId, MessageId, MessageVerId, Mime, UserId};
 
 pub mod animated;
 pub mod embed;

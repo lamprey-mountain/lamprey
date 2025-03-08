@@ -10,12 +10,6 @@ pub mod util;
 /// miscellaneous types
 pub mod misc;
 
-/// random ideas for the future
-/// most probably won't be implemented, but i'll keep track of them anyways
-#[doc(hidden)]
-#[allow(unused)]
-mod ideas;
-
 pub mod audit_logs;
 pub mod auth;
 pub mod email;

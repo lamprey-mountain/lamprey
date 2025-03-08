@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-#[cfg(feature = "validator")]
-use validator::Validate;
+// #[cfg(feature = "validator")]
+// use validator::Validate;
 
 use super::{File, Image, Video};
 

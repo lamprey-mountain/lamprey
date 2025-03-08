@@ -15,10 +15,6 @@ use crate::v1::types::{
 mod mime;
 mod track;
 
-#[allow(unused)]
-/// yet more media testing
-pub(crate) mod media3;
-
 pub use mime::Mime;
 pub use track::*;
 

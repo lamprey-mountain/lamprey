@@ -4,12 +4,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-#[cfg(feature = "validator")]
-use validator::Validate;
-
-use crate::v1::types::Mime;
-
-use super::Image;
+use super::{Image, Mime};
 
 /// a thumbnail/image preview
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

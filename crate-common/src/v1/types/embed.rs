@@ -11,10 +11,6 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-#[allow(unused)]
-/// next types for embeds
-mod embed2;
-
 // maybe allow iframes for some sites? probably could be done client side though
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

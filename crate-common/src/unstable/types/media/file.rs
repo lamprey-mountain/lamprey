@@ -9,9 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    text::Language, EmbedId, MediaId, MessageId, MessageVerId, Mime, UrlEmbed, UserId,
-};
+use crate::v1::types::{text::Language, Mime};
 
 use super::thumb::Thumbs;
 

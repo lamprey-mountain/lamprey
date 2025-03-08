@@ -126,7 +126,7 @@ mod animated_avatars {
     #[cfg(feature = "validator")]
     use validator::Validate;
 
-    use crate::v1::types::media::media3::*;
+    use crate::unstable::types::media::*;
 
     #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
     #[cfg_attr(feature = "utoipa", derive(ToSchema))]

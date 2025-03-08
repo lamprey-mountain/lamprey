@@ -9,11 +9,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{
-    misc::Color, text::Language, EmbedId, MediaId, MessageId, MessageVerId, UserId,
-};
+use super::super::{misc::Color, util::truncate::truncate_with_ellipsis, EmbedId};
 
-use super::{MediaFile, MediaImage, Mime};
+use super::{MediaFile, MediaImage};
 
 /// base for all embeds
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -52,7 +50,7 @@ pub struct EmbedBase {
     pub author: Author,
 }
 
-/// a preview of content at a url
+/// a preview of some remote content at a url
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -166,3 +164,111 @@ fn sane_url_length(url: &Url) -> Result<(), validator::ValidationError> {
         Err(err)
     }
 }
+
+/// can be truncated to fit inside max length limits
+pub trait Truncate {
+    /// trim to max len
+    fn truncate(self) -> Self;
+}
+
+impl Truncate for Website {
+    fn truncate(self) -> Self {
+        let name = self
+            .name
+            .map(|t| truncate_with_ellipsis(&t, 256).into_owned());
+        Self { name, ..self }
+    }
+}
+
+impl Truncate for Author {
+    fn truncate(self) -> Self {
+        let name = self
+            .name
+            .map(|t| truncate_with_ellipsis(&t, 256).into_owned());
+        Self { name, ..self }
+    }
+}
+
+impl Truncate for EmbedBase {
+    fn truncate(self) -> Self {
+        let title = self
+            .title
+            .map(|t| truncate_with_ellipsis(&t, 256).into_owned());
+        let description = self
+            .description
+            .map(|s| truncate_with_ellipsis(&s, 4096).into_owned());
+        Self {
+            title,
+            description,
+            author: self.author.truncate(),
+            ..self
+        }
+    }
+}
+
+impl Truncate for EmbedUrl {
+    fn truncate(self) -> Self {
+        Self {
+            base: self.base.truncate(),
+            site: self.site.truncate(),
+            ..self
+        }
+    }
+}
+
+impl Truncate for EmbedCustom {
+    fn truncate(self) -> Self {
+        Self {
+            base: self.base.truncate(),
+            ..self
+        }
+    }
+}
+
+/*
+
+uog:type values:
+
+article - Namespace URI: https://ogp.me/ns/article#
+
+    article:published_time - datetime - When the article was first published.
+    article:modified_time - datetime - When the article was last changed.
+    article:expiration_time - datetime - When the article is out of date after.
+    article:author - profile array - Writers of the article.
+    article:section - string - A high-level section name. E.g. Technology
+    article:tag - string array - Tag words associated with this article.
+
+book - Namespace URI: https://ogp.me/ns/book#
+
+    book:author - profile array - Who wrote this book.
+    book:isbn - string - The ISBN
+    book:release_date - datetime - The date the book was released.
+    book:tag - string array - Tag words associated with this book.
+
+profile - Namespace URI: https://ogp.me/ns/profile#
+
+    profile:first_name - string - A name normally given to an individual by a parent or self-chosen.
+    profile:last_name - string - A name inherited from a family or marriage and by which the individual is commonly known.
+    profile:username - string - A short unique string to identify them.
+    profile:gender - enum(male, female) - Their gender.
+
+*/
+
+// og:image:url - Identical to og:image.
+// og:image:secure_url - An alternate url to use if the webpage requires HTTPS.
+// og:image:type - A MIME type for this image.
+// og:image:width - The number of pixels wide.
+// og:image:height - The number of pixels high.
+// og:image:alt - A description of what is in the image (not a caption). If the page specifies an og:image it should specify og:image:alt.
+
+/*
+
+og:audio - A URL to an audio file to accompany this object.
+og:description - A one to two sentence description of your object.
+og:locale - The locale these tags are marked up in. Of the format language_TERRITORY. Default is en_US.
+og:locale:alternate - An array of other locales this page is available in.
+og:site_name - If your object is part of a larger web site, the name which should be displayed for the overall site. e.g., "IMDb".
+og:video - A URL to a video file that complements this object.
+
+For example (line-break solely for display purposes):
+*/
