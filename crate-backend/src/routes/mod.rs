@@ -30,6 +30,9 @@ mod user_config;
 mod user_email;
 mod util;
 
+// HACK: re-export because utoipa
+pub use user::UserListFilter;
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(auth::routes())

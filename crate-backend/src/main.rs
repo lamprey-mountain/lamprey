@@ -2,6 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
+use common::v1::types::notifications::InboxFilters;
 use figment::providers::{Env, Format, Toml};
 use http::header;
 use opendal::layers::LoggingLayer;
@@ -12,7 +13,12 @@ use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
-use backend::{cli, config, error, routes, types, ServerState};
+use backend::{
+    cli, config, error,
+    routes::{self, UserListFilter},
+    types::{self, MessageId, MessageSync, PaginationQuery},
+    ServerState,
+};
 
 use config::Config;
 use error::Result;
@@ -27,6 +33,12 @@ use error::Result;
     types::Message,
     types::RoomMember,
     types::Role,
+    // utoipa seems to forget to add these types specifically
+    types::UserIdReq,
+    InboxFilters,
+    MessageSync,
+    PaginationQuery<MessageId>,
+    UserListFilter,
 )))]
 struct ApiDoc;
 

@@ -71,7 +71,7 @@ async fn user_create(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-enum UserListFilter {
+pub enum UserListFilter {
     /// users in mutual rooms, excluding puppets
     Mutual,
 
