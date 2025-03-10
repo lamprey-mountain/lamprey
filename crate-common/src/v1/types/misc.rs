@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
+use time::{OffsetDateTime, PrimitiveDateTime};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -132,5 +132,17 @@ impl TryInto<Time> for uuid::Timestamp {
 impl From<OffsetDateTime> for Time {
     fn from(value: OffsetDateTime) -> Self {
         Time(value)
+    }
+}
+
+impl From<PrimitiveDateTime> for Time {
+    fn from(value: PrimitiveDateTime) -> Self {
+        value.assume_utc().into()
+    }
+}
+
+impl From<Time> for PrimitiveDateTime {
+    fn from(value: Time) -> Self {
+        PrimitiveDateTime::new(value.0.date(), value.0.time())
     }
 }

@@ -3,9 +3,10 @@ use std::time::Duration;
 use async_trait::async_trait;
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
-    ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,
+    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Relationship,
+    RelationshipPatch, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed,
+    UrlEmbedId,
 };
 use url::Url;
 use uuid::Uuid;
@@ -40,6 +41,8 @@ pub trait Data:
     + DataAuditLogs
     + DataThreadMember
     + DataUrlEmbed
+    + DataDm
+    + DataUserRelationship
     + Send
     + Sync
 {
@@ -348,4 +351,32 @@ pub trait DataUrlEmbed {
         embed_id: UrlEmbedId,
         ordering: u32,
     ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataDm {
+    async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, room_id: RoomId) -> Result<()>;
+    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<RoomId>;
+}
+
+#[async_trait]
+pub trait DataUserRelationship {
+    async fn user_relationship_put(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+        rel: Relationship,
+    ) -> Result<()>;
+    async fn user_relationship_edit(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+        patch: RelationshipPatch,
+    ) -> Result<()>;
+    async fn user_relationship_delete(&self, user_id: UserId, other_id: UserId) -> Result<()>;
+    async fn user_relationship_get(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+    ) -> Result<Relationship>;
 }

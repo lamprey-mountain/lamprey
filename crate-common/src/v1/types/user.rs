@@ -252,7 +252,7 @@ pub struct RelationshipPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "ignore")]
 pub enum Ignore {
-    Timed { ignore_until: Time },
+    Until { ignore_until: Time },
     Forever,
 }
 
