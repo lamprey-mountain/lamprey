@@ -51,6 +51,10 @@ pub enum UnnamedMessage {
         message_id: MessageId,
         response: oneshot::Sender<()>,
     },
+    UserFetch {
+        user_id: UserId,
+        response: oneshot::Sender<User>,
+    },
 }
 
 struct Handle {
@@ -72,7 +76,7 @@ impl EventHandler for Handle {
 
     async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        if message.author.id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+        if message.author_id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
             return Ok(());
         }
         self.globals.portal_send(
@@ -165,14 +169,19 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
         } => {
             http.message_delete(thread_id, message_id).await?;
             let _ = response.send(());
-        } // UnnamedMessage::MessageGet {
-          //     thread_id,
-          //     message_id,
-          //     response,
-          // } => {
-          //     let res = http.message_get(thread_id, message_id).await?;
-          //     let _ = response.send(res);
-          // }
+        }
+        // UnnamedMessage::MessageGet {
+        //     thread_id,
+        //     message_id,
+        //     response,
+        // } => {
+        //     let res = http.message_get(thread_id, message_id).await?;
+        //     let _ = response.send(res);
+        // }
+        UnnamedMessage::UserFetch { user_id, response } => {
+            let res = http.user_get(user_id).await?;
+            let _ = response.send(res);
+        }
     }
     Ok(())
 }

@@ -51,12 +51,6 @@ pub struct Message {
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub ordering: i32,
 
-    /// who sent this message
-    ///
-    /// deprecated: use author_id and fetch manually, better caching and easier server impl
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub author: User,
-
     /// the id of who sent this message
     pub author_id: UserId,
 

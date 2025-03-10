@@ -187,8 +187,17 @@ impl Portal {
                             .await?;
                         files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                     }
+                    let (user_send, user) = oneshot::channel();
+                    self.globals
+                        .ch_chan
+                        .send(UnnamedMessage::UserFetch {
+                            user_id: message.author_id,
+                            response: user_send,
+                        })
+                        .await?;
+                    let user = user.await?;
                     let mut payload = ExecuteWebhook::new()
-                        .username(msg_inner.override_name.unwrap_or(message.author.name))
+                        .username(msg_inner.override_name.unwrap_or(user.name))
                         .avatar_url("")
                         .content(content)
                         .allowed_mentions(
@@ -202,7 +211,7 @@ impl Portal {
                     if let Some(dc_tid) = self.config.discord_thread_id {
                         payload = payload.in_thread(dc_tid);
                     }
-                    if let Some(media_id) = message.author.avatar {
+                    if let Some(media_id) = user.avatar {
                         let (avatar_send, avatar) = oneshot::channel();
                         self.globals
                             .ch_chan

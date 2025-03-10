@@ -1,7 +1,7 @@
 use anyhow::Result;
 use common::v1::types::{
     media::MediaCreated, Media, MediaCreate, MediaId, Message, MessageCreate, MessageId,
-    MessagePatch, RoomId, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch,
+    MessagePatch, RoomId, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch, User, UserId,
 };
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
@@ -153,3 +153,4 @@ route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delet
 route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ThreadId, message_id: MessageId) -> Message, MessagePatch);
 route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ThreadId, message_id: MessageId) -> Message);
 route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreate);
+route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);

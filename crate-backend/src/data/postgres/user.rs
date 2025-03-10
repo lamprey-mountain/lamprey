@@ -15,7 +15,7 @@ use crate::data::DataUser;
 use super::Postgres;
 
 #[derive(Deserialize)]
-pub struct DbUserBase<T> {
+pub struct DbUser {
     pub id: UserId,
     pub version_id: UserVerId,
     pub parent_id: Option<Uuid>,
@@ -24,7 +24,7 @@ pub struct DbUserBase<T> {
     pub avatar: Option<Uuid>,
     pub r#type: DbUserType,
     pub state: DbUserState,
-    pub state_updated_at: T,
+    pub state_updated_at: PrimitiveDateTime,
     pub puppet_external_platform: Option<String>,
     pub puppet_external_id: Option<String>,
     pub puppet_external_url: Option<String>,
@@ -32,8 +32,6 @@ pub struct DbUserBase<T> {
     pub bot_is_bridge: bool,
     pub bot_visibility: DbBotVisibility,
 }
-
-type DbUser = DbUserBase<PrimitiveDateTime>;
 
 #[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "user_type")]
@@ -109,8 +107,8 @@ impl From<UserState> for DbUserState {
     }
 }
 
-impl<T: Into<Time>> From<DbUserBase<T>> for User {
-    fn from(row: DbUserBase<T>) -> Self {
+impl From<DbUser> for User {
+    fn from(row: DbUser) -> Self {
         User {
             id: row.id,
             version_id: row.version_id,

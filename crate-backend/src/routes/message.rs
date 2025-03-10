@@ -303,7 +303,7 @@ async fn message_edit(
     if !message.message_type.is_editable() {
         return Err(Error::BadStatic("cant edit that message"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
@@ -409,7 +409,7 @@ async fn message_delete(
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageDelete)?;
@@ -514,7 +514,7 @@ async fn message_version_delete(
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;

@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use common::v1::types::util::Time;
 use common::v1::types::{
-    self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, User,
+    self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
@@ -17,7 +16,6 @@ use crate::types::{
 use crate::data::DataMessage;
 
 use super::url_embed::DbUrlEmbed;
-use super::user::DbUserBase;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -32,7 +30,7 @@ pub struct DbMessage {
     pub metadata: Option<serde_json::Value>,
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
-    pub author: serde_json::Value,
+    pub author_id: UserId,
     pub is_pinned: bool,
     pub embeds: Vec<serde_json::Value>,
 }
@@ -56,11 +54,6 @@ impl From<MessageType> for DbMessageType {
 
 impl From<DbMessage> for Message {
     fn from(row: DbMessage) -> Self {
-        let author: User = {
-            let a: DbUserBase<Time> =
-                serde_json::from_value(row.author).expect("invalid data in database!");
-            a.into()
-        };
         Message {
             id: row.id,
             message_type: match row.message_type {
@@ -88,8 +81,7 @@ impl From<DbMessage> for Message {
             version_id: row.version_id,
             nonce: None,
             ordering: row.ordering,
-            author_id: author.id,
-            author,
+            author_id: row.author_id,
             is_pinned: row.is_pinned,
             mentions: Mentions::default(),
             state: types::MessageState::Default,
