@@ -523,7 +523,15 @@ async fn message_version_delete(
     Ok(Json(()))
 }
 
-/// Message delete bulk
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+struct MessageDeleteBulk {
+    /// which messages to delete
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    message_id: Vec<MessageId>,
+}
+
+/// Message delete bulk (TODO)
 #[utoipa::path(
     post,
     path = "/thread/{thread_id}/messages/bulk-delete",
@@ -546,12 +554,44 @@ async fn message_delete_bulk(
     Err(Error::Unimplemented)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
-struct MessageDeleteBulk {
-    /// which messages to delete
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    message_id: Vec<MessageId>,
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct RepliesQuery {
+    #[serde(flatten)]
+    q: PaginationQuery<MessageId>,
+
+    /// how deeply to fetch replies
+    #[serde(default = "fn_one")]
+    #[validate(range(min = 1, max = 8))]
+    depth: u16,
+}
+
+/// always returns one
+fn fn_one() -> u16 {
+    1
+}
+
+/// Message replies (TODO)
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/replies/{message_id}",
+    params(
+        RepliesQuery,
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id"),
+    ),
+    tags = ["message"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+    ),
+)]
+async fn message_replies(
+    Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
+    Query(_q): Query<RepliesQuery>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -566,4 +606,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_get))
         .routes(routes!(message_version_delete))
         .routes(routes!(message_delete_bulk))
+        .routes(routes!(message_replies))
 }

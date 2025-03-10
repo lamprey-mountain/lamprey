@@ -9,6 +9,8 @@ use common::v1::types::{
     RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
 };
 use http::StatusCode;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -31,7 +33,7 @@ use crate::error::{Error, Result};
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
 )]
-pub async fn room_member_list(
+async fn room_member_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
     Auth(user_id): Auth,
@@ -57,7 +59,7 @@ pub async fn room_member_list(
         (status = OK, body = RoomMember, description = "success"),
     )
 )]
-pub async fn room_member_get(
+async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -94,7 +96,7 @@ pub async fn room_member_get(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn room_member_add(
+async fn room_member_add(
     Path((_room_id, _target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -118,7 +120,7 @@ pub async fn room_member_add(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn room_member_update(
+async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -158,6 +160,17 @@ pub async fn room_member_update(
     Ok(Json(res).into_response())
 }
 
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct LeaveQuery {
+    /// when leaving a room, allow this room to be found with ?include=Removed
+    #[serde(default)]
+    soft: bool,
+    // /// don't send any leave messages?
+    // // wasn't planning on doing it for rooms anyways, maybe threads though?
+    // #[serde(default)]
+    // silent: bool,
+}
+
 /// Room member delete (kick/leave)
 #[utoipa::path(
     delete,
@@ -171,10 +184,11 @@ pub async fn room_member_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn room_member_delete(
+async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     HeaderReason(reason): HeaderReason,
+    Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {

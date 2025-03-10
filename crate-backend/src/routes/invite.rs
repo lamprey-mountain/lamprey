@@ -4,8 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    Invite, InviteCode, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
+    Invite, InviteCode, InviteCreate, InvitePatch, InviteTarget, InviteTargetId,
+    InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
+    RoomMembership,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -212,6 +213,7 @@ pub async fn invite_room_create(
     Auth(user_id): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
+    Json(_json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
@@ -285,7 +287,7 @@ pub async fn invite_room_list(
     Ok(Json(res))
 }
 
-/// Invite user create
+/// Invite user create (TODO)
 ///
 /// Create an invite that goes to a user
 #[utoipa::path(
@@ -298,11 +300,13 @@ pub async fn invite_room_list(
 pub async fn invite_user_create(
     Auth(_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<InviteCreate>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
 
-/// Invite user list
+/// Invite user list (TODO)
 ///
 /// List invites that go to a user
 #[utoipa::path(
@@ -325,10 +329,35 @@ pub async fn invite_user_list(
     Err(Error::Unimplemented)
 }
 
+/// Invite patch (TODO)
+///
+/// Edit an invite
+#[utoipa::path(
+    patch,
+    path = "/invite/{invite_code}",
+    params(
+        ("invite_code", description = "The code identifying this invite"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = NOT_MODIFIED, description = "not modified"),
+        (status = OK, body = Invite, description = "success"),
+    )
+)]
+pub async fn invite_patch(
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<InvitePatch>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(invite_delete))
         .routes(routes!(invite_resolve))
+        .routes(routes!(invite_patch))
         .routes(routes!(invite_use))
         .routes(routes!(invite_room_create))
         .routes(routes!(invite_room_list))

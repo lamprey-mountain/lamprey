@@ -82,14 +82,19 @@ pub enum RoomMembership {
         // origin: RoomMemberOrigin,
     },
 
-    /// kicked or left, can rejoin with an invite. todo: can still view messages up until then
+    // /// kicked, can rejoin with an invite. todo: can still view messages up until then
+    // Kick {
+    //     // TODO: copy kick/ban reason here
+    //     // /// user supplied reason why this user was banned
+    //     // reason: Option<String>,
+    //     // /// which user caused the kick, or None if the user left themselves
+    //     // user_id: Option<UserId>,
+    // },
+    /// left, can rejoin with an invite. todo: can still view messages up until then
     Leave {
         // TODO: keep roles on leave?
-        // TODO: copy kick/ban reason here
-        // /// user supplied reason why this user was banned
+        // /// user supplied reason why they left
         // reason: Option<String>,
-        // /// which user caused the kick, or None if the user left themselves
-        // user_id: Option<UserId>,
     },
 
     /// banned. todo: can still view messages up until they were banned

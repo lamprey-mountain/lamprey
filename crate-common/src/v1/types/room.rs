@@ -77,6 +77,9 @@ pub struct Room {
 
     /// where system messages are sent, or None to **disable** them
     pub system_messages: Option<ThreadId>,
+    // // rooms can't be outright deleted, but some people might want to "clean up"
+    // // or "close" old rooms. archiving could be a good way to do that.
+    // pub is_archived: bool,
 }
 
 /// User-specific room data

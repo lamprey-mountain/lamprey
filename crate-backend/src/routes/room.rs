@@ -9,6 +9,8 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{AuditLog, AuditLogId};
 use headers::ETag;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -75,6 +77,32 @@ async fn room_get(
 
     let etag: ETag = etag.parse().unwrap();
     Ok((TypedHeader(etag), Json(room)).into_response())
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct RoomListParams {
+    /// what rooms to include. defaults to Default
+    #[serde(default = "default_room_list_includes")]
+    include: Vec<RoomListInclude>,
+}
+
+fn default_room_list_includes() -> Vec<RoomListInclude> {
+    vec![RoomListInclude::Default]
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+enum RoomListInclude {
+    /// include default rooms
+    Default,
+
+    /// include dm rooms
+    Dm,
+
+    /// include rooms you have were kicked or banned from, or left with ?soft=true
+    Removed,
+
+    /// include rooms that were archived
+    Archived,
 }
 
 /// List visible rooms

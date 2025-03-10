@@ -540,3 +540,63 @@ mod slowmode {
         pub slowmode_message: u64,
     }
 }
+
+/// let people decide on their own licensing
+/// similarly to how github lets people decide on the license for their code
+/// as opposed to how most social media sites generally try to hide license stuff
+/// i am not a lawyer and have no idea what i'm doing
+mod licensing {
+    /// a license
+    enum License {
+        // #[default]
+        /// you have exclusive control
+        AllRightsReserved,
+
+        /// creative commons
+        Commons(CCLicense),
+
+        /// the cc-0 license
+        CCZero,
+
+        /// known software licenses
+        KnownSoftware(SoftwareLicense),
+
+        /// bring your own
+        Custom(CustomLicense),
+    }
+
+    struct CCLicense {
+        /// can people use this for commercial purposes?
+        require_attribution: bool,
+
+        /// can people remix and modify this?
+        derivatives: CCDerivatives,
+    }
+
+    enum CCDerivatives {
+        /// yes
+        Allow,
+
+        /// yes, if they license their derivitive work under the same license
+        Sharealike,
+
+        /// no
+        Deny,
+    }
+
+    struct CustomLicense {
+        name: String,
+        text: String,
+    }
+
+    enum SoftwareLicense {
+        GnuAgpl3,
+        GnuGpl3,
+        GnuLgpl3,
+        MozillaPublic2,
+        Apache2,
+        Mit,
+        Boost1,
+        Unlicense,
+    }
+}

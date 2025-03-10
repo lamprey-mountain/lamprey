@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "validator")]
+use validator::Validate;
+
 use crate::v1::types::util::Time;
 use crate::v1::types::{PaginationKey, RoomId, ThreadId, UserId};
 
@@ -120,6 +123,24 @@ pub struct InvitePatch {
     /// the maximum number of times this invite can be used
     /// be sure to account for existing `uses` and `max_uses` when patching
     pub max_uses: Option<Option<u64>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct InviteCreate {
+    /// a description for this invite
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub description: Option<String>,
+
+    /// the time when this invite will stop working
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub expires_at: Option<Time>,
+
+    /// the maximum number of times this invite can be used
+    /// be sure to account for existing `uses` and `max_uses` when patching
+    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    pub max_uses: Option<u64>,
 }
 
 impl fmt::Display for InviteCode {
