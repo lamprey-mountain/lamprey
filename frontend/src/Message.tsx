@@ -77,15 +77,19 @@ export function MessageView(props: MessageProps) {
 		if (props.message.type === MessageType.ThreadUpdate) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
-			const patch = props.message.metadata as any;
-			if (patch.name) updates.push(`set name to ${patch.name}`);
-			if (patch.description) {
-				updates.push(
-					patch.description ? `set description to ${patch.description}` : "",
-				);
-			}
-			if (patch.state) {
-				updates.push(`set state to ${patch.state}`);
+			const patch = props.message.patch as any;
+			if (patch) {
+				if (patch.name) updates.push(`set name to ${patch.name}`);
+				if (patch.description) {
+					updates.push(
+						patch.description ? `set description to ${patch.description}` : "",
+					);
+				}
+				if (patch.state) {
+					updates.push(`set state to ${patch.state}`);
+				}
+			} else {
+				console.warn("missing patch", props.message);
 			}
 			return (
 				<>
@@ -137,14 +141,14 @@ export function MessageView(props: MessageProps) {
 						<Show when={props.message.content}>
 							<MessageText message={props.message} />
 						</Show>
-						<Show when={props.message.attachments.length}>
+						<Show when={props.message.attachments?.length}>
 							<ul class="attachments">
 								<For each={props.message.attachments}>
 									{(att) => <AttachmentView media={att} />}
 								</For>
 							</ul>
 						</Show>
-						<Show when={props.message.embeds.length}>
+						<Show when={props.message.embeds?.length}>
 							<ul class="embeds">
 								<For each={props.message.embeds}>
 									{(embed) => <UrlEmbedView embed={embed} />}
@@ -272,14 +276,14 @@ function Author(props: { message: Message; thread?: Thread }) {
 	const room_member = props.thread
 		? api.room_members.fetch(
 			() => props.thread!.room_id,
-			() => props.message.author.id,
+			() => props.message.author_id,
 		)
 		: () => null;
 	const thread_member = api.thread_members.fetch(
 		() => props.message.thread_id,
-		() => props.message.author.id,
+		() => props.message.author_id,
 	);
-	// const user = api.users.fetch(() => props.message.author.id);
+	const user = api.users.fetch(() => props.message.author_id);
 
 	function name() {
 		let name = props.message.override_name;
@@ -289,7 +293,8 @@ function Author(props: { message: Message; thread?: Thread }) {
 		const rm = room_member?.();
 		if (rm?.membership === "Join") name ??= rm.override_name;
 
-		name ??= props.message.author.name;
+		const us = user();
+		name ??= us?.name;
 
 		return name;
 	}
@@ -300,7 +305,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 		interactive: true,
 		tip: () => (
 			<UserView
-				user={props.message.author}
+				user={user()}
 				room_member={room_member()}
 				thread_member={thread_member()}
 			/>
@@ -311,7 +316,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 		<span
 			class="user"
 			classList={{ "override-name": !!props.message.override_name }}
-			data-user-id={props.message.author.id}
+			data-user-id={props.message.author_id}
 			use:content
 		>
 			{name()}

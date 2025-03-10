@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
+use common::v1::types::util::Diff;
+use common::v1::types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 use moka::future::Cache;
-use types::util::Diff;
-use types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
 
 use crate::error::{Error, Result};
-use crate::types::RoleCreate;
+use crate::types::DbRoleCreate;
 use crate::ServerStateInner;
 
 pub struct ServiceRooms {
@@ -50,7 +51,7 @@ impl ServiceRooms {
         let data = self.state.data();
         let room = data.room_create(create).await?;
         let room_id = room.id;
-        let role_admin = RoleCreate {
+        let role_admin = DbRoleCreate {
             room_id,
             name: "admin".to_owned(),
             description: None,
@@ -59,34 +60,20 @@ impl ServiceRooms {
             is_mentionable: false,
             is_default: false,
         };
-        let role_moderator = RoleCreate {
+        let role_moderator = DbRoleCreate {
             room_id,
             name: "moderator".to_owned(),
             description: None,
-            permissions: vec![
-                Permission::ThreadManage,
-                Permission::ThreadDelete,
-                Permission::MessagePin,
-                Permission::MessageDelete,
-                Permission::MemberKick,
-                Permission::MemberBan,
-                Permission::MemberManage,
-                Permission::InviteManage,
-            ],
+            permissions: MODERATOR.to_vec(),
             is_self_applicable: false,
             is_mentionable: false,
             is_default: false,
         };
-        let role_everyone = RoleCreate {
+        let role_everyone = DbRoleCreate {
             room_id,
             name: "everyone".to_owned(),
             description: None,
-            permissions: vec![
-                Permission::MessageCreate,
-                Permission::MessageFilesEmbeds,
-                Permission::ThreadCreate,
-                Permission::InviteCreate,
-            ],
+            permissions: EVERYONE_TRUSTED.to_vec(),
             is_self_applicable: false,
             is_mentionable: false,
             is_default: true,

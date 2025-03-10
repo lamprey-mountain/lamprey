@@ -11,7 +11,7 @@ export type RoomMember = components["schemas"]["RoomMember"];
 export type ThreadMember = components["schemas"]["ThreadMember"];
 export type Media = components["schemas"]["Media"];
 export type MediaTrack = components["schemas"]["MediaTrack"];
-export type MessageCreate = components["schemas"]["MessageCreateRequest"];
+export type MessageCreate = components["schemas"]["MessageCreate"];
 export type PaginationResponseMessage =
 	components["schemas"]["PaginationResponse_Message"];
 export type AuditLogEntry = components["schemas"]["AuditLog"];

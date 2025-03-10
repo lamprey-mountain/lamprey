@@ -1,9 +1,13 @@
-use serde::Deserialize;
-use types::{
+use common::v1::types::{
+    thread::text::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
+    util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,
-    ThreadId, ThreadInfo, ThreadMembership, ThreadState, ThreadVerId, ThreadVisibility, UserId,
+    ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
+    ThreadVisibility, UserId, UserType,
 };
+use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -18,7 +22,7 @@ pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
-    pub is_bot: bool,
+    pub user_type: UserType,
 }
 
 #[derive(sqlx::Type)]
@@ -31,12 +35,26 @@ pub enum DbMembership {
 
 impl From<DbRoom> for Room {
     fn from(row: DbRoom) -> Self {
+        #[allow(deprecated)]
         Room {
             id: row.id.into(),
             version_id: row.version_id,
             name: row.name,
             description: row.description,
             room_type: RoomType::Default,
+
+            // FIXME: add to db, calculate
+            visibility: Default::default(),
+            member_count: Default::default(),
+            online_count: Default::default(),
+            thread_count: Default::default(),
+            default_order: Default::default(),
+            default_layout: Default::default(),
+            tags_available: Default::default(),
+            tags_applied: Default::default(),
+            languages: Default::default(),
+            views: Default::default(),
+            system_messages: Default::default(),
         }
     }
 }
@@ -56,7 +74,7 @@ pub struct DbThread {
     pub state: DbThreadState,
 }
 
-pub struct ThreadCreate {
+pub struct DbThreadCreate {
     pub room_id: RoomId,
     pub creator_id: UserId,
     pub name: String,
@@ -77,12 +95,6 @@ impl From<DbThread> for Thread {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            info: ThreadInfo::Chat {
-                is_unread: row.is_unread,
-                last_version_id: row.last_version_id,
-                last_read_id: row.last_read_id.map(Into::into),
-                message_count: row.message_count.try_into().expect("count is negative?"),
-            },
             state: match row.state {
                 DbThreadState::Pinned => todo!(),
                 DbThreadState::Active => ThreadState::Active,
@@ -91,6 +103,28 @@ impl From<DbThread> for Thread {
                 DbThreadState::Deleted => ThreadState::Deleted,
             },
             visibility: ThreadVisibility::Room,
+            info: ThreadPublic::Chat(ThreadTypeChatPublic {
+                last_version_id: row.last_version_id,
+                message_count: row.message_count.try_into().expect("count is negative?"),
+            }),
+            private: Some(ThreadPrivate::Chat(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                // FIXME: add field to db schema
+                mention_count: 0,
+                notifications: Default::default(),
+            })),
+
+            // FIXME: add field to db schema
+            state_updated_at: row.id.try_into().unwrap(),
+            // FIXME: add field to db schema or calculate
+            member_count: 0,
+            // FIXME: calculate field
+            online_count: 0,
+            tags: Default::default(),
+            is_locked: Default::default(),
+            is_announcement: Default::default(),
+            reactions: Default::default(),
         }
     }
 }
@@ -122,6 +156,7 @@ impl From<DbSession> for Session {
                 },
                 DbSessionStatus::Sudo => SessionStatus::Sudo {
                     user_id: row.user_id.expect("invalid data in db!").into(),
+                    expires_at: Time::now_utc(),
                 },
             },
             name: row.name,
@@ -167,7 +202,7 @@ impl From<DbRole> for Role {
     }
 }
 
-pub struct RoleCreate {
+pub struct DbRoleCreate {
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
@@ -177,93 +212,139 @@ pub struct RoleCreate {
     pub is_default: bool,
 }
 
-pub struct MessageCreate {
+pub struct DbMessageCreate {
     pub message_type: MessageType,
     pub thread_id: ThreadId,
-    pub content: Option<String>,
     pub attachment_ids: Vec<MediaId>,
-    pub metadata: Option<serde_json::Value>,
-    pub reply_id: Option<MessageId>,
     pub author_id: UserId,
-    pub override_name: Option<String>, // temp?
 }
 
-// surely there's a better way
-#[derive(sqlx::Type, PartialEq, Eq)]
-#[sqlx(type_name = "permission")]
-pub enum DbPermission {
+// TODO: move to types
+impl DbMessageCreate {
+    pub fn content(&self) -> Option<String> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.content.clone(),
+            MessageType::ThreadUpdate(_patch) => Some("(thread update)".to_owned()),
+            _ => None,
+        }
+    }
+
+    pub fn metadata(&self) -> Option<serde_json::Value> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
+            MessageType::ThreadUpdate(patch) => Some(serde_json::to_value(patch).ok()?),
+            _ => None,
+        }
+    }
+
+    pub fn reply_id(&self) -> Option<MessageId> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.reply_id,
+            _ => None,
+        }
+    }
+
+    pub fn override_name(&self) -> Option<String> {
+        match &self.message_type {
+            MessageType::DefaultMarkdown(msg) => msg.override_name.clone(),
+            _ => None,
+        }
+    }
+}
+
+macro_rules! impl_perms {
+    ($($e:ident,)*) => {
+        #[derive(sqlx::Type, PartialEq, Eq)]
+        #[sqlx(type_name = "permission")]
+        pub enum DbPermission {
+            $($e,)*
+        }
+
+        impl From<DbPermission> for Permission {
+            fn from(value: DbPermission) -> Self {
+                match value {
+                    $(DbPermission::$e => Permission::$e,)*
+                }
+            }
+        }
+
+        impl From<Permission> for DbPermission {
+            fn from(value: Permission) -> Self {
+                match value {
+                    $(Permission::$e => DbPermission::$e,)*
+                }
+            }
+        }
+    }
+}
+
+// surely there's a better way without copypasta
+impl_perms!(
     Admin,
-    RoomManage,
-    ThreadCreate,
-    ThreadManage,
-    ThreadDelete,
-    MessageCreate,
-    MessageFilesEmbeds,
-    MessagePin,
-    MessageDelete,
-    MessageMassMention,
-    MemberKick,
-    MemberBan,
-    MemberManage,
+    BotsAdd,
+    BotsManage,
+    EmojiAdd,
+    EmojiManage,
+    EmojiUseExternal,
     InviteCreate,
     InviteManage,
-    RoleManage,
-    RoleApply,
-    View,
+    MemberBan,
+    MemberBanManage,
+    MemberBridge,
+    MemberKick,
+    MemberManage,
+    MessageCreate,
+    MessageDelete,
     MessageEdit,
-}
-
-impl From<DbPermission> for Permission {
-    fn from(value: DbPermission) -> Self {
-        match value {
-            DbPermission::Admin => Permission::Admin,
-            DbPermission::RoomManage => Permission::RoomManage,
-            DbPermission::ThreadCreate => Permission::ThreadCreate,
-            DbPermission::ThreadManage => Permission::ThreadManage,
-            DbPermission::ThreadDelete => Permission::ThreadDelete,
-            DbPermission::MessageCreate => Permission::MessageCreate,
-            DbPermission::MessageFilesEmbeds => Permission::MessageFilesEmbeds,
-            DbPermission::MessagePin => Permission::MessagePin,
-            DbPermission::MessageDelete => Permission::MessageDelete,
-            DbPermission::MessageMassMention => Permission::MessageMassMention,
-            DbPermission::MemberKick => Permission::MemberKick,
-            DbPermission::MemberBan => Permission::MemberBan,
-            DbPermission::MemberManage => Permission::MemberManage,
-            DbPermission::InviteCreate => Permission::InviteCreate,
-            DbPermission::InviteManage => Permission::InviteManage,
-            DbPermission::RoleManage => Permission::RoleManage,
-            DbPermission::RoleApply => Permission::RoleApply,
-            DbPermission::View => Permission::View,
-            DbPermission::MessageEdit => Permission::MessageEdit,
-        }
-    }
-}
-
-impl From<Permission> for DbPermission {
-    fn from(value: Permission) -> Self {
-        match value {
-            Permission::Admin => DbPermission::Admin,
-            Permission::RoomManage => DbPermission::RoomManage,
-            Permission::ThreadCreate => DbPermission::ThreadCreate,
-            Permission::ThreadManage => DbPermission::ThreadManage,
-            Permission::ThreadDelete => DbPermission::ThreadDelete,
-            Permission::MessageCreate => DbPermission::MessageCreate,
-            Permission::MessageFilesEmbeds => DbPermission::MessageFilesEmbeds,
-            Permission::MessagePin => DbPermission::MessagePin,
-            Permission::MessageDelete => DbPermission::MessageDelete,
-            Permission::MessageMassMention => DbPermission::MessageMassMention,
-            Permission::MemberKick => DbPermission::MemberKick,
-            Permission::MemberBan => DbPermission::MemberBan,
-            Permission::MemberManage => DbPermission::MemberManage,
-            Permission::InviteCreate => DbPermission::InviteCreate,
-            Permission::InviteManage => DbPermission::InviteManage,
-            Permission::RoleManage => DbPermission::RoleManage,
-            Permission::RoleApply => DbPermission::RoleApply,
-            Permission::View => DbPermission::View,
-            Permission::MessageEdit => DbPermission::MessageEdit,
-        }
-    }
-}
+    MessageEmbeds,
+    MessageMassMention,
+    MessageAttachments,
+    MessageMove,
+    MessagePin,
+    ReactionAdd,
+    ReactionClear,
+    ProfileAvatar,
+    ProfileOverride,
+    RoleApply,
+    RoleManage,
+    RoomManage,
+    ServerAdmin,
+    ServerMetrics,
+    ServerOversee,
+    ServerReports,
+    TagApply,
+    TagManage,
+    ThreadArchive,
+    ThreadCreateChat,
+    ThreadCreateDocument,
+    ThreadCreateEvent,
+    ThreadCreateForumLinear,
+    ThreadCreateForumTree,
+    ThreadCreateTable,
+    ThreadCreateVoice,
+    ThreadCreatePublic,
+    ThreadCreatePrivate,
+    ThreadDelete,
+    ThreadEdit,
+    ThreadForward,
+    ThreadLock,
+    ThreadPin,
+    ThreadPublish,
+    UserDms,
+    UserProfile,
+    UserSessions,
+    UserStatus,
+    View,
+    ViewAuditLog,
+    VoiceConnect,
+    VoiceDeafen,
+    VoiceDisconnect,
+    VoiceMove,
+    VoiceMute,
+    VoicePriority,
+    VoiceSpeak,
+    VoiceVideo,
+);
 
 impl From<RoomMembership> for DbMembership {
     fn from(value: RoomMembership) -> Self {
@@ -285,8 +366,7 @@ impl From<ThreadMembership> for DbMembership {
     }
 }
 
-// TODO: ToSchema
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(untagged)]
 pub enum UserIdReq {
     #[serde(deserialize_with = "const_self")]
@@ -294,7 +374,7 @@ pub enum UserIdReq {
     UserId(UserId),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(untagged)]
 pub enum SessionIdReq {
     #[serde(deserialize_with = "const_self")]
@@ -363,6 +443,8 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
+    // FIXME(#230): link media to embeds
+    // Embed,
 }
 
 // TODO: surely there's a better way than manually managing media links/references

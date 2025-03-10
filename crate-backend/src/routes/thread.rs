@@ -6,22 +6,21 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::{MessageId, MessageThreadUpdate, ThreadState, ThreadType};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use types::{MessageId, ThreadState};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
     types::{
-        MessageCreate, MessageSync, MessageType, MessageVerId, PaginationQuery, PaginationResponse,
-        Permission, RoomId, Thread, ThreadCreate, ThreadCreateRequest, ThreadId, ThreadPatch,
+        DbMessageCreate, DbThreadCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
+        PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
 /// Create a thread
@@ -39,15 +38,20 @@ async fn thread_create(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<ThreadCreateRequest>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<ThreadCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::ThreadCreate)?;
+    match json.ty {
+        ThreadType::Chat => {
+            perms.ensure(Permission::ThreadCreateChat)?;
+        }
+    };
     let thread_id = data
-        .thread_create(ThreadCreate {
+        .thread_create(DbThreadCreate {
             room_id,
             creator_id: user_id,
             name: json.name.clone(),
@@ -55,18 +59,18 @@ async fn thread_create(
         })
         .await?;
     let starter_message_id = data
-        .message_create(MessageCreate {
+        .message_create(DbMessageCreate {
             thread_id,
-            content: Some("(thread create)".to_string()),
             attachment_ids: vec![],
             author_id: user_id,
-            message_type: MessageType::ThreadUpdate,
-            metadata: Some(json!({
-                "name": json.name,
-                "description": json.description,
-            })),
-            reply_id: None,
-            override_name: None,
+            message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
+                patch: ThreadPatch {
+                    name: Some(json.name),
+                    description: Some(json.description),
+                    state: None,
+                    tags: None,
+                },
+            }),
         })
         .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
@@ -74,7 +78,7 @@ async fn thread_create(
     s.broadcast_room(
         room_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertThread {
             thread: thread.clone(),
         },
@@ -154,13 +158,14 @@ async fn thread_update(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, json)
+        .update(user_id, thread_id, json, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -242,17 +247,19 @@ async fn thread_ack(
 async fn thread_pin(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
         name: None,
         description: None,
         state: Some(ThreadState::Pinned { pin_order: 0 }),
+        tags: None,
     };
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -275,17 +282,19 @@ async fn thread_pin(
 async fn thread_archive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
         name: None,
         description: None,
         state: Some(ThreadState::Archived),
+        tags: None,
     };
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -308,17 +317,19 @@ async fn thread_archive(
 async fn thread_activate(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
         name: None,
         description: None,
         state: Some(ThreadState::Active),
+        tags: None,
     };
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -340,16 +351,18 @@ async fn thread_activate(
 async fn thread_delete(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let patch = ThreadPatch {
         name: None,
         description: None,
         state: Some(ThreadState::Deleted),
+        tags: None,
     };
     s.services()
         .threads
-        .update(user_id, thread_id, patch)
+        .update(user_id, thread_id, patch, reason)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -357,6 +370,7 @@ async fn thread_delete(
 /// Send typing
 ///
 /// Send a typing notification to a thread
+// should this be POST?
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/typing",
@@ -371,6 +385,7 @@ async fn thread_delete(
 async fn thread_typing(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
@@ -379,11 +394,11 @@ async fn thread_typing(
     s.broadcast_thread(
         thread_id,
         user_id,
-        None,
+        reason,
         MessageSync::Typing {
             thread_id,
             user_id,
-            until,
+            until: until.into(),
         },
     )
     .await?;

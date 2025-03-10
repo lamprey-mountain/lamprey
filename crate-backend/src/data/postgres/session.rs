@@ -1,6 +1,6 @@
 use async_trait::async_trait;
+use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
 use sqlx::{query, query_as, query_scalar, Acquire};
-use types::{SessionPatch, SessionStatus, SessionToken};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -56,12 +56,13 @@ impl DataSession for Postgres {
     }
 
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
+        let user_id = status.user_id().map(|i| i.into_inner());
         let status_db: DbSessionStatus = status.into();
         query!(
             r#"UPDATE session SET status = $2, user_id = $3 WHERE id = $1"#,
             session_id.into_inner(),
             status_db as _,
-            status.user_id().map(|i| i.into_inner()),
+            user_id,
         )
         .execute(&self.pool)
         .await?;

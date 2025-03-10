@@ -1,10 +1,10 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use common::v1::types::{MediaId, MessageId, ThreadId};
 use serenity::all::{
     AttachmentId as DcAttachmentId, ChannelId as DcChannelId, MessageId as DcMessageId,
 };
 use sqlx::{query, query_as};
-use types::{MediaId, MessageId, ThreadId};
 
 use crate::common::Globals;
 

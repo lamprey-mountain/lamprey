@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
-use tracing::info;
-use types::{
+use common::v1::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, RoomMember, RoomMemberPatch,
     RoomMembership,
 };
+use sqlx::{query, query_as, query_scalar, Acquire};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -40,7 +40,7 @@ impl From<DbRoomMember> for RoomMember {
                 DbMembership::Leave => RoomMembership::Leave {},
                 DbMembership::Ban => RoomMembership::Ban {},
             },
-            membership_updated_at: row.membership_updated_at.assume_utc(),
+            membership_updated_at: row.membership_updated_at.assume_utc().into(),
         }
     }
 }

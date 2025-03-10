@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
+use common::v1::types::util::Diff;
+use common::v1::types::{
+    MessageSync, MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch,
+    UserId,
+};
 use moka::future::Cache;
-use serde_json::json;
-use types::util::Diff;
-use types::{MessageSync, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId};
 
 use crate::error::{Error, Result};
-use crate::types::MessageCreate;
+use crate::types::DbMessageCreate;
 use crate::ServerStateInner;
 
 pub struct ServiceThreads {
@@ -55,6 +57,7 @@ impl ServiceThreads {
         user_id: UserId,
         thread_id: ThreadId,
         patch: ThreadPatch,
+        reason: Option<String>,
     ) -> Result<Thread> {
         // check update perms
         let mut perms = self
@@ -67,9 +70,9 @@ impl ServiceThreads {
         let data = self.state.data();
         let thread = data.thread_get(thread_id, Some(user_id)).await?;
         if thread.creator_id == user_id {
-            perms.add(Permission::ThreadManage);
+            perms.add(Permission::ThreadEdit);
         }
-        perms.ensure(Permission::ThreadManage)?;
+        perms.ensure(Permission::ThreadEdit)?;
 
         // shortcut if it wont modify the thread
         if !patch.changes(&thread) {
@@ -90,19 +93,19 @@ impl ServiceThreads {
 
         // send update message to thread
         let update_message_id = data
-            .message_create(MessageCreate {
+            .message_create(DbMessageCreate {
                 thread_id,
-                content: Some("(thread update)".to_string()),
                 attachment_ids: vec![],
                 author_id: user_id,
-                message_type: MessageType::ThreadUpdate,
-                metadata: Some(json!({
-                    "name": patch.name,
-                    "description": patch.description,
-                    "state": patch.state,
-                })),
-                reply_id: None,
-                override_name: None,
+                message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
+                    patch: ThreadPatch {
+                        name: patch.name,
+                        description: patch.description,
+                        state: patch.state,
+                        // tags: patch.tags,
+                        tags: None,
+                    },
+                }),
             })
             .await?;
         let update_message = data.message_get(thread_id, update_message_id).await?;
@@ -121,7 +124,7 @@ impl ServiceThreads {
             thread: thread.clone(),
         };
         self.state
-            .broadcast_room(thread.room_id, user_id, None, msg)
+            .broadcast_room(thread.room_id, user_id, reason, msg)
             .await?;
 
         Ok(thread)

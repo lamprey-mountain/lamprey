@@ -1,15 +1,15 @@
 use async_trait::async_trait;
-use sqlx::{query_file_as, query_file_scalar, Acquire};
-use types::{
+use common::v1::types::search::SearchMessageRequest;
+use common::v1::types::{
     Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
-    SearchMessageRequest,
 };
+use sqlx::{query_file_as, query_file_scalar, Acquire};
 
 use crate::data::postgres::message::{DbMessage, DbMessageType};
 use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
-use types::UserId;
+use common::v1::types::UserId;
 
 use crate::data::DataSearch;
 

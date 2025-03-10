@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
-use tracing::info;
-use types::{
+use common::v1::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember,
     ThreadMemberPatch, ThreadMembership, UserId,
 };
+use sqlx::{query, query_as, query_scalar, Acquire};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::data::postgres::Pagination;
@@ -38,7 +38,7 @@ impl From<DbThreadMember> for ThreadMember {
                 DbMembership::Leave => ThreadMembership::Leave {},
                 DbMembership::Ban => ThreadMembership::Ban {},
             },
-            membership_updated_at: row.membership_updated_at.assume_utc(),
+            membership_updated_at: row.membership_updated_at.assume_utc().into(),
         }
     }
 }

@@ -3,19 +3,20 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::{
+    Invite, InviteCode, InviteCreate, InvitePatch, InviteTarget, InviteTargetId,
+    InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
+    RoomMembership,
+};
 use http::StatusCode;
 use nanoid::nanoid;
 use serde::Serialize;
-use types::{
-    Invite, InviteCode, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
-};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
-use crate::ServerState;
+use crate::{Error, ServerState};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 
 /// Invite delete
 #[utoipa::path(
@@ -32,6 +33,7 @@ use super::util::Auth;
 pub async fn invite_delete(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -61,7 +63,7 @@ pub async fn invite_delete(
             },
         ),
     };
-    let can_delete = user_id == invite.invite.creator.id || has_perm;
+    let can_delete = user_id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
         match id_target {
@@ -75,7 +77,7 @@ pub async fn invite_delete(
                 s.broadcast_room(
                     room_id,
                     user_id,
-                    None,
+                    reason,
                     MessageSync::DeleteInvite {
                         code,
                         target: id_target,
@@ -87,7 +89,7 @@ pub async fn invite_delete(
                 s.broadcast_thread(
                     thread_id,
                     user_id,
-                    None,
+                    reason,
                     MessageSync::DeleteInvite {
                         code,
                         target: id_target,
@@ -121,7 +123,7 @@ pub async fn invite_resolve(
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(code).await?;
-    if invite.invite.creator.id == user_id {
+    if invite.invite.creator_id == user_id {
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
@@ -157,6 +159,7 @@ pub async fn invite_resolve(
 pub async fn invite_use(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -182,7 +185,7 @@ pub async fn invite_use(
             s.broadcast_room(
                 room.id,
                 user_id,
-                None,
+                reason,
                 MessageSync::UpsertRoomMember { member },
             )
             .await?;
@@ -208,7 +211,9 @@ pub async fn invite_use(
 pub async fn invite_room_create(
     Path(room_id): Path<RoomId>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
+    Json(_json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
@@ -223,7 +228,7 @@ pub async fn invite_room_create(
     s.broadcast_room(
         room_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertInvite {
             invite: invite.clone(),
         },
@@ -269,7 +274,7 @@ pub async fn invite_room_list(
             .items
             .into_iter()
             .map(|i| {
-                if i.invite.creator.id != user_id && !perms.has(Permission::InviteManage) {
+                if i.invite.creator_id != user_id && !perms.has(Permission::InviteManage) {
                     InviteWithPotentialMetadata::Invite(i.strip_metadata())
                 } else {
                     InviteWithPotentialMetadata::InviteWithMetadata(i)
@@ -282,55 +287,80 @@ pub async fn invite_room_list(
     Ok(Json(res))
 }
 
-// /// Invite user create
-// ///
-// /// Create an invite that goes to a user
-// #[utoipa::path(
-//     post,
-//     path = "/users/{user_id}/invite",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["invite"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn invite_user_create(
-//     Auth(user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-// ) -> Result<impl IntoResponse> {
-//     Ok(StatusCode::NOT_IMPLEMENTED)
-// }
+/// Invite user create (TODO)
+///
+/// Create an invite that goes to a user
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/invite",
+    params(("user_id", description = "User id")),
+    tags = ["invite"],
+    responses((status = OK, body = Invite, description = "success")),
+)]
+pub async fn invite_user_create(
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<InviteCreate>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
-// /// Invite user list
-// ///
-// /// List invites that go to a user
-// #[utoipa::path(
-//     get,
-//     path = "/users/{user_id}/invite",
-//     params(
-//         ("user_id", description = "User id"),
-//     ),
-//     tags = ["invite"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn invite_user_list(
-//     Auth(user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-// ) -> Result<impl IntoResponse> {
-//     Ok(StatusCode::NOT_IMPLEMENTED)
-// }
+/// Invite user list (TODO)
+///
+/// List invites that go to a user
+#[utoipa::path(
+    get,
+    path = "/users/{user_id}/invite",
+    params(
+        PaginationQuery<InviteCode>,
+        ("user_id", description = "User id"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
+    )
+)]
+pub async fn invite_user_list(
+    Query(_paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Invite patch (TODO)
+///
+/// Edit an invite
+#[utoipa::path(
+    patch,
+    path = "/invite/{invite_code}",
+    params(
+        ("invite_code", description = "The code identifying this invite"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = NOT_MODIFIED, description = "not modified"),
+        (status = OK, body = Invite, description = "success"),
+    )
+)]
+pub async fn invite_patch(
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<InvitePatch>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(invite_delete))
         .routes(routes!(invite_resolve))
+        .routes(routes!(invite_patch))
         .routes(routes!(invite_use))
         .routes(routes!(invite_room_create))
         .routes(routes!(invite_room_list))
-    // .routes(routes!(invite_user_create))
-    // .routes(routes!(invite_user_list))
+        .routes(routes!(invite_user_create))
+        .routes(routes!(invite_user_list))
 }

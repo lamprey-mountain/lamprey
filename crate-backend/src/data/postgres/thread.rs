@@ -1,13 +1,13 @@
 use async_trait::async_trait;
+use common::v1::types::ThreadState;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
-use types::ThreadState;
 
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, DbThreadState, PaginationDirection, PaginationQuery, PaginationResponse, RoomId,
-    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, UserId,
+    DbThread, DbThreadCreate, DbThreadState, PaginationDirection, PaginationQuery,
+    PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;
@@ -16,7 +16,7 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataThread for Postgres {
-    async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId> {
+    async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId> {
         let thread_id = ThreadId::new();
         query!(
             "

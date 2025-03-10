@@ -1,9 +1,9 @@
 use async_trait::async_trait;
-use sqlx::{query, query_as, query_scalar, Acquire};
-use types::{
+use common::v1::types::{
     InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery, PaginationResponse,
     ThreadId,
 };
+use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
 use crate::data::{DataInvite, DataRoom, DataThread, DataUser};
@@ -65,13 +65,18 @@ impl DataInvite for Postgres {
             _ => panic!("invalid data in db"),
         };
         let creator = self.user_get(UserId::from(row.creator_id)).await?;
-        let invite = Invite {
+        let creator_id = creator.id;
+        let invite = Invite::new(
             code,
             target,
             creator,
-            created_at: row.created_at.assume_utc(),
-            expires_at: row.expires_at.map(|t| t.assume_utc()),
-        };
+            creator_id,
+            row.created_at.assume_utc().into(),
+            row.expires_at.map(|t| t.assume_utc().into()),
+            // TODO(#260): description
+            None,
+            false,
+        );
         let invite_with_meta = InviteWithMetadata {
             invite,
             uses: row.uses.try_into().expect("invalid data in db"),
@@ -128,13 +133,18 @@ impl DataInvite for Postgres {
             assert_eq!(row.target_id, room_id.into_inner());
             let target = InviteTarget::Room { room: room.clone() };
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
-            let invite = Invite {
-                code: InviteCode(row.code),
+            let creator_id = creator.id;
+            let invite = Invite::new(
+                InviteCode(row.code),
                 target,
                 creator,
-                created_at: row.created_at.assume_utc(),
-                expires_at: row.expires_at.map(|t| t.assume_utc()),
-            };
+                creator_id,
+                row.created_at.assume_utc().into(),
+                row.expires_at.map(|t| t.assume_utc().into()),
+                // TODO(#260): description
+                None,
+                false,
+            );
             let invite_with_meta = InviteWithMetadata {
                 invite,
                 uses: row.uses.try_into().expect("invalid data in db"),

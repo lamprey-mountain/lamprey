@@ -270,7 +270,7 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: `${msg.version_id}-${msg.embeds.length}`,
+			id: `${msg.version_id}-${msg.embeds?.length}`,
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});
@@ -328,7 +328,7 @@ function shouldSplit(a: Message, b: Message) {
 
 function shouldSplitInner(a: Message, b: Message) {
 	shouldSplitMemo;
-	if (a.author.id !== b.author.id) return true;
+	if (a.author_id !== b.author_id) return true;
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
 	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;

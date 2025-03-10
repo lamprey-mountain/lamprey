@@ -3,19 +3,21 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use http::StatusCode;
-use types::util::Diff;
-use types::{
+use common::v1::types::util::Diff;
+use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, RoomMembership, UserId,
+    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
 };
+use http::StatusCode;
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 /// Room member list
@@ -31,7 +33,7 @@ use crate::error::{Error, Result};
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
 )]
-pub async fn room_member_list(
+async fn room_member_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
     Auth(user_id): Auth,
@@ -57,7 +59,7 @@ pub async fn room_member_list(
         (status = OK, body = RoomMember, description = "success"),
     )
 )]
-pub async fn room_member_get(
+async fn room_member_get(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -78,6 +80,32 @@ pub async fn room_member_get(
     }
 }
 
+/// Room member add
+///
+/// Only `Puppet` users can be added to rooms (via MemberBridge permission)
+#[utoipa::path(
+    put,
+    path = "/room/{room_id}/member/{user_id}",
+    params(
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = String, description = "User id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = OK, body = RoomMember, description = "success"),
+        (status = NOT_MODIFIED, description = "not modified"),
+    )
+)]
+async fn room_member_add(
+    Path((_room_id, _target_user_id)): Path<(RoomId, UserIdReq)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<RoomMemberPut>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 /// Room member update
 #[utoipa::path(
     patch,
@@ -92,10 +120,11 @@ pub async fn room_member_get(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn room_member_update(
+async fn room_member_update(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -122,13 +151,24 @@ pub async fn room_member_update(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertRoomMember {
             member: res.clone(),
         },
     )
     .await?;
     Ok(Json(res).into_response())
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct LeaveQuery {
+    /// when leaving a room, allow this room to be found with ?include=Removed
+    #[serde(default)]
+    soft: bool,
+    // /// don't send any leave messages?
+    // // wasn't planning on doing it for rooms anyways, maybe threads though?
+    // #[serde(default)]
+    // silent: bool,
 }
 
 /// Room member delete (kick/leave)
@@ -144,9 +184,11 @@ pub async fn room_member_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn room_member_delete(
+async fn room_member_delete(
     Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
     Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -174,7 +216,7 @@ pub async fn room_member_delete(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertRoomMember { member: res },
     )
     .await?;
@@ -185,6 +227,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_member_list))
         .routes(routes!(room_member_get))
+        .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
 }

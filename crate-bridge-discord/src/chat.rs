@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use common::v1::types::{
+    self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session,
+    Thread, ThreadId, User, UserId,
+};
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
-use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MessageCreateRequest, MessageId, Session,
-    Thread, ThreadId, User, UserId,
-};
 use uuid::uuid;
 
 use crate::{
@@ -37,7 +37,7 @@ pub enum UnnamedMessage {
     // },
     MessageCreate {
         thread_id: ThreadId,
-        req: MessageCreateRequest,
+        req: MessageCreate,
         response: oneshot::Sender<types::Message>,
     },
     MessageUpdate {
@@ -50,6 +50,10 @@ pub enum UnnamedMessage {
         thread_id: ThreadId,
         message_id: MessageId,
         response: oneshot::Sender<()>,
+    },
+    UserFetch {
+        user_id: UserId,
+        response: oneshot::Sender<User>,
     },
 }
 
@@ -72,7 +76,7 @@ impl EventHandler for Handle {
 
     async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        if message.author.id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
+        if message.author_id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
             return Ok(());
         }
         self.globals.portal_send(
@@ -165,14 +169,19 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
         } => {
             http.message_delete(thread_id, message_id).await?;
             let _ = response.send(());
-        } // UnnamedMessage::MessageGet {
-          //     thread_id,
-          //     message_id,
-          //     response,
-          // } => {
-          //     let res = http.message_get(thread_id, message_id).await?;
-          //     let _ = response.send(res);
-          // }
+        }
+        // UnnamedMessage::MessageGet {
+        //     thread_id,
+        //     message_id,
+        //     response,
+        // } => {
+        //     let res = http.message_get(thread_id, message_id).await?;
+        //     let _ = response.send(res);
+        // }
+        UnnamedMessage::UserFetch { user_id, response } => {
+            let res = http.user_get(user_id).await?;
+            let _ = response.send(res);
+        }
     }
     Ok(())
 }

@@ -2,13 +2,14 @@ use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
-use tokio::time::Instant;
-use tracing::debug;
-use types::user_status::Status;
-use types::{
+use common::v1::types;
+use common::v1::types::user_status::Status;
+use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
 };
+use tokio::time::Instant;
+use tracing::{debug, trace};
 
 use crate::error::{Error, Result};
 use crate::ServerState;
@@ -109,15 +110,17 @@ impl Connection {
         ws: &mut WebSocket,
         timeout: &mut Timeout,
     ) -> Result<()> {
+        trace!("{:#?}", msg);
         match msg {
             MessageClient::Hello {
                 token,
                 resume: reconnect,
                 status,
             } => {
-                let data = self.s.data();
-                let session = data
-                    .session_get_by_token(token)
+                let srv = self.s.services();
+                let session = srv
+                    .sessions
+                    .get_by_token(token)
                     .await
                     .map_err(|err| match err {
                         Error::NotFound => Error::MissingAuth,
@@ -151,8 +154,8 @@ impl Connection {
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
                     let user = srv
-                        .user_status
-                        .set(
+                        .users
+                        .status_set(
                             user_id,
                             status
                                 .map(|s| s.apply(Status::offline()))
@@ -189,8 +192,8 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.user_status
-                    .set(user_id, status.apply(Status::offline()))
+                srv.users
+                    .status_set(user_id, status.apply(Status::offline()))
                     .await?;
             }
             MessageClient::Pong => {
@@ -203,7 +206,7 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                srv.user_status.ping(user_id).await?;
+                srv.users.status_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
         }
@@ -279,6 +282,8 @@ impl Connection {
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
             MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            // FIXME: implement new event types
+            _ => unimplemented!(),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

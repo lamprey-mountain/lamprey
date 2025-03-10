@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use std::future::{ready, Future};
-use types::{
-    InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId,
-    Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember,
-    User, UserId,
+use common::v1::types::{
+    util::Time, InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync,
+    MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId,
+    ThreadMember, User, UserId,
 };
+use std::future::{ready, Future};
 
 #[allow(unused_variables)]
 pub trait EventHandler: Send {
@@ -123,7 +123,7 @@ pub trait EventHandler: Send {
         &mut self,
         thread_id: ThreadId,
         user_id: UserId,
-        until: time::OffsetDateTime,
+        until: Time,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
@@ -184,6 +184,7 @@ where
                     user_id,
                     until,
                 } => self.typing(thread_id, user_id, until).await,
+                _ => todo!(),
             },
             MessagePayload::Error { error } => self.error(error).await,
             MessagePayload::Ready { user, session, .. } => self.ready(user, session).await,

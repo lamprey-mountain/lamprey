@@ -4,9 +4,10 @@ use media::ServiceMedia;
 use oauth2::ServiceOauth;
 use permissions::ServicePermissions;
 use room::ServiceRooms;
+use sessions::ServiceSessions;
 use thread::ServiceThreads;
 use url_embed::ServiceUrlEmbed;
-use user_status::ServiceUserStatus;
+use users::ServiceUsers;
 
 use crate::ServerStateInner;
 
@@ -14,9 +15,10 @@ pub mod media;
 pub mod oauth2;
 pub mod permissions;
 pub mod room;
+pub mod sessions;
 pub mod thread;
 pub mod url_embed;
-pub mod user_status;
+pub mod users;
 
 pub struct Services {
     pub(super) state: Arc<ServerStateInner>,
@@ -26,7 +28,8 @@ pub struct Services {
     pub threads: ServiceThreads,
     pub oauth: ServiceOauth,
     pub url_embed: ServiceUrlEmbed,
-    pub user_status: ServiceUserStatus,
+    pub users: ServiceUsers,
+    pub sessions: ServiceSessions,
 }
 
 impl Services {
@@ -38,7 +41,8 @@ impl Services {
             threads: ServiceThreads::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),
             url_embed: ServiceUrlEmbed::new(state.clone()),
-            user_status: ServiceUserStatus::new(state.clone()),
+            users: ServiceUsers::new(state.clone()),
+            sessions: ServiceSessions::new(state.clone()),
             state,
         }
     }

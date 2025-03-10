@@ -1,15 +1,15 @@
 use async_trait::async_trait;
+use common::v1::types::{PaginationDirection, UserId};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
-use types::{PaginationDirection, UserId};
 use uuid::Uuid;
 
 use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbPermission, DbRole, PaginationQuery, PaginationResponse, Role, RoleCreate, RoleId, RolePatch,
-    RoleVerId, RoomId,
+    DbPermission, DbRole, DbRoleCreate, PaginationQuery, PaginationResponse, Role, RoleId,
+    RolePatch, RoleVerId, RoomId,
 };
 
 use crate::data::DataRole;
@@ -18,7 +18,7 @@ use super::Postgres;
 
 #[async_trait]
 impl DataRole for Postgres {
-    async fn role_create(&self, create: RoleCreate) -> Result<Role> {
+    async fn role_create(&self, create: DbRoleCreate) -> Result<Role> {
         let role_id = Uuid::now_v7();
         let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
         let role = query_as!(DbRole, r#"

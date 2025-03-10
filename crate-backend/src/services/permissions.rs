@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use common::v1::types::{RoomId, ThreadId, UserId};
 use moka::future::Cache;
-use types::{RoomId, ThreadId, UserId};
 
 use crate::error::Result;
 use crate::types::Permissions;
@@ -87,7 +87,6 @@ impl ServicePermissions {
             .expect("failed to invalidate");
     }
 
-    // FIXME: cache
     /// check if two users share a common room
     pub async fn is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
         if a == b {

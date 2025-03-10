@@ -15,12 +15,11 @@ SELECT
     msg.metadata,
     msg.reply_id,
     msg.override_name,
+    msg.author_id,
     false as "is_pinned!",
-    row_to_json(usr) as "author!",
     coalesce(att_json.attachments, '{}') as "attachments!",
     coalesce(u.embeds, '{}') as "embeds!"
 FROM message_coalesced AS msg
-JOIN usr ON usr.id = msg.author_id
 left join url_embed_json u on u.version_id = msg.version_id
 left JOIN att_json ON att_json.version_id = msg.version_id
      WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL

@@ -3,19 +3,19 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use http::StatusCode;
-use types::util::Diff;
-use types::{
+use common::v1::types::util::Diff;
+use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
     ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId,
 };
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::types::UserIdReq;
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
 /// Thread member list
@@ -100,6 +100,7 @@ pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -135,7 +136,7 @@ pub async fn thread_member_add(
         s.broadcast_thread(
             thread_id,
             auth_user_id,
-            None,
+            reason,
             MessageSync::UpsertThreadMember {
                 member: res.clone(),
             },
@@ -163,6 +164,7 @@ pub async fn thread_member_update(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadMemberPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -194,7 +196,7 @@ pub async fn thread_member_update(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertThreadMember {
             member: res.clone(),
         },
@@ -219,6 +221,7 @@ pub async fn thread_member_update(
 pub async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -248,7 +251,7 @@ pub async fn thread_member_delete(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        None,
+        reason,
         MessageSync::UpsertThreadMember { member: res },
     )
     .await?;

@@ -1,20 +1,21 @@
 use async_trait::async_trait;
+use common::v1::types::{
+    self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, UserId,
+};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
-use types::MessageType;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    Message, MessageCreate, MessageId, MessageVerId, PaginationDirection, PaginationQuery,
+    DbMessageCreate, Message, MessageId, MessageVerId, PaginationDirection, PaginationQuery,
     PaginationResponse, ThreadId,
 };
 
 use crate::data::DataMessage;
 
 use super::url_embed::DbUrlEmbed;
-use super::user::DbUser;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -29,7 +30,7 @@ pub struct DbMessage {
     pub metadata: Option<serde_json::Value>,
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
-    pub author: serde_json::Value,
+    pub author_id: UserId,
     pub is_pinned: bool,
     pub embeds: Vec<serde_json::Value>,
 }
@@ -41,20 +42,12 @@ pub enum DbMessageType {
     ThreadUpdate,
 }
 
-impl From<DbMessageType> for MessageType {
-    fn from(value: DbMessageType) -> Self {
-        match value {
-            DbMessageType::Default => MessageType::Default,
-            DbMessageType::ThreadUpdate => MessageType::ThreadUpdate,
-        }
-    }
-}
-
 impl From<MessageType> for DbMessageType {
     fn from(value: MessageType) -> Self {
         match value {
-            MessageType::Default => DbMessageType::Default,
-            MessageType::ThreadUpdate => DbMessageType::ThreadUpdate,
+            MessageType::DefaultMarkdown(_) => DbMessageType::Default,
+            MessageType::ThreadUpdate(_) => DbMessageType::ThreadUpdate,
+            _ => todo!(),
         }
     }
 }
@@ -63,45 +56,66 @@ impl From<DbMessage> for Message {
     fn from(row: DbMessage) -> Self {
         Message {
             id: row.id,
-            message_type: row.message_type.into(),
+            message_type: match row.message_type {
+                DbMessageType::Default => MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                    content: row.content,
+                    attachments: row.attachments.into_iter().map(media_from_db).collect(),
+                    metadata: row.metadata,
+                    reply_id: row.reply_id.map(Into::into),
+                    override_name: row.override_name,
+                    embeds: row
+                        .embeds
+                        .into_iter()
+                        .map(|a| {
+                            let db: DbUrlEmbed =
+                                serde_json::from_value(a).expect("invalid data in database!");
+                            db.into()
+                        })
+                        .collect(),
+                }),
+                DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {
+                    patch: serde_json::from_value(row.metadata.unwrap()).unwrap(),
+                }),
+            },
             thread_id: row.thread_id,
             version_id: row.version_id,
             nonce: None,
             ordering: row.ordering,
-            content: row.content,
-            attachments: row.attachments.into_iter().map(media_from_db).collect(),
-            metadata: row.metadata,
-            reply_id: row.reply_id.map(Into::into),
-            override_name: row.override_name,
-            author: {
-                let a: DbUser =
-                    serde_json::from_value(row.author).expect("invalid data in database!");
-                a.into()
-            },
+            author_id: row.author_id,
             is_pinned: row.is_pinned,
-            embeds: row
-                .embeds
-                .into_iter()
-                .map(|a| {
-                    let db: DbUrlEmbed =
-                        serde_json::from_value(a).expect("invalid data in database!");
-                    db.into()
-                })
-                .collect(),
+            mentions: Mentions::default(),
+            state: types::MessageState::Default,
+            state_updated_at: row
+                .id
+                .into_inner()
+                .get_timestamp()
+                .unwrap()
+                .try_into()
+                .unwrap(),
         }
     }
 }
 
 #[async_trait]
 impl DataMessage for Postgres {
-    async fn message_create(&self, create: MessageCreate) -> Result<MessageId> {
+    async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId> {
         let message_id = Uuid::now_v7();
-        let message_type: DbMessageType = create.message_type.into();
+        let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
         query!(r#"
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)
-        "#, message_id, create.thread_id.into_inner(), message_id, create.content, create.metadata, create.reply_id.map(|i| i.into_inner()), create.author_id.into_inner(), message_type as _, create.override_name)
+        "#,
+            message_id,
+            create.thread_id.into_inner(),
+            message_id,
+            create.content(),
+            create.metadata(),
+            create.reply_id().map(|i| i.into_inner()),
+            create.author_id.into_inner(),
+            message_type as _,
+            create.override_name(),
+        )
         .execute(&mut *tx)
         .await?;
         for (ord, att) in create.attachment_ids.iter().enumerate() {
@@ -126,10 +140,10 @@ impl DataMessage for Postgres {
         &self,
         _thread_id: ThreadId,
         message_id: MessageId,
-        create: MessageCreate,
+        create: DbMessageCreate,
     ) -> Result<MessageVerId> {
         let ver_id = Uuid::now_v7();
-        let message_type: DbMessageType = create.message_type.into();
+        let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
         query!(r#"
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
@@ -138,12 +152,12 @@ impl DataMessage for Postgres {
             message_id.into_inner(),
             create.thread_id.into_inner(),
             ver_id,
-            create.content,
-            create.metadata,
-            create.reply_id.map(|i| i.into_inner()),
+            create.content(),
+            create.metadata(),
+            create.reply_id().map(|i| i.into_inner()),
             create.author_id.into_inner(),
             message_type as _,
-            create.override_name,
+            create.override_name(),
         )
         .execute(&mut *tx)
         .await?;

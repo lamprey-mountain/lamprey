@@ -1,10 +1,10 @@
 use anyhow::Result;
+use common::v1::types::{
+    media::MediaCreated, Media, MediaCreate, MediaId, Message, MessageCreate, MessageId,
+    MessagePatch, RoomId, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch, User, UserId,
+};
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
-use types::{
-    Media, MediaCreate, MediaCreated, MediaId, Message, MessageCreateRequest, MessageId,
-    MessagePatch, RoomId, SessionToken, Thread, ThreadCreateRequest, ThreadId, ThreadPatch,
-};
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 
@@ -146,10 +146,11 @@ macro_rules! route {
 }
 
 route!(get    "/api/v1/media/{media_id}"                        => media_info_get(media_id: MediaId) -> Media);
-route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Thread, ThreadCreateRequest);
+route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Thread, ThreadCreate);
 route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ThreadId) -> Thread, ThreadPatch);
 route!(post   "/api/v1/media"                                   => media_create() -> MediaCreated, MediaCreate);
 route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delete(thread_id: ThreadId, message_id: MessageId));
 route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ThreadId, message_id: MessageId) -> Message, MessagePatch);
 route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ThreadId, message_id: MessageId) -> Message);
-route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreateRequest);
+route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreate);
+route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);

@@ -4,8 +4,13 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use types::util::Diff;
-use types::{MediaTrackInfo, MessageSync, User, UserCreate, UserPatch};
+use common::v1::types::util::Diff;
+use common::v1::types::{
+    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, User, UserCreate,
+    UserId, UserPatch, UserType,
+};
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
@@ -23,41 +28,98 @@ use crate::error::{Error, Result};
         (status = CREATED, body = User, description = "success"),
     )
 )]
-pub async fn user_create(
-    // NOTE: utoipa + cargo check seems to break with _session here?
+async fn user_create(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<UserCreate>,
 ) -> Result<impl IntoResponse> {
     let parent_id = Some(auth_user_id);
     let data = s.data();
+    let srv = s.services();
+    let parent = srv.users.get(auth_user_id).await?;
+    if !parent.user_type.can_create(&body.user_type) {
+        return Err(Error::BadStatic("can't create that user"));
+    };
+    match &body.user_type {
+        UserType::Bot { owner, .. } => match owner {
+            BotOwner::User { user_id } if *user_id != auth_user_id => {
+                return Err(Error::BadStatic("bad owner id"));
+            }
+            _ => {}
+        },
+        UserType::Puppet {
+            owner_id, alias_id, ..
+        } => {
+            if alias_id.is_some() {
+                return Err(Error::Unimplemented);
+            }
+            if *owner_id != auth_user_id {
+                return Err(Error::BadStatic("bad owner id"));
+            }
+        }
+        _ => {}
+    };
     let user = data
         .user_create(DbUserCreate {
             parent_id,
             name: body.name,
             description: body.description,
-            is_bot: body.is_bot,
+            user_type: body.user_type,
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-// TODO: not sure how to implement this
-// /// User list
-// #[utoipa::path(
-//     get,
-//     path = "/user",
-//     tags = ["user"],
-//     responses(
-//         (status = OK, description = "success"),
-//     )
-// )]
-// pub async fn user_list(
-//     Auth(_session): Auth,
-// State(s): State<Arc<ServerState>>,
-// ) -> Result<Json<()>> {
-//     todo!()
-// }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub enum UserListFilter {
+    /// users in mutual rooms, excluding puppets
+    Mutual,
+
+    /// friends
+    Friends,
+
+    /// users you have dms with
+    Dms,
+
+    /// puppets in mutual rooms
+    Puppet,
+
+    /// to bots you have created
+    Bot,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
+struct UserListParams {
+    #[serde(default = "default_user_list_filter")]
+    include: Vec<UserListFilter>,
+}
+
+fn default_user_list_filter() -> Vec<UserListFilter> {
+    vec![
+        UserListFilter::Mutual,
+        UserListFilter::Friends,
+        UserListFilter::Dms,
+    ]
+}
+
+/// User list (TODO)
+///
+/// Lists every user you are able to see. Can be filtered with ?include
+#[utoipa::path(
+    get,
+    path = "/user",
+    tags = ["user"],
+    params(
+        UserListParams,
+        PaginationQuery<UserId>,
+    ),
+    responses(
+        (status = OK, body = PaginationResponse<User>, description = "success"),
+    )
+)]
+async fn user_list(Auth(_session): Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 /// User update
 // TODO: updating/deleting bots
@@ -73,7 +135,7 @@ pub async fn user_create(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
-pub async fn user_update(
+async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -87,7 +149,8 @@ pub async fn user_update(
         return Err(Error::NotFound);
     }
     let data = s.data();
-    let start = data.user_get(target_user_id).await?;
+    let srv = s.services();
+    let start = srv.users.get(target_user_id).await?;
     if !patch.changes(&start) {
         return Err(Error::NotModified);
     }
@@ -115,7 +178,8 @@ pub async fn user_update(
         )
         .await?;
     }
-    let user = data.user_get(target_user_id).await?;
+    srv.users.invalidate(target_user_id).await;
+    let user = srv.users.get(target_user_id).await?;
     s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -132,7 +196,7 @@ pub async fn user_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn user_delete(
+async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -148,6 +212,8 @@ pub async fn user_delete(
     data.user_delete(target_user_id).await?;
     data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
         .await?;
+    let srv = s.services();
+    srv.users.invalidate(target_user_id).await;
     s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -164,7 +230,7 @@ pub async fn user_delete(
         (status = OK, body = User, description = "success"),
     )
 )]
-pub async fn user_get(
+async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -173,17 +239,15 @@ pub async fn user_get(
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    let data = s.data();
-    let mut user = data.user_get(target_user_id).await?;
     let srv = s.services();
-    user.status = srv.user_status.get(target_user_id);
+    let user = srv.users.get(target_user_id).await?;
     Ok(Json(user))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_create))
-        // .routes(routes!(user_list))
+        .routes(routes!(user_list))
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))

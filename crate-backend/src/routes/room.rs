@@ -7,8 +7,10 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
+use common::v1::types::{AuditLog, AuditLogId};
 use headers::ETag;
-use types::{AuditLog, AuditLogId};
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -18,10 +20,10 @@ use crate::{
         MessageSync, PaginationQuery, PaginationResponse, Permission, Room, RoomCreate, RoomId,
         RoomPatch,
     },
-    ServerState,
+    Error, ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 
 /// Create a room
 #[utoipa::path(
@@ -77,6 +79,32 @@ async fn room_get(
     Ok((TypedHeader(etag), Json(room)).into_response())
 }
 
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct RoomListParams {
+    /// what rooms to include. defaults to Default
+    #[serde(default = "default_room_list_includes")]
+    include: Vec<RoomListInclude>,
+}
+
+fn default_room_list_includes() -> Vec<RoomListInclude> {
+    vec![RoomListInclude::Default]
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+enum RoomListInclude {
+    /// include default rooms
+    Default,
+
+    /// include dm rooms
+    Dm,
+
+    /// include rooms you have were kicked or banned from, or left with ?soft=true
+    Removed,
+
+    /// include rooms that were archived
+    Archived,
+}
+
 /// List visible rooms
 #[utoipa::path(
     get,
@@ -114,6 +142,7 @@ async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -122,7 +151,7 @@ async fn room_edit(
     perms.ensure(Permission::RoomManage)?;
     let room = s.services().rooms.update(room_id, user_id, json).await?;
     let msg = MessageSync::UpsertRoom { room: room.clone() };
-    s.broadcast_room(room_id, user_id, None, msg).await?;
+    s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok(Json(room))
 }
 
@@ -153,70 +182,27 @@ async fn room_audit_logs(
     Ok(Json(logs))
 }
 
-// /// ack message
-// ///
-// /// Mark all threads in a room as read.
-// #[utoipa::path(
-//     put,
-//     path = "/room/{room_id}/ack",
-//     params(
-//         ("room_id", description = "Room id"),
-//     ),
-//     tags = ["room"],
-//     responses(
-//         (status = NO_CONTENT, description = "success"),
-//     )
-// )]
-// async fn room_ack(
-//     Path((room_id,)): Path<(RoomId,)>,
-//     Auth(user_id): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<Json<()>> {
-//     todo!()
-// }
-
-// /// dm initialize
-// /// Get or create a direct message room.
-// #[utoipa::path(
-//     patch,
-//     path = "/dm/{user_id}",
-//     params(
-//         ("user_id", description = "Target user's id"),
-//     ),
-//     tags = ["room"],
-//     responses(
-//         (status = CREATED, description = "new dm created"),
-//         (status = OK, description = "already exists"),
-//     )
-// )]
-// async fn dm_initialize(
-//     Path((user_id, )): Path<(UserId,)>,
-//     Auth(user_id): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<Json<Room>> {
-//     todo!()
-// }
-
-// /// dm get
-// /// Get a direct message room.
-// #[utoipa::path(
-//     get,
-//     path = "/dm/{user_id}",
-//     params(
-//         ("user_id", description = "Target user's id"),
-//     ),
-//     tags = ["room"],
-//     responses(
-//         (status = OK, description = "already exists"),
-//     )
-// )]
-// async fn dm_get(
-//     Path((user_id, )): Path<(UserId,)>,
-//     Auth(user_id): Auth,
-//     State(s): State<ServerState>,
-// ) -> Result<Json<Room>> {
-//     todo!()
-// }
+/// Ack room (TODO)
+///
+/// Mark all threads in a room as read.
+#[utoipa::path(
+    put,
+    path = "/room/{room_id}/ack",
+    params(
+        ("room_id", description = "Room id"),
+    ),
+    tags = ["room"],
+    responses(
+        (status = OK, description = "success"),
+    )
+)]
+async fn room_ack(
+    Path(_room_id): Path<RoomId>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
@@ -225,7 +211,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_list))
         .routes(routes!(room_edit))
         .routes(routes!(room_audit_logs))
-    // .routes(routes!(room_ack))
-    // .routes(routes!(dm_init))
-    // .routes(routes!(dm_get))
+        .routes(routes!(room_ack))
 }

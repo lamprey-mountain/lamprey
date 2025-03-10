@@ -1,20 +1,23 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SearchMessageRequest, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed, UrlEmbedId,
+use common::v1::types::search::SearchMessageRequest;
+use common::v1::types::{
+    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Relationship,
+    RelationshipPatch, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed,
+    UrlEmbedId,
 };
 use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbUserCreate, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageCreate,
-    MessageId, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleCreate, RoleId,
-    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
-    Thread, ThreadCreate, ThreadId, ThreadPatch, ThreadVerId, User, UserId, UserPatch, UserVerId,
+    DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media, MediaId,
+    MediaLink, MediaLinkType, Message, MessageId, MessageVerId, PaginationQuery,
+    PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId, User,
+    UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -38,6 +41,8 @@ pub trait Data:
     + DataAuditLogs
     + DataThreadMember
     + DataUrlEmbed
+    + DataDm
+    + DataUserRelationship
     + Send
     + Sync
 {
@@ -88,7 +93,7 @@ pub trait DataRoomMember {
 
 #[async_trait]
 pub trait DataRole {
-    async fn role_create(&self, create: RoleCreate) -> Result<Role>;
+    async fn role_create(&self, create: DbRoleCreate) -> Result<Role>;
     async fn role_list(
         &self,
         room_id: RoomId,
@@ -181,12 +186,12 @@ pub trait DataMedia {
 
 #[async_trait]
 pub trait DataMessage {
-    async fn message_create(&self, create: MessageCreate) -> Result<MessageId>;
+    async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId>;
     async fn message_update(
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
-        create: MessageCreate,
+        create: DbMessageCreate,
     ) -> Result<MessageVerId>;
     async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message>;
     async fn message_list(
@@ -230,7 +235,7 @@ pub trait DataSession {
 
 #[async_trait]
 pub trait DataThread {
-    async fn thread_create(&self, create: ThreadCreate) -> Result<ThreadId>;
+    async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId>;
     async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread>;
     async fn thread_list(
         &self,
@@ -346,4 +351,32 @@ pub trait DataUrlEmbed {
         embed_id: UrlEmbedId,
         ordering: u32,
     ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataDm {
+    async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, room_id: RoomId) -> Result<()>;
+    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<RoomId>;
+}
+
+#[async_trait]
+pub trait DataUserRelationship {
+    async fn user_relationship_put(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+        rel: Relationship,
+    ) -> Result<()>;
+    async fn user_relationship_edit(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+        patch: RelationshipPatch,
+    ) -> Result<()>;
+    async fn user_relationship_delete(&self, user_id: UserId, other_id: UserId) -> Result<()>;
+    async fn user_relationship_get(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+    ) -> Result<Relationship>;
 }

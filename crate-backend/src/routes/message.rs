@@ -6,9 +6,11 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use common::v1::types::{
+    util::Diff, MessageDefaultMarkdown, PaginationDirection, ThreadMembership,
+};
 use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
-use types::{util::Diff, PaginationDirection, ThreadMembership};
 use url::Url;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -17,14 +19,14 @@ use validator::Validate;
 use crate::{
     error::Error,
     types::{
-        MediaLinkType, Message, MessageCreate, MessageCreateRequest, MessageId, MessagePatch,
+        DbMessageCreate, MediaLinkType, Message, MessageCreate, MessageId, MessagePatch,
         MessageSync, MessageType, MessageVerId, PaginationQuery, PaginationResponse, Permission,
         ThreadId,
     },
     ServerState,
 };
 
-use super::util::Auth;
+use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
 use crate::error::Result;
 
 /// Create a message
@@ -41,7 +43,9 @@ async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessageCreateRequest>,
+    HeaderReason(reason): HeaderReason,
+    HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
+    Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
@@ -50,8 +54,11 @@ async fn message_create(
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
     if !json.attachments.is_empty() {
-        perms.ensure(Permission::MessageFilesEmbeds)?;
+        perms.ensure(Permission::MessageAttachments)?;
     }
+    // if !json.embeds.is_empty() {
+    //     perms.ensure(Permission::MessageEmbeds)?;
+    // }
     // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
     // TODO: move this to validation
     if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
@@ -67,16 +74,24 @@ async fn message_create(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    let message_id = data
-        .message_create(MessageCreate {
-            thread_id,
+    let body = if json.use_new_text_formatting {
+        return Err(Error::Unimplemented);
+    } else {
+        MessageDefaultMarkdown {
             content: json.content,
-            attachment_ids: attachment_ids.clone(),
-            author_id: user_id,
-            message_type: MessageType::Default,
+            attachments: vec![],
+            embeds: vec![],
             metadata: json.metadata,
             reply_id: json.reply_id,
             override_name: json.override_name,
+        }
+    };
+    let message_id = data
+        .message_create(DbMessageCreate {
+            thread_id,
+            attachment_ids: attachment_ids.clone(),
+            author_id: user_id,
+            message_type: MessageType::DefaultMarkdown(body.clone()),
         })
         .await?;
     let message_uuid = message_id.into_inner();
@@ -87,7 +102,7 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
-    if let Some(content) = &message.content {
+    if let Some(content) = &body.content {
         for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
                 let version_id = message.version_id;
@@ -113,7 +128,7 @@ async fn message_create(
         }
     }
     s.presign_message(&mut message).await?;
-    message.nonce = json.nonce;
+    message.nonce = nonce.or(json.nonce);
     data.thread_member_put(
         thread_id,
         user_id,
@@ -127,7 +142,7 @@ async fn message_create(
         message: message.clone(),
     };
     srv.threads.invalidate(thread_id); // message count
-    s.broadcast_thread(thread_id, user_id, None, msg).await?;
+    s.broadcast_thread(thread_id, user_id, reason, msg).await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -190,7 +205,7 @@ async fn message_context(
     };
     let after = data.message_list(thread_id, after_q).await?;
     let message = data.message_get(thread_id, message_id).await?;
-    let mut res = ContextResponse {
+    let mut res = dbg!(ContextResponse {
         items: before
             .items
             .into_iter()
@@ -200,7 +215,7 @@ async fn message_context(
         total: after.total,
         has_after: after.has_more,
         has_before: before.has_more,
-    };
+    });
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -277,6 +292,7 @@ async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     json.validate()?;
@@ -287,7 +303,7 @@ async fn message_edit(
     if !message.message_type.is_editable() {
         return Err(Error::BadStatic("cant edit that message"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
@@ -297,20 +313,22 @@ async fn message_edit(
         ));
     }
     if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
-        perms.ensure(Permission::MessageFilesEmbeds)?;
+        perms.ensure(Permission::MessageAttachments)?;
     }
+    // if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
+    //     perms.ensure(Permission::MessageEmbeds)?;
+    // }
     if !json.changes(&message) {
         return Ok((StatusCode::NOT_MODIFIED, Json(message)));
     }
     let attachment_ids: Vec<_> = json
         .attachments
         .map(|ats| ats.into_iter().map(|r| r.id).collect())
-        .unwrap_or_else(|| {
-            message
-                .attachments
-                .into_iter()
-                .map(|media| media.id)
-                .collect()
+        .unwrap_or_else(|| match &message.message_type {
+            MessageType::DefaultMarkdown(msg) => {
+                msg.attachments.iter().map(|media| media.id).collect()
+            }
+            _ => vec![],
         });
     for id in &attachment_ids {
         data.media_select(*id).await?;
@@ -322,19 +340,26 @@ async fn message_edit(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
+    let body = match message.message_type {
+        MessageType::DefaultMarkdown(msg) => Result::Ok(MessageDefaultMarkdown {
+            content: json.content.unwrap_or(msg.content),
+            attachments: vec![],
+            embeds: vec![],
+            metadata: json.metadata.unwrap_or(msg.metadata),
+            reply_id: json.reply_id.unwrap_or(msg.reply_id),
+            override_name: json.override_name.unwrap_or(msg.override_name),
+        }),
+        _ => return Err(Error::Unimplemented),
+    }?;
     let version_id = data
         .message_update(
             thread_id,
             message_id,
-            MessageCreate {
+            DbMessageCreate {
                 thread_id,
-                content: json.content.unwrap_or(message.content),
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
-                message_type: MessageType::Default,
-                metadata: json.metadata.unwrap_or(message.metadata),
-                reply_id: json.reply_id.unwrap_or(message.reply_id),
-                override_name: json.override_name.unwrap_or(message.override_name),
+                message_type: MessageType::DefaultMarkdown(body.clone()),
             },
         )
         .await?;
@@ -348,7 +373,7 @@ async fn message_edit(
     s.broadcast_thread(
         thread_id,
         user_id,
-        None,
+        reason,
         MessageSync::UpsertMessage {
             message: message.clone(),
         },
@@ -358,7 +383,7 @@ async fn message_edit(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
-/// delete a message
+/// Delete message
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/message/{message_id}",
@@ -374,6 +399,7 @@ async fn message_edit(
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
@@ -383,7 +409,7 @@ async fn message_delete(
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageDelete)?;
@@ -393,7 +419,7 @@ async fn message_delete(
     s.broadcast_thread(
         thread.id,
         user_id,
-        None,
+        reason,
         MessageSync::DeleteMessage {
             room_id: thread.room_id,
             thread_id,
@@ -488,13 +514,84 @@ async fn message_version_delete(
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
-    if message.author.id == user_id {
+    if message.author_id == user_id {
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
     data.message_version_delete(thread_id, version_id).await?;
     s.services().threads.invalidate(thread_id); // last version id, message count
     Ok(Json(()))
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+struct MessageDeleteBulk {
+    /// which messages to delete
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    message_id: Vec<MessageId>,
+}
+
+/// Message delete bulk (TODO)
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/messages/bulk-delete",
+    params(
+        ("message_id", description = "Message id")
+    ),
+    tags = ["message"],
+    responses(
+        (status = NO_CONTENT, description = "bulk delete success"),
+    )
+)]
+async fn message_delete_bulk(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(json): Json<MessageDeleteBulk>,
+) -> Result<()> {
+    json.validate()?;
+    Err(Error::Unimplemented)
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
+struct RepliesQuery {
+    #[serde(flatten)]
+    q: PaginationQuery<MessageId>,
+
+    /// how deeply to fetch replies
+    #[serde(default = "fn_one")]
+    #[validate(range(min = 1, max = 8))]
+    depth: u16,
+}
+
+/// always returns one
+fn fn_one() -> u16 {
+    1
+}
+
+/// Message replies (TODO)
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/replies/{message_id}",
+    params(
+        RepliesQuery,
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id"),
+    ),
+    tags = ["message"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+    ),
+)]
+async fn message_replies(
+    Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
+    Query(_q): Query<RepliesQuery>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -508,4 +605,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
         .routes(routes!(message_version_delete))
+        .routes(routes!(message_delete_bulk))
+        .routes(routes!(message_replies))
 }

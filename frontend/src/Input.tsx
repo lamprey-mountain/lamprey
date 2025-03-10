@@ -79,6 +79,10 @@ export function Input(props: InputProps) {
 		return m?.membership === "Join" && m.override_name || user()?.name;
 	};
 
+	const getNameNullable = (user_id?: string) => {
+		if (user_id) return getName(user_id);
+	};
+
 	const getTyping = () => {
 		const fmt = new Intl.ListFormat();
 		const user_id = api.users.cache.get("@self")?.id;
@@ -114,7 +118,9 @@ export function Input(props: InputProps) {
 						cancel
 					</button>
 					<div class="info">
-						replying to {reply()?.override_name ?? reply()?.author.name}:{" "}
+						replying to{" "}
+						{reply()?.override_name ?? getNameNullable(reply()?.author_id)}:
+						{" "}
 						{reply()?.content}
 					</div>
 				</div>

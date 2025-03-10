@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::State;
 use axum::extract::WebSocketUpgrade;
+use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
+use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::SinkExt;
 use tracing::{debug, error};
-use types::{MessageEnvelope, MessagePayload};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Error;
@@ -23,16 +23,21 @@ type WsMessage = axum::extract::ws::Message;
     get,
     path = "/sync",
     tags = ["sync"],
+    params(SyncParams),
     responses(
         (status = UPGRADE_REQUIRED, description = "success"),
     )
 )]
-async fn sync(State(s): State<Arc<ServerState>>, upgrade: WebSocketUpgrade) -> impl IntoResponse {
-    upgrade.on_upgrade(move |ws| worker(s, ws))
+async fn sync(
+    State(s): State<Arc<ServerState>>,
+    Query(params): Query<SyncParams>,
+    upgrade: WebSocketUpgrade,
+) -> impl IntoResponse {
+    upgrade.on_upgrade(move |ws| worker(s, params, ws))
 }
 
 #[tracing::instrument(skip(s, ws))]
-async fn worker(s: Arc<ServerState>, mut ws: WebSocket) {
+async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
     let mut timeout = Timeout::for_ping();
     let mut sushi = s.inner.sushi.subscribe();
     let mut conn = Connection::new(s.clone());

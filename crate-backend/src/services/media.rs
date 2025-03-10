@@ -6,6 +6,10 @@ use std::{
 };
 
 use async_tempfile::TempFile;
+use common::v1::types::{
+    self, util::truncate::truncate_filename, Media, MediaCreate, MediaCreateSource, MediaId,
+    MediaSize, MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
+};
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
@@ -15,10 +19,6 @@ use tokio::{
     process::Command,
 };
 use tracing::{debug, error, info, span, trace, Instrument, Level};
-use types::{
-    Media, MediaCreate, MediaCreateSource, MediaId, MediaSize, MediaTrack, MediaTrackInfo, Mime,
-    TrackSource, UserId,
-};
 
 use crate::{
     error::{Error, Result},
@@ -420,7 +420,7 @@ impl ServiceMedia {
                     .map(|s| s.to_owned())
                     .unwrap_or_else(|| "unknown".to_owned());
                 let media = self
-                    .process_upload(up, media_id, user_id, &filename)
+                    .process_upload(up, media_id, user_id, &truncate_filename(&filename, 256))
                     .await?;
                 debug!("finished processing media");
                 Ok(media)
