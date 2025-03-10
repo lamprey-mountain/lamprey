@@ -2154,10 +2154,6 @@ export interface components {
 			& components["schemas"]["Mentions"]
 			& components["schemas"]["MessageState"]
 			& {
-				/** @description who sent this message
-				 *
-				 *     deprecated: use author_id and fetch manually, better caching and easier server impl */
-				author: components["schemas"]["User"];
 				/** @description the id of who sent this message */
 				author_id: components["schemas"]["UserId"];
 				id: components["schemas"]["MessageId"];
@@ -2624,10 +2620,6 @@ export interface components {
 				& components["schemas"]["Mentions"]
 				& components["schemas"]["MessageState"]
 				& {
-					/** @description who sent this message
-					 *
-					 *     deprecated: use author_id and fetch manually, better caching and easier server impl */
-					author: components["schemas"]["User"];
 					/** @description the id of who sent this message */
 					author_id: components["schemas"]["UserId"];
 					id: components["schemas"]["MessageId"];
