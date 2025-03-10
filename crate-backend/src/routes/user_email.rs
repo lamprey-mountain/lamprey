@@ -93,10 +93,30 @@ async fn email_list(
     Err(Error::Unimplemented)
 }
 
+/// Email resend verification email
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/email/{addr}/verify",
+    params(
+        ("user_id", description = "User id"),
+        ("addr", description = "email address"),
+    ),
+    tags = ["user_email"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn email_resent_verification(
+    Path((_target_user_id, _email)): Path<(UserIdReq, EmailAddr)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(email_add))
         .routes(routes!(email_get))
         .routes(routes!(email_list))
         .routes(routes!(email_delete))
+        .routes(routes!(email_resent_verification))
 }
