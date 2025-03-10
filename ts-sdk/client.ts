@@ -61,7 +61,7 @@ export function createClient(opts: ClientOptions): Client {
 	function setupWebsocket() {
 		if (state.get() !== "connecting") return;
 
-		ws = new WebSocket(new URL("/api/v1/sync", opts.baseUrl));
+		ws = new WebSocket(new URL("/api/v1/sync?version=1", opts.baseUrl));
 		ws.addEventListener("message", (e) => {
 			const msg: MessageEnvelope = JSON.parse(e.data);
 			if (msg.op === "Ping") {

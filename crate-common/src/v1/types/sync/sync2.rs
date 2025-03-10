@@ -15,9 +15,13 @@ use crate::v1::types::{
 pub struct SyncParams {
     pub version: SyncVersion,
     pub compression: Option<SyncCompression>,
+    #[serde(default)]
     pub format: SyncFormat,
 }
 
+// i thought that putting the api version in the path would be better, but
+// apparently websockets are hard to load balance. being able to use arbitrary
+// urls/paths in the future could be helpful.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[repr(u8)]
