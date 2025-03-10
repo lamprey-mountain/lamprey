@@ -114,7 +114,7 @@ async fn auth_oauth_redirect(
     Ok(Html(include_str!("../oauth.html")))
 }
 
-/// Auth oauth logout
+/// Auth oauth logout (TODO)
 #[utoipa::path(
     post,
     path = "/auth/oauth/{provider}/logout",
@@ -130,7 +130,7 @@ async fn auth_oauth_logout(
     Err(Error::Unimplemented)
 }
 
-/// Auth oauth delete
+/// Auth oauth delete (TODO)
 #[utoipa::path(
     delete,
     path = "/auth/oauth/{provider}",
@@ -146,7 +146,7 @@ async fn auth_oauth_delete(
     Err(Error::Unimplemented)
 }
 
-/// Auth oauth get
+/// Auth oauth get (TODO)
 #[utoipa::path(
     get,
     path = "/auth/oauth/{provider}",
@@ -162,7 +162,7 @@ async fn auth_oauth_get(
     Err(Error::Unimplemented)
 }
 
-/// Auth email exec
+/// Auth email exec (TODO)
 ///
 /// Send a "magic link" email to login
 #[utoipa::path(
@@ -180,7 +180,7 @@ async fn auth_email_exec(
     Err(Error::Unimplemented)
 }
 
-/// Auth email reset
+/// Auth email reset (TODO)
 ///
 /// Like exec, but the link also resets the password
 #[utoipa::path(
@@ -198,7 +198,7 @@ async fn auth_email_reset(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp init
+/// Auth totp init (TODO)
 #[utoipa::path(
     post,
     path = "/auth/totp/init",
@@ -212,7 +212,7 @@ async fn auth_totp_init(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp execute
+/// Auth totp execute (TODO)
 #[utoipa::path(
     post,
     path = "/auth/totp",
@@ -227,7 +227,7 @@ async fn auth_totp_exec(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp recovery codes get
+/// Auth totp recovery codes get (TODO)
 #[utoipa::path(
     get,
     path = "/auth/totp/recovery",
@@ -241,7 +241,7 @@ async fn auth_totp_recovery_get(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp recovery codes rotate
+/// Auth totp recovery codes rotate (TODO)
 #[utoipa::path(
     post,
     path = "/auth/totp/recovery",
@@ -255,7 +255,7 @@ async fn auth_totp_recovery_rotate(
     Err(Error::Unimplemented)
 }
 
-/// Auth totp delete
+/// Auth totp delete (TODO)
 #[utoipa::path(
     delete,
     path = "/auth/totp",
@@ -269,7 +269,7 @@ async fn auth_totp_delete(
     Err(Error::Unimplemented)
 }
 
-/// Auth password set
+/// Auth password set (TODO)
 #[utoipa::path(
     put,
     path = "/auth/password",
@@ -284,7 +284,7 @@ async fn auth_password_set(
     Err(Error::Unimplemented)
 }
 
-/// Auth password delete
+/// Auth password delete (TODO)
 #[utoipa::path(
     delete,
     path = "/auth/password",
@@ -298,7 +298,7 @@ async fn auth_password_delete(
     Err(Error::Unimplemented)
 }
 
-/// Auth password exec
+/// Auth password exec (TODO)
 #[utoipa::path(
     post,
     path = "/auth/password",
@@ -313,7 +313,7 @@ async fn auth_password_exec(
     Err(Error::Unimplemented)
 }
 
-/// Auth status
+/// Auth status (TODO)
 #[utoipa::path(
     get,
     path = "/auth",
@@ -327,7 +327,7 @@ async fn auth_status(
     Err(Error::Unimplemented)
 }
 
-/// Auth captcha init
+/// Auth captcha init (TODO)
 #[utoipa::path(
     post,
     path = "/auth/captcha/init",
@@ -341,7 +341,7 @@ async fn auth_captcha_init(
     Err(Error::Unimplemented)
 }
 
-/// Auth captcha submit
+/// Auth captcha submit (TODO)
 #[utoipa::path(
     post,
     path = "/auth/captcha/submit",

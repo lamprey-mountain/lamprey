@@ -14,7 +14,7 @@ use crate::error::{Error, Result};
 
 use super::util::Auth;
 
-/// Auth email add
+/// Email add
 #[utoipa::path(
     put,
     path = "/user/{user_id}/email/{addr}",
@@ -36,7 +36,7 @@ async fn email_add(
     Err(Error::Unimplemented)
 }
 
-/// Auth email get
+/// Email get
 #[utoipa::path(
     get,
     path = "/user/{user_id}/email/{addr}",
@@ -58,7 +58,7 @@ async fn email_get(
     Err(Error::Unimplemented)
 }
 
-/// Auth email delete
+/// Email delete
 #[utoipa::path(
     delete,
     path = "/user/{user_id}/email/{addr}",
