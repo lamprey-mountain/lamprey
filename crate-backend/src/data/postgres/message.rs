@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{
     self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, User,
 };
@@ -16,7 +17,7 @@ use crate::types::{
 use crate::data::DataMessage;
 
 use super::url_embed::DbUrlEmbed;
-use super::user::DbUser;
+use super::user::DbUserBase;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -56,7 +57,8 @@ impl From<MessageType> for DbMessageType {
 impl From<DbMessage> for Message {
     fn from(row: DbMessage) -> Self {
         let author: User = {
-            let a: DbUser = serde_json::from_value(row.author).expect("invalid data in database!");
+            let a: DbUserBase<Time> =
+                serde_json::from_value(row.author).expect("invalid data in database!");
             a.into()
         };
         Message {

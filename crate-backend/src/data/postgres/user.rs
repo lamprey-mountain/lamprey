@@ -15,7 +15,7 @@ use crate::data::DataUser;
 use super::Postgres;
 
 #[derive(Deserialize)]
-pub struct DbUser {
+pub struct DbUserBase<T> {
     pub id: UserId,
     pub version_id: UserVerId,
     pub parent_id: Option<Uuid>,
@@ -24,7 +24,7 @@ pub struct DbUser {
     pub avatar: Option<Uuid>,
     pub r#type: DbUserType,
     pub state: DbUserState,
-    pub state_updated_at: PrimitiveDateTime,
+    pub state_updated_at: T,
     pub puppet_external_platform: Option<String>,
     pub puppet_external_id: Option<String>,
     pub puppet_external_url: Option<String>,
@@ -32,6 +32,8 @@ pub struct DbUser {
     pub bot_is_bridge: bool,
     pub bot_visibility: DbBotVisibility,
 }
+
+type DbUser = DbUserBase<PrimitiveDateTime>;
 
 #[derive(Deserialize, sqlx::Type)]
 #[sqlx(type_name = "user_type")]
@@ -107,8 +109,8 @@ impl From<UserState> for DbUserState {
     }
 }
 
-impl From<DbUser> for User {
-    fn from(row: DbUser) -> Self {
+impl<T: Into<Time>> From<DbUserBase<T>> for User {
+    fn from(row: DbUserBase<T>) -> Self {
         User {
             id: row.id,
             version_id: row.version_id,
@@ -141,7 +143,7 @@ impl From<DbUser> for User {
                 DbUserType::System => UserType::System,
             },
             state: row.state.into(),
-            state_updated_at: row.state_updated_at.assume_utc().into(),
+            state_updated_at: row.state_updated_at.into(),
         }
     }
 }
