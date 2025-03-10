@@ -239,13 +239,13 @@ export function createApi(
 			{
 				const t = typing.get(m.thread_id);
 				if (t) {
-					t.delete(m.author.id);
+					t.delete(m.author_id);
 					typing.set(m.thread_id, new Set(t));
-					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author.id));
+					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author_id));
 				}
 			}
 
-			for (const att of m.attachments) {
+			for (const att of m.attachments ?? []) {
 				media.cacheInfo.set(att.id, att);
 			}
 		} else if (msg.type === "DeleteMessage") {

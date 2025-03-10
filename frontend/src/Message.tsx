@@ -276,14 +276,14 @@ function Author(props: { message: Message; thread?: Thread }) {
 	const room_member = props.thread
 		? api.room_members.fetch(
 			() => props.thread!.room_id,
-			() => props.message.author.id,
+			() => props.message.author_id,
 		)
 		: () => null;
 	const thread_member = api.thread_members.fetch(
 		() => props.message.thread_id,
-		() => props.message.author.id,
+		() => props.message.author_id,
 	);
-	// const user = api.users.fetch(() => props.message.author.id);
+	const user = api.users.fetch(() => props.message.author_id);
 
 	function name() {
 		let name = props.message.override_name;
@@ -293,7 +293,8 @@ function Author(props: { message: Message; thread?: Thread }) {
 		const rm = room_member?.();
 		if (rm?.membership === "Join") name ??= rm.override_name;
 
-		name ??= props.message.author.name;
+		const us = user();
+		name ??= us?.name;
 
 		return name;
 	}
@@ -304,7 +305,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 		interactive: true,
 		tip: () => (
 			<UserView
-				user={props.message.author}
+				user={user()}
 				room_member={room_member()}
 				thread_member={thread_member()}
 			/>
@@ -315,7 +316,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 		<span
 			class="user"
 			classList={{ "override-name": !!props.message.override_name }}
-			data-user-id={props.message.author.id}
+			data-user-id={props.message.author_id}
 			use:content
 		>
 			{name()}

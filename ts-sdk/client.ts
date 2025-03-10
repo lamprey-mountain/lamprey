@@ -124,7 +124,7 @@ export function createClient(opts: ClientOptions): Client {
 		start,
 		stop,
 		_debugGetWebsocket: () => ws,
-	};
+	} as any;
 }
 
 export const UUID_MIN = "00000000-0000-0000-0000-000000000000";
