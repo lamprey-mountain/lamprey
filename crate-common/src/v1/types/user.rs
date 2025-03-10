@@ -39,7 +39,7 @@ pub struct User {
     pub user_type: UserType,
 
     pub state: UserState,
-    // pub state_updated_at: Time,
+    pub state_updated_at: Time,
     pub status: Status,
 }
 

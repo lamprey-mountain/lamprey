@@ -1,7 +1,9 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{self, BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
 use serde::Deserialize;
 use sqlx::{query, query_as, Acquire};
+use time::PrimitiveDateTime;
 use url::Url;
 use uuid::Uuid;
 
@@ -22,6 +24,7 @@ pub struct DbUser {
     pub avatar: Option<Uuid>,
     pub r#type: DbUserType,
     pub state: DbUserState,
+    pub state_updated_at: PrimitiveDateTime,
     pub puppet_external_platform: Option<String>,
     pub puppet_external_id: Option<String>,
     pub puppet_external_url: Option<String>,
@@ -138,6 +141,7 @@ impl From<DbUser> for User {
                 DbUserType::System => UserType::System,
             },
             state: row.state.into(),
+            state_updated_at: row.state_updated_at.assume_utc().into(),
         }
     }
 }
@@ -158,6 +162,10 @@ impl From<User> for DbUser {
                 UserType::System => DbUserType::System,
             },
             state: u.state.into(),
+            state_updated_at: {
+                let ts = u.state_updated_at.into_inner();
+                PrimitiveDateTime::new(ts.date(), ts.time())
+            },
             puppet_external_platform: None,
             puppet_external_id: None,
             puppet_external_url: None,
@@ -213,6 +221,7 @@ impl DataUser for Postgres {
             avatar: None,
             user_type: patch.user_type,
             state: UserState::Active,
+            state_updated_at: Time::now_utc(),
             status: types::user_status::Status::online(),
         }
         .into();
@@ -220,12 +229,12 @@ impl DataUser for Postgres {
             DbUser,
             r#"
             INSERT INTO usr (
-                id, version_id, parent_id, name, description, state, type, avatar,
+                id, version_id, parent_id, name, description, state, state_updated_at, type, avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility
             )
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING
-                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
         "#,
             user.id.into_inner(),
@@ -234,6 +243,7 @@ impl DataUser for Postgres {
             user.name,
             user.description,
             user.state as _,
+            user.state_updated_at,
             user.r#type as _,
             user.avatar,
             user.puppet_external_platform,
@@ -255,7 +265,7 @@ impl DataUser for Postgres {
             DbUser,
             r#"
             SELECT
-                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
             FROM usr WHERE id = $1
             FOR UPDATE
@@ -299,7 +309,7 @@ impl DataUser for Postgres {
             DbUser,
             r#"
             SELECT
-                id, version_id, parent_id, name, description, state as "state: _", type as "type: _", avatar,
+                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
             FROM usr WHERE id = $1
         "#,

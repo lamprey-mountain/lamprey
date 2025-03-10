@@ -72,19 +72,39 @@ async fn user_create(
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 enum UserListFilter {
-    Default,
+    /// users in mutual rooms, excluding puppets
+    Mutual,
+
+    /// friends
+    Friends,
+
+    /// users you have dms with
+    Dms,
+
+    /// puppets in mutual rooms
     Puppet,
+
+    /// to bots you have created
     Bot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
 struct UserListParams {
-    ty: UserListFilter,
+    #[serde(default = "default_user_list_filter")]
+    include: Vec<UserListFilter>,
+}
+
+fn default_user_list_filter() -> Vec<UserListFilter> {
+    vec![
+        UserListFilter::Mutual,
+        UserListFilter::Friends,
+        UserListFilter::Dms,
+    ]
 }
 
 /// User list (TODO)
 ///
-/// List bots you have created or people in mutual rooms
+/// Lists every user you are able to see. Can be filtered with ?include
 #[utoipa::path(
     get,
     path = "/user",
