@@ -7,6 +7,7 @@ use crate::data::Data;
 use crate::data::MessageMetadata;
 use crate::{chat::UnnamedMessage, discord::DiscordMessage};
 use anyhow::Result;
+use common::v1::types::media::MediaRef;
 use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
 use serenity::all::CreateAllowedMentions;
 use serenity::all::CreateAttachment;
@@ -75,7 +76,11 @@ impl Portal {
         match msg {
             PortalMessage::UnnamedMessageUpsert { message } => {
                 let existing = self.globals.get_message(message.id).await?;
-                let reply_ids = if let Some(reply_id) = message.reply_id {
+                let msg_inner = match message.message_type {
+                    types::MessageType::DefaultMarkdown(m) => m,
+                    _ => todo!(),
+                };
+                let reply_ids = if let Some(reply_id) = msg_inner.reply_id {
                     self.globals
                         .get_message(reply_id)
                         .await?
@@ -84,7 +89,7 @@ impl Portal {
                     None
                 };
                 let mut embeds = vec![];
-                let mut content = message
+                let mut content = msg_inner
                     .content
                     .to_owned()
                     .unwrap_or_else(|| "(no content?)".to_owned());
@@ -135,7 +140,7 @@ impl Portal {
                 let (send, recv) = tokio::sync::oneshot::channel();
                 if let Some(edit) = existing {
                     let mut files = EditAttachments::new();
-                    for media in &message.attachments {
+                    for media in &msg_inner.attachments {
                         let existing = self.globals.get_attachment(media.id.to_owned()).await?;
                         if let Some(existing) = existing {
                             files = files.keep(existing.discord_id);
@@ -174,7 +179,7 @@ impl Portal {
                         .await?;
                 } else {
                     let mut files = vec![];
-                    for media in &message.attachments {
+                    for media in &msg_inner.attachments {
                         let bytes = reqwest::get(media.source.url.to_owned())
                             .await?
                             .error_for_status()?
@@ -183,7 +188,7 @@ impl Portal {
                         files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                     }
                     let mut payload = ExecuteWebhook::new()
-                        .username(message.override_name.unwrap_or(message.author.name))
+                        .username(msg_inner.override_name.unwrap_or(message.author.name))
                         .avatar_url("")
                         .content(content)
                         .allowed_mentions(
@@ -232,7 +237,7 @@ impl Portal {
                         discord_channel_id: res.channel_id,
                     })
                     .await?;
-                for (att, media) in res.attachments.iter().zip(message.attachments) {
+                for (att, media) in res.attachments.iter().zip(msg_inner.attachments) {
                     self.globals
                         .insert_attachment(AttachmentMetadata {
                             chat_id: media.id,
@@ -274,6 +279,7 @@ impl Portal {
                         .or(message.author.global_name)
                         .or(Some(message.author.name)),
                     nonce: None,
+                    use_new_text_formatting: false,
                 };
                 for a in &message.attachments {
                     let bytes = a.download().await?;
@@ -293,7 +299,7 @@ impl Portal {
                             discord_id: a.id,
                         })
                         .await?;
-                    req.attachments.push(types::MediaRef { id: media.id });
+                    req.attachments.push(MediaRef { id: media.id });
                 }
                 req.content = match message.kind {
                     DcMessageType::Regular | DcMessageType::InlineReply
@@ -358,7 +364,7 @@ impl Portal {
                     for att in atts {
                         let existing = self.globals.get_attachment_dc(att.id).await?;
                         if let Some(existing) = existing {
-                            v.push(types::MediaRef {
+                            v.push(MediaRef {
                                 id: existing.chat_id,
                             });
                             continue;
@@ -380,7 +386,7 @@ impl Portal {
                                 discord_id: att.id,
                             })
                             .await?;
-                        v.push(types::MediaRef { id: media.id });
+                        v.push(MediaRef { id: media.id });
                     }
                     Some(v)
                 } else {
