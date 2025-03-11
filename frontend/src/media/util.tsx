@@ -1,5 +1,5 @@
-import { Media, MediaTrack } from "sdk";
-import { ParentProps, VoidProps } from "solid-js";
+import type { Media, MediaTrack } from "sdk";
+import type { ParentProps, VoidProps } from "solid-js";
 import { flags } from "../flags";
 
 export type MediaProps = VoidProps<{ media: Media }>;

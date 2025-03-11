@@ -1,7 +1,7 @@
-import { Pagination, Thread } from "sdk";
+import type { Pagination, Thread } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import { batch, createEffect, createResource, Resource } from "solid-js";
-import { Api } from "../api.tsx";
+import { batch, createEffect, createResource, type Resource } from "solid-js";
+import type { Api } from "../api.tsx";
 
 type Listing<T> = {
 	// resource: Resource<Pagination<T>>;

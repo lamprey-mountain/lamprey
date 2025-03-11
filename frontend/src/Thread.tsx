@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { Thread } from "sdk";
+import type { Thread } from "sdk";
 import { useApi } from "./api.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { AvatarWithStatus, UserView } from "./User.tsx";

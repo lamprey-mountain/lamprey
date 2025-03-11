@@ -1,6 +1,6 @@
-import { JSX } from "solid-js/jsx-runtime";
+import type { JSX } from "solid-js/jsx-runtime";
 import { createComputed, For, on } from "solid-js";
-import { Accessor, createEffect, createSignal } from "solid-js";
+import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { createResizeObserver } from "@solid-primitives/resize-observer";
 // import { throttle } from "@solid-primitives/scheduled";

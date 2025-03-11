@@ -1,5 +1,5 @@
-import { Thread } from "sdk";
-import { VoidProps } from "solid-js";
+import type { Thread } from "sdk";
+import type { VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 
 export function Info(props: VoidProps<{ thread: Thread }>) {

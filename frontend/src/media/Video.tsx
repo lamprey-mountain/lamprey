@@ -15,8 +15,8 @@ import {
 	getUrl,
 	getWidth,
 	Loader,
-	MediaLoadingState,
-	MediaProps,
+	type MediaLoadingState,
+	type MediaProps,
 	parseRanges,
 	Resize,
 } from "./util.tsx";

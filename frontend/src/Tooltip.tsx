@@ -1,14 +1,20 @@
 import {
 	createSignal,
-	JSX,
-	JSXElement,
+	type JSX,
+	type JSXElement,
 	onCleanup,
 	onMount,
 	Show,
-	ValidComponent,
+	type ValidComponent,
 } from "solid-js";
 import { Portal, render } from "solid-js/web";
-import { autoUpdate, flip, offset, Placement, shift } from "@floating-ui/dom";
+import {
+	autoUpdate,
+	flip,
+	offset,
+	type Placement,
+	shift,
+} from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 
 // WARNING: this is potentially very laggy

@@ -1,13 +1,13 @@
-import { Pagination, RoomMember } from "sdk";
+import type { Pagination, RoomMember } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
 	createEffect,
 	createResource,
-	Resource,
+	type Resource,
 	untrack,
 } from "solid-js";
-import { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "../api.tsx";
 
 export class RoomMembers {
 	api: Api = null as unknown as Api;

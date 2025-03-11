@@ -1,4 +1,4 @@
-import { types } from "sdk";
+import type { types } from "sdk";
 
 export type RoomT = types.Room;
 export type ThreadT = types.Thread;

@@ -1,5 +1,5 @@
-import { createSignal, Show, VoidProps } from "solid-js";
-import { createUpload, User } from "sdk";
+import { createSignal, Show, type VoidProps } from "solid-js";
+import { createUpload, type User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 import { getUrl } from "../media/util.tsx";

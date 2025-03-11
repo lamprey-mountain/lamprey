@@ -1,13 +1,13 @@
-import { Pagination, ThreadMember } from "sdk";
+import type { Pagination, ThreadMember } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
 	batch,
 	createEffect,
 	createResource,
-	Resource,
+	type Resource,
 	untrack,
 } from "solid-js";
-import { Api, Listing } from "../api.tsx";
+import type { Api, Listing } from "../api.tsx";
 
 export class ThreadMembers {
 	api: Api = null as unknown as Api;

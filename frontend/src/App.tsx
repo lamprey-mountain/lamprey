@@ -1,19 +1,19 @@
 import {
-	Component,
+	type Component,
 	createEffect,
 	For,
 	from,
 	onCleanup,
-	ParentProps,
+	type ParentProps,
 	Show,
 } from "solid-js";
 import {
-	ChatCtx,
+	type ChatCtx,
 	chatctx,
-	Data,
-	Events,
-	MediaCtx,
-	Menu,
+	type Data,
+	type Events,
+	type MediaCtx,
+	type Menu,
 	useCtx,
 } from "./context.ts";
 import { createStore } from "solid-js/store";
@@ -25,7 +25,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createSignal } from "solid-js";
 import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
-import { Route, Router, RouteSectionProps } from "@solidjs/router";
+import { Route, Router, type RouteSectionProps } from "@solidjs/router";
 import { useFloating } from "solid-floating-ui";
 import { ChatMain } from "./Chat.tsx";
 import { Home } from "./Home.tsx";
@@ -35,7 +35,11 @@ import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
-import { ClientRectObject, ReferenceElement, shift } from "@floating-ui/dom";
+import {
+	type ClientRectObject,
+	type ReferenceElement,
+	shift,
+} from "@floating-ui/dom";
 import { Debug } from "./Debug.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";

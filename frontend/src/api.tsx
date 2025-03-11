@@ -2,17 +2,17 @@
 // i'm copypasting stuff for now, but will refactor out abstractions later
 
 import {
-	Accessor,
+	type Accessor,
 	batch,
-	Component,
+	type Component,
 	createContext,
 	createSignal,
-	ParentProps,
-	Resource,
+	type ParentProps,
+	type Resource,
 	useContext,
 } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
-import {
+import type {
 	AuditLogEntry,
 	Client,
 	Invite,
@@ -30,11 +30,11 @@ import {
 	ThreadMember,
 	User,
 } from "sdk";
-import { Emitter } from "@solid-primitives/event-bus";
+import type { Emitter } from "@solid-primitives/event-bus";
 import {
-	MessageListAnchor,
-	MessageRange,
-	MessageRanges,
+	type MessageListAnchor,
+	type MessageRange,
+	type MessageRanges,
 	Messages,
 } from "./api/messages.ts";
 import { Rooms } from "./api/rooms.ts";

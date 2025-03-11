@@ -1,6 +1,6 @@
 // import { Tooltip } from "./Atoms.tsx";
 import { Match, Show, Switch } from "solid-js";
-import { MessageT, ThreadT } from "./types.ts";
+import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 

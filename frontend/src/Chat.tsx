@@ -1,15 +1,15 @@
 import { createEffect, createRenderEffect, on, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
-import { RoomT, ThreadT } from "./types.ts";
-import { renderTimelineItem, TimelineItemT } from "./Messages.tsx";
+import type { RoomT, ThreadT } from "./types.ts";
+import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
 import { createSignal } from "solid-js";
 import { reconcile } from "solid-js/store";
-import { Message } from "sdk";
+import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
-import { MessageListAnchor } from "./api/messages.ts";
+import type { MessageListAnchor } from "./api/messages.ts";
 import { getMsgTs as get_msg_ts } from "./util.tsx";
 
 type ChatProps = {

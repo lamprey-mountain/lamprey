@@ -1,4 +1,4 @@
-import {
+import type {
 	Media,
 	Message,
 	MessageCreate,
@@ -13,11 +13,11 @@ import {
 	createEffect,
 	createResource,
 	onCleanup,
-	Resource,
+	type Resource,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { MessageType } from "../types.ts";
-import { Api } from "../api.tsx";
+import type { Api } from "../api.tsx";
 
 export type MessageMutator = {
 	mutate: (r: MessageRange) => void;

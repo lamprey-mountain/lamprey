@@ -3,9 +3,9 @@ import {
 	createSignal,
 	createUniqueId,
 	For,
-	JSX,
+	type JSX,
 	Show,
-	VoidProps,
+	type VoidProps,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { go } from "fuzzysort";

@@ -1,6 +1,6 @@
-import { ChatCtx, Data } from "../context.ts";
-import { SetStoreFunction } from "solid-js/store";
-import { Api } from "../api.tsx";
+import type { ChatCtx, Data } from "../context.ts";
+import type { SetStoreFunction } from "solid-js/store";
+import type { Api } from "../api.tsx";
 
 // TODO: implement a retry queue
 // TODO: show when messages fail to send

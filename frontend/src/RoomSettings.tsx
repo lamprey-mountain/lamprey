@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { RoomT } from "./types.ts";
+import type { RoomT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {

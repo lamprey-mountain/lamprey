@@ -2,7 +2,7 @@ import { For, from, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { Room, Thread } from "sdk";
+import type { Room, Thread } from "sdk";
 
 export const ChatNav = () => {
 	const ctx = useCtx();

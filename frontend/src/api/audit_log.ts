@@ -1,6 +1,6 @@
-import { AuditLogEntry, Pagination } from "sdk";
-import { createEffect, createResource, Resource } from "solid-js";
-import { Api } from "../api.tsx";
+import type { AuditLogEntry, Pagination } from "sdk";
+import { createEffect, createResource, type Resource } from "solid-js";
+import type { Api } from "../api.tsx";
 
 type Listing<T> = {
 	pagination: Pagination<T> | null;

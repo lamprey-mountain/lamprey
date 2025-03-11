@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import { Info, Sessions } from "./user_settings/mod.tsx";
-import { User } from "sdk";
+import type { User } from "sdk";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },

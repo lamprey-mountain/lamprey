@@ -1,7 +1,7 @@
-import { createResource, For, Show, VoidProps } from "solid-js";
+import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { Pagination, SessionT, UserT } from "../types.ts";
+import type { Pagination, SessionT, UserT } from "../types.ts";
 
 export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();

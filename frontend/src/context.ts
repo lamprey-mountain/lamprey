@@ -1,9 +1,14 @@
-import { Accessor, createContext, Setter, useContext } from "solid-js";
-import { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
+import {
+	type Accessor,
+	createContext,
+	type Setter,
+	useContext,
+} from "solid-js";
+import type { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
 import type { EditorState } from "prosemirror-state";
-import { MessageListAnchor } from "./api/messages.ts";
-import { ReactiveMap } from "@solid-primitives/map";
-import { Emitter } from "@solid-primitives/event-bus";
+import type { MessageListAnchor } from "./api/messages.ts";
+import type { ReactiveMap } from "@solid-primitives/map";
+import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.ts";
 

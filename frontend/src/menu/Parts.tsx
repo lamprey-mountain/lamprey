@@ -1,8 +1,8 @@
 import {
 	createSignal,
 	createUniqueId,
-	JSX,
-	ParentProps,
+	type JSX,
+	type ParentProps,
 	useContext,
 } from "solid-js";
 import { useFloating } from "solid-floating-ui";

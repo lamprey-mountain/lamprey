@@ -1,4 +1,4 @@
-import { getTimestampFromUUID, Message } from "sdk";
+import { getTimestampFromUUID, type Message } from "sdk";
 import { useCtx } from "./context";
 
 export function createWeaklyMemoized<T extends object, U>(

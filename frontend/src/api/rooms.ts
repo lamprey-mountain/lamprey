@@ -1,7 +1,7 @@
-import { Pagination, Room } from "sdk";
+import type { Pagination, Room } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import { batch, createEffect, createResource, Resource } from "solid-js";
-import { Api, Listing } from "../api.tsx";
+import { batch, createEffect, createResource, type Resource } from "solid-js";
+import type { Api, Listing } from "../api.tsx";
 
 export class Rooms {
 	api: Api = null as unknown as Api;

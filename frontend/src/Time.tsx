@@ -1,4 +1,4 @@
-import { VoidProps } from "solid-js";
+import type { VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
 
 function timeAgo(date: Date): string {

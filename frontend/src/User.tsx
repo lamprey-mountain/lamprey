@@ -1,6 +1,6 @@
-import { RoomMember, ThreadMember, User } from "sdk";
+import type { RoomMember, ThreadMember, User } from "sdk";
 import { useApi } from "./api";
-import { For, Show, VoidProps } from "solid-js";
+import { For, Show, type VoidProps } from "solid-js";
 import { Copyable } from "./util";
 import { getThumb, getUrl } from "./media/util";
 

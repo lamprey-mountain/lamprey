@@ -1,7 +1,7 @@
-import { createEffect, createSignal, ParentProps, Show } from "solid-js";
-import { Modal as ContextModal, useCtx } from "../context.ts";
+import { createEffect, createSignal, type ParentProps, Show } from "solid-js";
+import { type Modal as ContextModal, useCtx } from "../context.ts";
 import { autofocus } from "@solid-primitives/autofocus";
-import { Media } from "sdk";
+import type { Media } from "sdk";
 import { getHeight, getUrl, getWidth, Resize } from "../media/util.tsx";
 
 export const Modal = (props: ParentProps) => {

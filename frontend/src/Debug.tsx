@@ -4,7 +4,7 @@ import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { flags } from "./flags.ts";
-import { Message, UrlEmbed } from "sdk";
+import type { Message, UrlEmbed } from "sdk";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 

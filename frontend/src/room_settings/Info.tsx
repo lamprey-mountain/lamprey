@@ -1,6 +1,6 @@
-import { VoidProps } from "solid-js";
+import type { VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
-import { RoomT } from "../types.ts";
+import type { RoomT } from "../types.ts";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();

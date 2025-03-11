@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { ThreadT } from "./types.ts";
+import type { ThreadT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import { Info } from "./thread_settings/mod.tsx";

@@ -1,14 +1,19 @@
-import { Command, EditorState, Plugin, TextSelection } from "prosemirror-state";
+import {
+	type Command,
+	EditorState,
+	Plugin,
+	TextSelection,
+} from "prosemirror-state";
 import {
 	Decoration,
-	DecorationAttrs,
+	type DecorationAttrs,
 	DecorationSet,
 	EditorView,
 } from "prosemirror-view";
 import { DOMParser, Schema } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { marked, Token } from "marked";
+import { marked, type Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
 
 const md = marked.use({

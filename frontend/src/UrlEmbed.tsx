@@ -1,5 +1,5 @@
-import { UrlEmbed } from "sdk";
-import { Show, VoidProps } from "solid-js";
+import type { UrlEmbed } from "sdk";
+import { Show, type VoidProps } from "solid-js";
 import { ImageView } from "./media/mod";
 
 type UrlEmbedProps = {

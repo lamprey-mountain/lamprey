@@ -1,5 +1,5 @@
-import { getTimestampFromUUID, Message, Thread } from "sdk";
-import { MessageT, MessageType } from "./types.ts";
+import { getTimestampFromUUID, type Message, type Thread } from "sdk";
+import { type MessageT, MessageType } from "./types.ts";
 import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
@@ -13,7 +13,7 @@ import {
 	VideoView,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { byteFmt, getUrl, MediaProps } from "./media/util.tsx";
+import { byteFmt, getUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { UserView } from "./User.tsx";

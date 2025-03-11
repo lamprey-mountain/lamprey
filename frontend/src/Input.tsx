@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from "solid-js/web";
-import { Attachment, useCtx } from "./context.ts";
-import { ThreadT } from "./types.ts";
+import { type Attachment, useCtx } from "./context.ts";
+import type { ThreadT } from "./types.ts";
 import Editor, { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { AttachmentView } from "./Message.tsx";

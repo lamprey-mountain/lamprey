@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { RoomT } from "./types.ts";
+import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";

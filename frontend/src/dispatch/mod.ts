@@ -1,11 +1,11 @@
-import { SetStoreFunction } from "solid-js/store";
-import { Action, Attachment, Data, Modal } from "../context.ts";
+import type { SetStoreFunction } from "solid-js/store";
+import type { Action, Attachment, Data, Modal } from "../context.ts";
 import { batch as solidBatch } from "solid-js";
-import { ChatCtx } from "../context.ts";
+import type { ChatCtx } from "../context.ts";
 import { createEditorState } from "../Editor.tsx";
 import { createUpload } from "sdk";
 import { handleSubmit } from "./submit.ts";
-import { Api } from "../api.tsx";
+import type { Api } from "../api.tsx";
 
 type Reduction =
 	| { do: "modal.close" }

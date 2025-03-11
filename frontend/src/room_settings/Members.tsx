@@ -1,7 +1,7 @@
-import { For, Show, VoidProps } from "solid-js";
+import { For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { RoomT } from "../types.ts";
+import type { RoomT } from "../types.ts";
 import { Dropdown } from "../Dropdown.tsx";
 import { Copyable } from "../util.tsx";
 

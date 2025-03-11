@@ -1,8 +1,14 @@
-import { createEffect, createSignal, For, Show, VoidProps } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
-import { RoomT } from "../types.ts";
-import { Permission, Role } from "sdk";
+import type { RoomT } from "../types.ts";
+import type { Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore } from "solid-js/store";
 

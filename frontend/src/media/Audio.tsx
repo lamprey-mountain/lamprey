@@ -5,7 +5,7 @@ import {
 	For,
 	onCleanup,
 	Show,
-	ValidComponent,
+	type ValidComponent,
 } from "solid-js";
 import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
@@ -19,8 +19,8 @@ import {
 	formatTime,
 	getDuration,
 	getUrl,
-	MediaLoadingState,
-	MediaProps,
+	type MediaLoadingState,
+	type MediaProps,
 	parseRanges,
 } from "./util.tsx";
 import { tooltip } from "../Tooltip.tsx";

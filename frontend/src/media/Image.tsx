@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { useCtx } from "../context.ts";
-import { getThumb, getUrl, Loader, MediaProps, Resize } from "./util.tsx";
+import { getThumb, getUrl, Loader, type MediaProps, Resize } from "./util.tsx";
 
 type ImageViewProps = MediaProps & {
 	thumb_width?: number;
