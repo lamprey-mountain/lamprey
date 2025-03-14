@@ -244,6 +244,26 @@ async fn user_get(
     Ok(Json(user))
 }
 
+/// User audit logs (TODO)
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/audit-logs",
+    params(
+        ("user_id", description = "User id"),
+    ),
+    tags = ["user"],
+    responses(
+        (status = OK, body = User, description = "success"),
+    )
+)]
+async fn user_audit_logs(
+    Path(_target_user_id): Path<UserIdReq>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_create))
@@ -251,4 +271,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))
+        .routes(routes!(user_audit_logs))
 }
