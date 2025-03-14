@@ -348,6 +348,22 @@ mod tests {
             r#"[{"type":"Blockquote","text":"hello ~b{world}"},{"type":"Code","lang":"rs","text":"code here"}]"#
         );
     }
+
+    #[test]
+    fn test_mention() {
+        let doc: Document = serde_json::from_value(json!(
+            "hello, ~mention-user{019438e7-584f-793f-8c5e-739416e011ce}!"
+        ))
+        .unwrap();
+        assert_eq!(
+            dbg!(doc.as_html().to_string()),
+            r#"<p>hello, <span data-mention-type="user" data-mention-id="019438e7-584f-793f-8c5e-739416e011ce">@unknown-user</span>!</p>"#
+        );
+        assert_eq!(
+            dbg!(serde_json::to_string(&doc).unwrap()),
+            r#""hello, ~mention-user{019438e7-584f-793f-8c5e-739416e011ce}!""#,
+        );
+    }
 }
 
 /// potential future types

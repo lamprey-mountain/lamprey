@@ -23,11 +23,17 @@ pub enum KnownTag<'a> {
     /// strikethrough
     Strikethrough(Text<'a>),
 
-    /// link (optional custom text)
-    Link(Url, Option<Text<'a>>),
+    /// link
+    Link {
+        text: Option<Text<'a>>,
+        url: Url,
+    },
 
-    /// inline code (optional programming language)
-    Code(Text<'a>, Option<String>),
+    /// inline code
+    Code {
+        text: Text<'a>,
+        lang: Option<String>,
+    },
 
     Mention(MentionTag),
 
@@ -76,22 +82,22 @@ pub enum KnownTag<'a> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MentionTag {
     /// mention a user
-    MentionUser(UserId),
+    User(UserId),
 
     /// mention/link a room
-    MentionRoom(RoomId),
+    Room(RoomId),
 
     /// mention/link a thread
-    MentionThread(ThreadId),
+    Thread(ThreadId),
 
     /// mention everyone with a role
-    MentionRole(RoleId),
+    Role(RoleId),
 
     /// mention everyone in the room
-    MentionAllRoom,
+    AllRoom,
 
     /// mention everyone in the thread
-    MentionAllThread,
+    AllThread,
 }
 
 /// how the time should be displayed
@@ -147,28 +153,57 @@ impl<'a> KnownTag<'a> {
         match (&*value.name, value.params.as_slice()) {
             ("b", [t]) => Ok(KnownTag::Bold(t.clone())),
             ("em", [t]) => Ok(KnownTag::Emphasis(t.clone())),
-            ("a", [l]) => Ok(KnownTag::Link(
-                l.as_plain().to_string().parse().map_err(|_| ())?,
-                None,
-            )),
-            ("a", [l, t]) => Ok(KnownTag::Link(
-                l.as_plain().to_string().parse().map_err(|_| ())?,
-                Some(t.clone()),
-            )),
+            ("a", [l]) => Ok(KnownTag::Link {
+                url: l.as_plain().to_string().parse().map_err(|_| ())?,
+                text: None,
+            }),
+            ("a", [l, t]) => Ok(KnownTag::Link {
+                url: l.as_plain().to_string().parse().map_err(|_| ())?,
+                text: Some(t.clone()),
+            }),
             #[cfg(feature = "formatting_extra")]
             ("sub", [t]) => Ok(KnownTag::Sub(t.clone())),
             #[cfg(feature = "formatting_extra")]
             ("sup", [t]) => Ok(KnownTag::Sup(t.clone())),
             ("s", [t]) => Ok(KnownTag::Strikethrough(t.clone())),
-            ("code", [t]) => Ok(KnownTag::Code(t.clone(), None)),
-            ("code", [t, l]) => Ok(KnownTag::Code(t.clone(), Some(l.as_plain().to_string()))),
-            _ => Err(()),
+            ("code", [t]) => Ok(KnownTag::Code {
+                text: t.clone(),
+                lang: None,
+            }),
+            ("code", [t, l]) => Ok(KnownTag::Code {
+                text: t.clone(),
+                lang: Some(l.as_plain().to_string()),
+            }),
+            _ => MentionTag::parse_strict(value).map(Self::Mention),
         }
     }
 
     /// use Unknown if any tag is unknown
     pub fn parse_lenient(value: Tag<'a>) -> KnownTag<'a> {
         Self::parse_strict(value).unwrap_or(Self::Unknown)
+    }
+}
+
+impl MentionTag {
+    /// fail if any tag is unknown
+    pub fn parse_strict(value: Tag<'_>) -> Result<MentionTag, ()> {
+        match (&*value.name, value.params.as_slice()) {
+            ("mention-user", [uid]) => Ok(Self::User(
+                uid.as_plain().to_string().parse().map_err(|_| ())?,
+            )),
+            ("mention-room", [uid]) => Ok(Self::Room(
+                uid.as_plain().to_string().parse().map_err(|_| ())?,
+            )),
+            ("mention-thread", [uid]) => Ok(Self::Thread(
+                uid.as_plain().to_string().parse().map_err(|_| ())?,
+            )),
+            ("mention-role", [uid]) => Ok(Self::Role(
+                uid.as_plain().to_string().parse().map_err(|_| ())?,
+            )),
+            ("mention-all-room", []) => Ok(Self::AllRoom),
+            ("mention-all-thread", []) => Ok(Self::AllThread),
+            _ => Err(()),
+        }
     }
 }
 

@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 use super::{
-    tags::{BlockInner, Document, KnownTag},
+    tags::{BlockInner, Document, KnownTag, MentionTag},
     Span, Tag, Text,
 };
 
@@ -187,13 +187,51 @@ impl Display for HtmlFormatterInner<'_> {
                     #[cfg(feature = "formatting_extra")]
                     KnownTag::Sup(text) => write!(f, "<sup>{}</sup>", HtmlFormatter(&text))?,
                     KnownTag::Strikethrough(text) => write!(f, "<s>{}</s>", HtmlFormatter(&text))?,
-                    KnownTag::Link(url, Some(text)) => {
-                        write!(f, "<a href=\"{url}\">{}</a>", HtmlFormatter(&text))?
-                    }
-                    KnownTag::Link(url, None) => write!(f, "<a href=\"{url}\">{url}</a>")?,
-                    KnownTag::Code(text, _lang) => {
+                    KnownTag::Link {
+                        url,
+                        text: Some(text),
+                    } => write!(f, "<a href=\"{url}\">{}</a>", HtmlFormatter(&text))?,
+                    KnownTag::Link { url, text: None } => write!(f, "<a href=\"{url}\">{url}</a>")?,
+                    KnownTag::Code { text, lang: None } => {
                         write!(f, "<code>{}</code>", HtmlFormatter(&text))?
                     }
+                    KnownTag::Code {
+                        text,
+                        lang: Some(lang),
+                    } => write!(
+                        f,
+                        r#"<code lang="{}">{}</code>"#,
+                        lang,
+                        HtmlFormatter(&text)
+                    )?,
+                    KnownTag::Mention(m) => match m {
+                        MentionTag::User(id) => write!(
+                            f,
+                            r#"<span data-mention-type="user" data-mention-id="{}">@unknown-user</span>"#,
+                            id
+                        )?,
+                        MentionTag::Room(id) => write!(
+                            f,
+                            r#"<span data-mention-type="room" data-mention-id="{}">@unknown-room</span>"#,
+                            id
+                        )?,
+                        MentionTag::Thread(id) => write!(
+                            f,
+                            r#"<span data-mention-type="thread" data-mention-id="{}">@unknown-thread</span>"#,
+                            id
+                        )?,
+                        MentionTag::Role(id) => write!(
+                            f,
+                            r#"<span data-mention-type="role" data-mention-id="{}">@unknown-role</span>"#,
+                            id
+                        )?,
+                        MentionTag::AllRoom => {
+                            write!(f, r#"<span data-mention-type="all-room">@room</span>"#)?
+                        }
+                        MentionTag::AllThread => {
+                            write!(f, r#"<span data-mention-type="all-thread">@thread</span>"#)?
+                        }
+                    },
                     _ => todo!(),
                 }
             }
@@ -208,7 +246,7 @@ impl Display for PlainFormatterInner<'_> {
             Span::Text(t) => write!(f, "{t}")?,
             Span::Tag(tag) => {
                 let known: Result<KnownTag, _> = tag.clone().try_into();
-                if let Ok(KnownTag::Link(link, text)) = known {
+                if let Ok(KnownTag::Link { url: link, text }) = known {
                     if let Some(text) = text {
                         write!(f, "{} ({})", PlainFormatter(&text), link)?;
                     } else {
@@ -257,11 +295,14 @@ impl Display for MarkdownFormatterInner<'_> {
                     KnownTag::Bold(text) => write!(f, "**{}**", MarkdownFormatter(&text))?,
                     KnownTag::Emphasis(text) => write!(f, "*{}*", MarkdownFormatter(&text))?,
                     KnownTag::Strikethrough(text) => write!(f, "~~{}~~", MarkdownFormatter(&text))?,
-                    KnownTag::Link(url, Some(text)) => {
-                        write!(f, "[{}]({url})", MarkdownFormatter(&text))?
+                    KnownTag::Link {
+                        url,
+                        text: Some(text),
+                    } => write!(f, "[{}]({url})", MarkdownFormatter(&text))?,
+                    KnownTag::Link { url, text: None } => write!(f, "[{url}]({url})")?,
+                    KnownTag::Code { text, lang: _lang } => {
+                        write!(f, "`{}`", MarkdownFormatter(&text))?
                     }
-                    KnownTag::Link(url, None) => write!(f, "[{url}]({url})")?,
-                    KnownTag::Code(text, _lang) => write!(f, "`{}`", MarkdownFormatter(&text))?,
                     #[cfg(feature = "formatting_extra")]
                     KnownTag::Spoiler(text, None) => write!(f, "||{}||", MarkdownFormatter(&text))?,
                     #[cfg(feature = "formatting_extra")]
