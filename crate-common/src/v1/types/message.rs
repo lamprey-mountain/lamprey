@@ -83,7 +83,7 @@ pub enum MessageState {
     /// (TODO) message is not stored
     Ephemeral,
 
-    #[cfg(feature = "feat_move_messages")]
+    #[cfg(feature = "feat_message_move")]
     /// message was moved from another thread
     Moved {
         /// the relevant MessagesMoved message in this thread
@@ -219,7 +219,7 @@ pub struct MessagePatch {
     pub override_name: Option<Option<String>>,
 
     #[cfg(feature = "feat_custom_embeds")]
-    pub embeds: Vec<UrlEmbed>,
+    pub embeds: Option<Vec<UrlEmbed>>,
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
@@ -235,7 +235,7 @@ pub enum MessageType {
     // #[deprecated = "use the new text format"]
     DefaultMarkdown(MessageDefaultMarkdown),
 
-    #[cfg(feature = "feat_messages_new_text")]
+    #[cfg(feature = "feat_message_new_text")]
     /// a basic message, using the new tagged text format
     DefaultTagged(MessageDefaultTagged),
 
@@ -249,7 +249,7 @@ pub enum MessageType {
     /// (TODO) a message was unpinned
     MessageUnpinned(MessagePin),
 
-    #[cfg(feature = "feat_move_messages")]
+    #[cfg(feature = "feat_message_move")]
     /// (TODO) one or more messages were moved
     MessagesMoved(MessagesMoved),
 
@@ -322,7 +322,7 @@ pub struct MessageThreadPingback {
     pub source_thread_id: ThreadId,
 }
 
-#[cfg(feature = "feat_move_messages")]
+#[cfg(feature = "feat_message_move")]
 /// Information about one or more messages being moved between threads
 /// probably want this being sent in both the source and target threads, maybe
 /// with a bit of different styling depending on whether its source/target
@@ -454,7 +454,7 @@ pub struct MessageDefaultMarkdown {
 }
 
 /// a basic message, using the shiny new and very experimental tagged text format
-#[cfg(feature = "feat_messages_new_text")]
+#[cfg(feature = "feat_message_new_text")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -484,12 +484,12 @@ pub struct MessageDefaultTagged {
     #[cfg(feature = "feat_reactions")]
     pub reactions: ReactionCounts,
 
-    #[cfg(feature = "feat_interactions")]
+    #[cfg(feature = "feat_interaction_reaction")]
     pub interactions: Interactions,
 }
 
 /// ways to interact with a message
-#[cfg(feature = "feat_interactions")]
+#[cfg(feature = "feat_interaction_reaction")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -507,16 +507,18 @@ impl Diff<Message> for MessagePatch {
                     || self.metadata.changes(&m.metadata)
                     || self.reply_id.changes(&m.reply_id)
                     || self.override_name.changes(&m.override_name)
+                    || self.embeds.changes(&m.embeds)
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
                     })
             }
-            #[cfg(feature = "feat_messages_new_text")]
+            #[cfg(feature = "feat_message_new_text")]
             MessageType::DefaultTagged(m) => {
                 self.content.changes(&m.content)
                     || self.metadata.changes(&m.metadata)
                     || self.reply_id.changes(&m.reply_id)
+                    || self.embeds.changes(&m.embeds)
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
@@ -532,7 +534,7 @@ impl MessageType {
     pub fn is_deletable(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => true,
-            #[cfg(feature = "feat_messages_new_text")]
+            #[cfg(feature = "feat_message_new_text")]
             MessageType::DefaultTagged(_) => true,
             #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => true,
@@ -553,19 +555,19 @@ impl MessageType {
             MessageType::ModerationReport(_) => true,
             MessageType::SystemMessage(_) => true,
 
-            #[cfg(feature = "feat_move_messages")]
+            #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
         }
     }
 
     pub fn is_editable(&self) -> bool {
-        #[cfg(feature = "feat_messages_new_text")]
+        #[cfg(feature = "feat_message_new_text")]
         return matches!(
             self,
             MessageType::DefaultMarkdown(_) | MessageType::DefaultTagged(_)
         );
 
-        #[cfg(not(feature = "feat_messages_new_text"))]
+        #[cfg(not(feature = "feat_message_new_text"))]
         matches!(self, MessageType::DefaultMarkdown(_))
     }
 }

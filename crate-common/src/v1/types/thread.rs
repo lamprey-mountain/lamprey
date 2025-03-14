@@ -1,6 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use text::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
+use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
+use forum::ThreadTypeForumTreePublic;
+use ThreadTypeChatPrivate as ThreadTypeForumLinearPrivate;
+use ThreadTypeChatPrivate as ThreadTypeForumTreePrivate;
+use ThreadTypeChatPublic as ThreadTypeForumLinearPublic;
+
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -13,7 +18,8 @@ use crate::v1::types::{util::Diff, ThreadVerId};
 
 use super::{RoomId, ThreadId, UserId};
 
-pub mod text;
+pub mod chat;
+pub mod forum;
 
 #[cfg(feature = "feat_thread_type_voice")]
 pub mod voice;
@@ -124,6 +130,7 @@ pub struct Thread {
 // #[strum_discriminants(vis(pub), name(ThreadType))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
+#[non_exhaustive]
 pub enum ThreadPublic {
     /// instant messaging
     Chat(ThreadTypeChatPublic),
@@ -131,11 +138,11 @@ pub enum ThreadPublic {
     #[cfg(feature = "feat_thread_type_forums")]
     /// linear long form chat history, similar to github/forgejo issues
     // TODO: come up with a less terrible name
-    ForumLinear(ThreadTypeChatPublic),
+    ForumLinear(ThreadTypeForumLinearPublic),
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// tree-style chat history
-    ForumTree(ThreadTypeChatPublic),
+    ForumTree(ThreadTypeForumTreePublic),
 
     #[cfg(feature = "feat_thread_type_voice")]
     /// call
@@ -164,17 +171,18 @@ pub enum ThreadPublic {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
+#[non_exhaustive]
 pub enum ThreadPrivate {
     /// instant messaging
     Chat(ThreadTypeChatPrivate),
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// linear long form chat history, similar to github/forgejo issues
-    ForumLinear(ThreadTypeChatPrivate),
+    ForumLinear(ThreadTypeForumLinearPrivate),
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// tree-style chat history
-    ForumTree(ThreadTypeChatPrivate),
+    ForumTree(ThreadTypeForumTreePrivate),
 
     #[cfg(feature = "feat_thread_type_voice")]
     /// call
@@ -201,6 +209,7 @@ pub enum ThreadPrivate {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[non_exhaustive]
 pub enum ThreadType {
     /// instant messaging
     #[default]

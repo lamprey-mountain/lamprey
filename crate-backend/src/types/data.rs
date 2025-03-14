@@ -1,5 +1,5 @@
 use common::v1::types::{
-    thread::text::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
+    thread::chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,

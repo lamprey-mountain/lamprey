@@ -17,7 +17,7 @@ use crate::{
         DbMessageCreate, DbThreadCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
         PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
-    ServerState,
+    Error, ServerState,
 };
 
 use super::util::{Auth, HeaderReason};
@@ -49,6 +49,7 @@ async fn thread_create(
         ThreadType::Chat => {
             perms.ensure(Permission::ThreadCreateChat)?;
         }
+        _ => return Err(Error::Unimplemented),
     };
     let thread_id = data
         .thread_create(DbThreadCreate {

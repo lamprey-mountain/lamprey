@@ -289,6 +289,7 @@ impl Portal {
                         .or(Some(message.author.name)),
                     nonce: None,
                     use_new_text_formatting: false,
+                    embeds: vec![],
                 };
                 for a in &message.attachments {
                     let bytes = a.download().await?;
@@ -367,6 +368,7 @@ impl Portal {
                     metadata: None,
                     reply_id: None,
                     override_name: None,
+                    embeds: None,
                 };
                 req.attachments = if let Some(atts) = &update.attachments {
                     let mut v = vec![];

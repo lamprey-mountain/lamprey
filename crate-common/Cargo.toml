@@ -26,7 +26,7 @@ utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
 formatting_extra = []
 feat_reactions = []
-feat_interactions = []
+feat_interaction_reaction = []
 feat_custom_embeds = []
 feat_thread_linking = []
 feat_thread_type_forums = []
@@ -37,10 +37,9 @@ feat_thread_type_table = []
 feat_thread_type_report = []
 feat_forward_threads = []
 feat_custom_emoji = []
-# TODO: rename to be more consistent
-feat_move_messages = []
-feat_messages_new_text = []
-feat_message_forwarding = ["feat_messages_new_text"]
+feat_message_move = []
+feat_message_new_text = []
+feat_message_forwarding = ["feat_message_new_text"]
 feat_automod = []
 
 default = [
@@ -48,4 +47,7 @@ default = [
   "validator",
   "feat_reactions",
   "feat_custom_emoji",
+  "feat_custom_embeds",
+  "feat_thread_type_forums",
+  "feat_interaction_reaction",
 ]

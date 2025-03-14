@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    row_to_json(usr) as \"author!: serde_json::Value\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\"\nfrom message as msg\njoin usr on usr.id = msg.author_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $3 and msg.id < $4\norder by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6\n\n",
+  "query": "select\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    false as \"is_pinned!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(u.embeds, '{}') as \"embeds!\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nwhere thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null\n",
   "describe": {
     "columns": [
       {
@@ -60,18 +60,18 @@
       },
       {
         "ordinal": 9,
-        "name": "author!: serde_json::Value",
-        "type_info": "Json"
+        "name": "author_id",
+        "type_info": "Uuid"
       },
       {
         "ordinal": 10,
-        "name": "attachments!",
-        "type_info": "JsonArray"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       },
       {
         "ordinal": 11,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "attachments!",
+        "type_info": "JsonArray"
       },
       {
         "ordinal": 12,
@@ -82,11 +82,7 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -99,11 +95,11 @@
       true,
       true,
       true,
-      null,
+      false,
       null,
       null,
       null
     ]
   },
-  "hash": "28323e6f345bc1411c7c85f01a5bcd1983ddf8b2e1b9bc4ec0882a9b1f7862a0"
+  "hash": "82e09874db58db4d1950d9ab61ec72e4140bee748525b56e067123e5551fb32d"
 }

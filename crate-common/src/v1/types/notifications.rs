@@ -188,6 +188,16 @@ pub struct NotifsThread {
     pub mentions: Option<NotifAction>,
 }
 
+/// notification config for a message
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotifsMessage {
+    pub mute: Option<MuteDuration>,
+    pub replies: Option<NotifAction>,
+    // pub edits: Option<NotifAction>,
+    // pub reactions: Option<NotifAction>,
+}
+
 /// how long to mute for
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
