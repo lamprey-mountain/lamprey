@@ -39,6 +39,9 @@ use error::Result;
     MessageSync,
     PaginationQuery<MessageId>,
     UserListFilter,
+    // TEMP: manually added for now
+    common::v1::types::text::Document,
+    common::v1::types::text::OwnedText,
 )))]
 struct ApiDoc;
 

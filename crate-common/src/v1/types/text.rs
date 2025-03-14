@@ -41,6 +41,7 @@ mod formatting {
 pub mod parse;
 pub mod render;
 pub mod tags;
+pub use tags::{Block, BlockInner, Document};
 
 // i want to redo this whole text thing, it's a bit of a mess
 // eg. to_owned will cause tons of small allocations for strings

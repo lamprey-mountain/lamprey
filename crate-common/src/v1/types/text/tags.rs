@@ -214,17 +214,23 @@ mod doc {
 
     use crate::v1::types::text::{Language, OwnedText, Text};
 
+    #[cfg(feature = "utoipa")]
+    use utoipa::ToSchema;
+
     /// text with block level formatting
     /// mainly sticking to markdown-esque formatting for now
     #[derive(Debug, Clone, PartialEq, Eq)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = AnyDocument))]
     pub struct Document(pub Vec<Block>);
 
     /// a single unit of block level formatting
     #[derive(Debug, Clone, PartialEq, Eq)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = AnyBlock))]
     pub struct Block(pub BlockInner);
 
     #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
     #[serde(tag = "type")]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(no_recursion))]
     #[non_exhaustive]
     pub enum BlockInner {
         Paragraph {
@@ -260,6 +266,22 @@ mod doc {
             #[serde(rename = "type")]
             block_type: String,
         },
+    }
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    enum AnyDocument {
+        Many(Vec<Block>),
+        One(Block),
+    }
+
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum AnyBlock {
+        Str(String),
+        Obj(BlockInner),
     }
 
     impl From<Block> for BlockInner {
@@ -306,13 +328,6 @@ mod doc {
         where
             D: serde::Deserializer<'de>,
         {
-            #[derive(Deserialize)]
-            #[serde(untagged)]
-            enum AnyDocument {
-                Many(Vec<Block>),
-                One(Block),
-            }
-
             match AnyDocument::deserialize(deserializer)? {
                 AnyDocument::Many(v) => Ok(Self(v)),
                 AnyDocument::One(o) => Ok(Self(vec![o])),
@@ -325,13 +340,6 @@ mod doc {
         where
             D: serde::Deserializer<'de>,
         {
-            #[derive(Deserialize)]
-            #[serde(untagged)]
-            enum AnyBlock {
-                Str(String),
-                Obj(BlockInner),
-            }
-
             match AnyBlock::deserialize(deserializer)? {
                 AnyBlock::Str(s) => Ok(BlockInner::Paragraph {
                     text: Text::parse(&s).to_owned(),

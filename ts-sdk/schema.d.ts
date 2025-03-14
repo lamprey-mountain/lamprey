@@ -1541,6 +1541,23 @@ export interface paths {
 		patch: operations["user_update"];
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/audit-logs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** User audit logs (TODO) */
+		get: operations["user_audit_logs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/config": {
 		parameters: {
 			query?: never;
@@ -1729,6 +1746,10 @@ export interface components {
 			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
 			version_id: components["schemas"]["MessageVerId"];
 		};
+		AnyBlock: string | components["schemas"]["BlockInner"];
+		AnyDocument:
+			| components["schemas"]["Block"][]
+			| components["schemas"]["Block"];
 		/** @description metadata for audio */
 		Audio: {
 			codec: string;
@@ -1760,6 +1781,42 @@ export interface components {
 			has_verified_email: boolean;
 			/** @description the oauth providers this user has authenticated with */
 			oauth_providers: string[];
+		};
+		/** @description a single unit of block level formatting */
+		Block: components["schemas"]["AnyBlock"];
+		BlockInner: {
+			text: components["schemas"]["OwnedText"];
+			/** @enum {string} */
+			type: "Paragraph";
+		} | {
+			/**
+			 * Format: int32
+			 * @description between 1 to 6 (same as html/markdown)
+			 */
+			level: number;
+			text: components["schemas"]["OwnedText"];
+			/** @enum {string} */
+			type: "Heading";
+		} | {
+			text: components["schemas"]["Document"];
+			/** @enum {string} */
+			type: "Blockquote";
+		} | {
+			lang?: null | components["schemas"]["Language"];
+			text: components["schemas"]["OwnedText"];
+			/** @enum {string} */
+			type: "Code";
+		} | {
+			items: components["schemas"]["Document"][];
+			/** @enum {string} */
+			type: "ListUnordered";
+		} | {
+			items: components["schemas"]["Document"][];
+			/** @enum {string} */
+			type: "ListOrdered";
+		} | {
+			/** @enum {string} */
+			type: "Other";
 		};
 		BotOwner: {
 			/** @enum {string} */
@@ -1799,6 +1856,9 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		/** @description text with block level formatting
+		 *     mainly sticking to markdown-esque formatting for now */
+		Document: components["schemas"]["AnyDocument"];
 		/** @description An email address */
 		EmailAddr: {
 			inner: string;
@@ -2187,6 +2247,7 @@ export interface components {
 			attachments?: components["schemas"]["MediaRef"][];
 			/** @description the message's content, in either markdown or the new format depending on if use_new_text_formatting is true */
 			content?: string | null;
+			embeds: components["schemas"]["UrlEmbed"][];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2260,6 +2321,7 @@ export interface components {
 			attachments?: components["schemas"]["MediaRef"][] | null;
 			/** @description the new message content. whether its markdown/new format depends on the target message's format */
 			content?: string | null;
+			embeds?: components["schemas"]["UrlEmbed"][] | null;
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2406,6 +2468,7 @@ export interface components {
 		MessageThreadPingback: {
 			source_room_id: components["schemas"]["RoomId"];
 			source_thread_id: components["schemas"]["ThreadId"];
+			source_user_id: components["schemas"]["UserId"];
 		};
 		/** @description Information about a thread being updated */
 		MessageThreadUpdate: {
@@ -2546,6 +2609,11 @@ export interface components {
 			/** Format: uri */
 			url: string;
 		};
+		/**
+		 * Text
+		 * @description formatted tagged text
+		 */
+		OwnedText: string;
 		/** @enum {string} */
 		PaginationDirection: "f" | "b";
 		PaginationQuery_MessageId: {
@@ -3401,15 +3469,33 @@ export interface components {
 			tags?: components["schemas"]["TagId"][] | null;
 		};
 		/** @description user-specific data for threads */
-		ThreadPrivate: components["schemas"]["ThreadTypeChatPrivate"] & {
-			/** @enum {string} */
-			type: "Chat";
-		};
+		ThreadPrivate:
+			| (components["schemas"]["ThreadTypeChatPrivate"] & {
+				/** @enum {string} */
+				type: "Chat";
+			})
+			| (components["schemas"]["ThreadTypeChatPrivate"] & {
+				/** @enum {string} */
+				type: "ForumLinear";
+			})
+			| (components["schemas"]["ThreadTypeChatPrivate"] & {
+				/** @enum {string} */
+				type: "ForumTree";
+			});
 		/** @description type-specific data for threads */
-		ThreadPublic: components["schemas"]["ThreadTypeChatPublic"] & {
-			/** @enum {string} */
-			type: "Chat";
-		};
+		ThreadPublic:
+			| (components["schemas"]["ThreadTypeChatPublic"] & {
+				/** @enum {string} */
+				type: "Chat";
+			})
+			| (components["schemas"]["ThreadTypeChatPublic"] & {
+				/** @enum {string} */
+				type: "ForumLinear";
+			})
+			| (components["schemas"]["ThreadTypeForumTreePublic"] & {
+				/** @enum {string} */
+				type: "ForumTree";
+			});
 		/** @description lifecycle of a thread */
 		ThreadState: {
 			/** Format: int32 */
@@ -3430,7 +3516,7 @@ export interface components {
 			state: "Deleted";
 		};
 		/** @enum {string} */
-		ThreadType: "Chat";
+		ThreadType: "Chat" | "ForumLinear" | "ForumTree";
 		ThreadTypeChatPrivate: {
 			is_unread: boolean;
 			last_read_id?: null | components["schemas"]["MessageVerId"];
@@ -3442,6 +3528,13 @@ export interface components {
 			last_version_id: components["schemas"]["MessageVerId"];
 			/** Format: int64 */
 			message_count: number;
+		};
+		ThreadTypeForumTreePublic: {
+			last_version_id: components["schemas"]["MessageVerId"];
+			/** Format: int64 */
+			message_count: number;
+			/** Format: int64 */
+			root_message_count: number;
 		};
 		/** Format: uuid */
 		ThreadVerId: string;
@@ -7104,6 +7197,29 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	user_audit_logs: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["User"];
+				};
 			};
 		};
 	};
