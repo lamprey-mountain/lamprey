@@ -2,10 +2,15 @@
 
 use std::fmt::Display;
 
-use super::{tags::KnownTag, Span, Tag, Text};
+use super::{
+    tags::{BlockInner, Document, KnownTag},
+    Span, Tag, Text,
+};
 
 /// a struct whose Display impl outputs html
 pub struct HtmlFormatter<'a>(&'a Text<'a>);
+
+pub struct HtmlDocumentFormatter<'a>(&'a Document);
 
 /// sanitizes text in its display impl to prevent accidental html formatting
 struct HtmlSanitized<'a>(&'a str);
@@ -48,10 +53,57 @@ impl Text<'_> {
     }
 }
 
+impl Document {
+    pub fn as_html(&self) -> HtmlDocumentFormatter {
+        HtmlDocumentFormatter(self)
+    }
+}
+
 impl Display for HtmlFormatter<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for i in &self.0 .0 {
             write!(f, "{}", HtmlFormatterInner(i))?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for HtmlDocumentFormatter<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for i in &self.0 .0 {
+            match &i.0 {
+                BlockInner::Paragraph { text } => write!(f, "<p>{}</p>", text.0.as_html())?,
+                BlockInner::Heading { text, level } => {
+                    write!(f, "<h{level}>{}</h{level}>", text.0.as_html())?
+                }
+                BlockInner::Blockquote { text } => {
+                    write!(f, "<blockquote>{}</blockquote>", text.as_html())?
+                }
+                BlockInner::Code { lang, text } => match lang {
+                    Some(lang) => write!(
+                        f,
+                        r#"<pre><code lang="{}">{}</code></pre>"#,
+                        lang.0,
+                        text.0.as_html()
+                    )?,
+                    None => write!(f, "<pre>{}</pre>", text.0.as_html())?,
+                },
+                BlockInner::ListUnordered { items } => {
+                    write!(f, "<ul>")?;
+                    for i in items {
+                        write!(f, "<li>{}</li>", i.as_html())?
+                    }
+                    write!(f, "</ul>")?;
+                }
+                BlockInner::ListOrdered { items } => {
+                    write!(f, "<ol>")?;
+                    for i in items {
+                        write!(f, "<li>{}</li>", i.as_html())?
+                    }
+                    write!(f, "</ol>")?;
+                }
+                _ => todo!(),
+            }
         }
         Ok(())
     }
@@ -156,7 +208,7 @@ impl Display for PlainFormatterInner<'_> {
             Span::Text(t) => write!(f, "{t}")?,
             Span::Tag(tag) => {
                 let known: Result<KnownTag, _> = tag.clone().try_into();
-                if let Ok(KnownTag::Link(link, text)) = dbg!(known) {
+                if let Ok(KnownTag::Link(link, text)) = known {
                     if let Some(text) = text {
                         write!(f, "{} ({})", PlainFormatter(&text), link)?;
                     } else {

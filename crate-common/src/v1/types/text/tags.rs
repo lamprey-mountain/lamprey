@@ -12,6 +12,7 @@ use crate::v1::types::{util::Time, EmojiId};
 /// currently supported tags
 #[cfg(not(feature = "formatting_extra"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum KnownTag<'a> {
     /// bold text
     Bold(Text<'a>),
@@ -69,6 +70,7 @@ pub enum KnownTag<'a> {
     // Silence(Text<'a>), // suppress mentions, link embeds (or make them separate)
     // Document(DocumentTag<'a>),
     // Interactive(InteractiveTag<'a>),
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,6 +137,13 @@ impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
     type Error = ();
 
     fn try_from(value: Tag<'a>) -> Result<Self, Self::Error> {
+        KnownTag::parse_strict(value)
+    }
+}
+
+impl<'a> KnownTag<'a> {
+    /// fail if any tag is unknown
+    pub fn parse_strict(value: Tag<'a>) -> Result<KnownTag<'a>, ()> {
         match (&*value.name, value.params.as_slice()) {
             ("b", [t]) => Ok(KnownTag::Bold(t.clone())),
             ("em", [t]) => Ok(KnownTag::Emphasis(t.clone())),
@@ -156,6 +165,11 @@ impl<'a> TryFrom<Tag<'a>> for KnownTag<'a> {
             _ => Err(()),
         }
     }
+
+    /// use Unknown if any tag is unknown
+    pub fn parse_lenient(value: Tag<'a>) -> KnownTag<'a> {
+        Self::parse_strict(value).unwrap_or(Self::Unknown)
+    }
 }
 
 // TODO: test serde, use less copypasta
@@ -168,43 +182,16 @@ mod doc {
     /// text with block level formatting
     /// mainly sticking to markdown-esque formatting for now
     #[derive(Debug, Clone, PartialEq, Eq)]
-    pub struct Document(Vec<Block>);
+    pub struct Document(pub Vec<Block>);
 
     /// a single unit of block level formatting
     #[derive(Debug, Clone, PartialEq, Eq)]
-    pub enum Block {
-        Paragraph {
-            text: OwnedText,
-        },
-
-        Heading {
-            text: OwnedText,
-            /// between 1 to 6 (same as html/markdown)
-            level: u8,
-        },
-
-        Blockquote {
-            text: Document,
-        },
-
-        Code {
-            /// if None, try to guess lang (Language("Plain") to explicitly prevent syntax hl)
-            lang: Option<Language>,
-            text: OwnedText,
-        },
-
-        ListUnordered {
-            items: Vec<Document>,
-        },
-
-        ListOrdered {
-            items: Vec<Document>,
-        },
-    }
+    pub struct Block(pub BlockInner);
 
     #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
     #[serde(tag = "type")]
-    enum BlockSerde {
+    #[non_exhaustive]
+    pub enum BlockInner {
         Paragraph {
             text: OwnedText,
         },
@@ -232,31 +219,23 @@ mod doc {
         ListOrdered {
             items: Vec<Document>,
         },
+
+        #[serde(untagged)]
+        Other {
+            #[serde(rename = "type")]
+            block_type: String,
+        },
     }
 
-    impl From<Block> for BlockSerde {
+    impl From<Block> for BlockInner {
         fn from(value: Block) -> Self {
-            match value {
-                Block::Paragraph { text } => BlockSerde::Paragraph { text },
-                Block::Heading { text, level } => BlockSerde::Heading { text, level },
-                Block::Blockquote { text } => BlockSerde::Blockquote { text },
-                Block::Code { lang, text } => BlockSerde::Code { lang, text },
-                Block::ListUnordered { items } => BlockSerde::ListUnordered { items },
-                Block::ListOrdered { items } => BlockSerde::ListOrdered { items },
-            }
+            value.0
         }
     }
 
-    impl From<BlockSerde> for Block {
-        fn from(value: BlockSerde) -> Self {
-            match value {
-                BlockSerde::Paragraph { text } => Block::Paragraph { text },
-                BlockSerde::Heading { text, level } => Block::Heading { text, level },
-                BlockSerde::Blockquote { text } => Block::Blockquote { text },
-                BlockSerde::Code { lang, text } => Block::Code { lang, text },
-                BlockSerde::ListUnordered { items } => Block::ListUnordered { items },
-                BlockSerde::ListOrdered { items } => Block::ListOrdered { items },
-            }
+    impl From<BlockInner> for Block {
+        fn from(value: BlockInner) -> Self {
+            Self(value)
         }
     }
 
@@ -266,7 +245,7 @@ mod doc {
             S: serde::Serializer,
         {
             if self.0.len() == 1 {
-                self.0.serialize(serializer)
+                self.0[0].serialize(serializer)
             } else {
                 serializer.collect_seq(&self.0)
             }
@@ -278,10 +257,10 @@ mod doc {
         where
             S: serde::Serializer,
         {
-            if let Block::Paragraph { text } = self {
+            if let BlockInner::Paragraph { text } = &self.0 {
                 text.serialize(serializer)
             } else {
-                let a: BlockSerde = self.clone().into();
+                let a: BlockInner = self.clone().into();
                 a.serialize(serializer)
             }
         }
@@ -315,13 +294,14 @@ mod doc {
             #[serde(untagged)]
             enum AnyBlock {
                 Str(String),
-                Obj(BlockSerde),
+                Obj(BlockInner),
             }
 
             match AnyBlock::deserialize(deserializer)? {
-                AnyBlock::Str(s) => Ok(Block::Paragraph {
+                AnyBlock::Str(s) => Ok(BlockInner::Paragraph {
                     text: Text::parse(&s).to_owned(),
-                }),
+                }
+                .into()),
                 AnyBlock::Obj(o) => Ok(o.into()),
             }
         }
@@ -474,7 +454,15 @@ mod doc {
         // User(User),
         // Message(Message),
         // Url(UrlEmbed),
+        // Transclude(Transclusion),
     }
+
+    // /// copy target's content (or a part of it) directly
+    // struct Transclusion {
+    //     source: AnyIdOrUrl,
+    //     document: Document,
+    //     snippet: Range, // need to figure out how to represent ranges of documents
+    // }
 
     // idk about *any* of these, just throwing random ideas out here
     // i'm probably not going to implement them

@@ -168,7 +168,7 @@ impl Serialize for OwnedText {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.as_ref().as_tagged_text().to_string())
+        serializer.collect_str(&self.as_ref().as_tagged_text())
     }
 }
 
@@ -208,8 +208,12 @@ mod schema {
 
 #[cfg(test)]
 mod tests {
-    use crate::text::Text;
+    use serde_json::json;
+
+    use crate::v1::types::text::Text;
     use std::fmt::Write;
+
+    use super::tags::Document;
 
     #[test]
     fn test_html() {
@@ -281,6 +285,67 @@ mod tests {
         assert_eq!(
             Text::parse("foo ~b{bar").as_html().to_string(),
             "foo <b>bar</b>"
+        );
+    }
+
+    #[test]
+    fn test_doc_str_single() {
+        let doc: Document = serde_json::from_value(json!("hello ~b{world}")).unwrap();
+        assert_eq!(dbg!(doc.as_html().to_string()), "<p>hello <b>world</b></p>");
+        assert_eq!(
+            dbg!(serde_json::to_string(&doc).unwrap()),
+            r#""hello ~b{world}""#
+        );
+    }
+
+    #[test]
+    fn test_doc_str_multi() {
+        let doc: Document = serde_json::from_value(json!(["hello ", "~b{world}"])).unwrap();
+        assert_eq!(
+            dbg!(doc.as_html().to_string()),
+            "<p>hello </p><p><b>world</b></p>"
+        );
+        assert_eq!(
+            dbg!(serde_json::to_string(&doc).unwrap()),
+            r#"["hello ","~b{world}"]"#
+        );
+    }
+
+    #[test]
+    fn test_doc_block_single() {
+        let doc: Document = serde_json::from_value(json!({
+            "type": "Blockquote",
+            "text": "hello ~b{world}",
+        }))
+        .unwrap();
+        assert_eq!(
+            dbg!(doc.as_html().to_string()),
+            "<blockquote><p>hello <b>world</b></p></blockquote>"
+        );
+        assert_eq!(
+            dbg!(serde_json::to_string(&doc).unwrap()),
+            r#"{"type":"Blockquote","text":"hello ~b{world}"}"#
+        );
+    }
+
+    #[test]
+    fn test_doc_block_multi() {
+        let doc: Document = serde_json::from_value(json!([{
+            "type": "Blockquote",
+            "text": "hello ~b{world}",
+        },{
+            "type": "Code",
+            "lang": "rs",
+            "text": "code here",
+        }]))
+        .unwrap();
+        assert_eq!(
+            dbg!(doc.as_html().to_string()),
+            r#"<blockquote><p>hello <b>world</b></p></blockquote><pre><code lang="rs">code here</code></pre>"#
+        );
+        assert_eq!(
+            dbg!(serde_json::to_string(&doc).unwrap()),
+            r#"[{"type":"Blockquote","text":"hello ~b{world}"},{"type":"Code","lang":"rs","text":"code here"}]"#
         );
     }
 }
