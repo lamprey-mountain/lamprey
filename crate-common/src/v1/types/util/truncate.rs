@@ -43,10 +43,10 @@ pub fn truncate_filename(a: &str, max_len: usize) -> Cow<'_, str> {
             let ext = dbg!(&a[idx..]);
             match ext.len().cmp(&max_len) {
                 // the file extension would be mangled anyways
-                Ordering::Less => Cow::Borrowed(truncate(a, max_len)),
+                Ordering::Greater => Cow::Borrowed(truncate(a, max_len)),
                 // remove extension to avoid returning dotfile
                 Ordering::Equal => Cow::Borrowed(truncate(a, max_len)),
-                Ordering::Greater => {
+                Ordering::Less => {
                     let name = dbg!(truncate(&a[0..idx], dbg!(max_len - ext.len())));
                     Cow::Owned(format!("{}{}", name, ext))
                 }
