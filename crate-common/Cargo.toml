@@ -26,7 +26,6 @@ utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
 formatting_extra = []
 feat_reactions = []
-feat_interaction_reaction = []
 feat_custom_embeds = []
 feat_thread_linking = []
 feat_thread_type_forums = []
@@ -41,6 +40,8 @@ feat_message_move = []
 feat_message_new_text = []
 feat_message_forwarding = ["feat_message_new_text"]
 feat_automod = []
+feat_interaction_reaction = ["feat_reactions"]
+feat_interaction_status = []
 
 default = [
   "utoipa",
@@ -50,4 +51,5 @@ default = [
   "feat_custom_embeds",
   "feat_thread_type_forums",
   "feat_interaction_reaction",
+  "feat_interaction_status",
 ]

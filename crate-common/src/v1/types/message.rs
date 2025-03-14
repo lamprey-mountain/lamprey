@@ -66,9 +66,17 @@ pub struct Message {
     #[serde(flatten)]
     pub state: MessageState,
     pub state_updated_at: Time,
+    // pub pinned_at: Option<Time>,
+    // pub pinned_order: Option<u8>,
+    // pub moved_at: Option<Time>,
+    // pub moved_from: Option<(ThreadId, MessageId)>,
+    // pub deleted_at: Option<Time>,
+    // // drop the is_?
+    // pub is_ephemeral: bool,
 }
 
 /// lifecycle of a message
+// TODO: switch back to fields, this is pretty h
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "state")]
@@ -320,6 +328,7 @@ pub struct MessageThreadUpdate {
 pub struct MessageThreadPingback {
     pub source_room_id: RoomId,
     pub source_thread_id: ThreadId,
+    pub source_user_id: UserId,
 }
 
 #[cfg(feature = "feat_message_move")]
@@ -489,15 +498,51 @@ pub struct MessageDefaultTagged {
 }
 
 /// ways to interact with a message
-#[cfg(feature = "feat_interaction_reaction")]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Interactions {
-    #[cfg(feature = "feat_reactions")]
+    #[cfg(feature = "feat_interaction_reaction")]
     /// show placeholder reactions (they appear with zero total reactions) for these emoji
     pub reactions_default: Vec<Emoji>,
+
+    // yet another rabbit hole. not worth it for now.
+    #[cfg(feature = "feat_interaction_status")]
+    #[serde(flatten)]
+    pub status: InteractionStatus,
 }
+
+/// the current status
+#[cfg(feature = "feat_interaction_reaction")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum InteractionStatus {
+    /// This message is still loading, or the action it represents is in progress
+    ///
+    /// - Will switch to Failed after 5 minutes or 30 seconds without edit
+    /// - Can edit without creating message history entry
+    /// - Intended for dynamic/streaming responses
+    Loading,
+
+    /// The (inter)action this message represents failed
+    Failed {
+        reason: String,
+        // code: InteractionStatusKnownErrorCode,
+        can_retry: bool,
+    },
+}
+
+// enum InteractionStatusKnownErrorCode {
+//     Forbidden,
+//     Timeout,
+//     BadInput,
+//     Missing,
+//     Conflict,
+//     Gone,
+//     TooLarge,
+//     Cancelled,
+//     Ratelimit,
+// }
 
 impl Diff<Message> for MessagePatch {
     fn changes(&self, other: &Message) -> bool {
@@ -569,5 +614,43 @@ impl MessageType {
 
         #[cfg(not(feature = "feat_message_new_text"))]
         matches!(self, MessageType::DefaultMarkdown(_))
+    }
+}
+
+impl MessagePatch {
+    pub fn can_append(&self, other: &Message) -> bool {
+        if !self.changes(other) {
+            return true;
+        }
+        match &other.message_type {
+            MessageType::DefaultMarkdown(m) => {
+                if let Some(c) = &self.content {
+                    let ok = match (&m.content, c) {
+                        (None, None) => true,
+                        (None, Some(_)) => true,
+                        (Some(_), None) => false,
+                        (Some(a), Some(b)) => a.starts_with(b.as_str()),
+                    };
+                    if !ok {
+                        return false;
+                    }
+                }
+                if self.metadata.changes(&m.metadata)
+                    || self.reply_id.changes(&m.reply_id)
+                    || self.override_name.changes(&m.override_name)
+                    || self.embeds.changes(&m.embeds)
+                    || self.attachments.as_ref().is_some_and(|a| {
+                        a.len() != m.attachments.len()
+                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
+                    })
+                {
+                    return false;
+                }
+                true
+            }
+            #[cfg(feature = "feat_message_new_text")]
+            MessageType::DefaultTagged(m) => todo!(),
+            _ => false,
+        }
     }
 }

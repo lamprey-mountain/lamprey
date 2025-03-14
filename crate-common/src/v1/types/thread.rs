@@ -122,7 +122,29 @@ pub struct Thread {
     /// emoji reactions to this thread
     #[cfg(feature = "feat_reactions")]
     pub reactions: ReactionCounts,
+    // pub pinned_at: Option<Time>,
+    // pub pinned_order: Option<u8>,
+    // pub moved_at: Option<Time>,
+    // pub moved_from: Option<(RoomId, ThreadId)>,
+    // pub deleted_at: Option<Time>,
+    // pub locked_at: Option<Time>,
+    // pub locked_reason: Option<String>,
+    // pub archived_at: Option<Time>,
+    // pub archived_by: Option<User>,
+    // pub archived_reason: Option<String>,
+    // pub archived: Option<Archived>,
+    // pub ephemeral: bool,
 }
+
+// enum Archived {
+//     Manual {
+//         archived_at: Option<Time>,
+//         archived_by: User,
+//     },
+//     Automatic {
+//         archived_at: Option<Time>,
+//     },
+// }
 
 /// type-specific data for threads
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -399,6 +421,7 @@ impl Diff<Thread> for ThreadPatch {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.state.changes(&other.state)
+            || self.tags.changes(&other.tags)
     }
 }
 
@@ -438,5 +461,32 @@ impl ThreadState {
             self,
             ThreadState::Pinned { .. } | ThreadState::Active | ThreadState::Temporary
         )
+    }
+}
+
+impl ThreadPatch {
+    pub fn minimal_for(self, other: &Thread) -> ThreadPatch {
+        ThreadPatch {
+            name: if self.name.changes(&other.name) {
+                self.name
+            } else {
+                None
+            },
+            description: if self.description.changes(&other.description) {
+                self.description
+            } else {
+                None
+            },
+            state: if self.state.changes(&other.state) {
+                self.state
+            } else {
+                None
+            },
+            tags: if self.tags.changes(&other.tags) {
+                self.tags
+            } else {
+                None
+            },
+        }
     }
 }

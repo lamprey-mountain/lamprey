@@ -194,7 +194,7 @@ mod tests {
                 "filename": "test.png",
                 "size": 1234,
                 "mime": "image/png",
-                "url": "https://example.com",
+                "url": "https://example.com/",
                 "source_url": null,
                 "thumbs": [],
                 "height": 123,
