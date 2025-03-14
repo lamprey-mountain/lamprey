@@ -6,9 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::{
-    deserialize_sorted_permissions, deserialize_sorted_permissions_option, some_option, Diff,
-};
+use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option, Diff};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
@@ -28,7 +26,7 @@ pub struct Role {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    #[serde(deserialize_with = "deserialize_sorted_permissions")]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub permissions: Vec<Permission>,
 
     pub is_self_applicable: bool,
@@ -36,6 +34,9 @@ pub struct Role {
     pub is_default: bool,
     // FIXME(#114): at least some sort of hierarchy
     // pub priority: u64,
+
+    // #[serde(deserialize_with = "deserialize_sorted_permissions")]
+    // pub includes: Vec<Role>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,7 +101,7 @@ pub struct RolePatch {
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[serde(default, deserialize_with = "deserialize_sorted_permissions_option")]
+    #[serde(default, deserialize_with = "deserialize_sorted_option")]
     pub permissions: Option<Vec<Permission>>,
 
     pub is_self_applicable: Option<bool>,

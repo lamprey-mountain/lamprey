@@ -1,7 +1,5 @@
 use serde::{Deserialize, Deserializer};
 
-use super::Permission;
-
 pub mod truncate;
 
 // TEMP: pub use here for compatibility
@@ -34,23 +32,23 @@ where
     Option::<bool>::deserialize(deserializer).map(|b| b.unwrap_or(true))
 }
 
-pub fn deserialize_sorted_permissions<'de, D>(deserializer: D) -> Result<Vec<Permission>, D::Error>
+pub fn deserialize_sorted<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
 where
     D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Ord,
 {
-    Vec::<Permission>::deserialize(deserializer).map(|mut v| {
+    Vec::<T>::deserialize(deserializer).map(|mut v| {
         v.sort();
         v
     })
 }
 
-pub fn deserialize_sorted_permissions_option<'de, D>(
-    deserializer: D,
-) -> Result<Option<Vec<Permission>>, D::Error>
+pub fn deserialize_sorted_option<'de, D, T>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
 where
     D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Ord,
 {
-    Option::<Vec<Permission>>::deserialize(deserializer).map(|opt| {
+    Option::<Vec<T>>::deserialize(deserializer).map(|opt| {
         opt.map(|mut vec| {
             vec.sort();
             vec

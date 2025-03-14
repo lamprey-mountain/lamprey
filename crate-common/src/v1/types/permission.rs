@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::deserialize_sorted_permissions, RoleId, UserId};
+use crate::v1::types::{util::deserialize_sorted, RoleId, UserId};
 
 pub mod defaults;
 
@@ -302,11 +302,11 @@ pub struct PermissionOverrides {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverride {
     /// extra permissions allowed here
-    #[serde(deserialize_with = "deserialize_sorted_permissions")]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
 
     /// permissions denied here
-    #[serde(deserialize_with = "deserialize_sorted_permissions")]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub deny: Vec<Permission>,
 }
 
