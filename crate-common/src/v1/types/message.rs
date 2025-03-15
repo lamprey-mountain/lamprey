@@ -617,40 +617,40 @@ impl MessageType {
     }
 }
 
-impl MessagePatch {
-    pub fn can_append(&self, other: &Message) -> bool {
-        if !self.changes(other) {
-            return true;
-        }
-        match &other.message_type {
-            MessageType::DefaultMarkdown(m) => {
-                if let Some(c) = &self.content {
-                    let ok = match (&m.content, c) {
-                        (None, None) => true,
-                        (None, Some(_)) => true,
-                        (Some(_), None) => false,
-                        (Some(a), Some(b)) => a.starts_with(b.as_str()),
-                    };
-                    if !ok {
-                        return false;
-                    }
-                }
-                if self.metadata.changes(&m.metadata)
-                    || self.reply_id.changes(&m.reply_id)
-                    || self.override_name.changes(&m.override_name)
-                    || self.embeds.changes(&m.embeds)
-                    || self.attachments.as_ref().is_some_and(|a| {
-                        a.len() != m.attachments.len()
-                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
-                    })
-                {
-                    return false;
-                }
-                true
-            }
-            #[cfg(feature = "feat_message_new_text")]
-            MessageType::DefaultTagged(m) => todo!(),
-            _ => false,
-        }
-    }
-}
+// impl MessagePatch {
+//     pub fn can_append(&self, other: &Message) -> bool {
+//         if !self.changes(other) {
+//             return true;
+//         }
+//         match &other.message_type {
+//             MessageType::DefaultMarkdown(m) => {
+//                 if let Some(c) = &self.content {
+//                     let ok = match (&m.content, c) {
+//                         (None, None) => true,
+//                         (None, Some(_)) => true,
+//                         (Some(_), None) => false,
+//                         (Some(a), Some(b)) => a.starts_with(b.as_str()),
+//                     };
+//                     if !ok {
+//                         return false;
+//                     }
+//                 }
+//                 if self.metadata.changes(&m.metadata)
+//                     || self.reply_id.changes(&m.reply_id)
+//                     || self.override_name.changes(&m.override_name)
+//                     || self.embeds.changes(&m.embeds)
+//                     || self.attachments.as_ref().is_some_and(|a| {
+//                         a.len() != m.attachments.len()
+//                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
+//                     })
+//                 {
+//                     return false;
+//                 }
+//                 true
+//             }
+//             #[cfg(feature = "feat_message_new_text")]
+//             MessageType::DefaultTagged(m) => todo!(),
+//             _ => false,
+//         }
+//     }
+// }

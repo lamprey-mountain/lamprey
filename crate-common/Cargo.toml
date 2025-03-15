@@ -51,5 +51,5 @@ default = [
   "feat_custom_embeds",
   "feat_thread_type_forums",
   "feat_interaction_reaction",
-  "feat_interaction_status",
+  "feat_message_new_text",
 ]
