@@ -1048,6 +1048,11 @@ button[disabled] {
 			list-style: none;
 		}
 	}
+
+	& textarea, input[type="text"] {
+		border: solid $sep-500 1px;
+		background: $bg-300;
+	}
 }
 
 .dbg-resize {
