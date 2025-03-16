@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbRoom, DbRoomType, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate,
-    RoomId, RoomPatch, RoomVerId, UserId,
+    DbRoom, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;
@@ -21,14 +21,13 @@ impl DataRoom for Postgres {
         let room_id = Uuid::now_v7();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, type)
-    	    VALUES ($1, $2, $3, $4, $5)
+    	    INSERT INTO room (id, version_id, name, description)
+    	    VALUES ($1, $2, $3, $4)
         ",
             room_id,
             room_id,
             create.name,
             create.description,
-            DbRoomType::Default as _,
         )
         .execute(&mut *conn)
         .await?;
@@ -47,10 +46,10 @@ impl DataRoom for Postgres {
                 room.version_id,
                 room.name,
                 room.description,
-                room.type as "room_type: _",
-                array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
+                dm.user_a_id as "dm_uid_a: Option<Uuid>",
+                dm.user_b_id as "dm_uid_b: Option<Uuid>"
             FROM room
-            JOIN dm ON dm.room_id = room.id
+            LEFT JOIN dm ON dm.room_id = room.id
             WHERE id = $1
             "#,
             id
@@ -77,11 +76,11 @@ impl DataRoom for Postgres {
                     room.version_id,
                     room.name,
                     room.description,
-                    room.type as "room_type: _",
-                    array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
+                    dm.user_a_id as "dm_uid_a: Option<Uuid>",
+                    dm.user_b_id as "dm_uid_b: Option<Uuid>"
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
-                JOIN dm ON dm.room_id = room.id
+                LEFT JOIN dm ON dm.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
                 "#,
@@ -101,18 +100,10 @@ impl DataRoom for Postgres {
     async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let room = query_as!(
-            DbRoom,
+        let room = query!(
             r#"
-            SELECT
-                room.id,
-                room.version_id,
-                room.name,
-                room.description,
-                room.type as "room_type: _",
-                array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
+            SELECT room.id, room.name, room.description
             FROM room
-            JOIN dm ON dm.room_id = room.id
             WHERE id = $1
             FOR UPDATE
             "#,

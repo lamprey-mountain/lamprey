@@ -15,8 +15,8 @@ pub struct DbRoom {
     pub version_id: Uuid,
     pub name: String,
     pub description: Option<String>,
-    pub room_type: DbRoomType,
-    pub participants: Option<(Uuid, Uuid)>,
+    pub dm_uid_a: Option<Uuid>,
+    pub dm_uid_b: Option<Uuid>,
 }
 
 pub struct DbUserCreate {
@@ -49,14 +49,12 @@ impl From<DbRoom> for Room {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            room_type: match row.room_type {
-                DbRoomType::Default => RoomType::Default,
-                DbRoomType::Dm => RoomType::Dm {
-                    participants: {
-                        let p = row.participants.expect("missing dm entry for room type dm");
-                        (p.0.into(), p.1.into())
-                    },
-                },
+            room_type: if row.dm_uid_a.is_some() {
+                RoomType::Dm {
+                    participants: (row.dm_uid_a.unwrap().into(), row.dm_uid_b.unwrap().into()),
+                }
+            } else {
+                RoomType::Default
             },
 
             // FIXME: add to db, calculate
