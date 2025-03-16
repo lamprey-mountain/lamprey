@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::user_config::UserConfig;
-use common::v1::types::{Ignore, Relationship, RelationshipPatch, RelationshipType};
-use sqlx::{query, query_as, query_scalar};
-use time::PrimitiveDateTime;
+use sqlx::{query, query_scalar};
 
 use crate::error::Result;
 use crate::types::UserId;
