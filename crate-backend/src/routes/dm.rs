@@ -3,7 +3,8 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::{PaginationQuery, PaginationResponse, Room, UserId};
+use common::v1::types::{MessageSync, PaginationQuery, PaginationResponse, Room, UserId};
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::UserIdReq;
@@ -33,8 +34,13 @@ async fn dm_init(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let res = srv.users.init_dm(auth_user_id, target_user_id).await?;
-    Ok(Json(res))
+    let (room, is_new) = srv.users.init_dm(auth_user_id, target_user_id).await?;
+    if is_new {
+        s.broadcast(MessageSync::UpsertRoom { room: room.clone() })?;
+        Ok((StatusCode::CREATED, Json(room)))
+    } else {
+        Ok((StatusCode::OK, Json(room)))
+    }
 }
 
 /// Dm get (TODO)

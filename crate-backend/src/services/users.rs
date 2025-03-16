@@ -131,17 +131,18 @@ impl ServiceUsers {
         }
     }
 
-    pub async fn init_dm(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Room> {
-        let (user_a_id, user_b_id) = ensure_dm_canonical(user_a_id, user_b_id)?;
+    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Room, bool)> {
+        let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
         let data = self.state.data();
-        let _lock = self.dm_lock.entry((user_a_id, user_b_id)).or_default();
-        if data.dm_get(user_a_id, user_b_id).await.is_ok() {
-            return Err(Error::NotModified);
-        }
         let srv = self.state.services();
-        let room = srv.rooms.create_dm(user_a_id, user_b_id).await?;
-        data.dm_put(user_a_id, user_b_id, room.id).await?;
-        Ok(room)
+        let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
+        if let Ok(room_id) = data.dm_get(user_id, other_id).await {
+            let room = srv.rooms.get(room_id, Some(user_id)).await?;
+            return Ok((room, false));
+        }
+        let room = srv.rooms.create_dm(user_id, other_id).await?;
+        data.dm_put(user_id, other_id, room.id).await?;
+        Ok((room, true))
     }
 }
 
