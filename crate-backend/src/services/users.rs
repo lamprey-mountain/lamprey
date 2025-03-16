@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
@@ -131,7 +132,7 @@ impl ServiceUsers {
     }
 
     pub async fn init_dm(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Room> {
-        let (user_a_id, user_b_id) = ensure_canonical(user_a_id, user_b_id);
+        let (user_a_id, user_b_id) = ensure_dm_canonical(user_a_id, user_b_id)?;
         let data = self.state.data();
         let _lock = self.dm_lock.entry((user_a_id, user_b_id)).or_default();
         if data.dm_get(user_a_id, user_b_id).await.is_ok() {
@@ -144,10 +145,10 @@ impl ServiceUsers {
     }
 }
 
-fn ensure_canonical(a: UserId, b: UserId) -> (UserId, UserId) {
-    if a < b {
-        (a, b)
-    } else {
-        (b, a)
+fn ensure_dm_canonical(a: UserId, b: UserId) -> Result<(UserId, UserId)> {
+    match a.cmp(&b) {
+        Ordering::Less => Ok((a, b)),
+        Ordering::Equal => Err(Error::BadStatic("cant dm yourself")),
+        Ordering::Greater => Ok((b, a)),
     }
 }
