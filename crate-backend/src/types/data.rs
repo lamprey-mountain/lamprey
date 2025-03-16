@@ -10,12 +10,13 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
 pub struct DbRoom {
     pub id: Uuid,
     pub version_id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub room_type: DbRoomType,
+    pub participants: Option<(Uuid, Uuid)>,
 }
 
 pub struct DbUserCreate {
@@ -33,6 +34,13 @@ pub enum DbMembership {
     Ban,
 }
 
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "room_type")]
+pub enum DbRoomType {
+    Default,
+    Dm,
+}
+
 impl From<DbRoom> for Room {
     fn from(row: DbRoom) -> Self {
         #[allow(deprecated)]
@@ -41,7 +49,15 @@ impl From<DbRoom> for Room {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            room_type: RoomType::Default,
+            room_type: match row.room_type {
+                DbRoomType::Default => RoomType::Default,
+                DbRoomType::Dm => RoomType::Dm {
+                    participants: {
+                        let p = row.participants.expect("missing dm entry for room type dm");
+                        (p.0.into(), p.1.into())
+                    },
+                },
+            },
 
             // FIXME: add to db, calculate
             visibility: Default::default(),

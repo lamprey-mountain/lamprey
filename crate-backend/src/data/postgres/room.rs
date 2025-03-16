@@ -6,8 +6,8 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbRoom, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, UserId,
+    DbRoom, DbRoomType, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate,
+    RoomId, RoomPatch, RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;
@@ -19,22 +19,21 @@ impl DataRoom for Postgres {
     async fn room_create(&self, create: RoomCreate) -> Result<Room> {
         let mut conn = self.pool.acquire().await?;
         let room_id = Uuid::now_v7();
-        let room = query_as!(
-            DbRoom,
+        query!(
             "
-    	    INSERT INTO room (id, version_id, name, description)
-    	    VALUES ($1, $2, $3, $4)
-    	    RETURNING id, version_id, name, description
+    	    INSERT INTO room (id, version_id, name, description, type)
+    	    VALUES ($1, $2, $3, $4, $5)
         ",
             room_id,
             room_id,
             create.name,
-            create.description
+            create.description,
+            DbRoomType::Default as _,
         )
-        .fetch_one(&mut *conn)
+        .execute(&mut *conn)
         .await?;
         info!("inserted room");
-        Ok(room.into())
+        self.room_get(room_id.into()).await
     }
 
     async fn room_get(&self, id: RoomId) -> Result<Room> {
@@ -42,7 +41,18 @@ impl DataRoom for Postgres {
         let mut conn = self.pool.acquire().await?;
         let room = query_as!(
             DbRoom,
-            "SELECT id, version_id, name, description FROM room WHERE id = $1",
+            r#"
+            SELECT
+                room.id,
+                room.version_id,
+                room.name,
+                room.description,
+                room.type as "room_type: _",
+                array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
+            FROM room
+            JOIN dm ON dm.room_id = room.id
+            WHERE id = $1
+            "#,
             id
         )
         .fetch_one(&mut *conn)
@@ -61,12 +71,20 @@ impl DataRoom for Postgres {
             self.pool,
             query_as!(
                 DbRoom,
-                "
-            	SELECT room.id, room.version_id, room.name, room.description FROM room_member
+                r#"
+                SELECT
+                    room.id,
+                    room.version_id,
+                    room.name,
+                    room.description,
+                    room.type as "room_type: _",
+                    array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
+                FROM room_member
             	JOIN room ON room_member.room_id = room.id
+                JOIN dm ON dm.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
-                ",
+                "#,
                 user_id.into_inner(),
                 p.after.into_inner(),
                 p.before.into_inner(),
@@ -85,12 +103,19 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query_as!(
             DbRoom,
-            "
-            SELECT id, version_id, name, description
+            r#"
+            SELECT
+                room.id,
+                room.version_id,
+                room.name,
+                room.description,
+                room.type as "room_type: _",
+                array[dm.user_a_id, dm.user_b_id] as "participants: (Uuid, Uuid)"
             FROM room
+            JOIN dm ON dm.room_id = room.id
             WHERE id = $1
             FOR UPDATE
-            ",
+            "#,
             id.into_inner()
         )
         .fetch_one(&mut *tx)
