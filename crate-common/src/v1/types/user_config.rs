@@ -15,7 +15,7 @@ use crate::v1::types::notifications::NotifsGlobal;
 // use validator::Validate;
 
 /// configuration for a user
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserConfig {
     /// global notification config

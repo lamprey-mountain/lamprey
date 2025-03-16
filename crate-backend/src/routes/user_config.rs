@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user_config::UserConfig;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::ServerState;
 
 /// User config set (TODO)
@@ -18,12 +19,14 @@ use crate::ServerState;
     tags = ["user"],
     responses((status = OK, body = UserConfig, description = "success"))
 )]
+#[axum::debug_handler]
 async fn user_config_set(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<UserConfig>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<UserConfig>,
+) -> Result<impl IntoResponse> {
+    s.data().user_config_set(auth_user_id, &json).await?;
+    Ok(Json(json))
 }
 
 /// User config get (TODO)
@@ -37,10 +40,11 @@ async fn user_config_set(
     responses((status = OK, body = UserConfig, description = "success"))
 )]
 async fn user_config_get(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let config = s.data().user_config_get(auth_user_id).await?;
+    Ok(Json(config))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

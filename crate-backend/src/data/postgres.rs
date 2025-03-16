@@ -29,6 +29,7 @@ mod thread_member;
 mod unread;
 mod url_embed;
 mod user;
+mod user_config;
 mod user_relationship;
 mod util;
 

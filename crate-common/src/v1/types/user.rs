@@ -11,6 +11,7 @@ use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::{MediaId, RoomId, ThreadId};
 
+use super::user_config::UserConfig;
 use super::{UserId, UserVerId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -41,6 +42,15 @@ pub struct User {
     pub state: UserState,
     pub state_updated_at: Time,
     pub status: Status,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct UserWithPrivate {
+    #[serde(flatten)]
+    pub inner: User,
+    pub config: UserConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

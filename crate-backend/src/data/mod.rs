@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use common::v1::types::search::SearchMessageRequest;
+use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
     AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Relationship,
     RelationshipPatch, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
@@ -43,6 +44,7 @@ pub trait Data:
     + DataUrlEmbed
     + DataDm
     + DataUserRelationship
+    + DataUserConfig
     + Send
     + Sync
 {
@@ -379,4 +381,10 @@ pub trait DataUserRelationship {
         user_id: UserId,
         other_id: UserId,
     ) -> Result<Relationship>;
+}
+
+#[async_trait]
+pub trait DataUserConfig {
+    async fn user_config_set(&self, user_id: UserId, config: &UserConfig) -> Result<()>;
+    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfig>;
 }
