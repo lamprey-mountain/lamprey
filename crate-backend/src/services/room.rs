@@ -95,4 +95,48 @@ impl ServiceRooms {
         data.role_apply_default(room.id, creator).await?;
         Ok(room)
     }
+
+    pub async fn create_dm(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Room> {
+        let data = self.state.data();
+        let room = data
+            .room_create(RoomCreate {
+                name: "(dm)".into(),
+                description: None,
+            })
+            .await?;
+        let room_id = room.id;
+        let role_default = DbRoleCreate {
+            room_id,
+            name: "default".to_owned(),
+            description: None,
+            permissions: vec![Permission::Admin],
+            is_self_applicable: false,
+            is_mentionable: false,
+            is_default: true,
+        };
+        data.role_create(role_default).await?;
+        data.room_member_put(
+            room_id,
+            user_a_id,
+            RoomMembership::Join {
+                override_name: None,
+                override_description: None,
+                roles: vec![],
+            },
+        )
+        .await?;
+        data.room_member_put(
+            room_id,
+            user_b_id,
+            RoomMembership::Join {
+                override_name: None,
+                override_description: None,
+                roles: vec![],
+            },
+        )
+        .await?;
+        data.role_apply_default(room.id, user_a_id).await?;
+        data.role_apply_default(room.id, user_b_id).await?;
+        Ok(room)
+    }
 }

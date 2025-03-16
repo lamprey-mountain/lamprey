@@ -1,14 +1,14 @@
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::MessageSync;
+use common::v1::types::{MessageSync, Room};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::{Result, ServerStateInner};
+use crate::{Error, Result, ServerStateInner};
 
 // currently relies on sync heartbeat time
 const STATUS_EXPIRE: Duration = Duration::from_secs(40);
@@ -17,6 +17,7 @@ pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
     statuses: DashMap<UserId, OnlineState>,
+    dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
 struct OnlineState {
@@ -33,6 +34,7 @@ impl ServiceUsers {
                 .support_invalidation_closures()
                 .build(),
             statuses: DashMap::new(),
+            dm_lock: DashMap::new(),
         }
     }
 
@@ -126,5 +128,26 @@ impl ServiceUsers {
         } else {
             Status::offline()
         }
+    }
+
+    pub async fn init_dm(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Room> {
+        let (user_a_id, user_b_id) = ensure_canonical(user_a_id, user_b_id);
+        let data = self.state.data();
+        let _lock = self.dm_lock.entry((user_a_id, user_b_id)).or_default();
+        if data.dm_get(user_a_id, user_b_id).await.is_ok() {
+            return Err(Error::NotModified);
+        }
+        let srv = self.state.services();
+        let room = srv.rooms.create_dm(user_a_id, user_b_id).await?;
+        data.dm_put(user_a_id, user_b_id, room.id).await?;
+        Ok(room)
+    }
+}
+
+fn ensure_canonical(a: UserId, b: UserId) -> (UserId, UserId) {
+    if a < b {
+        (a, b)
+    } else {
+        (b, a)
     }
 }

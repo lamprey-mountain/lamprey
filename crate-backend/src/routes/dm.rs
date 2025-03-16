@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{PaginationQuery, PaginationResponse, Room, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -27,11 +28,13 @@ use crate::error::{Error, Result};
     )
 )]
 async fn dm_init(
-    Path(_target_user_id): Path<UserId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<Room>> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let res = srv.users.init_dm(auth_user_id, target_user_id).await?;
+    Ok(Json(res))
 }
 
 /// Dm get (TODO)
@@ -49,11 +52,15 @@ async fn dm_init(
     )
 )]
 async fn dm_get(
-    Path(_target_user_id): Path<UserId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Room>> {
-    Err(Error::Unimplemented)
+    let data = s.data();
+    let room_id = data.dm_get(auth_user_id, target_user_id).await?;
+    let srv = s.services();
+    let room = srv.rooms.get(room_id, Some(auth_user_id)).await?;
+    Ok(Json(room))
 }
 
 /// Mutual rooms list (TODO)
