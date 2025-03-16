@@ -137,6 +137,14 @@ impl Diff<RoomMember> for RoomMemberPatch {
     }
 }
 
+impl RoomMembership {
+    pub const JOIN_BLANK: RoomMembership = RoomMembership::Join {
+        override_name: None,
+        override_description: None,
+        roles: Vec::new(),
+    };
+}
+
 #[cfg(feature = "validator")]
 mod val {
     use super::RoomMembership;

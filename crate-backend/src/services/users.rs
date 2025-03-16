@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::{MessageSync, Room};
+use common::v1::types::{MessageSync, Room, RoomMembership};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -138,6 +138,10 @@ impl ServiceUsers {
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
         if let Ok(room_id) = data.dm_get(user_id, other_id).await {
             let room = srv.rooms.get(room_id, Some(user_id)).await?;
+            data.room_member_put(room_id, user_id, RoomMembership::JOIN_BLANK)
+                .await?;
+            data.room_member_put(room_id, other_id, RoomMembership::JOIN_BLANK)
+                .await?;
             return Ok((room, false));
         }
         let room = srv.rooms.create_dm(user_id, other_id).await?;
