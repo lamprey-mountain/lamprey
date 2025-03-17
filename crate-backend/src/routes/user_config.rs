@@ -9,7 +9,7 @@ use super::util::Auth;
 use crate::error::Result;
 use crate::ServerState;
 
-/// User config set (TODO)
+/// User config set
 ///
 /// Set user config
 #[utoipa::path(
@@ -29,7 +29,7 @@ async fn user_config_set(
     Ok(Json(json))
 }
 
-/// User config get (TODO)
+/// User config get
 ///
 /// Get user config
 #[utoipa::path(

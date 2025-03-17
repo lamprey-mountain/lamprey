@@ -13,7 +13,7 @@ use crate::ServerState;
 use super::util::Auth;
 use crate::error::{Error, Result};
 
-/// Dm initialize (TODO)
+/// Dm initialize
 ///
 /// Get or create a direct message room.
 #[utoipa::path(
@@ -43,7 +43,7 @@ async fn dm_init(
     }
 }
 
-/// Dm get (TODO)
+/// Dm get
 ///
 /// Get a direct message room.
 #[utoipa::path(

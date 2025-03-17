@@ -49,7 +49,7 @@ async fn permission_thread_delete(
     Err(Error::Unimplemented)
 }
 
-/// Tag permission override upsert(TODO)
+/// Tag permission override upsert (TODO)
 ///
 /// Upsert a tag permission override
 #[utoipa::path(
