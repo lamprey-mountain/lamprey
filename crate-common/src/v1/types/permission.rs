@@ -67,6 +67,7 @@ pub enum Permission {
 
     /// (unimplemented) unban any member
     /// implies MemberBan
+    // TODO: remove, not worth it
     MemberBanManage,
 
     /// (unimplemented) allow adding users with type Puppet (and use timestamp massaging if/when implemented)

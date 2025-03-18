@@ -282,8 +282,15 @@ impl Connection {
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
             MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            // FIXME: implement new event types
-            _ => unimplemented!(),
+            MessageSync::ThreadAck { .. } => todo!(),
+            MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::RelationshipDelete { user_id } => AuthCheck::User(*user_id),
+            MessageSync::ReactionMessageUpsert { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionMessageRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionMessagePurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionThreadUpsert { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionThreadRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionThreadPurge { thread_id } => AuthCheck::Thread(*thread_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
