@@ -4,8 +4,8 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    PaginationQuery, PaginationResponse, Relationship, RelationshipPatch, RelationshipType,
-    RelationshipWithUserId, UserId,
+    MessageSync, PaginationQuery, PaginationResponse, Relationship, RelationshipPatch,
+    RelationshipType, RelationshipWithUserId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -50,6 +50,7 @@ async fn relationship_get(
 /// Relationship update
 ///
 /// Update your relationship with another user
+// TEMP: ugly hacky code
 #[utoipa::path(
     patch,
     path = "/user/@self/relationship/{target_id}",
@@ -110,8 +111,7 @@ async fn relationship_update(
             }
         }
     }
-    let rel = data
-        .user_relationship_edit(auth_user_id, target_user_id, patch)
+    data.user_relationship_edit(auth_user_id, target_user_id, patch)
         .await?;
     if is_friend_req {
         data.user_relationship_edit(
@@ -125,6 +125,14 @@ async fn relationship_update(
             },
         )
         .await?;
+        let rev_rel = data
+            .user_relationship_get(target_user_id, auth_user_id)
+            .await?
+            .unwrap();
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: target_user_id,
+            relationship: rev_rel,
+        })?;
     } else if is_friend_accept {
         data.user_relationship_edit(
             target_user_id,
@@ -137,7 +145,23 @@ async fn relationship_update(
             },
         )
         .await?;
+        let rev_rel = data
+            .user_relationship_get(target_user_id, auth_user_id)
+            .await?
+            .unwrap();
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: target_user_id,
+            relationship: rev_rel,
+        })?;
     }
+    let rel = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?
+        .unwrap();
+    s.broadcast(MessageSync::RelationshipUpsert {
+        user_id: auth_user_id,
+        relationship: rel.clone(),
+    })?;
     Ok(Json(rel))
 }
 
@@ -178,7 +202,18 @@ async fn relationship_reset(
             },
         )
         .await?;
+        let rev_rel = data
+            .user_relationship_get(target_user_id, auth_user_id)
+            .await?
+            .unwrap();
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: target_user_id,
+            relationship: rev_rel,
+        })?;
     }
+    s.broadcast(MessageSync::RelationshipDelete {
+        user_id: auth_user_id,
+    })?;
     Ok(StatusCode::NO_CONTENT)
 }
 
