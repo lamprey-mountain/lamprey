@@ -225,6 +225,23 @@ impl DataMessage for Postgres {
         Ok(())
     }
 
+    async fn message_delete_bulk(
+        &self,
+        _thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()> {
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
+        query!(
+            "UPDATE message SET deleted_at = $2 WHERE id = ANY($1)",
+            &ids[..],
+            now,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     async fn message_version_get(
         &self,
         thread_id: ThreadId,

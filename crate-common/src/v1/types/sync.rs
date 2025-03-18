@@ -211,14 +211,14 @@ pub enum MessageSync {
     ReactionThreadPurge {
         thread_id: ThreadId,
     },
+
+    /// remove multiple messages at once
+    MessageDeleteBulk {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
     // snip... ----- >8 ----
     // everything below is TODO
-
-    // /// remove multiple messages at once
-    // MessageDeleteBulk {
-    //     thread_id: ThreadId,
-    //     message_ids: Vec<MessageId>,
-    // },
 
     // VoiceUpsert {
     //     thread_id: ThreadId,

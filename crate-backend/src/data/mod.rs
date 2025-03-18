@@ -204,6 +204,11 @@ pub trait DataMessage {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn message_delete_bulk(
+        &self,
+        thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()>;
     async fn message_version_get(
         &self,
         thread_id: ThreadId,

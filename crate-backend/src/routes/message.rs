@@ -528,7 +528,7 @@ struct MessageDeleteBulk {
     /// which messages to delete
     #[serde(default)]
     #[validate(length(min = 1, max = 128))]
-    message_id: Vec<MessageId>,
+    message_ids: Vec<MessageId>,
 }
 
 /// Message delete bulk (TODO)
@@ -544,14 +544,41 @@ struct MessageDeleteBulk {
     )
 )]
 async fn message_delete_bulk(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageDeleteBulk>,
-) -> Result<()> {
+) -> Result<impl IntoResponse> {
     json.validate()?;
-    Err(Error::Unimplemented)
+    let data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
+    for id in &json.message_ids {
+        let message = data.message_get(thread_id, *id).await?;
+        if !message.message_type.is_deletable() {
+            return Err(Error::BadStatic("cant delete that message"));
+        }
+        perms.ensure(Permission::MessageDelete)?;
+    }
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    data.message_delete_bulk(thread_id, &json.message_ids)
+        .await?;
+    for id in &json.message_ids {
+        data.media_link_delete_all(id.into_inner()).await?;
+    }
+    s.broadcast_thread(
+        thread.id,
+        user_id,
+        reason,
+        MessageSync::MessageDeleteBulk {
+            thread_id,
+            message_ids: json.message_ids,
+        },
+    )
+    .await?;
+    s.services().threads.invalidate(thread_id); // last version id, message count
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]

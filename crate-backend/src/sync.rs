@@ -290,7 +290,8 @@ impl Connection {
             MessageSync::ReactionMessagePurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionThreadUpsert { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionThreadRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ReactionThreadPurge { thread_id } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionThreadPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
