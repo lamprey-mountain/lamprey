@@ -733,7 +733,7 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Tag permission override upsert(TODO)
+		 * Tag permission override upsert (TODO)
 		 * @description Upsert a tag permission override
 		 */
 		put: operations["permission_tag_override"];
@@ -1167,7 +1167,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/**
-		 * Message reaction purge (TODO)
+		 * Message reaction purge
 		 * @description Remove all reactions from a message.
 		 */
 		delete: operations["reaction_message_purge"];
@@ -1184,18 +1184,18 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message reaction list (TODO)
+		 * Message reaction list
 		 * @description List message reactions for a specific emoji.
 		 */
 		get: operations["reaction_message_list"];
 		/**
-		 * Message reaction add (TODO)
+		 * Message reaction add
 		 * @description Add a reaction to a message.
 		 */
 		put: operations["reaction_message_add"];
 		post?: never;
 		/**
-		 * Message reaction remove (TODO)
+		 * Message reaction remove
 		 * @description Remove a reaction from a message.
 		 */
 		delete: operations["reaction_message_remove"];
@@ -1331,7 +1331,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/**
-		 * Thread reaction purge (TODO)
+		 * Thread reaction purge
 		 * @description Remove all reactions from a thread.
 		 */
 		delete: operations["reaction_thread_purge"];
@@ -1348,18 +1348,18 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Thread reaction list (TODO)
+		 * Thread reaction list
 		 * @description List thread reactions for a specific emoji.
 		 */
 		get: operations["reaction_thread_list"];
 		/**
-		 * Thread reaction add (TODO)
+		 * Thread reaction add
 		 * @description Add a reaction to a thread.
 		 */
 		put: operations["reaction_thread_add"];
 		post?: never;
 		/**
-		 * Thread reaction remove (TODO)
+		 * Thread reaction remove
 		 * @description Remove a reaction from a thread.
 		 */
 		delete: operations["reaction_thread_remove"];
@@ -1458,12 +1458,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Dm get (TODO)
+		 * Dm get
 		 * @description Get a direct message room.
 		 */
 		get: operations["dm_get"];
 		/**
-		 * Dm initialize (TODO)
+		 * Dm initialize
 		 * @description Get or create a direct message room.
 		 */
 		put: operations["dm_init"];
@@ -1566,12 +1566,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * User config get (TODO)
+		 * User config get
 		 * @description Get user config
 		 */
 		get: operations["user_config_get"];
 		/**
-		 * User config set (TODO)
+		 * User config set
 		 * @description Set user config
 		 */
 		put: operations["user_config_set"];
@@ -1992,6 +1992,11 @@ export interface components {
 			/** @enum {string} */
 			type: "Message";
 		};
+		/** @description ways to interact with a message */
+		Interactions: {
+			/** @description show placeholder reactions (they appear with zero total reactions) for these emoji */
+			reactions_default: components["schemas"]["Emoji"][];
+		};
 		Invite: {
 			/** @description the invite code for this invite */
 			code: components["schemas"]["InviteCode"];
@@ -2297,6 +2302,23 @@ export interface components {
 			override_name?: string | null;
 			reply_id?: null | components["schemas"]["MessageId"];
 		};
+		/** @description a basic message, using the shiny new and very experimental tagged text format */
+		MessageDefaultTagged: {
+			attachments: components["schemas"]["Media"][];
+			/** @description the message's content in the new format */
+			content?: string | null;
+			embeds: components["schemas"]["UrlEmbed"][];
+			interactions: components["schemas"]["Interactions"];
+			/**
+			 * @deprecated
+			 * @description arbitrary metadata associated with a message
+			 *
+			 *     deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
+			 */
+			metadata?: unknown;
+			reactions: components["schemas"]["ReactionCounts"];
+			reply_id?: null | components["schemas"]["MessageId"];
+		};
 		MessageDeleteBulk: {
 			/** @description which messages to delete */
 			message_id?: components["schemas"]["MessageId"][];
@@ -2457,6 +2479,41 @@ export interface components {
 			/** @enum {string} */
 			type: "RelationshipDelete";
 			user_id: components["schemas"]["UserId"];
+		} | {
+			key: components["schemas"]["ReactionKey"];
+			message_id: components["schemas"]["MessageId"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionMessageUpsert";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			key: components["schemas"]["ReactionKey"];
+			message_id: components["schemas"]["MessageId"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionMessageRemove";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			message_id: components["schemas"]["MessageId"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionMessagePurge";
+		} | {
+			key: components["schemas"]["ReactionKey"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionThreadUpsert";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			key: components["schemas"]["ReactionKey"];
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionThreadRemove";
+			user_id: components["schemas"]["UserId"];
+		} | {
+			thread_id: components["schemas"]["ThreadId"];
+			/** @enum {string} */
+			type: "ReactionThreadPurge";
 		};
 		/** @description a message (announcement? motd?) from the system */
 		MessageSystemMessage: {
@@ -2478,6 +2535,10 @@ export interface components {
 			| (components["schemas"]["MessageDefaultMarkdown"] & {
 				/** @enum {string} */
 				type: "DefaultMarkdown";
+			})
+			| (components["schemas"]["MessageDefaultTagged"] & {
+				/** @enum {string} */
+				type: "DefaultTagged";
 			})
 			| (components["schemas"]["MessagePin"] & {
 				/** @enum {string} */
@@ -3031,6 +3092,7 @@ export interface components {
 		};
 		/** @description the total reaction counts for all emoji */
 		ReactionCounts: components["schemas"]["ReactionCount"][];
+		ReactionKey: components["schemas"]["Emoji"];
 		ReactionListItem: {
 			user_id: components["schemas"]["UserId"];
 		};
@@ -6408,7 +6470,7 @@ export interface operations {
 				/** @description Message id */
 				message_id: components["schemas"]["MessageId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
@@ -6436,7 +6498,7 @@ export interface operations {
 				/** @description Message id */
 				message_id: components["schemas"]["MessageId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
@@ -6468,7 +6530,7 @@ export interface operations {
 				/** @description Message id */
 				message_id: components["schemas"]["MessageId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
@@ -6737,7 +6799,7 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["ThreadId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
@@ -6763,7 +6825,7 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["ThreadId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
@@ -6793,7 +6855,7 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["ThreadId"];
 				/** @description Reaction key */
-				key: string;
+				key: components["schemas"]["ReactionKey"];
 			};
 			cookie?: never;
 		};
