@@ -232,6 +232,14 @@ pub struct Relationship {
     pub ignore: Option<Ignore>,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RelationshipWithUserId {
+    #[serde(flatten)]
+    pub inner: Relationship,
+    pub user_id: UserId,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]

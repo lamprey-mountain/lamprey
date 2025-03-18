@@ -6,9 +6,9 @@ use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
     AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Relationship,
-    RelationshipPatch, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, UrlEmbed,
-    UrlEmbedId,
+    RelationshipPatch, RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership,
+    SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
+    UrlEmbed, UrlEmbedId,
 };
 use url::Url;
 use uuid::Uuid;
@@ -387,7 +387,12 @@ pub trait DataUserRelationship {
         &self,
         user_id: UserId,
         other_id: UserId,
-    ) -> Result<Relationship>;
+    ) -> Result<Option<Relationship>>;
+    async fn user_relationship_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>>;
 }
 
 #[async_trait]

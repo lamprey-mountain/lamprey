@@ -1,9 +1,15 @@
 use async_trait::async_trait;
-use common::v1::types::{Ignore, Relationship, RelationshipPatch, RelationshipType};
-use sqlx::{query, query_as};
+use common::v1::types::{
+    Ignore, PaginationDirection, PaginationQuery, PaginationResponse, Relationship,
+    RelationshipPatch, RelationshipType, RelationshipWithUserId,
+};
+use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
+use uuid::Uuid;
 
+use crate::data::postgres::Pagination;
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::UserId;
 
 use crate::data::DataUserRelationship;
@@ -25,6 +31,15 @@ struct DbUserRel {
     petname: Option<String>,
     ignore_forever: bool,
     ignore_until: Option<PrimitiveDateTime>,
+}
+
+struct DbUserRelWithId {
+    rel: Option<DbUserRelType>,
+    note: Option<String>,
+    petname: Option<String>,
+    ignore_forever: bool,
+    ignore_until: Option<PrimitiveDateTime>,
+    user_id: Uuid,
 }
 
 impl From<DbUserRelType> for RelationshipType {
@@ -83,6 +98,26 @@ impl From<DbUserRel> for Relationship {
     }
 }
 
+impl From<DbUserRelWithId> for RelationshipWithUserId {
+    fn from(value: DbUserRelWithId) -> Self {
+        RelationshipWithUserId {
+            user_id: value.user_id.into(),
+            inner: Relationship {
+                note: value.note,
+                relation: value.rel.map(Into::into),
+                petname: value.petname,
+                ignore: match (value.ignore_forever, value.ignore_until) {
+                    (true, _) => Some(Ignore::Forever),
+                    (false, Some(t)) => Some(Ignore::Until {
+                        ignore_until: t.into(),
+                    }),
+                    (false, None) => None,
+                },
+            },
+        }
+    }
+}
+
 #[async_trait]
 impl DataUserRelationship for Postgres {
     async fn user_relationship_put(
@@ -133,9 +168,9 @@ impl DataUserRelationship for Postgres {
             user_id.into_inner(),
             other_id.into_inner(),
         )
-        .fetch_one(&mut *tx)
+        .fetch_optional(&mut *tx)
         .await?;
-        let rel: Relationship = row.into();
+        let rel: Relationship = row.map(Into::into).unwrap_or_default();
         let rel = Relationship {
             note: patch.note.unwrap_or(rel.note),
             relation: patch.relation.unwrap_or(rel.relation),
@@ -183,7 +218,7 @@ impl DataUserRelationship for Postgres {
         &self,
         user_id: UserId,
         other_id: UserId,
-    ) -> Result<Relationship> {
+    ) -> Result<Option<Relationship>> {
         let row = query_as!(
             DbUserRel,
             r#"
@@ -193,8 +228,37 @@ impl DataUserRelationship for Postgres {
             user_id.into_inner(),
             other_id.into_inner(),
         )
-        .fetch_one(&self.pool)
+        .fetch_optional(&self.pool)
         .await?;
-        Ok(row.into())
+        Ok(row.map(Into::into))
+    }
+
+    async fn user_relationship_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbUserRelWithId,
+                r#"
+                SELECT rel as "rel: _", note, petname, ignore_forever, ignore_until, other_id as user_id FROM user_relationship
+            	WHERE user_id = $1 AND other_id > $2 AND other_id < $3
+            	ORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5
+                "#,
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1"#,
+                user_id.into_inner(),
+            )
+        )
     }
 }

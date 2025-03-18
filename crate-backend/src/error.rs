@@ -10,6 +10,8 @@ use crate::types::MessageSync;
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
 pub enum Error {
+    #[error("blocked by other user")]
+    Blocked,
     #[error("missing authentication")]
     MissingAuth,
     #[error("bad header")]
@@ -109,6 +111,7 @@ impl From<axum::http::header::ToStrError> for Error {
 impl Error {
     fn get_status(&self) -> StatusCode {
         match self {
+            Error::Blocked => StatusCode::FORBIDDEN,
             Error::NotFound => StatusCode::NOT_FOUND,
             Error::BadHeader => StatusCode::BAD_REQUEST,
             Error::BadStatic(_) => StatusCode::BAD_REQUEST,
@@ -130,6 +133,7 @@ impl Error {
 
     pub fn fake_clone(&self) -> Error {
         match self {
+            Error::Blocked => Error::Blocked,
             Error::MissingAuth => Error::MissingAuth,
             Error::BadHeader => Error::BadHeader,
             Error::UnauthSession => Error::UnauthSession,
