@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    INSERT INTO reaction_message_custom (message_id, user_id, reaction_key)\n                    VALUES ($1, $2, $3)\n                    ON CONFLICT DO NOTHING\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c8a66397313cd4568487bd9c08a51327a122e256a89c6647405729d6873ab4e7"
+}

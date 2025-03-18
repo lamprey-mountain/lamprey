@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT user_id FROM reaction_thread_unicode\n                        WHERE thread_id = $1 AND reaction_key = $2 AND user_id > $3 AND user_id < $4\n                    \tORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6df99d6d8e354afc9b9053dc6059f0dcee6801575a3dc52e38c7e5579595b5bd"
+}

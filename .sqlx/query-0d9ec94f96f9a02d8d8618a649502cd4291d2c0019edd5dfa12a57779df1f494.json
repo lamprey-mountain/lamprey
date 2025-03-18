@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    DELETE FROM reaction_thread_unicode\n                    WHERE thread_id = $1 AND user_id = $2 AND reaction_key = $3\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d9ec94f96f9a02d8d8618a649502cd4291d2c0019edd5dfa12a57779df1f494"
+}
