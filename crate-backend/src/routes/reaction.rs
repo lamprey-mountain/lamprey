@@ -1,22 +1,20 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::{MessageId, PaginationQuery, PaginationResponse, ThreadId, UserId};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use common::v1::types::reaction::{ReactionKey, ReactionListItem};
+use common::v1::types::{
+    MessageId, MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, UserId,
+};
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
-use crate::error::{Error, Result};
+use super::util::{Auth, HeaderReason};
+use crate::error::Result;
 use crate::ServerState;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct ReactionListItem {
-    pub user_id: UserId,
-}
-
-/// Message reaction add (TODO)
+/// Message reaction add
 ///
 /// Add a reaction to a message.
 #[utoipa::path(
@@ -34,14 +32,34 @@ pub struct ReactionListItem {
     )
 )]
 async fn reaction_message_add(
-    Path((_thread_id, _message_id, _key)): Path<(ThreadId, MessageId, String)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionAdd)?;
+    data.reaction_message_put(auth_user_id, thread_id, message_id, key.clone())
+        .await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionMessageUpsert {
+            thread_id,
+            user_id: auth_user_id,
+            message_id,
+            key,
+        },
+    )
+    .await?;
+    Ok(StatusCode::OK)
 }
 
-/// Message reaction remove (TODO)
+/// Message reaction remove
 ///
 /// Remove a reaction from a message.
 #[utoipa::path(
@@ -58,14 +76,34 @@ async fn reaction_message_add(
     )
 )]
 async fn reaction_message_remove(
-    Path((_thread_id, _message_id, _key)): Path<(ThreadId, MessageId, String)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionAdd)?;
+    data.reaction_message_delete(auth_user_id, thread_id, message_id, key.clone())
+        .await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionMessageRemove {
+            thread_id,
+            user_id: auth_user_id,
+            message_id,
+            key,
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Message reaction purge (TODO)
+/// Message reaction purge
 ///
 /// Remove all reactions from a message.
 #[utoipa::path(
@@ -81,14 +119,31 @@ async fn reaction_message_remove(
     )
 )]
 async fn reaction_message_purge(
-    Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionClear)?;
+    data.reaction_message_purge(thread_id, message_id).await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionMessagePurge {
+            thread_id,
+            message_id,
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Message reaction list (TODO)
+/// Message reaction list
 ///
 /// List message reactions for a specific emoji.
 #[utoipa::path(
@@ -106,15 +161,22 @@ async fn reaction_message_purge(
     )
 )]
 async fn reaction_message_list(
-    Path((_thread_id, _message_id, _key)): Path<(ThreadId, MessageId, String)>,
-    Auth(_auth_user_id): Auth,
-    Query(_q): Query<PaginationQuery<UserId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    let list = data
+        .reaction_message_list(thread_id, message_id, key, q)
+        .await?;
+    Ok(Json(list))
 }
 
-/// Thread reaction add (TODO)
+/// Thread reaction add
 ///
 /// Add a reaction to a thread.
 #[utoipa::path(
@@ -131,14 +193,33 @@ async fn reaction_message_list(
     )
 )]
 async fn reaction_thread_add(
-    Path((_thread_id, _key)): Path<(ThreadId, String)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, key)): Path<(ThreadId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionAdd)?;
+    data.reaction_thread_put(auth_user_id, thread_id, key.clone())
+        .await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionThreadUpsert {
+            thread_id,
+            user_id: auth_user_id,
+            key,
+        },
+    )
+    .await?;
+    Ok(StatusCode::OK)
 }
 
-/// Thread reaction remove (TODO)
+/// Thread reaction remove
 ///
 /// Remove a reaction from a thread.
 #[utoipa::path(
@@ -154,14 +235,33 @@ async fn reaction_thread_add(
     )
 )]
 async fn reaction_thread_remove(
-    Path((_thread_id, _key)): Path<(ThreadId, String)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, key)): Path<(ThreadId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionAdd)?;
+    data.reaction_thread_delete(auth_user_id, thread_id, key.clone())
+        .await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionThreadRemove {
+            thread_id,
+            user_id: auth_user_id,
+            key,
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread reaction purge (TODO)
+/// Thread reaction purge
 ///
 /// Remove all reactions from a thread.
 #[utoipa::path(
@@ -176,14 +276,28 @@ async fn reaction_thread_remove(
     )
 )]
 async fn reaction_thread_purge(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(thread_id): Path<ThreadId>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ReactionClear)?;
+    data.reaction_thread_purge(thread_id).await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ReactionThreadPurge { thread_id },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread reaction list (TODO)
+/// Thread reaction list
 ///
 /// List thread reactions for a specific emoji.
 #[utoipa::path(
@@ -200,12 +314,17 @@ async fn reaction_thread_purge(
     )
 )]
 async fn reaction_thread_list(
-    Path((_thread_id, _key)): Path<(ThreadId, String)>,
-    Auth(_auth_user_id): Auth,
-    Query(_q): Query<PaginationQuery<UserId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, key)): Path<(ThreadId, ReactionKey)>,
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms.ensure_view()?;
+    let list = data.reaction_thread_list(thread_id, key, q).await?;
+    Ok(Json(list))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

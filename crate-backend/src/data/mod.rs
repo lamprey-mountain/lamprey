@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
@@ -45,6 +46,7 @@ pub trait Data:
     + DataDm
     + DataUserRelationship
     + DataUserConfig
+    + DataReaction
     + Send
     + Sync
 {
@@ -387,4 +389,53 @@ pub trait DataUserRelationship {
 pub trait DataUserConfig {
     async fn user_config_set(&self, user_id: UserId, config: &UserConfig) -> Result<()>;
     async fn user_config_get(&self, user_id: UserId) -> Result<UserConfig>;
+}
+
+#[async_trait]
+pub trait DataReaction {
+    async fn reaction_message_put(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        key: ReactionKey,
+    ) -> Result<()>;
+    async fn reaction_message_delete(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        key: ReactionKey,
+    ) -> Result<()>;
+    async fn reaction_message_list(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        key: ReactionKey,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<ReactionListItem>>;
+    async fn reaction_message_purge(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+    ) -> Result<()>;
+    async fn reaction_thread_put(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        key: ReactionKey,
+    ) -> Result<()>;
+    async fn reaction_thread_delete(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        key: ReactionKey,
+    ) -> Result<()>;
+    async fn reaction_thread_list(
+        &self,
+        thread_id: ThreadId,
+        key: ReactionKey,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<ReactionListItem>>;
+    async fn reaction_thread_purge(&self, thread_id: ThreadId) -> Result<()>;
 }

@@ -9,8 +9,8 @@ use crate::v1::types::{
 };
 
 use super::{
-    InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
-    SessionId, SessionToken, Thread, ThreadId, User, UserId,
+    reaction::ReactionKey, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
+    RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
 
 mod sync2;
@@ -174,6 +174,43 @@ pub enum MessageSync {
     RelationshipDelete {
         user_id: UserId,
     },
+
+    ReactionMessageUpsert {
+        user_id: UserId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        key: ReactionKey,
+    },
+
+    ReactionMessageRemove {
+        user_id: UserId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        key: ReactionKey,
+    },
+
+    /// remove all reactions
+    ReactionMessagePurge {
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
+
+    ReactionThreadUpsert {
+        user_id: UserId,
+        thread_id: ThreadId,
+        key: ReactionKey,
+    },
+
+    ReactionThreadRemove {
+        user_id: UserId,
+        thread_id: ThreadId,
+        key: ReactionKey,
+    },
+
+    /// remove all reactions
+    ReactionThreadPurge {
+        thread_id: ThreadId,
+    },
     // snip... ----- >8 ----
     // everything below is TODO
 
@@ -181,24 +218,6 @@ pub enum MessageSync {
     // MessageDeleteBulk {
     //     thread_id: ThreadId,
     //     message_ids: Vec<MessageId>,
-    // },
-
-    // ReactionUpsert {
-    //     thread_id: ThreadId,
-    //     message_id: MessageId,
-    //     reaction: Reaction,
-    // },
-
-    // ReactionDelete {
-    //     thread_id: ThreadId,
-    //     message_id: MessageId,
-    //     reaction: Reaction,
-    // },
-
-    // /// remove all reactions
-    // ReactionPurge {
-    //     thread_id: ThreadId,
-    //     message_id: MessageId,
     // },
 
     // VoiceUpsert {
@@ -276,6 +295,8 @@ impl MessageSync {
                 | MessageSync::DeleteMessageVersion { .. }
                 | MessageSync::DeleteRole { .. }
                 | MessageSync::DeleteInvite { .. }
+                | MessageSync::ReactionMessagePurge { .. }
+                | MessageSync::ReactionThreadPurge { .. }
         )
     }
 

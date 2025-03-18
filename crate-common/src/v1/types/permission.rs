@@ -115,10 +115,12 @@ pub enum Permission {
     /// (unimplemented) use a custom name (nickname), description, etc
     ProfileOverride,
 
-    /// (unimplemented) add new reactions (can still react with existing reactions)
+    /// add new reactions
+    // TODO: can still react with existing reactions
     ReactionAdd,
 
-    /// (unimplemented) remove reactions
+    /// remove all reactions
+    // TODO: rename to ReactionPurge
     ReactionClear,
 
     /// add and remove roles from members

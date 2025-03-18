@@ -18,6 +18,7 @@ mod invite;
 mod media;
 mod message;
 mod permission;
+mod reaction;
 mod role;
 mod role_member;
 mod room;
