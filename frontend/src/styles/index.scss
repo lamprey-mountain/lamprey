@@ -1274,13 +1274,24 @@ table {
 
 .message.withavatar {
 	grid-template-columns: 64px auto;
-	grid-template-rows: 1em auto;
+	grid-template-rows: auto 1em auto;
+	grid-template-areas: "reply reply" "avatar author" "avatar content";
+
+	& > .reply {
+		grid-area: reply;
+		grid-template-columns: 64px 1fr;
+
+		& > .arrow > svg {
+			width: 32px;
+		}
+	}
 
 	& > .avatar {
-		grid-row: 1 / span 2;
+		grid-area: avatar;
 	}
 
 	& > .author {
+		grid-area: author;
 		text-align: left;
 		padding: 0;
 		line-height: 1;
@@ -1290,6 +1301,10 @@ table {
 			visibility: hidden;
 			color: $fg-500;
 		}
+	}
+
+	& > .content {
+		grid-area: content;
 	}
 
 	&:hover {

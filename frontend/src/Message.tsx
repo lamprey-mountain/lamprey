@@ -144,7 +144,6 @@ export function MessageView(props: MessageProps) {
 							<div
 								class="author menu-user"
 								classList={{ "override-name": !!props.message.override_name }}
-								ref={set_w}
 							>
 								<Author message={props.message} thread={thread()} />
 								<Time date={date} animGroup="message-ts" />
@@ -247,7 +246,7 @@ function ReplyView(props: ReplyProps) {
 					<svg
 						viewBox="0 0 100 100"
 						preserveAspectRatio="none"
-						style={{ width: `${props.arrow_width}px` }}
+						style={{ width: props.arrow_width ? `${props.arrow_width}px` : "" }}
 					>
 						<path
 							vector-effect="non-scaling-stroke"
