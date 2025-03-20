@@ -28,6 +28,10 @@ pub struct HeaderReason(pub Option<String>);
 /// extract the Idempotency-Key header
 pub struct HeaderIdempotencyKey(pub Option<String>);
 
+/// extract the X-Puppet-Id header
+// TODO: support X-Puppet-Id everywhere
+pub struct HeaderPuppetId(pub Option<UserId>);
+
 impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
     type Rejection = Error;
 
@@ -77,7 +81,8 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
     ) -> Result<Self, Self::Rejection> {
         let AuthWithSession(_session, user_id) =
             AuthWithSession::from_request_parts(parts, s).await?;
-        Ok(Self(user_id))
+        let puppet_id = HeaderPuppetId::from_request_parts(parts, s).await?;
+        Ok(Self(puppet_id.0.unwrap_or(user_id)))
     }
 }
 
@@ -126,5 +131,21 @@ impl FromRequestParts<Arc<ServerState>> for HeaderIdempotencyKey {
             .and_then(|h| h.to_str().ok())
             .map(|h| h.to_string());
         Ok(Self(header))
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for HeaderPuppetId {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let puppet_id = parts
+            .headers
+            .get("X-Puppet-Id")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|h| h.parse().ok());
+        Ok(Self(puppet_id))
     }
 }
