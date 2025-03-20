@@ -70,6 +70,7 @@ export async function handleSubmit(
 		content: text || null,
 		reply_id,
 		attachments,
+		embeds: [],
 	});
 	ctx.thread_attachments.delete(thread_id);
 	ctx.thread_reply_id.delete(thread_id);
