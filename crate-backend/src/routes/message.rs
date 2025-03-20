@@ -340,7 +340,7 @@ async fn message_edit(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    let body = match message.message_type {
+    let body = match message.message_type.clone() {
         MessageType::DefaultMarkdown(msg) => Result::Ok(MessageDefaultMarkdown {
             content: json.content.unwrap_or(msg.content),
             attachments: vec![],
@@ -367,6 +367,43 @@ async fn message_edit(
     for id in &attachment_ids {
         data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
             .await?;
+    }
+    if let Some(content) = &body.content {
+        let embeds = match &message.message_type {
+            MessageType::DefaultMarkdown(m) => Some(m.embeds.clone()),
+            MessageType::DefaultTagged(m) => Some(m.embeds.clone()),
+            _ => None,
+        };
+        if let Some(embeds) = dbg!(embeds) {
+            let srv = s.services();
+            for (ordering, link) in LinkFinder::new().links(content).enumerate() {
+                if let Some(url) = link.as_str().parse::<Url>().ok() {
+                    let s = s.clone();
+                    let srv = srv.clone();
+                    let data = s.data();
+                    let embeds = embeds.clone();
+                    tokio::spawn(async move {
+                        let embed = if let Some(existing) = embeds.iter().find(|e| e.url == url) {
+                            existing.clone()
+                        } else {
+                            srv.url_embed.generate(user_id, url).await?
+                        };
+                        data.url_embed_link(version_id, embed.id, ordering as u32)
+                            .await?;
+                        let mut message = data.message_get(thread_id, message_id).await?;
+                        s.presign_message(&mut message).await?;
+                        s.broadcast_thread(
+                            thread_id,
+                            user_id,
+                            None,
+                            MessageSync::UpsertMessage { message },
+                        )
+                        .await?;
+                        Result::Ok(())
+                    });
+                }
+            }
+        }
     }
     let mut message = data.message_version_get(thread_id, version_id).await?;
     s.presign_message(&mut message).await?;
