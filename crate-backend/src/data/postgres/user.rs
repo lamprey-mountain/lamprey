@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{self, BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
 use serde::Deserialize;
-use sqlx::{query, query_as, Acquire};
+use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use url::Url;
 use uuid::Uuid;
@@ -318,5 +318,25 @@ impl DataUser for Postgres {
         .fetch_one(&self.pool)
         .await?;
         Ok(row.into())
+    }
+
+    async fn user_lookup_puppet(
+        &self,
+        owner_id: UserId,
+        external_platform: &str,
+        external_id: &str,
+    ) -> Result<Option<UserId>> {
+        let id = query_scalar!(
+            r#"
+            SELECT id FROM usr
+            WHERE parent_id = $1 AND puppet_external_platform = $2 AND puppet_external_id = $3
+            "#,
+            owner_id.into_inner(),
+            external_platform,
+            external_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(id.map(Into::into))
     }
 }

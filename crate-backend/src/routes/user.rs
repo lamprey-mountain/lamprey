@@ -6,8 +6,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    BotOwner, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, User, UserCreate,
-    UserId, UserPatch, UserType,
+    BotOwner, ExternalPlatform, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse,
+    User, UserCreate, UserId, UserPatch, UserType,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -25,8 +25,9 @@ use crate::error::{Error, Result};
     path = "/user",
     tags = ["user"],
     responses(
-        (status = CREATED, body = User, description = "success"),
-    )
+        (status = CREATED, body = User, description = "user created"),
+        (status = OK, body = User, description = "user exists (puppet with same external_platform/id)"),
+    ),
 )]
 async fn user_create(
     Auth(auth_user_id): Auth,
@@ -48,13 +49,26 @@ async fn user_create(
             _ => {}
         },
         UserType::Puppet {
-            owner_id, alias_id, ..
+            owner_id,
+            alias_id,
+            external_platform,
+            external_id,
+            ..
         } => {
             if alias_id.is_some() {
                 return Err(Error::Unimplemented);
             }
             if *owner_id != auth_user_id {
                 return Err(Error::BadStatic("bad owner id"));
+            }
+            let p = match &external_platform {
+                ExternalPlatform::Discord => "Discord",
+                ExternalPlatform::Other(o) => o.as_str(),
+            };
+            let existing = data.user_lookup_puppet(*owner_id, p, external_id).await?;
+            if let Some(id) = existing {
+                let user = data.user_get(id).await?;
+                return Ok((StatusCode::CREATED, Json(user)));
             }
         }
         _ => {}

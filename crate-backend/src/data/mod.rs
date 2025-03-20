@@ -277,6 +277,12 @@ pub trait DataUser {
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
+    async fn user_lookup_puppet(
+        &self,
+        owner_id: UserId,
+        external_platform: &str,
+        external_id: &str,
+    ) -> Result<Option<UserId>>;
 }
 
 #[async_trait]
