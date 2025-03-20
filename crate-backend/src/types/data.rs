@@ -2,13 +2,14 @@ use common::v1::types::{
     thread::chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
-    RoomId, RoomMembership, RoomType, Session, SessionId, SessionStatus, SessionToken, Thread,
-    ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId,
-    ThreadVisibility, UserId, UserType,
+    RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, Thread, ThreadId,
+    ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId, ThreadVisibility,
+    UserId, UserType,
 };
 use serde::Deserialize;
-use utoipa::ToSchema;
 use uuid::Uuid;
+
+pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
 pub struct DbRoom {
     pub id: Uuid,
@@ -379,50 +380,6 @@ impl From<ThreadMembership> for DbMembership {
         }
     }
 }
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(untagged)]
-pub enum UserIdReq {
-    #[serde(deserialize_with = "const_self")]
-    UserSelf,
-    UserId(UserId),
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-#[serde(untagged)]
-pub enum SessionIdReq {
-    #[serde(deserialize_with = "const_self")]
-    SessionSelf,
-    // #[serde(deserialize_with = "const_all")]
-    // SessionAll,
-    SessionId(SessionId),
-}
-
-fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    enum Helper {
-        #[serde(rename = "@self")]
-        Variant,
-    }
-
-    Helper::deserialize(deserializer).map(|_| ())
-}
-
-// fn const_all<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-// where
-//     D: serde::Deserializer<'de>,
-// {
-//     #[derive(Deserialize)]
-//     enum Helper {
-//         #[serde(rename = "@all")]
-//         Variant,
-//     }
-
-//     Helper::deserialize(deserializer).map(|_| ())
-// }
 
 pub struct DbInvite {
     pub code: String,

@@ -110,6 +110,8 @@ pub struct EmbedUrl {
     /// where did the embed come from
     #[cfg_attr(feature = "validator", validate(nested))]
     pub site: Website,
+    // /// http status code
+    // pub status: u16,
 }
 
 /// a custom embed
