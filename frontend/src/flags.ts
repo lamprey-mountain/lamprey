@@ -24,6 +24,12 @@ export const allFlags = [
 	{
 		id: "service_worker_media",
 	},
+	{
+		id: "inbox",
+	},
+	{
+		id: "friends",
+	},
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -34,6 +40,8 @@ const flagsDev: Flag[] = [
 	"room_member_list",
 	"thread_member_list",
 	"service_worker_media",
+	"inbox",
+	"friends",
 ];
 
 const flagsProd: Flag[] = [

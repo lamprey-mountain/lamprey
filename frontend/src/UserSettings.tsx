@@ -3,10 +3,15 @@ import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import { Info, Sessions } from "./user_settings/mod.tsx";
 import type { User } from "sdk";
+import { Todo } from "./user_settings/Todo.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
 	{ name: "sessions", path: "sessions", component: Sessions },
+	{ name: "audit log", path: "audit-log", component: Todo },
+	{ name: "notifications", path: "notifications", component: Todo },
+	{ name: "blocked users", path: "blocks", component: Todo },
+	{ name: "email", path: "email", component: Todo },
 ];
 
 export const UserSettings = (props: { user: User; page: string }) => {

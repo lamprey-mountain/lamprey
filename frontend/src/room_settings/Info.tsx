@@ -44,6 +44,10 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<br />
 			<button onClick={setDescription}>set description</button>
 			<br />
+			<div>(todo) tags</div>
+			<div>(todo) visibility</div>
+			<div>(todo) order, layout</div>
+			<br />
 		</>
 	);
 }

@@ -8,6 +8,7 @@ import {
 	Invites,
 	Members,
 	Roles,
+	Todo,
 } from "./room_settings/mod.tsx";
 
 const tabs = [
@@ -15,6 +16,7 @@ const tabs = [
 	{ name: "invites", path: "invites", component: Invites },
 	{ name: "roles", path: "roles", component: Roles, noPad: true },
 	{ name: "members", path: "members", component: Members },
+	{ name: "tags", path: "tags", component: Todo },
 	{ name: "audit log", path: "logs", component: AuditLog },
 ];
 

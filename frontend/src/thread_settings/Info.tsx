@@ -44,6 +44,11 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 			<br />
 			<button onClick={setDescription}>set description</button>
 			<br />
+			<div>(todo) tags</div>
+			<div>(todo) locked</div>
+			<div>(todo) archived</div>
+			<div>(todo) visibility</div>
+			<br />
 		</>
 	);
 }

@@ -1244,3 +1244,30 @@ svg.avatar {
 		background: $color-teal;
 	}
 }
+
+table {
+	border: solid $sep-500 1px;
+	width: 100%;
+	border-collapse: collapse;
+
+	& tr {
+		background: $bg-200;
+
+		&:nth-child(even) {
+			background: $bg-300;
+		}
+	}
+
+	& thead tr {
+		background: $bg-100;
+	}
+
+	& td, th {
+		padding: 4px;
+		text-align: left;
+	}
+}
+
+.inbox > table {
+	min-width: 500px;
+}

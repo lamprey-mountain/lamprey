@@ -61,6 +61,8 @@ const App: Component = () => {
 	return (
 		<Router root={Root}>
 			<Route path="/" component={RouteHome} />
+			<Route path="/inbox" component={RouteInbox} />
+			<Route path="/friends" component={RouteFriends} />
 			<Route path="/settings/:page?" component={RouteSettings} />
 			<Route path="/room/:room_id" component={RouteRoom} />
 			<Route
@@ -456,6 +458,57 @@ function RouteThread(p: RouteSectionProps) {
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
+		</>
+	);
+}
+
+function RouteInbox() {
+	return (
+		<>
+			<Title title="inbox" />
+			<ChatNav />
+			<div class="inbox" style="padding:8px">
+				todo!
+				<table>
+					<thead>
+						<tr>
+							<th>item</th>
+							<th>room</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<th>foo</th>
+							<th>foo</th>
+						</tr>
+						<tr>
+							<th>bar</th>
+							<th>bar</th>
+						</tr>
+						<tr>
+							<th>baz</th>
+							<th>baz</th>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</>
+	);
+}
+
+function RouteFriends() {
+	return (
+		<>
+			<Title title="friends" />
+			<ChatNav />
+			<div class="friends" style="padding:8px">
+				todo!
+				<ul>
+					<li>foo</li>
+					<li>bar</li>
+					<li>baz</li>
+				</ul>
+			</div>
 		</>
 	);
 }

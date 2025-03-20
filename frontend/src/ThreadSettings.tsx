@@ -2,13 +2,13 @@ import { For, Show } from "solid-js";
 import type { ThreadT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Info } from "./thread_settings/mod.tsx";
+import { Info, Todo } from "./thread_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
-	// TODO: { name: "invites", path: "invites", component: Invites },
-	// TODO: { name: "roles", path: "roles", component: Roles },
-	// TODO: { name: "members", path: "members", component: Members },
+	{ name: "invites", path: "invites", component: Todo },
+	{ name: "permissions", path: "permissions", component: Todo },
+	{ name: "members", path: "members", component: Todo },
 ];
 
 export const ThreadSettings = (props: { thread: ThreadT; page: string }) => {
