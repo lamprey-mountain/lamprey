@@ -6,7 +6,7 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
+    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId, UserType,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -97,13 +97,66 @@ async fn room_member_get(
     )
 )]
 async fn room_member_add(
-    Path((_room_id, _target_user_id)): Path<(RoomId, UserIdReq)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<RoomMemberPut>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, target_user_id)): Path<(RoomId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<RoomMemberPut>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::MemberBridge)?;
+    let auth_user = srv.users.get(auth_user_id).await?;
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+    let target_user = srv.users.get(target_user_id).await?;
+    match target_user.user_type {
+        UserType::Puppet { owner_id, .. } => {
+            if owner_id != auth_user_id {
+                return Err(Error::BadStatic("not puppet owner"));
+            }
+            if !matches!(
+                auth_user.user_type,
+                UserType::Bot {
+                    is_bridge: true,
+                    ..
+                }
+            ) {
+                return Err(Error::BadStatic("bot is not a bridge"));
+            }
+        }
+        _ => return Err(Error::BadStatic("can't add that user")),
+    }
+    let d = s.data();
+    d.room_member_put(
+        room_id,
+        target_user_id,
+        RoomMembership::Join {
+            override_name: json.override_name,
+            override_description: json.override_description,
+            roles: vec![],
+        },
+    )
+    .await?;
+    s.services()
+        .perms
+        .invalidate_room(target_user_id, room_id)
+        .await;
+    s.services().perms.invalidate_is_mutual(target_user_id);
+    let res = d.room_member_get(room_id, target_user_id).await?;
+    s.broadcast_room(
+        room_id,
+        auth_user_id,
+        reason,
+        MessageSync::UpsertRoomMember {
+            member: res.clone(),
+        },
+    )
+    .await?;
+    Ok(Json(res))
 }
 
 /// Room member update
