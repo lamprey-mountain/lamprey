@@ -36,7 +36,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 						// 	item.message.id === a()!.message_id,
 					}}
 				>
-					<MessageView message={item.message} />
+					<MessageView message={item.message} separate={item.separate} />
 				</li>
 			);
 		}

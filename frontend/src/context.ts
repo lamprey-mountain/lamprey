@@ -125,6 +125,8 @@ export type ChatCtx = {
 
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
+
+	settings: ReactiveMap<string, string>;
 };
 
 export type MediaCtx = {

@@ -329,6 +329,7 @@ function shouldSplit(a: Message, b: Message) {
 function shouldSplitInner(a: Message, b: Message) {
 	shouldSplitMemo;
 	if (a.author_id !== b.author_id) return true;
+	if (a.override_name !== b.override_name) return true;
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
 	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;

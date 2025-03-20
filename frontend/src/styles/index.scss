@@ -1271,3 +1271,56 @@ table {
 .inbox > table {
 	min-width: 500px;
 }
+
+.message.withavatar {
+	grid-template-columns: 64px auto;
+	grid-template-rows: 1em auto;
+
+	& > .avatar {
+		grid-row: 1 / span 2;
+	}
+
+	& > .author {
+		text-align: left;
+		padding: 0;
+		line-height: 1;
+
+		& > time {
+			margin-left: 4px;
+			visibility: hidden;
+			color: $fg-500;
+		}
+	}
+
+	&:hover {
+		background-color: oklch(var(--color-bg1) / 0.3);
+
+		& > .author > time {
+			visibility: visible;
+		}
+	}
+
+	& .avatar {
+		height: 36px;
+		width: 36px;
+		margin: initial;
+		margin-left: 24px;
+	}
+
+	& > .content {
+		/* margin-top: -2px; */
+	}
+
+	&.notseparate {
+		grid-template-rows: auto;
+
+		& .avatar {
+			grid-row: initial;
+			height: 0;
+		}
+	}
+}
+
+.message + .message > .withavatar.separate {
+	margin-top: 8px;
+}

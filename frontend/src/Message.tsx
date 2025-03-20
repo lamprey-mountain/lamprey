@@ -16,11 +16,12 @@ import { flags } from "./flags.ts";
 import { byteFmt, getUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
-import { UserView } from "./User.tsx";
+import { Avatar, UserView } from "./User.tsx";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
 
 type MessageProps = {
 	message: MessageT;
+	separate?: boolean;
 };
 
 type MessageTextProps = {
@@ -108,6 +109,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else {
 			const [arrow_width, set_arrow_width] = createSignal(0);
+			const user = api.users.fetch(() => props.message.author_id);
 			const set_w = (e: HTMLElement) => {
 				onMount(() => {
 					set_arrow_width(
@@ -115,11 +117,19 @@ export function MessageView(props: MessageProps) {
 					);
 				});
 			};
+			const ctx = useCtx();
+			const withAvatar = ctx.settings.get("message_pfps") === "yes";
 
+			// TODO: this code is getting messy and needs a refactor soon...
 			return (
 				<article
 					class="message menu-message"
 					data-message-id={props.message.id}
+					classList={{
+						withavatar: withAvatar,
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
 				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
@@ -128,35 +138,72 @@ export function MessageView(props: MessageProps) {
 							arrow_width={arrow_width()}
 						/>
 					</Show>
-					<div class="author-wrap">
-						<div
-							class="author sticky menu-user"
-							classList={{ "override-name": !!props.message.override_name }}
-							ref={set_w}
-						>
-							<Author message={props.message} thread={thread()} />
+					<Show when={withAvatar}>
+						<Show when={props.separate}>
+							<Avatar user={user()} />
+							<div
+								class="author menu-user"
+								classList={{ "override-name": !!props.message.override_name }}
+								ref={set_w}
+							>
+								<Author message={props.message} thread={thread()} />
+								<Time date={date} animGroup="message-ts" />
+							</div>
+						</Show>
+						<Show when={!props.separate}>
+							<div class="avatar"></div>
+						</Show>
+						<div class="content">
+							<Show when={props.message.content}>
+								<MessageText message={props.message} />
+							</Show>
+							<Show when={props.message.attachments?.length}>
+								<ul class="attachments">
+									<For each={props.message.attachments}>
+										{(att) => <AttachmentView media={att} />}
+									</For>
+								</ul>
+							</Show>
+							<Show when={props.message.embeds?.length}>
+								<ul class="embeds">
+									<For each={props.message.embeds}>
+										{(embed) => <UrlEmbedView embed={embed} />}
+									</For>
+								</ul>
+							</Show>
 						</div>
-					</div>
-					<div class="content">
-						<Show when={props.message.content}>
-							<MessageText message={props.message} />
-						</Show>
-						<Show when={props.message.attachments?.length}>
-							<ul class="attachments">
-								<For each={props.message.attachments}>
-									{(att) => <AttachmentView media={att} />}
-								</For>
-							</ul>
-						</Show>
-						<Show when={props.message.embeds?.length}>
-							<ul class="embeds">
-								<For each={props.message.embeds}>
-									{(embed) => <UrlEmbedView embed={embed} />}
-								</For>
-							</ul>
-						</Show>
-					</div>
-					<Time date={date} animGroup="message-ts" />
+					</Show>
+					<Show when={!withAvatar}>
+						<div class="author-wrap">
+							<div
+								class="author sticky menu-user"
+								classList={{ "override-name": !!props.message.override_name }}
+								ref={set_w}
+							>
+								<Author message={props.message} thread={thread()} />
+							</div>
+						</div>
+						<div class="content">
+							<Show when={props.message.content}>
+								<MessageText message={props.message} />
+							</Show>
+							<Show when={props.message.attachments?.length}>
+								<ul class="attachments">
+									<For each={props.message.attachments}>
+										{(att) => <AttachmentView media={att} />}
+									</For>
+								</ul>
+							</Show>
+							<Show when={props.message.embeds?.length}>
+								<ul class="embeds">
+									<For each={props.message.embeds}>
+										{(embed) => <UrlEmbedView embed={embed} />}
+									</For>
+								</ul>
+							</Show>
+						</div>
+						<Time date={date} animGroup="message-ts" />
+					</Show>
 				</article>
 			);
 		}

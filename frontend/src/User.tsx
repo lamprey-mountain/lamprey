@@ -162,3 +162,55 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 		</svg>
 	);
 };
+
+export const Avatar = (props: VoidProps<AvatarProps>) => {
+	const api = useApi();
+
+	function fetchThumb(media_id: string) {
+		const media = api.media.fetchInfo(() => media_id);
+		const m = media();
+		if (!m) return;
+		return getUrl(getThumb(m, 64, 64));
+	}
+
+	const size = 64;
+	const pad = 4;
+	const totalSize = size + pad * 2;
+	const circPos = size;
+	const circRad = 8;
+	const circPad = 6;
+	return (
+		<svg
+			class="avatar status-indicator"
+			data-status={props.user?.status.type ?? "Offline"}
+			viewBox={`0 0 ${totalSize} ${totalSize}`}
+			role="img"
+			style={{ "--pad": `${pad}px` }}
+		>
+			{/* not sure if i want avatars to be boxes, circles, rounded boxes, ..? */}
+			<mask id="rbox2">
+				<rect rx="6" width={size} height={size} x={pad} y={pad} fill="white" />
+			</mask>
+			<g mask="url(#rbox2)">
+				<rect
+					width={size}
+					height={size}
+					x={pad}
+					y={pad}
+					fill={getColor(props.user?.id ?? "")}
+				/>
+				<Show when={props.user?.avatar}>
+					<image
+						// temp? i need to crop avatars properly on upload
+						preserveAspectRatio="xMidYMid slice"
+						width={size}
+						height={size}
+						x={pad}
+						y={pad}
+						href={fetchThumb(props.user!.avatar!)!}
+					/>
+				</Show>
+			</g>
+		</svg>
+	);
+};

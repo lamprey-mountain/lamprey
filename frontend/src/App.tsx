@@ -140,11 +140,38 @@ export const Root: Component = (props: ParentProps) => {
 
 		currentMedia,
 		setCurrentMedia,
+
+		settings: new ReactiveMap(
+			JSON.parse(localStorage.getItem("settings") ?? "[]"),
+		),
 	};
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 
 	onCleanup(() => client.stop());
+
+	createEffect(() => {
+		localStorage.setItem(
+			"settings",
+			JSON.stringify([...ctx.settings.entries()]),
+		);
+	});
+
+	// TODO: sync settings to server
+	// needs a new event to receive config updates
+	// api.client.http.GET("/api/v1/user/{user_id}/config", {
+	// 	params: {path: {user_id: "@self"}},
+	// });
+
+	// createEffect(() => {
+	// 	api.client.http.PUT("/api/v1/user/{user_id}/config", {
+	// 		params: {path: {user_id: "@self"}},
+	// 		body: {
+
+	// 			frontend: Object.fromEntries (ctx.settings.entries())
+	// 		}
+	// 	})
+	// })
 
 	const handleClick = (e: MouseEvent) => {
 		setMenu(null);

@@ -84,6 +84,13 @@ export function Info(props: VoidProps<{ user: User }>) {
 		}
 	}
 
+	const togglePfps = () => {
+		ctx.settings.set(
+			"message_pfps",
+			ctx.settings.get("message_pfps") === "yes" ? "no" : "yes",
+		);
+	};
+
 	return (
 		<>
 			<h2>info</h2>
@@ -108,6 +115,16 @@ export function Info(props: VoidProps<{ user: User }>) {
 				onInput={(e) => setFile(e.target.files?.[0] ?? null)}
 			/>
 			<br />
+			<h3>appearance (todo: move to separate section)</h3>
+			<br />
+			<label>
+				<input
+					type="checkbox"
+					checked={ctx.settings.get("message_pfps") === "yes"}
+					onInput={togglePfps}
+				/>{" "}
+				show pfps in messages (experimental)
+			</label>
 		</>
 	);
 }
