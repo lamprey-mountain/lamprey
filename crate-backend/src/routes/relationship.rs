@@ -245,10 +245,110 @@ async fn relationship_list(
     Ok(Json(rels))
 }
 
+/// Friend list (TODO)
+///
+/// List (mutual) friends.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/friend",
+    params(
+        PaginationQuery<UserId>,
+        ("user_id", description = "User id to list friends from"),
+    ),
+    tags = ["relationship"],
+    responses(
+        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
+    )
+)]
+async fn friend_list() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Friend add (TODO)
+///
+/// Send or accept a friend request.
+#[utoipa::path(
+    put,
+    path = "/user/@self/friend/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn friend_add() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Friend remove (TODO)
+///
+/// Remove friend or reject a friend request.
+#[utoipa::path(
+    delete,
+    path = "/user/@self/friend/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn friend_remove() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Block list (TODO)
+///
+/// List (mutually?) blocked users.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/block",
+    params(
+        PaginationQuery<UserId>,
+        ("user_id", description = "User id to list blocks from"),
+    ),
+    tags = ["relationship"],
+    responses(
+        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
+    )
+)]
+async fn block_list() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Block add (TODO)
+///
+/// Block a user.
+#[utoipa::path(
+    put,
+    path = "/user/@self/block/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn block_add() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Block remove (TODO)
+///
+/// Unblock a user.
+#[utoipa::path(
+    delete,
+    path = "/user/@self/block/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn block_remove() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(relationship_get))
         .routes(routes!(relationship_update))
         .routes(routes!(relationship_reset))
         .routes(routes!(relationship_list))
+        .routes(routes!(friend_list))
+        .routes(routes!(friend_add))
+        .routes(routes!(friend_remove))
+        .routes(routes!(block_list))
+        .routes(routes!(block_add))
+        .routes(routes!(block_remove))
 }

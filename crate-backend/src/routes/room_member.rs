@@ -52,7 +52,7 @@ async fn room_member_list(
     path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id" = RoomId, description = "Room id"),
-        ("user_id" = String, description = "User id"),
+        ("user_id" = UserId, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -88,7 +88,7 @@ async fn room_member_get(
     path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id" = RoomId, description = "Room id"),
-        ("user_id" = String, description = "User id"),
+        ("user_id" = UserId, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -165,7 +165,7 @@ async fn room_member_add(
     path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id" = RoomId, description = "Room id"),
-        ("user_id" = String, description = "User id"),
+        ("user_id" = UserId, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -230,7 +230,7 @@ struct LeaveQuery {
     path = "/room/{room_id}/member/{user_id}",
     params(
         ("room_id" = RoomId, description = "Room id"),
-        ("user_id" = String, description = "User id"),
+        ("user_id" = UserId, description = "User id"),
     ),
     tags = ["room_member"],
     responses(
@@ -276,6 +276,74 @@ async fn room_member_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Room ban create (TODO)
+#[utoipa::path(
+    put,
+    path = "/room/{room_id}/ban/{user_id}",
+    params(
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = UserId, description = "User id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn room_ban_create() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Room ban remove (TODO)
+#[utoipa::path(
+    delete,
+    path = "/room/{room_id}/ban/{user_id}",
+    params(
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = UserId, description = "User id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn room_ban_remove() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Room ban get (TODO)
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/ban/{user_id}",
+    params(
+        ("room_id" = RoomId, description = "Room id"),
+        ("user_id" = UserId, description = "User id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn room_ban_get() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Room ban list (TODO)
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/ban",
+    params(
+        PaginationQuery<UserId>,
+        ("room_id" = RoomId, description = "Room id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    )
+)]
+async fn room_ban_list() -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_member_list))
@@ -283,4 +351,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
+        .routes(routes!(room_ban_create))
+        .routes(routes!(room_ban_remove))
+        .routes(routes!(room_ban_get))
+        .routes(routes!(room_ban_list))
 }
