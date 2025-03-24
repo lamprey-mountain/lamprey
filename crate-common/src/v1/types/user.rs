@@ -109,7 +109,7 @@ pub enum UserType {
         owner: BotOwner,
 
         /// who can use the bot
-        visibility: BotVisibility,
+        access: BotAccess,
 
         /// enables managing Puppet users
         is_bridge: bool,
@@ -172,7 +172,7 @@ pub enum BotOwner {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum BotVisibility {
+pub enum BotAccess {
     /// only the creator can use the bot
     #[default]
     Private,

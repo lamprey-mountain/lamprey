@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{self, BotOwner, BotVisibility, ExternalPlatform, UserState, UserType};
+use common::v1::types::{self, BotAccess, BotOwner, ExternalPlatform, UserState, UserType};
 use serde::Deserialize;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
@@ -30,7 +30,7 @@ pub struct DbUser {
     pub puppet_external_url: Option<String>,
     pub puppet_alias_id: Option<Uuid>,
     pub bot_is_bridge: bool,
-    pub bot_visibility: DbBotVisibility,
+    pub bot_access: DbBotAccess,
 }
 
 #[derive(Deserialize, sqlx::Type)]
@@ -51,36 +51,36 @@ pub enum DbUserState {
 }
 
 #[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "bot_visibility_type")]
-pub enum DbBotVisibility {
+#[sqlx(type_name = "bot_access_type")]
+pub enum DbBotAccess {
     Private,
     Public,
     PublicDiscoverable,
 }
 
-impl From<DbBotVisibility> for BotVisibility {
-    fn from(value: DbBotVisibility) -> Self {
+impl From<DbBotAccess> for BotAccess {
+    fn from(value: DbBotAccess) -> Self {
         match value {
-            DbBotVisibility::Private => BotVisibility::Private,
-            DbBotVisibility::Public => BotVisibility::Public {
+            DbBotAccess::Private => BotAccess::Private,
+            DbBotAccess::Public => BotAccess::Public {
                 is_discoverable: false,
             },
-            DbBotVisibility::PublicDiscoverable => BotVisibility::Public {
+            DbBotAccess::PublicDiscoverable => BotAccess::Public {
                 is_discoverable: true,
             },
         }
     }
 }
 
-impl From<BotVisibility> for DbBotVisibility {
-    fn from(value: BotVisibility) -> Self {
+impl From<BotAccess> for DbBotAccess {
+    fn from(value: BotAccess) -> Self {
         match value {
-            BotVisibility::Private => DbBotVisibility::Private,
-            BotVisibility::Public { is_discoverable } => {
+            BotAccess::Private => DbBotAccess::Private,
+            BotAccess::Public { is_discoverable } => {
                 if is_discoverable {
-                    DbBotVisibility::Public
+                    DbBotAccess::Public
                 } else {
-                    DbBotVisibility::PublicDiscoverable
+                    DbBotAccess::PublicDiscoverable
                 }
             }
         }
@@ -135,7 +135,7 @@ impl From<DbUser> for User {
                     owner: BotOwner::User {
                         user_id: row.parent_id.unwrap().into(),
                     },
-                    visibility: row.bot_visibility.into(),
+                    access: row.bot_access.into(),
                     is_bridge: row.bot_is_bridge,
                 },
                 DbUserType::System => UserType::System,
@@ -171,19 +171,19 @@ impl From<User> for DbUser {
             puppet_external_url: None,
             puppet_alias_id: None,
             bot_is_bridge: false,
-            bot_visibility: DbBotVisibility::Private,
+            bot_access: DbBotAccess::Private,
         };
         match u.user_type {
             UserType::Bot {
                 owner,
-                visibility,
+                access,
                 is_bridge,
             } => DbUser {
                 parent_id: match owner {
                     BotOwner::User { user_id } => Some(user_id.into_inner()),
                     _ => todo!(),
                 },
-                bot_visibility: visibility.into(),
+                bot_access: access.into(),
                 bot_is_bridge: is_bridge,
                 ..base
             },
@@ -230,12 +230,12 @@ impl DataUser for Postgres {
             r#"
             INSERT INTO usr (
                 id, version_id, parent_id, name, description, state, state_updated_at, type, avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access
             )
     	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING
                 id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
         "#,
             user.id.into_inner(),
             user.version_id.into_inner(),
@@ -251,7 +251,7 @@ impl DataUser for Postgres {
             user.puppet_external_url,
             user.puppet_alias_id,
             user.bot_is_bridge,
-            user.bot_visibility as _,
+            user.bot_access as _,
         )
         .fetch_one(&self.pool)
         .await?;
@@ -266,7 +266,7 @@ impl DataUser for Postgres {
             r#"
             SELECT
                 id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
@@ -310,7 +310,7 @@ impl DataUser for Postgres {
             r#"
             SELECT
                 id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as "bot_visibility: _"
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
             FROM usr WHERE id = $1
         "#,
             id.into_inner()

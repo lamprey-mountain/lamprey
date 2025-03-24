@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, version_id, parent_id, name, description, state as \"state: _\", state_updated_at, type as \"type: _\", avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as \"bot_visibility: _\"\n            FROM usr WHERE id = $1\n            FOR UPDATE\n            ",
+  "query": "\n            INSERT INTO usr (\n                id, version_id, parent_id, name, description, state, state_updated_at, type, avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access\n            )\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)\n            RETURNING\n                id, version_id, parent_id, name, description, state as \"state: _\", state_updated_at, type as \"type: _\", avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as \"bot_access: _\"\n        ",
   "describe": {
     "columns": [
       {
@@ -98,10 +98,10 @@
       },
       {
         "ordinal": 14,
-        "name": "bot_visibility: _",
+        "name": "bot_access: _",
         "type_info": {
           "Custom": {
-            "name": "bot_visibility_type",
+            "name": "bot_access_type",
             "kind": {
               "Enum": [
                 "Private",
@@ -115,7 +115,55 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "user_state",
+            "kind": {
+              "Enum": [
+                "Active",
+                "Suspended",
+                "Deleted"
+              ]
+            }
+          }
+        },
+        "Timestamp",
+        {
+          "Custom": {
+            "name": "user_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Puppet",
+                "Bot",
+                "System"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Bool",
+        {
+          "Custom": {
+            "name": "bot_access_type",
+            "kind": {
+              "Enum": [
+                "Private",
+                "Public",
+                "PublicDiscoverable"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
@@ -136,5 +184,5 @@
       false
     ]
   },
-  "hash": "9a0ad3d1fe076761eeec76668193fe4c93c51f9ce9078738cef81519a25651ae"
+  "hash": "9a45532cc985b8e913288ead2367f03fd7ecfdfc80d6d938cd6281e97aee9770"
 }

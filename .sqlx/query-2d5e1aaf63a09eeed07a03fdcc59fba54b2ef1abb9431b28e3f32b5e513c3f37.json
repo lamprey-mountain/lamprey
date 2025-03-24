@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, version_id, parent_id, name, description, state as \"state: _\", state_updated_at, type as \"type: _\", avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_visibility as \"bot_visibility: _\"\n            FROM usr WHERE id = $1\n        ",
+  "query": "\n            SELECT\n                id, version_id, parent_id, name, description, state as \"state: _\", state_updated_at, type as \"type: _\", avatar,\n                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as \"bot_access: _\"\n            FROM usr WHERE id = $1\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -98,10 +98,10 @@
       },
       {
         "ordinal": 14,
-        "name": "bot_visibility: _",
+        "name": "bot_access: _",
         "type_info": {
           "Custom": {
-            "name": "bot_visibility_type",
+            "name": "bot_access_type",
             "kind": {
               "Enum": [
                 "Private",
@@ -136,5 +136,5 @@
       false
     ]
   },
-  "hash": "5f51c0040b662f603122d3197a575199a45a81dfb527d6f261cb28bdb749a840"
+  "hash": "2d5e1aaf63a09eeed07a03fdcc59fba54b2ef1abb9431b28e3f32b5e513c3f37"
 }
