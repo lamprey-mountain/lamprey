@@ -369,6 +369,8 @@ export const Root: Component = (props: ParentProps) => {
 
 	// const [sw] = createResource(() => navigator.serviceWorker.ready);
 
+	const state = from(ctx.client.state);
+
 	return (
 		<div id="root">
 			<api.Provider>
@@ -377,6 +379,7 @@ export const Root: Component = (props: ParentProps) => {
 					<Portal mount={document.getElementById("overlay")!}>
 						<Overlay />
 					</Portal>
+					<footer>{state()}</footer>
 				</chatctx.Provider>
 			</api.Provider>
 		</div>
@@ -474,7 +477,7 @@ function RouteThread(p: RouteSectionProps) {
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
 	return (
-		<div class="chat-wrap">
+		<>
 			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
@@ -486,7 +489,7 @@ function RouteThread(p: RouteSectionProps) {
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
-		</div>
+		</>
 	);
 }
 

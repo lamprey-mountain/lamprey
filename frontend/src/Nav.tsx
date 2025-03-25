@@ -7,7 +7,6 @@ import type { Room, Thread } from "sdk";
 export const ChatNav = () => {
 	const ctx = useCtx();
 	const api = useApi();
-	const state = from(ctx.client.state);
 
 	const rooms = api.rooms.list();
 
@@ -21,9 +20,7 @@ export const ChatNav = () => {
 					{(room) => <ItemRoom room={room} />}
 				</For>
 			</ul>
-			<div style="flex:1"></div>
 			<div style="margin: 8px">
-				state: {state()}
 			</div>
 		</nav>
 	);

@@ -22,13 +22,18 @@
 }
 
 #root {
-	display: flex;
+	display: grid;
+	grid-template-areas:
+		"nav header header" "nav main sidebar" "footer footer footer";
+	grid-template-rows: auto 1fr 20px;
+	grid-template-columns: auto 1fr auto;
 	height: 100vh;
 	background-color: $bg-200;
 	color: $fg-200;
 }
 
-#root > nav, .chat-wrap > nav {
+#root > nav {
+	grid-area: nav;
 	width: 16rem;
 	background-color: $bg-100;
 	color: $fg-200;
@@ -90,7 +95,7 @@ input[type="submit"] {
 }
 
 .home {
-	flex: 1;
+	grid-area: main;
 	background-color: $bg-200;
 	color: $fg-200;
 	padding: 1rem;
@@ -102,7 +107,7 @@ input[type="submit"] {
 }
 
 .room-home {
-	flex: 1;
+	grid-area: main;
 	background-color: $bg-200;
 	color: $fg-200;
 	padding: 1rem;
@@ -160,7 +165,7 @@ input[type="submit"] {
 }
 
 .chat {
-	flex: 1;
+	grid-area: main;
 	background-color: $bg-200;
 	color: $fg-200;
 	display: grid;
@@ -495,7 +500,7 @@ input[type="url"] {
 }
 
 .settings {
-	flex: 1;
+	grid-area: main;
 	background-color: $bg-200;
 	color: $fg-200;
 	display: grid;
@@ -1155,6 +1160,7 @@ svg.avatar {
 }
 
 .member-list {
+	grid-area: sidebar;
 	padding: 4px 0;
 	width: 196px;
 	background: $bg-100;
@@ -1340,31 +1346,21 @@ table {
 	margin-top: 8px;
 }
 
-.chat-wrap {
-	display: grid;
-	grid-template-areas: "nav header header" "nav chat sidebar";
-	grid-template-rows: auto 1fr;
-	grid-template-columns: auto 1fr auto;
-	width: 100%;
+#root > header {
+	grid-area: header;
+	background: $bg-200;
+	box-shadow: 0 2px 8px $bg-100;
+	border-bottom: solid $sep-500 1px;
+	padding: 8px;
+	@include truncate;
+}
 
-	& > nav {
-		grid-area: nav;
-	}
-
-	& > header {
-		grid-area: header;
-		background: $bg-200;
-		box-shadow: 0 2px 8px $bg-100;
-		border-bottom: solid $sep-500 1px;
-		padding: 8px;
-		@include truncate;
-	}
-
-	& > .chat {
-		grid-area: chat;
-	}
-
-	& > .member-list {
-		grid-area: sidebar;
-	}
+#root > footer {
+	grid-area: footer;
+	background: $bg-150;
+	border-top: solid $bg-300 1px;
+	padding: 0 4px;
+	display: flex;
+	align-items: center;
+	font-size: 0.9rem;
 }
