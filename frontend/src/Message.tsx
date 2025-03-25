@@ -303,14 +303,8 @@ export function AttachmentView(props: MediaProps) {
 	const ty = () => props.media.source.mime.split(";")[0];
 	if (b() === "image") {
 		return (
-			<li>
+			<li class="raw">
 				<ImageView media={props.media} />
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
-					download {props.media.filename}
-				</a>
-				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
-				</div>
 			</li>
 		);
 	} else if (b() === "video") {

@@ -35,3 +35,8 @@ $color-teal: oklch(var(--color-teal));
 	text-overflow: ellipsis;
 	white-space: pre;
 }
+
+@mixin center {
+	display: grid;
+	place-items: center center;
+}

@@ -4,7 +4,8 @@
 	position: relative;
 }
 
-.media-old audio, .media-old video {
+.media-old audio,
+.media-old video {
 	display: block;
 }
 
@@ -17,6 +18,50 @@
 
 .image {
 	display: contents;
+
+	& > .download,
+	& > .info {
+		opacity: 0;
+		transition: all 100ms;
+		position: absolute;
+	}
+
+	& > .download {
+		border: solid $sep-500 1px;
+		top: 4px;
+		right: 4px;
+
+		& > button {
+			@include center;
+			height: 24px;
+			width: 24px;
+		}
+	}
+
+	& > .info {
+		padding: 4px;
+		width: 100%;
+		pointer-events: none;
+	}
+
+	& > header.info {
+		top: 0;
+	}
+
+	& > footer.info {
+		background: #111d;
+		bottom: 0;
+		clip-path: inset(4px 0 0 0);
+	}
+
+	&:hover > footer.info {
+		clip-path: inset(0 0 0 0);
+	}
+
+	&:hover > .info,
+	&:hover > .download {
+		opacity: 1;
+	}
 }
 
 .image > img {
