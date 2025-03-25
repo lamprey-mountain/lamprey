@@ -28,7 +28,7 @@
 	color: $fg-200;
 }
 
-#root > nav {
+#root > nav, .chat-wrap > nav {
 	width: 16rem;
 	background-color: $bg-100;
 	color: $fg-200;
@@ -1338,4 +1338,33 @@ table {
 
 .message + .message > .withavatar.separate {
 	margin-top: 8px;
+}
+
+.chat-wrap {
+	display: grid;
+	grid-template-areas: "nav header header" "nav chat sidebar";
+	grid-template-rows: auto 1fr;
+	grid-template-columns: auto 1fr auto;
+	width: 100%;
+
+	& > nav {
+		grid-area: nav;
+	}
+
+	& > header {
+		grid-area: header;
+		background: $bg-200;
+		box-shadow: 0 2px 8px $bg-100;
+		border-bottom: solid $sep-500 1px;
+		padding: 8px;
+		@include truncate;
+	}
+
+	& > .chat {
+		grid-area: chat;
+	}
+
+	& > .member-list {
+		grid-area: sidebar;
+	}
 }

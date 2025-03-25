@@ -27,7 +27,7 @@ import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
 import { Route, Router, type RouteSectionProps } from "@solidjs/router";
 import { useFloating } from "solid-floating-ui";
-import { ChatMain } from "./Chat.tsx";
+import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { Home } from "./Home.tsx";
 import { ChatNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
@@ -474,18 +474,19 @@ function RouteThread(p: RouteSectionProps) {
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
 	return (
-		<>
+		<div class="chat-wrap">
 			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
 			<ChatNav />
 			<Show when={room() && thread()}>
+				<ChatHeader room={room()!} thread={thread()!} />
 				<ChatMain room={room()!} thread={thread()!} />
 				<Show when={flags.has("thread_member_list")}>
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
-		</>
+		</div>
 	);
 }
 

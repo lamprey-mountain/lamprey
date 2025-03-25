@@ -1,4 +1,11 @@
-import { createEffect, createRenderEffect, on, Show } from "solid-js";
+import {
+	createEffect,
+	createRenderEffect,
+	Match,
+	on,
+	Show,
+	Switch,
+} from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
 import type { RoomT, ThreadT } from "./types.ts";
@@ -221,6 +228,19 @@ export const ChatMain = (props: ChatProps) => {
 	);
 };
 
+export const ChatHeader = (props: ChatProps) => {
+	return (
+		<header class="chat-header">
+			<b>{props.thread.name}</b>
+			<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
+			{props.thread.description ?? "(no description)"}
+			<Switch>
+				<Match when={props.thread.state === "Archived"}>{" (archived)"}</Match>
+				<Match when={props.thread.state === "Deleted"}>{" (deleted)"}</Match>
+			</Switch>
+		</header>
+	);
+};
 type RenderTimelineParams = {
 	items: Array<Message>;
 	read_marker_id: string | null;
@@ -235,11 +255,6 @@ export function renderTimeline(
 	if (items.length === 0) throw new Error("no items");
 	if (has_before) {
 		newItems.push({
-			type: "info",
-			id: "info",
-			header: false,
-		});
-		newItems.push({
 			type: "spacer",
 			id: "spacer-top",
 		});
@@ -247,11 +262,6 @@ export function renderTimeline(
 		newItems.push({
 			type: "spacer-mini2",
 			id: "spacer-top2",
-		});
-		newItems.push({
-			type: "info",
-			id: "info",
-			header: true,
 		});
 	}
 	for (let i = 0; i < items.length; i++) {
