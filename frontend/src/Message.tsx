@@ -72,9 +72,9 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 function MessageTextTagged(props: MessageTextTaggedProps) {
 	return (
 		<div class="body markdown" classList={{ local: props.message.is_local }}>
-			<span>{transformBlock(props.message.content ?? "")}</span>
+			{transformBlock(props.message.content ?? "")}
 			<Show when={props.message.id !== props.message.version_id}>
-				<span class="edited">(edited)</span>
+				<span class="edited">{" "}(edited)</span>
 			</Show>
 		</div>
 	);
