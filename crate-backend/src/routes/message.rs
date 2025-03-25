@@ -7,7 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Diff, MessageDefaultMarkdown, PaginationDirection, ThreadMembership,
+    reaction::ReactionCounts, util::Diff, Interactions, MessageDefaultMarkdown,
+    MessageDefaultTagged, PaginationDirection, ThreadMembership,
 };
 use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
@@ -56,10 +57,9 @@ async fn message_create(
     if !json.attachments.is_empty() {
         perms.ensure(Permission::MessageAttachments)?;
     }
-    // if !json.embeds.is_empty() {
-    //     perms.ensure(Permission::MessageEmbeds)?;
-    // }
-    // TODO: everyone can set override_name, but it's meant to be temporary so its probably fine
+    if !json.embeds.is_empty() {
+        perms.ensure(Permission::MessageEmbeds)?;
+    }
     // TODO: move this to validation
     if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
         return Err(Error::BadStatic(
@@ -74,24 +74,38 @@ async fn message_create(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    let body = if json.use_new_text_formatting {
-        return Err(Error::Unimplemented);
+    let (content, payload) = if json.use_new_text_formatting {
+        (
+            json.content.clone(),
+            MessageType::DefaultTagged(MessageDefaultTagged {
+                content: json.content,
+                attachments: vec![],
+                embeds: vec![],
+                metadata: json.metadata,
+                reply_id: json.reply_id,
+                reactions: ReactionCounts(vec![]),
+                interactions: Interactions::default(),
+            }),
+        )
     } else {
-        MessageDefaultMarkdown {
-            content: json.content,
-            attachments: vec![],
-            embeds: vec![],
-            metadata: json.metadata,
-            reply_id: json.reply_id,
-            override_name: json.override_name,
-        }
+        (
+            json.content.clone(),
+            MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                content: json.content,
+                attachments: vec![],
+                embeds: vec![],
+                metadata: json.metadata,
+                reply_id: json.reply_id,
+                override_name: json.override_name,
+            }),
+        )
     };
     let message_id = data
         .message_create(DbMessageCreate {
             thread_id,
             attachment_ids: attachment_ids.clone(),
             author_id: user_id,
-            message_type: MessageType::DefaultMarkdown(body.clone()),
+            message_type: payload,
         })
         .await?;
     let message_uuid = message_id.into_inner();
@@ -102,7 +116,7 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
-    if let Some(content) = &body.content {
+    if let Some(content) = &content {
         for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
                 let version_id = message.version_id;
@@ -315,9 +329,9 @@ async fn message_edit(
     if json.attachments.as_ref().is_none_or(|a| !a.is_empty()) {
         perms.ensure(Permission::MessageAttachments)?;
     }
-    // if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
-    //     perms.ensure(Permission::MessageEmbeds)?;
-    // }
+    if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
+        perms.ensure(Permission::MessageEmbeds)?;
+    }
     if !json.changes(&message) {
         return Ok((StatusCode::NOT_MODIFIED, Json(message)));
     }

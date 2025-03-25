@@ -20,6 +20,7 @@ export type Pagination<T> = {
 };
 
 export enum MessageType {
-	Default = "Default",
+	DefaultMarkdown = "DefaultMarkdown",
+	DefaultTagged = "DefaultTagged",
 	ThreadUpdate = "ThreadUpdate",
 }

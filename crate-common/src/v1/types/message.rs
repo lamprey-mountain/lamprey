@@ -493,23 +493,25 @@ pub struct MessageDefaultTagged {
     #[cfg(feature = "feat_reactions")]
     pub reactions: ReactionCounts,
 
-    #[cfg(feature = "feat_interaction_reaction")]
+    // experimental! don't touch yet.
+    #[cfg(feature = "feat_interaction")]
+    #[cfg_attr(feature = "utoipa", schema(ignore))]
     pub interactions: Interactions,
 }
 
 /// ways to interact with a message
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Interactions {
     #[cfg(feature = "feat_interaction_reaction")]
     /// show placeholder reactions (they appear with zero total reactions) for these emoji
-    pub reactions_default: Vec<Emoji>,
+    pub reactions_default: Option<Vec<Emoji>>,
 
     // yet another rabbit hole. not worth it for now.
     #[cfg(feature = "feat_interaction_status")]
     #[serde(flatten)]
-    pub status: InteractionStatus,
+    pub status: Option<InteractionStatus>,
 }
 
 /// the current status

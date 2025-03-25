@@ -17,8 +17,9 @@
             "name": "message_type",
             "kind": {
               "Enum": [
-                "Default",
-                "ThreadUpdate"
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged"
               ]
             }
           }

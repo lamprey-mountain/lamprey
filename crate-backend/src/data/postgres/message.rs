@@ -1,6 +1,8 @@
 use async_trait::async_trait;
+use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::{
-    self, Mentions, MessageDefaultMarkdown, MessageThreadUpdate, MessageType, UserId,
+    self, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
+    MessageThreadUpdate, MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
@@ -38,14 +40,16 @@ pub struct DbMessage {
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {
-    Default,
+    DefaultMarkdown,
+    DefaultTagged,
     ThreadUpdate,
 }
 
 impl From<MessageType> for DbMessageType {
     fn from(value: MessageType) -> Self {
         match value {
-            MessageType::DefaultMarkdown(_) => DbMessageType::Default,
+            MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
+            MessageType::DefaultTagged(_) => DbMessageType::DefaultTagged,
             MessageType::ThreadUpdate(_) => DbMessageType::ThreadUpdate,
             _ => todo!(),
         }
@@ -57,12 +61,29 @@ impl From<DbMessage> for Message {
         Message {
             id: row.id,
             message_type: match row.message_type {
-                DbMessageType::Default => MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                DbMessageType::DefaultMarkdown => {
+                    MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                        content: row.content,
+                        attachments: row.attachments.into_iter().map(media_from_db).collect(),
+                        metadata: row.metadata,
+                        reply_id: row.reply_id.map(Into::into),
+                        override_name: row.override_name,
+                        embeds: row
+                            .embeds
+                            .into_iter()
+                            .map(|a| {
+                                let db: DbUrlEmbed =
+                                    serde_json::from_value(a).expect("invalid data in database!");
+                                db.into()
+                            })
+                            .collect(),
+                    })
+                }
+                DbMessageType::DefaultTagged => MessageType::DefaultTagged(MessageDefaultTagged {
                     content: row.content,
                     attachments: row.attachments.into_iter().map(media_from_db).collect(),
                     metadata: row.metadata,
                     reply_id: row.reply_id.map(Into::into),
-                    override_name: row.override_name,
                     embeds: row
                         .embeds
                         .into_iter()
@@ -72,6 +93,8 @@ impl From<DbMessage> for Message {
                             db.into()
                         })
                         .collect(),
+                    reactions: ReactionCounts(vec![]),
+                    interactions: Interactions::default(),
                 }),
                 DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {
                     patch: serde_json::from_value(row.metadata.unwrap()).unwrap(),

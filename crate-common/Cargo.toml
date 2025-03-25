@@ -40,8 +40,9 @@ feat_message_move = []
 feat_message_new_text = []
 feat_message_forwarding = ["feat_message_new_text"]
 feat_automod = []
-feat_interaction_reaction = ["feat_reactions"]
-feat_interaction_status = []
+feat_interaction = []
+feat_interaction_reaction = ["feat_interaction", "feat_reactions"]
+feat_interaction_status = ["feat_interaction"]
 
 default = [
   "utoipa",

@@ -158,63 +158,6 @@ export function parse(tokens: Generator<Token>) {
 	}
 }
 
-// impl<'a> Text<'a> {
-//     /// parse a str
-//     ///
-//     /// parsing is designed to never fail
-//     pub fn parse(s: &'a str) -> Text<'a> {
-//         let mut lex = Token::lexer(s);
-//         let mut parser = Parser::new(&mut lex);
-//         let spans = match parse(&mut parser, s) {
-//             ParseRes::EndOfAttr(mut vec) => {
-//                 if STRICT {
-//                     panic!("unexpected close brace")
-//                 } else {
-//                     // its probably better to send the raw text than to truncate
-//                     // maybe i could start parsing again, but if the text is broken then dont bother
-//                     vec.push(Span::Text(Cow::Borrowed(lex.remainder())));
-//                     vec
-//                 }
-//             }
-//             ParseRes::EndOfInput(vec) => vec,
-//         };
-//         Self(spans)
-//     }
-// }
-
-// function _parse(tokens: Array<Token>): Array<Span> {
-//   const items: Array<Span> = [];
-//   let idx = 0;
-//   while (idx < tokens.length) {
-//     items.push(parseNext());
-//   }
-//   return items;
-
-//   function parseNext(): Span {
-//     const token = tokens[idx++];
-//     if (token.type === "text") {
-//       return { type: "text", text: token.text };
-//     } else if (token.type === "tag") {
-//       return parseTag(token.text);
-//     } else {
-//       console.log(token);
-//       throw new Error("syntax error: unexpected { or }");
-//     }
-//   }
-
-//   function parseTag(tag: string): Span {
-//     const args: Array<Span> = [];
-//     while (tokens[idx]?.type === "start") {
-//       idx++;
-//       if (!tokens[idx]) throw new Error("unexpected eof");
-//       while (tokens[idx]?.type !== "end") {
-//         args.push(parseNext());
-//       }
-//     }
-//     return { type: "tag", name: tag, args };
-//   }
-// }
-
 function stringifySpan(s: Span): string {
 	if (s.type === "text") {
 		return s.text;

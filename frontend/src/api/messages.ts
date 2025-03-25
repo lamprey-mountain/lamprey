@@ -356,18 +356,17 @@ export class Messages {
 	async send(thread_id: string, body: MessageSendReq): Promise<Message> {
 		const id = uuidv7();
 		const local: Message = {
-			type: MessageType.Default,
+			type: MessageType.DefaultMarkdown,
 			id,
 			thread_id,
 			version_id: id,
 			override_name: null,
 			reply_id: null,
 			content: null,
-			author: this.api.users.cache.get("@self")!,
+			author_id: this.api.users.cache.get("@self")!.id,
 			metadata: null,
 			is_pinned: false,
 			ordering: 0,
-			embeds: [],
 			...body,
 			nonce: id,
 			is_local: true,

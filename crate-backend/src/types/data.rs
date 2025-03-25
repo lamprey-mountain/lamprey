@@ -239,6 +239,7 @@ impl DbMessageCreate {
     pub fn content(&self) -> Option<String> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.content.clone(),
+            MessageType::DefaultTagged(msg) => msg.content.clone(),
             MessageType::ThreadUpdate(_patch) => Some("(thread update)".to_owned()),
             _ => None,
         }
@@ -255,6 +256,7 @@ impl DbMessageCreate {
     pub fn reply_id(&self) -> Option<MessageId> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.reply_id,
+            MessageType::DefaultTagged(msg) => msg.reply_id,
             _ => None,
         }
     }

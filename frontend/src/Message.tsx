@@ -18,14 +18,19 @@ import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
+import { transformBlock } from "./text.tsx";
 
 type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
 };
 
-type MessageTextProps = {
-	message: MessageT;
+type MessageTextTaggedProps = {
+	message: MessageT & { type: "DefaultTagged" };
+};
+
+type MessageTextMarkdownProps = {
+	message: MessageT & { type: "DefaultMarkdown" };
 };
 
 const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
@@ -41,13 +46,13 @@ const md = marked.use({
 
 const contentToHtml = new WeakMap();
 
-function MessageText(props: MessageTextProps) {
+function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 	function getHtml(): string {
 		const cached = contentToHtml.get(props.message);
 		if (cached) return cached;
 		// console.count("render_html");
 		const html = sanitizeHtml(
-			md.parse(props.message.content!) as string,
+			md.parse(props.message.content ?? "") as string,
 			sanitizeHtmlOptions,
 		).trim();
 		contentToHtml.set(props.message, html);
@@ -57,6 +62,17 @@ function MessageText(props: MessageTextProps) {
 	return (
 		<div class="body markdown" classList={{ local: props.message.is_local }}>
 			<span innerHTML={getHtml()}></span>
+			<Show when={props.message.id !== props.message.version_id}>
+				<span class="edited">(edited)</span>
+			</Show>
+		</div>
+	);
+}
+
+function MessageTextTagged(props: MessageTextTaggedProps) {
+	return (
+		<div class="body markdown" classList={{ local: props.message.is_local }}>
+			<span>{transformBlock(props.message.content ?? "")}</span>
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited">(edited)</span>
 			</Show>
@@ -107,7 +123,10 @@ export function MessageView(props: MessageProps) {
 					</div>
 				</>
 			);
-		} else {
+		} else if (
+			props.message.type === "DefaultMarkdown" ||
+			props.message.type === "DefaultTagged"
+		) {
 			const [arrow_width, set_arrow_width] = createSignal(0);
 			const user = api.users.fetch(() => props.message.author_id);
 			const set_w = (e: HTMLElement) => {
@@ -153,8 +172,11 @@ export function MessageView(props: MessageProps) {
 							<div class="avatar"></div>
 						</Show>
 						<div class="content">
-							<Show when={props.message.content}>
-								<MessageText message={props.message} />
+							<Show when={props.message.type === "DefaultMarkdown"}>
+								<MessageTextMarkdown message={props.message} />
+							</Show>
+							<Show when={props.message.type === "DefaultTagged"}>
+								<MessageTextTagged message={props.message} />
 							</Show>
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
@@ -183,8 +205,11 @@ export function MessageView(props: MessageProps) {
 							</div>
 						</div>
 						<div class="content">
-							<Show when={props.message.content}>
-								<MessageText message={props.message} />
+							<Show when={props.message.type === "DefaultMarkdown"}>
+								<MessageTextMarkdown message={props.message} />
+							</Show>
+							<Show when={props.message.type === "DefaultTagged"}>
+								<MessageTextTagged message={props.message} />
 							</Show>
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
