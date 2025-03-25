@@ -354,15 +354,36 @@ async fn message_edit(
             return Err(Error::BadStatic("cant reuse media"));
         }
     }
-    let body = match message.message_type.clone() {
-        MessageType::DefaultMarkdown(msg) => Result::Ok(MessageDefaultMarkdown {
-            content: json.content.unwrap_or(msg.content),
-            attachments: vec![],
-            embeds: vec![],
-            metadata: json.metadata.unwrap_or(msg.metadata),
-            reply_id: json.reply_id.unwrap_or(msg.reply_id),
-            override_name: json.override_name.unwrap_or(msg.override_name),
-        }),
+    let (content, payload) = match message.message_type.clone() {
+        MessageType::DefaultMarkdown(msg) => {
+            let content = json.content.unwrap_or(msg.content);
+            Result::Ok((
+                content.clone(),
+                MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+                    content,
+                    attachments: vec![],
+                    embeds: vec![],
+                    metadata: json.metadata.unwrap_or(msg.metadata),
+                    reply_id: json.reply_id.unwrap_or(msg.reply_id),
+                    override_name: json.override_name.unwrap_or(msg.override_name),
+                }),
+            ))
+        }
+        MessageType::DefaultTagged(msg) => {
+            let content = json.content.unwrap_or(msg.content);
+            Result::Ok((
+                content.clone(),
+                MessageType::DefaultTagged(MessageDefaultTagged {
+                    content,
+                    attachments: vec![],
+                    embeds: vec![],
+                    metadata: json.metadata.unwrap_or(msg.metadata),
+                    reply_id: json.reply_id.unwrap_or(msg.reply_id),
+                    reactions: ReactionCounts(vec![]),
+                    interactions: Interactions::default(),
+                }),
+            ))
+        }
         _ => return Err(Error::Unimplemented),
     }?;
     let version_id = data
@@ -373,7 +394,7 @@ async fn message_edit(
                 thread_id,
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
-                message_type: MessageType::DefaultMarkdown(body.clone()),
+                message_type: payload,
             },
         )
         .await?;
@@ -382,7 +403,7 @@ async fn message_edit(
         data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
             .await?;
     }
-    if let Some(content) = &body.content {
+    if let Some(content) = &content {
         let embeds = match &message.message_type {
             MessageType::DefaultMarkdown(m) => Some(m.embeds.clone()),
             MessageType::DefaultTagged(m) => Some(m.embeds.clone()),
