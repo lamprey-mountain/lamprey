@@ -60,7 +60,6 @@ pub struct Message {
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub is_pinned: bool,
 
-    #[serde(flatten)]
     pub mentions: Mentions,
 
     #[serde(flatten)]
@@ -74,6 +73,25 @@ pub struct Message {
     // // drop the is_?
     // pub is_ephemeral: bool,
 }
+
+// /// unlisted + content is stripped
+// struct Deleted {
+//     at: Option<Time>,
+//     by: Option<UserId>,
+//     reason: Option<String>,
+//     is_undeletable: bool,
+// }
+
+// struct Pinned {
+//     at: Time,
+//     order: u8, // tiebreak by id
+// }
+
+// struct Moved {
+//     at: Time,
+//     from_thread: Option<ThreadId>, // removed if thread is deleted
+//     from_message: Option<MessageId>, // removed if thread or message is deleted
+// }
 
 /// lifecycle of a message
 // TODO: switch back to fields, this is pretty h
@@ -106,16 +124,16 @@ pub enum MessageState {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
-    pub mentions_users: Vec<UserId>,
-    pub mentions_roles: Vec<RoleId>,
-    pub mentions_threads: Vec<ThreadId>,
-    pub mentions_rooms: Vec<ThreadId>,
+    pub users: Vec<UserId>,
+    pub roles: Vec<RoleId>,
+    pub threads: Vec<ThreadId>,
+    pub rooms: Vec<ThreadId>,
 
     /// if this mentioned everyone in the room
-    pub mentions_all_in_room: bool,
+    pub all_in_room: bool,
 
     /// if this mentioned everyone in the thread
-    pub mentions_all_in_thread: bool,
+    pub all_in_thread: bool,
 }
 
 /// data that has been resolved from the ids, provided on request
@@ -178,6 +196,7 @@ pub struct MessageCreate {
     ///
     /// deprecated: create new puppets for each bridged user instead
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
+    #[serde(default)]
     pub override_name: Option<String>,
 
     /// used so the client can know if the message was sent or not
@@ -186,9 +205,11 @@ pub struct MessageCreate {
     // TODO(#87): actually support Ideompotency-Key
     // TODO(#246): use this to deduplicate messages
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
+    #[serde(default)]
     pub nonce: Option<String>,
 
     #[cfg(feature = "feat_custom_embeds")]
+    #[serde(default)]
     pub embeds: Vec<UrlEmbed>,
 }
 
@@ -491,11 +512,13 @@ pub struct MessageDefaultTagged {
     pub embeds: Vec<UrlEmbed>,
 
     #[cfg(feature = "feat_reactions")]
+    #[serde(default)]
     pub reactions: ReactionCounts,
 
     // experimental! don't touch yet.
     #[cfg(feature = "feat_interaction")]
     #[cfg_attr(feature = "utoipa", schema(ignore))]
+    #[serde(default)]
     pub interactions: Interactions,
 }
 

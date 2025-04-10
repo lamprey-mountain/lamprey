@@ -24,7 +24,7 @@ pub struct Thumb {
     pub image: Image,
 }
 
-/// multiple sized thumbs
+/// multiple sized thumbs. always has at least one thumbnail.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Thumbs(pub Vec<Thumb>);

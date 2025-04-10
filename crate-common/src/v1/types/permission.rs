@@ -9,7 +9,7 @@ pub mod defaults;
 
 // should i rename Admin to RoomAdmin? it might be confusing to have ThreadAdmin
 // be a different permission though
-// should i split out room, thread, user, and server permissions?
+// should i split out room, thread, user, and server permissions? yeah.
 /// a permission that lets a user do something
 ///
 /// - unimplemented: the feature this permission refers to does not yet exist
@@ -203,6 +203,7 @@ pub enum Permission {
 
     /// (unimplemented) create announcements
     /// requires ThreadCreate*
+    // rename to ThreadCreateAnnouncement?
     ThreadPublish,
 
     /// (user) access dms
@@ -227,15 +228,18 @@ pub enum Permission {
     VoiceConnect,
 
     /// (unimplemented) stop someone from listening
+    // remove?
     VoiceDeafen,
 
     /// (unimplemented) disconnect members from voice threads
+    // merge with VoiceMove?
     VoiceDisconnect,
 
     /// (unimplemented) move members between voice threads
     VoiceMove,
 
     /// (unimplemented) stop someone from talking
+    // remove?
     VoiceMute,
 
     /// (unimplemented) talk louder
@@ -293,6 +297,9 @@ pub enum Permission {
 //
 // would i rename ThreadCreateFoo to FooCreate? maybe!
 // also, i don't want it to become too complicated or have too many perms!
+
+// remove and replace Voice{Mute,Deafen} with editing permission overwrites
+// directly? i'd need granular permission assigning/removing then.
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

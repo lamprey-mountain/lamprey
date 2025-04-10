@@ -20,7 +20,7 @@ pub use animated::Animated;
 pub use embed::Embed;
 pub use file::*;
 pub use stream::Streamable;
-pub use thumb::Thumb;
+pub use thumb::{Thumb, Thumbs};
 
 /// a piece of media. becomes immutable after being linked to something.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

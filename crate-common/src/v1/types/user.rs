@@ -42,6 +42,9 @@ pub struct User {
     pub state: UserState,
     pub state_updated_at: Time,
     pub status: Status,
+    // pub deleted_at: Option<Time>,
+    // pub suspended_at: Option<Time>,
+    // pub suspended_reason: SuspendedReason, // ???
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

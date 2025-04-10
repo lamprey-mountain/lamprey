@@ -32,7 +32,11 @@ pub struct Report {
     pub destination: ReportDestination,
 
     /// what's being reported
+    // #[serde(flatten)]
     pub target: ReportTarget,
+    // /// number of reports for this target
+    // /// count by room/destination
+    // pub dedup_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

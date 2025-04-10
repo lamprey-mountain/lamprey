@@ -10,7 +10,9 @@ use crate::v1::types::{moderation::Report, MessageVerId};
 pub struct ThreadTypeReportPublic {
     pub last_version_id: MessageVerId,
     pub message_count: u64,
-    pub report: Report,
+    // /// the first report there may be multiple reports
+    // pub initial_report: Report,
+    // pub initial_report_message_id: MessageId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

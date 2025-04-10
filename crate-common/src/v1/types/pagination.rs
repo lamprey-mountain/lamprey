@@ -77,7 +77,9 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
 #[serde(rename_all = "lowercase")]
 pub enum PaginationDirection {
     #[default]
+    // #[serde(rename="f")]
     F,
+    // #[serde(rename="b")]
     B,
 }
 
@@ -97,3 +99,16 @@ pub struct PaginationResponse<T> {
     pub total: u64,
     pub has_more: bool,
 }
+
+// pub trait HasKey {
+//     type PaginationKey: PaginationKey;
+// }
+
+// #[derive(Debug, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub struct PaginationResponse2<T: core::fmt::Debug + Serialize + Deserialize<'_> + HasKey> {
+//     pub items: Vec<T>,
+//     pub total: u64,
+//     pub after: Option<T::PaginationKey>,
+//     pub before: Option<T::PaginationKey>,
+// }

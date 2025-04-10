@@ -11,11 +11,10 @@ pub struct ThreadTypeVoicePublic {
     pub call_id: Option<CallId>,
     pub bitrate: u64,
     pub user_limit: u64,
+    // probably needs some kind of limit
+    pub participants: Vec<VoiceParticipant>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadTypeVoicePrivate {
-    // what to put here?
-    // pub voice_state: Option<VoiceState>,
-}
+pub struct ThreadTypeVoicePrivate {}

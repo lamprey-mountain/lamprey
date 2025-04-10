@@ -260,6 +260,8 @@ pub struct InboxPatch {
 
     /// remove all old notifications before this timestamp
     pub prune_before: Option<Time>,
+    // /// remove all old notifications from things with this id
+    // pub prune: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

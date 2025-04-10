@@ -30,6 +30,7 @@ pub struct EmojiCustom {
     pub owner: EmojiOwner,
     pub animated: bool,
     pub media_id: MediaId,
+    // pub aliases: Vec<String>, // for searching
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

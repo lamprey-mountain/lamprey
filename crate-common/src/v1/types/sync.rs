@@ -9,8 +9,24 @@ use crate::v1::types::{
 };
 
 use super::{
-    reaction::ReactionKey, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
-    RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
+    reaction::ReactionKey,
+    // voice::{IceCandidate, SessionDescription},
+    InviteCode,
+    Message,
+    MessageId,
+    MessageVerId,
+    Role,
+    RoleId,
+    Room,
+    RoomId,
+    RoomMember,
+    Session,
+    SessionId,
+    SessionToken,
+    Thread,
+    ThreadId,
+    User,
+    UserId,
 };
 
 mod sync2;
@@ -36,6 +52,17 @@ pub enum MessageClient {
 
     /// heartbeat
     Pong,
+    // VoiceIceCandidate {
+    //     candidate: IceCandidate,
+    // },
+    // VoiceSdp {
+    //     sdp: SessionDescription,
+    // },
+    // VoiceConnect {
+    //     thread_id: ThreadId,
+    //     include_video: Vec<UserId>,
+    //     include_stream: Vec<UserId>,
+    // },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -220,15 +247,27 @@ pub enum MessageSync {
     // snip... ----- >8 ----
     // everything below is TODO
 
-    // VoiceUpsert {
+    // VoiceParticipantUpsert {
     //     thread_id: ThreadId,
     //     user_id: UserId,
     //     voice_state: VoiceState,
     // },
 
-    // VoiceDelete {
+    // VoiceParticipantDelete {
     //     thread_id: ThreadId,
     //     user_id: UserId,
+    // },
+
+    // VoiceIceCandidate {
+    //     candidate: IceCandidate,
+    // },
+    // VoiceSdp {
+    //     sdp: SessionDescription,
+    // },
+    // VoiceConnected {
+    //     thread_id: ThreadId,
+    //     include_video: Vec<UserId>,
+    //     include_stream: Vec<UserId>,
     // },
 
     // EventRsvp {

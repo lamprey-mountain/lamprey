@@ -93,6 +93,11 @@ pub enum MentionTag {
     /// mention everyone with a role
     Role(RoleId),
 
+    // /// mention everyone online in the room
+    // HereRoom,
+
+    // /// mention everyone online in the thread
+    // HereThread,
     /// mention everyone in the room
     AllRoom,
 

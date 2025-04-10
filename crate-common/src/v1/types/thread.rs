@@ -128,12 +128,12 @@ pub struct Thread {
     // pub moved_from: Option<(RoomId, ThreadId)>,
     // pub deleted_at: Option<Time>,
     // pub locked_at: Option<Time>,
-    // pub locked_reason: Option<String>,
+    // pub locked_reason: (message/audit log),
     // pub archived_at: Option<Time>,
     // pub archived_by: Option<User>,
-    // pub archived_reason: Option<String>,
+    // pub archived_reason: (audit log),
     // pub archived: Option<Archived>,
-    // pub ephemeral: bool,
+    // pub is_ephemeral: bool,
 }
 
 // enum Archived {
@@ -348,6 +348,11 @@ pub enum ThreadVisibility {
     // maybe use Room(RoomId) instead?,
     Room,
 
+    // Room {
+    //     /// anyone can search for and find this; otherwise, this is unlisted
+    //     /// setting to false hides it in the listing unless you can view everything
+    //     is_discoverable: bool,
+    // },
     /// anyone can view
     Public {
         /// anyone can search for and find this; otherwise, this is unlisted
@@ -363,6 +368,7 @@ pub enum ThreadVisibility {
     },
 }
 
+/// too generic?
 #[cfg(feature = "feat_thread_linking")]
 pub mod thread_linking {
     use crate::v1::types::{util::Time, ThreadId, UserId};
@@ -410,6 +416,28 @@ pub mod thread_linking {
 
         /// generic bidirectional relationship
         Related,
+    }
+}
+
+// i still dont know
+#[cfg(feature = "feat_thread_linking")]
+pub mod thread_linking_2 {
+    use crate::v1::types::{util::Time, ThreadId, UserId};
+
+    // need a way to define access control for linking threads
+    // linked threads need to be in the same room
+    pub struct ThreadLinks {
+        /// announcement thread this was cloned from
+        pub announcement: Option<ThreadId>,
+
+        /// targets the source thread if this was forwarded
+        pub forwards: Option<ThreadId>,
+
+        /// this is a duplicate
+        pub duplicates: Option<ThreadId>,
+
+        /// alternative text thread where this thread can be discussed
+        pub discussion: Option<ThreadId>,
     }
 }
 

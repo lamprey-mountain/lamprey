@@ -11,7 +11,7 @@ use validator::Validate;
 
 use super::super::{misc::Color, util::truncate::truncate_with_ellipsis, EmbedId};
 
-use super::{MediaFile, MediaImage};
+use super::{MediaFile, MediaImage, Thumbs};
 
 /// base for all embeds
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -43,17 +43,11 @@ pub struct EmbedBase {
     pub media: Option<MediaFile>,
 
     /// a small image that represents this thing
-    pub thumbnail: Option<MediaImage>,
+    pub thumbs: Option<Thumbs>,
 
     /// who made this thing
     #[cfg_attr(feature = "validator", validate(nested))]
     pub author: Author,
-    // /// a video
-    // pub video: Option<MediaVideo>,
-
-    // /// an audio
-    // pub audio: Option<MediaAudio>,
-
     // pub published_at: Option<Time>,
     // pub updated_at: Option<Time>,
     // pub tags: Vec<String>,
@@ -79,22 +73,6 @@ pub struct EmbedBase {
 //     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
 //     pub value: String,
 // }
-
-/// arbitrary key value metadata
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct EmbedFooter {
-    #[serde(flatten)]
-    pub base: EmbedBase,
-
-    /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
-    pub canonical_url: Option<Url>,
-
-    /// where did the embed come from
-    #[cfg_attr(feature = "validator", validate(nested))]
-    pub site: Website,
-}
 
 /// a preview of some remote content at a url
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,6 +102,20 @@ pub struct EmbedCustom {
     // any custom embed specific fields?
 }
 
+/// a remote file embed
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct EmbedFile {
+    /// the url for this thing
+    pub url: Url,
+
+    /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
+    pub canonical_url: Option<Url>,
+
+    pub inner: super::MediaFile,
+}
+
 /// a preview of some remote content
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -136,7 +128,7 @@ pub enum Embed {
     Article(Box<EmbedUrl>),
 
     /// a direct link to a file
-    File(Box<super::MediaFile>),
+    File(Box<EmbedFile>),
 
     /// a custom embed
     Custom(Box<EmbedCustom>),
@@ -373,4 +365,25 @@ https://oembed.com/#section4 oembed
 //     has_ads: bool,
 //     has_trackers: bool,
 //     html_size: u64,
+//     status: u16,
 // }
+
+impl Embed {
+    pub fn url(&self) -> Option<&Url> {
+        match self {
+            Embed::Website(embed_url) => Some(&embed_url.base.url),
+            Embed::Article(embed_url) => Some(&embed_url.base.url),
+            Embed::File(embed_file) => Some(&embed_file.url),
+            Embed::Custom(embed_custom) => Some(&embed_custom.base.url),
+        }
+    }
+
+    pub fn canonical_url(&self) -> Option<&Url> {
+        match self {
+            Embed::Website(embed_url) => embed_url.canonical_url.as_ref(),
+            Embed::Article(embed_url) => embed_url.canonical_url.as_ref(),
+            Embed::File(embed_file) => embed_file.canonical_url.as_ref(),
+            Embed::Custom(_) => None,
+        }
+    }
+}

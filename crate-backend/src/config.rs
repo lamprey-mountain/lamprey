@@ -9,6 +9,7 @@ pub struct Config {
     pub rust_log: String,
     pub database_url: String,
     pub base_url: Url,
+    /// for media/file uploads
     pub s3: ConfigS3,
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
@@ -21,6 +22,8 @@ pub struct ConfigS3 {
     pub region: String,
     pub access_key_id: String,
     pub secret_access_key: String,
+    // /// alternative host instead of going though the reverse proxy
+    // pub local_endpoint: Option<Url>,
 }
 
 #[derive(Debug, Deserialize)]

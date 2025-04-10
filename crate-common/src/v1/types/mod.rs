@@ -4,6 +4,8 @@
 // TODO(#242): make serde optional
 // maybe merge util and misc?
 
+// maybe rename self -> something else (@me instead of @self)
+
 /// utility stuff
 pub mod util;
 

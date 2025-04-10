@@ -36,7 +36,7 @@ pub struct File<T> {
     pub source_url: Option<Url>,
 
     /// Thumbnails for this file
-    pub thumbs: Thumbs,
+    pub thumbs: Option<Thumbs>,
 
     /// metadata about this file
     #[serde(flatten)]

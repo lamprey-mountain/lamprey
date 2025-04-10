@@ -41,7 +41,12 @@ pub struct Tag {
     // pub restrict: Option<Vec<RoleId>>,
 
     // /// if this tag includes other tags (composition). ie. tag `fruits` might include `apples` and `oranges`
+    // // maybe don't include it here..?
     // pub includes: Option<Vec<TagId>>,
+    // pub thread_count: u64,
+    // pub active_thread_count: u64,
+    // /// threads with this tag are hidden by default. does NOT prevent people from viewing those threads though, ie. not a permission.
+    // pub is_default_hidden: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

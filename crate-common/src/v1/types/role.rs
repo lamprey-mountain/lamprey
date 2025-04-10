@@ -35,8 +35,8 @@ pub struct Role {
     // FIXME(#114): at least some sort of hierarchy
     // pub priority: u64,
 
-    // #[serde(deserialize_with = "deserialize_sorted_permissions")]
     // pub includes: Vec<Role>,
+    // pub member_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

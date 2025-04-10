@@ -32,6 +32,7 @@ pub struct Room {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
+    // TODO: rename to `topic`
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 8192)
@@ -197,9 +198,13 @@ pub enum ThreadsOrder {
     // Hot,
 
     // /// engagement causes ranking to *lower*
-    // Cool,
+    // Disengaging,
+    // /// stuff the user likes divided by popularity, aka underrated
+    // Unpopular,
     // // /// returns posts randomly!
     // // Shuffle,
+    // /// weights based on number of messages
+    // Messages,
 
     // // /// most of that specific reaction first
     // // Reactions(Emoji),
