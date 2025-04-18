@@ -1,5 +1,6 @@
 /// <reference no-default-lib="true"/>
 /// <reference lib="webworker" />
+/// <reference no-default-lib="true"/>
 
 declare const self: ServiceWorkerGlobalScope;
 
