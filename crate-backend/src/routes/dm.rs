@@ -13,6 +13,10 @@ use crate::ServerState;
 use super::util::Auth;
 use crate::error::{Error, Result};
 
+// probably need a better term, "dm" sounds wonky and "direct" is a bit h
+// chatter says "whisper", "note", "tell"
+// discord avoids naming direct messages in their api routes entirely
+
 /// Dm initialize
 ///
 /// Get or create a direct message room.

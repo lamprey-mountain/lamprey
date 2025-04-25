@@ -15,8 +15,11 @@ use crate::error::{Error, Result};
 /// Tag create (TODO)
 #[utoipa::path(
     post,
-    path = "/tag",
+    path = "/room/{room_id}/tag",
     tags = ["tag"],
+    params(
+        ("room_id", description = "Room id"),
+    ),
     responses(
         (status = CREATED, body = Tag, description = "success"),
     )
@@ -32,8 +35,11 @@ async fn tag_create(
 /// Tag get (TODO)
 #[utoipa::path(
     get,
-    path = "/tag/{tag_id}",
-    params(("tag_id", description = "Tag id")),
+    path = "/room/{room_id}/tag/{tag_id}",
+    params(
+        ("room_id", description = "Room id"),
+        ("tag_id", description = "Tag id"),
+    ),
     tags = ["tag"],
     responses(
         (status = OK, body = Tag, description = "success"),
@@ -50,8 +56,11 @@ async fn tag_get(
 /// Tag patch (TODO)
 #[utoipa::path(
     patch,
-    path = "/tag/{tag_id}",
-    params(("tag_id", description = "Tag id")),
+    path = "/room/{room_id}/tag/{tag_id}",
+    params(
+        ("room_id", description = "Room id"),
+        ("tag_id", description = "Tag id"),
+    ),
     tags = ["tag"],
     responses(
         (status = OK, body = Tag, description = "success"),
@@ -78,8 +87,11 @@ struct TagDeleteQuery {
 /// Tag delete (TODO)
 #[utoipa::path(
     delete,
-    path = "/tag/{tag_id}",
-    params(("tag_id", description = "Tag id")),
+    path = "/room/{room_id}/tag/{tag_id}",
+    params(
+        ("room_id", description = "Room id"),
+        ("tag_id", description = "Tag id"),
+    ),
     tags = ["tag"],
     responses(
         (status = NO_CONTENT, description = "success"),
@@ -94,31 +106,9 @@ async fn tag_delete(
     Err(Error::Unimplemented)
 }
 
-/// Tag list user (TODO)
-///
-/// List tags you have access to?
-#[utoipa::path(
-    get,
-    path = "/tag",
-    tags = ["tag"],
-    params(
-        PaginationQuery<TagId>,
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<Tag>, description = "success"),
-    )
-)]
-async fn tag_list_user(
-    Auth(_session): Auth,
-    Query(_q): Query<PaginationQuery<TagId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// Tag list room (TODO)
 ///
-/// List tags in a room?
+/// List tags in a room
 #[utoipa::path(
     get,
     path = "/room/{room_id}/tag",
@@ -131,7 +121,7 @@ async fn tag_list_user(
         (status = OK, body = PaginationResponse<Tag>, description = "success"),
     )
 )]
-async fn tag_list_room(
+async fn tag_list(
     Auth(_session): Auth,
     Query(_q): Query<PaginationQuery<TagId>>,
     State(_s): State<Arc<ServerState>>,
@@ -242,7 +232,7 @@ async fn tag_room_unapply(
 /// If tag a is tagged with tag b then any taggable tagged with tag a is implicitly tagged with tag b
 #[utoipa::path(
     put,
-    path = "/tag/{tag_id}/tag/{tag_id}",
+    path = "/room/{room_id}/tag/{tag_id}/tag/{tag_id}",
     tags = ["tag"],
     params(
         ("target_id", description = "Target tag id"),
@@ -266,7 +256,7 @@ async fn tag_tag_apply(
 /// Unapply a tag from a tag
 #[utoipa::path(
     delete,
-    path = "/tag/{tag_id}/tag/{tag_id}",
+    path = "/room/{room_id}/tag/{tag_id}/tag/{tag_id}",
     tags = ["tag"],
     params(
         ("target_id", description = "Target tag id"),
@@ -291,12 +281,11 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(tag_get))
         .routes(routes!(tag_patch))
         .routes(routes!(tag_delete))
-        .routes(routes!(tag_list_user))
-        .routes(routes!(tag_list_room))
+        .routes(routes!(tag_list))
         .routes(routes!(tag_thread_apply))
         .routes(routes!(tag_thread_unapply))
-        .routes(routes!(tag_room_apply))
-        .routes(routes!(tag_room_unapply))
+        // .routes(routes!(tag_room_apply))
+        // .routes(routes!(tag_room_unapply))
         .routes(routes!(tag_tag_apply))
         .routes(routes!(tag_tag_unapply))
 }

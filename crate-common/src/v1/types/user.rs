@@ -223,7 +223,7 @@ pub struct Relationship {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub note: Option<String>,
 
-    /// relationship with other user
+    /// your relationship with this other user
     pub relation: Option<RelationshipType>,
 
     /// personal petname for this user
@@ -255,6 +255,7 @@ pub struct RelationshipPatch {
 
     /// relationship with other user
     #[serde(default, deserialize_with = "some_option")]
+    #[deprecated = "use relationship state change endpoints"]
     pub relation: Option<Option<RelationshipType>>,
 
     /// personal petname for this user

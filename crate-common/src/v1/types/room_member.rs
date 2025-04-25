@@ -14,6 +14,8 @@ use crate::v1::types::util::{some_option, Diff, Time};
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMember {
+    // in the future, i might want to get rid of user_id and generally scope user profiles to rooms
+    // pub member_id: MemberId,
     pub user_id: UserId,
     pub room_id: RoomId,
 
@@ -23,6 +25,10 @@ pub struct RoomMember {
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
     pub membership_updated_at: Time,
+    // pub joined_at: Time,
+    // pub parted_at: Time,
+    // pub kicked_at: Time,
+    // pub banned_at: Time,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

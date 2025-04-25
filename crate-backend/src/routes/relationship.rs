@@ -21,6 +21,8 @@ use crate::error::{Error, Result};
 /// Get your relationship with another user
 #[utoipa::path(
     get,
+    // path = "/user/@self/memo/{target_id}",
+    // path = "/user/@self/note/{target_id}",
     path = "/user/@self/relationship/{target_id}",
     params(
         ("target_id", description = "Target user's id"),
@@ -31,6 +33,7 @@ use crate::error::{Error, Result};
         (status = NOT_FOUND, description = "couldn't find that user or you don't have any relationship state yet"),
     )
 )]
+#[deprecated = "get the target user directly"]
 async fn relationship_get(
     Path(target_user_id): Path<UserId>,
     Auth(auth_user_id): Auth,
@@ -63,6 +66,7 @@ async fn relationship_get(
         (status = NOT_MODIFIED, description = "not modified"),
     )
 )]
+#[deprecated = "will be split into different routes depending on relationship action"]
 async fn relationship_update(
     Path(target_user_id): Path<UserId>,
     Auth(auth_user_id): Auth,
@@ -179,6 +183,7 @@ async fn relationship_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
+#[deprecated = "will be split into different routes depending on relationship action"]
 async fn relationship_reset(
     Path(target_user_id): Path<UserId>,
     Auth(auth_user_id): Auth,
@@ -234,6 +239,7 @@ async fn relationship_reset(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
 )]
+#[deprecated = "use /friend or /block for listing"]
 async fn relationship_list(
     Path(_target_user_id): Path<UserIdReq>,
     Auth(auth_user_id): Auth,

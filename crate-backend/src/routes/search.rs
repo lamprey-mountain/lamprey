@@ -15,6 +15,9 @@ use crate::{Error, ServerState};
 use super::util::Auth;
 use crate::error::Result;
 
+// maybe consider having one big search endgoint that searches *everything*?
+// or maybe that's too expensive to do, idk
+
 /// Search messages
 #[utoipa::path(
     post,

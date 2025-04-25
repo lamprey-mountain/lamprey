@@ -333,8 +333,12 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(reaction_message_remove))
         .routes(routes!(reaction_message_purge))
         .routes(routes!(reaction_message_list))
-        .routes(routes!(reaction_thread_add))
-        .routes(routes!(reaction_thread_remove))
-        .routes(routes!(reaction_thread_purge))
-        .routes(routes!(reaction_thread_list))
+    // TODO: remove? you can react to the first message in the thread
+    // anyways. the only reason to keep this is if there's other thread
+    // types that can't be reacted to by default, which is likely to happen
+    // to be fair.
+    // .routes(routes!(reaction_thread_add))
+    // .routes(routes!(reaction_thread_remove))
+    // .routes(routes!(reaction_thread_purge))
+    // .routes(routes!(reaction_thread_list))
 }

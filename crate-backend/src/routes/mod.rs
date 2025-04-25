@@ -12,7 +12,7 @@ mod invite;
 mod media;
 mod message;
 mod moderation;
-mod notifications;
+mod notification;
 mod permission_overwrite;
 mod reaction;
 mod relationship;
@@ -43,7 +43,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(media::routes())
         .merge(message::routes())
         .merge(moderation::routes())
-        .merge(notifications::routes())
+        .merge(notification::routes())
         .merge(permission_overwrite::routes())
         .merge(reaction::routes())
         .merge(relationship::routes())

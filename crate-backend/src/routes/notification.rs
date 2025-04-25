@@ -53,7 +53,7 @@ async fn inbox_query(
 ///
 /// Edit notifications in the inbox.
 #[utoipa::path(
-    post,
+    patch,
     path = "/inbox",
     tags = ["notification"],
     responses((status = NO_CONTENT, description = "success"))
@@ -68,44 +68,36 @@ async fn inbox_patch(
     Err(Error::Unimplemented)
 }
 
-/// Notification edit room (TODO)
+/// Notification room configure (TODO)
 ///
 /// Edit notification settings for a room.
 #[utoipa::path(
     patch,
-    path = "/room/{room_id}/notifications",
-    params(
-        ("room_id", description = "Room id"),
-    ),
+    path = "/room/{room_id}/config/notifications",
+    params(("room_id", description = "Room id")),
     tags = ["notification"],
-    responses(
-        (status = OK, body = NotifsRoom, description = "success"),
-    )
+    responses((status = OK, body = NotifsRoom, description = "success")),
 )]
-async fn notification_edit_room(
+async fn notification_room_configure(
     Path(_room_id): Path<RoomId>,
     Auth(_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<NotifsThread>,
+    Json(_json): Json<NotifsRoom>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
 }
 
-/// Notification edit thread (TODO)
+/// Notification thread configure (TODO)
 ///
 /// Edit notification settings for a thread.
 #[utoipa::path(
     patch,
-    path = "/thread/{thread_id}/notifications",
-    params(
-        ("thread_id", description = "Thread id"),
-    ),
+    path = "/thread/{thread_id}/config/notifications",
+    params(("thread_id", description = "Thread id")),
     tags = ["notification"],
-    responses(
-        (status = OK, body = NotifsThread, description = "success"),
-    )
+    responses((status = OK, body = NotifsThread, description = "success")),
 )]
-async fn notification_edit_thread(
+async fn notification_thread_configure(
     Path(_thread_id): Path<ThreadId>,
     Auth(_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -118,6 +110,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(inbox_query))
         .routes(routes!(inbox_patch))
-        .routes(routes!(notification_edit_room))
-        .routes(routes!(notification_edit_thread))
+        .routes(routes!(notification_room_configure))
+        .routes(routes!(notification_thread_configure))
 }

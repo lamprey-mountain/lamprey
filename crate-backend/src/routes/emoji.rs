@@ -15,8 +15,11 @@ use crate::ServerState;
 /// Create a custom emoji.
 #[utoipa::path(
     post,
-    path = "/emoji",
+    path = "/room/{room_id}/emoji",
     tags = ["emoji"],
+    params(
+        ("room_id", description = "Room id"),
+    ),
     responses(
         (status = CREATED, body = EmojiCustom, description = "new emoji created"),
     )
@@ -34,8 +37,9 @@ async fn emoji_create(
 /// Get a custom emoji.
 #[utoipa::path(
     get,
-    path = "/emoji/{emoji_id}",
+    path = "/room/{room_id}/emoji/{emoji_id}",
     params(
+        ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
     tags = ["emoji"],
@@ -56,8 +60,9 @@ async fn emoji_get(
 /// Delete a custom emoji.
 #[utoipa::path(
     delete,
-    path = "/emoji/{emoji_id}",
+    path = "/room/{room_id}/emoji/{emoji_id}",
     params(
+        ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
     tags = ["emoji"],
@@ -78,8 +83,9 @@ async fn emoji_delete(
 /// Edit a custom emoji.
 #[utoipa::path(
     patch,
-    path = "/emoji/{emoji_id}",
+    path = "/room/{room_id}/emoji/{emoji_id}",
     params(
+        ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
     tags = ["emoji"],
@@ -97,12 +103,12 @@ async fn emoji_update(
     Err(Error::Unimplemented)
 }
 
-/// Emoji list room (TODO)
+/// Emoji list (TODO)
 ///
-/// List emoji for a room.
+/// List emoji in a room.
 #[utoipa::path(
     get,
-    path = "/room/{thread_id}/emoji",
+    path = "/room/{room_id}/emoji",
     params(
         PaginationQuery<EmojiId>,
         ("room_id", description = "Room id"),
@@ -112,30 +118,8 @@ async fn emoji_update(
         (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
     )
 )]
-async fn emoji_list_room(
+async fn emoji_list(
     Path(_room_id): Path<RoomId>,
-    Auth(_auth_user_id): Auth,
-    Query(_q): Query<PaginationQuery<EmojiId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
-/// Emoji list user (TODO)
-///
-/// List emoji for a user.
-#[utoipa::path(
-    get,
-    path = "/user/@self/emoji",
-    params(
-        PaginationQuery<EmojiId>,
-    ),
-    tags = ["emoji"],
-    responses(
-        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
-    )
-)]
-async fn emoji_list_user(
     Auth(_auth_user_id): Auth,
     Query(_q): Query<PaginationQuery<EmojiId>>,
     State(_s): State<Arc<ServerState>>,
@@ -149,6 +133,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(emoji_get))
         .routes(routes!(emoji_delete))
         .routes(routes!(emoji_update))
-        .routes(routes!(emoji_list_room))
-        .routes(routes!(emoji_list_user))
+        .routes(routes!(emoji_list))
 }

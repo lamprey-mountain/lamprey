@@ -303,6 +303,7 @@ async fn thread_archive(
 /// Reopen/unpin thread
 ///
 /// Set a thread's state to Default.
+/// (rename to /reopen, /restore, /refresh? can this undelete threads?)
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/activate",
@@ -371,9 +372,9 @@ async fn thread_delete(
 /// Send typing
 ///
 /// Send a typing notification to a thread
-// should this be POST?
+/// PUT is deprecated! use POST instead
 #[utoipa::path(
-    put,
+    method(put, post),
     path = "/thread/{thread_id}/typing",
     params(
         ("thread_id", description = "Thread id"),

@@ -311,7 +311,7 @@ pub async fn invite_user_create(
 /// List invites that go to a user
 #[utoipa::path(
     get,
-    path = "/users/{user_id}/invite",
+    path = "/user/{user_id}/invite",
     params(
         PaginationQuery<InviteCode>,
         ("user_id", description = "User id"),

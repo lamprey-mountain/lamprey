@@ -596,31 +596,49 @@ async fn message_version_delete(
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageDeleteBulk {
+struct MessageBulkDelete {
     /// which messages to delete
     #[serde(default)]
     #[validate(length(min = 1, max = 128))]
     message_ids: Vec<MessageId>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+struct MessageBulkUndelete {
+    /// which messages to undelete
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    message_ids: Vec<MessageId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
+struct MessageBulkMove {
+    /// which messages to move
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    message_ids: Vec<MessageId>,
+
+    /// keep original messages intact
+    copy: bool,
+
+    /// must be in same room (for now...)
+    target_thread_id: ThreadId,
+}
+
 /// Message delete bulk (TODO)
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/messages/bulk-delete",
-    params(
-        ("message_id", description = "Message id")
-    ),
+    path = "/thread/{thread_id}/messages/delete",
+    params(("thread_id", description = "Thread id")),
     tags = ["message"],
-    responses(
-        (status = NO_CONTENT, description = "bulk delete success"),
-    )
+    responses((status = NO_CONTENT, description = "bulk delete success")),
 )]
 async fn message_delete_bulk(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessageDeleteBulk>,
+    Json(json): Json<MessageBulkDelete>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
@@ -653,6 +671,42 @@ async fn message_delete_bulk(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Message undelete (TODO)
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/messages/undelete",
+    params(("thread_id", description = "Thread id")),
+    tags = ["message"],
+    responses((status = NO_CONTENT, description = "undelete success")),
+)]
+async fn message_undelete(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<MessageBulkUndelete>,
+) -> Result<()> {
+    todo!()
+}
+
+/// Message move (TODO)
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/messages/move",
+    params(("thread_id", description = "Thread id")),
+    tags = ["message"],
+    responses((status = NO_CONTENT, description = "move success")),
+)]
+async fn message_move(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<MessageBulkMove>,
+) -> Result<()> {
+    todo!()
+}
+
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
 struct RepliesQuery {
     #[serde(flatten)]
@@ -672,7 +726,7 @@ fn fn_one() -> u16 {
 /// Message replies (TODO)
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/replies/{message_id}",
+    path = "/thread/{thread_id}/reply/{message_id}",
     params(
         RepliesQuery,
         ("thread_id", description = "Thread id"),

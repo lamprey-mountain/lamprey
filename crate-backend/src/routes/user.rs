@@ -29,6 +29,7 @@ use crate::error::{Error, Result};
         (status = OK, body = User, description = "user exists (puppet with same external_platform/id)"),
     ),
 )]
+#[deprecated = "will be split into different routes depending on user type"]
 async fn user_create(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,

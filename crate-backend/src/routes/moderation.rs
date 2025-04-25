@@ -67,7 +67,7 @@ async fn report_media(
 /// Report a thread
 #[utoipa::path(
     post,
-    path = "/room/{room_id}/thread/{thread_id}/report",
+    path = "/thread/{thread_id}/report",
     params(
         ("room_id", description = "room id"),
         ("thread_id", description = "thread id"),
@@ -88,7 +88,7 @@ async fn report_thread(
 /// Report a message
 #[utoipa::path(
     post,
-    path = "/room/{room_id}/thread/{thread_id}/message/{message_id}/report",
+    path = "/thread/{thread_id}/message/{message_id}/report",
     params(
         ("room_id", description = "room id"),
         ("thread_id", description = "thread id"),

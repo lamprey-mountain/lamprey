@@ -265,6 +265,7 @@ pub enum MessageType {
     DefaultMarkdown(MessageDefaultMarkdown),
 
     #[cfg(feature = "feat_message_new_text")]
+    // #[deprecated = "didn't work how i thought it would"]
     /// a basic message, using the new tagged text format
     DefaultTagged(MessageDefaultTagged),
 
@@ -325,6 +326,7 @@ pub enum MessageType {
     /// (TODO) important message from the system/server
     // #[deprecated = "check if user.type is System"]
     SystemMessage(MessageSystemMessage),
+    // Nudge,
 }
 
 /// Information about a message being pinned or unpinned

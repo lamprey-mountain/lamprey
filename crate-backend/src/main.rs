@@ -1,3 +1,6 @@
+// TEMP: will remove deprecated routes later
+#![allow(deprecated)]
+
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
@@ -6,11 +9,12 @@ use common::v1::types::notifications::InboxFilters;
 use figment::providers::{Env, Format, Toml};
 use http::header;
 use opendal::layers::LoggingLayer;
+use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use utoipa::OpenApi;
+use utoipa::{openapi::extensions::Extensions, Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 
 use backend::{
@@ -24,26 +28,75 @@ use config::Config;
 use error::Result;
 
 #[derive(OpenApi)]
-#[openapi(components(schemas(
-    types::Room,
-    types::RoomPatch,
-    types::User,
-    types::Thread,
-    types::ThreadPatch,
-    types::Message,
-    types::RoomMember,
-    types::Role,
-    // utoipa seems to forget to add these types specifically
-    types::UserIdReq,
-    InboxFilters,
-    MessageSync,
-    PaginationQuery<MessageId>,
-    UserListFilter,
-    // TEMP: manually added for now
-    common::v1::types::text::Document,
-    common::v1::types::text::OwnedText,
-)))]
+#[openapi(
+    components(schemas(
+        types::Room,
+        types::RoomPatch,
+        types::User,
+        types::Thread,
+        types::ThreadPatch,
+        types::Message,
+        types::RoomMember,
+        types::Role,
+        // utoipa seems to forget to add these types specifically
+        types::UserIdReq,
+        InboxFilters,
+        MessageSync,
+        PaginationQuery<MessageId>,
+        UserListFilter,
+        // TEMP: manually added for now
+        common::v1::types::text::Document,
+        common::v1::types::text::OwnedText,
+    )),
+    info(
+        title = "api doccery",
+        description = "yup its the docs for the api for the uhh umm thingamabob",
+    ),
+    tags(
+        (name = "sync", description = include_str!("../docs/sync.md")),
+        (name = "auth", description = include_str!("../docs/auth.md")),
+    ),
+    modifiers(&NestedTags),
+)]
 struct ApiDoc;
+
+struct NestedTags;
+
+impl Modify for NestedTags {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let tag_groups = json!([
+            {
+                "name": "auth",
+                "description": "authentication and session management",
+                "tags": ["session", "auth"],
+            },
+            {
+                "name": "room",
+                "description": "working with rooms",
+                "tags": ["room", "room_member", "role", "emoji", "tags"],
+            },
+            {
+                "name": "thread",
+                "description": "working with threads",
+                "tags": ["thread", "thread_member", "message", "reaction"],
+            },
+            {
+                "name": "user",
+                "description": "working with users",
+                "tags": ["user", "user_email", "relationship", "dm"],
+            },
+            {
+                "name": "misc",
+                "description": "random other routes that i dont have anywhere to put yet",
+                "tags": ["debug", "invite", "media", "moderation", "notification", "sync", "search"],
+            },
+        ]);
+        openapi
+            .extensions
+            .get_or_insert_default()
+            .merge(Extensions::builder().add("x-tagGroups", tag_groups).build());
+    }
+}
 
 fn cors() -> CorsLayer {
     use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
