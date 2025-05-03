@@ -73,7 +73,7 @@ pub struct InviteWithMetadata {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum InviteTarget {
-    /// start a dm and become friends with a user
+    /// start a dm and/or become friends with a user
     User { user: User },
 
     /// join a room
@@ -83,7 +83,7 @@ pub enum InviteTarget {
         // roles: Vec<Role>,
     },
 
-    /// join a room and automatically open a thread
+    /// join a room and automatically open/focus on a thread
     Thread {
         room: Room,
         thread: Thread,
