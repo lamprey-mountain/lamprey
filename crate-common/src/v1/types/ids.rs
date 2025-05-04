@@ -32,6 +32,7 @@ mod private {
 pub trait Marker: private::Sealed {}
 
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Id<M: Marker> {
     inner: Uuid,
 
