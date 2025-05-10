@@ -1,0 +1,23 @@
+[package]
+name = "sfu"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+
+[dependencies]
+common = { version = "0.1.0", path = "../crate-common" }
+str0m = "0.8.0"
+tokio = { version = "1.42.0", features = ["macros", "process", "rt-multi-thread"] }
+crate-hakari = { version = "0.1", path = "../crate-hakari" }
+anyhow = "1.0.98"
+axum = { version = "0.8.4", default-features = false, features = ["tracing", "tokio", "json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+thiserror = "2.0.12"
+tracing = "0.1.41"
+dashmap = "6.1.0"
+reqwest = "0.12.15"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+systemstat = "0.2.4"

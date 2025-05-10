@@ -431,6 +431,9 @@ export function createApi(
 				</ApiContext.Provider>
 			);
 		},
+
+		// HACK
+		temp_events,
 	};
 
 	messages.api = api;
@@ -526,6 +529,11 @@ export type Api = {
 	tempCreateSession: () => void;
 	client: Client;
 	Provider: Component<ParentProps>;
+
+	temp_events: Emitter<{
+		sync: MessageSync;
+		ready: MessageReady;
+	}>;
 };
 
 export type Listing<T> = {

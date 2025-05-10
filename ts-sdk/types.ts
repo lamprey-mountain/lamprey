@@ -70,4 +70,5 @@ export type MessageSync =
 	| { type: "DeleteRole"; room_id: string; role_id: string }
 	| { type: "DeleteRoomMember"; room_id: string; user_id: string }
 	| { type: "DeleteInvite"; code: string }
-	| { type: "Typing"; thread_id: string; user_id: string; until: string };
+	| { type: "Typing"; thread_id: string; user_id: string; until: string }
+	| { type: "VoiceDispatch"; user_id: string; payload: any };

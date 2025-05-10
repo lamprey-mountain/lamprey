@@ -8,11 +8,16 @@ import type { Message, UrlEmbed } from "sdk";
 import { UrlEmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 import { transformBlock } from "./text.tsx";
+import { DebugWebrtc } from "./Webrtc.tsx";
 
 export const Debug = () => {
 	return (
 		<div class="debug">
 			<h3>area 51</h3>
+			<details open>
+				<summary>webrtc</summary>
+				<DebugWebrtc />
+			</details>
 			<details>
 				<summary>invite json</summary>
 				<InviteView />
@@ -46,7 +51,7 @@ export const Debug = () => {
 					]}
 				/>
 			</details>
-			<details open>
+			<details>
 				<summary>colors</summary>
 				<ul class="debug-colors">
 					<li>
@@ -75,7 +80,7 @@ export const Debug = () => {
 					</li>
 				</ul>
 			</details>
-			<details open>
+			<details>
 				<summary>text</summary>
 				<TextDbg />
 			</details>

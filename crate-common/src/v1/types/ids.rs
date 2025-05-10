@@ -148,6 +148,18 @@ macro_rules! genid {
             pub type [<$name Id>] = Id<[<Marker $name>]>;
         }
     };
+    ($name:ident) => {
+        paste::paste! {
+            #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+            #[non_exhaustive]
+            pub enum [<Marker $name>] {}
+
+            impl Marker for [<Marker $name>] {}
+            impl private::Sealed for [<Marker $name>] {}
+
+            pub type [<$name Id>] = Id<[<Marker $name>]>;
+        }
+    };
 }
 
 // i might not need version ids for everything
@@ -174,3 +186,8 @@ genid!(Report, "00000000-0000-0000-0000-000modreport");
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
+
+// genid!(Region); // not a uuid?
+genid!(Server); // rename? Worker, Host
+genid!(Livestream);
+genid!(RtcPeer);
