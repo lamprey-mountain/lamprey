@@ -8,6 +8,7 @@ use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
 };
+use serde_json::Value;
 use tokio::time::Instant;
 use tracing::{debug, trace};
 
@@ -209,6 +210,31 @@ impl Connection {
                 srv.users.status_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
+            MessageClient::VoiceDispatch { user_id, payload } => {
+                #[derive(Debug, serde::Serialize)]
+                struct Request {
+                    user_id: UserId,
+
+                    #[serde(flatten)]
+                    inner: Value,
+                }
+
+                let req = reqwest::Client::new()
+                    .post("http://localhost:4001/rpc")
+                    .json(&Request {
+                        user_id,
+                        inner: payload,
+                    })
+                    .send()
+                    .await?;
+                if !req.status().is_success() {
+                    return Err(Error::GenericError(format!(
+                        "{} {}",
+                        req.status(),
+                        req.text().await?
+                    )));
+                }
+            }
         }
         Ok(())
     }
@@ -292,6 +318,7 @@ impl Connection {
             MessageSync::ReactionThreadRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionThreadPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

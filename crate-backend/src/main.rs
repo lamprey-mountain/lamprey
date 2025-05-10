@@ -78,7 +78,7 @@ impl Modify for NestedTags {
             {
                 "name": "thread",
                 "description": "working with threads",
-                "tags": ["thread", "thread_member", "message", "reaction"],
+                "tags": ["thread", "thread_member", "message", "reaction", "voice"],
             },
             {
                 "name": "user",

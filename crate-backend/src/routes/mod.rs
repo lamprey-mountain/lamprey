@@ -8,6 +8,7 @@ mod auth;
 mod debug;
 mod dm;
 mod emoji;
+mod internal;
 mod invite;
 mod media;
 mod message;
@@ -29,6 +30,7 @@ mod user;
 mod user_config;
 mod user_email;
 mod util;
+mod voice;
 
 // HACK: re-export because utoipa
 pub use user::UserListFilter;
@@ -39,6 +41,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(emoji::routes())
+        .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())
         .merge(message::routes())
@@ -59,4 +62,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(user::routes())
         .merge(user_config::routes())
         .merge(user_email::routes())
+        .merge(voice::routes())
 }

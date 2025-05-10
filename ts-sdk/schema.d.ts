@@ -254,54 +254,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/emoji": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Emoji create (TODO)
-		 * @description Create a custom emoji.
-		 */
-		post: operations["emoji_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/emoji/{emoji_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Emoji get (TODO)
-		 * @description Get a custom emoji.
-		 */
-		get: operations["emoji_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Emoji delete (TODO)
-		 * @description Delete a custom emoji.
-		 */
-		delete: operations["emoji_delete"];
-		options?: never;
-		head?: never;
-		/**
-		 * Emoji update (TODO)
-		 * @description Edit a custom emoji.
-		 */
-		patch: operations["emoji_update"];
-		trace?: never;
-	};
 	"/api/v1/inbox": {
 		parameters: {
 			query?: never;
@@ -315,11 +267,28 @@ export interface paths {
 		 */
 		get: operations["inbox_query"];
 		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
 		/**
 		 * Inbox edit (TODO)
 		 * @description Edit notifications in the inbox.
 		 */
-		post: operations["inbox_patch"];
+		patch: operations["inbox_patch"];
+		trace?: never;
+	};
+	"/api/v1/internal/rpc": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Internal rpc */
+		post: operations["internal_rpc"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -487,6 +456,131 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/audit-logs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Fetch audit logs */
+		get: operations["room_audit_logs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/ban": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Room ban list (TODO) */
+		get: operations["room_ban_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/ban/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Room ban get (TODO) */
+		get: operations["room_ban_get"];
+		/** Room ban create (TODO) */
+		put: operations["room_ban_create"];
+		post?: never;
+		/** Room ban remove (TODO) */
+		delete: operations["room_ban_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/config/notifications": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Notification room configure (TODO)
+		 * @description Edit notification settings for a room.
+		 */
+		patch: operations["notification_room_configure"];
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/emoji": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Emoji list (TODO)
+		 * @description List emoji in a room.
+		 */
+		get: operations["emoji_list"];
+		put?: never;
+		/**
+		 * Emoji create (TODO)
+		 * @description Create a custom emoji.
+		 */
+		post: operations["emoji_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/emoji/{emoji_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Emoji get (TODO)
+		 * @description Get a custom emoji.
+		 */
+		get: operations["emoji_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Emoji delete (TODO)
+		 * @description Delete a custom emoji.
+		 */
+		delete: operations["emoji_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Emoji update (TODO)
+		 * @description Edit a custom emoji.
+		 */
+		patch: operations["emoji_update"];
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/invite": {
 		parameters: {
 			query?: never;
@@ -518,8 +612,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Fetch audit logs */
-		get: operations["room_audit_logs"];
+		/**
+		 * Fetch audit logs
+		 * @deprecated
+		 */
+		get: operations["room_audit_logs_old"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -566,26 +663,6 @@ export interface paths {
 		head?: never;
 		/** Room member update */
 		patch: operations["room_member_update"];
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/notifications": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Notification edit room (TODO)
-		 * @description Edit notification settings for a room.
-		 */
-		patch: operations["notification_edit_room"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/report": {
@@ -689,11 +766,12 @@ export interface paths {
 		};
 		/**
 		 * Tag list room (TODO)
-		 * @description List tags in a room?
+		 * @description List tags in a room
 		 */
-		get: operations["tag_list_room"];
+		get: operations["tag_list"];
 		put?: never;
-		post?: never;
+		/** Tag create (TODO) */
+		post: operations["tag_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -707,21 +785,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
-		/**
-		 * Tag room apply (TODO)
-		 * @description Apply a tag to a room
-		 */
-		put: operations["tag_room_apply"];
+		/** Tag get (TODO) */
+		get: operations["tag_get"];
+		put?: never;
 		post?: never;
-		/**
-		 * Tag room unapply (TODO)
-		 * @description Unapply a tag from a room
-		 */
-		delete: operations["tag_room_unapply"];
+		/** Tag delete (TODO) */
+		delete: operations["tag_delete"];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Tag patch (TODO) */
+		patch: operations["tag_patch"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/tag/{tag_id}/permission/{overwrite_id}": {
@@ -748,6 +821,32 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/tag/{tag_id}/tag/{tag_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Tag tag apply (TODO)
+		 * @description Apply a tag to a tag
+		 *
+		 *     If tag a is tagged with tag b then any taggable tagged with tag a is implicitly tagged with tag b
+		 */
+		put: operations["tag_tag_apply"];
+		post?: never;
+		/**
+		 * Tag tag unapply (TODO)
+		 * @description Unapply a tag from a tag
+		 */
+		delete: operations["tag_tag_unapply"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/thread": {
 		parameters: {
 			query?: never;
@@ -760,66 +859,6 @@ export interface paths {
 		put?: never;
 		/** Create a thread */
 		post: operations["thread_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/thread/{thread_id}/message/{message_id}/report": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Report message (TODO)
-		 * @description Report a message
-		 */
-		post: operations["report_message"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/thread/{thread_id}/report": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Report thread (TODO)
-		 * @description Report a thread
-		 */
-		post: operations["report_thread"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{thread_id}/emoji": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Emoji list room (TODO)
-		 * @description List emoji for a room.
-		 */
-		get: operations["emoji_list_room"];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -914,72 +953,6 @@ export interface paths {
 		patch: operations["session_update"];
 		trace?: never;
 	};
-	"/api/v1/tag": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Tag list user (TODO)
-		 * @description List tags you have access to?
-		 */
-		get: operations["tag_list_user"];
-		put?: never;
-		/** Tag create (TODO) */
-		post: operations["tag_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/tag/{tag_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Tag get (TODO) */
-		get: operations["tag_get"];
-		put?: never;
-		post?: never;
-		/** Tag delete (TODO) */
-		delete: operations["tag_delete"];
-		options?: never;
-		head?: never;
-		/** Tag patch (TODO) */
-		patch: operations["tag_patch"];
-		trace?: never;
-	};
-	"/api/v1/tag/{tag_id}/tag/{tag_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Tag tag apply (TODO)
-		 * @description Apply a tag to a tag
-		 *
-		 *     If tag a is tagged with tag b then any taggable tagged with tag a is implicitly tagged with tag b
-		 */
-		put: operations["tag_tag_apply"];
-		post?: never;
-		/**
-		 * Tag tag unapply (TODO)
-		 * @description Unapply a tag from a tag
-		 */
-		delete: operations["tag_tag_unapply"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/thread/{thread_id}": {
 		parameters: {
 			query?: never;
@@ -1033,6 +1006,7 @@ export interface paths {
 		/**
 		 * Reopen/unpin thread
 		 * @description Set a thread's state to Default.
+		 *     (rename to /reopen, /restore, /refresh? can this undelete threads?)
 		 */
 		put: operations["thread_activate"];
 		post?: never;
@@ -1060,6 +1034,26 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/config/notifications": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Notification thread configure (TODO)
+		 * @description Edit notification settings for a thread.
+		 */
+		patch: operations["notification_thread_configure"];
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/context/{message_id}": {
@@ -1204,6 +1198,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/message/{message_id}/report": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Report message (TODO)
+		 * @description Report a message
+		 */
+		post: operations["report_message"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/thread/{thread_id}/message/{message_id}/version": {
 		parameters: {
 			query?: never;
@@ -1239,7 +1253,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/messages/bulk-delete": {
+	"/api/v1/thread/{thread_id}/messages/delete": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1254,26 +1268,6 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/notifications": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Notification edit thread (TODO)
-		 * @description Edit notification settings for a thread.
-		 */
-		patch: operations["notification_edit_thread"];
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/permission/{overwrite_id}": {
@@ -1320,55 +1314,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/reaction": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/**
-		 * Thread reaction purge
-		 * @description Remove all reactions from a thread.
-		 */
-		delete: operations["reaction_thread_purge"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/reaction/{key}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Thread reaction list
-		 * @description List thread reactions for a specific emoji.
-		 */
-		get: operations["reaction_thread_list"];
-		/**
-		 * Thread reaction add
-		 * @description Add a reaction to a thread.
-		 */
-		put: operations["reaction_thread_add"];
-		post?: never;
-		/**
-		 * Thread reaction remove
-		 * @description Remove a reaction from a thread.
-		 */
-		delete: operations["reaction_thread_remove"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/replies/{message_id}": {
+	"/api/v1/thread/{thread_id}/reply/{message_id}": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1379,6 +1325,26 @@ export interface paths {
 		get: operations["message_replies"];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/report": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Report thread (TODO)
+		 * @description Report a thread
+		 */
+		post: operations["report_thread"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1420,9 +1386,32 @@ export interface paths {
 		/**
 		 * Send typing
 		 * @description Send a typing notification to a thread
+		 *     PUT is deprecated! use POST instead
 		 */
 		put: operations["thread_typing"];
-		post?: never;
+		/**
+		 * Send typing
+		 * @description Send a typing notification to a thread
+		 *     PUT is deprecated! use POST instead
+		 */
+		post: operations["thread_typing"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/voice": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Voice do something (TEMP) */
+		post: operations["voice_foobar"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1442,9 +1431,36 @@ export interface paths {
 		 */
 		get: operations["user_list"];
 		put?: never;
-		/** User create */
+		/**
+		 * User create
+		 * @deprecated
+		 */
 		post: operations["user_create"];
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/@self/block/{target_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Block add (TODO)
+		 * @description Block a user.
+		 */
+		put: operations["block_add"];
+		post?: never;
+		/**
+		 * Block remove (TODO)
+		 * @description Unblock a user.
+		 */
+		delete: operations["block_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1474,21 +1490,25 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/user/@self/emoji": {
+	"/api/v1/user/@self/friend/{target_id}": {
 		parameters: {
 			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
+		get?: never;
 		/**
-		 * Emoji list user (TODO)
-		 * @description List emoji for a user.
+		 * Friend add (TODO)
+		 * @description Send or accept a friend request.
 		 */
-		get: operations["emoji_list_user"];
-		put?: never;
+		put: operations["friend_add"];
 		post?: never;
-		delete?: never;
+		/**
+		 * Friend remove (TODO)
+		 * @description Remove friend or reject a friend request.
+		 */
+		delete: operations["friend_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1502,21 +1522,24 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Relationship get (TODO)
+		 * Relationship get
+		 * @deprecated
 		 * @description Get your relationship with another user
 		 */
 		get: operations["relationship_get"];
 		put?: never;
 		post?: never;
 		/**
-		 * Relationship remove (TODO)
+		 * Relationship remove
+		 * @deprecated
 		 * @description Reset your relationship with another user
 		 */
 		delete: operations["relationship_reset"];
 		options?: never;
 		head?: never;
 		/**
-		 * Relationship update (TODO)
+		 * Relationship update
+		 * @deprecated
 		 * @description Update your relationship with another user
 		 */
 		patch: operations["relationship_update"];
@@ -1550,6 +1573,26 @@ export interface paths {
 		};
 		/** User audit logs (TODO) */
 		get: operations["user_audit_logs"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/{user_id}/block": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Block list (TODO)
+		 * @description List (mutually?) blocked users.
+		 */
+		get: operations["block_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1635,6 +1678,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/friend": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Friend list (TODO)
+		 * @description List (mutual) friends.
+		 */
+		get: operations["friend_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/invite": {
 		parameters: {
 			query?: never;
@@ -1642,7 +1705,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
+		/**
+		 * Invite user list (TODO)
+		 * @description List invites that go to a user
+		 */
+		get: operations["invite_user_list"];
 		put?: never;
 		/**
 		 * Invite user create (TODO)
@@ -1663,9 +1730,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Relationship list (TODO)
-		 * @description List relationships with other users. Passing in someone else's id lists
-		 *     mutual friends.
+		 * Relationship list
+		 * @deprecated
+		 * @description List relationships with other users.
 		 */
 		get: operations["relationship_list"];
 		put?: never;
@@ -1717,34 +1784,14 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/users/{user_id}/invite": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Invite user list (TODO)
-		 * @description List invites that go to a user
-		 */
-		get: operations["invite_user_list"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
 		AckReq: {
-			message_id?: null | components["schemas"]["MessageId"];
+			message_id?: null | components["schemas"]["Id"];
 			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
-			version_id: components["schemas"]["MessageVerId"];
+			version_id: components["schemas"]["Id"];
 		};
 		AnyBlock: string | components["schemas"]["BlockInner"];
 		AnyDocument:
@@ -1759,19 +1806,17 @@ export interface components {
 		};
 		AuditLog: {
 			/** @description Unique id idenfitying this entry */
-			id: components["schemas"]["AuditLogId"];
+			id: components["schemas"]["Id"];
 			/** @description Generated sync payload (sent in websocket) */
 			payload: components["schemas"]["MessageSync"];
 			payload_prev?: null | components["schemas"]["MessageSync"];
 			/** @description User supplied reason why this happened */
 			reason?: string | null;
 			/** @description Room this happened in */
-			room_id: components["schemas"]["RoomId"];
+			room_id: components["schemas"]["Id"];
 			/** @description User who caused this entry to be created */
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		};
-		/** Format: uuid */
-		AuditLogId: string;
 		AuthStatus: {
 			/** @description if a password has been set */
 			has_password: boolean;
@@ -1818,28 +1863,28 @@ export interface components {
 			/** @enum {string} */
 			type: "Other";
 		};
-		BotOwner: {
-			/** @enum {string} */
-			owner_type: "Thread";
-			thread_id: components["schemas"]["ThreadId"];
-		} | {
-			/** @enum {string} */
-			owner_type: "Room";
-			room_id: components["schemas"]["RoomId"];
-		} | {
-			/** @enum {string} */
-			owner_type: "User";
-			user_id: components["schemas"]["UserId"];
-		} | {
-			/** @enum {string} */
-			owner_type: "Server";
-		};
-		BotVisibility: "Private" | {
+		BotAccess: "Private" | {
 			/** @description anyone can use the bot */
 			Public: {
 				/** @description anyone can search for and find this; otherwise, this is unlisted */
 				is_discoverable: boolean;
 			};
+		};
+		BotOwner: {
+			/** @enum {string} */
+			owner_type: "Thread";
+			thread_id: components["schemas"]["Id"];
+		} | {
+			/** @enum {string} */
+			owner_type: "Room";
+			room_id: components["schemas"]["Id"];
+		} | {
+			/** @enum {string} */
+			owner_type: "User";
+			user_id: components["schemas"]["Id"];
+		} | {
+			/** @enum {string} */
+			owner_type: "Server";
 		};
 		CaptchaChallenge: {
 			code: string;
@@ -1849,6 +1894,12 @@ export interface components {
 		};
 		/** @description a color */
 		Color: string;
+		Command: {
+			payload: unknown;
+			/** @enum {string} */
+			type: "VoiceDispatch";
+			user_id: components["schemas"]["Id"];
+		};
 		ContextResponse: {
 			has_after: boolean;
 			has_before: boolean;
@@ -1885,15 +1936,15 @@ export interface components {
 			| components["schemas"]["EmojiUnicode"];
 		EmojiCustom: {
 			animated: boolean;
-			creator_id: components["schemas"]["UserId"];
-			id: components["schemas"]["EmojiId"];
-			media_id: components["schemas"]["MediaId"];
+			creator_id: components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			media_id: components["schemas"]["Id"];
 			name: string;
 			owner: components["schemas"]["EmojiOwner"];
 		};
 		EmojiCustomCreate: {
 			animated: boolean;
-			media_id: components["schemas"]["MediaId"];
+			media_id: components["schemas"]["Id"];
 			name: string;
 			owner: components["schemas"]["EmojiOwner"];
 		};
@@ -1901,12 +1952,10 @@ export interface components {
 			name?: string | null;
 			owner?: null | components["schemas"]["EmojiOwner"];
 		};
-		/** Format: uuid */
-		EmojiId: string;
 		EmojiOwner: {
 			/** @enum {string} */
 			owner: "Room";
-			room_id: components["schemas"]["RoomId"];
+			room_id: components["schemas"]["Id"];
 		} | {
 			/** @enum {string} */
 			owner: "User";
@@ -1914,6 +1963,12 @@ export interface components {
 		/** @description a single unicode emoji */
 		EmojiUnicode: string;
 		ExternalPlatform: null | string;
+		/**
+		 * Uuid
+		 * Format: uuid
+		 * @description A universally unique identifier.
+		 */
+		Id: string;
 		/** @description how a user is ignoring another user */
 		Ignore: {
 			/** @enum {string} */
@@ -1954,48 +2009,48 @@ export interface components {
 		};
 		InboxPatchAdd: {
 			added_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
 		} | {
 			added_at?: null | components["schemas"]["Time"];
-			message_id: components["schemas"]["MessageId"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Message";
 		};
 		InboxPatchRead: {
 			read_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
 		} | {
-			message_id: components["schemas"]["MessageId"];
+			message_id: components["schemas"]["Id"];
 			read_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Message";
 		};
 		InboxPatchUnread: {
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
 		} | {
-			message_id: components["schemas"]["MessageId"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Message";
 		};
 		/** @description ways to interact with a message */
 		Interactions: {
 			/** @description show placeholder reactions (they appear with zero total reactions) for these emoji */
-			reactions_default: components["schemas"]["Emoji"][];
+			reactions_default?: components["schemas"]["Emoji"][] | null;
 		};
 		Invite: {
 			/** @description the invite code for this invite */
@@ -2005,7 +2060,7 @@ export interface components {
 			/** @description the user who created this invite */
 			creator: components["schemas"]["User"];
 			/** @description the id of the user who created this invite */
-			creator_id: components["schemas"]["UserId"];
+			creator_id: components["schemas"]["Id"];
 			/** @description a description for this invite */
 			description?: string | null;
 			expires_at?: null | components["schemas"]["Time"];
@@ -2057,14 +2112,14 @@ export interface components {
 		InviteTargetId: {
 			/** @enum {string} */
 			type: "User";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
-			room_id: components["schemas"]["RoomId"];
+			room_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Room";
 		} | {
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
 		};
@@ -2088,7 +2143,7 @@ export interface components {
 			alt?: string | null;
 			/** @description The original filename */
 			filename: string;
-			id: components["schemas"]["MediaId"];
+			id: components["schemas"]["Id"];
 			/** @description The source (Uploaded, Downloaded) */
 			source: components["schemas"]["MediaTrack"];
 			/** @description The source (Extracted, Generated) */
@@ -2121,21 +2176,19 @@ export interface components {
 			source_url: string;
 		};
 		MediaCreated: {
-			media_id: components["schemas"]["MediaId"];
+			media_id: components["schemas"]["Id"];
 			/**
 			 * Format: uri
 			 * @description A url to download your media to
 			 */
 			upload_url?: string | null;
 		};
-		/** Format: uuid */
-		MediaId: string;
 		MediaPatch: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
 		};
 		MediaRef: {
-			id: components["schemas"]["MediaId"];
+			id: components["schemas"]["Id"];
 		};
 		MediaSize: {
 			/**
@@ -2206,22 +2259,21 @@ export interface components {
 		/** @description who/what this message notified on send */
 		Mentions: {
 			/** @description if this mentioned everyone in the room */
-			mentions_all_in_room: boolean;
+			all_in_room: boolean;
 			/** @description if this mentioned everyone in the thread */
-			mentions_all_in_thread: boolean;
-			mentions_roles: components["schemas"]["RoleId"][];
-			mentions_rooms: components["schemas"]["ThreadId"][];
-			mentions_threads: components["schemas"]["ThreadId"][];
-			mentions_users: components["schemas"]["UserId"][];
+			all_in_thread: boolean;
+			roles: components["schemas"]["Id"][];
+			rooms: components["schemas"]["Id"][];
+			threads: components["schemas"]["Id"][];
+			users: components["schemas"]["Id"][];
 		};
 		Message:
 			& components["schemas"]["MessageType"]
-			& components["schemas"]["Mentions"]
 			& components["schemas"]["MessageState"]
 			& {
 				/** @description the id of who sent this message */
-				author_id: components["schemas"]["UserId"];
-				id: components["schemas"]["MessageId"];
+				author_id: components["schemas"]["Id"];
+				id: components["schemas"]["Id"];
 				/**
 				 * @deprecated
 				 * @description if this message is pinned
@@ -2229,6 +2281,7 @@ export interface components {
 				 *     deprecated: use message.state
 				 */
 				is_pinned: boolean;
+				mentions: components["schemas"]["Mentions"];
 				/** @description unique string sent by the client to identify this message
 				 *     maybe i will replace with a header so nonces can be used everywhere */
 				nonce?: string | null;
@@ -2241,18 +2294,22 @@ export interface components {
 				 */
 				ordering: number;
 				state_updated_at: components["schemas"]["Time"];
-				thread_id: components["schemas"]["ThreadId"];
-				version_id: components["schemas"]["MessageVerId"];
+				thread_id: components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
 			};
 		/** @description a bot command */
 		MessageBotCommand: {
 			command_id: string;
 		};
+		MessageBulkDelete: {
+			/** @description which messages to delete */
+			message_ids?: components["schemas"]["Id"][];
+		};
 		MessageCreate: {
 			attachments?: components["schemas"]["MediaRef"][];
 			/** @description the message's content, in either markdown or the new format depending on if use_new_text_formatting is true */
 			content?: string | null;
-			embeds: components["schemas"]["UrlEmbed"][];
+			embeds?: components["schemas"]["UrlEmbed"][];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2274,7 +2331,7 @@ export interface components {
 			 *     deprecated: create new puppets for each bridged user instead
 			 */
 			override_name?: string | null;
-			reply_id?: null | components["schemas"]["MessageId"];
+			reply_id?: null | components["schemas"]["Id"];
 			/** @description uses the new new formatting system if true, otherwise uses markdown */
 			use_new_text_formatting?: boolean;
 		};
@@ -2300,7 +2357,7 @@ export interface components {
 			 *     deprecated: create new puppets for each bridged user instead
 			 */
 			override_name?: string | null;
-			reply_id?: null | components["schemas"]["MessageId"];
+			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description a basic message, using the shiny new and very experimental tagged text format */
 		MessageDefaultTagged: {
@@ -2308,7 +2365,6 @@ export interface components {
 			/** @description the message's content in the new format */
 			content?: string | null;
 			embeds: components["schemas"]["UrlEmbed"][];
-			interactions: components["schemas"]["Interactions"];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2316,20 +2372,14 @@ export interface components {
 			 *     deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
 			 */
 			metadata?: unknown;
-			reactions: components["schemas"]["ReactionCounts"];
-			reply_id?: null | components["schemas"]["MessageId"];
+			reactions?: components["schemas"]["ReactionCounts"];
+			reply_id?: null | components["schemas"]["Id"];
 		};
-		MessageDeleteBulk: {
-			/** @description which messages to delete */
-			message_id?: components["schemas"]["MessageId"][];
-		};
-		/** Format: uuid */
-		MessageId: string;
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
-			actor_user_id: components["schemas"]["UserId"];
+			actor_user_id: components["schemas"]["Id"];
 			reason?: string | null;
-			target_user_id: components["schemas"]["UserId"];
+			target_user_id: components["schemas"]["Id"];
 		};
 		/** @description audit log entries as a message (builtin moderation logging?) */
 		MessageModerationLog: {
@@ -2358,19 +2408,19 @@ export interface components {
 			 *     deprecated: create new puppets for each bridged user instead
 			 */
 			override_name?: string | null;
-			reply_id?: null | components["schemas"]["MessageId"];
+			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description Information about a message being pinned or unpinned */
 		MessagePin: {
-			message_id: components["schemas"]["MessageId"];
+			message_id: components["schemas"]["Id"];
 			reason?: string | null;
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description Following a room and will receive announcement posts from it */
 		MessageRoomFollowed: {
 			reason?: string | null;
-			thread_id: components["schemas"]["ThreadId"];
-			user_id: components["schemas"]["UserId"];
+			thread_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description lifecycle of a message */
 		MessageState: {
@@ -2425,32 +2475,32 @@ export interface components {
 			/** @enum {string} */
 			type: "UpsertInvite";
 		} | {
-			message_id: components["schemas"]["MessageId"];
+			message_id: components["schemas"]["Id"];
 			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "DeleteMessage";
 		} | {
-			message_id: components["schemas"]["MessageId"];
+			message_id: components["schemas"]["Id"];
 			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "DeleteMessageVersion";
-			version_id: components["schemas"]["MessageVerId"];
+			version_id: components["schemas"]["Id"];
 		} | {
-			id: components["schemas"]["UserId"];
+			id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "DeleteUser";
 		} | {
-			id: components["schemas"]["SessionId"];
+			id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "DeleteSession";
-			user_id?: null | components["schemas"]["UserId"];
+			user_id?: null | components["schemas"]["Id"];
 		} | {
-			role_id: components["schemas"]["RoleId"];
-			room_id: components["schemas"]["RoomId"];
+			role_id: components["schemas"]["Id"];
+			room_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "DeleteRole";
 		} | {
@@ -2459,61 +2509,71 @@ export interface components {
 			/** @enum {string} */
 			type: "DeleteInvite";
 		} | {
-			thread_id: components["schemas"]["ThreadId"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Typing";
 			until: components["schemas"]["Time"];
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
-			message_id: components["schemas"]["MessageId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ThreadAck";
-			version_id: components["schemas"]["MessageVerId"];
+			version_id: components["schemas"]["Id"];
 		} | {
 			relationship: components["schemas"]["Relationship"];
 			/** @enum {string} */
 			type: "RelationshipUpsert";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			/** @enum {string} */
 			type: "RelationshipDelete";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			key: components["schemas"]["ReactionKey"];
-			message_id: components["schemas"]["MessageId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionMessageUpsert";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			key: components["schemas"]["ReactionKey"];
-			message_id: components["schemas"]["MessageId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionMessageRemove";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
-			message_id: components["schemas"]["MessageId"];
-			thread_id: components["schemas"]["ThreadId"];
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionMessagePurge";
 		} | {
 			key: components["schemas"]["ReactionKey"];
-			thread_id: components["schemas"]["ThreadId"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionThreadUpsert";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			key: components["schemas"]["ReactionKey"];
-			thread_id: components["schemas"]["ThreadId"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionThreadRemove";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
-			thread_id: components["schemas"]["ThreadId"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "ReactionThreadPurge";
+		} | {
+			message_ids: components["schemas"]["Id"][];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageDeleteBulk";
+		} | {
+			payload: unknown;
+			/** @enum {string} */
+			type: "VoiceDispatch";
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description a message (announcement? motd?) from the system */
 		MessageSystemMessage: {
@@ -2523,9 +2583,9 @@ export interface components {
 		};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
-			source_room_id: components["schemas"]["RoomId"];
-			source_thread_id: components["schemas"]["ThreadId"];
-			source_user_id: components["schemas"]["UserId"];
+			source_room_id: components["schemas"]["Id"];
+			source_thread_id: components["schemas"]["Id"];
+			source_user_id: components["schemas"]["Id"];
 		};
 		/** @description Information about a thread being updated */
 		MessageThreadUpdate: {
@@ -2588,8 +2648,6 @@ export interface components {
 				/** @enum {string} */
 				type: "SystemMessage";
 			});
-		/** Format: uuid */
-		MessageVerId: string;
 		/**
 		 * Mime
 		 * @description a mime/media type
@@ -2623,15 +2681,15 @@ export interface components {
 		};
 		NotificationInfo: {
 			reason: components["schemas"]["NotificationReasonThread"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
 		} | {
-			message_id: components["schemas"]["MessageId"];
+			message_id: components["schemas"]["Id"];
 			reason: components["schemas"]["NotificationReasonMessage"];
-			room_id: components["schemas"]["RoomId"];
-			thread_id: components["schemas"]["ThreadId"];
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Message";
 		};
@@ -2677,32 +2735,40 @@ export interface components {
 		OwnedText: string;
 		/** @enum {string} */
 		PaginationDirection: "f" | "b";
-		PaginationQuery_MessageId: {
+		PaginationQuery_Id: {
 			dir?: null | components["schemas"]["PaginationDirection"];
-			/** Format: uuid */
+			/**
+			 * Uuid
+			 * Format: uuid
+			 * @description A universally unique identifier.
+			 */
 			from?: string;
 			/**
 			 * Format: int32
 			 * @description The maximum number of items to return.
 			 */
 			limit?: number | null;
-			/** Format: uuid */
+			/**
+			 * Uuid
+			 * Format: uuid
+			 * @description A universally unique identifier.
+			 */
 			to?: string;
 		};
 		PaginationResponse_AuditLog: {
 			has_more: boolean;
 			items: {
 				/** @description Unique id idenfitying this entry */
-				id: components["schemas"]["AuditLogId"];
+				id: components["schemas"]["Id"];
 				/** @description Generated sync payload (sent in websocket) */
 				payload: components["schemas"]["MessageSync"];
 				payload_prev?: null | components["schemas"]["MessageSync"];
 				/** @description User supplied reason why this happened */
 				reason?: string | null;
 				/** @description Room this happened in */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description User who caused this entry to be created */
-				user_id: components["schemas"]["UserId"];
+				user_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -2711,9 +2777,9 @@ export interface components {
 			has_more: boolean;
 			items: {
 				animated: boolean;
-				creator_id: components["schemas"]["UserId"];
-				id: components["schemas"]["EmojiId"];
-				media_id: components["schemas"]["MediaId"];
+				creator_id: components["schemas"]["Id"];
+				id: components["schemas"]["Id"];
+				media_id: components["schemas"]["Id"];
 				name: string;
 				owner: components["schemas"]["EmojiOwner"];
 			}[];
@@ -2730,7 +2796,7 @@ export interface components {
 				/** @description the user who created this invite */
 				creator: components["schemas"]["User"];
 				/** @description the id of the user who created this invite */
-				creator_id: components["schemas"]["UserId"];
+				creator_id: components["schemas"]["Id"];
 				/** @description a description for this invite */
 				description?: string | null;
 				expires_at?: null | components["schemas"]["Time"];
@@ -2746,12 +2812,11 @@ export interface components {
 			has_more: boolean;
 			items: (
 				& components["schemas"]["MessageType"]
-				& components["schemas"]["Mentions"]
 				& components["schemas"]["MessageState"]
 				& {
 					/** @description the id of who sent this message */
-					author_id: components["schemas"]["UserId"];
-					id: components["schemas"]["MessageId"];
+					author_id: components["schemas"]["Id"];
+					id: components["schemas"]["Id"];
 					/**
 					 * @deprecated
 					 * @description if this message is pinned
@@ -2759,6 +2824,7 @@ export interface components {
 					 *     deprecated: use message.state
 					 */
 					is_pinned: boolean;
+					mentions: components["schemas"]["Mentions"];
 					/** @description unique string sent by the client to identify this message
 					 *     maybe i will replace with a header so nonces can be used everywhere */
 					nonce?: string | null;
@@ -2771,8 +2837,8 @@ export interface components {
 					 */
 					ordering: number;
 					state_updated_at: components["schemas"]["Time"];
-					thread_id: components["schemas"]["ThreadId"];
-					version_id: components["schemas"]["MessageVerId"];
+					thread_id: components["schemas"]["Id"];
+					version_id: components["schemas"]["Id"];
 				}
 			)[];
 			/** Format: int64 */
@@ -2792,19 +2858,15 @@ export interface components {
 		PaginationResponse_ReactionListItem: {
 			has_more: boolean;
 			items: {
-				user_id: components["schemas"]["UserId"];
+				user_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
 		};
-		PaginationResponse_Relationship: {
+		PaginationResponse_RelationshipWithUserId: {
 			has_more: boolean;
-			items: ((null | components["schemas"]["Ignore"]) & {
-				/** @description whatever you want to write */
-				note?: string | null;
-				/** @description personal petname for this user */
-				petname?: string | null;
-				relation?: null | components["schemas"]["RelationshipType"];
+			items: (components["schemas"]["Relationship"] & {
+				user_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -2813,14 +2875,14 @@ export interface components {
 			has_more: boolean;
 			items: {
 				description?: string | null;
-				id: components["schemas"]["RoleId"];
+				id: components["schemas"]["Id"];
 				is_default: boolean;
 				is_mentionable: boolean;
 				is_self_applicable: boolean;
 				name: string;
 				permissions: components["schemas"]["Permission"][];
-				room_id: components["schemas"]["RoomId"];
-				version_id: components["schemas"]["RoleVerId"];
+				room_id: components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -2832,7 +2894,7 @@ export interface components {
 				default_order: components["schemas"]["ThreadsOrder"];
 				description?: string | null;
 				/** @description A unique identifier for this room */
-				id: components["schemas"]["RoomId"];
+				id: components["schemas"]["Id"];
 				/** @description list of preferred locales, in order of most to least preferred */
 				languages: components["schemas"]["Language"][];
 				/**
@@ -2846,14 +2908,14 @@ export interface components {
 				 * @description number of people who are online in this room
 				 */
 				online_count: number;
-				system_messages?: null | components["schemas"]["ThreadId"];
+				system_messages?: null | components["schemas"]["Id"];
 				/** @description tags that are applied to this room */
-				tags_applied: components["schemas"]["TagId"][];
+				tags_applied: components["schemas"]["Id"][];
 				/**
 				 * @deprecated
 				 * @description tags that can be used in threads
 				 */
-				tags_available: components["schemas"]["TagId"][];
+				tags_available: components["schemas"]["Id"][];
 				/**
 				 * Format: int64
 				 * @description number of active threads
@@ -2874,8 +2936,8 @@ export interface components {
 			items: (components["schemas"]["RoomMembership"] & {
 				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
 				membership_updated_at: components["schemas"]["Time"];
-				room_id: components["schemas"]["RoomId"];
-				user_id: components["schemas"]["UserId"];
+				room_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -2883,7 +2945,7 @@ export interface components {
 		PaginationResponse_Session: {
 			has_more: boolean;
 			items: (components["schemas"]["SessionStatus"] & {
-				id: components["schemas"]["SessionId"];
+				id: components["schemas"]["Id"];
 				name?: string | null;
 			})[];
 			/** Format: int64 */
@@ -2894,12 +2956,12 @@ export interface components {
 			items: {
 				color?: null | components["schemas"]["Color"];
 				description?: string | null;
-				id: components["schemas"]["TagId"];
+				id: components["schemas"]["Id"];
 				/** @description whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists. */
 				is_archived: boolean;
 				name: string;
-				room_id: components["schemas"]["RoomId"];
-				version_id: components["schemas"]["TagVerId"];
+				room_id: components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -2910,9 +2972,9 @@ export interface components {
 				& components["schemas"]["ThreadPublic"]
 				& (null | components["schemas"]["ThreadPrivate"])
 				& {
-					creator_id: components["schemas"]["UserId"];
+					creator_id: components["schemas"]["Id"];
 					description?: string | null;
-					id: components["schemas"]["ThreadId"];
+					id: components["schemas"]["Id"];
 					/** @description if this should be treated as an announcement
 					 *     contents will be copied into a new room in all following room */
 					is_announcement: boolean;
@@ -2933,13 +2995,13 @@ export interface components {
 					online_count: number;
 					/** @description emoji reactions to this thread */
 					reactions: components["schemas"]["ReactionCounts"];
-					room_id: components["schemas"]["RoomId"];
+					room_id: components["schemas"]["Id"];
 					state: components["schemas"]["ThreadState"];
 					state_updated_at: components["schemas"]["Time"];
 					/** @description tags that are applied to this thread */
-					tags: components["schemas"]["TagId"][];
+					tags: components["schemas"]["Id"][];
 					/** @description only updates when the thread itself is updated, not the stuff in the thread */
-					version_id: components["schemas"]["ThreadVerId"];
+					version_id: components["schemas"]["Id"];
 					/** @description who can see this thread */
 					visibility: components["schemas"]["ThreadVisibility"];
 				}
@@ -2952,8 +3014,8 @@ export interface components {
 			items: (components["schemas"]["ThreadMembership"] & {
 				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
 				membership_updated_at: components["schemas"]["Time"];
-				thread_id: components["schemas"]["ThreadId"];
-				user_id: components["schemas"]["UserId"];
+				thread_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -2961,14 +3023,14 @@ export interface components {
 		PaginationResponse_User: {
 			has_more: boolean;
 			items: (components["schemas"]["UserType"] & {
-				avatar?: null | components["schemas"]["MediaId"];
+				avatar?: null | components["schemas"]["Id"];
 				description?: string | null;
-				id: components["schemas"]["UserId"];
+				id: components["schemas"]["Id"];
 				name: string;
 				state: components["schemas"]["UserState"];
 				state_updated_at: components["schemas"]["Time"];
 				status: components["schemas"]["Status"];
-				version_id: components["schemas"]["UserVerId"];
+				version_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -2980,7 +3042,7 @@ export interface components {
 		PasswordExecIdent: {
 			/** @enum {string} */
 			type: "UserId";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			email: components["schemas"]["EmailAddr"];
 			/** @enum {string} */
@@ -3066,13 +3128,13 @@ export interface components {
 			| "VoiceSpeak"
 			| "VoiceVideo";
 		PermissionOverridable: {
-			role_id: components["schemas"]["RoleId"];
+			role_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Role";
 		} | {
 			/** @enum {string} */
 			type: "User";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		};
 		PermissionOverride: {
 			/** @description extra permissions allowed here */
@@ -3094,7 +3156,7 @@ export interface components {
 		ReactionCounts: components["schemas"]["ReactionCount"][];
 		ReactionKey: components["schemas"]["Emoji"];
 		ReactionListItem: {
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		};
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			/** @description whatever you want to write */
@@ -3115,17 +3177,20 @@ export interface components {
 		 * @enum {string}
 		 */
 		RelationshipType: "Friend" | "Outgoing" | "Incoming" | "Block";
+		RelationshipWithUserId: components["schemas"]["Relationship"] & {
+			user_id: components["schemas"]["Id"];
+		};
 		/** @description moderation report */
 		Report: {
 			/** @description where the report is being sent to */
 			destination: components["schemas"]["ReportDestination"];
-			id: components["schemas"]["ReportId"];
+			id: components["schemas"]["Id"];
 			/** @description user supplied note */
 			note?: string | null;
 			/** @description built in reason */
 			reason: components["schemas"]["ReportReason"];
 			/** @description user id of who reported this */
-			reporter_id: components["schemas"]["UserId"];
+			reporter_id: components["schemas"]["Id"];
 			/** @description what's being reported */
 			target: components["schemas"]["ReportTarget"];
 		};
@@ -3139,8 +3204,6 @@ export interface components {
 		};
 		/** @enum {string} */
 		ReportDestination: "Room" | "Server";
-		/** Format: uuid */
-		ReportId: string;
 		/** @enum {string} */
 		ReportReason:
 			| "Illegal"
@@ -3163,35 +3226,35 @@ export interface components {
 			| "Other";
 		ReportTarget: {
 			User: {
-				target_id: components["schemas"]["UserId"];
+				target_id: components["schemas"]["Id"];
 			};
 		} | {
 			Room: {
-				target_id: components["schemas"]["RoomId"];
+				target_id: components["schemas"]["Id"];
 			};
 		} | {
 			Thread: {
-				target_id: components["schemas"]["ThreadId"];
+				target_id: components["schemas"]["Id"];
 			};
 		} | {
 			Message: {
-				target_id: components["schemas"]["MessageId"];
+				target_id: components["schemas"]["Id"];
 			};
 		} | {
 			Media: {
-				target_id: components["schemas"]["MediaId"];
+				target_id: components["schemas"]["Id"];
 			};
 		};
 		Role: {
 			description?: string | null;
-			id: components["schemas"]["RoleId"];
+			id: components["schemas"]["Id"];
 			is_default: boolean;
 			is_mentionable: boolean;
 			is_self_applicable: boolean;
 			name: string;
 			permissions: components["schemas"]["Permission"][];
-			room_id: components["schemas"]["RoomId"];
-			version_id: components["schemas"]["RoleVerId"];
+			room_id: components["schemas"]["Id"];
+			version_id: components["schemas"]["Id"];
 		};
 		RoleCreate: {
 			description?: string | null;
@@ -3203,8 +3266,6 @@ export interface components {
 			name: string;
 			permissions?: components["schemas"]["Permission"][];
 		};
-		/** Format: uuid */
-		RoleId: string;
 		RolePatch: {
 			description?: string | null;
 			is_default?: boolean | null;
@@ -3213,15 +3274,13 @@ export interface components {
 			name?: string | null;
 			permissions?: components["schemas"]["Permission"][] | null;
 		};
-		/** Format: uuid */
-		RoleVerId: string;
 		/** @description A room */
 		Room: components["schemas"]["RoomType"] & {
 			default_layout: components["schemas"]["ThreadsLayout"];
 			default_order: components["schemas"]["ThreadsOrder"];
 			description?: string | null;
 			/** @description A unique identifier for this room */
-			id: components["schemas"]["RoomId"];
+			id: components["schemas"]["Id"];
 			/** @description list of preferred locales, in order of most to least preferred */
 			languages: components["schemas"]["Language"][];
 			/**
@@ -3235,14 +3294,14 @@ export interface components {
 			 * @description number of people who are online in this room
 			 */
 			online_count: number;
-			system_messages?: null | components["schemas"]["ThreadId"];
+			system_messages?: null | components["schemas"]["Id"];
 			/** @description tags that are applied to this room */
-			tags_applied: components["schemas"]["TagId"][];
+			tags_applied: components["schemas"]["Id"][];
 			/**
 			 * @deprecated
 			 * @description tags that can be used in threads
 			 */
-			tags_available: components["schemas"]["TagId"][];
+			tags_available: components["schemas"]["Id"][];
 			/**
 			 * Format: int64
 			 * @description number of active threads
@@ -3260,13 +3319,11 @@ export interface components {
 			description?: string | null;
 			name: string;
 		};
-		/** Format: uuid */
-		RoomId: string;
 		RoomMember: components["schemas"]["RoomMembership"] & {
 			/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
 			membership_updated_at: components["schemas"]["Time"];
-			room_id: components["schemas"]["RoomId"];
-			user_id: components["schemas"]["UserId"];
+			room_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
 		};
 		RoomMemberPatch: {
 			override_description?: string | null;
@@ -3281,7 +3338,7 @@ export interface components {
 			membership: "Join";
 			override_description?: string | null;
 			override_name?: string | null;
-			roles: components["schemas"]["RoleId"][];
+			roles: components["schemas"]["Id"][];
 		} | {
 			/** @enum {string} */
 			membership: "Leave";
@@ -3310,7 +3367,7 @@ export interface components {
 		};
 		RoomView: {
 			order?: null | components["schemas"]["ThreadsOrder"];
-			tags: components["schemas"]["TagId"][];
+			tags: components["schemas"]["Id"][];
 		};
 		/** @description who can view this room */
 		RoomVisibility: "Private" | {
@@ -3361,14 +3418,12 @@ export interface components {
 			target: string;
 		};
 		Session: components["schemas"]["SessionStatus"] & {
-			id: components["schemas"]["SessionId"];
+			id: components["schemas"]["Id"];
 			name?: string | null;
 		};
 		SessionCreate: {
 			name?: string | null;
 		};
-		/** Format: uuid */
-		SessionId: string;
 		SessionPatch: {
 			name?: string | null;
 		};
@@ -3378,13 +3433,13 @@ export interface components {
 		} | {
 			/** @enum {string} */
 			status: "Authorized";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		} | {
 			/** @description given ~5 minutes after auth to do stuff? */
 			expires_at: components["schemas"]["Time"];
 			/** @enum {string} */
 			status: "Sudo";
-			user_id: components["schemas"]["UserId"];
+			user_id: components["schemas"]["Id"];
 		};
 		SessionToken: string;
 		SessionWithToken: components["schemas"]["Session"] & {
@@ -3422,21 +3477,19 @@ export interface components {
 		Tag: {
 			color?: null | components["schemas"]["Color"];
 			description?: string | null;
-			id: components["schemas"]["TagId"];
+			id: components["schemas"]["Id"];
 			/** @description whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists. */
 			is_archived: boolean;
 			name: string;
-			room_id: components["schemas"]["RoomId"];
-			version_id: components["schemas"]["TagVerId"];
+			room_id: components["schemas"]["Id"];
+			version_id: components["schemas"]["Id"];
 		};
 		TagCreate: {
 			color?: null | components["schemas"]["Color"];
 			description?: string | null;
 			name: string;
-			room_id: components["schemas"]["RoomId"];
+			room_id: components["schemas"]["Id"];
 		};
-		/** Format: uuid */
-		TagId: string;
 		TagPatch: {
 			color?: null | components["schemas"]["Color"];
 			description?: string | null;
@@ -3444,8 +3497,6 @@ export interface components {
 			is_archived?: boolean | null;
 			name?: string | null;
 		};
-		/** Format: uuid */
-		TagVerId: string;
 		/** @description metadata for text */
 		Text: {
 			language?: null | components["schemas"]["Language"];
@@ -3455,9 +3506,9 @@ export interface components {
 			& components["schemas"]["ThreadPublic"]
 			& (null | components["schemas"]["ThreadPrivate"])
 			& {
-				creator_id: components["schemas"]["UserId"];
+				creator_id: components["schemas"]["Id"];
 				description?: string | null;
-				id: components["schemas"]["ThreadId"];
+				id: components["schemas"]["Id"];
 				/** @description if this should be treated as an announcement
 				 *     contents will be copied into a new room in all following room */
 				is_announcement: boolean;
@@ -3478,13 +3529,13 @@ export interface components {
 				online_count: number;
 				/** @description emoji reactions to this thread */
 				reactions: components["schemas"]["ReactionCounts"];
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				state: components["schemas"]["ThreadState"];
 				state_updated_at: components["schemas"]["Time"];
 				/** @description tags that are applied to this thread */
-				tags: components["schemas"]["TagId"][];
+				tags: components["schemas"]["Id"][];
 				/** @description only updates when the thread itself is updated, not the stuff in the thread */
-				version_id: components["schemas"]["ThreadVerId"];
+				version_id: components["schemas"]["Id"];
 				/** @description who can see this thread */
 				visibility: components["schemas"]["ThreadVisibility"];
 			};
@@ -3492,17 +3543,15 @@ export interface components {
 			description?: string | null;
 			name: string;
 			/** @description tags to apply to this thread (overwrite, not append) */
-			tags?: components["schemas"]["TagId"][] | null;
+			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this thread */
 			type?: components["schemas"]["ThreadType"];
 		};
-		/** Format: uuid */
-		ThreadId: string;
 		ThreadMember: components["schemas"]["ThreadMembership"] & {
 			/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
 			membership_updated_at: components["schemas"]["Time"];
-			thread_id: components["schemas"]["ThreadId"];
-			user_id: components["schemas"]["UserId"];
+			thread_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
 		};
 		ThreadMemberPatch: {
 			override_description?: string | null;
@@ -3528,7 +3577,7 @@ export interface components {
 			description?: string | null;
 			name?: string | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
-			tags?: components["schemas"]["TagId"][] | null;
+			tags?: components["schemas"]["Id"][] | null;
 		};
 		/** @description user-specific data for threads */
 		ThreadPrivate:
@@ -3581,25 +3630,23 @@ export interface components {
 		ThreadType: "Chat" | "ForumLinear" | "ForumTree";
 		ThreadTypeChatPrivate: {
 			is_unread: boolean;
-			last_read_id?: null | components["schemas"]["MessageVerId"];
+			last_read_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			mention_count: number;
 			notifications: components["schemas"]["NotifsThread"];
 		};
 		ThreadTypeChatPublic: {
-			last_version_id: components["schemas"]["MessageVerId"];
+			last_version_id: components["schemas"]["Id"];
 			/** Format: int64 */
 			message_count: number;
 		};
 		ThreadTypeForumTreePublic: {
-			last_version_id: components["schemas"]["MessageVerId"];
+			last_version_id: components["schemas"]["Id"];
 			/** Format: int64 */
 			message_count: number;
 			/** Format: int64 */
 			root_message_count: number;
 		};
-		/** Format: uuid */
-		ThreadVerId: string;
 		/** @description who can view this thread */
 		ThreadVisibility: "Room" | {
 			/** @description anyone can view */
@@ -3641,7 +3688,7 @@ export interface components {
 		/** @description information about who used this code */
 		TotpRecoveryCodeUsed: {
 			used_at: components["schemas"]["Time"];
-			used_by?: null | components["schemas"]["SessionId"];
+			used_by?: null | components["schemas"]["Id"];
 		};
 		TotpRecoveryCodes: {
 			items: components["schemas"]["TotpRecoveryCode"][];
@@ -3683,7 +3730,7 @@ export interface components {
 			canonical_url?: string | null;
 			color?: null | components["schemas"]["Color"];
 			description?: string | null;
-			id: components["schemas"]["UrlEmbedId"];
+			id: components["schemas"]["Id"];
 			media?: null | components["schemas"]["Media"];
 			/** @description if `media` should be displayed as a small thumbnail or as a full size */
 			media_is_thumbnail: boolean;
@@ -3697,21 +3744,19 @@ export interface components {
 			 */
 			url: string;
 		};
-		/** Format: uuid */
-		UrlEmbedId: string;
 		UrlEmbedRequest: {
 			/** Format: uri */
 			url: string;
 		};
 		User: components["schemas"]["UserType"] & {
-			avatar?: null | components["schemas"]["MediaId"];
+			avatar?: null | components["schemas"]["Id"];
 			description?: string | null;
-			id: components["schemas"]["UserId"];
+			id: components["schemas"]["Id"];
 			name: string;
 			state: components["schemas"]["UserState"];
 			state_updated_at: components["schemas"]["Time"];
 			status: components["schemas"]["Status"];
-			version_id: components["schemas"]["UserVerId"];
+			version_id: components["schemas"]["Id"];
 		};
 		/** @description configuration for a user */
 		UserConfig: {
@@ -3726,13 +3771,11 @@ export interface components {
 			description?: string | null;
 			name: string;
 		};
-		/** Format: uuid */
-		UserId: string;
-		UserIdReq: null | components["schemas"]["UserId"];
+		UserIdReq: null | components["schemas"]["Id"];
 		/** @enum {string} */
 		UserListFilter: "Mutual" | "Friends" | "Dms" | "Puppet" | "Bot";
 		UserPatch: {
-			avatar?: null | components["schemas"]["MediaId"];
+			avatar?: null | components["schemas"]["Id"];
 			description?: string | null;
 			name?: string | null;
 		};
@@ -3744,16 +3787,16 @@ export interface components {
 				type: "Default";
 			}
 			| (components["schemas"]["BotOwner"] & {
+				/** @description who can use the bot */
+				access: components["schemas"]["BotAccess"];
 				/** @description enables managing Puppet users */
 				is_bridge: boolean;
-				/** @description who can use the bot */
-				visibility: components["schemas"]["BotVisibility"];
 			} & {
 				/** @enum {string} */
 				type: "Bot";
 			})
 			| {
-				alias_id?: null | components["schemas"]["UserId"];
+				alias_id?: null | components["schemas"]["Id"];
 				/** @description an opaque identifier from the other platform */
 				external_id?: string;
 				/** @description what platform this puppet is connected to */
@@ -3764,7 +3807,7 @@ export interface components {
 				 */
 				external_url?: string | null;
 				/** @description the user who created this puppet */
-				owner_id: components["schemas"]["UserId"];
+				owner_id: components["schemas"]["Id"];
 				/** @enum {string} */
 				type: "Puppet";
 			}
@@ -3772,8 +3815,6 @@ export interface components {
 				/** @enum {string} */
 				type: "System";
 			};
-		/** Format: uuid */
-		UserVerId: string;
 		/** @description metadata for videos */
 		Video: {
 			codec: string;
@@ -4220,108 +4261,6 @@ export interface operations {
 			};
 		};
 	};
-	emoji_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["EmojiCustomCreate"];
-			};
-		};
-		responses: {
-			/** @description new emoji created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["EmojiCustom"];
-				};
-			};
-		};
-	};
-	emoji_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Emoji id */
-				emoji_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["EmojiCustom"];
-				};
-			};
-		};
-	};
-	emoji_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Emoji id */
-				emoji_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	emoji_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Emoji id */
-				emoji_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["EmojiCustomPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["EmojiCustom"];
-				};
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	inbox_query: {
 		parameters: {
 			query: {
@@ -4331,9 +4270,9 @@ export interface operations {
 				limit?: number;
 				include: components["schemas"]["InboxFilters"];
 				/** @description only include notifications from this room */
-				room_id?: components["schemas"]["RoomId"][];
+				room_id?: components["schemas"]["Id"][];
 				/** @description only include notifications from this thread */
-				thread_id?: components["schemas"]["ThreadId"][];
+				thread_id?: components["schemas"]["Id"][];
 			};
 			header?: never;
 			path?: never;
@@ -4368,6 +4307,28 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	internal_rpc: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["Command"];
+			};
+		};
+		responses: {
+			/** @description Accepted */
+			202: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -4504,7 +4465,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Media id */
-				media_id: components["schemas"]["MediaId"];
+				media_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4678,7 +4639,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4708,7 +4669,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4748,6 +4709,296 @@ export interface operations {
 		responses: {
 			/** @description success */
 			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_audit_logs: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description fetch audit logs success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_AuditLog"];
+				};
+			};
+		};
+	};
+	room_ban_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				from: string;
+				to: string;
+				dir: "b" | "f";
+				limit: number;
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ban_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ban_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ban_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	notification_room_configure: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["NotifsRoom"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["NotifsRoom"];
+				};
+			};
+		};
+	};
+	emoji_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_EmojiCustom"];
+				};
+			};
+		};
+	};
+	emoji_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["EmojiCustomCreate"];
+			};
+		};
+		responses: {
+			/** @description new emoji created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["EmojiCustom"];
+				};
+			};
+		};
+	};
+	emoji_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+				/** @description Emoji id */
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["EmojiCustom"];
+				};
+			};
+		};
+	};
+	emoji_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+				/** @description Emoji id */
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	emoji_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+				/** @description Emoji id */
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["EmojiCustomPatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["EmojiCustom"];
+				};
+			};
+			/** @description not modified */
+			304: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -4811,7 +5062,7 @@ export interface operations {
 			};
 		};
 	};
-	room_audit_logs: {
+	room_audit_logs_old: {
 		parameters: {
 			query?: {
 				from?: string;
@@ -4851,7 +5102,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4875,9 +5126,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: string;
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4900,9 +5151,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: string;
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4936,9 +5187,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: string;
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4959,9 +5210,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: string;
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -4986,33 +5237,6 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
-			};
-		};
-	};
-	notification_edit_room: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["NotifsThread"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["NotifsRoom"];
-				};
 			};
 		};
 	};
@@ -5104,9 +5328,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5129,9 +5353,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5152,9 +5376,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5188,9 +5412,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5214,11 +5438,11 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: components["schemas"]["UserId"];
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5241,11 +5465,11 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 				/** @description Role id */
-				role_id: components["schemas"]["RoleId"];
+				role_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: components["schemas"]["UserId"];
+				user_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5262,7 +5486,7 @@ export interface operations {
 			};
 		};
 	};
-	tag_list_room: {
+	tag_list: {
 		parameters: {
 			query?: {
 				from?: string;
@@ -5290,15 +5514,67 @@ export interface operations {
 			};
 		};
 	};
-	tag_room_apply: {
+	tag_create: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TagCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Tag"];
+				};
+			};
+		};
+	};
+	tag_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
 				/** @description Tag id */
-				tag_id: components["schemas"]["TagId"];
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Tag"];
+				};
+			};
+		};
+	};
+	tag_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+				/** @description Tag id */
+				tag_id: string;
 			};
 			cookie?: never;
 		};
@@ -5306,13 +5582,6 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -5320,26 +5589,32 @@ export interface operations {
 			};
 		};
 	};
-	tag_room_unapply: {
+	tag_patch: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: string;
 				/** @description Tag id */
-				tag_id: components["schemas"]["TagId"];
+				tag_id: string;
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TagPatch"];
+			};
+		};
 		responses: {
 			/** @description success */
-			204: {
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["Tag"];
+				};
 			};
 			/** @description not modified */
 			304: {
@@ -5407,6 +5682,70 @@ export interface operations {
 			};
 		};
 	};
+	tag_tag_apply: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target tag id */
+				target_id: string;
+				/** @description Tag id of tag to tag tag with */
+				with_id: string;
+				room_id: components["schemas"]["Id"];
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	tag_tag_unapply: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target tag id */
+				target_id: string;
+				/** @description Tag id of tag to tag tag with */
+				with_id: string;
+				room_id: components["schemas"]["Id"];
+				tag_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	thread_list: {
 		parameters: {
 			query?: {
@@ -5418,7 +5757,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5442,7 +5781,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Room id */
-				room_id: components["schemas"]["RoomId"];
+				room_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -5459,95 +5798,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	report_message: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description room id */
-				room_id: string;
-				/** @description thread id */
-				thread_id: string;
-				/** @description message id */
-				message_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ReportCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Report"];
-				};
-			};
-		};
-	};
-	report_thread: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description room id */
-				room_id: string;
-				/** @description thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ReportCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Report"];
-				};
-			};
-		};
-	};
-	emoji_list_room: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_EmojiCustom"];
 				};
 			};
 		};
@@ -5756,202 +6006,13 @@ export interface operations {
 			};
 		};
 	};
-	tag_list_user: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PaginationResponse_Tag"];
-				};
-			};
-		};
-	};
-	tag_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TagCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-		};
-	};
-	tag_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-		};
-	};
-	tag_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TagPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_tag_apply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target tag id */
-				target_id: string;
-				/** @description Tag id of tag to tag tag with */
-				with_id: string;
-				tag_id: components["schemas"]["TagId"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_tag_unapply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target tag id */
-				target_id: string;
-				/** @description Tag id of tag to tag tag with */
-				with_id: string;
-				tag_id: components["schemas"]["TagId"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	thread_get: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6114,19 +6175,46 @@ export interface operations {
 			};
 		};
 	};
+	notification_thread_configure: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["NotifsThread"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["NotifsThread"];
+				};
+			};
+		};
+	};
 	message_context: {
 		parameters: {
 			query?: {
-				to_start?: null | components["schemas"]["MessageId"];
-				to_end?: null | components["schemas"]["MessageId"];
+				to_start?: null | components["schemas"]["Id"];
+				to_end?: null | components["schemas"]["Id"];
 				limit?: number | null;
 			};
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6154,7 +6242,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6178,7 +6266,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: string;
 			};
@@ -6203,7 +6291,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: string;
 			};
@@ -6239,7 +6327,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: string;
 			};
@@ -6262,7 +6350,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description User id */
 				user_id: string;
 			};
@@ -6303,7 +6391,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6327,7 +6415,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6354,9 +6442,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6379,9 +6467,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6402,9 +6490,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6438,9 +6526,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6466,9 +6554,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 				/** @description Reaction key */
 				key: components["schemas"]["ReactionKey"];
 			};
@@ -6494,9 +6582,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 				/** @description Reaction key */
 				key: components["schemas"]["ReactionKey"];
 			};
@@ -6526,9 +6614,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 				/** @description Reaction key */
 				key: components["schemas"]["ReactionKey"];
 			};
@@ -6545,6 +6633,37 @@ export interface operations {
 			};
 		};
 	};
+	report_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description room id */
+				room_id: string;
+				/** @description thread id */
+				thread_id: string;
+				/** @description message id */
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ReportCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Report"];
+				};
+			};
+		};
+	};
 	message_version_list: {
 		parameters: {
 			query?: {
@@ -6556,9 +6675,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6582,11 +6701,11 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 				/** @description Version id */
-				version_id: components["schemas"]["MessageVerId"];
+				version_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6609,11 +6728,11 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 				/** @description Version id */
-				version_id: components["schemas"]["MessageVerId"];
+				version_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6633,14 +6752,14 @@ export interface operations {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description Message id */
-				message_id: string;
+				/** @description Thread id */
+				thread_id: string;
 			};
 			cookie?: never;
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["MessageDeleteBulk"];
+				"application/json": components["schemas"]["MessageBulkDelete"];
 			};
 		};
 		responses: {
@@ -6650,33 +6769,6 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
-			};
-		};
-	};
-	notification_edit_thread: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["NotifsThread"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["NotifsThread"];
-				};
 			};
 		};
 	};
@@ -6765,124 +6857,19 @@ export interface operations {
 			};
 		};
 	};
-	reaction_thread_purge: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	reaction_thread_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_ReactionListItem"];
-				};
-			};
-		};
-	};
-	reaction_thread_add: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description new reaction created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description already exists */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	reaction_thread_remove: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	message_replies: {
 		parameters: {
 			query: {
-				q: components["schemas"]["PaginationQuery_MessageId"];
+				q: components["schemas"]["PaginationQuery_Id"];
 				/** @description how deeply to fetch replies */
 				depth?: number;
 			};
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Message id */
-				message_id: components["schemas"]["MessageId"];
+				message_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6900,15 +6887,44 @@ export interface operations {
 			};
 		};
 	};
+	report_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description room id */
+				room_id: string;
+				/** @description thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ReportCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Report"];
+				};
+			};
+		};
+	};
 	tag_thread_apply: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Tag id */
-				tag_id: components["schemas"]["TagId"];
+				tag_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6936,9 +6952,9 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["ThreadId"];
+				thread_id: components["schemas"]["Id"];
 				/** @description Tag id */
-				tag_id: components["schemas"]["TagId"];
+				tag_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
@@ -6981,6 +6997,50 @@ export interface operations {
 			};
 		};
 	};
+	thread_typing: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_foobar: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
 	user_list: {
 		parameters: {
 			query?: never;
@@ -7020,7 +7080,16 @@ export interface operations {
 			};
 		};
 		responses: {
-			/** @description success */
+			/** @description user exists (puppet with same external_platform/id) */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["User"];
+				};
+			};
+			/** @description user created */
 			201: {
 				headers: {
 					[name: string]: unknown;
@@ -7028,6 +7097,48 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["User"];
 				};
+			};
+		};
+	};
+	block_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	block_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -7080,29 +7191,45 @@ export interface operations {
 			};
 		};
 	};
-	emoji_list_user: {
+	friend_add: {
 		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
+			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
 			/** @description success */
-			200: {
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_EmojiCustom"];
+				content?: never;
+			};
+		};
+	};
+	friend_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
 				};
+				content?: never;
 			};
 		};
 	};
@@ -7126,6 +7253,13 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Relationship"];
 				};
+			};
+			/** @description couldn't find that user or you don't have any relationship state yet */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -7281,6 +7415,34 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["User"];
+				};
+			};
+		};
+	};
+	block_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				from: string;
+				to: string;
+				dir: "b" | "f";
+				limit: number;
+				/** @description User id to list blocks from */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
 				};
 			};
 		};
@@ -7466,6 +7628,63 @@ export interface operations {
 			};
 		};
 	};
+	friend_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				from: string;
+				to: string;
+				dir: "b" | "f";
+				limit: number;
+				/** @description User id to list friends from */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
+				};
+			};
+		};
+	};
+	invite_user_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Invite"];
+				};
+			};
+		};
+	};
 	invite_user_create: {
 		parameters: {
 			query?: never;
@@ -7517,7 +7736,7 @@ export interface operations {
 				};
 				content: {
 					"application/json":
-						components["schemas"]["PaginationResponse_Relationship"];
+						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
 				};
 			};
 		};
@@ -7573,35 +7792,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["PaginationResponse_Room"];
-				};
-			};
-		};
-	};
-	invite_user_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Invite"];
 				};
 			};
 		};

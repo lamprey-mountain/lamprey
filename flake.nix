@@ -13,8 +13,18 @@
         src = ./.;
         common = {
           inherit src;
-          strictDept = true;
+          strictDeps = true;
           doCheck = false;
+          
+          buildInputs = with pkgs; [
+            openssl
+            pkg-config
+            # Add additional build inputs here
+          ] ++ lib.optionals pkgs.stdenv.isDarwin [
+            # Additional darwin specific inputs can be set here
+            pkgs.libiconv
+          ];
+
         };
 
         cargoArtifacts =
@@ -84,6 +94,11 @@
               ];
             };
           };
+        };
+        
+        devShells.default = craneLib.devShell {
+          # Inherit inputs from checks.
+          # checks = self.checks.${system};
         };
       });
 }

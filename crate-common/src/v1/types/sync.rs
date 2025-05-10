@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use serde_json::Value;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -9,23 +10,8 @@ use crate::v1::types::{
 };
 
 use super::{
-    reaction::ReactionKey,
-    // voice::{IceCandidate, SessionDescription},
-    InviteCode,
-    Message,
-    MessageId,
-    MessageVerId,
-    Role,
-    RoleId,
-    Room,
-    RoomId,
-    RoomMember,
-    Session,
-    SessionId,
-    SessionToken,
-    Thread,
-    ThreadId,
-    User,
+    reaction::ReactionKey, voice::VoiceMember, InviteCode, Message, MessageId, MessageVerId, Role,
+    RoleId, Room, RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User,
     UserId,
 };
 
@@ -52,6 +38,15 @@ pub enum MessageClient {
 
     /// heartbeat
     Pong,
+
+    /// send arbitrary data to a voice server
+    // TEMP: for prototyping
+    VoiceDispatch {
+        user_id: UserId,
+        // TODO: multiple servers
+        // server_id: ServerId,
+        payload: Value,
+    },
     // VoiceIceCandidate {
     //     candidate: IceCandidate,
     // },
@@ -244,31 +239,44 @@ pub enum MessageSync {
         thread_id: ThreadId,
         message_ids: Vec<MessageId>,
     },
-    // snip... ----- >8 ----
-    // everything below is TODO
 
-    // VoiceParticipantUpsert {
+    /// recieve arbitrary data from a voice server
+    // TEMP: for prototyping
+    VoiceDispatch {
+        user_id: UserId,
+        // TODO: multiple servers
+        // server_id: ServerId,
+        payload: Value,
+    },
+    // VoiceMember {
     //     thread_id: ThreadId,
     //     user_id: UserId,
-    //     voice_state: VoiceState,
+    //     member: Option<VoiceMember>,
     // },
 
-    // VoiceParticipantDelete {
-    //     thread_id: ThreadId,
-    //     user_id: UserId,
-    // },
-
+    // /// interactive connectivity establishment
     // VoiceIceCandidate {
     //     candidate: IceCandidate,
     // },
-    // VoiceSdp {
+
+    // /// session description protocol answer
+    // VoiceSdpAnswer {
     //     sdp: SessionDescription,
     // },
+
+    // /// session description protocol answer
+    // VoiceSdpOffer {
+    //     sdp: SessionDescription,
+    // },
+
     // VoiceConnected {
     //     thread_id: ThreadId,
     //     include_video: Vec<UserId>,
     //     include_stream: Vec<UserId>,
     // },
+
+    // snip... ----- >8 ----
+    // everything below is TODO
 
     // EventRsvp {
     //     thread_id: ThreadId,
