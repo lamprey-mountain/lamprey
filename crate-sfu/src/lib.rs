@@ -26,6 +26,7 @@ pub enum RtcPeerCommand {
     },
 }
 
+// TODO: merge command/event?
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RtcPeerEvent {

@@ -334,7 +334,8 @@ h3 {
 	font-size: 1.3rem;
 }
 
-b, strong {
+b,
+strong {
 	font-weight: bold;
 }
 
@@ -1054,7 +1055,8 @@ button[disabled] {
 		}
 	}
 
-	& textarea, input[type="text"] {
+	& textarea,
+	input[type="text"] {
 		border: solid $sep-500 1px;
 		background: $bg-300;
 	}
@@ -1174,7 +1176,8 @@ svg.avatar {
 	display: flex;
 	align-items: center;
 	padding: 2px;
-	cursor: pointer; /* make these buttons? */
+	cursor: pointer;
+	/* make these buttons? */
 
 	& > .text {
 		grid-area: name;
@@ -1268,7 +1271,8 @@ table {
 		background: $bg-100;
 	}
 
-	& td, th {
+	& td,
+	th {
 		padding: 4px;
 		text-align: left;
 	}
@@ -1363,4 +1367,36 @@ table {
 	display: flex;
 	align-items: center;
 	font-size: 0.9rem;
+}
+
+.debug .webrtc > .ui {
+	padding: 4px;
+	border: solid $sep-500 1px;
+	background: $bg-100;
+
+	.row {
+		display: flex;
+	}
+
+	.strike {
+		filter: none;
+		image {
+			filter: invert(0.9);
+		}
+	}
+
+	.strike > line {
+		visibility: hidden;
+		stroke: $color-red;
+	}
+
+	.strike[aria-checked="true"] {
+		image {
+			mask: url(#strike);
+		}
+
+		line {
+			visibility: visible;
+		}
+	}
 }
