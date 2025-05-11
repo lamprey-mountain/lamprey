@@ -314,5 +314,8 @@ export function createTooltip(props: CreateTooltipProps) {
 				);
 			}, document.body);
 		},
+		showTip,
+		considerHidingTip,
+		setContentEl,
 	};
 }
