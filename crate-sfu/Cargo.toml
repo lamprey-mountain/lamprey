@@ -21,3 +21,4 @@ dashmap = "6.1.0"
 reqwest = "0.12.15"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 systemstat = "0.2.4"
+uuid = { version = "1.16.0", features = ["v7"] }
