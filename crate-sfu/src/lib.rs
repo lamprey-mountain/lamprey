@@ -13,14 +13,17 @@ use str0m::{
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RtcPeerCommand {
+    /// sdp answer (via websocket)
+    Answer { sdp: String },
+
     /// sdp offer (via websocket)
     Offer { sdp: String },
-    // /// ice candidate proposal (via websocket)
-    // IceCandidate {
-    //     candidate: Candidate,
-    // },
-    // MediaAdded(MediaAdded),
-    // MediaData(MediaData),
+
+    /// ice candidate proposal (via websocket)
+    IceCandidate {
+        data: String,
+        // candidate: Candidate,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,6 +31,9 @@ pub enum RtcPeerCommand {
 pub enum RtcPeerEvent {
     /// sdp answer (via websocket)
     Answer { sdp: String },
+
+    /// sdp offer (via websocket)
+    Offer { sdp: String },
     // /// ice candidate proposal (via websocket)
     // IceCandidate { candidate: Candidate },
 }
