@@ -10,9 +10,8 @@ use crate::v1::types::{
 };
 
 use super::{
-    reaction::ReactionKey, voice::VoiceMember, InviteCode, Message, MessageId, MessageVerId, Role,
-    RoleId, Room, RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User,
-    UserId,
+    reaction::ReactionKey, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
+    RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
 
 mod sync2;
@@ -47,17 +46,6 @@ pub enum MessageClient {
         // server_id: ServerId,
         payload: Value,
     },
-    // VoiceIceCandidate {
-    //     candidate: IceCandidate,
-    // },
-    // VoiceSdp {
-    //     sdp: SessionDescription,
-    // },
-    // VoiceConnect {
-    //     thread_id: ThreadId,
-    //     include_video: Vec<UserId>,
-    //     include_stream: Vec<UserId>,
-    // },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

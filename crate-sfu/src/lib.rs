@@ -2,27 +2,33 @@
 // do sdp/ice/connection and do signalling directly against the sfu with
 // datachannels? i feel like the second could be nicer but harder.
 
-use common::v1::types::{RtcPeerId, UserId};
-use serde::{Deserialize, Serialize};
-use str0m::{
-    change::{SdpAnswer, SdpOffer},
-    media::{MediaAdded, MediaData, Mid},
-    Candidate,
+use common::v1::types::{
+    voice::{IceCandidate, SessionDescription, VoiceState, VoiceStatePatch},
+    UserId,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum RtcPeerCommand {
     /// sdp answer (via websocket)
-    Answer { sdp: String },
+    Answer {
+        sdp: SessionDescription,
+    },
 
     /// sdp offer (via websocket)
-    Offer { sdp: String },
+    Offer {
+        sdp: SessionDescription,
+    },
 
     /// ice candidate proposal (via websocket)
+    // FIXME: ice negotiation
     IceCandidate {
-        data: String,
-        // candidate: Candidate,
+        data: IceCandidate,
+    },
+
+    VoiceStateUpdate {
+        patch: VoiceStatePatch,
     },
 }
 
@@ -37,6 +43,10 @@ pub enum RtcPeerEvent {
     Offer { sdp: String },
     // /// ice candidate proposal (via websocket)
     // IceCandidate { candidate: Candidate },
+    VoiceState {
+        user_id: UserId,
+        state: Option<VoiceState>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

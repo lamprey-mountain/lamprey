@@ -9,9 +9,8 @@ use axum::{
     routing::{get, post},
     Json,
 };
-use common::v1::types::UserId;
+use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
-use serde_json::Value;
 use sfu::{Request, RtcPeerCommand, RtcPeerEvent};
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
@@ -35,6 +34,7 @@ mod util;
 #[derive(Debug, Default)]
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommandPayload>>,
+    voice_states: DashMap<UserId, VoiceState>,
 }
 
 #[derive(Debug)]
@@ -201,9 +201,9 @@ impl Peer {
                     self.sdp_pending = Some(pending);
                     send_rpc(&RpcCommand::VoiceDispatch {
                         user_id,
-                        payload: serde_json::to_value(RtcPeerEvent::Offer {
+                        payload: RtcPeerEvent::Offer {
                             sdp: offer.to_sdp_string(),
-                        })?,
+                        },
                     })
                     .await?;
                 } else {
@@ -266,9 +266,10 @@ impl Peer {
                     }),
                 })?;
             }
-            RtcPeerCommand::IceCandidate { data } => {
-                // _ = dbg!(serde_json::from_str::<Candidate>(&data));
-            }
+            // RtcPeerCommand::IceCandidate { data } => {
+            //     _ = dbg!(serde_json::from_str::<Candidate>(&data));
+            // }
+            _ => {}
         }
         Ok(())
     }
@@ -347,6 +348,34 @@ impl Sfu {
                 vacant_entry.insert(peer)
             }
         };
+
+        match &req.inner {
+            RtcPeerCommand::VoiceStateUpdate { patch } => {
+                if let Some(thread_id) = patch.thread_id {
+                    self.voice_states.insert(
+                        user_id,
+                        VoiceState {
+                            user_id,
+                            thread_id,
+                            joined_at: Time::now_utc(),
+                        },
+                    );
+                } else {
+                    self.voice_states.remove(&user_id);
+                }
+                send_rpc(&RpcCommand::VoiceDispatch {
+                    user_id,
+                    payload: RtcPeerEvent::VoiceState {
+                        user_id,
+                        state: self.voice_states.get(&user_id).map(|s| s.to_owned()),
+                    },
+                })
+                .await?;
+                debug!("got voice state update {patch:?}");
+            }
+            _ => {}
+        }
+
         ctl.send(PeerCommandPayload::RtcPeerCommand(req.inner))?;
 
         Ok(())
@@ -360,7 +389,7 @@ impl Sfu {
                 debug!("sdp answer {sdp}");
                 send_rpc(&RpcCommand::VoiceDispatch {
                     user_id,
-                    payload: serde_json::to_value(RtcPeerEvent::Answer { sdp })?,
+                    payload: RtcPeerEvent::Answer { sdp },
                 })
                 .await?;
             }
@@ -421,7 +450,10 @@ async fn start_http(wheel: UnboundedSender<SfuCommand>) -> Result<()> {
 #[derive(Debug, serde::Serialize)]
 #[serde(tag = "type")]
 enum RpcCommand {
-    VoiceDispatch { user_id: UserId, payload: Value },
+    VoiceDispatch {
+        user_id: UserId,
+        payload: RtcPeerEvent,
+    },
 }
 
 async fn send_rpc(command: &RpcCommand) -> Result<()> {

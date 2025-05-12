@@ -39,7 +39,7 @@ export const DebugWebrtc = () => {
 	});
 
 	conn.addEventListener("icecandidateerror", (e) => {
-		console.info("[rtc:ice]", e);
+		console.error("[rtc:ice]", e);
 	});
 
 	conn.addEventListener("negotiationneeded", async () => {
@@ -48,7 +48,10 @@ export const DebugWebrtc = () => {
 	});
 
 	conn.addEventListener("datachannel", (e) => {
-		console.info("[rtc:track] datachannel", e.channel);
+		const ch = e.channel;
+		console.info("[rtc:track] datachannel", ch);
+		// ch.protocol === "Control"
+		// ch.protocol === "VoiceActivity"
 	});
 
 	let mediaEl!: HTMLAudioElement;
@@ -90,6 +93,14 @@ export const DebugWebrtc = () => {
 		}
 	});
 
+	async function negotiate() {
+		await conn.setLocalDescription(await conn.createOffer());
+		sendWebsocket({
+			type: "Offer",
+			sdp: conn.localDescription!.sdp,
+		});
+	}
+
 	onCleanup(() => {
 		conn.close();
 	});
@@ -118,14 +129,6 @@ export const DebugWebrtc = () => {
 		audio.play();
 	}
 
-	async function negotiate() {
-		await conn.setLocalDescription(await conn.createOffer());
-		sendWebsocket({
-			type: "Offer",
-			sdp: conn.localDescription!.sdp,
-		});
-	}
-
 	async function start() {
 		const user_id = api.users.cache.get("@self")!.id;
 		console.info("starting with user id " + user_id);
@@ -143,6 +146,35 @@ export const DebugWebrtc = () => {
 		}));
 	}
 
+	let startedMic = false;
+	const toggleMic = async () => {
+		if (startedMic) return;
+		// await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
+		// await navigator.mediaDevices.getUserMedia({ video: true })
+		// navigator.mediaDevices.enumerateDevices()
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		for (const track of stream.getTracks()) {
+			const tcr = conn.addTransceiver(track);
+			console.log("add transciever", tcr.mid, tcr);
+			track.addEventListener("ended", () => {
+				conn.removeTrack(tcr.sender);
+			});
+		}
+		stream.addEventListener("addtrack", (e) => {
+			const tcr = conn.addTransceiver(e.track);
+			console.log("add transciever", tcr.mid, tcr);
+		});
+		startedMic = true;
+	};
+
+	const toggleCam = async () => {
+		// asdf
+	};
+
+	const toggleScreen = async () => {
+		// asdf
+	};
+
 	return (
 		<div class="webrtc">
 			<div>webrtc (nothing to see here, move along...)</div>
@@ -152,9 +184,13 @@ export const DebugWebrtc = () => {
 			<div>
 				<button onClick={playAudioEl}>play audio</button>
 			</div>
+			<div>
+				<button onClick={toggleMic}>start mic</button>
+				<button onClick={toggleCam}>start cam</button>
+				<button onClick={toggleScreen}>start screen</button>
+			</div>
 			<div>state {rtcState()}</div>
 			<audio controls ref={mediaEl}></audio>
-			<Ui />
 			{/* <Ui /> */}
 		</div>
 	);
