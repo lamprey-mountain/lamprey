@@ -52,5 +52,10 @@ async fn internal_rpc(
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new().routes(routes!(internal_rpc))
+    let router = OpenApiRouter::new();
+
+    #[cfg(feature = "voice")]
+    let router = router.routes(routes!(internal_rpc));
+
+    router
 }
