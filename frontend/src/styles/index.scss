@@ -264,13 +264,23 @@ input[type="submit"] {
 			}
 
 			&.unread-marker {
-				box-shadow: 4px 0 0 -1px inset #3fa9c9;
-				background-color: #3fa9c922;
 				color: #3fa9c9;
 				margin: 8px 0;
 
 				& > .content {
-					grid-column: 2;
+					grid-column: 1 / 4;
+					text-align: center;
+					display: flex;
+					align-items: center;
+
+					&::before, &::after {
+						content: "";
+						display: block;
+						background: #3fa9c9;
+						height: 1px;
+						flex: 1;
+						margin: 0 8px;
+					}
 				}
 			}
 
