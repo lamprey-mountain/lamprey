@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::{extract::State, Json};
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
-use common::v1::types::{PaginationQuery, PaginationResponse, RoomId, TagId, ThreadId};
+use common::v1::types::{PaginationQuery, PaginationResponse, TagId, ThreadId};
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 

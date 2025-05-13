@@ -6,11 +6,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    BotOwner, ExternalPlatform, MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse,
-    User, UserCreate, UserId, UserPatch, UserType,
+    BotOwner, ExternalPlatform, MediaTrackInfo, MessageSync, User, UserCreate, UserPatch, UserType,
 };
-use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};

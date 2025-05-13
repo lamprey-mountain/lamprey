@@ -72,7 +72,7 @@ impl Modify for NestedTags {
             {
                 "name": "room",
                 "description": "working with rooms",
-                "tags": ["room", "room_member", "role", "emoji", "tags"],
+                "tags": ["room", "room_member", "role", "emoji", "tag"],
             },
             {
                 "name": "thread",
@@ -87,7 +87,7 @@ impl Modify for NestedTags {
             {
                 "name": "misc",
                 "description": "random other routes that i dont have anywhere to put yet",
-                "tags": ["debug", "invite", "media", "moderation", "notification", "sync", "search"],
+                "tags": ["debug", "invite", "media", "moderation", "notification", "sync", "search", "application"],
             },
         ]);
         openapi

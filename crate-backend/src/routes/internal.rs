@@ -1,14 +1,7 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
-use common::v1::types::{
-    MessageId, MessageSync, MessageThreadUpdate, ThreadState, ThreadType, UserId,
-};
+use axum::{extract::State, http::StatusCode, Json};
+use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};

@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::{
     self, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
     MessageThreadUpdate, MessageType, UserId,
