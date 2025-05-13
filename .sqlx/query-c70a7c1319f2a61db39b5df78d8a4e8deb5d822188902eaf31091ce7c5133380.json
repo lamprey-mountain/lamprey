@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM reaction_thread_custom WHERE thread_id = $1 AND reaction_key = $2",
+  "query": "SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2",
   "describe": {
     "columns": [
       {
@@ -12,12 +12,12 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Text"
       ]
     },
     "nullable": [
       null
     ]
   },
-  "hash": "15c53a4a9b2457e1942abe7b35d9d9f5789d1abfe9cd53ea222394a2470c836f"
+  "hash": "c70a7c1319f2a61db39b5df78d8a4e8deb5d822188902eaf31091ce7c5133380"
 }

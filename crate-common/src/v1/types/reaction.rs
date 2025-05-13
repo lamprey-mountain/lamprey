@@ -19,7 +19,7 @@ pub struct ReactionCount {
     pub emoji: Emoji,
     pub count: u64,
 
-    #[serde(rename = "self")]
+    #[serde(default, rename = "self")]
     pub self_reacted: bool,
 }
 

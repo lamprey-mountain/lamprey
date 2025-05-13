@@ -35,6 +35,7 @@ pub struct DbMessage {
     pub author_id: UserId,
     pub is_pinned: bool,
     pub embeds: Vec<serde_json::Value>,
+    pub reactions: Option<serde_json::Value>,
 }
 
 #[derive(sqlx::Type)]
@@ -77,6 +78,10 @@ impl From<DbMessage> for Message {
                                 db.into()
                             })
                             .collect(),
+                        reactions: row
+                            .reactions
+                            .map(|a| serde_json::from_value(a).unwrap())
+                            .unwrap_or_default(),
                     })
                 }
                 DbMessageType::DefaultTagged => MessageType::DefaultTagged(MessageDefaultTagged {
@@ -93,7 +98,10 @@ impl From<DbMessage> for Message {
                             db.into()
                         })
                         .collect(),
-                    reactions: ReactionCounts(vec![]),
+                    reactions: row
+                        .reactions
+                        .map(|a| serde_json::from_value(a).unwrap())
+                        .unwrap_or_default(),
                     interactions: Interactions::default(),
                 }),
                 DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {

@@ -97,6 +97,7 @@ async fn message_create(
                 metadata: json.metadata,
                 reply_id: json.reply_id,
                 override_name: json.override_name,
+                reactions: ReactionCounts::default(),
             }),
         )
     };
@@ -366,6 +367,7 @@ async fn message_edit(
                     metadata: json.metadata.unwrap_or(msg.metadata),
                     reply_id: json.reply_id.unwrap_or(msg.reply_id),
                     override_name: json.override_name.unwrap_or(msg.override_name),
+                    reactions: ReactionCounts::default(),
                 }),
             ))
         }

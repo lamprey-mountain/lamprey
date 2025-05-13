@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\"\nfrom message_coalesced as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nwhere thread_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
+  "query": "with\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id, key\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    false as \"is_pinned!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null\n",
   "describe": {
     "columns": [
       {
@@ -66,27 +66,29 @@
       },
       {
         "ordinal": 10,
-        "name": "attachments!",
-        "type_info": "JsonArray"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       },
       {
         "ordinal": 11,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "attachments!",
+        "type_info": "JsonArray"
       },
       {
         "ordinal": 12,
         "name": "embeds!",
         "type_info": "JsonArray"
+      },
+      {
+        "ordinal": 13,
+        "name": "reactions",
+        "type_info": "Json"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -102,8 +104,9 @@
       false,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "8bb4001ccd4c6950bc3d304f3353b1ccf2b8bf547eaf3b16ec72c8b4baa85c5c"
+  "hash": "1b2d9202d09d78d7ec488ac2d35139e53ea42270a0e5234aa674c43bce559d41"
 }

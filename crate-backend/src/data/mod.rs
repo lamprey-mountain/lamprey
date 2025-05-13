@@ -409,49 +409,32 @@ pub trait DataUserConfig {
 
 #[async_trait]
 pub trait DataReaction {
-    async fn reaction_message_put(
+    async fn reaction_put(
         &self,
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
-    async fn reaction_message_delete(
+    async fn reaction_delete(
         &self,
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
-    async fn reaction_message_list(
+    async fn reaction_list(
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
         key: ReactionKey,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ReactionListItem>>;
-    async fn reaction_message_purge(
+    async fn reaction_purge(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn reaction_purge_key(
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
-    ) -> Result<()>;
-    async fn reaction_thread_put(
-        &self,
-        user_id: UserId,
-        thread_id: ThreadId,
         key: ReactionKey,
     ) -> Result<()>;
-    async fn reaction_thread_delete(
-        &self,
-        user_id: UserId,
-        thread_id: ThreadId,
-        key: ReactionKey,
-    ) -> Result<()>;
-    async fn reaction_thread_list(
-        &self,
-        thread_id: ThreadId,
-        key: ReactionKey,
-        pagination: PaginationQuery<UserId>,
-    ) -> Result<PaginationResponse<ReactionListItem>>;
-    async fn reaction_thread_purge(&self, thread_id: ThreadId) -> Result<()>;
 }

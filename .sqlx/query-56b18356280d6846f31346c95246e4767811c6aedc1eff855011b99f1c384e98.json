@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nmessage_coalesced as (\n    select *\n    from (select *, row_number() over(partition by id order by version_id desc) as row_num\n        from message)\n    where row_num = 1\n)\nSELECT\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    false as \"is_pinned!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(u.embeds, '{}') as \"embeds!\"\nFROM message_coalesced AS msg\nleft join url_embed_json u on u.version_id = msg.version_id\nleft JOIN att_json ON att_json.version_id = msg.version_id\n     WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL\n",
+  "query": "with\n    message_coalesced as (\n        select *\n        from (select *, row_number() over(partition by id order by version_id desc) as row_num\n            from message)\n        where row_num = 1\n    ),\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id, key\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message_coalesced as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -66,24 +66,32 @@
       },
       {
         "ordinal": 10,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "attachments!",
+        "type_info": "JsonArray"
       },
       {
         "ordinal": 11,
-        "name": "attachments!",
-        "type_info": "JsonArray"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       },
       {
         "ordinal": 12,
         "name": "embeds!",
         "type_info": "JsonArray"
+      },
+      {
+        "ordinal": 13,
+        "name": "reactions",
+        "type_info": "Json"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
@@ -99,8 +107,9 @@
       false,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "b0979487835e8a5940d28b9f2a636c597bb998f14379185abba231d6da0ffeec"
+  "hash": "56b18356280d6846f31346c95246e4767811c6aedc1eff855011b99f1c384e98"
 }

@@ -4,6 +4,15 @@ message_coalesced as (
     from (select *, row_number() over(partition by id order by version_id desc) as row_num
         from message)
     where row_num = 1
+),
+message_reaction as (
+    -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self
+    select
+        message_id,
+        json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json
+    from reaction
+    group by message_id, key
+    order by min(position)
 )
 SELECT
     msg.type as "message_type: DbMessageType",
@@ -18,8 +27,10 @@ SELECT
     msg.author_id,
     false as "is_pinned!",
     coalesce(att_json.attachments, '{}') as "attachments!",
-    coalesce(u.embeds, '{}') as "embeds!"
-FROM message_coalesced AS msg
+    coalesce(u.embeds, '{}') as "embeds!",
+    r.json as "reactions"
+from message_coalesced as msg
 left join url_embed_json u on u.version_id = msg.version_id
-left JOIN att_json ON att_json.version_id = msg.version_id
-     WHERE thread_id = $1 AND msg.id = $2 AND msg.deleted_at IS NULL
+left join att_json on att_json.version_id = msg.version_id
+left join message_reaction r on r.message_id = msg.id
+where thread_id = $1 and msg.id = $2 and msg.deleted_at is null

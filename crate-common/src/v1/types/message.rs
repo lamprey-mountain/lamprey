@@ -483,6 +483,10 @@ pub struct MessageDefaultMarkdown {
     /// deprecated: create new puppets for each bridged user instead
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<String>,
+
+    #[cfg(feature = "feat_reactions")]
+    #[serde(default)]
+    pub reactions: ReactionCounts,
 }
 
 /// a basic message, using the shiny new and very experimental tagged text format

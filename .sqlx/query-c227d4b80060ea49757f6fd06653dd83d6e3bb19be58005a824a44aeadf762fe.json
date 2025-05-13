@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM reaction_thread_custom WHERE thread_id = $1",
+  "query": "DELETE FROM reaction WHERE message_id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "07233bec009f0f09b07c13f4128189128beda8fb2004f5b8a439d7f6c70e377f"
+  "hash": "c227d4b80060ea49757f6fd06653dd83d6e3bb19be58005a824a44aeadf762fe"
 }

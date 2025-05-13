@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT user_id FROM reaction\n                WHERE message_id = $1 AND key = $2 AND user_id > $3 AND user_id < $4\n            \tORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b8a4d04fe969e98b9602e101ee195a69eb03da45f9d97fb50d67e60e3a6826a3"
+}
