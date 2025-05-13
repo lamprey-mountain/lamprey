@@ -44,6 +44,8 @@ pub mod thread_member;
 pub mod user;
 pub mod user_config;
 pub mod user_status;
+
+#[cfg(feature = "feat_voice")]
 pub mod voice;
 
 pub use media::{

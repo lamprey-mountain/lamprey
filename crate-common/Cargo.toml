@@ -43,6 +43,7 @@ feat_automod = []
 feat_interaction = []
 feat_interaction_reaction = ["feat_interaction", "feat_reactions"]
 feat_interaction_status = ["feat_interaction"]
+feat_voice = []
 
 default = [
   "utoipa",
@@ -53,4 +54,5 @@ default = [
   "feat_thread_type_forums",
   "feat_interaction_reaction",
   "feat_message_new_text",
+  "feat_voice",
 ]

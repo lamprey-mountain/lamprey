@@ -38,6 +38,7 @@ pub enum MessageClient {
     /// heartbeat
     Pong,
 
+    #[cfg(feature = "feat_voice")]
     /// send arbitrary data to a voice server
     // TEMP: for prototyping
     VoiceDispatch {
@@ -228,6 +229,7 @@ pub enum MessageSync {
         message_ids: Vec<MessageId>,
     },
 
+    #[cfg(feature = "feat_voice")]
     /// recieve arbitrary data from a voice server
     // TEMP: for prototyping
     VoiceDispatch {
