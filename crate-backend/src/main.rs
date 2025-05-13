@@ -19,7 +19,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use backend::{
     cli, config, error,
-    routes::{self, UserListFilter},
+    routes::{self},
     types::{self, MessageId, MessageSync, PaginationQuery},
     ServerState,
 };
@@ -43,7 +43,6 @@ use error::Result;
         InboxFilters,
         MessageSync,
         PaginationQuery<MessageId>,
-        UserListFilter,
         // TEMP: manually added for now
         common::v1::types::text::Document,
         common::v1::types::text::OwnedText,

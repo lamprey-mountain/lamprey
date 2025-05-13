@@ -85,59 +85,7 @@ async fn user_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub enum UserListFilter {
-    /// users in mutual rooms, excluding puppets
-    Mutual,
-
-    /// friends
-    Friends,
-
-    /// users you have dms with
-    Dms,
-
-    /// puppets in mutual rooms
-    Puppet,
-
-    /// to bots you have created
-    Bot,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
-struct UserListParams {
-    #[serde(default = "default_user_list_filter")]
-    include: Vec<UserListFilter>,
-}
-
-fn default_user_list_filter() -> Vec<UserListFilter> {
-    vec![
-        UserListFilter::Mutual,
-        UserListFilter::Friends,
-        UserListFilter::Dms,
-    ]
-}
-
-/// User list (TODO)
-///
-/// Lists every user you are able to see. Can be filtered with ?include
-#[utoipa::path(
-    get,
-    path = "/user",
-    tags = ["user"],
-    params(
-        UserListParams,
-        PaginationQuery<UserId>,
-    ),
-    responses(
-        (status = OK, body = PaginationResponse<User>, description = "success"),
-    )
-)]
-async fn user_list(Auth(_session): Auth, State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// User update
-// TODO: updating/deleting bots
 #[utoipa::path(
     patch,
     path = "/user/{user_id}",
@@ -282,7 +230,6 @@ async fn user_audit_logs(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_create))
-        .routes(routes!(user_list))
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))
