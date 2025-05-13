@@ -4,6 +4,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
 
+mod application;
 mod auth;
 mod debug;
 mod dm;
@@ -37,6 +38,7 @@ pub use user::UserListFilter;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .merge(application::routes())
         .merge(auth::routes())
         .merge(debug::routes())
         .merge(dm::routes())

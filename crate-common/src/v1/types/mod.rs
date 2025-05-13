@@ -12,6 +12,7 @@ pub mod util;
 /// miscellaneous types
 pub mod misc;
 
+pub mod application;
 pub mod audit_logs;
 pub mod auth;
 pub mod email;

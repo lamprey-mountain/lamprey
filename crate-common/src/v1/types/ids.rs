@@ -186,6 +186,7 @@ genid!(Report, "00000000-0000-0000-0000-000modreport");
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
+genid!(Application);
 
 // genid!(Region); // not a uuid?
 genid!(Server); // rename? Worker, Host
