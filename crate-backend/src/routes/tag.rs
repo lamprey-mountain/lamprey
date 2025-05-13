@@ -12,6 +12,8 @@ use crate::ServerState;
 use super::util::Auth;
 use crate::error::{Error, Result};
 
+// NOTE: maybe use roles as tags?
+
 /// Tag create (TODO)
 #[utoipa::path(
     post,
@@ -177,54 +179,6 @@ async fn tag_thread_unapply(
     Err(Error::Unimplemented)
 }
 
-/// Tag room apply (TODO)
-///
-/// Apply a tag to a room
-#[utoipa::path(
-    put,
-    path = "/room/{room_id}/tag/{tag_id}",
-    tags = ["tag"],
-    params(
-        ("room_id", description = "Room id"),
-        ("tag_id", description = "Tag id"),
-    ),
-    responses(
-        (status = NO_CONTENT, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
-async fn tag_room_apply(
-    Auth(_session): Auth,
-    Path((_room_id, _tag_id)): Path<(RoomId, TagId)>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
-/// Tag room unapply (TODO)
-///
-/// Unapply a tag from a room
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/tag/{tag_id}",
-    tags = ["tag"],
-    params(
-        ("room_id", description = "Room id"),
-        ("tag_id", description = "Tag id"),
-    ),
-    responses(
-        (status = NO_CONTENT, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
-async fn tag_room_unapply(
-    Auth(_session): Auth,
-    Path((_room_id, _tag_id)): Path<(RoomId, TagId)>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// Tag tag apply (TODO)
 ///
 /// Apply a tag to a tag
@@ -284,8 +238,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(tag_list))
         .routes(routes!(tag_thread_apply))
         .routes(routes!(tag_thread_unapply))
-        // .routes(routes!(tag_room_apply))
-        // .routes(routes!(tag_room_unapply))
         .routes(routes!(tag_tag_apply))
         .routes(routes!(tag_tag_unapply))
 }
