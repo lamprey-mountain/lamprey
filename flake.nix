@@ -25,6 +25,9 @@
             pkgs.libiconv
           ];
 
+          nativeBuildInputs = with pkgs; [
+            perl
+          ];
         };
 
         cargoArtifacts =
