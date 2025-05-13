@@ -15,6 +15,8 @@ export const Debug = () => {
 		<div class="debug">
 			<h3>area 51</h3>
 			<details open>
+			</details>
+			<details open>
 				<summary>webrtc</summary>
 				<DebugWebrtc />
 			</details>

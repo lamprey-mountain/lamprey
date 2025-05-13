@@ -53,6 +53,7 @@ import {
 	ThreadMenu,
 	UserMenu,
 } from "./menu/mod.ts";
+import { UserPage } from "./UserPage.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -74,6 +75,7 @@ const App: Component = () => {
 				component={RouteThreadSettings}
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
+			<Route path="/user/:user_id" component={RouteUser} />
 			<Route path="/debug" component={Debug} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
@@ -540,6 +542,24 @@ function RouteFriends() {
 					<li>baz</li>
 				</ul>
 			</div>
+		</>
+	);
+}
+
+function RouteUser(p: RouteSectionProps) {
+	const { t } = useCtx();
+	const api = useApi();
+	const user = api.users.fetch(() => p.params.user_id);
+
+	return (
+		<>
+			<Show when={user()} fallback={<Title title={t("loading")} />}>
+				<Title title={`${user()!.name}`} />
+			</Show>
+			<ChatNav />
+			<Show when={user()}>
+				<UserPage user={user()!} />
+			</Show>
 		</>
 	);
 }
