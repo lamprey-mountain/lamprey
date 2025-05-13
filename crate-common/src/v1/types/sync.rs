@@ -186,14 +186,14 @@ pub enum MessageSync {
         user_id: UserId,
     },
 
-    ReactionMessageUpsert {
+    ReactionUpsert {
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
         key: ReactionKey,
     },
 
-    ReactionMessageRemove {
+    ReactionRemove {
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
@@ -201,26 +201,9 @@ pub enum MessageSync {
     },
 
     /// remove all reactions
-    ReactionMessagePurge {
+    ReactionPurge {
         thread_id: ThreadId,
         message_id: MessageId,
-    },
-
-    ReactionThreadUpsert {
-        user_id: UserId,
-        thread_id: ThreadId,
-        key: ReactionKey,
-    },
-
-    ReactionThreadRemove {
-        user_id: UserId,
-        thread_id: ThreadId,
-        key: ReactionKey,
-    },
-
-    /// remove all reactions
-    ReactionThreadPurge {
-        thread_id: ThreadId,
     },
 
     /// remove multiple messages at once
@@ -332,8 +315,7 @@ impl MessageSync {
                 | MessageSync::DeleteMessageVersion { .. }
                 | MessageSync::DeleteRole { .. }
                 | MessageSync::DeleteInvite { .. }
-                | MessageSync::ReactionMessagePurge { .. }
-                | MessageSync::ReactionThreadPurge { .. }
+                | MessageSync::ReactionPurge { .. }
         )
     }
 
