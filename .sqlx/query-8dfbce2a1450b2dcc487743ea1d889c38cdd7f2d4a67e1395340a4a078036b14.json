@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)\n    \t    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)\n        ",
+  "query": "\n    \t    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest)\n    \t    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true)\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -29,5 +29,5 @@
     },
     "nullable": []
   },
-  "hash": "cddb0f01c2ceb47e195c7fccb415bec85068d549ca4c2d799cf495d6bcbe171f"
+  "hash": "8dfbce2a1450b2dcc487743ea1d889c38cdd7f2d4a67e1395340a4a078036b14"
 }

@@ -1,10 +1,4 @@
 with
-message_coalesced as (
-    select *
-    from (select *, row_number() over(partition by id order by version_id desc) as row_num
-        from message)
-    where row_num = 1
-),
 message_reaction as (
     -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self
     select
@@ -29,8 +23,8 @@ SELECT
     coalesce(att_json.attachments, '{}') as "attachments!",
     coalesce(u.embeds, '{}') as "embeds!",
     r.json as "reactions"
-from message_coalesced as msg
+from message as msg
 left join url_embed_json u on u.version_id = msg.version_id
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
-where thread_id = $1 and msg.id = $2 and msg.deleted_at is null
+where is_latest and thread_id = $1 and msg.id = $2 and msg.deleted_at is null

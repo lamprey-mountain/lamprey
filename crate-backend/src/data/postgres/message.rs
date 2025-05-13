@@ -133,8 +133,8 @@ impl DataMessage for Postgres {
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true)
         "#,
             message_id,
             create.thread_id.into_inner(),
@@ -175,9 +175,15 @@ impl DataMessage for Postgres {
         let ver_id = Uuid::now_v7();
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
+        query!(
+            r#"UPDATE message SET is_latest = false WHERE id = $1"#,
+            message_id.into_inner(),
+        )
+        .execute(&mut *tx)
+        .await?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true)
         "#,
             message_id.into_inner(),
             create.thread_id.into_inner(),
