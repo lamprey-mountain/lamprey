@@ -25,8 +25,6 @@ use crate::{
     ServerStateInner,
 };
 
-use super::embed::USER_AGENT;
-
 mod ffmpeg;
 mod ffprobe;
 
@@ -322,7 +320,7 @@ impl ServiceMedia {
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(USER_AGENT)
+            .user_agent(&self.state.config.url_preview.user_agent)
             .https_only(true)
             .build()?
             .get(source_url.clone())

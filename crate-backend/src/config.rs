@@ -37,5 +37,6 @@ pub struct ConfigOauthProvider {
 
 #[derive(Debug, Deserialize)]
 pub struct ConfigUrlPreview {
+    pub user_agent: String,
     pub deny: Vec<IpNet>,
 }

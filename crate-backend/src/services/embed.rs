@@ -17,8 +17,6 @@ use crate::error::Error;
 use crate::Result;
 use crate::ServerStateInner;
 
-pub const USER_AGENT: &str = "StupidTestBot (no url yet)";
-
 const MAX_SIZE_HTML: u64 = 1024 * 1024 * 4;
 const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
 const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
@@ -180,7 +178,7 @@ impl ServiceEmbed {
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(USER_AGENT)
+            .user_agent(&self.state.config.url_preview.user_agent)
             .https_only(true)
             .build()?;
         let fetched = http
