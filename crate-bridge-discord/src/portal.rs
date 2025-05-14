@@ -356,9 +356,11 @@ impl Portal {
                 }
                 req.content = match message.kind {
                     DcMessageType::Regular | DcMessageType::InlineReply
-                        if message.content.is_empty() && message.attachments.is_empty() =>
+                        if message.content.is_empty()
+                            && message.attachments.is_empty()
+                            && message.embeds.is_empty() =>
                     {
-                        Some("(empty message, or sticker/embeds only)".to_string())
+                        Some("(sticker, poll, or other unsupported message type)".to_string())
                     }
                     DcMessageType::Regular | DcMessageType::InlineReply
                         if message.content.is_empty() =>
