@@ -84,10 +84,10 @@ export function Info(props: VoidProps<{ user: User }>) {
 		}
 	}
 
-	const togglePfps = () => {
+	const toggle = (setting: string) => () => {
 		ctx.settings.set(
-			"message_pfps",
-			ctx.settings.get("message_pfps") === "yes" ? "no" : "yes",
+			setting,
+			ctx.settings.get(setting) === "yes" ? "no" : "yes",
 		);
 	};
 
@@ -121,9 +121,17 @@ export function Info(props: VoidProps<{ user: User }>) {
 				<input
 					type="checkbox"
 					checked={ctx.settings.get("message_pfps") === "yes"}
-					onInput={togglePfps}
+					onInput={toggle("message_pfps")}
 				/>{" "}
 				show pfps in messages (experimental)
+			</label>
+			<label>
+				<input
+					type="checkbox"
+					checked={ctx.settings.get("underline_links") === "yes"}
+					onInput={toggle("underline_links")}
+				/>{" "}
+				always underline links
 			</label>
 		</>
 	);

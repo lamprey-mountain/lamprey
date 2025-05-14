@@ -372,8 +372,15 @@ pre {
 
 a {
 	color: $link-500;
-	text-decoration: underline;
 	cursor: pointer;
+
+	&:hover {
+		text-decoration: underline;
+	}
+}
+
+.underline-links a {
+	text-decoration: underline;
 }
 
 .select-all {

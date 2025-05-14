@@ -372,7 +372,12 @@ export const Root: Component = (props: ParentProps) => {
 	const state = from(ctx.client.state);
 
 	return (
-		<div id="root">
+		<div
+			id="root"
+			classList={{
+				"underline-links": ctx.settings.get("underline_links") === "yes",
+			}}
+		>
 			<api.Provider>
 				<chatctx.Provider value={ctx}>
 					{props.children}
