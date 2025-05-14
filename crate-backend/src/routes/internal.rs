@@ -14,6 +14,7 @@ use crate::{Error, ServerState};
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
 enum Command {
+    #[cfg(feature = "voice")]
     VoiceDispatch { user_id: UserId, payload: Value },
 }
 
@@ -24,6 +25,7 @@ enum Command {
     tags = ["internal"],
     responses((status = ACCEPTED, description = "Accepted")),
 )]
+#[allow(unused)]
 async fn internal_rpc(
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
@@ -37,6 +39,7 @@ async fn internal_rpc(
         return Err(Error::MissingAuth);
     }
     match dbg!(json) {
+        #[cfg(feature = "voice")]
         Command::VoiceDispatch { user_id, payload } => {
             s.broadcast(MessageSync::VoiceDispatch { user_id, payload })?;
         }
@@ -45,10 +48,5 @@ async fn internal_rpc(
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
-    let router = OpenApiRouter::new();
-
-    #[cfg(feature = "voice")]
-    let router = router.routes(routes!(internal_rpc));
-
-    router
+    OpenApiRouter::new().routes(routes!(internal_rpc))
 }

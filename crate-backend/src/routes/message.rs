@@ -796,5 +796,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_delete))
         .routes(routes!(message_delete_bulk))
         .routes(routes!(message_replies))
-    // .routes(routes!(message_append))
+        .routes(routes!(message_undelete))
+        .routes(routes!(message_move))
 }
