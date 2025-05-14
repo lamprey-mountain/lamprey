@@ -1,23 +1,23 @@
 use std::sync::Arc;
 
+use embed::ServiceEmbed;
 use media::ServiceMedia;
 use oauth2::ServiceOauth;
 use permissions::ServicePermissions;
 use room::ServiceRooms;
 use sessions::ServiceSessions;
 use thread::ServiceThreads;
-use url_embed::ServiceUrlEmbed;
 use users::ServiceUsers;
 
 use crate::ServerStateInner;
 
+pub mod embed;
 pub mod media;
 pub mod oauth2;
 pub mod permissions;
 pub mod room;
 pub mod sessions;
 pub mod thread;
-pub mod url_embed;
 pub mod users;
 
 pub struct Services {
@@ -27,7 +27,7 @@ pub struct Services {
     pub rooms: ServiceRooms,
     pub threads: ServiceThreads,
     pub oauth: ServiceOauth,
-    pub url_embed: ServiceUrlEmbed,
+    pub embed: ServiceEmbed,
     pub users: ServiceUsers,
     pub sessions: ServiceSessions,
 }
@@ -40,7 +40,7 @@ impl Services {
             rooms: ServiceRooms::new(state.clone()),
             threads: ServiceThreads::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),
-            url_embed: ServiceUrlEmbed::new(state.clone()),
+            embed: ServiceEmbed::new(state.clone()),
             users: ServiceUsers::new(state.clone()),
             sessions: ServiceSessions::new(state.clone()),
             state,

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    self, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
+    self, Embed, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
     MessageThreadUpdate, MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
@@ -16,7 +16,6 @@ use crate::types::{
 
 use crate::data::DataMessage;
 
-use super::url_embed::DbUrlEmbed;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -72,7 +71,7 @@ impl From<DbMessage> for Message {
                             .embeds
                             .into_iter()
                             .map(|a| {
-                                let db: DbUrlEmbed =
+                                let db: Embed =
                                     serde_json::from_value(a).expect("invalid data in database!");
                                 db.into()
                             })
@@ -92,7 +91,7 @@ impl From<DbMessage> for Message {
                         .embeds
                         .into_iter()
                         .map(|a| {
-                            let db: DbUrlEmbed =
+                            let db: Embed =
                                 serde_json::from_value(a).expect("invalid data in database!");
                             db.into()
                         })

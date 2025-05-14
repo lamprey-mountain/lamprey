@@ -25,7 +25,7 @@ use crate::{
     ServerStateInner,
 };
 
-use super::url_embed::USER_AGENT;
+use super::embed::USER_AGENT;
 
 mod ffmpeg;
 mod ffprobe;

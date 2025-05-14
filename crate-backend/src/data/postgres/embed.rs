@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
-use common::v1::types::{misc::Color, MessageVerId, UrlEmbed, UrlEmbedId, UserId};
+use common::v1::types::{misc::Color, Embed, EmbedId, MessageVerId, UserId};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as};
@@ -11,10 +11,10 @@ use uuid::Uuid;
 
 use super::{util::media_from_db, Postgres};
 
-use crate::{data::DataUrlEmbed, Result};
+use crate::{data::DataEmbed, Result};
 
 #[derive(Debug, Deserialize)]
-pub struct DbUrlEmbed {
+pub struct DbEmbed {
     pub id: Uuid,
     pub url: String,
     pub canonical_url: Option<String>,
@@ -30,9 +30,9 @@ pub struct DbUrlEmbed {
     pub site_avatar: Option<Value>,
 }
 
-impl From<DbUrlEmbed> for UrlEmbed {
-    fn from(row: DbUrlEmbed) -> Self {
-        UrlEmbed {
+impl From<DbEmbed> for Embed {
+    fn from(row: DbEmbed) -> Self {
+        Embed {
             id: row.id.into(),
             url: row.url.parse().expect("invalid data in db"),
             canonical_url: row
@@ -55,8 +55,8 @@ impl From<DbUrlEmbed> for UrlEmbed {
 }
 
 #[async_trait]
-impl DataUrlEmbed for Postgres {
-    async fn url_embed_insert(&self, user_id: UserId, embed: UrlEmbed) -> Result<()> {
+impl DataEmbed for Postgres {
+    async fn embed_insert(&self, user_id: UserId, embed: Embed) -> Result<()> {
         query!(
             r#"
             INSERT INTO url_embed (
@@ -98,11 +98,11 @@ impl DataUrlEmbed for Postgres {
         Ok(())
     }
 
-    async fn url_embed_find(&self, url: Url, max_age: Duration) -> Result<Option<UrlEmbed>> {
+    async fn embed_find(&self, url: Url, max_age: Duration) -> Result<Option<Embed>> {
         let min_ts = time::OffsetDateTime::now_utc() - max_age;
         let min_ts = time::PrimitiveDateTime::new(min_ts.date(), min_ts.time());
         let row = query_as!(
-            DbUrlEmbed,
+            DbEmbed,
             r#"
             SELECT
                 u.id,
@@ -138,10 +138,10 @@ impl DataUrlEmbed for Postgres {
         Ok(embed)
     }
 
-    async fn url_embed_link(
+    async fn embed_link(
         &self,
         version_id: MessageVerId,
-        embed_id: UrlEmbedId,
+        embed_id: EmbedId,
         ordering: u32,
     ) -> Result<()> {
         query!(

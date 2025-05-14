@@ -4,8 +4,8 @@ import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 import { flags } from "./flags.ts";
-import type { Message, UrlEmbed } from "sdk";
-import { UrlEmbedView } from "./UrlEmbed.tsx";
+import type { Embed, Message } from "sdk";
+import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 import { transformBlock } from "./text.tsx";
 import { DebugWebrtc } from "./Webrtc.tsx";
@@ -152,7 +152,7 @@ const InviteView = () => {
 const UrlEmbedDbg = () => {
 	const api = useApi();
 	let url: string;
-	const [data, setData] = createSignal<UrlEmbed | null>(null);
+	const [data, setData] = createSignal<Embed | null>(null);
 
 	async function generate(e: SubmitEvent) {
 		e.preventDefault();
@@ -172,7 +172,7 @@ const UrlEmbedDbg = () => {
 			</form>
 			<Show when={data()}>
 				<div>
-					<UrlEmbedView embed={data()!} />
+					<EmbedView embed={data()!} />
 				</div>
 			</Show>
 			<pre>{JSON.stringify(data(), null, 4)}</pre>

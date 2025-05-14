@@ -17,7 +17,7 @@ import { byteFmt, getUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";
-import { UrlEmbedView } from "./UrlEmbed.tsx";
+import { EmbedView } from "./UrlEmbed.tsx";
 import { transformBlock } from "./text.tsx";
 
 type MessageProps = {
@@ -188,7 +188,7 @@ export function MessageView(props: MessageProps) {
 							<Show when={props.message.embeds?.length}>
 								<ul class="embeds">
 									<For each={props.message.embeds}>
-										{(embed) => <UrlEmbedView embed={embed} />}
+										{(embed) => <EmbedView embed={embed} />}
 									</For>
 								</ul>
 							</Show>
@@ -221,7 +221,7 @@ export function MessageView(props: MessageProps) {
 							<Show when={props.message.embeds?.length}>
 								<ul class="embeds">
 									<For each={props.message.embeds}>
-										{(embed) => <UrlEmbedView embed={embed} />}
+										{(embed) => <EmbedView embed={embed} />}
 									</For>
 								</ul>
 							</Show>

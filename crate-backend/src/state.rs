@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use common::v1::types::{Media, Message, RoomId, ThreadId, UrlEmbed, UserId};
+use common::v1::types::{Embed, Media, Message, RoomId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -139,7 +139,7 @@ impl ServerStateInner {
     }
 
     /// presigns every relevant url in a UrlEmbed
-    pub async fn presign_url_embed(&self, embed: &mut UrlEmbed) -> Result<()> {
+    pub async fn presign_url_embed(&self, embed: &mut Embed) -> Result<()> {
         if let Some(m) = &mut embed.media {
             self.presign(m).await?;
         }

@@ -5,10 +5,10 @@ use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    AuditLog, AuditLogId, InviteWithMetadata, MediaPatch, MessageSync, Relationship,
-    RelationshipPatch, RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership,
-    SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
-    UrlEmbed, UrlEmbedId,
+    AuditLog, AuditLogId, Embed, EmbedId, InviteWithMetadata, MediaPatch, MessageSync,
+    Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember, RoomMemberPatch,
+    RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch,
+    ThreadMembership,
 };
 use url::Url;
 use uuid::Uuid;
@@ -42,7 +42,7 @@ pub trait Data:
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
-    + DataUrlEmbed
+    + DataEmbed
     + DataDm
     + DataUserRelationship
     + DataUserConfig
@@ -357,13 +357,13 @@ pub trait DataThreadMember {
 }
 
 #[async_trait]
-pub trait DataUrlEmbed {
-    async fn url_embed_insert(&self, user_id: UserId, embed: UrlEmbed) -> Result<()>;
-    async fn url_embed_find(&self, url: Url, max_age: Duration) -> Result<Option<UrlEmbed>>;
-    async fn url_embed_link(
+pub trait DataEmbed {
+    async fn embed_insert(&self, user_id: UserId, embed: Embed) -> Result<()>;
+    async fn embed_find(&self, url: Url, max_age: Duration) -> Result<Option<Embed>>;
+    async fn embed_link(
         &self,
         version_id: MessageVerId,
-        embed_id: UrlEmbedId,
+        embed_id: EmbedId,
         ordering: u32,
     ) -> Result<()>;
 }

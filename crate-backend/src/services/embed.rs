@@ -4,8 +4,8 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types;
 use common::v1::types::misc::Color;
+use common::v1::types::{Embed, EmbedId};
 use common::v1::types::{Media, UserId};
-use common::v1::types::{UrlEmbed, UrlEmbedId};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
@@ -23,9 +23,9 @@ const MAX_SIZE_HTML: u64 = 1024 * 1024 * 4;
 const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
 const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
 
-pub struct ServiceUrlEmbed {
+pub struct ServiceEmbed {
     state: Arc<ServerStateInner>,
-    cache: Cache<Url, UrlEmbed>,
+    cache: Cache<Url, Embed>,
 }
 
 /// an opengraph type
@@ -52,7 +52,7 @@ pub enum OpenGraphType {
 #[serde(tag = "type")]
 pub enum EmbedType {
     /// a generic website embed
-    Website(UrlEmbed),
+    Website(Embed),
 
     /// a piece of media
     Media(Media),
@@ -134,7 +134,7 @@ impl From<OpenGraphType> for &'static str {
     }
 }
 
-impl ServiceUrlEmbed {
+impl ServiceEmbed {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
@@ -145,7 +145,7 @@ impl ServiceUrlEmbed {
         }
     }
 
-    pub async fn generate(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+    pub async fn generate(&self, user_id: UserId, url: Url) -> Result<Embed> {
         let embed = self
             .cache
             .try_get_with_by_ref(&url, self.generate_and_insert(user_id, url.clone()))
@@ -157,11 +157,11 @@ impl ServiceUrlEmbed {
         Ok(embed)
     }
 
-    async fn generate_and_insert(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+    async fn generate_and_insert(&self, user_id: UserId, url: Url) -> Result<Embed> {
         if let Some(embed) = self
             .state
             .data()
-            .url_embed_find(url.clone(), MAX_EMBED_AGE)
+            .embed_find(url.clone(), MAX_EMBED_AGE)
             .await?
         {
             return Ok(embed);
@@ -169,13 +169,13 @@ impl ServiceUrlEmbed {
         let embed = self.generate_inner(user_id, url).await?;
         self.state
             .data()
-            .url_embed_insert(user_id, embed.clone())
+            .embed_insert(user_id, embed.clone())
             .await?;
         Ok(embed)
     }
 
     #[tracing::instrument(level = "info", skip(self))]
-    async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<UrlEmbed> {
+    async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<Embed> {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
@@ -230,8 +230,8 @@ impl ServiceUrlEmbed {
                 )
                 .await?;
             debug!("url embed inserted media");
-            let mut embed = UrlEmbed {
-                id: UrlEmbedId::new(),
+            let mut embed = Embed {
+                id: EmbedId::new(),
                 url: url.clone(),
                 canonical_url: if url == canonical_url {
                     None
@@ -383,8 +383,8 @@ impl ServiceUrlEmbed {
             //     None
             // };
 
-            let mut embed = UrlEmbed {
-                id: UrlEmbedId::new(),
+            let mut embed = Embed {
+                id: EmbedId::new(),
                 url: url.clone(),
                 canonical_url: if url == canonical_url {
                     None

@@ -14,6 +14,7 @@ impl Data for Postgres {}
 mod audit_logs;
 mod auth;
 mod dm;
+mod embed;
 mod invite;
 mod media;
 mod message;
@@ -28,7 +29,6 @@ mod session;
 mod thread;
 mod thread_member;
 mod unread;
-mod url_embed;
 mod user;
 mod user_config;
 mod user_relationship;

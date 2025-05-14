@@ -16,7 +16,7 @@ export type PaginationResponseMessage =
 	components["schemas"]["PaginationResponse_Message"];
 export type AuditLogEntry = components["schemas"]["AuditLog"];
 export type Permission = components["schemas"]["Permission"];
-export type UrlEmbed = components["schemas"]["UrlEmbed"];
+export type Embed = components["schemas"]["UrlEmbed"];
 export type TextDocument = components["schemas"]["Document"];
 
 export type Pagination<T> = {

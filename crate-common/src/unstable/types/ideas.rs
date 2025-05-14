@@ -3,7 +3,7 @@
 mod unfurl {
     use url::Url;
 
-    use crate::v1::types::UrlEmbed;
+    use crate::v1::types::Embed;
 
     // urlembedrequest -> urlembed
     struct Unfurler {
@@ -39,7 +39,7 @@ mod unfurl {
     enum UnfurlRes {
         AuthRequired,
         ConfirmationRequired,
-        Embed { ttl: u64, embed: UrlEmbed },
+        Embed { ttl: u64, embed: Embed },
     }
 }
 

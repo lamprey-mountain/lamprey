@@ -23,7 +23,7 @@ use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
 use crate::v1::types::RoomId;
 use crate::v1::types::{
-    AuditLog, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UrlEmbed, UserId,
+    AuditLog, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UserId,
 };
 
 use super::{
@@ -210,7 +210,7 @@ pub struct MessageCreate {
 
     #[cfg(feature = "feat_custom_embeds")]
     #[serde(default)]
-    pub embeds: Vec<UrlEmbed>,
+    pub embeds: Vec<Embed>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -248,7 +248,7 @@ pub struct MessagePatch {
     pub override_name: Option<Option<String>>,
 
     #[cfg(feature = "feat_custom_embeds")]
-    pub embeds: Option<Vec<UrlEmbed>>,
+    pub embeds: Option<Vec<Embed>>,
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
@@ -445,7 +445,7 @@ pub struct MessageSystemMessage {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<UrlEmbed>,
+    pub embeds: Vec<Embed>,
 }
 
 /// a basic message, using the legacy markdown syntax
@@ -476,7 +476,7 @@ pub struct MessageDefaultMarkdown {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<UrlEmbed>,
+    pub embeds: Vec<Embed>,
 
     /// override the name of this message's sender
     ///
@@ -515,7 +515,7 @@ pub struct MessageDefaultTagged {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<UrlEmbed>,
+    pub embeds: Vec<Embed>,
 
     #[cfg(feature = "feat_reactions")]
     #[serde(default)]

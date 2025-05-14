@@ -125,8 +125,8 @@ async fn message_create(
                 let srv = srv.clone();
                 let data = s.data();
                 tokio::spawn(async move {
-                    let embed = srv.url_embed.generate(user_id, url).await?;
-                    data.url_embed_link(version_id, embed.id, ordering as u32)
+                    let embed = srv.embed.generate(user_id, url).await?;
+                    data.embed_link(version_id, embed.id, ordering as u32)
                         .await?;
                     let mut message = data.message_get(thread_id, message_id).await?;
                     s.presign_message(&mut message).await?;
@@ -423,9 +423,9 @@ async fn message_edit(
                         let embed = if let Some(existing) = embeds.iter().find(|e| e.url == url) {
                             existing.clone()
                         } else {
-                            srv.url_embed.generate(user_id, url).await?
+                            srv.embed.generate(user_id, url).await?
                         };
-                        data.url_embed_link(version_id, embed.id, ordering as u32)
+                        data.embed_link(version_id, embed.id, ordering as u32)
                             .await?;
                         let mut message = data.message_get(thread_id, message_id).await?;
                         s.presign_message(&mut message).await?;

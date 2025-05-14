@@ -4,6 +4,77 @@
  */
 
 export interface paths {
+	"/api/v1/app": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** App list */
+		get: operations["app_list"];
+		put?: never;
+		/** App create */
+		post: operations["app_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/app/{app_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** App get */
+		get: operations["app_get"];
+		put?: never;
+		post?: never;
+		/** App delete */
+		delete: operations["app_delete"];
+		options?: never;
+		head?: never;
+		/** App patch */
+		patch: operations["app_patch"];
+		trace?: never;
+	};
+	"/api/v1/app/{app_id}/puppet": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Puppet create */
+		post: operations["puppet_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/app/{app_id}/puppet/{puppet_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Puppet ensure */
+		put: operations["puppet_ensure"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/auth": {
 		parameters: {
 			query?: never;
@@ -276,23 +347,6 @@ export interface paths {
 		 * @description Edit notifications in the inbox.
 		 */
 		patch: operations["inbox_patch"];
-		trace?: never;
-	};
-	"/api/v1/internal/rpc": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Internal rpc */
-		post: operations["internal_rpc"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/invite/{invite_code}": {
@@ -1161,10 +1215,10 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/**
-		 * Message reaction purge
+		 * Reaction purge
 		 * @description Remove all reactions from a message.
 		 */
-		delete: operations["reaction_message_purge"];
+		delete: operations["reaction_purge"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1178,21 +1232,21 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message reaction list
+		 * Reaction list
 		 * @description List message reactions for a specific emoji.
 		 */
-		get: operations["reaction_message_list"];
+		get: operations["reaction_list"];
 		/**
-		 * Message reaction add
+		 * Reaction add
 		 * @description Add a reaction to a message.
 		 */
-		put: operations["reaction_message_add"];
+		put: operations["reaction_add"];
 		post?: never;
 		/**
-		 * Message reaction remove
+		 * Reaction remove
 		 * @description Remove a reaction from a message.
 		 */
-		delete: operations["reaction_message_remove"];
+		delete: operations["reaction_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1401,23 +1455,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/voice": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Voice do something (TEMP) */
-		post: operations["voice_foobar"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/user": {
 		parameters: {
 			query?: never;
@@ -1425,11 +1462,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * User list (TODO)
-		 * @description Lists every user you are able to see. Can be filtered with ?include
-		 */
-		get: operations["user_list"];
+		get?: never;
 		put?: never;
 		/**
 		 * User create
@@ -1784,6 +1817,43 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/voice/region": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Voice region list (TODO) */
+		get: operations["voice_region_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{thread_id}/member/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Voice member get (TODO) */
+		get: operations["voice_member_get"];
+		put?: never;
+		/** Voice member move (TODO) */
+		post: operations["voice_member_move"];
+		/** Voice member disconnect (TODO) */
+		delete: operations["voice_member_disconnect"];
+		options?: never;
+		head?: never;
+		/** Voice member update (TODO) */
+		patch: operations["voice_member_patch"];
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1894,12 +1964,6 @@ export interface components {
 		};
 		/** @description a color */
 		Color: string;
-		Command: {
-			payload: unknown;
-			/** @enum {string} */
-			type: "VoiceDispatch";
-			user_id: components["schemas"]["Id"];
-		};
 		ContextResponse: {
 			has_after: boolean;
 			has_before: boolean;
@@ -2357,6 +2421,7 @@ export interface components {
 			 *     deprecated: create new puppets for each bridged user instead
 			 */
 			override_name?: string | null;
+			reactions?: components["schemas"]["ReactionCounts"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description a basic message, using the shiny new and very experimental tagged text format */
@@ -2534,36 +2599,20 @@ export interface components {
 			message_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "ReactionMessageUpsert";
+			type: "ReactionUpsert";
 			user_id: components["schemas"]["Id"];
 		} | {
 			key: components["schemas"]["ReactionKey"];
 			message_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "ReactionMessageRemove";
+			type: "ReactionRemove";
 			user_id: components["schemas"]["Id"];
 		} | {
 			message_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "ReactionMessagePurge";
-		} | {
-			key: components["schemas"]["ReactionKey"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionThreadUpsert";
-			user_id: components["schemas"]["Id"];
-		} | {
-			key: components["schemas"]["ReactionKey"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionThreadRemove";
-			user_id: components["schemas"]["Id"];
-		} | {
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionThreadPurge";
+			type: "ReactionPurge";
 		} | {
 			message_ids: components["schemas"]["Id"][];
 			thread_id: components["schemas"]["Id"];
@@ -3020,21 +3069,6 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		PaginationResponse_User: {
-			has_more: boolean;
-			items: (components["schemas"]["UserType"] & {
-				avatar?: null | components["schemas"]["Id"];
-				description?: string | null;
-				id: components["schemas"]["Id"];
-				name: string;
-				state: components["schemas"]["UserState"];
-				state_updated_at: components["schemas"]["Time"];
-				status: components["schemas"]["Status"];
-				version_id: components["schemas"]["Id"];
-			})[];
-			/** Format: int64 */
-			total: number;
-		};
 		PasswordExec: components["schemas"]["PasswordExecIdent"] & {
 			password: string;
 		};
@@ -3150,7 +3184,7 @@ export interface components {
 			/** Format: int64 */
 			count: number;
 			emoji: components["schemas"]["Emoji"];
-			self: boolean;
+			self?: boolean;
 		};
 		/** @description the total reaction counts for all emoji */
 		ReactionCounts: components["schemas"]["ReactionCount"][];
@@ -3772,8 +3806,6 @@ export interface components {
 			name: string;
 		};
 		UserIdReq: null | components["schemas"]["Id"];
-		/** @enum {string} */
-		UserListFilter: "Mutual" | "Friends" | "Dms" | "Puppet" | "Bot";
 		UserPatch: {
 			avatar?: null | components["schemas"]["Id"];
 			description?: string | null;
@@ -3835,6 +3867,132 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+	app_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	puppet_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	puppet_ensure: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	auth_status: {
 		parameters: {
 			query?: never;
@@ -4307,28 +4465,6 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	internal_rpc: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["Command"];
-			};
-		};
-		responses: {
-			/** @description Accepted */
-			202: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6520,7 +6656,7 @@ export interface operations {
 			};
 		};
 	};
-	reaction_message_purge: {
+	reaction_purge: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -6543,7 +6679,7 @@ export interface operations {
 			};
 		};
 	};
-	reaction_message_list: {
+	reaction_list: {
 		parameters: {
 			query?: {
 				from?: string;
@@ -6576,7 +6712,7 @@ export interface operations {
 			};
 		};
 	};
-	reaction_message_add: {
+	reaction_add: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -6608,7 +6744,7 @@ export interface operations {
 			};
 		};
 	};
-	reaction_message_remove: {
+	reaction_remove: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7015,55 +7151,6 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
-			};
-		};
-	};
-	voice_foobar: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Create thread success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	user_list: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				include: components["schemas"]["UserListFilter"][];
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PaginationResponse_User"];
-				};
 			};
 		};
 	};
@@ -7792,6 +7879,136 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["PaginationResponse_Room"];
+				};
+			};
+		};
+	};
+	voice_region_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	voice_member_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	voice_member_move: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": unknown;
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	voice_member_disconnect: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": unknown;
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_member_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": unknown;
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
 				};
 			};
 		};
