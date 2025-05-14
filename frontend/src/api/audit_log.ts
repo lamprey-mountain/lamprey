@@ -19,7 +19,7 @@ export class AuditLogs {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/logs",
+				"/api/v1/room/{room_id}/audit-logs",
 				{
 					params: {
 						path: { room_id: room_id_signal() },
