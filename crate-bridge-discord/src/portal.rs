@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::common::ConfigPortal;
@@ -8,7 +9,9 @@ use crate::data::MessageMetadata;
 use crate::{chat::UnnamedMessage, discord::DiscordMessage};
 use anyhow::Result;
 use common::v1::types::media::MediaRef;
+use common::v1::types::EmbedCreate;
 use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
+use reqwest::Url;
 use serenity::all::CreateAllowedMentions;
 use serenity::all::CreateAttachment;
 use serenity::all::CreateEmbed;
@@ -310,6 +313,46 @@ impl Portal {
                         })
                         .await?;
                     req.attachments.push(MediaRef { id: media.id });
+                }
+                for emb in message.embeds.iter().cloned() {
+                    let author_avatar = if let Some(url) = emb
+                        .author
+                        .as_ref()
+                        .and_then(|a| a.proxy_icon_url.as_deref())
+                    {
+                        let filename = Url::from_str(url)?
+                            .path_segments()
+                            .unwrap()
+                            .last()
+                            .unwrap()
+                            .to_owned();
+                        let bytes = reqwest::get(url).await?.bytes().await?;
+                        let (send, recv) = tokio::sync::oneshot::channel();
+                        self.globals
+                            .ch_chan
+                            .send(UnnamedMessage::MediaUpload {
+                                filename,
+                                bytes: bytes.into(),
+                                response: send,
+                            })
+                            .await?;
+                        let media = recv.await?;
+                        Some(MediaRef { id: media.id })
+                    } else {
+                        None
+                    };
+                    let create = EmbedCreate {
+                        url: emb.url.and_then(|u| u.parse().ok()),
+                        title: emb.title,
+                        description: emb.description,
+                        color: emb.colour.map(|c| format!("#{}", c.hex())),
+                        media_is_thumbnail: false,
+                        media: vec![], // FIXME
+                        author_name: emb.author.as_ref().map(|a| a.name.clone()),
+                        author_url: emb.author.and_then(|a| a.url).and_then(|u| u.parse().ok()),
+                        author_avatar,
+                    };
+                    req.embeds.push(create);
                 }
                 req.content = match message.kind {
                     DcMessageType::Regular | DcMessageType::InlineReply
