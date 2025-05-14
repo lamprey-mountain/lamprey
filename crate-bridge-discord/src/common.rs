@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::data::MessageMetadata;
 use crate::portal::{Portal, PortalMessage};
-use crate::{chat::UnnamedMessage, discord::DiscordMessage};
+use crate::{discord::DiscordMessage, lampo::LampoMessage};
 
 #[derive(Clone)]
 pub struct Globals {
@@ -17,7 +17,7 @@ pub struct Globals {
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
-    pub ch_chan: mpsc::Sender<UnnamedMessage>,
+    pub ch_chan: mpsc::Sender<LampoMessage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

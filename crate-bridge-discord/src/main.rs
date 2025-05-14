@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use chat::Unnamed;
 use common::{Config, Globals};
 use dashmap::DashMap;
 use data::Data;
 use discord::Discord;
+use lampo::Lampo;
 use tokio::sync::mpsc;
 use tracing_subscriber::EnvFilter;
 
-mod chat;
 mod common;
 mod data;
 mod discord;
+mod lampo;
 mod portal;
 
 #[tokio::main]
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     }
 
     let dc = Discord::new(globals.clone(), dc_chan.1);
-    let ch = Unnamed::new(globals.clone(), ch_chan.1);
+    let ch = Lampo::new(globals.clone(), ch_chan.1);
 
     let _ = tokio::join!(dc.connect(), ch.connect());
 

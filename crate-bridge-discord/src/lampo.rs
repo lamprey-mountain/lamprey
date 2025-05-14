@@ -15,12 +15,12 @@ use crate::{
     portal::PortalMessage,
 };
 
-pub struct Unnamed {
-    recv: mpsc::Receiver<UnnamedMessage>,
+pub struct Lampo {
+    recv: mpsc::Receiver<LampoMessage>,
     client: Client,
 }
 
-pub enum UnnamedMessage {
+pub enum LampoMessage {
     MediaUpload {
         filename: String,
         bytes: Vec<u8>,
@@ -50,6 +50,10 @@ pub enum UnnamedMessage {
         thread_id: ThreadId,
         message_id: MessageId,
         response: oneshot::Sender<()>,
+    },
+    PuppetEnsure {
+        key: String,
+        response: oneshot::Sender<User>,
     },
     UserFetch {
         user_id: UserId,
@@ -81,7 +85,7 @@ impl EventHandler for Handle {
         }
         self.globals.portal_send(
             message.thread_id,
-            PortalMessage::UnnamedMessageUpsert { message },
+            PortalMessage::LampoMessageUpsert { message },
         );
         Ok(())
     }
@@ -96,8 +100,8 @@ impl EventHandler for Handle {
     }
 }
 
-impl Unnamed {
-    pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<UnnamedMessage>) -> Self {
+impl Lampo {
+    pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<LampoMessage>) -> Self {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
         let base_url = std::env::var("BASE_URL").expect("missing BASE_URL");
         let base_url_ws = std::env::var("BASE_URL_WS").expect("missing BASE_URL_WS");
@@ -123,9 +127,9 @@ impl Unnamed {
     }
 }
 
-async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
+async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
     match msg {
-        UnnamedMessage::MediaUpload {
+        LampoMessage::MediaUpload {
             filename,
             bytes,
             response,
@@ -141,11 +145,11 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             let media = http.media_upload(&upload, bytes).await?;
             let _ = response.send(media.expect("failed to upload media!"));
         }
-        UnnamedMessage::MediaInfo { media_id, response } => {
+        LampoMessage::MediaInfo { media_id, response } => {
             let media = http.media_info_get(media_id).await?;
             let _ = response.send(media);
         }
-        UnnamedMessage::MessageCreate {
+        LampoMessage::MessageCreate {
             thread_id,
             req,
             response,
@@ -153,7 +157,7 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             let res = http.message_create(thread_id, &req).await?;
             let _ = response.send(res);
         }
-        UnnamedMessage::MessageUpdate {
+        LampoMessage::MessageUpdate {
             thread_id,
             message_id,
             req,
@@ -162,7 +166,7 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
             let res = http.message_update(thread_id, message_id, &req).await?;
             let _ = response.send(res);
         }
-        UnnamedMessage::MessageDelete {
+        LampoMessage::MessageDelete {
             thread_id,
             message_id,
             response,
@@ -178,10 +182,11 @@ async fn handle(msg: UnnamedMessage, http: &Http) -> Result<()> {
         //     let res = http.message_get(thread_id, message_id).await?;
         //     let _ = response.send(res);
         // }
-        UnnamedMessage::UserFetch { user_id, response } => {
+        LampoMessage::UserFetch { user_id, response } => {
             let res = http.user_get(user_id).await?;
             let _ = response.send(res);
         }
+        LampoMessage::PuppetEnsure { key, response } => todo!(),
     }
     Ok(())
 }

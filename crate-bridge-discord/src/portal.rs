@@ -6,7 +6,7 @@ use crate::common::Globals;
 use crate::data::AttachmentMetadata;
 use crate::data::Data;
 use crate::data::MessageMetadata;
-use crate::{chat::UnnamedMessage, discord::DiscordMessage};
+use crate::{discord::DiscordMessage, lampo::LampoMessage};
 use anyhow::Result;
 use common::v1::types::media::MediaRef;
 use common::v1::types::EmbedCreate;
@@ -36,7 +36,7 @@ pub struct Portal {
 
 /// portal actor message
 pub enum PortalMessage {
-    UnnamedMessageUpsert { message: Message },
+    LampoMessageUpsert { message: Message },
     UnnamedMessageDelete { message_id: MessageId },
     DiscordMessageCreate { message: DcMessage },
     DiscordMessageUpdate { update: DcMessageUpdate },
@@ -77,7 +77,7 @@ impl Portal {
 
     async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
         match msg {
-            PortalMessage::UnnamedMessageUpsert { message } => {
+            PortalMessage::LampoMessageUpsert { message } => {
                 let existing = self.globals.get_message(message.id).await?;
                 let msg_inner = match message.message_type {
                     types::MessageType::DefaultMarkdown(m) => m,
@@ -193,7 +193,7 @@ impl Portal {
                     let (user_send, user) = oneshot::channel();
                     self.globals
                         .ch_chan
-                        .send(UnnamedMessage::UserFetch {
+                        .send(LampoMessage::UserFetch {
                             user_id: message.author_id,
                             response: user_send,
                         })
@@ -218,7 +218,7 @@ impl Portal {
                         let (avatar_send, avatar) = oneshot::channel();
                         self.globals
                             .ch_chan
-                            .send(UnnamedMessage::MediaInfo {
+                            .send(LampoMessage::MediaInfo {
                                 media_id,
                                 response: avatar_send,
                             })
@@ -299,7 +299,7 @@ impl Portal {
                     let (send, recv) = tokio::sync::oneshot::channel();
                     self.globals
                         .ch_chan
-                        .send(UnnamedMessage::MediaUpload {
+                        .send(LampoMessage::MediaUpload {
                             filename: a.filename.to_owned(),
                             bytes,
                             response: send,
@@ -330,7 +330,7 @@ impl Portal {
                         let (send, recv) = tokio::sync::oneshot::channel();
                         self.globals
                             .ch_chan
-                            .send(UnnamedMessage::MediaUpload {
+                            .send(LampoMessage::MediaUpload {
                                 filename,
                                 bytes: bytes.into(),
                                 response: send,
@@ -386,7 +386,7 @@ impl Portal {
                 let thread_id = self.thread_id();
                 self.globals
                     .ch_chan
-                    .send(UnnamedMessage::MessageCreate {
+                    .send(LampoMessage::MessageCreate {
                         thread_id,
                         req,
                         response: send,
@@ -429,7 +429,7 @@ impl Portal {
                         let (send, recv) = tokio::sync::oneshot::channel();
                         self.globals
                             .ch_chan
-                            .send(UnnamedMessage::MediaUpload {
+                            .send(LampoMessage::MediaUpload {
                                 filename: att.filename.to_owned(),
                                 bytes,
                                 response: send,
@@ -465,7 +465,7 @@ impl Portal {
                 let thread_id = self.thread_id();
                 self.globals
                     .ch_chan
-                    .send(UnnamedMessage::MessageUpdate {
+                    .send(LampoMessage::MessageUpdate {
                         thread_id,
                         message_id: existing.chat_id,
                         req,
@@ -483,7 +483,7 @@ impl Portal {
                 let thread_id = self.thread_id();
                 self.globals
                     .ch_chan
-                    .send(UnnamedMessage::MessageDelete {
+                    .send(LampoMessage::MessageDelete {
                         thread_id,
                         message_id: existing.chat_id,
                         response: send,
