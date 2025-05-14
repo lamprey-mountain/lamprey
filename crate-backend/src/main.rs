@@ -11,7 +11,10 @@ use http::header;
 use opendal::layers::LoggingLayer;
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
-use tower_http::{catch_panic::CatchPanicLayer, cors::CorsLayer, trace::TraceLayer};
+use tower_http::{
+    catch_panic::CatchPanicLayer, cors::CorsLayer, sensitive_headers::SetSensitiveHeadersLayer,
+    trace::TraceLayer,
+};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use utoipa::{openapi::extensions::Extensions, Modify, OpenApi};
@@ -167,6 +170,7 @@ async fn serve(config: Config) -> Result<()> {
             "/api/docs",
             get(|| async { Html(include_str!("scalar.html")) }),
         )
+        .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new())
         .layer(cors())
