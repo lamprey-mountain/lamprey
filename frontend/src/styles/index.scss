@@ -392,6 +392,13 @@ em {
 }
 
 .markdown {
+	white-space: collapse;
+
+	li,
+	p {
+		white-space: pre-wrap;
+	}
+
 	& ul,
 	ol {
 		white-space: normal;
@@ -1132,6 +1139,10 @@ button[disabled] {
 			font-weight: bold;
 		}
 
+		& a.title {
+			color: $link-400;
+		}
+
 		& .site {
 			color: $fg-500;
 		}
@@ -1142,6 +1153,7 @@ button[disabled] {
 			-webkit-line-clamp: 3;
 			-webkit-box-orient: vertical;
 			overflow: hidden;
+			margin-top: 8px;
 		}
 	}
 

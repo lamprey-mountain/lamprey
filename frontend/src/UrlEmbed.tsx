@@ -1,12 +1,33 @@
 import type { Embed } from "sdk";
 import { Show, type VoidProps } from "solid-js";
 import { ImageView } from "./media/mod.tsx";
+import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 
 type EmbedProps = {
 	embed: Embed;
 };
 
+const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
+	transformTags: {
+		del: "s",
+	},
+};
+const md = marked.use({
+	breaks: true,
+	gfm: true,
+});
+
 export const EmbedView = (props: VoidProps<EmbedProps>) => {
+	const description = () => {
+		const d = props.embed.description;
+		if (!d) return null;
+		return sanitizeHtml(
+			md.parse(d ?? "") as string,
+			sanitizeHtmlOptions,
+		).trim();
+	};
+
 	return (
 		<article
 			class="embed"
@@ -26,7 +47,9 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 							</span>
 						</Show>
 					</header>
-					<p class="description">{props.embed.description}</p>
+					<Show when={props.embed.description}>
+						<p class="description markdown" innerHTML={description() ?? ""}></p>
+					</Show>
 				</div>
 			</Show>
 			<Show when={props.embed.media && props.embed.media_is_thumbnail}>
