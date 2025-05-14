@@ -62,8 +62,20 @@ pub async fn debug_embed_url(
     Ok(Json(embed))
 }
 
+/// Trigger a panic
+#[utoipa::path(
+    get,
+    path = "/debug/panic",
+    tags = ["debug"],
+    responses((status = INTERNAL_SERVER_ERROR, description = "success")),
+)]
+pub async fn debug_panic() {
+    panic!("whoops!")
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_version))
         .routes(routes!(debug_embed_url))
+        .routes(routes!(debug_panic))
 }
