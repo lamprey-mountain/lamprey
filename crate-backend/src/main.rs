@@ -7,13 +7,13 @@ use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
 use common::v1::types::notifications::InboxFilters;
 use figment::providers::{Env, Format, Toml};
-use http::header;
+use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{
-    catch_panic::CatchPanicLayer, cors::CorsLayer, sensitive_headers::SetSensitiveHeadersLayer,
-    trace::TraceLayer,
+    catch_panic::CatchPanicLayer, cors::CorsLayer, propagate_header::PropagateHeaderLayer,
+    sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
 };
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -173,6 +173,9 @@ async fn serve(config: Config) -> Result<()> {
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new())
+        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
+            "x-trace-id",
+        )))
         .layer(cors())
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
