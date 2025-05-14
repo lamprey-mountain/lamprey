@@ -8,15 +8,23 @@ type EmbedProps = {
 
 export const EmbedView = (props: VoidProps<EmbedProps>) => {
 	return (
-		<article class="embed">
+		<article
+			class="embed"
+			classList={{ color: !!props.embed.color }}
+			style={{ "--color": props.embed.color || undefined }}
+		>
 			<Show when={props.embed.title}>
 				<div class="info">
 					<header>
-						<a class="title" href={props.embed.url}>{props.embed.title}</a>
-						<span class="site">
-							{" - "}
-							{props.embed.site_name || new URL(props.embed.url).host}
-						</span>
+						<Show when={props.embed.url} fallback={<b>{props.embed.title}</b>}>
+							<a class="title" href={props.embed.url}>{props.embed.title}</a>
+						</Show>
+						<Show when={props.embed.site_name || props.embed.url}>
+							<span class="site">
+								{" - "}
+								{props.embed.site_name || URL.parse(props.embed.url)?.host}
+							</span>
+						</Show>
 					</header>
 					<p class="description">{props.embed.description}</p>
 				</div>

@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    reaction::ReactionCounts, util::Diff, Interactions, MessageDefaultMarkdown,
-    MessageDefaultTagged, PaginationDirection, ThreadMembership,
+    misc::Color, reaction::ReactionCounts, util::Diff, Embed, EmbedId, Interactions,
+    MessageDefaultMarkdown, MessageDefaultTagged, PaginationDirection, ThreadMembership,
 };
 use linkify::LinkFinder;
 use serde::{Deserialize, Serialize};
@@ -61,7 +61,10 @@ async fn message_create(
         perms.ensure(Permission::MessageEmbeds)?;
     }
     // TODO: move this to validation
-    if json.content.as_ref().is_none_or(|s| s.is_empty()) && json.attachments.is_empty() {
+    if json.content.as_ref().is_none_or(|s| s.is_empty())
+        && json.attachments.is_empty()
+        && json.embeds.is_empty()
+    {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
         ));
@@ -117,6 +120,40 @@ async fn message_create(
             .await?;
     }
     let mut message = data.message_get(thread_id, message_id).await?;
+    for (ordering, embed) in json.embeds.iter().enumerate() {
+        let id = EmbedId::new();
+        let embed = Embed {
+            id,
+            url: embed.url.clone(),
+            canonical_url: None,
+            title: embed.title.clone(),
+            description: embed.description.clone(),
+            color: embed
+                .color
+                .clone()
+                .map(|s| csscolorparser::parse(&s))
+                .transpose()
+                .map_err(|e| Error::GenericError(e.to_string()))?
+                .map(|c| Color::from_hex_string(c.to_hex_string())),
+            media: None,
+            media_is_thumbnail: embed.media_is_thumbnail,
+            author_name: embed.author_name.clone(),
+            author_url: embed.author_url.clone(),
+            author_avatar: None,
+            site_name: None,
+            site_avatar: None,
+        }
+        .truncate();
+        data.embed_insert(user_id, embed.clone()).await?;
+        data.embed_link(message.version_id, id, ordering as u32)
+            .await?;
+        match &mut message.message_type {
+            MessageType::DefaultMarkdown(m) => m.embeds.push(embed),
+            MessageType::DefaultTagged(m) => m.embeds.push(embed),
+            _ => {}
+        }
+    }
+
     if let Some(content) = &content {
         for (ordering, link) in LinkFinder::new().links(content).enumerate() {
             if let Some(url) = link.as_str().parse::<Url>().ok() {
@@ -124,9 +161,10 @@ async fn message_create(
                 let s = s.clone();
                 let srv = srv.clone();
                 let data = s.data();
+                let embed_count = json.embeds.len();
                 tokio::spawn(async move {
                     let embed = srv.embed.generate(user_id, url).await?;
-                    data.embed_link(version_id, embed.id, ordering as u32)
+                    data.embed_link(version_id, embed.id, (ordering + embed_count) as u32)
                         .await?;
                     let mut message = data.message_get(thread_id, message_id).await?;
                     s.presign_message(&mut message).await?;
@@ -322,7 +360,10 @@ async fn message_edit(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageEdit)?;
-    if json.content.is_none() && json.attachments.as_ref().is_some_and(|a| a.is_empty()) {
+    if json.content.is_none()
+        && json.attachments.as_ref().is_some_and(|a| a.is_empty())
+        && json.embeds.as_ref().is_some_and(|a| a.is_empty())
+    {
         return Err(Error::BadStatic(
             "at least one of content, attachments, or embeds must be defined",
         ));
@@ -400,11 +441,13 @@ async fn message_edit(
             },
         )
         .await?;
+
     let version_uuid = version_id.into_inner();
     for id in &attachment_ids {
         data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
             .await?;
     }
+
     if let Some(content) = &content {
         let embeds = match &message.message_type {
             MessageType::DefaultMarkdown(m) => Some(m.embeds.clone()),
@@ -420,7 +463,10 @@ async fn message_edit(
                     let data = s.data();
                     let embeds = embeds.clone();
                     tokio::spawn(async move {
-                        let embed = if let Some(existing) = embeds.iter().find(|e| e.url == url) {
+                        let embed = if let Some(existing) = embeds
+                            .iter()
+                            .find(|e| e.url.as_ref().is_some_and(|u| u == &url))
+                        {
                             existing.clone()
                         } else {
                             srv.embed.generate(user_id, url).await?
@@ -442,7 +488,47 @@ async fn message_edit(
             }
         }
     }
+
     let mut message = data.message_version_get(thread_id, version_id).await?;
+
+    if let Some(embeds) = json.embeds {
+        for (ordering, embed) in embeds.iter().enumerate() {
+            // TODO: don't create new embeds for every version
+            // TODO: don't always create a new version if any embeds for every version
+            let id = EmbedId::new();
+            let embed = Embed {
+                id,
+                url: embed.url.clone(),
+                canonical_url: None,
+                title: embed.title.clone(),
+                description: embed.description.clone(),
+                color: embed
+                    .color
+                    .clone()
+                    .map(|s| csscolorparser::parse(&s))
+                    .transpose()
+                    .map_err(|e| Error::GenericError(e.to_string()))?
+                    .map(|c| Color::from_hex_string(c.to_hex_string())),
+                media: None,
+                media_is_thumbnail: embed.media_is_thumbnail,
+                author_name: embed.author_name.clone(),
+                author_url: embed.author_url.clone(),
+                author_avatar: None,
+                site_name: None,
+                site_avatar: None,
+            }
+            .truncate();
+            data.embed_insert(user_id, embed.clone()).await?;
+            data.embed_link(message.version_id, id, ordering as u32)
+                .await?;
+            match &mut message.message_type {
+                MessageType::DefaultMarkdown(m) => m.embeds.push(embed),
+                MessageType::DefaultTagged(m) => m.embeds.push(embed),
+                _ => {}
+            }
+        }
+    }
+
     s.presign_message(&mut message).await?;
     s.broadcast_thread(
         thread_id,

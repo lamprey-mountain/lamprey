@@ -16,7 +16,7 @@ use crate::{data::DataEmbed, Result};
 #[derive(Debug, Deserialize)]
 pub struct DbEmbed {
     pub id: Uuid,
-    pub url: String,
+    pub url: Option<String>,
     pub canonical_url: Option<String>,
     pub title: Option<String>,
     pub description: Option<String>,
@@ -34,7 +34,7 @@ impl From<DbEmbed> for Embed {
     fn from(row: DbEmbed) -> Self {
         Embed {
             id: row.id.into(),
-            url: row.url.parse().expect("invalid data in db"),
+            url: row.url.map(|u| u.parse().expect("invalid data in db")),
             canonical_url: row
                 .canonical_url
                 .map(|i| i.parse().expect("invalid data in db")),
@@ -78,7 +78,7 @@ impl DataEmbed for Postgres {
     	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         "#,
             embed.id.into_inner(),
-            embed.url.to_string(),
+            embed.url.map(|u| u.to_string()),
             embed.canonical_url.map(|u| u.to_string()),
             embed.title,
             embed.description,

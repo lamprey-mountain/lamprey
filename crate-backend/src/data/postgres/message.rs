@@ -16,6 +16,7 @@ use crate::types::{
 
 use crate::data::DataMessage;
 
+use super::embed::DbEmbed;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -71,7 +72,7 @@ impl From<DbMessage> for Message {
                             .embeds
                             .into_iter()
                             .map(|a| {
-                                let db: Embed =
+                                let db: DbEmbed =
                                     serde_json::from_value(a).expect("invalid data in database!");
                                 db.into()
                             })
@@ -91,7 +92,7 @@ impl From<DbMessage> for Message {
                         .embeds
                         .into_iter()
                         .map(|a| {
-                            let db: Embed =
+                            let db: DbEmbed =
                                 serde_json::from_value(a).expect("invalid data in database!");
                             db.into()
                         })

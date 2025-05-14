@@ -21,7 +21,7 @@ pub struct Embed {
     pub id: EmbedId,
 
     /// the url this embed was requested for
-    pub url: Url,
+    pub url: Option<Url>,
 
     /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
     pub canonical_url: Option<Url>,
@@ -96,8 +96,11 @@ pub struct EmbedCreate {
     pub color: Option<String>,
 
     /// if `media` should be displayed as a small thumbnail or as a full size
+    #[serde(default)]
     pub media_is_thumbnail: bool,
+
     // TODO: allow using a url directly
+    #[serde(default)]
     pub media: Vec<MediaRef>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]

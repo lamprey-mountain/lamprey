@@ -1104,6 +1104,12 @@ button[disabled] {
 	/* width: 20em; */
 	background: $bg-150;
 	border: solid $sep-500 1px;
+	margin-bottom: 4px;
+
+	&.color {
+		box-shadow: inset 4px 0 var(--color);
+		padding-left: 4px;
+	}
 
 	& > .thumb {
 		grid-area: thumb;

@@ -26,6 +26,7 @@ use crate::v1::types::{
     AuditLog, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UserId,
 };
 
+use super::EmbedCreate;
 use super::{
     media::{Media, MediaRef},
     MessageId, MessageVerId, ThreadId, User,
@@ -210,7 +211,7 @@ pub struct MessageCreate {
 
     #[cfg(feature = "feat_custom_embeds")]
     #[serde(default)]
-    pub embeds: Vec<Embed>,
+    pub embeds: Vec<EmbedCreate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -248,7 +249,7 @@ pub struct MessagePatch {
     pub override_name: Option<Option<String>>,
 
     #[cfg(feature = "feat_custom_embeds")]
-    pub embeds: Option<Vec<Embed>>,
+    pub embeds: Option<Vec<EmbedCreate>>,
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
@@ -583,7 +584,7 @@ impl Diff<Message> for MessagePatch {
                     || self.metadata.changes(&m.metadata)
                     || self.reply_id.changes(&m.reply_id)
                     || self.override_name.changes(&m.override_name)
-                    || self.embeds.changes(&m.embeds)
+                    || self.embeds.is_some()
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
@@ -594,7 +595,7 @@ impl Diff<Message> for MessagePatch {
                 self.content.changes(&m.content)
                     || self.metadata.changes(&m.metadata)
                     || self.reply_id.changes(&m.reply_id)
-                    || self.embeds.changes(&m.embeds)
+                    || self.embeds.is_some()
                     || self.attachments.as_ref().is_some_and(|a| {
                         a.len() != m.attachments.len()
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)

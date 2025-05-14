@@ -232,7 +232,7 @@ impl ServiceEmbed {
             debug!("url embed inserted media");
             let mut embed = Embed {
                 id: EmbedId::new(),
-                url: url.clone(),
+                url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
                 } else {
@@ -385,7 +385,7 @@ impl ServiceEmbed {
 
             let mut embed = Embed {
                 id: EmbedId::new(),
-                url: url.clone(),
+                url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
                 } else {
