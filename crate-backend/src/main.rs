@@ -153,7 +153,7 @@ async fn serve(config: Config) -> Result<()> {
     let blobs = opendal::Operator::new(blobs_builder)?
         .layer(LoggingLayer::default())
         .finish();
-    // blobs.check().await?;
+    blobs.check().await?;
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
 
