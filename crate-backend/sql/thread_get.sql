@@ -4,15 +4,11 @@ with last_id as (
     from message
     where deleted_at is null
     group by thread_id
-), message_coalesced AS (
-    select *
-    from (select *, row_number() over(partition by id order by version_id desc) as row_num
-        from message)
-    where row_num = 1
 ),
 message_count as (
     select thread_id, count(*) as count
-    from message_coalesced
+    from message
+    where is_latest
     group by thread_id
 )
 select

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n), message_coalesced AS (\n    select *\n    from (select *, row_number() over(partition by id order by version_id desc) as row_num\n        from message)\n    where row_num = 1\n),\nmessage_count as (\n    select thread_id, count(*) as count\n    from message_coalesced\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.room_id,\n    thread.creator_id,\n    thread.name,\n    thread.version_id,\n    thread.description,\n    thread.state as \"state: DbThreadState\",\n    coalesce(count, 0) as \"message_count!\",\n    last_version_id as \"last_version_id!\",\n    unread.message_id as \"last_read_id?\",\n    coalesce(unread.version_id < last_version_id, true) as \"is_unread!\"\nfrom thread\njoin message_count on message_count.thread_id = thread.id\njoin last_id on last_id.thread_id = thread.id\nfull outer join usr on true\nleft join unread on usr.id = unread.user_id and thread.id = unread.thread_id\nwhere room_id = $1 AND usr.id = $2 AND thread.id > $3 AND thread.id < $4\norder by (CASE WHEN $5 = 'f' THEN thread.id END), thread.id DESC LIMIT $6\n",
+  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n),\nmessage_count as (\n    select thread_id, count(*) as count\n    from message\n    where is_latest\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.room_id,\n    thread.creator_id,\n    thread.name,\n    thread.version_id,\n    thread.description,\n    thread.state as \"state: DbThreadState\",\n    coalesce(count, 0) as \"message_count!\",\n    last_version_id as \"last_version_id!\",\n    unread.message_id as \"last_read_id?\",\n    coalesce(unread.version_id < last_version_id, true) as \"is_unread!\"\nfrom thread\njoin message_count on message_count.thread_id = thread.id\njoin last_id on last_id.thread_id = thread.id\nfull outer join usr on true\nleft join unread on usr.id = unread.user_id and thread.id = unread.thread_id\nwhere room_id = $1 AND usr.id = $2 AND thread.id > $3 AND thread.id < $4\norder by (CASE WHEN $5 = 'f' THEN thread.id END), thread.id DESC LIMIT $6\n",
   "describe": {
     "columns": [
       {
@@ -96,5 +96,5 @@
       null
     ]
   },
-  "hash": "9267da9c08033bd9e90e81b33cb78be007f1b4eae73c49eccbb8293551f5578a"
+  "hash": "9d95e699d361159520df828a08e6188047a7eb1d885f3001b6ba5c624567352c"
 }
