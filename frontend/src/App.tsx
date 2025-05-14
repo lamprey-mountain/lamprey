@@ -384,7 +384,11 @@ export const Root: Component = (props: ParentProps) => {
 					<Portal mount={document.getElementById("overlay")!}>
 						<Overlay />
 					</Portal>
-					<footer>{state()}</footer>
+					<Show when={state() !== "ready"}>
+						<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
+							{state()}
+						</div>
+					</Show>
 				</chatctx.Provider>
 			</api.Provider>
 		</div>

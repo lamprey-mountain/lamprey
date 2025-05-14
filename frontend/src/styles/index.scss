@@ -25,7 +25,7 @@
 	display: grid;
 	grid-template-areas:
 		"nav header header" "nav main sidebar" "footer footer footer";
-	grid-template-rows: auto 1fr 20px;
+	grid-template-rows: auto 1fr auto;
 	grid-template-columns: auto 1fr auto;
 	height: 100vh;
 	background-color: $bg-200;
