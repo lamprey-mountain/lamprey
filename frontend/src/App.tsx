@@ -53,6 +53,7 @@ import {
 	ThreadMenu,
 	UserMenu,
 } from "./menu/mod.ts";
+import { RouteInviteInner } from "./Invite.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -75,6 +76,7 @@ const App: Component = () => {
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
 			<Route path="/debug" component={Debug} />
+			<Route path="/invite/:code" component={RouteInvite} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);
@@ -548,6 +550,18 @@ function RouteFriends() {
 					<li>bar</li>
 					<li>baz</li>
 				</ul>
+			</div>
+		</>
+	);
+}
+
+function RouteInvite(p: RouteSectionProps) {
+	return (
+		<>
+			<Title title="invite" />
+			<ChatNav />
+			<div class="invite" style="padding:8px">
+				<RouteInviteInner code={p.params.code} />
 			</div>
 		</>
 	);

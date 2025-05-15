@@ -1435,3 +1435,10 @@ table {
 		}
 	}
 }
+
+.box {
+	background: $bg-150;
+	border: solid $sep-500 1px;
+	padding: 4px;
+	display: inline-block;
+}
