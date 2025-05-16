@@ -109,8 +109,9 @@ export const DebugWebrtc = () => {
 
 	async function playAudioEl() {
 		const audio = document.createElement("audio");
-		audio.src =
-			"https://chat-files.celery.eu.org/media/01969c94-0ac1-7741-a64f-16221a1aa4bf";
+		// audio.src =
+		// 	"https://chat-files.celery.eu.org/media/01969c94-0ac1-7741-a64f-16221a1aa4bf";
+		audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
 		audio.crossOrigin = "anonymous";
 		await new Promise((res) =>
 			audio.addEventListener("loadedmetadata", res, { once: true })

@@ -118,7 +118,7 @@ async fn voice_region_list(State(_s): State<Arc<ServerState>>) -> Result<Json<()
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     let router = OpenApiRouter::new();
 
-    // #[cfg(feature = "voice")]
+    #[cfg(feature = "voice")]
     let router = router
         .routes(routes!(voice_member_get))
         .routes(routes!(voice_member_patch))

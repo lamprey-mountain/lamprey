@@ -50,4 +50,5 @@ clap = { version = "4.5.31", features = ["derive"] }
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
 
 [features]
+default = ["voice"]
 voice = []

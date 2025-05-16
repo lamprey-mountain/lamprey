@@ -1271,6 +1271,7 @@ dependencies = [
  "atomic",
  "pear",
  "serde",
+ "serde_json",
  "toml",
  "uncased",
  "version_check",
@@ -4852,27 +4853,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sfu"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "common",
- "crate-hakari",
- "dashmap 6.1.0",
- "reqwest 0.12.15",
- "serde",
- "serde_json",
- "str0m",
- "systemstat",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6265,6 +6245,28 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "voice"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "common",
+ "crate-hakari",
+ "dashmap 6.1.0",
+ "figment",
+ "reqwest 0.12.15",
+ "serde",
+ "serde_json",
+ "str0m",
+ "systemstat",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
 
 [[package]]
 name = "walkdir"
