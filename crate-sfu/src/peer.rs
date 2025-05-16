@@ -44,7 +44,7 @@ impl Peer {
 
         let mut rtc = RtcConfig::new()
             .set_ice_lite(true)
-            .set_stats_interval(Some(Duration::from_secs(5)))
+            // .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
         let addr = crate::util::select_host_address_ipv4();
@@ -54,7 +54,7 @@ impl Peer {
 
         let (send, recv) = mpsc::unbounded_channel();
 
-        let peer = Self {
+        let mut peer = Self {
             rtc,
             socket,
             packet: [0; 2000],
@@ -70,13 +70,15 @@ impl Peer {
             if let Err(err) = peer.run().await {
                 error!("while running peer: {err:?}");
             }
+            debug!("dead!");
+            _ = peer.emit(PeerEvent::Dead);
         });
 
         Ok(send)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn run(mut self) -> Result<()> {
+    async fn run(&mut self) -> Result<()> {
         loop {
             self.negotiate_if_needed()?;
 
@@ -90,13 +92,6 @@ impl Peer {
                 Output::Event(v) => {
                     trace!("{v:?}");
                     match v {
-                        Event::IceConnectionStateChange(IceConnectionState::Disconnected) => {
-                            if dbg!(!self.rtc.is_alive()) {
-                                self.rtc.disconnect();
-                            }
-                            break;
-                        }
-
                         Event::Connected => debug!("connected!"),
 
                         Event::MediaAdded(m) => {
@@ -154,7 +149,11 @@ impl Peer {
                     )
                 }
                 recv = self.commands.recv() => {
-                    self.handle_sfu_command(recv.expect("channel unexpectedly closed!")).await?;
+                    if let Some(recv) = recv {
+                        self.handle_sfu_command(recv).await?;
+                    } else {
+                        self.rtc.disconnect();
+                    }
                     continue;
                 },
             };
@@ -189,6 +188,7 @@ impl Peer {
                 });
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
+            PeerCommand::Kill => self.rtc.disconnect(),
         }
 
         Ok(())
@@ -256,6 +256,7 @@ impl Peer {
             }
         }
 
+        self.sdp_pending = None;
         self.emit(PeerEvent::Signalling(SignallingEvent::Answer {
             sdp: answer.to_sdp_string(),
         }))?;

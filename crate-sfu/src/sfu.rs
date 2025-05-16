@@ -59,6 +59,9 @@ impl Sfu {
         let ctl = match self.peers.entry(user_id) {
             dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
             dashmap::Entry::Vacant(vacant_entry) => {
+                // if matches!(req, Disconnect) {
+                //     return;
+                // }
                 let peer = Peer::spawn(peer_send.clone(), user_id).await?;
                 for m in &self.tracks {
                     peer.send(PeerCommand::MediaAdded(m.clone()))?;
@@ -69,19 +72,23 @@ impl Sfu {
         };
 
         match &req.inner {
-            SignallingCommand::VoiceStateUpdate { patch } => {
-                if let Some(thread_id) = patch.thread_id {
-                    self.voice_states.insert(
-                        user_id,
-                        VoiceState {
-                            user_id,
-                            thread_id,
-                            joined_at: Time::now_utc(),
-                        },
-                    );
-                } else {
+            SignallingCommand::VoiceState { state } => {
+                let Some(state) = state else {
+                    ctl.send(PeerCommand::Kill)?;
                     self.voice_states.remove(&user_id);
-                }
+                    self.peers.remove(&user_id);
+                    return Ok(());
+                };
+
+                let thread_id = state.thread_id;
+                self.voice_states.insert(
+                    user_id,
+                    VoiceState {
+                        user_id,
+                        thread_id,
+                        joined_at: Time::now_utc(),
+                    },
+                );
                 self.emit(SfuEvent::VoiceDispatch {
                     user_id,
                     payload: SignallingEvent::VoiceState {
@@ -90,7 +97,7 @@ impl Sfu {
                     },
                 })
                 .await?;
-                debug!("got voice state update {patch:?}");
+                debug!("got voice state {state:?}");
             }
             _ => {}
         }
@@ -126,6 +133,11 @@ impl Sfu {
                         a.value().send(PeerCommand::MediaData(m.clone()))?;
                     }
                 }
+            }
+
+            PeerEvent::Dead => {
+                self.peers.remove(&user_id);
+                self.tracks.retain(|a| a.peer_id != user_id);
             }
         }
 

@@ -47,6 +47,11 @@ pub enum MessageClient {
         // server_id: ServerId,
         payload: Value,
     },
+    // #[cfg(feature = "feat_voice")]
+    // /// connect or disconnect to a voice channel
+    // VoiceState {
+    //     thread_id: Option<ThreadId>,
+    // },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

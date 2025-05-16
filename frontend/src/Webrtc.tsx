@@ -28,6 +28,7 @@ export const DebugWebrtc = () => {
 
 	// handle interactive connectivity establishment
 	conn.addEventListener("icecandidate", (e) => {
+		return;
 		console.info("[rtc:ice] propose candidate", e.candidate);
 		if (e.candidate) {
 			const c = e.candidate;
@@ -68,29 +69,52 @@ export const DebugWebrtc = () => {
 	});
 
 	api.temp_events.on("sync", async (msg) => {
-		if (msg.type === "VoiceDispatch") {
-			console.log("got signalling message", msg.payload);
-			if (msg.payload.type === "Answer") {
-				console.log("[rtc:signal] accept answer");
-				await conn.setRemoteDescription({
-					type: "answer",
-					sdp: msg.payload.sdp,
-				});
-			} else if (msg.payload.type === "Offer") {
-				console.log("[rtc:signal] accept offer; create answer");
-				await conn.setRemoteDescription({
-					type: "offer",
-					sdp: msg.payload.sdp,
-				});
-				await conn.setLocalDescription(await conn.createAnswer());
-				sendWebsocket({
-					type: "Answer",
-					sdp: conn.localDescription!.sdp,
-				});
-			} else {
-				console.warn("[rtc:signal] unknown message type");
+		if (msg.type !== "VoiceDispatch") return;
+		console.log("got signalling message", msg.payload);
+		if (msg.payload.type === "Answer") {
+			console.log("[rtc:signal] accept answer");
+			await conn.setRemoteDescription({
+				type: "answer",
+				sdp: msg.payload.sdp,
+			});
+		} else if (msg.payload.type === "Offer") {
+			if (conn.signalingState !== "stable") {
+				console.log("[rtc:signal] ignore server offer");
+				return;
 			}
+			console.log("[rtc:signal] accept offer; create answer");
+			await conn.setRemoteDescription({
+				type: "offer",
+				sdp: msg.payload.sdp,
+			});
+			await conn.setLocalDescription(await conn.createAnswer());
+			sendWebsocket({
+				type: "Answer",
+				sdp: conn.localDescription!.sdp,
+			});
+		} else {
+			console.warn("[rtc:signal] unknown message type");
 		}
+
+		// signaling.onmessage = async ({ description }) => {
+		//   const offerCollision = (description.type === "offer") &&
+		//     (makingOffer || pc.signalingState !== "stable");
+
+		//   const ignoreOffer = !isPolite && offerCollision;
+		//   if (ignoreOffer) return;
+
+		//   try {
+		//     if (description.type === "offer") {
+		//       await pc.setRemoteDescription(description);
+		//       await pc.setLocalDescription();
+		//       signaling.send({ description: pc.localDescription });
+		//     } else {
+		//       await pc.setRemoteDescription(description);
+		//     }
+		//   } catch (e) {
+		//     console.error(e);
+		//   }
+		// };
 	});
 
 	async function negotiate() {
@@ -131,9 +155,21 @@ export const DebugWebrtc = () => {
 	}
 
 	async function start() {
+		// sendWebsocket({
+		// 	type:"VoiceState",
+		// 	thread_id: "fe676818-7b36-429c-98c4-0a8b2fc411b4"
+		// });
+
 		const user_id = api.users.cache.get("@self")!.id;
 		console.info("starting with user id " + user_id);
 		console.log(conn.createDataChannel("asdf"));
+	}
+
+	async function reset() {
+		sendWebsocket({
+			type: "VoiceState",
+			thread_id: null,
+		});
 	}
 
 	function sendWebsocket(payload: any) {
@@ -146,6 +182,7 @@ export const DebugWebrtc = () => {
 			payload,
 		}));
 	}
+	console.log(sendWebsocket);
 
 	let startedMic = false;
 	const toggleMic = async () => {
@@ -181,6 +218,7 @@ export const DebugWebrtc = () => {
 			<div>webrtc (nothing to see here, move along...)</div>
 			<div>
 				<button onClick={start}>start</button>
+				<button onClick={reset}>reset</button>
 			</div>
 			<div>
 				<button onClick={playAudioEl}>play audio</button>

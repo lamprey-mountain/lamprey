@@ -5,8 +5,8 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{IceCandidate, SessionDescription, VoiceState, VoiceStatePatch},
-    UserId,
+    voice::{IceCandidate, SessionDescription, VoiceState},
+    ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
@@ -32,7 +32,7 @@ pub enum SignallingCommand {
     IceCandidate { data: IceCandidate },
 
     /// update voice state
-    VoiceStateUpdate { patch: VoiceStatePatch },
+    VoiceState { state: Option<VoiceState> },
 }
 
 // TODO: merge command/event?
@@ -81,6 +81,7 @@ pub enum PeerEvent {
     Signalling(SignallingEvent),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
+    Dead,
 }
 
 #[derive(Debug)]
@@ -88,6 +89,7 @@ pub enum PeerCommand {
     Signalling(SignallingCommand),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
+    Kill,
 }
 
 #[derive(Debug, Clone)]
