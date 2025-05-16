@@ -97,6 +97,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
+	const n = useNavigate();
 	// <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
 	return (
 		<div class="room-home">
@@ -105,6 +106,36 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<button onClick={() => createThread(room_id())}>create thread</button>
 			<br />
 			<button onClick={() => leaveRoom(room_id())}>leave room</button>
+			<br />
+			<br />
+			<form
+				onSubmit={async (e) => {
+					e.preventDefault();
+					const message = e.target.querySelector("input")?.value;
+					if (!message) return;
+					const t = await ctx.client.http.POST(
+						"/api/v1/room/{room_id}/thread",
+						{
+							params: {
+								path: { room_id: props.room.id },
+							},
+							body: { name: "thread" },
+						},
+					);
+					if (!t.data) return;
+					ctx.dispatch({
+						do: "thread.send",
+						thread_id: t.data.id,
+						text: message,
+					});
+					n(`/thread/${t.data.id}`);
+				}}
+			>
+				<label>
+					quick create thread<br />
+					<input type="text" placeholder="message" autofocus />
+				</label>
+			</form>
 			<br />
 			<A href={`/room/${props.room.id}/settings`}>settings</A>
 			<br />

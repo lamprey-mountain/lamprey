@@ -55,8 +55,8 @@ pub struct VoiceState {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct VoiceStatePatch {
-    pub thread_id: Option<ThreadId>,
+pub struct VoiceStateUpdate {
+    pub thread_id: ThreadId,
 }
 
 // if i move stuff perms into voice member/states

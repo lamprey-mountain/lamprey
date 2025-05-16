@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js";
+import { createSignal, onCleanup, Show } from "solid-js";
 import { useApi } from "./api";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
@@ -12,7 +12,6 @@ const RTC_CONFIG = {
 	iceServers: [
 		{ urls: ["stun:relay.webwormhole.io"] },
 		{ urls: ["stun:stun.stunprotocol.org"] },
-		// TODO: selfhost a stun server or two
 	],
 };
 
@@ -20,32 +19,20 @@ export const DebugWebrtc = () => {
 	const api = useApi();
 	const conn = new RTCPeerConnection(RTC_CONFIG);
 	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
+	const [voiceState, setVoiceState] = createSignal();
 
 	conn.addEventListener("connectionstatechange", () => {
 		console.info("[rtc:core] connectionstatechange", conn.connectionState);
 		setRtcState(conn.connectionState);
 	});
 
-	// handle interactive connectivity establishment
-	conn.addEventListener("icecandidate", (e) => {
-		return;
-		console.info("[rtc:ice] propose candidate", e.candidate);
-		if (e.candidate) {
-			const c = e.candidate;
-			sendWebsocket({
-				type: "IceCandidate",
-				data: JSON.stringify(c.toJSON()),
-			});
-		}
-	});
-
-	conn.addEventListener("icecandidateerror", (e) => {
-		console.error("[rtc:ice]", e);
-	});
-
 	conn.addEventListener("negotiationneeded", async () => {
 		console.info("[rtc:sdp] create offer");
-		await negotiate();
+		await conn.setLocalDescription(await conn.createOffer());
+		sendWebsocket({
+			type: "Offer",
+			sdp: conn.localDescription!.sdp,
+		});
 	});
 
 	conn.addEventListener("datachannel", (e) => {
@@ -57,15 +44,18 @@ export const DebugWebrtc = () => {
 
 	let mediaEl!: HTMLAudioElement;
 
+	// const tracks = new Map();
 	conn.addEventListener("track", (e) => {
 		console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
+		// tracks.set(e.transceiver.mid, e.track);
+
 		mediaEl.srcObject = e.streams[0];
 		mediaEl.play();
-		mediaEl.addEventListener("canplay", (e) => console.log(e));
-		mediaEl.addEventListener("waiting", (e) => console.log(e));
-		mediaEl.addEventListener("stalled", (e) => console.log(e));
-		mediaEl.addEventListener("change", (e) => console.log(e));
-		mediaEl.addEventListener("error", (e) => console.log(e));
+		// mediaEl.addEventListener("canplay", (e) => console.log(e));
+		// mediaEl.addEventListener("waiting", (e) => console.log(e));
+		// mediaEl.addEventListener("stalled", (e) => console.log(e));
+		// mediaEl.addEventListener("change", (e) => console.log(e));
+		// mediaEl.addEventListener("error", (e) => console.log(e));
 	});
 
 	api.temp_events.on("sync", async (msg) => {
@@ -92,40 +82,18 @@ export const DebugWebrtc = () => {
 				type: "Answer",
 				sdp: conn.localDescription!.sdp,
 			});
+		} else if (msg.payload.type === "VoiceState") {
+			const user_id = api.users.cache.get("@self")!.id;
+			if (msg.payload.user_id === user_id) {
+				setVoiceState(msg.payload.state);
+			}
 		} else {
 			console.warn("[rtc:signal] unknown message type");
 		}
-
-		// signaling.onmessage = async ({ description }) => {
-		//   const offerCollision = (description.type === "offer") &&
-		//     (makingOffer || pc.signalingState !== "stable");
-
-		//   const ignoreOffer = !isPolite && offerCollision;
-		//   if (ignoreOffer) return;
-
-		//   try {
-		//     if (description.type === "offer") {
-		//       await pc.setRemoteDescription(description);
-		//       await pc.setLocalDescription();
-		//       signaling.send({ description: pc.localDescription });
-		//     } else {
-		//       await pc.setRemoteDescription(description);
-		//     }
-		//   } catch (e) {
-		//     console.error(e);
-		//   }
-		// };
 	});
 
-	async function negotiate() {
-		await conn.setLocalDescription(await conn.createOffer());
-		sendWebsocket({
-			type: "Offer",
-			sdp: conn.localDescription!.sdp,
-		});
-	}
-
 	onCleanup(() => {
+		disconnect();
 		conn.close();
 	});
 
@@ -154,21 +122,24 @@ export const DebugWebrtc = () => {
 		audio.play();
 	}
 
-	async function start() {
-		// sendWebsocket({
-		// 	type:"VoiceState",
-		// 	thread_id: "fe676818-7b36-429c-98c4-0a8b2fc411b4"
-		// });
-
-		const user_id = api.users.cache.get("@self")!.id;
-		console.info("starting with user id " + user_id);
-		console.log(conn.createDataChannel("asdf"));
-	}
-
-	async function reset() {
+	async function connect() {
+		disconnect();
 		sendWebsocket({
 			type: "VoiceState",
-			thread_id: null,
+			state: {
+				thread_id: "fe676818-7b36-429c-98c4-0a8b2fc411b4",
+			},
+		});
+
+		// const user_id = api.users.cache.get("@self")!.id;
+		// console.info("starting with user id " + user_id);
+		// console.log(conn.createDataChannel("asdf"));
+	}
+
+	async function disconnect() {
+		sendWebsocket({
+			type: "VoiceState",
+			state: null,
 		});
 	}
 
@@ -184,41 +155,97 @@ export const DebugWebrtc = () => {
 	}
 	console.log(sendWebsocket);
 
-	let startedMic = false;
+	const tracks: Record<string, MediaStreamTrack | null> = {
+		mic: null,
+		cam: null,
+		screen: null,
+		speaker: null,
+	};
 	const toggleMic = async () => {
-		if (startedMic) return;
-		// await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true })
-		// await navigator.mediaDevices.getUserMedia({ video: true })
-		// navigator.mediaDevices.enumerateDevices()
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		for (const track of stream.getTracks()) {
-			const tcr = conn.addTransceiver(track);
-			console.log("add transciever", tcr.mid, tcr);
-			track.addEventListener("ended", () => {
-				conn.removeTrack(tcr.sender);
-			});
+		if (tracks.mic) {
+			tracks.mic.enabled = !tracks.mic.enabled;
+			return;
 		}
-		stream.addEventListener("addtrack", (e) => {
-			const tcr = conn.addTransceiver(e.track);
-			console.log("add transciever", tcr.mid, tcr);
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		const track = stream.getAudioTracks()[0];
+		if (!track) {
+			console.warn("no track");
+			return;
+		}
+		const tcr = conn.addTransceiver(track);
+		console.log("add transciever", tcr.mid, tcr);
+		track.addEventListener("ended", () => {
+			conn.removeTrack(tcr.sender);
 		});
-		startedMic = true;
+		tracks.mic = track;
 	};
 
 	const toggleCam = async () => {
-		// asdf
+		if (tracks.cam) {
+			tracks.cam.enabled = !tracks.cam.enabled;
+			return;
+		}
+		const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+		const track = stream.getVideoTracks()[0];
+		if (!track) {
+			console.warn("no track");
+			return;
+		}
+		const tcr = conn.addTransceiver(track);
+		console.log("add transciever", tcr.mid, tcr);
+		track.addEventListener("ended", () => {
+			conn.removeTrack(tcr.sender);
+		});
+		tracks.cam = track;
 	};
 
 	const toggleScreen = async () => {
-		// asdf
+		if (tracks.display) {
+			tracks.display.enabled = !tracks.display.enabled;
+			if (tracks.speaker) {
+				tracks.speaker.enabled = !tracks.speaker.enabled;
+			}
+			return;
+		}
+		const stream = await navigator.mediaDevices.getDisplayMedia({
+			video: true,
+			audio: true,
+		});
+		const track = stream.getVideoTracks()[0];
+		if (!track) {
+			console.warn("no track");
+			return;
+		}
+		const tcr = conn.addTransceiver(track);
+		console.log("add transciever", tcr.mid, tcr);
+		track.addEventListener("ended", () => {
+			conn.removeTrack(tcr.sender);
+		});
+		tracks.display = track;
+
+		const track2 = stream.getAudioTracks()[0];
+		if (!track2) {
+			console.warn("no track");
+			return;
+		}
+		const tcr2 = conn.addTransceiver(track2);
+		console.log("add transciever", tcr2.mid, tcr2);
+		track2.addEventListener("ended", () => {
+			conn.removeTrack(tcr2.sender);
+		});
+		tracks.speaker = track2;
 	};
 
 	return (
 		<div class="webrtc">
 			<div>webrtc (nothing to see here, move along...)</div>
 			<div>
-				<button onClick={start}>start</button>
-				<button onClick={reset}>reset</button>
+				<Show
+					when={voiceState()}
+					fallback={<button onClick={connect}>connect</button>}
+				>
+					<button onClick={disconnect}>disconnect</button>
+				</Show>
 			</div>
 			<div>
 				<button onClick={playAudioEl}>play audio</button>
@@ -228,9 +255,12 @@ export const DebugWebrtc = () => {
 				<button onClick={toggleCam}>start cam</button>
 				<button onClick={toggleScreen}>start screen</button>
 			</div>
-			<div>state {rtcState()}</div>
-			<audio controls ref={mediaEl}></audio>
-			{/* <Ui /> */}
+			<div>rtc state {rtcState()}</div>
+			<div>
+				voice state
+				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
+			</div>
+			<video controls ref={mediaEl}></video>
 		</div>
 	);
 };

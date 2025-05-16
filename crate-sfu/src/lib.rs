@@ -5,8 +5,8 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{IceCandidate, SessionDescription, VoiceState},
-    ThreadId, UserId,
+    voice::{SessionDescription, VoiceState, VoiceStateUpdate},
+    UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
@@ -27,12 +27,8 @@ pub enum SignallingCommand {
     /// sdp offer (via websocket)
     Offer { sdp: SessionDescription },
 
-    /// ice candidate proposal (via websocket)
-    // FIXME: ice negotiation
-    IceCandidate { data: IceCandidate },
-
     /// update voice state
-    VoiceState { state: Option<VoiceState> },
+    VoiceState { state: Option<VoiceStateUpdate> },
 }
 
 // TODO: merge command/event?
@@ -44,8 +40,8 @@ pub enum SignallingEvent {
 
     /// sdp offer (via websocket)
     Offer { sdp: String },
-    // /// ice candidate proposal (via websocket)
-    // IceCandidate { candidate: Candidate },
+
+    /// user changed their voice state
     VoiceState {
         user_id: UserId,
         state: Option<VoiceState>,

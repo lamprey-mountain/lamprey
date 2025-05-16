@@ -91,7 +91,7 @@ export function MessageView(props: MessageProps) {
 				)
 				? getTimestampFromUUID(props.message.id)
 				: new Date();
-		if (props.message.type === MessageType.ThreadUpdate) {
+		if (props.message.type === MessageType.ThreadUpdate && false) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
 			const patch = props.message.patch as any;

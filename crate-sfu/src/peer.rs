@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, time::Instant};
 
 use crate::{MediaData, PeerEvent, SignallingCommand, SignallingEvent};
 use anyhow::Result;
@@ -10,7 +7,7 @@ use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     media::{Direction, Mid},
     net::{Protocol, Receive},
-    Candidate, Event, IceConnectionState, Input, Output, Rtc, RtcConfig,
+    Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
 use tokio::{
     net::UdpSocket,
@@ -153,6 +150,9 @@ impl Peer {
                         self.handle_sfu_command(recv).await?;
                     } else {
                         self.rtc.disconnect();
+                    }
+                    if !self.rtc.is_alive() {
+                        break;
                     }
                     continue;
                 },

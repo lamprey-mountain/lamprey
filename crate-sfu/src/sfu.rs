@@ -1,19 +1,12 @@
 use crate::{
     peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent, SfuTrack,
-    SignallingCommand, SignallingEvent, TrackState,
+    SignallingCommand, SignallingEvent,
 };
 use anyhow::Result;
-use axum::{
-    http::StatusCode,
-    routing::{get, post},
-    Json,
-};
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
-use str0m::media::{MediaKind, Mid};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, trace};
-use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Default)]
 pub struct Sfu {
@@ -56,36 +49,31 @@ impl Sfu {
         trace!("new rpc message {req:?}");
 
         let user_id = req.user_id.unwrap();
-        let ctl = match self.peers.entry(user_id) {
-            dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
-            dashmap::Entry::Vacant(vacant_entry) => {
-                // if matches!(req, Disconnect) {
-                //     return;
-                // }
-                let peer = Peer::spawn(peer_send.clone(), user_id).await?;
-                for m in &self.tracks {
-                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
-                }
-
-                vacant_entry.insert(peer)
-            }
-        };
 
         match &req.inner {
             SignallingCommand::VoiceState { state } => {
                 let Some(state) = state else {
-                    ctl.send(PeerCommand::Kill)?;
                     self.voice_states.remove(&user_id);
-                    self.peers.remove(&user_id);
+                    if let Some((_, peer)) = self.peers.remove(&user_id) {
+                        peer.send(PeerCommand::Kill)?
+                    };
+                    self.emit(SfuEvent::VoiceDispatch {
+                        user_id,
+                        payload: SignallingEvent::VoiceState {
+                            user_id,
+                            state: None,
+                        },
+                    })
+                    .await?;
+                    debug!("remove voice state");
                     return Ok(());
                 };
 
-                let thread_id = state.thread_id;
                 self.voice_states.insert(
                     user_id,
                     VoiceState {
                         user_id,
-                        thread_id,
+                        thread_id: state.thread_id,
                         joined_at: Time::now_utc(),
                     },
                 );
@@ -101,6 +89,21 @@ impl Sfu {
             }
             _ => {}
         }
+
+        let ctl = match self.peers.entry(user_id) {
+            dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
+            dashmap::Entry::Vacant(vacant_entry) => {
+                // if matches!(req, Disconnect) {
+                //     return;
+                // }
+                let peer = Peer::spawn(peer_send.clone(), user_id).await?;
+                for m in &self.tracks {
+                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
+                }
+
+                vacant_entry.insert(peer)
+            }
+        };
 
         ctl.send(PeerCommand::Signalling(req.inner))?;
 
