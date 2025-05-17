@@ -10,8 +10,9 @@ use crate::v1::types::{
 };
 
 use super::{
-    reaction::ReactionKey, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
-    RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
+    reaction::ReactionKey, voice::VoiceState, InviteCode, Message, MessageId, MessageVerId, Role,
+    RoleId, Room, RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User,
+    UserId,
 };
 
 mod sync2;
@@ -226,17 +227,11 @@ pub enum MessageSync {
         // server_id: ServerId,
         payload: Value,
     },
-    // VoiceMember {
-    //     thread_id: ThreadId,
-    //     user_id: UserId,
-    //     member: Option<VoiceMember>,
-    // },
 
-    // /// interactive connectivity establishment
-    // VoiceIceCandidate {
-    //     candidate: IceCandidate,
-    // },
-
+    VoiceState {
+        user_id: UserId,
+        state: Option<VoiceState>,
+    },
     // /// session description protocol answer
     // VoiceSdpAnswer {
     //     sdp: SessionDescription,

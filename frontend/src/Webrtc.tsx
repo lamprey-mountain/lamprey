@@ -44,18 +44,14 @@ export const DebugWebrtc = () => {
 
 	let mediaEl!: HTMLAudioElement;
 
-	// const tracks = new Map();
+	const tracks = new Map();
+	const streams = new Map();
+	const voiceStates = new Map();
+
 	conn.addEventListener("track", (e) => {
 		console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
-		// tracks.set(e.transceiver.mid, e.track);
-
-		mediaEl.srcObject = e.streams[0];
-		mediaEl.play();
-		// mediaEl.addEventListener("canplay", (e) => console.log(e));
-		// mediaEl.addEventListener("waiting", (e) => console.log(e));
-		// mediaEl.addEventListener("stalled", (e) => console.log(e));
-		// mediaEl.addEventListener("change", (e) => console.log(e));
-		// mediaEl.addEventListener("error", (e) => console.log(e));
+		tracks.set(e.transceiver.mid, e.transceiver);
+		updateMedia();
 	});
 
 	api.temp_events.on("sync", async (msg) => {
@@ -87,6 +83,12 @@ export const DebugWebrtc = () => {
 			if (msg.payload.user_id === user_id) {
 				setVoiceState(msg.payload.state);
 			}
+			voiceStates.set(msg.payload.user_id, msg.payload.state);
+			console.log(
+				"[voice:state] update voice state for %s",
+				msg.payload.user_id,
+				msg.payload.state,
+			);
 		} else {
 			console.warn("[rtc:signal] unknown message type");
 		}
@@ -130,10 +132,6 @@ export const DebugWebrtc = () => {
 				thread_id: "fe676818-7b36-429c-98c4-0a8b2fc411b4",
 			},
 		});
-
-		// const user_id = api.users.cache.get("@self")!.id;
-		// console.info("starting with user id " + user_id);
-		// console.log(conn.createDataChannel("asdf"));
 	}
 
 	async function disconnect() {
@@ -155,85 +153,95 @@ export const DebugWebrtc = () => {
 	}
 	console.log(sendWebsocket);
 
-	const tracks: Record<string, MediaStreamTrack | null> = {
-		mic: null,
-		cam: null,
-		screen: null,
-		speaker: null,
-	};
+	// const tracks: Record<string, MediaStreamTrack | null> = {
+	// };
+
+	// const mids: Record<string, MediaStreamTrack | null> = {
+	// 		mic: null,
+	// 		cam: null,
+	// 		screen: null,
+	// 		speaker: null,
+	// }
+
 	const toggleMic = async () => {
-		if (tracks.mic) {
-			tracks.mic.enabled = !tracks.mic.enabled;
-			return;
-		}
-		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		const track = stream.getAudioTracks()[0];
-		if (!track) {
-			console.warn("no track");
-			return;
-		}
-		const tcr = conn.addTransceiver(track);
-		console.log("add transciever", tcr.mid, tcr);
-		track.addEventListener("ended", () => {
-			conn.removeTrack(tcr.sender);
-		});
-		tracks.mic = track;
+		// if (tracks.mic) {
+		// 	tracks.mic.enabled = !tracks.mic.enabled;
+		// 	return;
+		// }
+		// const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		// const track = stream.getAudioTracks()[0];
+		// if (!track) {
+		// 	console.warn("no track");
+		// 	return;
+		// }
+		// const tcr = conn.addTransceiver(track);
+		// console.log("add transciever", tcr.mid, tcr);
+		// track.addEventListener("ended", () => {
+		// 	conn.removeTrack(tcr.sender);
+		// });
+		// tracks.mic = track;
 	};
 
 	const toggleCam = async () => {
-		if (tracks.cam) {
-			tracks.cam.enabled = !tracks.cam.enabled;
-			return;
-		}
-		const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-		const track = stream.getVideoTracks()[0];
-		if (!track) {
-			console.warn("no track");
-			return;
-		}
-		const tcr = conn.addTransceiver(track);
-		console.log("add transciever", tcr.mid, tcr);
-		track.addEventListener("ended", () => {
-			conn.removeTrack(tcr.sender);
-		});
-		tracks.cam = track;
+		// if (tracks.cam) {
+		// 	tracks.cam.enabled = !tracks.cam.enabled;
+		// 	return;
+		// }
+		// const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+		// const track = stream.getVideoTracks()[0];
+		// if (!track) {
+		// 	console.warn("no track");
+		// 	return;
+		// }
+		// const tcr = conn.addTransceiver(track);
+		// console.log("add transciever", tcr.mid, tcr);
+		// track.addEventListener("ended", () => {
+		// 	conn.removeTrack(tcr.sender);
+		// });
+		// tracks.cam = track;
 	};
 
 	const toggleScreen = async () => {
-		if (tracks.display) {
-			tracks.display.enabled = !tracks.display.enabled;
-			if (tracks.speaker) {
-				tracks.speaker.enabled = !tracks.speaker.enabled;
-			}
-			return;
-		}
-		const stream = await navigator.mediaDevices.getDisplayMedia({
-			video: true,
-			audio: true,
-		});
-		const track = stream.getVideoTracks()[0];
-		if (!track) {
-			console.warn("no track");
-			return;
-		}
-		const tcr = conn.addTransceiver(track);
-		console.log("add transciever", tcr.mid, tcr);
-		track.addEventListener("ended", () => {
-			conn.removeTrack(tcr.sender);
-		});
-		tracks.display = track;
+		// if (tracks.display) {
+		// 	tracks.display.enabled = !tracks.display.enabled;
+		// 	if (tracks.speaker) {
+		// 		tracks.speaker.enabled = !tracks.speaker.enabled;
+		// 	}
+		// 	return;
+		// }
+		// const stream = await navigator.mediaDevices.getDisplayMedia({
+		// 	video: true,
+		// 	audio: true,
+		// });
+		// const track = stream.getVideoTracks()[0];
+		// if (!track) {
+		// 	console.warn("no track");
+		// 	return;
+		// }
+		// const tcr = conn.addTransceiver(track);
+		// console.log("add transciever", tcr.mid, tcr);
+		// track.addEventListener("ended", () => {
+		// 	conn.removeTrack(tcr.sender);
+		// });
+		// tracks.display = track;
 
-		const track2 = stream.getAudioTracks()[0];
-		if (!track2) {
-			console.warn("no track");
-			return;
-		}
-		const tcr2 = conn.addTransceiver(track2);
-		console.log("add transciever", tcr2.mid, tcr2);
-		track2.addEventListener("ended", () => {
-			conn.removeTrack(tcr2.sender);
-		});
-		tracks.speaker = track2;
+		// const track2 = stream.getAudioTracks()[0];
+		// if (!track2) {
+		// 	console.warn("no track");
+		// 	return;
+		// }
+		// const tcr2 = conn.addTransceiver(track2);
+		// console.log("add transciever", tcr2.mid, tcr2);
+		// track2.addEventListener("ended", () => {
+		// 	conn.removeTrack(tcr2.sender);
+		// });
+		// tracks.speaker = track2;
+	};
+
+	const updateMedia = () => {
+		console.log(tracks);
+		// mediaEl.srcObject = e.streams[0];
+		// mediaEl.play();
 	};
 
 	return (

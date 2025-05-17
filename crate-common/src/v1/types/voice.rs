@@ -42,7 +42,7 @@ impl Deref for IceCandidate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceState {
     pub user_id: UserId,
@@ -53,7 +53,7 @@ pub struct VoiceState {
     pub joined_at: Time,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceStateUpdate {
     pub thread_id: ThreadId,

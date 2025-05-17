@@ -316,6 +316,13 @@ impl Connection {
             MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::VoiceState { state, user_id, .. } => {
+                if let Some(state) = state {
+                    AuthCheck::Thread(state.thread_id)
+                } else {
+                    AuthCheck::User(*user_id)
+                }
+            }
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

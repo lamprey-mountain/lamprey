@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
+use common::v1::types::voice::VoiceState;
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
 use serde_json::Value;
@@ -16,6 +17,13 @@ use crate::{Error, ServerState};
 enum Command {
     #[cfg(feature = "voice")]
     VoiceDispatch { user_id: UserId, payload: Value },
+
+    #[cfg(feature = "voice")]
+    VoiceState {
+        user_id: UserId,
+        old: Option<VoiceState>,
+        state: Option<VoiceState>,
+    },
 }
 
 /// Internal rpc
@@ -42,6 +50,35 @@ async fn internal_rpc(
         #[cfg(feature = "voice")]
         Command::VoiceDispatch { user_id, payload } => {
             s.broadcast(MessageSync::VoiceDispatch { user_id, payload })?;
+        }
+        #[cfg(feature = "voice")]
+        Command::VoiceState {
+            user_id,
+            old,
+            state,
+        } => {
+            // TODO: deduplicate
+            if let Some(v) = &old {
+                s.broadcast_thread(
+                    v.thread_id,
+                    user_id,
+                    None,
+                    MessageSync::VoiceState {
+                        user_id,
+                        state: state.clone(),
+                    },
+                )
+                .await?;
+            }
+            if let Some(v) = &state {
+                s.broadcast_thread(
+                    v.thread_id,
+                    user_id,
+                    None,
+                    MessageSync::VoiceState { user_id, state },
+                )
+                .await?;
+            }
         }
     };
     Ok(StatusCode::ACCEPTED)

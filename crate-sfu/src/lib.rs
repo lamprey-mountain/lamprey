@@ -9,6 +9,7 @@ use common::v1::types::{
     UserId,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use str0m::{
     format::PayloadParams,
     media::{MediaKind, MediaTime, Mid},
@@ -29,6 +30,21 @@ pub enum SignallingCommand {
 
     /// update voice state
     VoiceState { state: Option<VoiceStateUpdate> },
+
+    /// i have this track
+    Publish {
+        #[serde(flatten)]
+        inner: Publish,
+    },
+
+    /// i no longer have this track
+    Unpublish { mid: Mid },
+
+    /// i want this data
+    Subscribe { mid: Mid, rid: u64 },
+
+    /// i dont want this data
+    Unsubscribe { mid: Mid },
 }
 
 // TODO: merge command/event?
@@ -63,6 +79,11 @@ pub enum SfuEvent {
     VoiceDispatch {
         user_id: UserId,
         payload: SignallingEvent,
+    },
+    VoiceState {
+        user_id: UserId,
+        old: Option<VoiceState>,
+        state: Option<VoiceState>,
     },
 }
 
@@ -140,4 +161,26 @@ pub enum Error {
     /// no voice state exists for this user
     #[error("no voice state exists for this user")]
     NotConnected,
+}
+
+/// publish a track
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Publish {
+    /// media id. one video or audio track with multiple versions.
+    pub mid: Mid,
+
+    /// whether this is audio, video
+    pub kind: MediaKindSerde,
+
+    /// different quality levels for this track
+    pub rids: Vec<u64>,
+
+    // TEMP: for prototyping
+    pub metadata: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum MediaKindSerde {
+    Video,
+    Audio,
 }
