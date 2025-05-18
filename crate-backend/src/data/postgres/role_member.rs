@@ -16,7 +16,7 @@ impl DataRoleMember for Postgres {
     async fn role_member_put(&self, user_id: UserId, role_id: RoleId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         query!(
-            "INSERT INTO role_member (user_id, role_id) VALUES ($1, $2)",
+            "INSERT INTO role_member (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             user_id.into_inner(),
             role_id.into_inner()
         )

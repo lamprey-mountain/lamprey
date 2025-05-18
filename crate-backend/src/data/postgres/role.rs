@@ -151,6 +151,7 @@ impl DataRole for Postgres {
     	  	INSERT INTO role_member (user_id, role_id)
     	  	SELECT $2 as u, id FROM role
     	  	WHERE room_id = $1 AND is_default = true
+    	  	ON CONFLICT DO NOTHING
         ",
             room_id.into_inner(),
             user_id.into_inner()

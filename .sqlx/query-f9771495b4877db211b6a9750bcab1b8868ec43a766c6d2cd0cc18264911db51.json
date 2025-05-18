@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t  \tINSERT INTO role_member (user_id, role_id)\n    \t  \tSELECT $2 as u, id FROM role\n    \t  \tWHERE room_id = $1 AND is_default = true\n    \t  \tON CONFLICT DO NOTHING\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f9771495b4877db211b6a9750bcab1b8868ec43a766c6d2cd0cc18264911db51"
+}
