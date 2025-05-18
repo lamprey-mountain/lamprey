@@ -104,7 +104,10 @@ impl From<DbMessage> for Message {
                     interactions: Interactions::default(),
                 }),
                 DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {
-                    patch: serde_json::from_value(row.metadata.unwrap()).unwrap(),
+                    patch: row
+                        .metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .unwrap_or_default(),
                 }),
             },
             thread_id: row.thread_id,
