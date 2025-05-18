@@ -230,9 +230,10 @@ impl DataUser for Postgres {
             r#"
             INSERT INTO usr (
                 id, version_id, parent_id, name, description, state, state_updated_at, type, avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access
+                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access,
+                can_fork
             )
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, false)
             RETURNING
                 id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
                 puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
