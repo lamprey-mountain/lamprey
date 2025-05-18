@@ -66,7 +66,7 @@ async fn user_create(
             let existing = data.user_lookup_puppet(*owner_id, p, external_id).await?;
             if let Some(id) = existing {
                 let user = data.user_get(id).await?;
-                return Ok((StatusCode::CREATED, Json(user)));
+                return Ok((StatusCode::OK, Json(user)));
             }
         }
         _ => {}

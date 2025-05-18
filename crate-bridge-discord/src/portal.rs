@@ -27,7 +27,6 @@ use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::error;
 
-/// a bidirectional portal to a sinister realm
 pub struct Portal {
     globals: Arc<Globals>,
     recv: mpsc::UnboundedReceiver<PortalMessage>,
@@ -280,6 +279,19 @@ impl Portal {
                 if existing.is_some() {
                     return Ok(());
                 }
+
+                let (send, recv) = tokio::sync::oneshot::channel();
+                self.globals
+                    .ch_chan
+                    .send(LampoMessage::PuppetEnsure {
+                        name: message.author.display_name().to_owned(),
+                        key: message.author.id.to_string(),
+                        response: send,
+                    })
+                    .await?;
+                let puppet = recv.await?;
+                let user_id = puppet.id;
+
                 let mut req = types::MessageCreate {
                     content: None,
                     attachments: vec![],
@@ -303,6 +315,7 @@ impl Portal {
                             filename: a.filename.to_owned(),
                             bytes,
                             response: send,
+                            user_id,
                         })
                         .await?;
                     let media = recv.await?;
@@ -334,6 +347,7 @@ impl Portal {
                                 filename,
                                 bytes: bytes.into(),
                                 response: send,
+                                user_id,
                             })
                             .await?;
                         let media = recv.await?;
@@ -390,6 +404,7 @@ impl Portal {
                         thread_id,
                         req,
                         response: send,
+                        user_id,
                     })
                     .await?;
                 let res = recv.await?;
@@ -407,6 +422,19 @@ impl Portal {
                 let Some(existing) = existing else {
                     return Ok(());
                 };
+
+                let (send, recv) = tokio::sync::oneshot::channel();
+                self.globals
+                    .ch_chan
+                    .send(LampoMessage::MessageGet {
+                        thread_id: existing.chat_thread_id,
+                        message_id: existing.chat_id,
+                        response: send,
+                    })
+                    .await?;
+                let message = recv.await?;
+                let user_id = message.author_id;
+
                 let mut req = types::MessagePatch {
                     content: None,
                     attachments: None,
@@ -433,6 +461,7 @@ impl Portal {
                                 filename: att.filename.to_owned(),
                                 bytes,
                                 response: send,
+                                user_id,
                             })
                             .await?;
                         let media = recv.await?;
@@ -470,6 +499,7 @@ impl Portal {
                         message_id: existing.chat_id,
                         req,
                         response: send,
+                        user_id,
                     })
                     .await?;
                 recv.await?;
@@ -478,6 +508,19 @@ impl Portal {
                 let Some(existing) = self.globals.get_message_dc(message_id).await? else {
                     return Ok(());
                 };
+
+                let (send, recv) = tokio::sync::oneshot::channel();
+                self.globals
+                    .ch_chan
+                    .send(LampoMessage::MessageGet {
+                        thread_id: existing.chat_thread_id,
+                        message_id: existing.chat_id,
+                        response: send,
+                    })
+                    .await?;
+                let message = recv.await?;
+                let user_id = message.author_id;
+
                 self.globals.delete_message_dc(message_id).await?;
                 let (send, recv) = oneshot::channel();
                 let thread_id = self.thread_id();
@@ -487,6 +530,7 @@ impl Portal {
                         thread_id,
                         message_id: existing.chat_id,
                         response: send,
+                        user_id,
                     })
                     .await?;
                 recv.await?;

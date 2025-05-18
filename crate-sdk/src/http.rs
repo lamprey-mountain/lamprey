@@ -9,6 +9,7 @@ use reqwest::{header::HeaderMap, StatusCode, Url};
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 
+#[derive(Clone)]
 pub struct Http {
     token: SessionToken,
     base_url: Url,
@@ -42,6 +43,20 @@ impl Http {
             base_url,
             client,
             ..self
+        }
+    }
+
+    pub fn for_puppet(&self, id: UserId) -> Self {
+        let mut h = HeaderMap::new();
+        h.typed_insert(headers::Authorization::bearer(&self.token.0).unwrap());
+        h.insert("x-puppet-id", id.to_string().try_into().unwrap());
+        let client = reqwest::Client::builder()
+            .default_headers(h)
+            .build()
+            .unwrap();
+        Self {
+            client,
+            ..self.clone()
         }
     }
 

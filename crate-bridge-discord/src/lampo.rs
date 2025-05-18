@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use common::v1::types::{
     self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session,
-    Thread, ThreadId, User, UserId,
+    Thread, ThreadId, User, UserCreate, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -24,34 +24,39 @@ pub enum LampoMessage {
     MediaUpload {
         filename: String,
         bytes: Vec<u8>,
+        user_id: UserId,
         response: oneshot::Sender<Media>,
     },
     MediaInfo {
         media_id: MediaId,
         response: oneshot::Sender<Media>,
     },
-    // MessageGet {
-    //     thread_id: ThreadId,
-    //     message_id: MessageId,
-    //     response: oneshot::Sender<types::Message>,
-    // },
+    MessageGet {
+        thread_id: ThreadId,
+        message_id: MessageId,
+        response: oneshot::Sender<types::Message>,
+    },
     MessageCreate {
         thread_id: ThreadId,
+        user_id: UserId,
         req: MessageCreate,
         response: oneshot::Sender<types::Message>,
     },
     MessageUpdate {
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         req: types::MessagePatch,
         response: oneshot::Sender<types::Message>,
     },
     MessageDelete {
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         response: oneshot::Sender<()>,
     },
     PuppetEnsure {
+        name: String,
         key: String,
         response: oneshot::Sender<User>,
     },
@@ -133,6 +138,7 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
             filename,
             bytes,
             response,
+            user_id,
         } => {
             let req = MediaCreate {
                 alt: None,
@@ -141,8 +147,11 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
                     size: bytes.len() as u64,
                 },
             };
-            let upload = http.media_create(&req).await?;
-            let media = http.media_upload(&upload, bytes).await?;
+            let upload = http.for_puppet(user_id).media_create(&req).await?;
+            let media = http
+                .for_puppet(user_id)
+                .media_upload(&upload, bytes)
+                .await?;
             let _ = response.send(media.expect("failed to upload media!"));
         }
         LampoMessage::MediaInfo { media_id, response } => {
@@ -153,8 +162,12 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
             thread_id,
             req,
             response,
+            user_id,
         } => {
-            let res = http.message_create(thread_id, &req).await?;
+            let res = http
+                .for_puppet(user_id)
+                .message_create(thread_id, &req)
+                .await?;
             let _ = response.send(res);
         }
         LampoMessage::MessageUpdate {
@@ -162,17 +175,32 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
             message_id,
             req,
             response,
+            user_id,
         } => {
-            let res = http.message_update(thread_id, message_id, &req).await?;
+            let res = http
+                .for_puppet(user_id)
+                .message_update(thread_id, message_id, &req)
+                .await?;
             let _ = response.send(res);
         }
         LampoMessage::MessageDelete {
             thread_id,
             message_id,
             response,
+            user_id,
         } => {
-            http.message_delete(thread_id, message_id).await?;
+            http.for_puppet(user_id)
+                .message_delete(thread_id, message_id)
+                .await?;
             let _ = response.send(());
+        }
+        LampoMessage::MessageGet {
+            thread_id,
+            message_id,
+            response,
+        } => {
+            let res = http.message_get(thread_id, message_id).await?;
+            let _ = response.send(res);
         }
         // UnnamedMessage::MessageGet {
         //     thread_id,
@@ -186,7 +214,26 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
             let res = http.user_get(user_id).await?;
             let _ = response.send(res);
         }
-        LampoMessage::PuppetEnsure { key, response } => todo!(),
+        LampoMessage::PuppetEnsure {
+            name,
+            key,
+            response,
+        } => {
+            let res = http
+                .user_create(&UserCreate {
+                    name,
+                    description: None,
+                    user_type: types::UserType::Puppet {
+                        owner_id: "01943cc1-62e0-7c0e-bb9b-a4ff42864d69".parse().unwrap(),
+                        external_platform: types::ExternalPlatform::Discord,
+                        external_id: key,
+                        external_url: None,
+                        alias_id: None,
+                    },
+                })
+                .await?;
+            let _ = response.send(res);
+        }
     }
     Ok(())
 }
