@@ -6,6 +6,7 @@ use common::v1::types::{
 };
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
+use serde_json::json;
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 
@@ -113,6 +114,8 @@ macro_rules! route {
                 let url = self.base_url.join(&format!($url))?;
                 let res = self.client
                     .$method(url)
+                    .header("content-type", "application/json")
+                    .json(&json!({}))
                     .send()
                     .await?
                     .error_for_status()?
@@ -152,6 +155,8 @@ macro_rules! route {
                 let url = self.base_url.join(&format!($url))?;
                 self.client
                     .$method(url)
+                    .header("content-type", "application/json")
+                    .json(&json!({}))
                     .send()
                     .await?
                     .error_for_status()?;

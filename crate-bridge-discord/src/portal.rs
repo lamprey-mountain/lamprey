@@ -10,6 +10,8 @@ use crate::{discord::DiscordMessage, lampo::LampoMessage};
 use anyhow::Result;
 use common::v1::types::media::MediaRef;
 use common::v1::types::EmbedCreate;
+use common::v1::types::RoomId;
+use common::v1::types::UserType;
 use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
 use reqwest::Url;
 use serenity::all::CreateAllowedMentions;
@@ -65,6 +67,10 @@ impl Portal {
         self.config.my_thread_id
     }
 
+    pub fn room_id(&self) -> RoomId {
+        self.config.my_room_id
+    }
+
     async fn activate(mut self) {
         while let Some(msg) = self.recv.recv().await {
             match self.handle(msg).await {
@@ -77,11 +83,25 @@ impl Portal {
     async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
         match msg {
             PortalMessage::LampoMessageUpsert { message } => {
+                let (user_send, user) = oneshot::channel();
+                self.globals
+                    .ch_chan
+                    .send(LampoMessage::UserFetch {
+                        user_id: message.author_id,
+                        response: user_send,
+                    })
+                    .await?;
+                let user = user.await?;
+                if matches!(user.user_type, UserType::Puppet { .. }) {
+                    return Ok(());
+                }
+
                 let existing = self.globals.get_message(message.id).await?;
                 let msg_inner = match message.message_type {
                     types::MessageType::DefaultMarkdown(m) => m,
                     _ => todo!(),
                 };
+
                 let reply_ids = if let Some(reply_id) = msg_inner.reply_id {
                     self.globals
                         .get_message(reply_id)
@@ -287,6 +307,7 @@ impl Portal {
                         name: message.author.display_name().to_owned(),
                         key: message.author.id.to_string(),
                         response: send,
+                        room_id: self.room_id(),
                     })
                     .await?;
                 let puppet = recv.await?;

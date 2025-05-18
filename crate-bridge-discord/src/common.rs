@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::ThreadId;
+use common::v1::types::{RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
@@ -28,6 +28,7 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ConfigPortal {
     pub my_thread_id: ThreadId,
+    pub my_room_id: RoomId,
     pub discord_guild_id: DcGuildId,
     pub discord_channel_id: DcChannelId,
     pub discord_thread_id: Option<DcChannelId>,

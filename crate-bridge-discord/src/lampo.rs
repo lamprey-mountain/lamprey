@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, Session,
-    Thread, ThreadId, User, UserCreate, UserId,
+    self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId,
+    Session, Thread, ThreadId, User, UserCreate, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -58,6 +58,7 @@ pub enum LampoMessage {
     PuppetEnsure {
         name: String,
         key: String,
+        room_id: RoomId,
         response: oneshot::Sender<User>,
     },
     UserFetch {
@@ -216,10 +217,11 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
         }
         LampoMessage::PuppetEnsure {
             name,
+            room_id,
             key,
             response,
         } => {
-            let res = http
+            let user = http
                 .user_create(&UserCreate {
                     name,
                     description: None,
@@ -232,7 +234,8 @@ async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
                     },
                 })
                 .await?;
-            let _ = response.send(res);
+            http.room_member_put(room_id, user.id).await?;
+            let _ = response.send(user);
         }
     }
     Ok(())
