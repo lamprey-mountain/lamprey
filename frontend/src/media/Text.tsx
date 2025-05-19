@@ -9,6 +9,16 @@ const MAX_PREVIEW_SIZE = 16384;
 export const TextView = (props: MediaProps) => {
 	const ctx = useCtx();
 
+	async function highlight(el: HTMLPreElement) {
+		const { default: hljs } = await import("highlight.js");
+		// HACK: determine file type via extension
+		el.classList.add(
+			"language-" +
+				props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
+		);
+		hljs.highlightElement(el);
+	}
+
 	const ty = () => props.media.source.mime.split(";")[0];
 
 	const [collapsed, setCollapsed] = createSignal(true);
@@ -43,7 +53,7 @@ export const TextView = (props: MediaProps) => {
 				<button class="copy" onClick={copy}>
 					{copied() ? "copied!" : "copy"}
 				</button>
-				<pre class="numbered">
+				<pre class="numbered" ref={highlight}>
 					<For each={text()?.split("\n")}>{l =>
 						<code>{l + "\n"}</code>
 					}</For>
@@ -55,10 +65,14 @@ export const TextView = (props: MediaProps) => {
 					<span class="warn">warning:</span> file preview truncated (too long!)
 				</Show>
 			</div>
-			<a download={props.media.filename} href={getUrl(props.media.source)}>
-				download {props.media.filename}
-			</a>
-			<div class="dim">{ty()} - {byteFmt.format(props.media.source.size)}</div>
+			<footer>
+				<a download={props.media.filename} href={getUrl(props.media.source)}>
+					download {props.media.filename}
+				</a>
+				<div class="dim">
+					{ty()} - {byteFmt.format(props.media.source.size)}
+				</div>
+			</footer>
 		</div>
 	);
 };

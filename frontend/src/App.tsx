@@ -27,12 +27,8 @@ import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
 import { Route, Router, type RouteSectionProps } from "@solidjs/router";
 import { useFloating } from "solid-floating-ui";
-import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { Home } from "./Home.tsx";
 import { ChatNav } from "./Nav.tsx";
-import { RoomHome, RoomMembers } from "./Room.tsx";
-import { RoomSettings } from "./RoomSettings.tsx";
-import { ThreadSettings } from "./ThreadSettings.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
 import {
@@ -44,7 +40,6 @@ import { Debug } from "./Debug.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
-import { ThreadMembers } from "./Thread.tsx";
 import {
 	MessageMenu,
 	RoomMemberMenu,
@@ -54,6 +49,12 @@ import {
 	UserMenu,
 } from "./menu/mod.ts";
 import { RouteInviteInner } from "./Invite.tsx";
+import {
+	RouteRoom,
+	RouteRoomSettings,
+	RouteThread,
+	RouteThreadSettings,
+} from "./routes.tsx";
 
 const BASE_URL = localStorage.getItem("base_url") ??
 	"https://chat.celery.eu.org";
@@ -425,80 +426,6 @@ function RouteSettings(p: RouteSectionProps) {
 			<Title title={user() ? t("page.settings_user") : t("loading")} />
 			<Show when={user()}>
 				<UserSettings user={user()!} page={p.params.page} />
-			</Show>
-		</>
-	);
-}
-
-function RouteRoom(p: RouteSectionProps) {
-	const { t } = useCtx();
-	const api = useApi();
-	const room = api.rooms.fetch(() => p.params.room_id);
-	return (
-		<>
-			<Title title={room() ? room()!.name : t("loading")} />
-			<ChatNav />
-			<Show when={room()}>
-				<RoomHome room={room()!} />
-				<Show when={flags.has("room_member_list")}>
-					<RoomMembers room={room()!} />
-				</Show>
-			</Show>
-		</>
-	);
-}
-
-function RouteRoomSettings(p: RouteSectionProps) {
-	const { t } = useCtx();
-	const api = useApi();
-	const room = api.rooms.fetch(() => p.params.room_id);
-	const title = () =>
-		room() ? t("page.settings_room", room()!.name) : t("loading");
-	return (
-		<>
-			<Title title={title()} />
-			<Show when={room()}>
-				<RoomSettings room={room()!} page={p.params.page} />
-			</Show>
-		</>
-	);
-}
-
-function RouteThreadSettings(p: RouteSectionProps) {
-	const { t } = useCtx();
-	const api = useApi();
-	const thread = api.threads.fetch(() => p.params.thread_id);
-	const title = () =>
-		thread() ? t("page.settings_thread", thread()!.name) : t("loading");
-	return (
-		<>
-			<Title title={title()} />
-			<ChatNav />
-			<Show when={thread()}>
-				<ThreadSettings thread={thread()!} page={p.params.page} />
-			</Show>
-		</>
-	);
-}
-
-function RouteThread(p: RouteSectionProps) {
-	const { t } = useCtx();
-	const api = useApi();
-	const thread = api.threads.fetch(() => p.params.thread_id);
-	const room = api.rooms.fetch(() => thread()?.room_id!);
-
-	return (
-		<>
-			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
-				<Title title={`${thread()!.name} - ${room()!.name}`} />
-			</Show>
-			<ChatNav />
-			<Show when={room() && thread()}>
-				<ChatHeader room={room()!} thread={thread()!} />
-				<ChatMain room={room()!} thread={thread()!} />
-				<Show when={flags.has("thread_member_list")}>
-					<ThreadMembers thread={thread()!} />
-				</Show>
 			</Show>
 		</>
 	);

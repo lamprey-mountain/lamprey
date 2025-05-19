@@ -323,7 +323,7 @@ export function AttachmentView(props: MediaProps) {
 		b() === "text" || /^application\/json\b/.test(props.media.source.mime)
 	) {
 		return (
-			<li>
+			<li class="raw">
 				<TextView media={props.media} />
 			</li>
 		);

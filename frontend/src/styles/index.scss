@@ -24,9 +24,9 @@
 #root {
 	display: grid;
 	grid-template-areas:
-		"nav header header" "nav main sidebar" "footer footer footer";
+		"nav2 nav header header" "nav2 nav main sidebar" "footer footer footer footer";
 	grid-template-rows: auto 1fr auto;
-	grid-template-columns: auto 1fr auto;
+	grid-template-columns: auto auto 1fr auto;
 	height: 100vh;
 	background-color: $bg-200;
 	color: $fg-200;
@@ -273,7 +273,8 @@ input[type="submit"] {
 					display: flex;
 					align-items: center;
 
-					&::before, &::after {
+					&::before,
+					&::after {
 						content: "";
 						display: block;
 						background: #3fa9c9;
@@ -778,6 +779,10 @@ article.message {
 	& > li:not(.raw) {
 		background-color: $bg-300;
 		padding: 4px;
+	}
+
+	& > li {
+		min-width: 0;
 	}
 }
 
@@ -1415,6 +1420,7 @@ table {
 
 	.strike {
 		filter: none;
+
 		image {
 			filter: invert(0.9);
 		}
@@ -1441,4 +1447,13 @@ table {
 	border: solid $sep-500 1px;
 	padding: 4px;
 	display: inline-block;
+}
+
+.dnd-hover {
+	border-top: solid #3fa9c9 3px;
+	margin-top: -3px;
+}
+
+.dnd-dragging {
+	color: #aaa;
 }

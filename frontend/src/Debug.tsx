@@ -9,6 +9,7 @@ import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 import { transformBlock } from "./text.tsx";
 import { DebugWebrtc } from "./Webrtc.tsx";
+import { DragAndDrop } from "./DragAndDrop.tsx";
 
 export const Debug = () => {
 	return (
@@ -17,6 +18,10 @@ export const Debug = () => {
 			<details open>
 				<summary>webrtc</summary>
 				<DebugWebrtc />
+			</details>
+			<details open>
+				<summary>drag and drop</summary>
+				<DragAndDrop />
 			</details>
 			<details>
 				<summary>invite json</summary>
