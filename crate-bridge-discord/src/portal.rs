@@ -6,7 +6,7 @@ use crate::common::Globals;
 use crate::data::AttachmentMetadata;
 use crate::data::Data;
 use crate::data::MessageMetadata;
-use crate::{discord::DiscordMessage, lampo::LampoMessage};
+use crate::discord::DiscordMessage;
 use anyhow::Result;
 use common::v1::types::media::MediaRef;
 use common::v1::types::EmbedCreate;
@@ -81,17 +81,10 @@ impl Portal {
     }
 
     async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
+        let ly = self.globals.lampo_handle().await?;
         match msg {
             PortalMessage::LampoMessageUpsert { message } => {
-                let (user_send, user) = oneshot::channel();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::UserFetch {
-                        user_id: message.author_id,
-                        response: user_send,
-                    })
-                    .await?;
-                let user = user.await?;
+                let user = ly.user_fetch(message.author_id).await?;
                 if matches!(user.user_type, UserType::Puppet { .. }) {
                     return Ok(());
                 }
@@ -209,15 +202,7 @@ impl Portal {
                             .await?;
                         files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                     }
-                    let (user_send, user) = oneshot::channel();
-                    self.globals
-                        .ch_chan
-                        .send(LampoMessage::UserFetch {
-                            user_id: message.author_id,
-                            response: user_send,
-                        })
-                        .await?;
-                    let user = user.await?;
+                    let user = ly.user_fetch(message.author_id).await?;
                     let mut payload = ExecuteWebhook::new()
                         .username(msg_inner.override_name.unwrap_or(user.name))
                         .avatar_url("")
@@ -234,15 +219,7 @@ impl Portal {
                         payload = payload.in_thread(dc_tid);
                     }
                     if let Some(media_id) = user.avatar {
-                        let (avatar_send, avatar) = oneshot::channel();
-                        self.globals
-                            .ch_chan
-                            .send(LampoMessage::MediaInfo {
-                                media_id,
-                                response: avatar_send,
-                            })
-                            .await?;
-                        let avatar = avatar.await?;
+                        let avatar = ly.media_info(media_id).await?;
                         let valid_track = avatar
                             .all_tracks()
                             .find(|a| matches!(a.info, MediaTrackInfo::Image(_)));
@@ -300,17 +277,13 @@ impl Portal {
                     return Ok(());
                 }
 
-                let (send, recv) = tokio::sync::oneshot::channel();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::PuppetEnsure {
-                        name: message.author.display_name().to_owned(),
-                        key: message.author.id.to_string(),
-                        response: send,
-                        room_id: self.room_id(),
-                    })
+                let puppet = ly
+                    .puppet_ensure(
+                        message.author.display_name().to_owned(),
+                        message.author.id.to_string(),
+                        self.room_id(),
+                    )
                     .await?;
-                let puppet = recv.await?;
                 let user_id = puppet.id;
 
                 let mut req = types::MessageCreate {
@@ -329,17 +302,9 @@ impl Portal {
                 };
                 for a in &message.attachments {
                     let bytes = a.download().await?;
-                    let (send, recv) = tokio::sync::oneshot::channel();
-                    self.globals
-                        .ch_chan
-                        .send(LampoMessage::MediaUpload {
-                            filename: a.filename.to_owned(),
-                            bytes,
-                            response: send,
-                            user_id,
-                        })
+                    let media = ly
+                        .media_upload(a.filename.to_owned(), bytes, user_id)
                         .await?;
-                    let media = recv.await?;
                     self.globals
                         .insert_attachment(AttachmentMetadata {
                             chat_id: media.id,
@@ -361,17 +326,9 @@ impl Portal {
                             .unwrap()
                             .to_owned();
                         let bytes = reqwest::get(url).await?.bytes().await?;
-                        let (send, recv) = tokio::sync::oneshot::channel();
-                        self.globals
-                            .ch_chan
-                            .send(LampoMessage::MediaUpload {
-                                filename,
-                                bytes: bytes.into(),
-                                response: send,
-                                user_id,
-                            })
+                        let media = ly
+                            .media_upload(filename.to_owned(), bytes.into(), user_id)
                             .await?;
-                        let media = recv.await?;
                         Some(MediaRef { id: media.id })
                     } else {
                         None
@@ -417,18 +374,8 @@ impl Portal {
                     }
                     Some(_) | None => {}
                 };
-                let (send, recv) = oneshot::channel();
                 let thread_id = self.thread_id();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::MessageCreate {
-                        thread_id,
-                        req,
-                        response: send,
-                        user_id,
-                    })
-                    .await?;
-                let res = recv.await?;
+                let res = ly.message_create(thread_id, user_id, req).await?;
                 self.globals
                     .insert_message(MessageMetadata {
                         chat_id: res.id,
@@ -444,16 +391,9 @@ impl Portal {
                     return Ok(());
                 };
 
-                let (send, recv) = tokio::sync::oneshot::channel();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::MessageGet {
-                        thread_id: existing.chat_thread_id,
-                        message_id: existing.chat_id,
-                        response: send,
-                    })
+                let message = ly
+                    .message_get(existing.chat_thread_id, existing.chat_id)
                     .await?;
-                let message = recv.await?;
                 let user_id = message.author_id;
 
                 let mut req = types::MessagePatch {
@@ -475,17 +415,9 @@ impl Portal {
                             continue;
                         }
                         let bytes = att.download().await?;
-                        let (send, recv) = tokio::sync::oneshot::channel();
-                        self.globals
-                            .ch_chan
-                            .send(LampoMessage::MediaUpload {
-                                filename: att.filename.to_owned(),
-                                bytes,
-                                response: send,
-                                user_id,
-                            })
+                        let media = ly
+                            .media_upload(att.filename.to_owned(), bytes, user_id)
                             .await?;
-                        let media = recv.await?;
                         self.globals
                             .insert_attachment(AttachmentMetadata {
                                 chat_id: media.id,
@@ -511,50 +443,25 @@ impl Portal {
                     }),
                     None => None,
                 };
-                let (send, recv) = oneshot::channel();
+
                 let thread_id = self.thread_id();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::MessageUpdate {
-                        thread_id,
-                        message_id: existing.chat_id,
-                        req,
-                        response: send,
-                        user_id,
-                    })
+                ly.message_update(thread_id, existing.chat_id, user_id, req)
                     .await?;
-                recv.await?;
             }
             PortalMessage::DiscordMessageDelete { message_id } => {
                 let Some(existing) = self.globals.get_message_dc(message_id).await? else {
                     return Ok(());
                 };
 
-                let (send, recv) = tokio::sync::oneshot::channel();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::MessageGet {
-                        thread_id: existing.chat_thread_id,
-                        message_id: existing.chat_id,
-                        response: send,
-                    })
+                let message = ly
+                    .message_get(existing.chat_thread_id, existing.chat_id)
                     .await?;
-                let message = recv.await?;
                 let user_id = message.author_id;
 
                 self.globals.delete_message_dc(message_id).await?;
-                let (send, recv) = oneshot::channel();
                 let thread_id = self.thread_id();
-                self.globals
-                    .ch_chan
-                    .send(LampoMessage::MessageDelete {
-                        thread_id,
-                        message_id: existing.chat_id,
-                        response: send,
-                        user_id,
-                    })
+                ly.message_delete(thread_id, existing.chat_id, user_id)
                     .await?;
-                recv.await?;
             }
         }
         Ok(())

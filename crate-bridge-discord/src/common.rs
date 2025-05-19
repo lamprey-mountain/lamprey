@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
+use anyhow::Result;
 use common::v1::types::{RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 use crate::data::MessageMetadata;
+use crate::lampo::LampoHandle;
 use crate::portal::{Portal, PortalMessage};
 use crate::{discord::DiscordMessage, lampo::LampoMessage};
 
@@ -17,7 +19,7 @@ pub struct Globals {
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
-    pub ch_chan: mpsc::Sender<LampoMessage>,
+    pub(super) ch_chan: mpsc::Sender<LampoMessage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -80,5 +82,15 @@ impl GlobalsTrait for Arc<Globals> {
             .entry(config.my_thread_id)
             .or_insert_with(|| Portal::summon(self.clone(), config.to_owned()));
         let _ = portal.send(msg);
+    }
+}
+
+impl Globals {
+    pub async fn lampo_handle(&self) -> Result<LampoHandle> {
+        let (send, recv) = oneshot::channel();
+        self.ch_chan
+            .send(LampoMessage::Handle { response: send })
+            .await?;
+        Ok(recv.await?)
     }
 }
