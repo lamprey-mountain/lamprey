@@ -36,9 +36,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 		});
 	};
 
-	const [file, setFile] = createSignal<File | null>(null);
-	const setAvatar = async () => {
-		const f = file();
+	const setAvatar = async (f: File) => {
 		if (f) {
 			await createUpload({
 				client: api.client,
@@ -69,6 +67,12 @@ export function Info(props: VoidProps<{ user: User }>) {
 		}
 	};
 
+	let avatarInputEl!: HTMLInputElement;
+
+	const openAvatarPicker = () => {
+		avatarInputEl?.click();
+	};
+
 	function getThumb(media_id: string) {
 		const media = api.media.fetchInfo(() => media_id);
 		const m = media();
@@ -92,27 +96,46 @@ export function Info(props: VoidProps<{ user: User }>) {
 	};
 
 	return (
-		<>
+		<div class="user-settings-info">
 			<h2>info</h2>
-			<div>name: {props.user.name}</div>
-			<div>description: {props.user.description}</div>
-			<Show when={props.user.avatar} fallback="avatar: none">
-				<div>
-					<div>avatar:</div>
-					<img src={getThumb(props.user.avatar!)} class="avatar" />
+			<div class="box profile">
+				<div
+					class="name"
+					onClick={setName}
+				>
+					{props.user.name}
 				</div>
-			</Show>
+				<div class="description" onClick={setDescription}>
+					{props.user.description}
+				</div>
+				<Show
+					when={props.user.avatar}
+					fallback={
+						<div
+							onClick={openAvatarPicker}
+							class="avatar"
+						>
+						</div>
+					}
+				>
+					<img
+						onClick={openAvatarPicker}
+						src={getThumb(props.user.avatar!)}
+						class="avatar"
+					/>
+				</Show>
+			</div>
 			<div>
 				id: <code class="select-all">{props.user.id}</code>
 			</div>
-			<button onClick={setName}>set name</button>
-			<br />
-			<button onClick={setDescription}>set description</button>
-			<br />
-			<button onClick={setAvatar}>set avatar</button>
 			<input
+				style="display:none"
+				ref={avatarInputEl}
 				type="file"
-				onInput={(e) => setFile(e.target.files?.[0] ?? null)}
+				onInput={(e) => {
+					const f = e.target.files?.[0];
+					if (f) setAvatar(f);
+				}}
 			/>
 			<br />
 			<h3>appearance (todo: move to separate section)</h3>
@@ -125,6 +148,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 				/>{" "}
 				show pfps in messages (experimental)
 			</label>
+			<br />
 			<label>
 				<input
 					type="checkbox"
@@ -133,6 +157,10 @@ export function Info(props: VoidProps<{ user: User }>) {
 				/>{" "}
 				always underline links
 			</label>
-		</>
+			<br />
+		</div>
 	);
+	// <div style="border: solid red 1px;padding:2px;margin: 0 -2px">
+	// 	<h3>todo</h3>
+	// </div>
 }

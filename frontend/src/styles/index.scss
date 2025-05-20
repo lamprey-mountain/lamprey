@@ -1457,3 +1457,30 @@ table {
 .dnd-dragging {
 	color: #aaa;
 }
+
+.user-settings-info {
+	padding: 8px;
+
+	.profile {
+		display: grid;
+		grid-template-rows: auto 1fr;
+		grid-template-columns: auto 1fr;
+		grid-template-areas: "avatar name" "avatar description";
+		gap: 4px;
+
+		.name {
+			grid-area: name;
+			font-weight: bold;
+			font-size: 1.2em;
+			cursor: pointer;
+		}
+
+		.description {
+			grid-area: description;
+		}
+
+		.avatar {
+			grid-area: avatar;
+		}
+	}
+}
