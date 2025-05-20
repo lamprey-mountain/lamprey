@@ -7,6 +7,7 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     BotOwner, ExternalPlatform, MediaTrackInfo, MessageSync, User, UserCreate, UserPatch, UserType,
+    UserWithRelationship,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -179,6 +180,8 @@ async fn user_delete(
 }
 
 /// User get
+///
+/// Get another user, including your relationship
 #[utoipa::path(
     get,
     path = "/user/{user_id}",
@@ -201,7 +204,15 @@ async fn user_get(
     };
     let srv = s.services();
     let user = srv.users.get(target_user_id).await?;
-    Ok(Json(user))
+    let data = s.data();
+    let relationship = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?
+        .unwrap_or_default();
+    Ok(Json(UserWithRelationship {
+        inner: user,
+        relationship,
+    }))
 }
 
 /// User audit logs (TODO)

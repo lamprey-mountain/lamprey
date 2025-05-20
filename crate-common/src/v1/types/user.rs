@@ -245,6 +245,14 @@ pub struct RelationshipWithUserId {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct UserWithRelationship {
+    #[serde(flatten)]
+    pub inner: User,
+    pub relationship: Relationship,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RelationshipPatch {
     /// whatever you want to write
@@ -255,7 +263,6 @@ pub struct RelationshipPatch {
 
     /// relationship with other user
     #[serde(default, deserialize_with = "some_option")]
-    #[deprecated = "use relationship state change endpoints"]
     pub relation: Option<Option<RelationshipType>>,
 
     /// personal petname for this user
@@ -337,3 +344,64 @@ impl Diff<Relationship> for RelationshipPatch {
             || self.ignore.changes(&other.ignore)
     }
 }
+
+// mod next {
+//     pub struct User {
+//         pub id: UserId,
+//         pub version_id: UserVerId,
+//         pub name: String,
+//         pub description: Option<String>,
+//         pub presence: Presence,
+//         pub registered_at: Option<Time>,
+//         pub deleted_at: Option<Time>,
+
+//         pub puppet: Option<Puppet>,
+//         pub bot: Option<Bot>,
+//         pub system: Option<System>,
+//         // pub suspended_at: Option<Time>,
+//         // pub suspended_reason: SuspendedReason, // ???
+//     }
+
+//     struct Puppet {
+//         /// the user who created this puppet
+//         owner_id: UserId,
+
+//         /// what platform this puppet is connected to
+//         external_platform: ExternalPlatform,
+
+//         /// an opaque identifier from the other platform
+//         #[cfg_attr(
+//             feature = "utoipa",
+//             schema(required = false, min_length = 1, max_length = 8192)
+//         )]
+//         external_id: String,
+
+//         /// a url on the other platform that this account can be reached at
+//         external_url: Option<Url>,
+
+//         /// makes two users be considered the same user, for importing
+//         /// stuff from other platforms
+//         /// can you alias to another puppet?
+//         alias_id: Option<UserId>,
+//     }
+
+//     struct Bot {
+//         /// who/what has control over this bot
+//         #[serde(flatten)]
+//         owner: BotOwner,
+
+//         /// who can use the bot
+//         access: BotAccess,
+
+//         /// enables managing Puppet users
+//         is_bridge: bool,
+//         // do i really need all these urls?
+//         // url_terms_of_service: Option<Url>,
+//         // url_privacy_policy: Option<Url>,
+//         // url_help_docs: Vec<Url>,
+//         // url_main_site: Vec<Url>,
+//         // url_interactions: Vec<Url>, // webhook
+//     }
+
+//     struct System {}
+// }

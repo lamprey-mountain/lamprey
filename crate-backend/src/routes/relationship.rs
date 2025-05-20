@@ -4,254 +4,18 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, Relationship, RelationshipPatch,
-    RelationshipType, RelationshipWithUserId, UserId,
+    MessageSync, PaginationQuery, PaginationResponse, RelationshipPatch, RelationshipType,
+    RelationshipWithUserId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::UserIdReq;
 use crate::ServerState;
 
 use super::util::Auth;
 use crate::error::{Error, Result};
 
-/// Relationship get
-///
-/// Get your relationship with another user
-#[utoipa::path(
-    get,
-    // path = "/user/@self/memo/{target_id}",
-    // path = "/user/@self/note/{target_id}",
-    path = "/user/@self/relationship/{target_id}",
-    params(
-        ("target_id", description = "Target user's id"),
-    ),
-    tags = ["relationship"],
-    responses(
-        (status = OK, body = Relationship, description = "success"),
-        (status = NOT_FOUND, description = "couldn't find that user or you don't have any relationship state yet"),
-    )
-)]
-#[deprecated = "get the target user directly"]
-async fn relationship_get(
-    Path(target_user_id): Path<UserId>,
-    Auth(auth_user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let rel = data
-        .user_relationship_get(auth_user_id, target_user_id)
-        .await?;
-    if let Some(rel) = rel {
-        Ok(Json(rel))
-    } else {
-        Err(Error::NotFound)
-    }
-}
-
-/// Relationship update
-///
-/// Update your relationship with another user
-// TEMP: ugly hacky code
-#[utoipa::path(
-    patch,
-    path = "/user/@self/relationship/{target_id}",
-    params(
-        ("target_id", description = "Target user's id"),
-    ),
-    tags = ["relationship"],
-    responses(
-        (status = OK, body = Relationship, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
-#[deprecated = "will be split into different routes depending on relationship action"]
-async fn relationship_update(
-    Path(target_user_id): Path<UserId>,
-    Auth(auth_user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-    Json(patch): Json<RelationshipPatch>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let mut is_friend_req = false;
-    let mut is_friend_accept = false;
-    if let Some(rel_ty) = &patch.relation {
-        let old_rel_ty = data
-            .user_relationship_get(auth_user_id, target_user_id)
-            .await?
-            .and_then(|r| dbg!(r).relation);
-        if &old_rel_ty != rel_ty {
-            let rev_rel_ty = data
-                .user_relationship_get(target_user_id, auth_user_id)
-                .await?
-                .and_then(|r| dbg!(r).relation);
-            match rel_ty {
-                Some(RelationshipType::Friend) => {
-                    if old_rel_ty != Some(RelationshipType::Incoming)
-                        || rev_rel_ty != Some(RelationshipType::Outgoing)
-                    {
-                        return Err(Error::BadStatic("need to send a friend request"));
-                    }
-                    is_friend_accept = true;
-                }
-                Some(RelationshipType::Incoming) => return Err(Error::BadStatic("cant do that")),
-                Some(RelationshipType::Outgoing) => {
-                    if rev_rel_ty == Some(RelationshipType::Block) {
-                        return Err(Error::Blocked);
-                    }
-                    is_friend_req = true;
-                }
-                Some(RelationshipType::Block) | None => {}
-            }
-
-            assert_eq!(
-                old_rel_ty == Some(RelationshipType::Incoming),
-                rev_rel_ty == Some(RelationshipType::Outgoing)
-            );
-
-            if is_friend_req && (old_rel_ty == Some(RelationshipType::Incoming)) {
-                return Err(Error::BadStatic("need to accept a friend request"));
-            }
-        }
-    }
-    data.user_relationship_edit(auth_user_id, target_user_id, patch)
-        .await?;
-    if is_friend_req {
-        data.user_relationship_edit(
-            target_user_id,
-            auth_user_id,
-            RelationshipPatch {
-                note: None,
-                petname: None,
-                ignore: None,
-                relation: Some(Some(RelationshipType::Incoming)),
-            },
-        )
-        .await?;
-        let rev_rel = data
-            .user_relationship_get(target_user_id, auth_user_id)
-            .await?
-            .unwrap();
-        s.broadcast(MessageSync::RelationshipUpsert {
-            user_id: target_user_id,
-            relationship: rev_rel,
-        })?;
-    } else if is_friend_accept {
-        data.user_relationship_edit(
-            target_user_id,
-            auth_user_id,
-            RelationshipPatch {
-                note: None,
-                petname: None,
-                ignore: None,
-                relation: Some(Some(RelationshipType::Friend)),
-            },
-        )
-        .await?;
-        let rev_rel = data
-            .user_relationship_get(target_user_id, auth_user_id)
-            .await?
-            .unwrap();
-        s.broadcast(MessageSync::RelationshipUpsert {
-            user_id: target_user_id,
-            relationship: rev_rel,
-        })?;
-    }
-    let rel = data
-        .user_relationship_get(auth_user_id, target_user_id)
-        .await?
-        .unwrap();
-    s.broadcast(MessageSync::RelationshipUpsert {
-        user_id: auth_user_id,
-        relationship: rel.clone(),
-    })?;
-    Ok(Json(rel))
-}
-
-/// Relationship remove
-///
-/// Reset your relationship with another user
-#[utoipa::path(
-    delete,
-    path = "/user/@self/relationship/{target_id}",
-    params(
-        ("target_id", description = "Target user's id"),
-    ),
-    tags = ["relationship"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
-)]
-#[deprecated = "will be split into different routes depending on relationship action"]
-async fn relationship_reset(
-    Path(target_user_id): Path<UserId>,
-    Auth(auth_user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    data.user_relationship_delete(auth_user_id, target_user_id)
-        .await?;
-    let rev_rel = data
-        .user_relationship_get(target_user_id, auth_user_id)
-        .await?;
-    if rev_rel.is_some_and(|r| r.relation != Some(RelationshipType::Block)) {
-        data.user_relationship_edit(
-            target_user_id,
-            auth_user_id,
-            RelationshipPatch {
-                note: None,
-                petname: None,
-                ignore: None,
-                relation: Some(None),
-            },
-        )
-        .await?;
-        let rev_rel = data
-            .user_relationship_get(target_user_id, auth_user_id)
-            .await?
-            .unwrap();
-        s.broadcast(MessageSync::RelationshipUpsert {
-            user_id: target_user_id,
-            relationship: rev_rel,
-        })?;
-    }
-    s.broadcast(MessageSync::RelationshipDelete {
-        user_id: auth_user_id,
-    })?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Relationship list
-///
-/// List relationships with other users.
-// TODO: Passing in someone else's id lists mutual friends
-// TODO: filtering for a specific relationship type
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/relationship",
-    params(
-        PaginationQuery<UserId>,
-        ("user_id", description = "User id to list relationships from"),
-    ),
-    tags = ["relationship"],
-    responses(
-        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
-    )
-)]
-#[deprecated = "use /friend or /block for listing"]
-async fn relationship_list(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
-    Query(q): Query<PaginationQuery<UserId>>,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let rels = data.user_relationship_list(auth_user_id, q).await?;
-    Ok(Json(rels))
-}
-
-/// Friend list (TODO)
+/// Friend list
 ///
 /// List (mutual) friends.
 #[utoipa::path(
@@ -266,11 +30,17 @@ async fn relationship_list(
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
 )]
-async fn friend_list() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn friend_list(
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let rels = data.user_relationship_list(auth_user_id, q).await?;
+    Ok(Json(rels))
 }
 
-/// Friend add (TODO)
+/// Friend add
 ///
 /// Send or accept a friend request.
 #[utoipa::path(
@@ -280,11 +50,115 @@ async fn friend_list() -> Result<()> {
     tags = ["relationship"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn friend_add() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn friend_add(
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    let existing = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?;
+
+    let reverse = data
+        .user_relationship_get(target_user_id, auth_user_id)
+        .await?;
+
+    match (
+        existing.as_ref().and_then(|r| r.relation.as_ref()),
+        reverse.as_ref().and_then(|r| r.relation.as_ref()),
+    ) {
+        (Some(RelationshipType::Incoming), Some(RelationshipType::Outgoing)) => {
+            // accept friend request
+            data.user_relationship_edit(
+                auth_user_id,
+                target_user_id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Friend)),
+                },
+            )
+            .await?;
+            data.user_relationship_edit(
+                target_user_id,
+                auth_user_id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Friend)),
+                },
+            )
+            .await?;
+        }
+        (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
+        (None, None) => {
+            // send friend request
+            data.user_relationship_edit(
+                auth_user_id,
+                target_user_id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Outgoing)),
+                },
+            )
+            .await?;
+            data.user_relationship_edit(
+                target_user_id,
+                auth_user_id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Incoming)),
+                },
+            )
+            .await?;
+        }
+        (Some(RelationshipType::Friend), Some(RelationshipType::Friend)) => {
+            // already friends
+            return Ok(StatusCode::NO_CONTENT);
+        }
+        (Some(RelationshipType::Outgoing), Some(RelationshipType::Incoming)) => {
+            // already sent a request
+            return Ok(StatusCode::NO_CONTENT);
+        }
+        (Some(RelationshipType::Block), _) => {
+            // you blocked them
+            return Err(Error::BadStatic("unblock this user first"));
+        }
+        _ => unreachable!("invalid data in database?"),
+    }
+
+    for (uid, rel) in [
+        (
+            auth_user_id,
+            data.user_relationship_get(auth_user_id, target_user_id)
+                .await?,
+        ),
+        (
+            target_user_id,
+            data.user_relationship_get(target_user_id, auth_user_id)
+                .await?,
+        ),
+    ] {
+        if let Some(rel) = rel {
+            s.broadcast(MessageSync::RelationshipUpsert {
+                user_id: uid,
+                relationship: rel,
+            })?;
+        }
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Friend remove (TODO)
+/// Friend remove
 ///
 /// Remove friend or reject a friend request.
 #[utoipa::path(
@@ -294,13 +168,55 @@ async fn friend_add() -> Result<()> {
     tags = ["relationship"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn friend_remove() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn friend_remove(
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    let existing = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?;
+
+    match existing.as_ref().and_then(|r| r.relation.as_ref()) {
+        Some(RelationshipType::Friend)
+        | Some(RelationshipType::Incoming)
+        | Some(RelationshipType::Outgoing) => {
+            data.user_relationship_delete(auth_user_id, target_user_id)
+                .await?;
+            s.broadcast(MessageSync::RelationshipDelete {
+                user_id: auth_user_id,
+            })?;
+
+            if let Some(r) = data
+                .user_relationship_get(target_user_id, auth_user_id)
+                .await?
+            {
+                match r.relation {
+                    Some(RelationshipType::Friend)
+                    | Some(RelationshipType::Incoming)
+                    | Some(RelationshipType::Outgoing) => {
+                        data.user_relationship_delete(target_user_id, auth_user_id)
+                            .await?;
+
+                        s.broadcast(MessageSync::RelationshipDelete {
+                            user_id: auth_user_id,
+                        })?;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Block list (TODO)
+/// Block list
 ///
-/// List (mutually?) blocked users.
+/// List blocked users.
 #[utoipa::path(
     get,
     path = "/user/{user_id}/block",
@@ -313,13 +229,19 @@ async fn friend_remove() -> Result<()> {
         (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
     )
 )]
-async fn block_list() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn block_list(
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let rels = data.user_relationship_list(auth_user_id, q).await?;
+    Ok(Json(rels))
 }
 
-/// Block add (TODO)
+/// Block add
 ///
-/// Block a user.
+/// Block a user. Removes them as a friend if they are one.
 #[utoipa::path(
     put,
     path = "/user/@self/block/{target_id}",
@@ -327,11 +249,50 @@ async fn block_list() -> Result<()> {
     tags = ["relationship"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn block_add() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn block_add(
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    data.user_relationship_edit(
+        auth_user_id,
+        target_user_id,
+        RelationshipPatch {
+            note: None,
+            petname: None,
+            ignore: None,
+            relation: Some(Some(RelationshipType::Block)),
+        },
+    )
+    .await?;
+
+    let reverse = data
+        .user_relationship_get(target_user_id, auth_user_id)
+        .await?;
+    if !matches!(
+        reverse.and_then(|r| r.relation),
+        Some(RelationshipType::Block)
+    ) {
+        data.user_relationship_delete(target_user_id, auth_user_id)
+            .await?;
+    }
+
+    let rel = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?
+        .unwrap();
+
+    s.broadcast(MessageSync::RelationshipUpsert {
+        user_id: auth_user_id,
+        relationship: rel,
+    })?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Block remove (TODO)
+/// Block remove
 ///
 /// Unblock a user.
 #[utoipa::path(
@@ -341,16 +302,34 @@ async fn block_add() -> Result<()> {
     tags = ["relationship"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn block_remove() -> Result<()> {
-    Err(Error::Unimplemented)
+async fn block_remove(
+    Path(target_user_id): Path<UserId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    let existing = data
+        .user_relationship_get(auth_user_id, target_user_id)
+        .await?;
+
+    if existing
+        .as_ref()
+        .is_some_and(|r| r.relation == Some(RelationshipType::Block))
+    {
+        data.user_relationship_delete(auth_user_id, target_user_id)
+            .await?;
+
+        s.broadcast(MessageSync::RelationshipDelete {
+            user_id: auth_user_id,
+        })?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(relationship_get))
-        .routes(routes!(relationship_update))
-        .routes(routes!(relationship_reset))
-        .routes(routes!(relationship_list))
         .routes(routes!(friend_list))
         .routes(routes!(friend_add))
         .routes(routes!(friend_remove))

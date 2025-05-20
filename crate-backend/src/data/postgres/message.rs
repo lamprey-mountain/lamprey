@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    self, Embed, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
+    self, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
     MessageThreadUpdate, MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
