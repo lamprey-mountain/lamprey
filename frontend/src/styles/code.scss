@@ -19,3 +19,9 @@
 .hljs-built_in {
 	color: #e0af68;
 }
+.hljs-title {
+	color: oklch(var(--color-blue));
+}
+.hljs-variable {
+	color: oklch(var(--color-cyan));
+}

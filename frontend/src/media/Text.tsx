@@ -1,4 +1,11 @@
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	on,
+	Show,
+} from "solid-js";
 import { byteFmt, getUrl, type MediaProps } from "./util.tsx";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
@@ -8,16 +15,6 @@ const MAX_PREVIEW_SIZE = 16384;
 
 export const TextView = (props: MediaProps) => {
 	const ctx = useCtx();
-
-	async function highlight(el: HTMLPreElement) {
-		const { default: hljs } = await import("highlight.js");
-		// HACK: determine file type via extension
-		el.classList.add(
-			"language-" +
-				props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
-		);
-		hljs.highlightElement(el);
-	}
 
 	const ty = () => props.media.source.mime.split(";")[0];
 
@@ -47,13 +44,33 @@ export const TextView = (props: MediaProps) => {
 		}
 	};
 
+	let highlightEl!: HTMLPreElement;
+
+	function highlight() {
+		text();
+		import("highlight.js").then(({ default: hljs }) => {
+			// HACK: determine file type via extension
+			// HACK: retain line numbers
+			for (const el of [...highlightEl.children]) {
+				el.dataset.highlighted = "";
+				el.classList.add(
+					"language-" +
+						props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
+				);
+				hljs.highlightElement(el);
+			}
+		});
+	}
+
+	createEffect(highlight);
+
 	return (
 		<div class="media-text">
 			<div class="wrap" classList={{ collapsed: collapsed() }}>
 				<button class="copy" onClick={copy}>
 					{copied() ? "copied!" : "copy"}
 				</button>
-				<pre class="numbered" ref={highlight}>
+				<pre class="numbered" ref={highlightEl}>
 					<For each={text()?.split("\n")}>{l =>
 						<code>{l + "\n"}</code>
 					}</For>
