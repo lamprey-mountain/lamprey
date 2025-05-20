@@ -78,6 +78,22 @@ pub struct UserCreate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
+pub struct PuppetCreate {
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub name: String,
+
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UserPatch {
     #[cfg_attr(
         feature = "utoipa",
@@ -187,6 +203,7 @@ pub enum BotAccess {
     },
 }
 
+// TODO: move to bridge info rather than per puppet?
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(untagged)]

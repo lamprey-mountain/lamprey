@@ -1,14 +1,15 @@
 use std::time::Duration;
 
 use async_trait::async_trait;
+use common::v1::types::application::Application;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    AuditLog, AuditLogId, Embed, EmbedId, InviteWithMetadata, MediaPatch, MessageSync,
-    Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember, RoomMemberPatch,
-    RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch,
-    ThreadMembership,
+    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, InviteWithMetadata, MediaPatch,
+    MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember,
+    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
+    ThreadMemberPatch, ThreadMembership,
 };
 use url::Url;
 use uuid::Uuid;
@@ -47,6 +48,7 @@ pub trait Data:
     + DataUserRelationship
     + DataUserConfig
     + DataReaction
+    + DataApplication
     + Send
     + Sync
 {
@@ -437,4 +439,17 @@ pub trait DataReaction {
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataApplication {
+    async fn application_insert(&self, data: Application) -> Result<()>;
+    async fn application_update(&self, data: Application) -> Result<()>;
+    async fn application_delete(&self, id: ApplicationId) -> Result<()>;
+    async fn application_get(&self, id: ApplicationId) -> Result<Application>;
+    async fn application_list(
+        &self,
+        owner_id: UserId,
+        q: PaginationQuery<ApplicationId>,
+    ) -> Result<PaginationResponse<Application>>;
 }
