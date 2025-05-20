@@ -1,10 +1,10 @@
-import { RouteSectionProps } from "@solidjs/router";
+import { A, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ChatNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { createEffect, Show } from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
@@ -16,15 +16,24 @@ const Title = (props: { title?: string }) => {
 };
 
 const Nav2 = () => {
-	const extraSidebar = false;
+	const api = useApi();
+	const rooms = api.rooms.list();
 	return (
-		<Show when={extraSidebar}>
-			<div style="width:64px;display:flex;flex-direction:column;align-items:center;grid-area:nav2;overflow:auto;">
-				{new Array(20).fill(0).map(() => (
-					<div style="min-height:48px;width:48px;background:red;margin:8px 0;border-radius:4px">
-					</div>
-				))}
-			</div>
+		<Show when={flags.has("two_tier_nav")}>
+			<nav class="nav2">
+				<ul>
+					<li>
+						<A href="/" end>home</A>
+					</li>
+					<For each={rooms()?.items}>
+						{(room) => (
+							<li>
+								<A href={`/room/${room.id}`} end>{room.name}</A>
+							</li>
+						)}
+					</For>
+				</ul>
+			</nav>
 		</Show>
 	);
 };
@@ -92,6 +101,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
+			<Nav2 />
 			<ChatNav />
 			<Show when={room() && thread()}>
 				<ChatHeader room={room()!} thread={thread()!} />
