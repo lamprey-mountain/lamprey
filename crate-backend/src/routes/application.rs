@@ -128,6 +128,7 @@ async fn app_delete(
     let app = data.application_get(app_id).await?;
     if app.owner_id == auth_user_id {
         data.application_delete(app_id).await?;
+        data.user_delete(app_id.into_inner().into()).await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
