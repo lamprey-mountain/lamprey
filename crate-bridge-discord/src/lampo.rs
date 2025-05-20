@@ -8,7 +8,6 @@ use common::v1::types::{
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
-use uuid::uuid;
 
 use crate::{
     common::{Globals, GlobalsTrait},
@@ -45,9 +44,6 @@ impl EventHandler for Handle {
 
     async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        if message.author_id == UserId::from(uuid!("01943cc1-62e0-7c0e-bb9b-a4ff42864d69")) {
-            return Ok(());
-        }
         self.globals.portal_send(
             message.thread_id,
             PortalMessage::LampoMessageUpsert { message },
