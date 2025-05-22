@@ -9,6 +9,7 @@ import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
+import { Home } from "./Home.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -46,7 +47,7 @@ export const RouteRoom = (p: RouteSectionProps) => {
 		<>
 			<Title title={room() ? room()!.name : t("loading")} />
 			<Nav2 />
-			<ChatNav />
+			<ChatNav room_id={p.params.room_id} />
 			<Show when={room()}>
 				<RoomHome room={room()!} />
 				<Show when={flags.has("room_member_list")}>
@@ -82,7 +83,7 @@ export const RouteThreadSettings = (p: RouteSectionProps) => {
 	return (
 		<>
 			<Title title={title()} />
-			<ChatNav />
+			<ChatNav room_id={thread()?.room_id} />
 			<Show when={thread()}>
 				<ThreadSettings thread={thread()!} page={p.params.page} />
 			</Show>
@@ -102,7 +103,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 				<Title title={`${thread()!.name} - ${room()!.name}`} />
 			</Show>
 			<Nav2 />
-			<ChatNav />
+			<ChatNav room_id={thread()?.room_id} />
 			<Show when={room() && thread()}>
 				<ChatHeader room={room()!} thread={thread()!} />
 				<ChatMain room={room()!} thread={thread()!} />
@@ -110,6 +111,18 @@ export const RouteThread = (p: RouteSectionProps) => {
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
+		</>
+	);
+};
+
+export const RouteHome = () => {
+	const { t } = useCtx();
+	return (
+		<>
+			<Title title={t("page.home")} />
+			<Nav2 />
+			<ChatNav />
+			<Home />
 		</>
 	);
 };

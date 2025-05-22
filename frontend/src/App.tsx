@@ -27,8 +27,6 @@ import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
 import { Route, Router, type RouteSectionProps } from "@solidjs/router";
 import { useFloating } from "solid-floating-ui";
-import { Home } from "./Home.tsx";
-import { ChatNav } from "./Nav.tsx";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
 import {
@@ -50,6 +48,7 @@ import {
 } from "./menu/mod.ts";
 import { RouteInviteInner } from "./Invite.tsx";
 import {
+	RouteHome,
 	RouteRoom,
 	RouteRoomSettings,
 	RouteThread,
@@ -403,17 +402,6 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
-const RouteHome = () => {
-	const { t } = useCtx();
-	return (
-		<>
-			<Title title={t("page.home")} />
-			<ChatNav />
-			<Home />
-		</>
-	);
-};
-
 function RouteSettings(p: RouteSectionProps) {
 	const { t } = useCtx();
 	const api = useApi();
@@ -435,7 +423,6 @@ function RouteInbox() {
 	return (
 		<>
 			<Title title="inbox" />
-			<ChatNav />
 			<div class="inbox" style="padding:8px">
 				todo!
 				<table>
@@ -469,7 +456,6 @@ function RouteFriends() {
 	return (
 		<>
 			<Title title="friends" />
-			<ChatNav />
 			<div class="friends" style="padding:8px">
 				todo!
 				<ul>
@@ -486,7 +472,6 @@ function RouteInvite(p: RouteSectionProps) {
 	return (
 		<>
 			<Title title="invite" />
-			<ChatNav />
 			<div class="invite" style="padding:8px">
 				<RouteInviteInner code={p.params.code} />
 			</div>

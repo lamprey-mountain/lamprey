@@ -1,10 +1,33 @@
 import { For, from, Show } from "solid-js";
 import { useCtx } from "./context.ts";
-import { A } from "@solidjs/router";
+import { A, useMatch } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Room, Thread } from "sdk";
 
-export const ChatNav = () => {
+export const ChatNav = (props: { room_id?: string }) => {
+	const ctx = useCtx();
+	const api = useApi();
+
+	return (
+		<nav id="nav">
+			<ul>
+				<For
+					each={[
+						...api.threads.cache.values().filter((i) =>
+							i.room_id === props.room_id && i.state.state !== "Deleted"
+						),
+					]}
+				>
+					{(thread) => <ItemThread thread={thread} />}
+				</For>
+			</ul>
+			<div style="margin: 8px">
+			</div>
+		</nav>
+	);
+};
+
+const ChatNav_ = () => {
 	const ctx = useCtx();
 	const api = useApi();
 
@@ -59,15 +82,6 @@ const ItemRoom = (props: { room: Room }) => {
 								home
 							</A>
 						</li>
-						<For
-							each={[
-								...api.threads.cache.values().filter((i) =>
-									i.room_id === props.room.id && i.state !== "Deleted"
-								),
-							]}
-						>
-							{(thread) => <ItemThread thread={thread} />}
-						</For>
 					</ul>
 				</Show>
 			</li>
