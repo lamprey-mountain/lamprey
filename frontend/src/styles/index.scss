@@ -57,7 +57,7 @@
 		padding: 2px 4px;
 		background-color: none;
 		text-decoration: none;
-		color: inherit;
+		color: $fg-400;
 
 		&.active {
 			background-color: $bg-300;
@@ -74,6 +74,7 @@
 
 		&.unread {
 			font-weight: bold;
+			color: $fg-200;
 		}
 	}
 
