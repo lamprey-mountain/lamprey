@@ -48,6 +48,7 @@ import {
 } from "./menu/mod.ts";
 import { RouteInviteInner } from "./Invite.tsx";
 import {
+	Nav2,
 	RouteHome,
 	RouteRoom,
 	RouteRoomSettings,
@@ -423,6 +424,7 @@ function RouteInbox() {
 	return (
 		<>
 			<Title title="inbox" />
+			<Nav2 />
 			<div class="inbox" style="padding:8px">
 				todo!
 				<table>
@@ -456,6 +458,7 @@ function RouteFriends() {
 	return (
 		<>
 			<Title title="friends" />
+			<Nav2 />
 			<div class="friends" style="padding:8px">
 				todo!
 				<ul>

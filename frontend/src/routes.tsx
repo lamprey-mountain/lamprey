@@ -16,7 +16,7 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
-const Nav2 = () => {
+export const Nav2 = () => {
 	const api = useApi();
 	const rooms = api.rooms.list();
 	return (
