@@ -38,8 +38,6 @@ pub enum SignallingCommand {
 
     Publish {
         mid: String,
-        // mostly the same as ssrc, except that it can be accessed from the client
-        // getting ssrc is possible but a pain
         key: String,
     },
 

@@ -28,7 +28,16 @@ export const DebugWebrtc = () => {
 	});
 
 	let pendingTracks: RTCRtpTransceiver[] = [];
-	let pendingTrackToStream = new Map<string, MediaStream>();
+	const pendingTrackToStream = new Map<string, MediaStream>();
+
+	const tracks = new ReactiveMap();
+	const voiceStates = new ReactiveMap();
+	const streams = new ReactiveMap<string, MediaStream>();
+
+	let trackMic: MediaStreamTrack | undefined;
+	let trackCam: MediaStreamTrack | undefined;
+	let trackScreenVideo: MediaStreamTrack | undefined;
+	let trackScreenAudio: MediaStreamTrack | undefined;
 
 	conn.addEventListener("negotiationneeded", async () => {
 		console.info("[rtc:sdp] create offer");
@@ -44,14 +53,10 @@ export const DebugWebrtc = () => {
 		console.info("[rtc:track] datachannel", ch);
 		// ch.protocol === "Control"
 		// ch.protocol === "VoiceActivity"
+		conn.createDataChannel("speaking", {
+			protocol: "speaking",
+		});
 	});
-
-	const tracks = new ReactiveMap();
-	const voiceStates = new ReactiveMap();
-	const streams = new ReactiveMap<string, MediaStream>();
-
-	let trackMic: MediaStreamTrack | undefined;
-	let trackCam: MediaStreamTrack | undefined;
 
 	conn.addEventListener("track", (e) => {
 		console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
@@ -101,6 +106,7 @@ export const DebugWebrtc = () => {
 			} else if (msg.payload.type === "Subscribe") {
 				const { mid } = msg.payload;
 				for (const tcr of conn.getTransceivers()) {
+					console.log(tcr);
 					if (tcr.mid === mid) tcr.sender.track!.enabled = true;
 				}
 			} else if (msg.payload.type === "Publish") {
@@ -113,6 +119,14 @@ export const DebugWebrtc = () => {
 					pendingTrackToStream.set(mid, stream);
 				}
 				streams.set(`${user_id}:${key}`, stream);
+				const my_user_id = api.users.cache.get("@self")!.id;
+				if (user_id !== my_user_id) {
+					// TODO: only subscribe on demand
+					sendWebsocket({
+						type: "Subscribe",
+						mid,
+					});
+				}
 			} else {
 				console.warn("[rtc:signal] unknown message type");
 			}
@@ -140,29 +154,6 @@ export const DebugWebrtc = () => {
 	});
 
 	console.log(conn);
-
-	async function playAudioEl() {
-		const audio = document.createElement("audio");
-		// audio.src =
-		// 	"https://chat-files.celery.eu.org/media/01969c94-0ac1-7741-a64f-16221a1aa4bf";
-		audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
-		audio.crossOrigin = "anonymous";
-		await new Promise((res) =>
-			audio.addEventListener("loadedmetadata", res, { once: true })
-		);
-
-		const stream: MediaStream = "captureStream" in audio
-			? (audio as any).captureStream()
-			: (audio as any).mozCaptureStream();
-		const tracks = stream.getAudioTracks();
-		console.log(audio, stream, tracks);
-		if (tracks.length > 1) {
-			console.warn("audio has multiple tracks, using first one", tracks);
-		}
-		const tcr = conn.addTransceiver(tracks[0]);
-		console.log("add transciever", tcr);
-		audio.play();
-	}
 
 	function connect() {
 		disconnect();
@@ -192,6 +183,30 @@ export const DebugWebrtc = () => {
 		}));
 	}
 	console.log(sendWebsocket);
+
+	async function playAudioEl() {
+		const audio = document.createElement("audio");
+		audio.src =
+			"https://chat-files.celery.eu.org/media/01969c94-0ac1-7741-a64f-16221a1aa4bf";
+		// audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
+		audio.crossOrigin = "anonymous";
+		await new Promise((res) =>
+			audio.addEventListener("loadedmetadata", res, { once: true })
+		);
+
+		const stream: MediaStream = "captureStream" in audio
+			? (audio as any).captureStream()
+			: (audio as any).mozCaptureStream();
+		const tracks = stream.getAudioTracks();
+		console.log(audio, stream, tracks);
+		if (tracks.length > 1) {
+			console.warn("audio has multiple tracks, using first one", tracks);
+		}
+		const tcr = conn.addTransceiver(tracks[0]);
+		console.log("add transciever", tcr);
+		audio.play();
+		pendingTracks.push(tcr);
+	}
 
 	const toggleMic = async () => {
 		if (trackMic) {
@@ -238,40 +253,46 @@ export const DebugWebrtc = () => {
 	};
 
 	const toggleScreen = async () => {
-		// if (tracks.display) {
-		// 	tracks.display.enabled = !tracks.display.enabled;
-		// 	if (tracks.speaker) {
-		// 		tracks.speaker.enabled = !tracks.speaker.enabled;
-		// 	}
-		// 	return;
-		// }
-		// const stream = await navigator.mediaDevices.getDisplayMedia({
-		// 	video: true,
-		// 	audio: true,
-		// });
-		// const track = stream.getVideoTracks()[0];
-		// if (!track) {
-		// 	console.warn("no track");
-		// 	return;
-		// }
-		// const tcr = conn.addTransceiver(track);
-		// console.log("add transciever", tcr.mid, tcr);
-		// track.addEventListener("ended", () => {
-		// 	conn.removeTrack(tcr.sender);
-		// });
-		// tracks.display = track;
+		if (trackScreenVideo) {
+			trackScreenVideo.enabled = !trackScreenVideo.enabled;
+			if (trackScreenAudio) {
+				trackScreenAudio.enabled = !trackScreenAudio.enabled;
+			}
+			return;
+		}
 
-		// const track2 = stream.getAudioTracks()[0];
-		// if (!track2) {
-		// 	console.warn("no track");
-		// 	return;
-		// }
-		// const tcr2 = conn.addTransceiver(track2);
-		// console.log("add transciever", tcr2.mid, tcr2);
-		// track2.addEventListener("ended", () => {
-		// 	conn.removeTrack(tcr2.sender);
-		// });
-		// tracks.speaker = track2;
+		const stream = await navigator.mediaDevices.getDisplayMedia({
+			video: true,
+			audio: true,
+		});
+
+		{
+			const track = stream.getVideoTracks()[0];
+			if (!track) {
+				console.warn("no video track");
+				return;
+			}
+			const tcr = conn.addTransceiver(track);
+			console.log("add transciever", tcr.mid, tcr);
+			track.addEventListener("ended", () => {
+				conn.removeTrack(tcr.sender);
+			});
+			trackScreenVideo = track;
+		}
+
+		{
+			const track = stream.getAudioTracks()[0];
+			if (!track) {
+				console.warn("no audio track");
+				return;
+			}
+			const tcr = conn.addTransceiver(track);
+			console.log("add transciever", tcr.mid, tcr);
+			track.addEventListener("ended", () => {
+				conn.removeTrack(tcr.sender);
+			});
+			trackScreenAudio = track;
+		}
 	};
 
 	createEffect(() => {

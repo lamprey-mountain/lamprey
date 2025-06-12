@@ -107,24 +107,7 @@ impl Peer {
                             }))?;
                         }
 
-                        Event::MediaData(m) => {
-                            if let Some(track) = self.inbound.get(&m.mid) {
-                                if matches!(track.state, TrackState::Open(_)) {
-                                    self.emit(PeerEvent::MediaData(MediaData {
-                                        mid: m.mid,
-                                        peer_id: self.user_id,
-                                        network_time: m.network_time,
-                                        time: m.time,
-                                        data: m.data.into(),
-                                        params: m.params,
-                                    }))?;
-                                } else {
-                                    error!("not yet negotiated")
-                                }
-                            } else {
-                                error!("recv data with no inbound id?")
-                            };
-                        }
+                        Event::MediaData(m) => self.handle_media_data(m)?,
 
                         Event::PeerStats(_)
                         | Event::MediaIngressStats(_)
@@ -345,7 +328,14 @@ impl Peer {
 
         for track in &mut self.outbound {
             if track.state == TrackState::Pending {
-                let mid = change.add_media(track.kind, Direction::SendOnly, None, None, None);
+                let mid = change.add_media(
+                    track.kind,
+                    Direction::SendOnly,
+                    // Some(track.ssrc.clone()),
+                    None,
+                    None,
+                    None,
+                );
                 track.state = TrackState::Negotiating(mid);
             }
         }
@@ -364,6 +354,27 @@ impl Peer {
         }))?;
 
         Ok(true)
+    }
+
+    fn handle_media_data(&self, data: str0m::media::MediaData) -> Result<()> {
+        let Some(track) = self.inbound.get(&data.mid) else {
+            return Ok(());
+        };
+
+        if !matches!(track.state, TrackState::Open(_)) {
+            return Ok(());
+        };
+
+        self.emit(PeerEvent::MediaData(MediaData {
+            mid: data.mid,
+            peer_id: self.user_id,
+            network_time: data.network_time,
+            time: data.time,
+            data: data.data.into(),
+            params: data.params,
+        }))?;
+
+        Ok(())
     }
 
     fn emit(&self, event: PeerEvent) -> Result<()> {

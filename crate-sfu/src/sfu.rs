@@ -13,8 +13,6 @@ use tracing::{debug, trace};
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
     voice_states: DashMap<UserId, VoiceState>,
-
-    // TODO: cleanup old/disconnected media
     tracks: Vec<SfuTrack>,
     // config: Config,
 }
