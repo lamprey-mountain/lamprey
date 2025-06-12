@@ -5,7 +5,7 @@ use anyhow::Result;
 use common::v1::types::{voice::SessionDescription, UserId};
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
-    media::{Direction, Mid},
+    media::{Direction, KeyframeRequestKind, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -93,7 +93,13 @@ impl Peer {
 
                         Event::MediaAdded(m) => {
                             debug!("media added {m:?}");
-                            self.inbound.insert(m.mid, TrackIn { _kind: m.kind });
+                            self.inbound.insert(
+                                m.mid,
+                                TrackIn {
+                                    kind: m.kind,
+                                    state: TrackState::Negotiating(m.mid),
+                                },
+                            );
                             self.emit(PeerEvent::MediaAdded(SfuTrack {
                                 kind: m.kind,
                                 mid: m.mid,
@@ -102,15 +108,19 @@ impl Peer {
                         }
 
                         Event::MediaData(m) => {
-                            if let Some(_track) = self.inbound.get(&m.mid) {
-                                self.emit(PeerEvent::MediaData(MediaData {
-                                    mid: m.mid,
-                                    peer_id: self.user_id,
-                                    network_time: m.network_time,
-                                    time: m.time,
-                                    data: m.data.into(),
-                                    params: m.params,
-                                }))?;
+                            if let Some(track) = self.inbound.get(&m.mid) {
+                                if matches!(track.state, TrackState::Open(_)) {
+                                    self.emit(PeerEvent::MediaData(MediaData {
+                                        mid: m.mid,
+                                        peer_id: self.user_id,
+                                        network_time: m.network_time,
+                                        time: m.time,
+                                        data: m.data.into(),
+                                        params: m.params,
+                                    }))?;
+                                } else {
+                                    error!("not yet negotiated")
+                                }
                             } else {
                                 error!("recv data with no inbound id?")
                             };
@@ -185,32 +195,53 @@ impl Peer {
                     state: TrackState::Pending,
                     peer_id: t.peer_id,
                     source_mid: t.mid,
+                    enabled: false,
+                    needs_keyframe: false,
                 });
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
             PeerCommand::Kill => self.rtc.disconnect(),
+            PeerCommand::RemotePublish { user_id, mid, key } => {
+                self.publish(user_id, mid, key)?;
+            }
         }
 
         Ok(())
     }
 
     fn handle_remote_media_data(&mut self, d: MediaData) {
-        let Some(mid) = self
+        let Some(track) = self
             .outbound
-            .iter()
+            .iter_mut()
             .find(|t| t.peer_id == d.peer_id && t.source_mid == d.mid)
-            .and_then(|f| f.state.mid())
         else {
             return;
         };
 
-        let Some(writer) = self.rtc.writer(mid) else {
+        if !track.enabled {
+            return;
+        }
+
+        let Some(mid) = track.state.mid() else {
+            return;
+        };
+
+        let Some(mut writer) = self.rtc.writer(mid) else {
             return;
         };
 
         let Some(pt) = writer.match_params(d.params) else {
             return;
         };
+
+        // FIXME: keyframe requests
+        // if track.needs_keyframe {
+        //     if let Err(err) = writer.request_keyframe(None, KeyframeRequestKind::Pli) {
+        //         warn!("failed to generate keyframe: {:?}", err);
+        //     } else {
+        //         track.needs_keyframe = false;
+        //     }
+        // }
 
         if let Err(err) = writer.write(pt, d.network_time, d.time, d.data.to_vec()) {
             warn!("client ({}) failed: {:?}", self.user_id, err);
@@ -222,10 +253,51 @@ impl Peer {
         match command {
             SignallingCommand::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingCommand::Offer { sdp } => self.handle_offer(sdp)?,
-            // RtcPeerCommand::IceCandidate { data } => {
-            //     _ = dbg!(serde_json::from_str::<Candidate>(&data));
-            // }
-            _ => {}
+            SignallingCommand::VoiceState { .. } => {}
+            SignallingCommand::Publish { mid, key } => {
+                info!("got publish mid={mid} key={key}");
+                let mid = Mid::from(mid.as_str());
+                if let Some((_, track)) = self.inbound.iter_mut().find(|t| t.0 == &mid) {
+                    if matches!(track.state, TrackState::Negotiating(_)) {
+                        track.state = TrackState::Open(mid);
+                        self.emit(PeerEvent::Signalling(SignallingEvent::Subscribe {
+                            mid: mid.to_string(),
+                        }))?;
+                    } else {
+                        error!("media already published")
+                    }
+                } else {
+                    error!("media not found")
+                }
+            }
+            SignallingCommand::Subscribe { mid } => {
+                info!("got subscribe mid={mid}");
+                let mid = Mid::from(mid.as_str());
+                if let Some(track) = self
+                    .outbound
+                    .iter_mut()
+                    .find(|t| t.state == TrackState::Open(mid))
+                {
+                    debug!("enabling track");
+                    track.enabled = true;
+                    track.needs_keyframe = true;
+                } else {
+                    error!("media not found")
+                }
+            }
+            SignallingCommand::Unsubscribe { mid } => {
+                info!("got unsubscribe mid={mid}");
+                let mid = Mid::from(mid.as_str());
+                if let Some(track) = self
+                    .outbound
+                    .iter_mut()
+                    .find(|t| t.state == TrackState::Open(mid))
+                {
+                    track.enabled = false;
+                } else {
+                    error!("media not found")
+                }
+            }
         }
         Ok(())
     }
@@ -277,6 +349,7 @@ impl Peer {
                 track.state = TrackState::Negotiating(mid);
             }
         }
+
         if !change.has_changes() {
             return Ok(false);
         }
@@ -298,6 +371,28 @@ impl Peer {
             user_id: self.user_id,
             payload: event,
         })?;
+        Ok(())
+    }
+
+    fn publish(&self, user_id: UserId, source_mid: Mid, key: String) -> Result<()> {
+        if let Some(t) = self
+            .outbound
+            .iter()
+            .find(|t| t.source_mid == source_mid && t.peer_id == user_id)
+        {
+            debug!("found track {:?}", t.state);
+            match t.state {
+                TrackState::Open(mid) | TrackState::Negotiating(mid) => {
+                    self.emit(PeerEvent::Signalling(SignallingEvent::Publish {
+                        user_id,
+                        mid: mid.to_string(),
+                        key,
+                    }))?;
+                }
+                _ => {}
+            }
+        }
+
         Ok(())
     }
 }

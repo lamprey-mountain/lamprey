@@ -5,6 +5,7 @@ use crate::{
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
+use str0m::media::Mid;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, trace};
 
@@ -80,6 +81,16 @@ impl Sfu {
                     old,
                 })
                 .await?;
+            }
+            SignallingCommand::Publish { mid, key } => {
+                let mid = Mid::from(mid.as_str());
+                for a in &self.peers {
+                    a.value().send(PeerCommand::RemotePublish {
+                        user_id,
+                        mid,
+                        key: key.to_owned(),
+                    })?;
+                }
             }
             _ => {}
         }

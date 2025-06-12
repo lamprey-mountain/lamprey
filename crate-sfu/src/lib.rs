@@ -9,7 +9,6 @@ use common::v1::types::{
     UserId,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use str0m::{
     format::PayloadParams,
     media::{MediaKind, MediaTime, Mid},
@@ -23,28 +22,35 @@ pub mod util;
 #[serde(tag = "type")]
 pub enum SignallingCommand {
     /// sdp answer (via websocket)
-    Answer { sdp: SessionDescription },
-
-    /// sdp offer (via websocket)
-    Offer { sdp: SessionDescription },
-
-    /// update voice state
-    VoiceState { state: Option<VoiceStateUpdate> },
-
-    /// i have this track
-    Publish {
-        #[serde(flatten)]
-        inner: Publish,
+    Answer {
+        sdp: SessionDescription,
     },
 
-    /// i no longer have this track
-    Unpublish { mid: Mid },
+    /// sdp offer (via websocket)
+    Offer {
+        sdp: SessionDescription,
+    },
 
-    /// i want this data
-    Subscribe { mid: Mid, rid: u64 },
+    /// update voice state
+    VoiceState {
+        state: Option<VoiceStateUpdate>,
+    },
 
-    /// i dont want this data
-    Unsubscribe { mid: Mid },
+    Publish {
+        mid: String,
+        // mostly the same as ssrc, except that it can be accessed from the client
+        // getting ssrc is possible but a pain
+        key: String,
+    },
+
+    Subscribe {
+        mid: String,
+        // rid: Rid,
+    },
+
+    Unsubscribe {
+        mid: String,
+    },
 }
 
 // TODO: merge command/event?
@@ -52,15 +58,34 @@ pub enum SignallingCommand {
 #[serde(tag = "type")]
 pub enum SignallingEvent {
     /// sdp answer (via websocket)
-    Answer { sdp: String },
+    Answer {
+        sdp: String,
+    },
 
     /// sdp offer (via websocket)
-    Offer { sdp: String },
+    Offer {
+        sdp: String,
+    },
 
     /// user changed their voice state
     VoiceState {
         user_id: UserId,
         state: Option<VoiceState>,
+    },
+
+    Publish {
+        user_id: UserId,
+        mid: String,
+        key: String,
+    },
+
+    Subscribe {
+        mid: String,
+        // rid: Rid,
+    },
+
+    Unsubscribe {
+        mid: String,
     },
 }
 
@@ -106,6 +131,11 @@ pub enum PeerCommand {
     Signalling(SignallingCommand),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
+    RemotePublish {
+        user_id: UserId,
+        mid: Mid,
+        key: String,
+    },
     Kill,
 }
 
@@ -145,7 +175,8 @@ impl TrackState {
 
 #[derive(Debug)]
 pub struct TrackIn {
-    pub _kind: MediaKind,
+    pub kind: MediaKind,
+    pub state: TrackState,
 }
 
 #[derive(Debug)]
@@ -154,6 +185,8 @@ pub struct TrackOut {
     pub state: TrackState,
     pub peer_id: UserId,
     pub source_mid: Mid,
+    pub enabled: bool,
+    pub needs_keyframe: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -161,22 +194,7 @@ pub enum Error {
     /// no voice state exists for this user
     #[error("no voice state exists for this user")]
     NotConnected,
-}
-
-/// publish a track
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Publish {
-    /// media id. one video or audio track with multiple versions.
-    pub mid: Mid,
-
-    /// whether this is audio, video
-    pub kind: MediaKindSerde,
-
-    /// different quality levels for this track
-    pub rids: Vec<u64>,
-
-    // TEMP: for prototyping
-    pub metadata: Value,
+    // NotPublished,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

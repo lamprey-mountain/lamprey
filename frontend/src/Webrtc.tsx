@@ -1,12 +1,11 @@
-import { createSignal, onCleanup, Show } from "solid-js";
-import { useApi } from "./api";
+import { createSignal, For, onCleanup, Show } from "solid-js";
+import { useApi } from "./api.tsx";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
 import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconX from "./assets/x.png";
-import { createTooltip } from "./Tooltip.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect } from "solid-js";
 
@@ -28,6 +27,9 @@ export const DebugWebrtc = () => {
 		setRtcState(conn.connectionState);
 	});
 
+	let pendingTracks: RTCRtpTransceiver[] = [];
+	let pendingTrackToStream = new Map<string, MediaStream>();
+
 	conn.addEventListener("negotiationneeded", async () => {
 		console.info("[rtc:sdp] create offer");
 		await conn.setLocalDescription(await conn.createOffer());
@@ -44,16 +46,22 @@ export const DebugWebrtc = () => {
 		// ch.protocol === "VoiceActivity"
 	});
 
-	let mediaEl!: HTMLAudioElement;
-
-	const tracks = new Map();
-	const streams = new Map();
+	const tracks = new ReactiveMap();
 	const voiceStates = new ReactiveMap();
+	const streams = new ReactiveMap<string, MediaStream>();
+
+	let trackMic: MediaStreamTrack | undefined;
+	let trackCam: MediaStreamTrack | undefined;
 
 	conn.addEventListener("track", (e) => {
 		console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
-		tracks.set(e.transceiver.mid, e.transceiver);
-		updateMedia();
+		// tracks.set(e.transceiver.mid, e.transceiver);
+		tracks.set(e.transceiver.mid, e.track);
+		const s = pendingTrackToStream.get(e.transceiver.mid!);
+		if (s) {
+			s.addTrack(e.track);
+			pendingTrackToStream.delete(e.transceiver.mid!);
+		}
 	});
 
 	api.temp_events.on("sync", async (msg) => {
@@ -65,6 +73,16 @@ export const DebugWebrtc = () => {
 					type: "answer",
 					sdp: msg.payload.sdp,
 				});
+				console.log({ pendingTracks });
+				for (const tcr of pendingTracks) {
+					sendWebsocket({
+						type: "Publish",
+						mid: tcr.mid,
+						kind: tcr.sender.track?.kind === "video" ? "Video" : "Audio",
+						key: "user",
+					});
+				}
+				pendingTracks = [];
 			} else if (msg.payload.type === "Offer") {
 				if (conn.signalingState !== "stable") {
 					console.log("[rtc:signal] ignore server offer");
@@ -80,6 +98,21 @@ export const DebugWebrtc = () => {
 					type: "Answer",
 					sdp: conn.localDescription!.sdp,
 				});
+			} else if (msg.payload.type === "Subscribe") {
+				const { mid } = msg.payload;
+				for (const tcr of conn.getTransceivers()) {
+					if (tcr.mid === mid) tcr.sender.track!.enabled = true;
+				}
+			} else if (msg.payload.type === "Publish") {
+				const { user_id, key, mid } = msg.payload;
+				const stream = streams.get(`${user_id}:${key}`) ?? new MediaStream();
+				const t = tracks.get(mid);
+				if (t) {
+					stream.addTrack(t);
+				} else {
+					pendingTrackToStream.set(mid, stream);
+				}
+				streams.set(`${user_id}:${key}`, stream);
 			} else {
 				console.warn("[rtc:signal] unknown message type");
 			}
@@ -131,7 +164,7 @@ export const DebugWebrtc = () => {
 		audio.play();
 	}
 
-	async function connect() {
+	function connect() {
 		disconnect();
 		sendWebsocket({
 			type: "VoiceState",
@@ -141,7 +174,7 @@ export const DebugWebrtc = () => {
 		});
 	}
 
-	async function disconnect() {
+	function disconnect() {
 		sendWebsocket({
 			type: "VoiceState",
 			state: null,
@@ -160,52 +193,48 @@ export const DebugWebrtc = () => {
 	}
 	console.log(sendWebsocket);
 
-	// const tracks: Record<string, MediaStreamTrack | null> = {
-	// };
-
-	// const mids: Record<string, MediaStreamTrack | null> = {
-	// 		mic: null,
-	// 		cam: null,
-	// 		screen: null,
-	// 		speaker: null,
-	// }
-
 	const toggleMic = async () => {
-		// if (tracks.mic) {
-		// 	tracks.mic.enabled = !tracks.mic.enabled;
-		// 	return;
-		// }
-		// const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		// const track = stream.getAudioTracks()[0];
-		// if (!track) {
-		// 	console.warn("no track");
-		// 	return;
-		// }
-		// const tcr = conn.addTransceiver(track);
-		// console.log("add transciever", tcr.mid, tcr);
-		// track.addEventListener("ended", () => {
-		// 	conn.removeTrack(tcr.sender);
-		// });
-		// tracks.mic = track;
+		if (trackMic) {
+			trackMic.enabled = !trackMic.enabled;
+			return;
+		}
+
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		const track = stream.getAudioTracks()[0];
+		if (!track) {
+			console.warn("no track");
+			return;
+		}
+		const tcr = conn.addTransceiver(track);
+		console.log("add transciever", tcr.mid, tcr);
+		track.addEventListener("ended", () => {
+			conn.removeTrack(tcr.sender);
+		});
+		track.enabled = false;
+		pendingTracks.push(tcr);
+		trackMic = track;
 	};
 
 	const toggleCam = async () => {
-		// if (tracks.cam) {
-		// 	tracks.cam.enabled = !tracks.cam.enabled;
-		// 	return;
-		// }
-		// const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-		// const track = stream.getVideoTracks()[0];
-		// if (!track) {
-		// 	console.warn("no track");
-		// 	return;
-		// }
-		// const tcr = conn.addTransceiver(track);
-		// console.log("add transciever", tcr.mid, tcr);
-		// track.addEventListener("ended", () => {
-		// 	conn.removeTrack(tcr.sender);
-		// });
-		// tracks.cam = track;
+		if (trackCam) {
+			trackCam.enabled = !trackCam.enabled;
+			return;
+		}
+
+		const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+		const track = stream.getVideoTracks()[0];
+		if (!track) {
+			console.warn("no track");
+			return;
+		}
+		const tcr = conn.addTransceiver(track);
+		console.log("add transciever", tcr.mid, tcr);
+		track.addEventListener("ended", () => {
+			conn.removeTrack(tcr.sender);
+		});
+		pendingTracks.push(tcr);
+		track.enabled = false;
+		trackCam = track;
 	};
 
 	const toggleScreen = async () => {
@@ -245,12 +274,6 @@ export const DebugWebrtc = () => {
 		// tracks.speaker = track2;
 	};
 
-	const updateMedia = () => {
-		console.log(tracks);
-		// mediaEl.srcObject = e.streams[0];
-		// mediaEl.play();
-	};
-
 	createEffect(() => {
 		console.log("current number of participants:", voiceStates.size);
 	});
@@ -279,7 +302,15 @@ export const DebugWebrtc = () => {
 				voice state
 				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
 			</div>
-			<video controls ref={mediaEl}></video>
+			<For each={[...streams.values()]}>
+				{(t) => (
+					<video
+						controls
+						autoplay
+						ref={(el) => el.srcObject = t}
+					/>
+				)}
+			</For>
 		</div>
 	);
 };
@@ -386,3 +417,19 @@ const ToggleIcon = (props: { checked: boolean; src: string }) => {
 		</svg>
 	);
 };
+
+type VoiceState = any;
+
+// per user
+type Participant = {
+	state: VoiceState;
+
+	tracks: Record<"mic" | "cam" | "screen", {
+		mid: string;
+		kind: "video" | "audio";
+		rids: number[];
+		enabled: boolean;
+	}>;
+};
+
+type TrackState = "pending" | "negotiating" | "open";
