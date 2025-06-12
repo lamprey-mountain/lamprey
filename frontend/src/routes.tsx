@@ -10,6 +10,7 @@ import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
+import { Voice } from "./Voice.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -123,6 +124,30 @@ export const RouteHome = () => {
 			<Nav2 />
 			<ChatNav />
 			<Home />
+		</>
+	);
+};
+
+export const RouteVoice = (p: RouteSectionProps) => {
+	const { t } = useCtx();
+	const api = useApi();
+	const thread = api.threads.fetch(() => p.params.thread_id);
+	const room = api.rooms.fetch(() => thread()?.room_id!);
+
+	return (
+		<>
+			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
+				<Title title={`${thread()!.name} - ${room()!.name}`} />
+			</Show>
+			<Nav2 />
+			<ChatNav room_id={thread()?.room_id} />
+			<Show when={room() && thread()}>
+				<ChatHeader room={room()!} thread={thread()!} />
+				<Voice room={room()!} thread={thread()!} />
+				<Show when={flags.has("thread_member_list")}>
+					<ThreadMembers thread={thread()!} />
+				</Show>
+			</Show>
 		</>
 	);
 };

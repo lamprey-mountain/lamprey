@@ -1412,10 +1412,11 @@ table {
 	font-size: 0.9rem;
 }
 
-.debug .webrtc > .ui {
+.webrtc > .ui {
 	padding: 4px;
 	border: solid $sep-500 1px;
 	background: $bg-100;
+	display: inline-block;
 
 	.row {
 		display: flex;
