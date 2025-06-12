@@ -46,7 +46,7 @@ async fn internal_rpc(
     if auth != "Server verysecrettoken" {
         return Err(Error::MissingAuth);
     }
-    match dbg!(json) {
+    match json {
         #[cfg(feature = "voice")]
         Command::VoiceDispatch { user_id, payload } => {
             s.broadcast(MessageSync::VoiceDispatch { user_id, payload })?;

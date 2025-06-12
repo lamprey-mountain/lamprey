@@ -1,6 +1,6 @@
 use crate::{
     peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent, SfuTrack,
-    SignallingCommand, SignallingEvent,
+    SignallingCommand,
 };
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
@@ -53,39 +53,33 @@ impl Sfu {
         match &req.inner {
             SignallingCommand::VoiceState { state } => {
                 let Some(state) = state else {
-                    self.voice_states.remove(&user_id);
+                    let old = self.voice_states.remove(&user_id).map(|s| s.1);
                     if let Some((_, peer)) = self.peers.remove(&user_id) {
                         peer.send(PeerCommand::Kill)?
                     };
-                    self.emit(SfuEvent::VoiceDispatch {
+                    self.emit(SfuEvent::VoiceState {
                         user_id,
-                        payload: SignallingEvent::VoiceState {
-                            user_id,
-                            state: None,
-                        },
+                        state: None,
+                        old,
                     })
                     .await?;
                     debug!("remove voice state");
                     return Ok(());
                 };
 
-                self.voice_states.insert(
+                let state = VoiceState {
                     user_id,
-                    VoiceState {
-                        user_id,
-                        thread_id: state.thread_id,
-                        joined_at: Time::now_utc(),
-                    },
-                );
-                self.emit(SfuEvent::VoiceDispatch {
+                    thread_id: state.thread_id,
+                    joined_at: Time::now_utc(),
+                };
+                let old = self.voice_states.insert(user_id, state.clone());
+                debug!("got voice state {state:?}");
+                self.emit(SfuEvent::VoiceState {
                     user_id,
-                    payload: SignallingEvent::VoiceState {
-                        user_id,
-                        state: self.voice_states.get(&user_id).map(|s| s.to_owned()),
-                    },
+                    state: Some(state),
+                    old,
                 })
                 .await?;
-                debug!("got voice state {state:?}");
             }
             _ => {}
         }

@@ -7,6 +7,8 @@ import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconX from "./assets/x.png";
 import { createTooltip } from "./Tooltip.tsx";
+import { ReactiveMap } from "@solid-primitives/map";
+import { createEffect } from "solid-js";
 
 const RTC_CONFIG = {
 	iceServers: [
@@ -46,7 +48,7 @@ export const DebugWebrtc = () => {
 
 	const tracks = new Map();
 	const streams = new Map();
-	const voiceStates = new Map();
+	const voiceStates = new ReactiveMap();
 
 	conn.addEventListener("track", (e) => {
 		console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
@@ -55,42 +57,47 @@ export const DebugWebrtc = () => {
 	});
 
 	api.temp_events.on("sync", async (msg) => {
-		if (msg.type !== "VoiceDispatch") return;
-		console.log("got signalling message", msg.payload);
-		if (msg.payload.type === "Answer") {
-			console.log("[rtc:signal] accept answer");
-			await conn.setRemoteDescription({
-				type: "answer",
-				sdp: msg.payload.sdp,
-			});
-		} else if (msg.payload.type === "Offer") {
-			if (conn.signalingState !== "stable") {
-				console.log("[rtc:signal] ignore server offer");
-				return;
+		if (msg.type === "VoiceDispatch") {
+			console.log("got signalling message", msg.payload);
+			if (msg.payload.type === "Answer") {
+				console.log("[rtc:signal] accept answer");
+				await conn.setRemoteDescription({
+					type: "answer",
+					sdp: msg.payload.sdp,
+				});
+			} else if (msg.payload.type === "Offer") {
+				if (conn.signalingState !== "stable") {
+					console.log("[rtc:signal] ignore server offer");
+					return;
+				}
+				console.log("[rtc:signal] accept offer; create answer");
+				await conn.setRemoteDescription({
+					type: "offer",
+					sdp: msg.payload.sdp,
+				});
+				await conn.setLocalDescription(await conn.createAnswer());
+				sendWebsocket({
+					type: "Answer",
+					sdp: conn.localDescription!.sdp,
+				});
+			} else {
+				console.warn("[rtc:signal] unknown message type");
 			}
-			console.log("[rtc:signal] accept offer; create answer");
-			await conn.setRemoteDescription({
-				type: "offer",
-				sdp: msg.payload.sdp,
-			});
-			await conn.setLocalDescription(await conn.createAnswer());
-			sendWebsocket({
-				type: "Answer",
-				sdp: conn.localDescription!.sdp,
-			});
-		} else if (msg.payload.type === "VoiceState") {
+		} else if (msg.type === "VoiceState") {
 			const user_id = api.users.cache.get("@self")!.id;
-			if (msg.payload.user_id === user_id) {
-				setVoiceState(msg.payload.state);
+			if (msg.user_id === user_id) {
+				setVoiceState(msg.state);
 			}
-			voiceStates.set(msg.payload.user_id, msg.payload.state);
+			if (msg.state) {
+				voiceStates.set(msg.user_id, msg.state);
+			} else {
+				voiceStates.delete(msg.user_id);
+			}
 			console.log(
 				"[voice:state] update voice state for %s",
-				msg.payload.user_id,
-				msg.payload.state,
+				msg.user_id,
+				msg.state,
 			);
-		} else {
-			console.warn("[rtc:signal] unknown message type");
 		}
 	});
 
@@ -129,7 +136,7 @@ export const DebugWebrtc = () => {
 		sendWebsocket({
 			type: "VoiceState",
 			state: {
-				thread_id: "fe676818-7b36-429c-98c4-0a8b2fc411b4",
+				thread_id: "019761a5-a6fb-70a3-a407-a0d7ffcf2862",
 			},
 		});
 	}
@@ -243,6 +250,10 @@ export const DebugWebrtc = () => {
 		// mediaEl.srcObject = e.streams[0];
 		// mediaEl.play();
 	};
+
+	createEffect(() => {
+		console.log("current number of participants:", voiceStates.size);
+	});
 
 	return (
 		<div class="webrtc">

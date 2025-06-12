@@ -317,7 +317,7 @@ impl Connection {
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::VoiceState { state, user_id, .. } => {
-                if let Some(state) = state {
+                if let Some(state) = dbg!(state) {
                     AuthCheck::Thread(state.thread_id)
                 } else {
                     AuthCheck::User(*user_id)
