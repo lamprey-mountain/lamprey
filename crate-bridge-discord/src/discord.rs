@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild, Http,
-        MessagePagination, Ready, Webhook,
+        parse_webhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
+        Http, MessagePagination, Ready, Webhook,
     },
     model::prelude::{ChannelId, GuildId, Message, MessageId, MessageUpdateEvent},
     prelude::*,
@@ -78,6 +78,19 @@ impl EventHandler for Handler {
         info!("discord message create");
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+
+        // ignore bridged messages
+        if let Some(w) = message.webhook_id {
+            if let Some(h) = globals.config.portal_by_discord_id(message.channel_id) {
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
+                    .unwrap()
+                    .0;
+                if msg_wh_id == w {
+                    return;
+                }
+            }
+        }
+
         globals.portal_send_dc(
             message
                 .thread
@@ -92,12 +105,25 @@ impl EventHandler for Handler {
         &self,
         ctx: Context,
         _old_if_available: Option<Message>,
-        _new: Option<Message>,
+        new: Option<Message>,
         event: MessageUpdateEvent,
     ) {
         info!("discord message update");
         let mut ctx_data = ctx.data.write().await;
         let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+
+        // ignore bridged messages
+        if let Some(w) = new.and_then(|m| m.webhook_id) {
+            if let Some(h) = globals.config.portal_by_discord_id(event.channel_id) {
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
+                    .unwrap()
+                    .0;
+                if msg_wh_id == w {
+                    return;
+                }
+            }
+        }
+
         globals.portal_send_dc(
             event.channel_id,
             PortalMessage::DiscordMessageUpdate { update: event },
