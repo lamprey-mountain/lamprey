@@ -3,6 +3,7 @@ import { useCtx } from "./context.ts";
 import { A, useMatch } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Room, Thread } from "sdk";
+import { flags } from "./flags.ts";
 
 export const ChatNav = (props: { room_id?: string }) => {
 	const ctx = useCtx();
@@ -10,6 +11,9 @@ export const ChatNav = (props: { room_id?: string }) => {
 
 	return (
 		<nav id="nav">
+			<Show when={flags.has("nav_header")}>
+				<header style="background: #eef1;padding:8px">header</header>
+			</Show>
 			<ul>
 				<For
 					each={[

@@ -33,6 +33,9 @@ export const allFlags = [
 	{
 		id: "two_tier_nav",
 	},
+	{
+		id: "nav_header",
+	},
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -46,6 +49,7 @@ const flagsDev: Flag[] = [
 	"inbox",
 	"friends",
 	"two_tier_nav",
+	"nav_header",
 ];
 
 const flagsProd: Flag[] = [
