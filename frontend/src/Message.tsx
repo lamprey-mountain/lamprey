@@ -1,6 +1,14 @@
 import { getTimestampFromUUID, type Message, type Thread } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
-import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Match,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
 import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { useApi } from "./api.tsx";
@@ -59,8 +67,27 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		return html;
 	}
 
+	let highlightEl;
+	function highlight() {
+		getHtml();
+		import("highlight.js").then(({ default: hljs }) => {
+			// HACK: retain line numbers
+			// FIXME: use langage if provided instead of guessing
+			for (const el of [...highlightEl.querySelectorAll("pre")]) {
+				el.dataset.highlighted = "";
+				hljs.highlightElement(el);
+			}
+		});
+	}
+
+	createEffect(highlight);
+
 	return (
-		<div class="body markdown" classList={{ local: props.message.is_local }}>
+		<div
+			class="body markdown"
+			classList={{ local: props.message.is_local }}
+			ref={highlightEl}
+		>
 			<span innerHTML={getHtml()}></span>
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited">(edited)</span>
