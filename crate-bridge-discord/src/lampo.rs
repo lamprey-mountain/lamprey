@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId,
-    Session, Thread, ThreadId, User, UserCreate, UserId,
+    self, misc::UserIdReq, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate,
+    MessageId, RoomId, Session, Thread, ThreadId, User, UserCreate, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -201,6 +201,14 @@ impl LampoHandle {
 
     pub async fn user_fetch(&self, user_id: UserId) -> Result<User> {
         let res = self.http.user_get(user_id).await?;
+        Ok(res)
+    }
+
+    pub async fn user_update(&self, user_id: UserId, patch: &types::UserPatch) -> Result<User> {
+        let res = self
+            .http
+            .user_update(UserIdReq::UserId(user_id), patch)
+            .await?;
         Ok(res)
     }
 }

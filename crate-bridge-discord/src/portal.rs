@@ -6,6 +6,7 @@ use crate::common::Globals;
 use crate::data::AttachmentMetadata;
 use crate::data::Data;
 use crate::data::MessageMetadata;
+use crate::data::Puppet;
 use crate::discord::DiscordMessage;
 use anyhow::Result;
 use common::v1::types::media::MediaRef;
@@ -28,6 +29,7 @@ use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::error;
+use tracing::info;
 
 pub struct Portal {
     globals: Arc<Globals>,
@@ -277,7 +279,7 @@ impl Portal {
                     return Ok(());
                 }
 
-                let puppet = ly
+                let mut puppet = ly
                     .puppet_ensure(
                         message.author.display_name().to_owned(),
                         message.author.id.to_string(),
@@ -285,6 +287,99 @@ impl Portal {
                     )
                     .await?;
                 let user_id = puppet.id;
+                let p = self
+                    .globals
+                    .get_puppet("discord", &user_id.to_string())
+                    .await?;
+                if let Some(p) = p {
+                    if p.ext_avatar != message.author.avatar_url() {
+                        if let Some(url) = message.author.avatar_url() {
+                            info!("set user pfp for {user_id}");
+                            let name = if url.ends_with(".gif") {
+                                "avatar.gif"
+                            } else {
+                                "avatar.png"
+                            };
+                            let bytes =
+                                reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                            let media = ly
+                                .media_upload(name.to_owned(), bytes.to_vec(), user_id)
+                                .await?;
+                            ly.user_update(
+                                user_id,
+                                &types::UserPatch {
+                                    name: None,
+                                    description: None,
+                                    avatar: Some(Some(media.id)),
+                                },
+                            )
+                            .await?;
+                            puppet.avatar = Some(media.id);
+                        } else {
+                            info!("remove user pfp for {user_id}");
+                            ly.user_update(
+                                user_id,
+                                &types::UserPatch {
+                                    name: None,
+                                    description: None,
+                                    avatar: Some(None),
+                                },
+                            )
+                            .await?;
+                            puppet.avatar = None;
+                        }
+                    }
+                } else if message.author.avatar_url().is_some() {
+                    if let Some(url) = message.author.avatar_url() {
+                        info!("set user pfp for {user_id}");
+                        let name = if url.ends_with(".gif") {
+                            "avatar.gif"
+                        } else {
+                            "avatar.png"
+                        };
+                        let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
+                        info!("set user pfp download");
+                        let media = dbg!(
+                            ly.media_upload(name.to_owned(), bytes.to_vec(), user_id)
+                                .await
+                        )?;
+                        info!("set user pfp upload");
+                        ly.user_update(
+                            user_id,
+                            &types::UserPatch {
+                                name: None,
+                                description: None,
+                                avatar: Some(Some(media.id)),
+                            },
+                        )
+                        .await?;
+                        info!("set user pfp patch");
+                        puppet.avatar = Some(media.id);
+                    } else {
+                        info!("remove user pfp for {user_id}");
+                        ly.user_update(
+                            user_id,
+                            &types::UserPatch {
+                                name: None,
+                                description: None,
+                                avatar: Some(None),
+                            },
+                        )
+                        .await?;
+                        puppet.avatar = None;
+                    }
+                }
+                self.globals
+                    .insert_puppet(Puppet {
+                        id: *user_id,
+                        ext_platform: "discord".to_owned(),
+                        ext_id: message.author.id.to_string(),
+                        ext_avatar: message.author.avatar_url(),
+                        name: puppet.name,
+                        avatar: puppet.avatar.map(|a| a.to_string()),
+                        bot: Some(matches!(puppet.user_type, UserType::Bot { .. })),
+                    })
+                    .await?;
 
                 let mut req = types::MessageCreate {
                     content: None,

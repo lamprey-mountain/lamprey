@@ -5,6 +5,7 @@ use serenity::all::{
     AttachmentId as DcAttachmentId, ChannelId as DcChannelId, MessageId as DcMessageId,
 };
 use sqlx::{query, query_as};
+use uuid::Uuid;
 
 use crate::common::Globals;
 
@@ -31,6 +32,17 @@ pub struct AttachmentMetadata {
 struct AttachmentMetadataRow {
     chat_id: String,
     discord_id: String,
+}
+
+pub struct Puppet {
+    pub id: Uuid,
+    pub ext_platform: String,
+    pub ext_id: String,
+    pub ext_avatar: Option<String>,
+    pub name: String,
+    pub avatar: Option<String>,
+    // TODO: remove Option
+    pub bot: Option<bool>,
 }
 
 impl TryFrom<MessageMetadataRow> for MessageMetadata {
@@ -91,6 +103,8 @@ pub trait Data {
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()>;
     async fn delete_message(&self, message_id: MessageId) -> Result<()>;
     async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()>;
+    async fn get_puppet(&self, ext_platform: &str, ext_id: &str) -> Result<Option<Puppet>>;
+    async fn insert_puppet(&self, data: Puppet) -> Result<()>;
 }
 
 #[async_trait]
@@ -213,6 +227,40 @@ impl Data for Globals {
         query!("DELETE FROM message WHERE discord_id = ?", b1)
             .execute(&self.pool)
             .await?;
+        Ok(())
+    }
+
+    async fn get_puppet(&self, ext_platform: &str, ext_id: &str) -> Result<Option<Puppet>> {
+        let row = query_as!(
+            Puppet,
+            r#"
+            SELECT id AS "id!: Uuid", ext_platform, ext_id, ext_avatar, name, avatar, bot
+            FROM puppet WHERE ext_platform = ? AND ext_id = ?
+            "#,
+            ext_platform,
+            ext_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    async fn insert_puppet(&self, data: Puppet) -> Result<()> {
+        query!(
+            r#"
+            INSERT OR REPLACE INTO puppet (id, ext_platform, ext_id, ext_avatar, name, avatar, bot)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            "#,
+            data.id,
+            data.ext_platform,
+            data.ext_id,
+            data.ext_avatar,
+            data.name,
+            data.avatar,
+            data.bot,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }
