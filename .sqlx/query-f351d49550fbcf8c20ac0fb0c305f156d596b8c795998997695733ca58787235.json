@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id, key\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $3 and msg.id < $4\norder by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6\n",
+  "query": "with\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $3 and msg.id < $4\norder by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6\n",
   "describe": {
     "columns": [
       {
@@ -112,5 +112,5 @@
       null
     ]
   },
-  "hash": "cce01a3065379837480c7d7b967e8c7a555ee79c2b0bb61a0f8e7c3ee8169c6c"
+  "hash": "f351d49550fbcf8c20ac0fb0c305f156d596b8c795998997695733ca58787235"
 }

@@ -10,7 +10,7 @@ with
             message_id,
             json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json
         from reaction
-        group by message_id, key
+        group by message_id
         order by min(position)
     )
 select

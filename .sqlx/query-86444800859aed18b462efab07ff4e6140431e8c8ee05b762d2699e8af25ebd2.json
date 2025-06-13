@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nmessage_reaction as (\n    -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n    select\n        message_id,\n        json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n    from reaction\n    group by message_id, key\n    order by min(position)\n)\nSELECT\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    false as \"is_pinned!\",\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere is_latest and thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n",
+  "query": "with\n    thread_viewer as (\n        select thread.id from thread\n        join room_member on thread.room_id = room_member.room_id\n        where room_member.user_id = $1\n    ),\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    false as \"is_pinned!\",\n    coalesce(u.embeds, '{}') as \"embeds!\",\n    r.json as \"reactions\"\nfrom message as msg\njoin thread_viewer on msg.thread_id = thread_viewer.id\nleft join att_json on att_json.version_id = msg.version_id\nleft join url_embed_json u on u.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere is_latest and msg.deleted_at is null\n  and msg.id > $2 AND msg.id < $3\n  and content @@ websearch_to_tsquery($6)\norder by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5\n",
   "describe": {
     "columns": [
       {
@@ -66,13 +66,13 @@
       },
       {
         "ordinal": 10,
-        "name": "is_pinned!",
-        "type_info": "Bool"
+        "name": "attachments!",
+        "type_info": "JsonArray"
       },
       {
         "ordinal": 11,
-        "name": "attachments!",
-        "type_info": "JsonArray"
+        "name": "is_pinned!",
+        "type_info": "Bool"
       },
       {
         "ordinal": 12,
@@ -88,7 +88,11 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "Text"
       ]
     },
     "nullable": [
@@ -108,5 +112,5 @@
       null
     ]
   },
-  "hash": "2ae32f0122779403b5d5257a5c7504b6ec48801df702b7ccd9a5711c6aaa7e53"
+  "hash": "86444800859aed18b462efab07ff4e6140431e8c8ee05b762d2699e8af25ebd2"
 }
