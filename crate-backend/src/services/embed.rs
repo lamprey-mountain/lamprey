@@ -14,6 +14,7 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
+use crate::types::MediaLinkType;
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -239,7 +240,7 @@ impl ServiceEmbed {
                 title: None,
                 description: None,
                 color: None,
-                media: Some(media),
+                media: Some(media.clone()),
                 media_is_thumbnail: false,
                 author_url: None,
                 author_name: None,
@@ -247,6 +248,10 @@ impl ServiceEmbed {
                 site_name: None,
                 site_avatar: None,
             };
+            self.state
+                .data()
+                .media_link_insert(media.id, *embed.id, MediaLinkType::Embed)
+                .await?;
             self.state.presign_url_embed(&mut embed).await?;
             embed
         } else {
@@ -340,22 +345,22 @@ impl ServiceEmbed {
             };
 
             let media = if let Some(m) = m {
-                Some(
-                    srv.media
-                        .import_from_url_with_max_size(
-                            user_id,
-                            types::MediaCreate {
-                                alt: m.alt,
-                                source: types::MediaCreateSource::Download {
-                                    filename: None,
-                                    size: None,
-                                    source_url: m.url,
-                                },
+                let media = srv
+                    .media
+                    .import_from_url_with_max_size(
+                        user_id,
+                        types::MediaCreate {
+                            alt: m.alt,
+                            source: types::MediaCreateSource::Download {
+                                filename: None,
+                                size: None,
+                                source_url: m.url,
                             },
-                            MAX_SIZE_ATTACHMENT,
-                        )
-                        .await?,
-                )
+                        },
+                        MAX_SIZE_ATTACHMENT,
+                    )
+                    .await?;
+                Some(media)
             } else {
                 None
             };
@@ -392,7 +397,7 @@ impl ServiceEmbed {
                 title,
                 description,
                 color: theme_color.map(|c| Color::from_hex_string(c.to_hex_string())),
-                media,
+                media: media.clone(),
                 media_is_thumbnail: match media_type {
                     ImageInstructions::Thumb => true,
                     ImageInstructions::Full => false,
@@ -406,6 +411,12 @@ impl ServiceEmbed {
                 // TODO: fetch favicon
                 site_avatar: None,
             };
+            if let Some(m) = media {
+                self.state
+                    .data()
+                    .media_link_insert(m.id, *embed.id, MediaLinkType::Embed)
+                    .await?;
+            }
             self.state.presign_url_embed(&mut embed).await?;
             embed
         };

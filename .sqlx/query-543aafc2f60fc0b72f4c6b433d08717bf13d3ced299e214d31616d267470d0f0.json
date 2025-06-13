@@ -23,7 +23,8 @@
               "Enum": [
                 "Message",
                 "MessageVersion",
-                "AvatarUser"
+                "AvatarUser",
+                "Embed"
               ]
             }
           }

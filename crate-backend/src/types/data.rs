@@ -416,8 +416,7 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
-    // FIXME(#230): link media to embeds
-    // Embed,
+    Embed,
 }
 
 // TODO: surely there's a better way than manually managing media links/references
