@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id AS \"id!: Uuid\", ext_platform, ext_id, ext_avatar, name, avatar, bot\n            FROM puppet WHERE ext_platform = ? AND ext_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: Uuid",
+        "ordinal": 0,
+        "type_info": "Null"
+      },
+      {
+        "name": "ext_platform",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "ext_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "ext_avatar",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "avatar",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "bot",
+        "ordinal": 6,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "ec59cc1611f90274a85d5e506f94ca5f692cc2188cad3d1394bb2703fbf2c21f"
+}
