@@ -207,6 +207,7 @@ impl LampoHandle {
     pub async fn user_update(&self, user_id: UserId, patch: &types::UserPatch) -> Result<User> {
         let res = self
             .http
+            .for_puppet(user_id)
             .user_update(UserIdReq::UserId(user_id), patch)
             .await?;
         Ok(res)
