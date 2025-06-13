@@ -1519,6 +1519,8 @@ table {
 }
 
 .reactions {
+	display: flex;
+	gap: 4px;
 	li {
 		cursor: pointer;
 		border: solid #445 1px;
@@ -1531,7 +1533,7 @@ table {
 	}
 
 	li.me {
-		border: solid #448 1px;
-		background: #4482;
+		border: solid #44f 1px;
+		background: #44f2;
 	}
 }

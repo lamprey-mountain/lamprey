@@ -111,6 +111,36 @@ export function MessageView(props: MessageProps) {
 	const api = useApi();
 	const thread = api.threads.fetch(() => props.message.thread_id);
 
+	function reactionAdd(emoji: string) {
+		api.client.http.PUT(
+			"/api/v1/thread/{thread_id}/message/{message_id}/reaction/{key}",
+			{
+				params: {
+					path: {
+						key: emoji,
+						message_id: props.message.id,
+						thread_id: props.message.thread_id,
+					},
+				},
+			},
+		);
+	}
+
+	function reactionDel(emoji: string) {
+		api.client.http.DELETE(
+			"/api/v1/thread/{thread_id}/message/{message_id}/reaction/{key}",
+			{
+				params: {
+					path: {
+						key: emoji,
+						message_id: props.message.id,
+						thread_id: props.message.thread_id,
+					},
+				},
+			},
+		);
+	}
+
 	function getComponent() {
 		const date =
 			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
@@ -223,7 +253,11 @@ export function MessageView(props: MessageProps) {
 								<ul class="reactions">
 									<For each={props.message.reactions}>
 										{(r) => (
-											<li classList={{ me: r.self }}>
+											<li
+												classList={{ me: r.self }}
+												onClick={() =>
+													r.self ? reactionAdd(r.emoji) : reactionDel(r.emoji)}
+											>
 												<span class="emoji">{r.emoji.toString()}</span>
 												<span class="count">{r.count}</span>
 											</li>
@@ -268,7 +302,11 @@ export function MessageView(props: MessageProps) {
 								<ul class="reactions">
 									<For each={props.message.reactions}>
 										{(r) => (
-											<li classList={{ me: r.self }}>
+											<li
+												classList={{ me: r.self }}
+												onClick={() =>
+													r.self ? reactionAdd(r.emoji) : reactionDel(r.emoji)}
+											>
 												<span class="emoji">{r.emoji.toString()}</span>
 												<span class="count">{r.count}</span>
 											</li>
