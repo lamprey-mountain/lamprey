@@ -219,7 +219,7 @@ pub enum MessageSync {
     },
 
     #[cfg(feature = "feat_voice")]
-    /// recieve arbitrary data from a voice server
+    /// receive arbitrary data from a voice server
     // TEMP: for prototyping
     VoiceDispatch {
         user_id: UserId,

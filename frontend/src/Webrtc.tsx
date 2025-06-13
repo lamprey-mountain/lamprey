@@ -250,7 +250,7 @@ export const DebugWebrtc = () => {
 			console.warn("audio has multiple tracks, using first one", tracks);
 		}
 		const tcr = conn.addTransceiver(tracks[0]);
-		console.log("add transciever", tcr);
+		console.log("add transceiver", tcr);
 		audio.play();
 		pendingTracks.push(tcr);
 	}
@@ -268,7 +268,7 @@ export const DebugWebrtc = () => {
 			return;
 		}
 		const tcr = conn.addTransceiver(track);
-		console.log("add transciever", tcr.mid, tcr);
+		console.log("add transceiver", tcr.mid, tcr);
 		track.addEventListener("ended", () => {
 			conn.removeTrack(tcr.sender);
 		});
@@ -290,7 +290,7 @@ export const DebugWebrtc = () => {
 			return;
 		}
 		const tcr = conn.addTransceiver(track);
-		console.log("add transciever", tcr.mid, tcr);
+		console.log("add transceiver", tcr.mid, tcr);
 		track.addEventListener("ended", () => {
 			conn.removeTrack(tcr.sender);
 		});
@@ -320,7 +320,7 @@ export const DebugWebrtc = () => {
 				return;
 			}
 			const tcr = conn.addTransceiver(track);
-			console.log("add transciever", tcr.mid, tcr);
+			console.log("add transceiver", tcr.mid, tcr);
 			track.addEventListener("ended", () => {
 				conn.removeTrack(tcr.sender);
 			});
@@ -334,7 +334,7 @@ export const DebugWebrtc = () => {
 				return;
 			}
 			const tcr = conn.addTransceiver(track);
-			console.log("add transciever", tcr.mid, tcr);
+			console.log("add transceiver", tcr.mid, tcr);
 			track.addEventListener("ended", () => {
 				conn.removeTrack(tcr.sender);
 			});

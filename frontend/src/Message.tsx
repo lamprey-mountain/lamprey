@@ -72,7 +72,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		getHtml();
 		import("highlight.js").then(({ default: hljs }) => {
 			// HACK: retain line numbers
-			// FIXME: use langage if provided instead of guessing
+			// FIXME: use language if provided instead of guessing
 			for (const el of [...highlightEl.querySelectorAll("pre")]) {
 				el.dataset.highlighted = "";
 				hljs.highlightElement(el);

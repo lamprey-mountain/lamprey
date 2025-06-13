@@ -112,7 +112,7 @@ const ModalPrompt = (
 	);
 };
 
-// currently only suports images!
+// currently only supports images!
 // though, it doesn't make much sense for video/audio/other media?
 const ModalMedia = (props: { media: Media }) => {
 	const ctx = useCtx();
