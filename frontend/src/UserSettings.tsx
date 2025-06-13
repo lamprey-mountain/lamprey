@@ -4,6 +4,7 @@ import { Dynamic } from "solid-js/web";
 import { Info, Sessions } from "./user_settings/mod.tsx";
 import type { User } from "sdk";
 import { Todo } from "./user_settings/Todo.tsx";
+import { Applications } from "./user_settings/Applications.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
@@ -12,6 +13,7 @@ const tabs = [
 	{ name: "notifications", path: "notifications", component: Todo },
 	{ name: "blocked users", path: "blocks", component: Todo },
 	{ name: "email", path: "email", component: Todo },
+	{ name: "applications", path: "applications", component: Applications },
 ];
 
 export const UserSettings = (props: { user: User; page: string }) => {
