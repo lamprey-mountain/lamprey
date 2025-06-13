@@ -152,6 +152,8 @@ pub struct SfuTrack {
     pub mid: Mid,
     pub peer_id: UserId,
     pub kind: MediaKind,
+    // TODO: replace with ssrc
+    pub key: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

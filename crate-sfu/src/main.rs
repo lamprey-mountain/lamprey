@@ -5,6 +5,7 @@ use axum::{
     Json,
 };
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::error;
 use tracing_subscriber::EnvFilter;
 use voice::{sfu::Sfu, SfuCommand};
 
@@ -15,7 +16,7 @@ async fn start_http(wheel: UnboundedSender<SfuCommand>) -> Result<()> {
             post(|Json(req): Json<SfuCommand>| async move {
                 // handles events proxied through the websocket
                 if let Err(err) = wheel.send(req) {
-                    tracing::error!("{err}");
+                    error!("error while sending command: {err}");
                 };
                 StatusCode::ACCEPTED
             }),

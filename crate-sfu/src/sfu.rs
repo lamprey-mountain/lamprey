@@ -7,7 +7,7 @@ use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
 use str0m::media::Mid;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tracing::{debug, trace};
+use tracing::{debug, error, trace, warn};
 
 #[derive(Debug, Default)]
 pub struct Sfu {
@@ -34,8 +34,16 @@ impl Sfu {
         let (peer_send, mut peer_events) = tokio::sync::mpsc::unbounded_channel();
         loop {
             tokio::select! {
-                Some(req) = a.recv() => self.handle_command(req, peer_send.clone()).await?,
-                Some(envelope) = peer_events.recv() => self.handle_event(envelope).await?,
+                Some(req) = a.recv() => {
+                    if let Err(err) = self.handle_command(req, peer_send.clone()).await {
+                        error!("error handling peer command: {err}");
+                    }
+                }
+                Some(envelope) = peer_events.recv() => {
+                    if let Err(err) = self.handle_event(envelope).await {
+                        error!("error handling peer event: {err}");
+                    }
+                }
             }
         }
     }
@@ -100,8 +108,31 @@ impl Sfu {
                 //     return;
                 // }
                 let peer = Peer::spawn(peer_send.clone(), user_id).await?;
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
                 for m in &self.tracks {
+                    if m.peer_id == user_id {
+                        continue;
+                    }
+
+                    let Some(state) = self.voice_states.get(&m.peer_id) else {
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        continue;
+                    }
+
                     peer.send(PeerCommand::MediaAdded(m.clone()))?;
+                    if let Some(key) = m.key.as_ref() {
+                        peer.send(PeerCommand::RemotePublish {
+                            user_id,
+                            mid: m.mid,
+                            key: key.to_owned(),
+                        })?;
+                    }
                 }
 
                 vacant_entry.insert(peer)
@@ -125,19 +156,47 @@ impl Sfu {
 
             PeerEvent::MediaAdded(ref m) => {
                 debug!("peer event payload {event:?}");
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
                 for a in &self.peers {
-                    if a.key() != &user_id {
-                        a.value().send(PeerCommand::MediaAdded(m.clone()))?;
+                    if a.key() == &user_id {
+                        continue;
                     }
+
+                    let Some(state) = self.voice_states.get(a.key()) else {
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        continue;
+                    }
+
+                    a.value().send(PeerCommand::MediaAdded(m.clone()))?;
                 }
                 self.tracks.push(m.clone());
             }
 
             PeerEvent::MediaData(m) => {
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
                 for a in &self.peers {
-                    if a.key() != &user_id {
-                        a.value().send(PeerCommand::MediaData(m.clone()))?;
+                    if a.key() == &user_id {
+                        continue;
                     }
+
+                    let Some(state) = self.voice_states.get(a.key()) else {
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        continue;
+                    }
+
+                    a.value().send(PeerCommand::MediaData(m.clone()))?;
                 }
             }
 

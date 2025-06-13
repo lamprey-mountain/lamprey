@@ -383,7 +383,7 @@ export function createApi(
 				typing_timeout.set(thread_id, tt);
 			}
 		} else {
-			console.warn(`unknown event ${msg.type}`, msg);
+			// console.warn(`unknown event ${msg.type}`, msg);
 		}
 	});
 

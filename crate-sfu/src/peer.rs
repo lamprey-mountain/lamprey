@@ -104,6 +104,7 @@ impl Peer {
                                 kind: m.kind,
                                 mid: m.mid,
                                 peer_id: self.user_id,
+                                key: None,
                             }))?;
                         }
 
