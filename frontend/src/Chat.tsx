@@ -18,6 +18,7 @@ import type { Message } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "./api/messages.ts";
 import { getMsgTs as get_msg_ts } from "./util.tsx";
+import { uuidv7 } from "uuidv7";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -216,7 +217,33 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(list.scrollPos, setPos));
 
 	return (
-		<div class="chat" data-thread-id={props.thread.id} role="log">
+		<div
+			class="chat"
+			data-thread-id={props.thread.id}
+			role="log"
+			onDragEnter={(e) => {
+				e.preventDefault();
+			}}
+			onDragOver={(e) => {
+				e.preventDefault();
+			}}
+			onDragLeave={(e) => {
+				e.preventDefault();
+			}}
+			onDrop={(e) => {
+				e.preventDefault();
+				for (const file of e.dataTransfer?.files ?? []) {
+					console.log(file);
+					const local_id = uuidv7();
+					ctx.dispatch({
+						do: "upload.init",
+						file,
+						local_id,
+						thread_id: props.thread.id,
+					});
+				}
+			}}
+		>
 			<Show when={messages.loading}>
 				<div class="loading">{t("loading")}</div>
 			</Show>
