@@ -1517,3 +1517,21 @@ table {
 		}
 	}
 }
+
+.reactions {
+	li {
+		cursor: pointer;
+		border: solid #445 1px;
+		background: #4452;
+		border-radius: 3px;
+		padding: 2px 4px;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	li.me {
+		border: solid #448 1px;
+		background: #4482;
+	}
+}

@@ -219,6 +219,18 @@ export function MessageView(props: MessageProps) {
 									</For>
 								</ul>
 							</Show>
+							<Show when={props.message.reactions?.length}>
+								<ul class="reactions">
+									<For each={props.message.reactions}>
+										{(r) => (
+											<li classList={{ me: r.self }}>
+												<span class="emoji">{r.emoji.toString()}</span>
+												<span class="count">{r.count}</span>
+											</li>
+										)}
+									</For>
+								</ul>
+							</Show>
 						</div>
 					</Show>
 					<Show when={!withAvatar}>
@@ -249,6 +261,18 @@ export function MessageView(props: MessageProps) {
 								<ul class="embeds">
 									<For each={props.message.embeds}>
 										{(embed) => <EmbedView embed={embed} />}
+									</For>
+								</ul>
+							</Show>
+							<Show when={props.message.reactions?.length}>
+								<ul class="reactions">
+									<For each={props.message.reactions}>
+										{(r) => (
+											<li classList={{ me: r.self }}>
+												<span class="emoji">{r.emoji.toString()}</span>
+												<span class="count">{r.count}</span>
+											</li>
+										)}
 									</For>
 								</ul>
 							</Show>
