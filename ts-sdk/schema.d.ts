@@ -41,23 +41,6 @@ export interface paths {
 		patch: operations["app_patch"];
 		trace?: never;
 	};
-	"/api/v1/app/{app_id}/puppet": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Puppet create */
-		post: operations["puppet_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/app/{app_id}/puppet/{puppet_id}": {
 		parameters: {
 			query?: never;
@@ -69,6 +52,23 @@ export interface paths {
 		/** Puppet ensure */
 		put: operations["puppet_ensure"];
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/app/{app_id}/session": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** App create session */
+		post: operations["app_create_session"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -308,6 +308,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/debug/panic": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Trigger a panic */
+		get: operations["debug_panic"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/debug/version": {
 		parameters: {
 			query?: never;
@@ -347,6 +364,23 @@ export interface paths {
 		 * @description Edit notifications in the inbox.
 		 */
 		patch: operations["inbox_patch"];
+		trace?: never;
+	};
+	"/api/v1/internal/rpc": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Internal rpc */
+		post: operations["internal_rpc"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/invite/{invite_code}": {
@@ -1324,6 +1358,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/thread/{thread_id}/messages/move": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Message move (TODO) */
+		post: operations["message_move"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/messages/undelete": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Message undelete (TODO) */
+		post: operations["message_undelete"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/thread/{thread_id}/permission/{overwrite_id}": {
 		parameters: {
 			query?: never;
@@ -1484,13 +1552,13 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Block add (TODO)
-		 * @description Block a user.
+		 * Block add
+		 * @description Block a user. Removes them as a friend if they are one.
 		 */
 		put: operations["block_add"];
 		post?: never;
 		/**
-		 * Block remove (TODO)
+		 * Block remove
 		 * @description Unblock a user.
 		 */
 		delete: operations["block_remove"];
@@ -1532,50 +1600,19 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Friend add (TODO)
+		 * Friend add
 		 * @description Send or accept a friend request.
 		 */
 		put: operations["friend_add"];
 		post?: never;
 		/**
-		 * Friend remove (TODO)
+		 * Friend remove
 		 * @description Remove friend or reject a friend request.
 		 */
 		delete: operations["friend_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/user/@self/relationship/{target_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Relationship get
-		 * @deprecated
-		 * @description Get your relationship with another user
-		 */
-		get: operations["relationship_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Relationship remove
-		 * @deprecated
-		 * @description Reset your relationship with another user
-		 */
-		delete: operations["relationship_reset"];
-		options?: never;
-		head?: never;
-		/**
-		 * Relationship update
-		 * @deprecated
-		 * @description Update your relationship with another user
-		 */
-		patch: operations["relationship_update"];
 		trace?: never;
 	};
 	"/api/v1/user/{user_id}": {
@@ -1585,7 +1622,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** User get */
+		/**
+		 * User get
+		 * @description Get another user, including your relationship
+		 */
 		get: operations["user_get"];
 		put?: never;
 		post?: never;
@@ -1622,8 +1662,8 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Block list (TODO)
-		 * @description List (mutually?) blocked users.
+		 * Block list
+		 * @description List blocked users.
 		 */
 		get: operations["block_list"];
 		put?: never;
@@ -1719,7 +1759,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Friend list (TODO)
+		 * Friend list
 		 * @description List (mutual) friends.
 		 */
 		get: operations["friend_list"];
@@ -1749,27 +1789,6 @@ export interface paths {
 		 * @description Create an invite that goes to a user
 		 */
 		post: operations["invite_user_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/user/{user_id}/relationship": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Relationship list
-		 * @deprecated
-		 * @description List relationships with other users.
-		 */
-		get: operations["relationship_list"];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1867,6 +1886,14 @@ export interface components {
 		AnyDocument:
 			| components["schemas"]["Block"][]
 			| components["schemas"]["Block"];
+		ApplicationCreate: {
+			/** @description enables managing Puppet users */
+			bridge: boolean;
+			description?: string | null;
+			name: string;
+			/** @description if anyone can use this */
+			public: boolean;
+		};
 		/** @description metadata for audio */
 		Audio: {
 			codec: string;
@@ -1964,6 +1991,18 @@ export interface components {
 		};
 		/** @description a color */
 		Color: string;
+		Command: {
+			payload: unknown;
+			/** @enum {string} */
+			type: "VoiceDispatch";
+			user_id: components["schemas"]["Id"];
+		} | {
+			old?: null | components["schemas"]["VoiceState"];
+			state?: null | components["schemas"]["VoiceState"];
+			/** @enum {string} */
+			type: "VoiceState";
+			user_id: components["schemas"]["Id"];
+		};
 		ContextResponse: {
 			has_after: boolean;
 			has_before: boolean;
@@ -1995,6 +2034,54 @@ export interface components {
 		 * @enum {string}
 		 */
 		EmailTrust: "Never" | "Trusted" | "Full";
+		Embed: {
+			author_avatar?: null | components["schemas"]["Media"];
+			author_name?: string | null;
+			/** Format: uri */
+			author_url?: string | null;
+			/**
+			 * Format: uri
+			 * @description the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
+			 */
+			canonical_url?: string | null;
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			id: components["schemas"]["Id"];
+			media?: null | components["schemas"]["Media"];
+			/** @description if `media` should be displayed as a small thumbnail or as a full size */
+			media_is_thumbnail: boolean;
+			site_avatar?: null | components["schemas"]["Media"];
+			/** @description the name of the website */
+			site_name?: string | null;
+			title?: string | null;
+			/**
+			 * Format: uri
+			 * @description the url this embed was requested for
+			 */
+			url?: string | null;
+		};
+		EmbedCreate: {
+			author_avatar?: null | components["schemas"]["MediaRef"];
+			author_name?: string | null;
+			/** Format: uri */
+			author_url?: string | null;
+			/** @description the theme color of the site, as a hex string (`#rrggbb`) */
+			color?: string | null;
+			description?: string | null;
+			media?: components["schemas"]["MediaRef"][];
+			/** @description if `media` should be displayed as a small thumbnail or as a full size */
+			media_is_thumbnail?: boolean;
+			title?: string | null;
+			/**
+			 * Format: uri
+			 * @description the url this embed was requested for
+			 */
+			url?: string | null;
+		};
+		EmbedRequest: {
+			/** Format: uri */
+			url: string;
+		};
 		Emoji:
 			| components["schemas"]["EmojiCustom"]
 			| components["schemas"]["EmojiUnicode"];
@@ -2369,11 +2456,23 @@ export interface components {
 			/** @description which messages to delete */
 			message_ids?: components["schemas"]["Id"][];
 		};
+		MessageBulkMove: {
+			/** @description keep original messages intact */
+			copy: boolean;
+			/** @description which messages to move */
+			message_ids?: components["schemas"]["Id"][];
+			/** @description must be in same room (for now...) */
+			target_thread_id: components["schemas"]["Id"];
+		};
+		MessageBulkUndelete: {
+			/** @description which messages to undelete */
+			message_ids?: components["schemas"]["Id"][];
+		};
 		MessageCreate: {
 			attachments?: components["schemas"]["MediaRef"][];
 			/** @description the message's content, in either markdown or the new format depending on if use_new_text_formatting is true */
 			content?: string | null;
-			embeds?: components["schemas"]["UrlEmbed"][];
+			embeds?: components["schemas"]["EmbedCreate"][];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2406,7 +2505,7 @@ export interface components {
 			attachments: components["schemas"]["Media"][];
 			/** @description the message's content in markdown */
 			content?: string | null;
-			embeds: components["schemas"]["UrlEmbed"][];
+			embeds: components["schemas"]["Embed"][];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2429,7 +2528,7 @@ export interface components {
 			attachments: components["schemas"]["Media"][];
 			/** @description the message's content in the new format */
 			content?: string | null;
-			embeds: components["schemas"]["UrlEmbed"][];
+			embeds: components["schemas"]["Embed"][];
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2458,7 +2557,7 @@ export interface components {
 			attachments?: components["schemas"]["MediaRef"][] | null;
 			/** @description the new message content. whether its markdown/new format depends on the target message's format */
 			content?: string | null;
-			embeds?: components["schemas"]["UrlEmbed"][] | null;
+			embeds?: components["schemas"]["EmbedCreate"][] | null;
 			/**
 			 * @deprecated
 			 * @description arbitrary metadata associated with a message
@@ -2623,12 +2722,17 @@ export interface components {
 			/** @enum {string} */
 			type: "VoiceDispatch";
 			user_id: components["schemas"]["Id"];
+		} | {
+			state?: null | components["schemas"]["VoiceState"];
+			/** @enum {string} */
+			type: "VoiceState";
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description a message (announcement? motd?) from the system */
 		MessageSystemMessage: {
 			attachments: components["schemas"]["Media"][];
 			content?: string | null;
-			embeds: components["schemas"]["UrlEmbed"][];
+			embeds: components["schemas"]["Embed"][];
 		};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
@@ -3179,6 +3283,10 @@ export interface components {
 		PermissionOverrideWithTarget:
 			& components["schemas"]["PermissionOverridable"]
 			& components["schemas"]["PermissionOverride"];
+		PuppetCreate: {
+			description?: string | null;
+			name: string;
+		};
 		/** @description the total reaction counts for an emoji */
 		ReactionCount: {
 			/** Format: int64 */
@@ -3193,13 +3301,6 @@ export interface components {
 			user_id: components["schemas"]["Id"];
 		};
 		Relationship: (null | components["schemas"]["Ignore"]) & {
-			/** @description whatever you want to write */
-			note?: string | null;
-			/** @description personal petname for this user */
-			petname?: string | null;
-			relation?: null | components["schemas"]["RelationshipType"];
-		};
-		RelationshipPatch: (null | components["schemas"]["Ignore"]) & {
 			/** @description whatever you want to write */
 			note?: string | null;
 			/** @description personal petname for this user */
@@ -3752,36 +3853,6 @@ export interface components {
 			/** @enum {string} */
 			source: "Generated";
 		};
-		UrlEmbed: {
-			author_avatar?: null | components["schemas"]["Media"];
-			author_name?: string | null;
-			/** Format: uri */
-			author_url?: string | null;
-			/**
-			 * Format: uri
-			 * @description the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
-			 */
-			canonical_url?: string | null;
-			color?: null | components["schemas"]["Color"];
-			description?: string | null;
-			id: components["schemas"]["Id"];
-			media?: null | components["schemas"]["Media"];
-			/** @description if `media` should be displayed as a small thumbnail or as a full size */
-			media_is_thumbnail: boolean;
-			site_avatar?: null | components["schemas"]["Media"];
-			/** @description the name of the website */
-			site_name?: string | null;
-			title?: string | null;
-			/**
-			 * Format: uri
-			 * @description the url this embed was requested for
-			 */
-			url: string;
-		};
-		UrlEmbedRequest: {
-			/** Format: uri */
-			url: string;
-		};
 		User: components["schemas"]["UserType"] & {
 			avatar?: null | components["schemas"]["Id"];
 			description?: string | null;
@@ -3858,6 +3929,12 @@ export interface components {
 			/** Format: int64 */
 			width: number;
 		};
+		VoiceState: {
+			/** @description when this person joined the call */
+			joined_at: components["schemas"]["Time"];
+			thread_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
+		};
 	};
 	responses: never;
 	parameters: never;
@@ -3892,7 +3969,11 @@ export interface operations {
 			path?: never;
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ApplicationCreate"];
+			};
+		};
 		responses: {
 			/** @description success */
 			201: {
@@ -3907,7 +3988,9 @@ export interface operations {
 		parameters: {
 			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -3925,7 +4008,9 @@ export interface operations {
 		parameters: {
 			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -3957,14 +4042,21 @@ export interface operations {
 			};
 		};
 	};
-	puppet_create: {
+	puppet_ensure: {
 		parameters: {
 			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+				puppet_id: string;
+			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PuppetCreate"];
+			};
+		};
 		responses: {
 			/** @description success */
 			200: {
@@ -3975,14 +4067,20 @@ export interface operations {
 			};
 		};
 	};
-	puppet_ensure: {
+	app_create_session: {
 		parameters: {
 			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SessionCreate"];
+			};
+		};
 		responses: {
 			/** @description success */
 			200: {
@@ -4384,7 +4482,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["UrlEmbedRequest"];
+				"application/json": components["schemas"]["EmbedRequest"];
 			};
 		};
 		responses: {
@@ -4394,8 +4492,26 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["UrlEmbed"];
+					"application/json": components["schemas"]["Embed"];
 				};
+			};
+		};
+	};
+	debug_panic: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			500: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -4465,6 +4581,28 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	internal_rpc: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["Command"];
+			};
+		};
+		responses: {
+			/** @description Accepted */
+			202: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -6908,6 +7046,56 @@ export interface operations {
 			};
 		};
 	};
+	message_move: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageBulkMove"];
+			};
+		};
+		responses: {
+			/** @description move success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_undelete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageBulkUndelete"];
+			};
+		};
+		responses: {
+			/** @description undelete success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	permission_thread_override: {
 		parameters: {
 			query?: never;
@@ -7320,91 +7508,6 @@ export interface operations {
 			};
 		};
 	};
-	relationship_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target user's id */
-				target_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Relationship"];
-				};
-			};
-			/** @description couldn't find that user or you don't have any relationship state yet */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	relationship_reset: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target user's id */
-				target_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	relationship_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target user's id */
-				target_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["RelationshipPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Relationship"];
-				};
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	user_get: {
 		parameters: {
 			query?: never;
@@ -7508,13 +7611,14 @@ export interface operations {
 	};
 	block_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 				/** @description User id to list blocks from */
 				user_id: string;
 			};
@@ -7717,13 +7821,14 @@ export interface operations {
 	};
 	friend_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 				/** @description User id to list friends from */
 				user_id: string;
 			};
@@ -7795,35 +7900,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Invite"];
-				};
-			};
-		};
-	};
-	relationship_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description User id to list relationships from */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
 				};
 			};
 		};
