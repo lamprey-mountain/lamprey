@@ -82,6 +82,18 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 
 	createEffect(highlight);
 
+	const ctx = useCtx();
+	const viewHistory = () => {
+		ctx.dispatch({
+			do: "modal.open",
+			modal: {
+				type: "message_edits",
+				message_id: props.message.id,
+				thread_id: props.message.thread_id,
+			},
+		});
+	};
+
 	return (
 		<div
 			class="body markdown"
@@ -90,7 +102,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		>
 			<span innerHTML={getHtml()}></span>
 			<Show when={props.message.id !== props.message.version_id}>
-				<span class="edited">(edited)</span>
+				<span class="edited" onClick={viewHistory}>(edited)</span>
 			</Show>
 		</div>
 	);

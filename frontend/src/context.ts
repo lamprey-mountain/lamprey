@@ -69,6 +69,11 @@ export type Modal =
 	| {
 		type: "media";
 		media: Media;
+	}
+	| {
+		type: "message_edits";
+		thread_id: string;
+		message_id: string;
 	};
 
 export type Action =

@@ -1,8 +1,17 @@
-import { createEffect, createSignal, type ParentProps, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	type ParentProps,
+	Show,
+} from "solid-js";
 import { type Modal as ContextModal, useCtx } from "../context.ts";
 import { autofocus } from "@solid-primitives/autofocus";
 import type { Media } from "sdk";
 import { getHeight, getUrl, getWidth, Resize } from "../media/util.tsx";
+import { useApi } from "../api.tsx";
+import { createResource } from "solid-js";
+import { MessageView } from "../Message.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -32,6 +41,14 @@ export function getModal(modal: ContextModal) {
 		}
 		case "media": {
 			return <ModalMedia media={modal.media} />;
+		}
+		case "message_edits": {
+			return (
+				<ModalMessageEdits
+					thread_id={modal.thread_id}
+					message_id={modal.message_id}
+				/>
+			);
 		}
 	}
 }
@@ -147,5 +164,43 @@ const ModalMedia = (props: { media: Media }) => {
 				</div>
 			</div>
 		</div>
+	);
+};
+
+const ModalMessageEdits = (
+	props: { thread_id: string; message_id: string },
+) => {
+	// FIXME: pagination
+	const api = useApi();
+	const [edits] = createResource(
+		{ thread_id: props.thread_id, message_id: props.message_id },
+		async (path) => {
+			const { data } = await api.client.http.GET(
+				"/api/v1/thread/{thread_id}/message/{message_id}/version",
+				{
+					params: {
+						path,
+						query: { limit: 100 },
+					},
+				},
+			);
+			return data!;
+		},
+	);
+
+	return (
+		<Modal>
+			<h3>edit history</h3>
+			<br />
+			<ul>
+				<For each={edits()?.items ?? []} fallback={"loading"}>
+					{(i) => (
+						<li>
+							<MessageView message={i} />
+						</li>
+					)}
+				</For>
+			</ul>
+		</Modal>
 	);
 };
