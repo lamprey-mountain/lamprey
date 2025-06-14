@@ -289,7 +289,7 @@ impl Portal {
                 let user_id = puppet.id;
                 let p = self
                     .globals
-                    .get_puppet("discord", &user_id.to_string())
+                    .get_puppet("discord", &message.author.id.to_string())
                     .await?;
                 if let Some(p) = p {
                     if p.ext_avatar != message.author.avatar_url() {
