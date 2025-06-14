@@ -50,4 +50,40 @@ impl DataAuth for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn auth_password_set(&self, user_id: UserId, hash: &[u8], salt: &[u8]) -> Result<()> {
+        sqlx::query!(
+            "update usr set password_hash = $2, password_salt = $3 where id = $1",
+            *user_id,
+            hash,
+            salt
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn auth_password_get(&self, user_id: UserId) -> Result<Option<(Vec<u8>, Vec<u8>)>> {
+        let row = sqlx::query!(
+            "select password_hash, password_salt from usr where id = $1",
+            *user_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        let Some(row) = row else { return Ok(None) };
+        match (row.password_hash, row.password_salt) {
+            (Some(hash), Some(salt)) => Ok(Some((hash, salt))),
+            _ => Ok(None),
+        }
+    }
+
+    async fn auth_password_delete(&self, user_id: UserId) -> Result<()> {
+        sqlx::query!(
+            "update usr set password_hash = null, password_salt = null where id = $1",
+            *user_id,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }

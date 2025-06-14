@@ -9,17 +9,21 @@ use common::v1::types::auth::AuthStatus;
 use common::v1::types::auth::CaptchaChallenge;
 use common::v1::types::auth::CaptchaResponse;
 use common::v1::types::auth::PasswordExec;
+use common::v1::types::auth::PasswordExecIdent;
 use common::v1::types::auth::PasswordSet;
 use common::v1::types::auth::TotpRecoveryCodes;
 use common::v1::types::auth::TotpState;
 use common::v1::types::auth::TotpStateWithSecret;
 use common::v1::types::auth::TotpVerificationRequest;
 use common::v1::types::email::EmailAddr;
+use common::v1::types::util::Time;
 use common::v1::types::MessageSync;
 use common::v1::types::SessionStatus;
 use common::v1::types::UserType;
+use http::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
+use time::Duration;
 use tracing::debug;
 use url::Url;
 use utoipa::IntoParams;
@@ -35,6 +39,7 @@ use crate::error::{Error, Result};
 use super::util::Auth;
 use super::util::AuthRelaxed;
 use super::util::AuthSudo;
+use super::util::AuthWithSession;
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub struct OauthRedirectQuery {
@@ -269,7 +274,7 @@ async fn auth_totp_delete(
     Err(Error::Unimplemented)
 }
 
-/// Auth password set (TODO)
+/// Auth password set
 #[utoipa::path(
     put,
     path = "/auth/password",
@@ -277,14 +282,23 @@ async fn auth_totp_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
-    AuthSudo(_auth_user_id): AuthSudo,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<PasswordSet>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    AuthSudo(auth_user_id): AuthSudo,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<PasswordSet>,
+) -> Result<impl IntoResponse> {
+    let config = argon2::Config::default();
+    let salt = {
+        let mut salt = [0u8; 16];
+        rand::fill(&mut salt);
+        salt
+    };
+    let hash = argon2::hash_raw(json.password.as_bytes(), &salt, &config).unwrap();
+    let data = s.data();
+    data.auth_password_set(auth_user_id, &hash, &salt).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Auth password delete (TODO)
+/// Auth password delete
 #[utoipa::path(
     delete,
     path = "/auth/password",
@@ -292,13 +306,15 @@ async fn auth_password_set(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
-    AuthSudo(_auth_user_id): AuthSudo,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    AuthSudo(auth_user_id): AuthSudo,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    data.auth_password_delete(auth_user_id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Auth password exec (TODO)
+/// Auth password exec
 #[utoipa::path(
     post,
     path = "/auth/password",
@@ -306,11 +322,32 @@ async fn auth_password_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_exec(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<PasswordExec>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<PasswordExec>,
+) -> Result<impl IntoResponse> {
+    let user_id = match json.ident {
+        PasswordExecIdent::UserId { user_id } => user_id,
+        PasswordExecIdent::Email { email: _ } => todo!("lookup email stuff"),
+    };
+    let data = s.data();
+    let config = argon2::Config::default();
+    let (hash, salt) = data
+        .auth_password_get(user_id)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let valid = argon2::verify_raw(json.password.as_bytes(), &salt, &hash, &config)
+        .map_err(|_| Error::NotFound)?;
+    if valid {
+        // TODO: allow entering sudo mode via password
+        data.session_set_status(session.id, SessionStatus::Authorized { user_id })
+            .await?;
+        let srv = s.services();
+        srv.sessions.invalidate(session.id).await;
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(Error::NotFound)
+    }
 }
 
 /// Auth status (TODO)
@@ -359,6 +396,32 @@ async fn auth_captcha_submit(
     Err(Error::Unimplemented)
 }
 
+/// Auth sudo (TEMP)
+///
+/// for debugging
+#[utoipa::path(
+    post,
+    path = "/auth/_sudo",
+    tags = ["auth"],
+    responses((status = NO_CONTENT, description = "ok")),
+)]
+async fn auth_sudo(
+    AuthWithSession(session, auth_user_id): AuthWithSession,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    s.data()
+        .session_set_status(
+            session.id,
+            SessionStatus::Sudo {
+                user_id: auth_user_id,
+                expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(session.id).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
@@ -379,4 +442,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_captcha_init))
         .routes(routes!(auth_captcha_submit))
         .routes(routes!(auth_status))
+        .routes(routes!(auth_sudo))
 }

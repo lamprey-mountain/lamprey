@@ -45,6 +45,8 @@ linkify = "0.10.0"
 ipnet = { version = "2.11.0", features = ["serde"] }
 csscolorparser = { version = "0.7.0", features = ["lab"] }
 clap = { version = "4.5.31", features = ["derive"] }
+rust-argon2 = "2.1.0"
+rand = "0.9.1"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
