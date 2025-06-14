@@ -1539,3 +1539,14 @@ table {
 		background: #44f2;
 	}
 }
+
+ins {
+	color: $color-green;
+	background: oklch(var(--color-green) / 0.1);
+}
+
+del {
+	color: $color-red;
+	background: oklch(var(--color-red) / 0.1);
+	text-decoration: line-through;
+}

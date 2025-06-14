@@ -12,6 +12,7 @@ import { getHeight, getUrl, getWidth, Resize } from "../media/util.tsx";
 import { useApi } from "../api.tsx";
 import { createResource } from "solid-js";
 import { MessageView } from "../Message.tsx";
+import { diffChars } from "diff";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -188,17 +189,36 @@ const ModalMessageEdits = (
 		},
 	);
 
+	diffChars;
+
 	return (
 		<Modal>
 			<h3>edit history</h3>
 			<br />
 			<ul>
 				<For each={edits()?.items ?? []} fallback={"loading"}>
-					{(i) => (
-						<li>
-							<MessageView message={i} />
-						</li>
-					)}
+					{(i, x) => {
+						const prev = edits()?.items[x() - 1];
+						if (prev) {
+							const pages = diffChars(i.content, prev.content);
+							const content = pages.map((i) => {
+								if (i.added) return `<ins>${i.value}</ins>`;
+								if (i.removed) return `<del>${i.value}</del>`;
+								return i.value;
+							}).join("");
+							return (
+								<li>
+									<MessageView message={{ ...i, content }} />
+								</li>
+							);
+						} else {
+							return (
+								<li>
+									<MessageView message={i} />
+								</li>
+							);
+						}
+					}}
 				</For>
 			</ul>
 		</Modal>

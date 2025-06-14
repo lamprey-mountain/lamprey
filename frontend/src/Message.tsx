@@ -42,9 +42,10 @@ type MessageTextMarkdownProps = {
 };
 
 const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
-	transformTags: {
-		del: "s",
-	},
+	// transformTags: {
+	// 	del: "s",
+	// },
+	allowedTags: sanitizeHtml.defaults.allowedTags.concat(["ins", "del"]),
 };
 
 const md = marked.use({
