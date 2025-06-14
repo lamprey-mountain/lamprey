@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use email::ServiceEmail;
 use embed::ServiceEmbed;
 use media::ServiceMedia;
 use messages::ServiceMessages;
@@ -12,6 +13,7 @@ use users::ServiceUsers;
 
 use crate::ServerStateInner;
 
+pub mod email;
 pub mod embed;
 pub mod media;
 pub mod messages;
@@ -33,6 +35,7 @@ pub struct Services {
     pub embed: ServiceEmbed,
     pub users: ServiceUsers,
     pub sessions: ServiceSessions,
+    pub email: ServiceEmail,
 }
 
 impl Services {
@@ -47,6 +50,7 @@ impl Services {
             oauth: ServiceOauth::new(state.clone()),
             users: ServiceUsers::new(state.clone()),
             sessions: ServiceSessions::new(state.clone()),
+            email: ServiceEmail::new(state.clone()),
             state,
         }
     }

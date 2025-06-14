@@ -5,7 +5,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
-use common::v1::types::notifications::InboxFilters;
+use common::v1::types::{email::EmailAddr, notifications::InboxFilters};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
@@ -130,6 +130,7 @@ async fn main() -> Result<()> {
     match &args.command {
         cli::Command::Serve {} => serve(config).await?,
         cli::Command::Check {} => check(config).await?,
+        cli::Command::TestMail { to } => send_test_email(config, to.to_owned()).await?,
     }
 
     Ok(())
@@ -202,5 +203,39 @@ async fn check(config: Config) -> Result<()> {
         .layer(LoggingLayer::default())
         .finish();
     blobs.check().await?;
+    Ok(())
+}
+
+async fn send_test_email(config: Config, to: String) -> Result<()> {
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect(&config.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let blobs_builder = opendal::services::S3::default()
+        .bucket(&config.s3.bucket)
+        .endpoint(config.s3.endpoint.as_str())
+        .region(&config.s3.region)
+        .access_key_id(&config.s3.access_key_id)
+        .secret_access_key(&config.s3.secret_access_key);
+    let blobs = opendal::Operator::new(blobs_builder)?
+        .layer(LoggingLayer::default())
+        .finish();
+    blobs.check().await?;
+
+    let state = Arc::new(ServerState::new(config, pool, blobs));
+    state.services().email.test().await?;
+    state
+        .services()
+        .email
+        .send(
+            EmailAddr::new(to)?,
+            "test email".to_owned(),
+            "test email, please ignore".to_owned(),
+        )
+        .await?;
     Ok(())
 }

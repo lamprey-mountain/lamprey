@@ -13,6 +13,7 @@ pub struct Config {
     pub s3: ConfigS3,
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
+    pub smtp: ConfigSmtp,
 }
 
 #[derive(Debug, Deserialize)]
@@ -39,4 +40,11 @@ pub struct ConfigOauthProvider {
 pub struct ConfigUrlPreview {
     pub user_agent: String,
     pub deny: Vec<IpNet>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConfigSmtp {
+    pub username: String,
+    pub password: String,
+    pub host: String,
 }

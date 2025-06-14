@@ -89,6 +89,9 @@ pub enum Error {
     #[error("validation error: {0}")]
     Validation(#[from] validator::ValidationErrors),
 
+    #[error("lettre error: {0}")]
+    Lettre(#[from] lettre::error::Error),
+
     #[error("generic error: {0}")]
     GenericError(String),
 }
