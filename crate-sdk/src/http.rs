@@ -1,8 +1,6 @@
 use anyhow::Result;
 use common::v1::types::{
-    media::MediaCreated, misc::UserIdReq, Media, MediaCreate, MediaId, Message, MessageCreate,
-    MessageId, MessagePatch, RoomId, RoomMember, SessionToken, Thread, ThreadCreate, ThreadId,
-    ThreadPatch, User, UserCreate, UserId, UserPatch,
+    media::MediaCreated, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaId, Message, MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, RoomMember, SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch, User, UserCreate, UserId, UserPatch
 };
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
@@ -176,5 +174,6 @@ route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(t
 route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreate);
 route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId) -> RoomMember);
-route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
+// route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
 route!(patch  "/api/v1/user/{user_id}"                          => user_update(user_id: UserIdReq) -> User, UserPatch);
+route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"         => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);

@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, misc::UserIdReq, Media, MediaCreate, MediaCreateSource, MediaId, MessageCreate,
-    MessageId, RoomId, Session, Thread, ThreadId, User, UserCreate, UserId,
+    self, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaCreateSource, MediaId,
+    MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User, UserCreate, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -181,19 +181,17 @@ impl LampoHandle {
     }
 
     pub async fn puppet_ensure(&self, name: String, key: String, room_id: RoomId) -> Result<User> {
+        let app_id: ApplicationId = "01943cc1-62e0-7c0e-bb9b-a4ff42864d69".parse().unwrap();
         let user = self
             .http
-            .user_create(&UserCreate {
-                name,
-                description: None,
-                user_type: types::UserType::Puppet {
-                    owner_id: "01943cc1-62e0-7c0e-bb9b-a4ff42864d69".parse().unwrap(),
-                    external_platform: types::ExternalPlatform::Discord,
-                    external_id: key,
-                    external_url: None,
-                    alias_id: None,
+            .puppet_ensure(
+                app_id,
+                key,
+                &types::PuppetCreate {
+                    name,
+                    description: None,
                 },
-            })
+            )
             .await?;
         self.http.room_member_put(room_id, user.id).await?;
         Ok(user)
