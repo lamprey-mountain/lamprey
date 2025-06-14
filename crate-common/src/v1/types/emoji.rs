@@ -52,7 +52,6 @@ pub enum EmojiOwner {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct EmojiCustomCreate {
     pub name: String,
-    pub owner: EmojiOwner,
     pub animated: bool,
     pub media_id: MediaId,
 }
