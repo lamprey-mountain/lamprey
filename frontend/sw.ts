@@ -50,7 +50,7 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
 	const req = e.request;
 	const url = new URL(req.url);
-	if (url.pathname.startsWith("/api")) return;
+	if (!url.pathname.startsWith("/_media")) return;
 
 	e.respondWith(
 		(async () => {
