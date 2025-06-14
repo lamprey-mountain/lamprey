@@ -3,6 +3,7 @@ use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
 use common::v1::types;
+use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
@@ -323,6 +324,18 @@ impl Connection {
                     AuthCheck::User(*user_id)
                 }
             }
+            MessageSync::EmojiCreate { emoji } => match emoji.owner {
+                EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
+                EmojiOwner::User => AuthCheck::User(emoji.creator_id),
+            },
+            MessageSync::EmojiDelete {
+                room_id,
+                emoji_id: _,
+            } => AuthCheck::Room(*room_id),
+            // MessageSync::EmojiDelete { emoji_id, room_id } => match emoji.owner {
+            //     EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
+            //     EmojiOwner::User => AuthCheck::User(emoji.creator_id),
+            // },
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

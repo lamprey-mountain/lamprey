@@ -3,12 +3,14 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate};
-use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission, RoomId};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiOwner};
+use common::v1::types::{
+    EmojiId, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
+};
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use super::util::Auth;
+use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 use crate::types::MediaLinkType;
 use crate::ServerState;
@@ -31,8 +33,9 @@ async fn emoji_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<EmojiCustomCreate>,
-) -> Result<Json<EmojiCustom>> {
+) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
@@ -55,6 +58,15 @@ async fn emoji_create(
     let emoji = data.emoji_create(user_id, room_id, json).await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
+    s.broadcast_room(
+        room_id,
+        user_id,
+        reason,
+        MessageSync::EmojiCreate {
+            emoji: emoji.clone(),
+        },
+    )
+    .await?;
     Ok(Json(emoji))
 }
 
@@ -102,6 +114,7 @@ async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
@@ -114,6 +127,18 @@ async fn emoji_delete(
         perms.ensure(Permission::EmojiManage)?;
     }
     data.emoji_delete(emoji_id).await?;
+    if let EmojiOwner::Room { room_id } = emoji.owner {
+        s.broadcast_room(
+            room_id,
+            user_id,
+            reason,
+            MessageSync::EmojiDelete {
+                emoji_id: emoji.id,
+                room_id,
+            },
+        )
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -55,4 +55,5 @@ default = [
   "feat_interaction_reaction",
   "feat_message_new_text",
   "feat_voice",
+  "feat_thread_type_voice",
 ]

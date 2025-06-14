@@ -10,9 +10,9 @@ use crate::v1::types::{
 };
 
 use super::{
-    reaction::ReactionKey, voice::VoiceState, InviteCode, Message, MessageId, MessageVerId, Role,
-    RoleId, Room, RoomId, RoomMember, Session, SessionId, SessionToken, Thread, ThreadId, User,
-    UserId,
+    emoji::EmojiCustom, reaction::ReactionKey, voice::VoiceState, EmojiId, InviteCode, Message,
+    MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId,
+    SessionToken, Thread, ThreadId, User, UserId,
 };
 
 mod sync2;
@@ -218,6 +218,15 @@ pub enum MessageSync {
         message_ids: Vec<MessageId>,
     },
 
+    EmojiCreate {
+        emoji: EmojiCustom,
+    },
+
+    EmojiDelete {
+        emoji_id: EmojiId,
+        room_id: RoomId,
+    },
+
     #[cfg(feature = "feat_voice")]
     /// receive arbitrary data from a voice server
     // TEMP: for prototyping
@@ -232,22 +241,6 @@ pub enum MessageSync {
         user_id: UserId,
         state: Option<VoiceState>,
     },
-    // /// session description protocol answer
-    // VoiceSdpAnswer {
-    //     sdp: SessionDescription,
-    // },
-
-    // /// session description protocol answer
-    // VoiceSdpOffer {
-    //     sdp: SessionDescription,
-    // },
-
-    // VoiceConnected {
-    //     thread_id: ThreadId,
-    //     include_video: Vec<UserId>,
-    //     include_stream: Vec<UserId>,
-    // },
-
     // snip... ----- >8 ----
     // everything below is TODO
 
@@ -316,6 +309,8 @@ impl MessageSync {
                 | MessageSync::DeleteRole { .. }
                 | MessageSync::DeleteInvite { .. }
                 | MessageSync::ReactionPurge { .. }
+                | MessageSync::EmojiCreate { .. }
+                | MessageSync::EmojiDelete { .. }
         )
     }
 
@@ -336,6 +331,8 @@ impl MessageSync {
             MessageSync::DeleteInvite { code, .. } => Some(code.to_string()),
             MessageSync::DeleteMessage { message_id, .. } => Some(message_id.to_string()),
             MessageSync::DeleteMessageVersion { message_id, .. } => Some(message_id.to_string()),
+            MessageSync::EmojiCreate { emoji } => Some(emoji.id.to_string()),
+            MessageSync::EmojiDelete { emoji_id, .. } => Some(emoji_id.to_string()),
 
             // HACK: prob. should impl thread-specific audit logs?
             MessageSync::UpsertThreadMember { member } => {
