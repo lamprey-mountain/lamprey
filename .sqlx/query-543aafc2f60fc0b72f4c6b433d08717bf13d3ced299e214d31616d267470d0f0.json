@@ -24,7 +24,8 @@
                 "Message",
                 "MessageVersion",
                 "AvatarUser",
-                "Embed"
+                "Embed",
+                "CustomEmoji"
               ]
             }
           }

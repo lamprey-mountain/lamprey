@@ -417,6 +417,7 @@ pub enum MediaLinkType {
     MessageVersion,
     AvatarUser,
     Embed,
+    CustomEmoji,
 }
 
 // TODO: surely there's a better way than manually managing media links/references

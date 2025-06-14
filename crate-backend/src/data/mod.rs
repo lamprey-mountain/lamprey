@@ -2,11 +2,12 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use common::v1::types::application::Application;
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, InviteWithMetadata, MediaPatch,
+    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, EmojiId, InviteWithMetadata, MediaPatch,
     MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember,
     RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
     ThreadMemberPatch, ThreadMembership,
@@ -49,6 +50,7 @@ pub trait Data:
     + DataUserConfig
     + DataReaction
     + DataApplication
+    + DataEmoji
     + Send
     + Sync
 {
@@ -452,4 +454,22 @@ pub trait DataApplication {
         owner_id: UserId,
         q: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<Application>>;
+}
+
+#[async_trait]
+pub trait DataEmoji {
+    async fn emoji_create(
+        &self,
+        creator_id: UserId,
+        room_id: RoomId,
+        create: EmojiCustomCreate,
+    ) -> Result<EmojiCustom>;
+    async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom>;
+    async fn emoji_list(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<EmojiId>,
+    ) -> Result<PaginationResponse<EmojiCustom>>;
+    async fn emoji_update(&self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()>;
+    async fn emoji_delete(&self, emoji_id: EmojiId) -> Result<()>;
 }

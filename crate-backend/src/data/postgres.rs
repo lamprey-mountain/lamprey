@@ -16,6 +16,7 @@ mod audit_logs;
 mod auth;
 mod dm;
 mod embed;
+mod emoji;
 mod invite;
 mod media;
 mod message;

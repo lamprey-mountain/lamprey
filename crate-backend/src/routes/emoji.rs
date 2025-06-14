@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
+use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
-use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, RoomId};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate};
+use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission, RoomId};
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 use crate::error::{Error, Result};
+use crate::types::MediaLinkType;
 use crate::ServerState;
 
-/// Emoji create (TODO)
+/// Emoji create
 ///
 /// Create a custom emoji.
 #[utoipa::path(
@@ -25,14 +28,37 @@ use crate::ServerState;
     )
 )]
 async fn emoji_create(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<EmojiCustomCreate>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Json(json): Json<EmojiCustomCreate>,
+) -> Result<Json<EmojiCustom>> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::EmojiAdd)?;
+
+    let data = s.data();
+    // FIXME: run this in a transaction
+    let (media, _) = data.media_select(json.media_id).await?;
+    if !matches!(
+        media.source.info,
+        common::v1::types::MediaTrackInfo::Image(_)
+    ) {
+        return Err(Error::BadStatic("media not an image"));
+    }
+    if !data.media_link_select(json.media_id).await?.is_empty() {
+        return Err(Error::BadStatic("media already used"));
+    }
+
+    let media_id = json.media_id;
+    let emoji = data.emoji_create(user_id, room_id, json).await?;
+    data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
+        .await?;
+    Ok(Json(emoji))
 }
 
-/// Emoji get (TODO)
+/// Emoji get
 ///
 /// Get a custom emoji.
 #[utoipa::path(
@@ -48,14 +74,16 @@ async fn emoji_create(
     )
 )]
 async fn emoji_get(
-    Path(_emoji_id): Path<EmojiId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((_room_id, emoji_id)): Path<(RoomId, EmojiId)>,
+    Auth(_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let emoji = data.emoji_get(emoji_id).await?;
+    Ok(Json(emoji))
 }
 
-/// Emoji delete (TODO)
+/// Emoji delete
 ///
 /// Delete a custom emoji.
 #[utoipa::path(
@@ -71,39 +99,50 @@ async fn emoji_get(
     )
 )]
 async fn emoji_delete(
-    Path(_emoji_id): Path<EmojiId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let data = s.data();
+    let emoji = data.emoji_get(emoji_id).await?;
+    let perms = srv.perms.for_room(user_id, room_id).await?;
+    perms.ensure_view()?;
+    if emoji.creator_id == user_id {
+        perms.ensure(Permission::EmojiAdd)?;
+    } else {
+        perms.ensure(Permission::EmojiManage)?;
+    }
+    data.emoji_delete(emoji_id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Emoji update (TODO)
-///
-/// Edit a custom emoji.
-#[utoipa::path(
-    patch,
-    path = "/room/{room_id}/emoji/{emoji_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("emoji_id", description = "Emoji id"),
-    ),
-    tags = ["emoji"],
-    responses(
-        (status = NOT_MODIFIED, description = "not modified"),
-        (status = OK, body = EmojiCustom, description = "success"),
-    )
-)]
-async fn emoji_update(
-    Path(_emoji_id): Path<EmojiId>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<EmojiCustomPatch>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
+// /// Emoji update (TODO(#311))
+// ///
+// /// Edit a custom emoji.
+// #[utoipa::path(
+//     patch,
+//     path = "/room/{room_id}/emoji/{emoji_id}",
+//     params(
+//         ("room_id", description = "Room id"),
+//         ("emoji_id", description = "Emoji id"),
+//     ),
+//     tags = ["emoji"],
+//     responses(
+//         (status = NOT_MODIFIED, description = "not modified"),
+//         (status = OK, body = EmojiCustom, description = "success"),
+//     )
+// )]
+// async fn emoji_update(
+//     Path(_emoji_id): Path<EmojiId>,
+//     Auth(_auth_user_id): Auth,
+//     State(_s): State<Arc<ServerState>>,
+//     Json(_json): Json<EmojiCustomPatch>,
+// ) -> Result<Json<()>> {
+//     Err(Error::Unimplemented)
+// }
 
-/// Emoji list (TODO)
+/// Emoji list
 ///
 /// List emoji in a room.
 #[utoipa::path(
@@ -119,12 +158,17 @@ async fn emoji_update(
     )
 )]
 async fn emoji_list(
-    Path(_room_id): Path<RoomId>,
-    Auth(_auth_user_id): Auth,
-    Query(_q): Query<PaginationQuery<EmojiId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(room_id): Path<RoomId>,
+    Auth(user_id): Auth,
+    Query(q): Query<PaginationQuery<EmojiId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
+    perms.ensure_view()?;
+    let emoji = data.emoji_list(room_id, q).await?;
+    Ok(Json(emoji))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -132,6 +176,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(emoji_create))
         .routes(routes!(emoji_get))
         .routes(routes!(emoji_delete))
-        .routes(routes!(emoji_update))
+        // .routes(routes!(emoji_update))
         .routes(routes!(emoji_list))
 }
