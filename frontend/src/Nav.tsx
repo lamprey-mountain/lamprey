@@ -16,11 +16,9 @@ export const ChatNav = (props: { room_id?: string }) => {
 			</Show>
 			<ul>
 				<For
-					each={[
-						...api.threads.cache.values().filter((i) =>
-							i.room_id === props.room_id && i.state.state !== "Deleted"
-						),
-					]}
+					each={[...api.threads.cache.values()].filter((i) =>
+						i.room_id === props.room_id && i.state.state !== "Deleted"
+					)}
 				>
 					{(thread) => <ItemThread thread={thread} />}
 				</For>
