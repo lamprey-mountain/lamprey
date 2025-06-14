@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use common::v1::types::{SessionToken, UserId};
+use common::v1::types::{SessionToken, UserId, UserType};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
 use crate::{
@@ -81,8 +81,30 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
     ) -> Result<Self, Self::Rejection> {
         let AuthWithSession(_session, user_id) =
             AuthWithSession::from_request_parts(parts, s).await?;
-        let puppet_id = HeaderPuppetId::from_request_parts(parts, s).await?;
-        Ok(Self(puppet_id.0.unwrap_or(user_id)))
+        let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
+        if let Some(puppet_id) = puppet_id {
+            let user = s.services().users.get(user_id).await?;
+            let puppet = s.services().users.get(puppet_id).await?;
+            let UserType::Bot { is_bridge, .. } = user.user_type else {
+                return Err(Error::BadStatic("user is not a bot"));
+            };
+
+            if !is_bridge {
+                return Err(Error::BadStatic("bot is not a bridge"));
+            }
+
+            let UserType::Puppet { owner_id, .. } = puppet.user_type else {
+                return Err(Error::BadStatic("can only puppet users of type Puppet"));
+            };
+
+            if owner_id != user.id {
+                return Err(Error::BadStatic("can only puppet your own puppets"));
+            }
+
+            Ok(Self(puppet_id))
+        } else {
+            Ok(Self(user_id))
+        }
     }
 }
 
