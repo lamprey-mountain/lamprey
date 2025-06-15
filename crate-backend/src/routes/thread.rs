@@ -349,8 +349,8 @@ async fn thread_delete(
 
 /// Undelete thread
 #[utoipa::path(
-    delete,
-    path = "/thread/{thread_id}",
+    post,
+    path = "/thread/{thread_id}/undelete",
     params(
         ("thread_id", description = "Thread id"),
     ),
