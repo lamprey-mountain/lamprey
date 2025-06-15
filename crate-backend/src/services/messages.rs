@@ -64,33 +64,16 @@ impl ServiceMessages {
                 return Err(Error::BadStatic("cant reuse media"));
             }
         }
-        let (content, payload) = if json.use_new_text_formatting {
-            (
-                json.content.clone(),
-                MessageType::DefaultTagged(MessageDefaultTagged {
-                    content: json.content,
-                    attachments: vec![],
-                    embeds: vec![],
-                    metadata: json.metadata,
-                    reply_id: json.reply_id,
-                    reactions: ReactionCounts(vec![]),
-                    interactions: Interactions::default(),
-                }),
-            )
-        } else {
-            (
-                json.content.clone(),
-                MessageType::DefaultMarkdown(MessageDefaultMarkdown {
-                    content: json.content,
-                    attachments: vec![],
-                    embeds: vec![],
-                    metadata: json.metadata,
-                    reply_id: json.reply_id,
-                    override_name: json.override_name,
-                    reactions: ReactionCounts::default(),
-                }),
-            )
-        };
+        let content = json.content.clone();
+        let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
+            content: json.content,
+            attachments: vec![],
+            embeds: vec![],
+            metadata: json.metadata,
+            reply_id: json.reply_id,
+            override_name: json.override_name,
+            reactions: ReactionCounts::default(),
+        });
         let message_id = data
             .message_create(DbMessageCreate {
                 thread_id,

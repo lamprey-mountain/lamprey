@@ -5,8 +5,8 @@ use tracing::info;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, DbThreadCreate, PaginationDirection, PaginationQuery,
-    PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
+    DbThread, DbThreadCreate, PaginationDirection, PaginationQuery, PaginationResponse, RoomId,
+    Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;

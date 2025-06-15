@@ -9,9 +9,8 @@ use validator::Validate;
 
 use crate::v1::types::{
     notifications::NotifsRoom,
-    text::Language,
     util::{some_option, Diff},
-    Permission, TagId, ThreadId, UserId,
+    Permission, UserId,
 };
 
 use super::{ids::RoomId, util::Time};

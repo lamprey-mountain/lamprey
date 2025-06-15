@@ -60,25 +60,6 @@ pub struct Message {
     // pub is_ephemeral: bool,
 }
 
-// /// unlisted + content is stripped
-// struct Deleted {
-//     at: Option<Time>,
-//     by: Option<UserId>,
-//     reason: Option<String>,
-//     is_undeletable: bool,
-// }
-
-// struct Pinned {
-//     at: Time,
-//     order: u8, // tiebreak by id
-// }
-
-// struct Moved {
-//     at: Time,
-//     from_thread: Option<ThreadId>, // removed if thread is deleted
-//     from_message: Option<MessageId>, // removed if thread or message is deleted
-// }
-
 /// who/what this message notified on send
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -128,11 +109,6 @@ pub struct MessageCreate {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub content: Option<String>,
-
-    /// uses the new new formatting system if true, otherwise uses markdown
-    // TEMP: opt in to the new formatting system
-    #[serde(default)]
-    pub use_new_text_formatting: bool,
 
     #[cfg_attr(
         feature = "utoipa",
@@ -596,51 +572,6 @@ impl MessageType {
     }
 
     pub fn is_editable(&self) -> bool {
-        #[cfg(feature = "feat_message_new_text")]
-        return matches!(
-            self,
-            MessageType::DefaultMarkdown(_) | MessageType::DefaultTagged(_)
-        );
-
-        #[cfg(not(feature = "feat_message_new_text"))]
         matches!(self, MessageType::DefaultMarkdown(_))
     }
 }
-
-// impl MessagePatch {
-//     pub fn can_append(&self, other: &Message) -> bool {
-//         if !self.changes(other) {
-//             return true;
-//         }
-//         match &other.message_type {
-//             MessageType::DefaultMarkdown(m) => {
-//                 if let Some(c) = &self.content {
-//                     let ok = match (&m.content, c) {
-//                         (None, None) => true,
-//                         (None, Some(_)) => true,
-//                         (Some(_), None) => false,
-//                         (Some(a), Some(b)) => a.starts_with(b.as_str()),
-//                     };
-//                     if !ok {
-//                         return false;
-//                     }
-//                 }
-//                 if self.metadata.changes(&m.metadata)
-//                     || self.reply_id.changes(&m.reply_id)
-//                     || self.override_name.changes(&m.override_name)
-//                     || self.embeds.changes(&m.embeds)
-//                     || self.attachments.as_ref().is_some_and(|a| {
-//                         a.len() != m.attachments.len()
-//                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
-//                     })
-//                 {
-//                     return false;
-//                 }
-//                 true
-//             }
-//             #[cfg(feature = "feat_message_new_text")]
-//             MessageType::DefaultTagged(m) => todo!(),
-//             _ => false,
-//         }
-//     }
-// }

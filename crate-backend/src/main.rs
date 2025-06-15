@@ -46,9 +46,6 @@ use error::Result;
         InboxFilters,
         MessageSync,
         PaginationQuery<MessageId>,
-        // TEMP: manually added for now
-        common::v1::types::text::Document,
-        common::v1::types::text::OwnedText,
     )),
     info(
         title = "api doccery",
