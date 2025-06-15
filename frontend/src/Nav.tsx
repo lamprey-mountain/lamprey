@@ -15,6 +15,13 @@ export const ChatNav = (props: { room_id?: string }) => {
 				<header style="background: #eef1;padding:8px">header</header>
 			</Show>
 			<ul>
+				<li>
+					<Show when={!!props.room_id}>
+						<A href={`/room/${props.room_id}`} class="menu-thread">
+							home
+						</A>
+					</Show>
+				</li>
 				<For
 					each={[...api.threads.cache.values()].filter((i) =>
 						i.room_id === props.room_id && !i.deleted_at
@@ -98,7 +105,7 @@ const ItemThread = (props: { thread: Thread }) => {
 				href={`/thread/${props.thread.id}`}
 				class="menu-thread"
 				classList={{
-					"closed": props.thread.state === "Archived",
+					"closed": !!props.thread.archived_at,
 					"unread": props.thread.is_unread,
 				}}
 				data-thread-id={props.thread.id}
