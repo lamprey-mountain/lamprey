@@ -15,6 +15,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import type {
 	AuditLogEntry,
 	Client,
+	EmojiCustom,
 	Invite,
 	Media,
 	Message,
@@ -46,6 +47,7 @@ import { Roles } from "./api/roles.ts";
 import { AuditLogs } from "./api/audit_log.ts";
 import { ThreadMembers } from "./api/thread_members.ts";
 import { MediaInfo } from "./api/media.tsx";
+import { Emoji } from "./api/emoji.ts";
 
 export type Json =
 	| number
@@ -81,6 +83,7 @@ export function createApi(
 	const typing = new ReactiveMap<string, Set<string>>();
 	const typing_timeout = new Map<string, Map<string, NodeJS.Timeout>>();
 	const audit_logs = new AuditLogs();
+	const emoji = new Emoji();
 
 	temp_events.on("sync", (msg) => {
 		if (msg.type === "UpsertRoom") {
@@ -423,7 +426,8 @@ export function createApi(
 		typing,
 		audit_logs,
 		tempCreateSession,
-		client: client,
+		client,
+		emoji,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -446,6 +450,7 @@ export function createApi(
 	users.api = api;
 	audit_logs.api = api;
 	media.api = api;
+	emoji.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -523,6 +528,14 @@ export type Api = {
 	media: {
 		fetchInfo: (media_id: () => string) => Resource<Media>;
 		cacheInfo: ReactiveMap<string, Media>;
+	};
+	emoji: {
+		fetch: (
+			room_id: () => string,
+			emoji_id: () => string,
+		) => Resource<EmojiCustom>;
+		list: (room_id: () => string) => Resource<Pagination<EmojiCustom>>;
+		cache: ReactiveMap<string, ReactiveMap<string, EmojiCustom>>;
 	};
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;

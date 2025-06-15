@@ -4,6 +4,7 @@ import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
 	AuditLog,
+	Emoji,
 	Info,
 	Invites,
 	Members,
@@ -17,6 +18,7 @@ const tabs = [
 	{ name: "roles", path: "roles", component: Roles, noPad: true },
 	{ name: "members", path: "members", component: Members },
 	{ name: "tags", path: "tags", component: Todo },
+	{ name: "emoji", path: "emoji", component: Emoji },
 	{ name: "audit log", path: "logs", component: AuditLog },
 ];
 

@@ -18,6 +18,7 @@ export type AuditLogEntry = components["schemas"]["AuditLog"];
 export type Permission = components["schemas"]["Permission"];
 export type Embed = components["schemas"]["UrlEmbed"];
 export type TextDocument = components["schemas"]["Document"];
+export type EmojiCustom = components["schemas"]["EmojiCustom"];
 
 export type Pagination<T> = {
 	total: number;
