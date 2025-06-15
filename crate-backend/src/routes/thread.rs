@@ -17,7 +17,7 @@ use crate::{
         DbMessageCreate, DbThreadCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
         PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
-    Error, ServerState,
+    ServerState,
 };
 
 use super::util::{Auth, HeaderReason};
@@ -252,10 +252,10 @@ async fn thread_ack(
     )
 )]
 async fn thread_pin(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -274,10 +274,10 @@ async fn thread_pin(
     )
 )]
 async fn thread_unpin(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -296,10 +296,10 @@ async fn thread_unpin(
     )
 )]
 async fn thread_archive(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -318,10 +318,10 @@ async fn thread_archive(
     )
 )]
 async fn thread_unarchive(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -339,10 +339,10 @@ async fn thread_unarchive(
     )
 )]
 async fn thread_delete(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
@@ -360,10 +360,10 @@ async fn thread_delete(
     )
 )]
 async fn thread_undelete(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     Ok(StatusCode::NOT_IMPLEMENTED)
 }
