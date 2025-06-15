@@ -46,31 +46,16 @@ pub struct Message {
     /// maybe i will replace with a header so nonces can be used everywhere
     pub nonce: Option<String>,
 
-    /// the index/position/ordering of this message in the thread
-    ///
-    /// deprecated: not that useful
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub ordering: i32,
-
     /// the id of who sent this message
     pub author_id: UserId,
 
-    /// if this message is pinned
-    ///
-    /// deprecated: use message.state
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub is_pinned: bool,
-
     pub mentions: Mentions,
 
-    #[serde(flatten)]
-    pub state: MessageState,
-    pub state_updated_at: Time,
     // pub pinned_at: Option<Time>,
     // pub pinned_order: Option<u8>,
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
-    // pub deleted_at: Option<Time>,
+    pub deleted_at: Option<Time>,
     // // drop the is_?
     // pub is_ephemeral: bool,
 }
@@ -93,33 +78,6 @@ pub struct Message {
 //     from_thread: Option<ThreadId>, // removed if thread is deleted
 //     from_message: Option<MessageId>, // removed if thread or message is deleted
 // }
-
-/// lifecycle of a message
-// TODO: switch back to fields, this is pretty h
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "state")]
-pub enum MessageState {
-    #[default]
-    /// default state that new messages
-    Default,
-
-    /// message is pinned to the thread
-    Pinned { pin_order: u32 },
-
-    /// (TODO) message is not stored
-    Ephemeral,
-
-    #[cfg(feature = "feat_message_move")]
-    /// message was moved from another thread
-    Moved {
-        /// the relevant MessagesMoved message in this thread
-        move_info: MessageId,
-    },
-
-    /// will be permanently deleted soon, visible to moderators for now
-    Deleted,
-}
 
 /// who/what this message notified on send
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

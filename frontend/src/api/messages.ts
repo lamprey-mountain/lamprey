@@ -365,7 +365,6 @@ export class Messages {
 			content: null,
 			author_id: this.api.users.cache.get("@self")!.id,
 			metadata: null,
-			is_pinned: false,
 			ordering: 0,
 			...body,
 			nonce: id,

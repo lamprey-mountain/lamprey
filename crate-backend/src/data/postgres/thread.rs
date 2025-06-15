@@ -1,12 +1,11 @@
 use async_trait::async_trait;
-use common::v1::types::ThreadState;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, DbThreadCreate, DbThreadState, PaginationDirection, PaginationQuery,
+    DbThread, DbThreadCreate, PaginationDirection, PaginationQuery,
     PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
@@ -20,8 +19,8 @@ impl DataThread for Postgres {
         let thread_id = ThreadId::new();
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, state, visibility)
-			VALUES ($1, $2, $3, $4, $5, $6, 'Active', 'Room')
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description)
+			VALUES ($1, $2, $3, $4, $5, $6)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -93,29 +92,19 @@ impl DataThread for Postgres {
         .fetch_one(&self.pool)
         .await?;
         let thread: Thread = thread.into();
-        let state = match patch.state.unwrap_or(thread.state) {
-            // ThreadState::Pinned { .. } => DbThreadState::Pinned,
-            ThreadState::Pinned { .. } => todo!(),
-            ThreadState::Active => DbThreadState::Active,
-            ThreadState::Temporary => DbThreadState::Temporary,
-            ThreadState::Archived => DbThreadState::Archived,
-            ThreadState::Deleted => DbThreadState::Deleted,
-        };
         let version_id = ThreadVerId::new();
         query!(
             r#"
             UPDATE thread SET
                 version_id = $2,
                 name = $3, 
-                description = $4,
-                state = $5
+                description = $4
             WHERE id = $1
         "#,
             thread_id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(thread.name),
             patch.description.unwrap_or(thread.description),
-            state as _,
         )
         .execute(&mut *tx)
         .await?;

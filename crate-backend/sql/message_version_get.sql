@@ -19,7 +19,6 @@ select
     msg.reply_id,
     msg.override_name,
     msg.author_id,
-    false as "is_pinned!",
     coalesce(att_json.attachments, '{}') as "attachments!",
     coalesce(u.embeds, '{}') as "embeds!",
     r.json as "reactions"

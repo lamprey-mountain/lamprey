@@ -77,12 +77,6 @@ pub struct Thread {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
-    pub state: ThreadState,
-    pub state_updated_at: Time,
-
-    /// who can see this thread
-    pub visibility: ThreadVisibility,
-
     /// type specific data for this thread
     #[serde(flatten)]
     pub info: ThreadPublic,
@@ -106,11 +100,6 @@ pub struct Thread {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Vec<TagId>,
 
-    /// other threads related to this thread
-    #[cfg(feature = "feat_thread_linking")]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
-    pub link: Vec<ThreadLink>,
-
     /// if this thread is locked and cannot be interacted with anymore
     // TODO(#243): implement this. it makes life much easier.
     pub is_locked: bool,
@@ -122,29 +111,10 @@ pub struct Thread {
     /// emoji reactions to this thread
     #[cfg(feature = "feat_reactions")]
     pub reactions: ReactionCounts,
-    // pub pinned_at: Option<Time>,
-    // pub pinned_order: Option<u8>,
-    // pub moved_at: Option<Time>,
-    // pub moved_from: Option<(RoomId, ThreadId)>,
-    // pub deleted_at: Option<Time>,
-    // pub locked_at: Option<Time>,
-    // pub locked_reason: (message/audit log),
-    // pub archived_at: Option<Time>,
-    // pub archived_by: Option<User>,
-    // pub archived_reason: (audit log),
-    // pub archived: Option<Archived>,
-    // pub is_ephemeral: bool,
-}
 
-// enum Archived {
-//     Manual {
-//         archived_at: Option<Time>,
-//         archived_by: User,
-//     },
-//     Automatic {
-//         archived_at: Option<Time>,
-//     },
-// }
+    pub deleted_at: Option<Time>,
+    pub archived_at: Option<Time>,
+}
 
 /// type-specific data for threads
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -309,159 +279,16 @@ pub struct ThreadPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[serde(flatten)]
-    pub state: Option<ThreadState>,
-
     /// tags to apply to this thread (overwrite, not append)
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub tags: Option<Vec<TagId>>,
 }
 
-/// lifecycle of a thread
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "state")]
-pub enum ThreadState {
-    /// always remains active
-    Pinned { pin_order: u32 },
-
-    /// default state that new threads are in
-    Active,
-
-    /// goes straight to Deleted instead of Archived
-    Temporary,
-
-    /// inactive
-    Archived,
-
-    // /// exists but is hidden from the main list/timeline
-    // Removed,
-    /// will be permanently deleted soon, visible to moderators
-    Deleted,
-}
-
-/// who can view this thread
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ThreadVisibility {
-    /// Inherit visibility from this (the parent) room
-    // maybe use Room(RoomId) instead?,
-    Room,
-
-    // Room {
-    //     /// anyone can search for and find this; otherwise, this is unlisted
-    //     /// setting to false hides it in the listing unless you can view everything
-    //     is_discoverable: bool,
-    // },
-    /// anyone can view
-    Public {
-        /// anyone can search for and find this; otherwise, this is unlisted
-        is_discoverable: bool,
-
-        /// whether anyone can join without an invite; otherwise, this is view only
-        is_free_for_all: bool,
-    },
-
-    /// only visible to existing thread members
-    Private {
-        // anything here?
-    },
-}
-
-/// too generic?
-#[cfg(feature = "feat_thread_linking")]
-pub mod thread_linking {
-    use crate::v1::types::{util::Time, ThreadId, UserId};
-
-    // need a way to define access control for linking threads
-    // linked threads need to be in the same room
-    pub struct ThreadLink {
-        pub thread_id: ThreadId,
-        #[serde(flatten)]
-        pub info: ThreadLinkInfo,
-        pub reason: Option<String>,
-        /// None if automated
-        pub by: Option<UserId>,
-        pub at: Time,
-    }
-
-    pub enum ThreadLinkInfo {
-        /// discussion, comments, calls
-        /// what if there are lots of threads? eg. a thread for every suggestion in a document?
-        /// maybe also need a way to hide threads with certain links
-        Discussion,
-
-        /// show a button/link to view this other thread instead of this one
-        /// (maybe redirect automatically in some places?)
-        // (stolen from irc)
-        #[cfg(feature = "feat_forward_threads")]
-        Forward,
-
-        /// Forward + special handling? (eg. search in both threads by default)
-        Duplicate,
-
-        /// the source announcement thread
-        Announcement,
-
-        /// a child thread (creates a hierarchy). possibly unnecessary, might be
-        /// useful for Voice threads.
-        Child,
-
-        // not sure about these "generic relations/links"
-        /// generic unidirectional relationship (source)
-        Incoming,
-
-        /// generic unidirectional relationship (target)
-        Outgoing,
-
-        /// generic bidirectional relationship
-        Related,
-    }
-}
-
-// i still dont know
-#[cfg(feature = "feat_thread_linking")]
-pub mod thread_linking_2 {
-    use crate::v1::types::{util::Time, ThreadId, UserId};
-
-    // need a way to define access control for linking threads
-    // linked threads need to be in the same room
-    pub struct ThreadLinks {
-        /// announcement thread this was cloned from
-        pub announcement: Option<ThreadId>,
-
-        /// targets the source thread if this was forwarded
-        pub forwards: Option<ThreadId>,
-
-        /// this is a duplicate
-        pub duplicates: Option<ThreadId>,
-
-        /// alternative text thread where this thread can be discussed
-        pub discussion: Option<ThreadId>,
-    }
-}
-
-#[cfg(feature = "feat_thread_linking")]
-use thread_linking::*;
-
 impl Diff<Thread> for ThreadPatch {
     fn changes(&self, other: &Thread) -> bool {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
-            || self.state.changes(&other.state)
             || self.tags.changes(&other.tags)
-    }
-}
-
-impl Diff<Thread> for ThreadState {
-    fn changes(&self, other: &Thread) -> bool {
-        self != &other.state
-    }
-}
-
-impl ThreadState {
-    pub fn can_change_to(&self, _to: &ThreadState) -> bool {
-        !matches!(self, Self::Deleted)
     }
 }
 
@@ -483,15 +310,6 @@ impl Thread {
     }
 }
 
-impl ThreadState {
-    pub fn is_active(&self) -> bool {
-        matches!(
-            self,
-            ThreadState::Pinned { .. } | ThreadState::Active | ThreadState::Temporary
-        )
-    }
-}
-
 impl ThreadPatch {
     pub fn minimal_for(self, other: &Thread) -> ThreadPatch {
         ThreadPatch {
@@ -502,11 +320,6 @@ impl ThreadPatch {
             },
             description: if self.description.changes(&other.description) {
                 self.description
-            } else {
-                None
-            },
-            state: if self.state.changes(&other.state) {
-                self.state
             } else {
                 None
             },

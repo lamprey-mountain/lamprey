@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    self, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
-    MessageThreadUpdate, MessageType, UserId,
+    Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged, MessageThreadUpdate,
+    MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
@@ -32,7 +32,6 @@ pub struct DbMessage {
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
     pub author_id: UserId,
-    pub is_pinned: bool,
     pub embeds: Vec<serde_json::Value>,
     pub reactions: Option<serde_json::Value>,
 }
@@ -113,18 +112,9 @@ impl From<DbMessage> for Message {
             thread_id: row.thread_id,
             version_id: row.version_id,
             nonce: None,
-            ordering: row.ordering,
             author_id: row.author_id,
-            is_pinned: row.is_pinned,
             mentions: Mentions::default(),
-            state: types::MessageState::Default,
-            state_updated_at: row
-                .id
-                .into_inner()
-                .get_timestamp()
-                .unwrap()
-                .try_into()
-                .unwrap(),
+            deleted_at: None,
         }
     }
 }
@@ -257,7 +247,7 @@ impl DataMessage for Postgres {
         query!(
             "UPDATE message SET deleted_at = $2 WHERE id = $1",
             message_id.into_inner(),
-            now
+            now,
         )
         .execute(&self.pool)
         .await?;

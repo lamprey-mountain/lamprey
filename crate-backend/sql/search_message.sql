@@ -25,7 +25,6 @@ select
     msg.override_name,
     msg.author_id,
     coalesce(att_json.attachments, '{}') as "attachments!",
-    false as "is_pinned!",
     coalesce(u.embeds, '{}') as "embeds!",
     r.json as "reactions"
 from message as msg

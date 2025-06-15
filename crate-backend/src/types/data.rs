@@ -3,8 +3,7 @@ use common::v1::types::{
     util::Time,
     MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
     RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, Thread, ThreadId,
-    ThreadMembership, ThreadPrivate, ThreadPublic, ThreadState, ThreadVerId, ThreadVisibility,
-    UserId, UserType,
+    ThreadMembership, ThreadPrivate, ThreadPublic, ThreadVerId, UserId, UserType,
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -58,18 +57,11 @@ impl From<DbRoom> for Room {
                 RoomType::Default
             },
 
-            // FIXME: add to db, calculate
-            visibility: Default::default(),
+            // FIXME: add to db or calculate
             member_count: Default::default(),
             online_count: Default::default(),
             thread_count: Default::default(),
-            default_order: Default::default(),
-            default_layout: Default::default(),
-            tags_available: Default::default(),
-            tags_applied: Default::default(),
-            languages: Default::default(),
-            views: Default::default(),
-            system_messages: Default::default(),
+            archived_at: None,
         }
     }
 }
@@ -86,7 +78,6 @@ pub struct DbThread {
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
     pub is_unread: bool,
-    pub state: DbThreadState,
 }
 
 pub struct DbThreadCreate {
@@ -110,14 +101,6 @@ impl From<DbThread> for Thread {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            state: match row.state {
-                DbThreadState::Pinned => todo!(),
-                DbThreadState::Active => ThreadState::Active,
-                DbThreadState::Temporary => ThreadState::Temporary,
-                DbThreadState::Archived => ThreadState::Archived,
-                DbThreadState::Deleted => ThreadState::Deleted,
-            },
-            visibility: ThreadVisibility::Room,
             info: ThreadPublic::Chat(ThreadTypeChatPublic {
                 last_version_id: row.last_version_id,
                 message_count: row.message_count.try_into().expect("count is negative?"),
@@ -130,8 +113,6 @@ impl From<DbThread> for Thread {
                 notifications: Default::default(),
             })),
 
-            // FIXME: add field to db schema
-            state_updated_at: row.id.try_into().unwrap(),
             // FIXME: add field to db schema or calculate
             member_count: 0,
             // FIXME: calculate field
@@ -140,6 +121,8 @@ impl From<DbThread> for Thread {
             is_locked: Default::default(),
             is_announcement: Default::default(),
             reactions: Default::default(),
+            archived_at: None,
+            deleted_at: None,
         }
     }
 }
