@@ -371,9 +371,8 @@ async fn thread_undelete(
 /// Send typing
 ///
 /// Send a typing notification to a thread
-/// PUT is deprecated! use POST instead
 #[utoipa::path(
-    method(put, post),
+    method(post),
     path = "/thread/{thread_id}/typing",
     params(
         ("thread_id", description = "Thread id"),

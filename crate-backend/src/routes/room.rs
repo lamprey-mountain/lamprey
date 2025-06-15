@@ -158,34 +158,6 @@ async fn room_edit(
 /// Fetch audit logs
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/logs",
-    params(
-        PaginationQuery<AuditLogId>,
-        ("room_id", description = "Room id"),
-    ),
-    tags = ["room"],
-    responses(
-        (status = 200, description = "fetch audit logs success", body = PaginationResponse<AuditLog>),
-    )
-)]
-#[deprecated = "use /audit-logs route"]
-async fn room_audit_logs_old(
-    Path(room_id): Path<RoomId>,
-    Query(paginate): Query<PaginationQuery<AuditLogId>>,
-    Auth(user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
-    perms.ensure_view()?;
-    perms.ensure(Permission::RoomManage)?;
-    let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
-    Ok(Json(logs))
-}
-
-/// Fetch audit logs
-#[utoipa::path(
-    get,
     path = "/room/{room_id}/audit-logs",
     params(
         PaginationQuery<AuditLogId>,
@@ -239,6 +211,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_list))
         .routes(routes!(room_edit))
         .routes(routes!(room_audit_logs))
-        .routes(routes!(room_audit_logs_old))
         .routes(routes!(room_ack))
 }
