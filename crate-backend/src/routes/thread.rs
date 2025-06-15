@@ -49,7 +49,16 @@ async fn thread_create(
         ThreadType::Chat => {
             perms.ensure(Permission::ThreadCreateChat)?;
         }
-        _ => return Err(Error::Unimplemented),
+        ThreadType::ForumLinear => {
+            perms.ensure(Permission::ThreadCreateForumLinear)?;
+        }
+        ThreadType::ForumTree => {
+            perms.ensure(Permission::ThreadCreateForumTree)?;
+        }
+        ThreadType::Voice => {
+            perms.ensure(Permission::ThreadCreateVoice)?;
+        }
+        _ => todo!(),
     };
     let thread_id = data
         .thread_create(DbThreadCreate {
