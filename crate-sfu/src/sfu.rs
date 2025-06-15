@@ -104,37 +104,7 @@ impl Sfu {
         let ctl = match self.peers.entry(user_id) {
             dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
             dashmap::Entry::Vacant(vacant_entry) => {
-                // if matches!(req, Disconnect) {
-                //     return;
-                // }
                 let peer = Peer::spawn(peer_send.clone(), user_id).await?;
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
-                for m in &self.tracks {
-                    if m.peer_id == user_id {
-                        continue;
-                    }
-
-                    let Some(state) = self.voice_states.get(&m.peer_id) else {
-                        continue;
-                    };
-
-                    if state.thread_id != my_state.thread_id {
-                        continue;
-                    }
-
-                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
-                    if let Some(key) = m.key.as_ref() {
-                        peer.send(PeerCommand::RemotePublish {
-                            user_id,
-                            mid: m.mid,
-                            key: key.to_owned(),
-                        })?;
-                    }
-                }
-
                 vacant_entry.insert(peer)
             }
         };
@@ -203,6 +173,38 @@ impl Sfu {
             PeerEvent::Dead => {
                 self.peers.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
+            }
+
+            PeerEvent::Init => {
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
+
+                let peer = self.peers.get(&user_id).unwrap();
+
+                for m in &self.tracks {
+                    if m.peer_id == user_id {
+                        continue;
+                    }
+
+                    let Some(state) = self.voice_states.get(&m.peer_id) else {
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        continue;
+                    }
+
+                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
+                    if let Some(key) = m.key.as_ref() {
+                        peer.send(PeerCommand::RemotePublish {
+                            user_id,
+                            mid: m.mid,
+                            key: key.to_owned(),
+                        })?;
+                    }
+                }
             }
         }
 

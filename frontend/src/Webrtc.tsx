@@ -3,7 +3,7 @@ import { useApi } from "./api.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect } from "solid-js";
 
-const RTC_CONFIG = {
+const RTC_CONFIG: RTCConfiguration = {
 	iceServers: [
 		{ urls: ["stun:relay.webwormhole.io"] },
 		{ urls: ["stun:stun.stunprotocol.org"] },
@@ -12,7 +12,9 @@ const RTC_CONFIG = {
 
 export const DebugWebrtc = () => {
 	const api = useApi();
-	let conn = new RTCPeerConnection(RTC_CONFIG);
+	const [conn, setConn] = createSignal<RTCPeerConnection>(
+		new RTCPeerConnection(RTC_CONFIG),
+	);
 	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
 	const [voiceState, setVoiceState] = createSignal();
 
@@ -29,50 +31,59 @@ export const DebugWebrtc = () => {
 	let trackScreenAudio: MediaStreamTrack | undefined;
 	let reconnectable = true;
 
-	const negotiate = async () => {
-		console.info("[rtc:sdp] create offer");
-		await conn.setLocalDescription(await conn.createOffer());
-		sendWebsocket({
-			type: "Offer",
-			sdp: conn.localDescription!.sdp,
-		});
-	};
-
 	setup();
 
 	function setup() {
+		const conn = new RTCPeerConnection(RTC_CONFIG);
 		pendingTracks = [];
 		pendingTrackToStream.clear();
 		tracks.clear();
 		streams.clear();
 
 		conn.addEventListener("connectionstatechange", () => {
-			console.info("[rtc:core] connectionstatechange", conn.connectionState);
+			console.warn("[rtc:core] connectionstatechange", conn.connectionState);
+			setRtcState(conn.connectionState);
 
 			if (conn.connectionState === "disconnected" && reconnectable) {
-				conn = new RTCPeerConnection(RTC_CONFIG);
+				console.log("reconnect");
 				setup();
 				reconnect();
-			} else {
-				setRtcState(conn.connectionState);
 			}
 		});
 
-		// conn.addEventListener("iceconnectionstatechange", (e) => console.log(e));
-		// conn.addEventListener("icecandidate", (e) => console.log(e));
-		// conn.addEventListener("icecandidateerror", (e) => console.log(e));
-		// conn.addEventListener("icegatheringstatechange", (e) => console.log(e));
-		conn.addEventListener("negotiationneeded", negotiate);
+		console.log(conn);
 
-		conn.addEventListener("datachannel", (e) => {
-			const ch = e.channel;
-			console.info("[rtc:track] datachannel", ch);
-			// ch.protocol === "Control"
-			// ch.protocol === "VoiceActivity"
-			// conn.createDataChannel("speaking", {
-			// 	protocol: "speaking",
-			// });
-		});
+		conn.addEventListener(
+			"icegatheringstatechange",
+			() =>
+				console.log(
+					"[rtc:core] icegatheringstatechange",
+					conn.iceGatheringState,
+				),
+		);
+
+		conn.addEventListener(
+			"iceconnectionstatechange",
+			() =>
+				console.log(
+					"[rtc:core] iceconnectionstatechange",
+					conn.iceConnectionState,
+				),
+		);
+
+		const negotiate = async () => {
+			console.info("[rtc:sdp] create offer");
+			const offer = await conn.createOffer();
+			await conn.setLocalDescription(offer);
+			sendWebsocket({
+				type: "Offer",
+				sdp: conn.localDescription!.sdp,
+			});
+		};
+
+		window.conn = conn;
+
+		conn.addEventListener("negotiationneeded", negotiate);
 
 		conn.addEventListener("track", (e) => {
 			console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
@@ -84,14 +95,18 @@ export const DebugWebrtc = () => {
 				pendingTrackToStream.delete(e.transceiver.mid!);
 			}
 		});
+
+		setRtcState("new");
+		setConn(conn);
 	}
 
 	api.temp_events.on("sync", async (msg) => {
+		const c = conn();
 		if (msg.type === "VoiceDispatch") {
 			console.log("got signalling message", msg.payload);
 			if (msg.payload.type === "Answer") {
 				console.log("[rtc:signal] accept answer");
-				await conn.setRemoteDescription({
+				await c.setRemoteDescription({
 					type: "answer",
 					sdp: msg.payload.sdp,
 				});
@@ -106,23 +121,27 @@ export const DebugWebrtc = () => {
 				}
 				pendingTracks = [];
 			} else if (msg.payload.type === "Offer") {
-				if (conn.signalingState !== "stable") {
+				if (c.signalingState !== "stable") {
 					console.log("[rtc:signal] ignore server offer");
 					return;
 				}
 				console.log("[rtc:signal] accept offer; create answer");
-				await conn.setRemoteDescription({
+				await c.setRemoteDescription({
 					type: "offer",
 					sdp: msg.payload.sdp,
 				});
-				await conn.setLocalDescription(await conn.createAnswer());
+				await c.setLocalDescription(await c.createAnswer());
 				sendWebsocket({
 					type: "Answer",
-					sdp: conn.localDescription!.sdp,
+					sdp: c.localDescription!.sdp,
 				});
+			} else if (msg.payload.type === "IceCandidate") {
+				const candidate = JSON.parse(msg.payload.candidate);
+				console.log("[rtc:signal] remote ICE candidate", candidate);
+				await c.addIceCandidate(candidate);
 			} else if (msg.payload.type === "Subscribe") {
 				const { mid } = msg.payload;
-				for (const tcr of conn.getTransceivers()) {
+				for (const tcr of c.getTransceivers()) {
 					console.log(tcr);
 					if (tcr.mid === mid) tcr.sender.track!.enabled = true;
 				}
@@ -167,11 +186,10 @@ export const DebugWebrtc = () => {
 
 	onCleanup(() => {
 		reconnectable = false;
-		conn.close();
+		conn().close();
 	});
 
 	function connect() {
-		// reset();
 		sendWebsocket({
 			type: "VoiceState",
 			state: {
@@ -181,13 +199,14 @@ export const DebugWebrtc = () => {
 	}
 
 	function connect2() {
-		// reset();
 		sendWebsocket({
 			type: "VoiceState",
 			state: {
 				thread_id: "019761a5-a6fb-70a3-a407-a0d7ffcf2862",
 			},
 		});
+
+		window.arst = () => conn().createDataChannel("asdf");
 	}
 
 	function reset() {
@@ -195,26 +214,28 @@ export const DebugWebrtc = () => {
 			type: "VoiceState",
 			state: null,
 		});
-		conn.close();
+		conn().close();
+		setup();
 	}
 
 	function reconnect() {
 		console.log("reconnect");
+		const c = conn();
 
 		if (trackMic) {
-			pendingTracks.push(conn.addTransceiver(trackMic));
+			pendingTracks.push(c.addTransceiver(trackMic));
 		}
 
 		if (trackCam) {
-			pendingTracks.push(conn.addTransceiver(trackCam));
+			pendingTracks.push(c.addTransceiver(trackCam));
 		}
 
 		if (trackScreenVideo) {
-			pendingTracks.push(conn.addTransceiver(trackScreenVideo));
+			pendingTracks.push(c.addTransceiver(trackScreenVideo));
 		}
 
 		if (trackScreenAudio) {
-			pendingTracks.push(conn.addTransceiver(trackScreenAudio));
+			pendingTracks.push(c.addTransceiver(trackScreenAudio));
 		}
 	}
 
@@ -249,7 +270,7 @@ export const DebugWebrtc = () => {
 		if (tracks.length > 1) {
 			console.warn("audio has multiple tracks, using first one", tracks);
 		}
-		const tcr = conn.addTransceiver(tracks[0]);
+		const tcr = conn().addTransceiver(tracks[0]);
 		console.log("add transceiver", tcr);
 		audio.play();
 		pendingTracks.push(tcr);
@@ -267,10 +288,10 @@ export const DebugWebrtc = () => {
 			console.warn("no track");
 			return;
 		}
-		const tcr = conn.addTransceiver(track);
+		const tcr = conn().addTransceiver(track);
 		console.log("add transceiver", tcr.mid, tcr);
 		track.addEventListener("ended", () => {
-			conn.removeTrack(tcr.sender);
+			conn().removeTrack(tcr.sender);
 		});
 		track.enabled = false;
 		pendingTracks.push(tcr);
@@ -289,10 +310,10 @@ export const DebugWebrtc = () => {
 			console.warn("no track");
 			return;
 		}
-		const tcr = conn.addTransceiver(track);
+		const tcr = conn().addTransceiver(track);
 		console.log("add transceiver", tcr.mid, tcr);
 		track.addEventListener("ended", () => {
-			conn.removeTrack(tcr.sender);
+			conn().removeTrack(tcr.sender);
 		});
 		pendingTracks.push(tcr);
 		track.enabled = false;
@@ -319,10 +340,10 @@ export const DebugWebrtc = () => {
 				console.warn("no video track");
 				return;
 			}
-			const tcr = conn.addTransceiver(track);
+			const tcr = conn().addTransceiver(track);
 			console.log("add transceiver", tcr.mid, tcr);
 			track.addEventListener("ended", () => {
-				conn.removeTrack(tcr.sender);
+				conn().removeTrack(tcr.sender);
 			});
 			trackScreenVideo = track;
 		}
@@ -333,10 +354,10 @@ export const DebugWebrtc = () => {
 				console.warn("no audio track");
 				return;
 			}
-			const tcr = conn.addTransceiver(track);
+			const tcr = conn().addTransceiver(track);
 			console.log("add transceiver", tcr.mid, tcr);
 			track.addEventListener("ended", () => {
-				conn.removeTrack(tcr.sender);
+				conn().removeTrack(tcr.sender);
 			});
 			trackScreenAudio = track;
 		}

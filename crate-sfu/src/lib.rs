@@ -5,13 +5,14 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{SessionDescription, VoiceState, VoiceStateUpdate},
+    voice::{IceCandidate, SessionDescription, VoiceState, VoiceStateUpdate},
     UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
     format::PayloadParams,
     media::{MediaKind, MediaTime, Mid},
+    Candidate,
 };
 
 pub mod peer;
@@ -49,9 +50,13 @@ pub enum SignallingCommand {
     Unsubscribe {
         mid: String,
     },
+
+    IceCandidate {
+        candidate: IceCandidate,
+    },
 }
 
-// TODO: merge command/event?
+// TODO: merge command/event
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum SignallingEvent {
@@ -84,6 +89,10 @@ pub enum SignallingEvent {
 
     Unsubscribe {
         mid: String,
+    },
+
+    IceCandidate {
+        candidate: IceCandidate,
     },
 }
 
@@ -122,6 +131,7 @@ pub enum PeerEvent {
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
+    Init,
 }
 
 #[derive(Debug)]

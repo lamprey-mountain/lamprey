@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap, net::IpAddr, time::Instant};
 
 use crate::{MediaData, PeerEvent, SignallingCommand, SignallingEvent};
 use anyhow::Result;
@@ -44,10 +44,12 @@ impl Peer {
             // .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
-        let addr = crate::util::select_host_address_ipv4();
-        let socket = UdpSocket::bind(format!("{addr}:0")).await?;
+        // let addr = crate::util::select_host_address_ipv4();
+        // let socket = UdpSocket::bind(format!("{addr}:0")).await?;
+        let socket = UdpSocket::bind("127.0.0.1:0").await?;
         let candidate = Candidate::host(socket.local_addr()?, "udp")?;
-        rtc.add_local_candidate(candidate);
+        debug!("listen on {}", socket.local_addr().unwrap());
+        rtc.add_local_candidate(candidate.clone());
 
         let (send, recv) = mpsc::unbounded_channel();
 
@@ -62,6 +64,8 @@ impl Peer {
             commands: recv,
             events: sfu_send,
         };
+
+        peer.emit(PeerEvent::Init)?;
 
         tokio::spawn(async move {
             if let Err(err) = peer.run().await {
@@ -109,6 +113,10 @@ impl Peer {
                         }
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
+
+                        Event::KeyframeRequest(r) => {
+                            todo!()
+                        }
 
                         Event::PeerStats(_)
                         | Event::MediaIngressStats(_)
@@ -248,10 +256,10 @@ impl Peer {
                             mid: mid.to_string(),
                         }))?;
                     } else {
-                        error!("media already published")
+                        debug!("media already published")
                     }
                 } else {
-                    error!("media not found")
+                    error!("publish: media not found")
                 }
             }
             SignallingCommand::Subscribe { mid } => {
@@ -266,7 +274,7 @@ impl Peer {
                     track.enabled = true;
                     track.needs_keyframe = true;
                 } else {
-                    error!("media not found")
+                    error!("subscribe: media not found")
                 }
             }
             SignallingCommand::Unsubscribe { mid } => {
@@ -279,7 +287,14 @@ impl Peer {
                 {
                     track.enabled = false;
                 } else {
-                    error!("media not found")
+                    error!("unsubscribe: media not found")
+                }
+            }
+            SignallingCommand::IceCandidate { candidate } => {
+                if let Ok(candidate) = serde_json::from_str::<Candidate>(&candidate) {
+                    // self.rtc.add_remote_candidate(candidate);
+                } else {
+                    warn!("invalid candidate: {candidate:?}")
                 }
             }
         }
