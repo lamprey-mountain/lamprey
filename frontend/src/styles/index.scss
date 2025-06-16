@@ -534,6 +534,7 @@ input[type="url"] {
 	display: grid;
 	grid-template-rows: auto 1fr;
 	grid-template-columns: 144px 1fr;
+	overflow: hidden;
 
 	& > header {
 		grid-column: span 2 / span 2;
