@@ -1,11 +1,11 @@
-use std::{collections::HashMap, net::IpAddr, time::Instant};
+use std::{collections::HashMap, time::Instant};
 
-use crate::{MediaData, PeerEvent, SignallingCommand, SignallingEvent};
+use crate::{MediaData, PeerEvent, SignallingMessage, TrackMetadata};
 use anyhow::Result;
 use common::v1::types::{voice::SessionDescription, UserId};
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
-    media::{Direction, KeyframeRequestKind, Mid},
+    media::{Direction, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -44,9 +44,9 @@ impl Peer {
             // .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
-        // let addr = crate::util::select_host_address_ipv4();
-        // let socket = UdpSocket::bind(format!("{addr}:0")).await?;
-        let socket = UdpSocket::bind("127.0.0.1:0").await?;
+        let addr = crate::util::select_host_address_ipv4();
+        let socket = UdpSocket::bind(format!("{addr}:0")).await?;
+        // let socket = UdpSocket::bind("127.0.0.1:0").await?;
         let candidate = Candidate::host(socket.local_addr()?, "udp")?;
         debug!("listen on {}", socket.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
@@ -96,6 +96,7 @@ impl Peer {
                         Event::Connected => debug!("connected!"),
 
                         Event::MediaAdded(m) => {
+                            // TODO: enforce max bitrate, resolution
                             debug!("media added {m:?}");
                             self.inbound.insert(
                                 m.mid,
@@ -110,13 +111,13 @@ impl Peer {
                                 peer_id: self.user_id,
                                 key: None,
                             }))?;
+                            // FIXME
+                            // self.emit(PeerEvent::Signalling(SignallingMessage::Have { mid: m.mid }))?;
                         }
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
 
-                        Event::KeyframeRequest(r) => {
-                            todo!()
-                        }
+                        Event::KeyframeRequest(_r) => todo!(),
 
                         Event::PeerStats(_)
                         | Event::MediaIngressStats(_)
@@ -193,9 +194,9 @@ impl Peer {
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
             PeerCommand::Kill => self.rtc.disconnect(),
-            PeerCommand::RemotePublish { user_id, mid, key } => {
-                self.publish(user_id, mid, key)?;
-            }
+            // PeerCommand::RemotePublish { user_id, mid, key } => {
+            //     self.publish(user_id, mid, key)?;
+            // }
         }
 
         Ok(())
@@ -241,62 +242,20 @@ impl Peer {
         }
     }
 
-    async fn handle_user_command(&mut self, command: SignallingCommand) -> Result<()> {
+    async fn handle_user_command(&mut self, command: SignallingMessage) -> Result<()> {
         match command {
-            SignallingCommand::Answer { sdp } => self.handle_answer(sdp)?,
-            SignallingCommand::Offer { sdp } => self.handle_offer(sdp)?,
-            SignallingCommand::VoiceState { .. } => {}
-            SignallingCommand::Publish { mid, key } => {
-                info!("got publish mid={mid} key={key}");
-                let mid = Mid::from(mid.as_str());
-                if let Some((_, track)) = self.inbound.iter_mut().find(|t| t.0 == &mid) {
-                    if matches!(track.state, TrackState::Negotiating(_)) {
-                        track.state = TrackState::Open(mid);
-                        self.emit(PeerEvent::Signalling(SignallingEvent::Subscribe {
-                            mid: mid.to_string(),
-                        }))?;
-                    } else {
-                        debug!("media already published")
-                    }
-                } else {
-                    error!("publish: media not found")
-                }
-            }
-            SignallingCommand::Subscribe { mid } => {
-                info!("got subscribe mid={mid}");
-                let mid = Mid::from(mid.as_str());
-                if let Some(track) = self
-                    .outbound
-                    .iter_mut()
-                    .find(|t| t.state == TrackState::Open(mid))
-                {
-                    debug!("enabling track");
-                    track.enabled = true;
-                    track.needs_keyframe = true;
-                } else {
-                    error!("subscribe: media not found")
-                }
-            }
-            SignallingCommand::Unsubscribe { mid } => {
-                info!("got unsubscribe mid={mid}");
-                let mid = Mid::from(mid.as_str());
-                if let Some(track) = self
-                    .outbound
-                    .iter_mut()
-                    .find(|t| t.state == TrackState::Open(mid))
-                {
-                    track.enabled = false;
-                } else {
-                    error!("unsubscribe: media not found")
-                }
-            }
-            SignallingCommand::IceCandidate { candidate } => {
+            SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
+            SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
+            SignallingMessage::Candidate { candidate } => {
                 if let Ok(candidate) = serde_json::from_str::<Candidate>(&candidate) {
-                    // self.rtc.add_remote_candidate(candidate);
+                    self.rtc.add_remote_candidate(candidate);
                 } else {
                     warn!("invalid candidate: {candidate:?}")
                 }
             }
+            SignallingMessage::Have { user_id, tracks } => todo!(),
+            SignallingMessage::Want { tracks } => todo!(),
+            SignallingMessage::VoiceState { .. } => {}
         }
         Ok(())
     }
@@ -316,7 +275,7 @@ impl Peer {
         Ok(())
     }
 
-    fn handle_offer(&mut self, sdp: SessionDescription) -> Result<()> {
+    fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
         let offer = SdpOffer::from_sdp_string(&sdp)?;
         let answer = self.rtc.sdp_api().accept_offer(offer)?;
 
@@ -328,8 +287,8 @@ impl Peer {
         }
 
         self.sdp_pending = None;
-        self.emit(PeerEvent::Signalling(SignallingEvent::Answer {
-            sdp: answer.to_sdp_string(),
+        self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
+            sdp: SessionDescription(answer.to_sdp_string()),
         }))?;
 
         Ok(())
@@ -365,8 +324,9 @@ impl Peer {
         };
 
         self.sdp_pending = Some(pending);
-        self.emit(PeerEvent::Signalling(SignallingEvent::Offer {
-            sdp: offer.to_sdp_string(),
+        self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
+            sdp: SessionDescription(offer.to_sdp_string()),
+            tracks: vec![],
         }))?;
 
         Ok(true)
@@ -401,25 +361,25 @@ impl Peer {
         Ok(())
     }
 
-    fn publish(&self, user_id: UserId, source_mid: Mid, key: String) -> Result<()> {
-        if let Some(t) = self
-            .outbound
-            .iter()
-            .find(|t| t.source_mid == source_mid && t.peer_id == user_id)
-        {
-            debug!("found track {:?}", t.state);
-            match t.state {
-                TrackState::Open(mid) | TrackState::Negotiating(mid) => {
-                    self.emit(PeerEvent::Signalling(SignallingEvent::Publish {
-                        user_id,
-                        mid: mid.to_string(),
-                        key,
-                    }))?;
-                }
-                _ => {}
-            }
-        }
+    // fn publish(&self, user_id: UserId, source_mid: Mid, key: String) -> Result<()> {
+    //     if let Some(t) = self
+    //         .outbound
+    //         .iter()
+    //         .find(|t| t.source_mid == source_mid && t.peer_id == user_id)
+    //     {
+    //         debug!("found track {:?}", t.state);
+    //         match t.state {
+    //             TrackState::Open(mid) | TrackState::Negotiating(mid) => {
+    //                 self.emit(PeerEvent::Signalling(SignallingMessage::Publish {
+    //                     user_id,
+    //                     mid: mid.to_string(),
+    //                     key,
+    //                 }))?;
+    //             }
+    //             _ => {}
+    //         }
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 }

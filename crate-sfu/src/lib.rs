@@ -21,78 +21,37 @@ pub mod util;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum SignallingCommand {
-    /// sdp answer (via websocket)
+pub enum SignallingMessage {
+    Offer {
+        sdp: SessionDescription,
+        tracks: Vec<TrackMetadata>,
+    },
+
     Answer {
         sdp: SessionDescription,
     },
 
-    /// sdp offer (via websocket)
-    Offer {
-        sdp: SessionDescription,
+    Candidate {
+        candidate: IceCandidate,
+        // not supported by str0m or not needed at all?
+        // sdp_mid: Mid,
+        // sdp_mline_index: u16,
     },
 
-    /// update voice state
+    // sent by server only
+    Have {
+        user_id: UserId,
+        tracks: Vec<TrackMetadata>,
+    },
+
+    // sent by server and users
+    Want {
+        tracks: Vec<Mid>,
+    },
+
+    // sent by client
     VoiceState {
         state: Option<VoiceStateUpdate>,
-    },
-
-    Publish {
-        mid: String,
-        key: String,
-    },
-
-    Subscribe {
-        mid: String,
-        // rid: Rid,
-    },
-
-    Unsubscribe {
-        mid: String,
-    },
-
-    IceCandidate {
-        candidate: IceCandidate,
-    },
-}
-
-// TODO: merge command/event
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum SignallingEvent {
-    /// sdp answer (via websocket)
-    Answer {
-        sdp: String,
-    },
-
-    /// sdp offer (via websocket)
-    Offer {
-        sdp: String,
-    },
-
-    /// user changed their voice state
-    VoiceState {
-        user_id: UserId,
-        state: Option<VoiceState>,
-    },
-
-    Publish {
-        user_id: UserId,
-        mid: String,
-        key: String,
-    },
-
-    Subscribe {
-        mid: String,
-        // rid: Rid,
-    },
-
-    Unsubscribe {
-        mid: String,
-    },
-
-    IceCandidate {
-        candidate: IceCandidate,
     },
 }
 
@@ -102,7 +61,7 @@ pub struct SfuCommand {
     pub user_id: Option<UserId>,
 
     #[serde(flatten)]
-    pub inner: SignallingCommand,
+    pub inner: SignallingMessage,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -110,7 +69,7 @@ pub struct SfuCommand {
 pub enum SfuEvent {
     VoiceDispatch {
         user_id: UserId,
-        payload: SignallingEvent,
+        payload: SignallingMessage,
     },
     VoiceState {
         user_id: UserId,
@@ -127,7 +86,7 @@ pub struct PeerEventEnvelope {
 
 #[derive(Debug)]
 pub enum PeerEvent {
-    Signalling(SignallingEvent),
+    Signalling(SignallingMessage),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
@@ -136,14 +95,14 @@ pub enum PeerEvent {
 
 #[derive(Debug)]
 pub enum PeerCommand {
-    Signalling(SignallingCommand),
+    Signalling(SignallingMessage),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
-    RemotePublish {
-        user_id: UserId,
-        mid: Mid,
-        key: String,
-    },
+    // RemotePublish {
+    //     user_id: UserId,
+    //     mid: Mid,
+    //     key: String,
+    // },
     Kill,
 }
 
@@ -204,11 +163,19 @@ pub enum Error {
     /// no voice state exists for this user
     #[error("no voice state exists for this user")]
     NotConnected,
-    // NotPublished,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MediaKindSerde {
     Video,
     Audio,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrackMetadata {
+    pub mid: Mid,
+    pub kind: MediaKindSerde,
+
+    // group tracks together into streams; identical to ssrc but easier to manage client side
+    pub key: String,
 }

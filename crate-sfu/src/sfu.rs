@@ -1,11 +1,10 @@
 use crate::{
     peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent, SfuTrack,
-    SignallingCommand,
+    SignallingMessage,
 };
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
-use str0m::media::Mid;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, trace, warn};
 
@@ -58,7 +57,7 @@ impl Sfu {
         let user_id = req.user_id.unwrap();
 
         match &req.inner {
-            SignallingCommand::VoiceState { state } => {
+            SignallingMessage::VoiceState { state } => {
                 let Some(state) = state else {
                     let old = self.voice_states.remove(&user_id).map(|s| s.1);
                     if let Some((_, peer)) = self.peers.remove(&user_id) {
@@ -88,16 +87,16 @@ impl Sfu {
                 })
                 .await?;
             }
-            SignallingCommand::Publish { mid, key } => {
-                let mid = Mid::from(mid.as_str());
-                for a in &self.peers {
-                    a.value().send(PeerCommand::RemotePublish {
-                        user_id,
-                        mid,
-                        key: key.to_owned(),
-                    })?;
-                }
-            }
+            // SignallingCommand::Publish { mid, key } => {
+            //     let mid = Mid::from(mid.as_str());
+            //     for a in &self.peers {
+            //         a.value().send(PeerCommand::RemotePublish {
+            //             user_id,
+            //             mid,
+            //             key: key.to_owned(),
+            //         })?;
+            //     }
+            // }
             _ => {}
         }
 
@@ -115,6 +114,7 @@ impl Sfu {
     }
 
     async fn handle_event(&mut self, envelope: PeerEventEnvelope) -> Result<()> {
+        debug!("handle_event {envelope:?}");
         let user_id = envelope.user_id;
         let event = envelope.payload;
         match event {
@@ -198,11 +198,12 @@ impl Sfu {
 
                     peer.send(PeerCommand::MediaAdded(m.clone()))?;
                     if let Some(key) = m.key.as_ref() {
-                        peer.send(PeerCommand::RemotePublish {
-                            user_id,
-                            mid: m.mid,
-                            key: key.to_owned(),
-                        })?;
+                        // FIXME
+                        // peer.send(PeerCommand::RemotePublish {
+                        //     user_id,
+                        //     mid: m.mid,
+                        //     key: key.to_owned(),
+                        // })?;
                     }
                 }
             }
