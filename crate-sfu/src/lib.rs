@@ -6,13 +6,12 @@ use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
     voice::{IceCandidate, SessionDescription, VoiceState, VoiceStateUpdate},
-    UserId,
+    ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
     format::PayloadParams,
     media::{MediaKind, MediaTime, Mid},
-    Candidate,
 };
 
 pub mod peer;
@@ -90,7 +89,6 @@ pub enum PeerEvent {
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
-    Init,
 }
 
 #[derive(Debug)]
@@ -98,11 +96,6 @@ pub enum PeerCommand {
     Signalling(SignallingMessage),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
-    // RemotePublish {
-    //     user_id: UserId,
-    //     mid: Mid,
-    //     key: String,
-    // },
     Kill,
 }
 
@@ -120,6 +113,7 @@ pub struct MediaData {
 pub struct SfuTrack {
     pub mid: Mid,
     pub peer_id: UserId,
+    // pub thread_id: ThreadId,
     pub kind: MediaKind,
     // TODO: replace with ssrc
     pub key: Option<String>,

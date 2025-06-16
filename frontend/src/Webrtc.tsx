@@ -71,17 +71,25 @@ export const DebugWebrtc = () => {
 				),
 		);
 
+		// conn.addEventListener("icecandidate", (e) => {
+		// 	console.log("[rtc:core] icecandidate", e.candidate);
+		// 	sendWebsocket({ type: "Candidate", ...e.candidate?.toJSON() });
+		// });
+
 		const negotiate = async () => {
 			console.info("[rtc:sdp] create offer");
 			const offer = await conn.createOffer();
 			await conn.setLocalDescription(offer);
+			const tracks = conn.getTransceivers()
+				.filter((i) => i.direction === "sendonly" || i.direction === "sendrecv")
+				.map((i) => ({ mid: i.mid, kind: i.sender.track?.kind, key: "user" }));
+			console.log("tcrs", tracks);
 			sendWebsocket({
 				type: "Offer",
 				sdp: conn.localDescription!.sdp,
+				tracks: [], // TODO
 			});
 		};
-
-		window.conn = conn;
 
 		conn.addEventListener("negotiationneeded", negotiate);
 
@@ -95,6 +103,8 @@ export const DebugWebrtc = () => {
 				pendingTrackToStream.delete(e.transceiver.mid!);
 			}
 		});
+
+		// conn.addEventListener("signalingstatechange", () => { })
 
 		setRtcState("new");
 		setConn(conn);
@@ -110,16 +120,6 @@ export const DebugWebrtc = () => {
 					type: "answer",
 					sdp: msg.payload.sdp,
 				});
-				console.log({ pendingTracks });
-				for (const tcr of pendingTracks) {
-					sendWebsocket({
-						type: "Publish",
-						mid: tcr.mid,
-						kind: tcr.sender.track?.kind === "video" ? "Video" : "Audio",
-						key: "user",
-					});
-				}
-				pendingTracks = [];
 			} else if (msg.payload.type === "Offer") {
 				if (c.signalingState !== "stable") {
 					console.log("[rtc:signal] ignore server offer");
@@ -135,34 +135,48 @@ export const DebugWebrtc = () => {
 					type: "Answer",
 					sdp: c.localDescription!.sdp,
 				});
-			} else if (msg.payload.type === "IceCandidate") {
-				const candidate = JSON.parse(msg.payload.candidate);
-				console.log("[rtc:signal] remote ICE candidate", candidate);
-				await c.addIceCandidate(candidate);
-			} else if (msg.payload.type === "Subscribe") {
-				const { mid } = msg.payload;
-				for (const tcr of c.getTransceivers()) {
-					console.log(tcr);
-					if (tcr.mid === mid) tcr.sender.track!.enabled = true;
-				}
-			} else if (msg.payload.type === "Publish") {
-				const { user_id, key, mid } = msg.payload;
-				const stream = streams.get(`${user_id}:${key}`) ?? new MediaStream();
-				const t = tracks.get(mid);
-				if (t) {
-					stream.addTrack(t);
-				} else {
-					pendingTrackToStream.set(mid, stream);
-				}
-				streams.set(`${user_id}:${key}`, stream);
-				const my_user_id = api.users.cache.get("@self")!.id;
-				if (user_id !== my_user_id) {
-					// TODO: only subscribe on demand
-					sendWebsocket({
-						type: "Subscribe",
-						mid,
-					});
-				}
+				// } else if (msg.payload.type === "Candidate") {
+				// 	const candidate = JSON.parse(msg.payload.candidate);
+				// 	console.log("[rtc:signal] remote ICE candidate", candidate);
+				// 	await c.addIceCandidate(candidate);
+				// 	// } else if (msg.payload.type === "Subscribe") {
+				// 	// 	const { mid } = msg.payload;
+				// 	// 	for (const tcr of c.getTransceivers()) {
+				// 	// 		console.log(tcr);
+				// 	// 		if (tcr.mid === mid) tcr.sender.track!.enabled = true;
+				// 	// 	}
+			} else if (msg.payload.type === "Have") {
+				console.log("[rtc:signal] have");
+				// 	const tcri = pendingTracks.findIndex((i) => i.mid === msg.payload.mid);
+				// 	if (typeof tcri !== "number") return;
+				// 	const tcr = pendingTracks[tcri];
+				// 	sendWebsocket({
+				// 		type: "Publish",
+				// 		mid: tcr.mid,
+				// 		kind: tcr.sender.track?.kind === "video" ? "Video" : "Audio",
+				// 		key: "user",
+				// 	});
+				// 	pendingTracks.splice(tcri, 1);
+
+				// 	const { user_id, key, mid } = msg.payload;
+				// 	const stream = streams.get(`${user_id}:${key}`) ?? new MediaStream();
+				// 	const t = tracks.get(mid);
+				// 	if (t) {
+				// 		stream.addTrack(t);
+				// 	} else {
+				// 		pendingTrackToStream.set(mid, stream);
+				// 	}
+				// 	streams.set(`${user_id}:${key}`, stream);
+				// 	const my_user_id = api.users.cache.get("@self")!.id;
+				// 	if (user_id !== my_user_id) {
+				// 		// TODO: only subscribe on demand
+				// 		sendWebsocket({
+				// 			type: "Subscribe",
+				// 			mid,
+				// 		});
+				// 	}
+			} else if (msg.payload.type === "Want") {
+				console.log("[rtc:signal] want");
 			} else {
 				console.warn("[rtc:signal] unknown message type");
 			}
@@ -205,8 +219,6 @@ export const DebugWebrtc = () => {
 				thread_id: "019761a5-a6fb-70a3-a407-a0d7ffcf2862",
 			},
 		});
-
-		window.arst = () => conn().createDataChannel("asdf");
 	}
 
 	function reset() {
@@ -403,18 +415,4 @@ export const DebugWebrtc = () => {
 			</For>
 		</div>
 	);
-};
-
-type VoiceState = any;
-
-// per user
-type Participant = {
-	state: VoiceState;
-
-	tracks: Record<"mic" | "cam" | "screen", {
-		mid: string;
-		kind: "video" | "audio";
-		rids: number[];
-		enabled: boolean;
-	}>;
 };

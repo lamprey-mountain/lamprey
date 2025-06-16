@@ -26,6 +26,7 @@ pub struct Peer {
     packet: [u8; 2000],
     inbound: HashMap<Mid, TrackIn>,
     outbound: Vec<TrackOut>,
+    // outbound: HashMap<Mid, TrackOut>,
     sdp_pending: Option<SdpPendingOffer>,
     user_id: UserId,
     commands: UnboundedReceiver<PeerCommand>,
@@ -46,7 +47,6 @@ impl Peer {
 
         let addr = crate::util::select_host_address_ipv4();
         let socket = UdpSocket::bind(format!("{addr}:0")).await?;
-        // let socket = UdpSocket::bind("127.0.0.1:0").await?;
         let candidate = Candidate::host(socket.local_addr()?, "udp")?;
         debug!("listen on {}", socket.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
@@ -64,8 +64,6 @@ impl Peer {
             commands: recv,
             events: sfu_send,
         };
-
-        peer.emit(PeerEvent::Init)?;
 
         tokio::spawn(async move {
             if let Err(err) = peer.run().await {
@@ -105,14 +103,31 @@ impl Peer {
                                     state: TrackState::Negotiating(m.mid),
                                 },
                             );
+
+                            // broadcast to other sfus
                             self.emit(PeerEvent::MediaAdded(SfuTrack {
                                 kind: m.kind,
                                 mid: m.mid,
                                 peer_id: self.user_id,
                                 key: None,
                             }))?;
-                            // FIXME
-                            // self.emit(PeerEvent::Signalling(SignallingMessage::Have { mid: m.mid }))?;
+
+                            // broadcast to other users
+                            self.emit(PeerEvent::Signalling(SignallingMessage::Have {
+                                user_id: self.user_id,
+                                tracks: vec![TrackMetadata {
+                                    mid: m.mid,
+                                    kind: match m.kind {
+                                        str0m::media::MediaKind::Audio => {
+                                            crate::MediaKindSerde::Audio
+                                        }
+                                        str0m::media::MediaKind::Video => {
+                                            crate::MediaKindSerde::Video
+                                        }
+                                    },
+                                    key: "".to_owned(),
+                                }],
+                            }))?;
                         }
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
@@ -194,9 +209,6 @@ impl Peer {
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
             PeerCommand::Kill => self.rtc.disconnect(),
-            // PeerCommand::RemotePublish { user_id, mid, key } => {
-            //     self.publish(user_id, mid, key)?;
-            // }
         }
 
         Ok(())
@@ -247,14 +259,14 @@ impl Peer {
             SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
             SignallingMessage::Candidate { candidate } => {
-                if let Ok(candidate) = serde_json::from_str::<Candidate>(&candidate) {
+                if let Ok(candidate) = Candidate::from_sdp_string(&candidate) {
                     self.rtc.add_remote_candidate(candidate);
                 } else {
                     warn!("invalid candidate: {candidate:?}")
                 }
             }
-            SignallingMessage::Have { user_id, tracks } => todo!(),
             SignallingMessage::Want { tracks } => todo!(),
+            SignallingMessage::Have { .. } => {}
             SignallingMessage::VoiceState { .. } => {}
         }
         Ok(())
@@ -285,6 +297,12 @@ impl Peer {
                 track.state = TrackState::Pending;
             }
         }
+
+        // // redo renegotiate?
+        // // delete all outbound, readd ones that work
+        // for track in tracks {
+        //     self.outbound.entry(track.mid);
+        // }
 
         self.sdp_pending = None;
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
@@ -360,26 +378,4 @@ impl Peer {
         })?;
         Ok(())
     }
-
-    // fn publish(&self, user_id: UserId, source_mid: Mid, key: String) -> Result<()> {
-    //     if let Some(t) = self
-    //         .outbound
-    //         .iter()
-    //         .find(|t| t.source_mid == source_mid && t.peer_id == user_id)
-    //     {
-    //         debug!("found track {:?}", t.state);
-    //         match t.state {
-    //             TrackState::Open(mid) | TrackState::Negotiating(mid) => {
-    //                 self.emit(PeerEvent::Signalling(SignallingMessage::Publish {
-    //                     user_id,
-    //                     mid: mid.to_string(),
-    //                     key,
-    //                 }))?;
-    //             }
-    //             _ => {}
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
 }

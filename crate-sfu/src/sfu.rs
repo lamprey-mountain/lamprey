@@ -55,9 +55,17 @@ impl Sfu {
         trace!("new rpc message {req:?}");
 
         let user_id = req.user_id.unwrap();
+        let ctl = match self.peers.entry(user_id) {
+            dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
+            dashmap::Entry::Vacant(vacant_entry) => {
+                let peer = Peer::spawn(peer_send.clone(), user_id).await?;
+                vacant_entry.insert(peer)
+            }
+        };
 
         match &req.inner {
             SignallingMessage::VoiceState { state } => {
+                // user disconnected
                 let Some(state) = state else {
                     let old = self.voice_states.remove(&user_id).map(|s| s.1);
                     if let Some((_, peer)) = self.peers.remove(&user_id) {
@@ -73,6 +81,7 @@ impl Sfu {
                     return Ok(());
                 };
 
+                // user connected or moved
                 let state = VoiceState {
                     user_id,
                     thread_id: state.thread_id,
@@ -80,6 +89,27 @@ impl Sfu {
                 };
                 let old = self.voice_states.insert(user_id, state.clone());
                 debug!("got voice state {state:?}");
+
+                // broadcast all tracks in a thread to the user
+                let peer = self.peers.get(&user_id).unwrap();
+                for m in &self.tracks {
+                    if m.peer_id == user_id {
+                        continue;
+                    }
+
+                    let Some(other) = self.voice_states.get(&m.peer_id) else {
+                        warn!("dead track not cleaned up?");
+                        continue;
+                    };
+
+                    if state.thread_id != other.thread_id {
+                        continue;
+                    }
+
+                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
+                }
+
+                // tell everyone about the voice state update
                 self.emit(SfuEvent::VoiceState {
                     user_id,
                     state: Some(state),
@@ -87,26 +117,8 @@ impl Sfu {
                 })
                 .await?;
             }
-            // SignallingCommand::Publish { mid, key } => {
-            //     let mid = Mid::from(mid.as_str());
-            //     for a in &self.peers {
-            //         a.value().send(PeerCommand::RemotePublish {
-            //             user_id,
-            //             mid,
-            //             key: key.to_owned(),
-            //         })?;
-            //     }
-            // }
             _ => {}
         }
-
-        let ctl = match self.peers.entry(user_id) {
-            dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
-            dashmap::Entry::Vacant(vacant_entry) => {
-                let peer = Peer::spawn(peer_send.clone(), user_id).await?;
-                vacant_entry.insert(peer)
-            }
-        };
 
         ctl.send(PeerCommand::Signalling(req.inner))?;
 
@@ -173,39 +185,6 @@ impl Sfu {
             PeerEvent::Dead => {
                 self.peers.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
-            }
-
-            PeerEvent::Init => {
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
-
-                let peer = self.peers.get(&user_id).unwrap();
-
-                for m in &self.tracks {
-                    if m.peer_id == user_id {
-                        continue;
-                    }
-
-                    let Some(state) = self.voice_states.get(&m.peer_id) else {
-                        continue;
-                    };
-
-                    if state.thread_id != my_state.thread_id {
-                        continue;
-                    }
-
-                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
-                    if let Some(key) = m.key.as_ref() {
-                        // FIXME
-                        // peer.send(PeerCommand::RemotePublish {
-                        //     user_id,
-                        //     mid: m.mid,
-                        //     key: key.to_owned(),
-                        // })?;
-                    }
-                }
             }
         }
 
