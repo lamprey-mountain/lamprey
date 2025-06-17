@@ -392,7 +392,6 @@ impl Portal {
                         .or(message.author.global_name)
                         .or(Some(message.author.name)),
                     nonce: None,
-                    use_new_text_formatting: false,
                     embeds: vec![],
                 };
                 for a in &message.attachments {
