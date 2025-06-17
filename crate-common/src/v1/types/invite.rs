@@ -90,6 +90,9 @@ pub enum InviteTarget {
         // invites that automatically apply a certain role?
         // roles: Vec<Role>,
     },
+
+    /// can register on this server
+    Server,
 }
 
 /// the type and id of this invite's target

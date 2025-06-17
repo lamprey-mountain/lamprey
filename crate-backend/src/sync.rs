@@ -286,6 +286,7 @@ impl Connection {
                 InviteTarget::User { user } => AuthCheck::User(user.id),
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Server => todo!(),
             },
             MessageSync::DeleteMessage { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::DeleteMessageVersion { thread_id, .. } => AuthCheck::Thread(*thread_id),

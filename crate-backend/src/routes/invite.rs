@@ -62,6 +62,7 @@ pub async fn invite_delete(
                 thread_id: thread.id,
             },
         ),
+        InviteTarget::Server => todo!(),
     };
     let can_delete = user_id == invite.invite.creator_id || has_perm;
     if can_delete {
@@ -136,6 +137,7 @@ pub async fn invite_resolve(
             let perms = s.perms.for_thread(user_id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
+        InviteTarget::Server => todo!(),
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -190,6 +192,7 @@ pub async fn invite_use(
             )
             .await?;
         }
+        InviteTarget::Server => todo!(),
     }
     Ok(())
 }
@@ -353,6 +356,47 @@ pub async fn invite_patch(
     Err(Error::Unimplemented)
 }
 
+/// Invite server create (TODO)
+///
+/// Create an invite that allows registration on a server.
+/// Using the invite upgrades a guest (readonly?) account (also todo) into a full account
+#[utoipa::path(
+    post,
+    path = "/server/invite",
+    tags = ["invite"],
+    responses((status = OK, body = Invite, description = "success")),
+)]
+pub async fn invite_server_create(
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<InviteCreate>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
+/// Invite server list (TODO)
+///
+/// List invites that allow registration on a server
+#[utoipa::path(
+    get,
+    path = "/server/invite",
+    params(
+        PaginationQuery<InviteCode>,
+    ),
+    tags = ["invite"],
+    responses(
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
+    )
+)]
+pub async fn invite_server_list(
+    Query(_paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(invite_delete))
@@ -363,4 +407,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(invite_room_list))
         .routes(routes!(invite_user_create))
         .routes(routes!(invite_user_list))
+        .routes(routes!(invite_server_create))
+        .routes(routes!(invite_server_list))
 }

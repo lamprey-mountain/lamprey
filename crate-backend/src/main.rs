@@ -49,7 +49,7 @@ use error::Result;
     )),
     info(
         title = "api doccery",
-        description = "yup its the docs for the api for the uhh umm thingamabob",
+        description = "thems the docs",
     ),
     tags(
         (name = "sync", description = include_str!("../docs/sync.md")),
