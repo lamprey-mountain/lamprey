@@ -1,11 +1,7 @@
-// do i have all signalling go through the main events websocket, or only
-// do sdp/ice/connection and do signalling directly against the sfu with
-// datachannels? i feel like the second could be nicer but harder.
-
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{IceCandidate, SessionDescription, VoiceState, VoiceStateUpdate},
+    voice::{SignallingMessage, TrackMetadata, VoiceState},
     ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
@@ -17,42 +13,6 @@ use str0m::{
 pub mod peer;
 pub mod sfu;
 pub mod util;
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum SignallingMessage {
-    Offer {
-        sdp: SessionDescription,
-        tracks: Vec<TrackMetadata>,
-    },
-
-    Answer {
-        sdp: SessionDescription,
-    },
-
-    Candidate {
-        candidate: IceCandidate,
-        // not supported by str0m or not needed at all?
-        // sdp_mid: Mid,
-        // sdp_mline_index: u16,
-    },
-
-    // sent by server only
-    Have {
-        user_id: UserId,
-        tracks: Vec<TrackMetadata>,
-    },
-
-    // sent by server and users
-    Want {
-        tracks: Vec<Mid>,
-    },
-
-    // sent by client
-    VoiceState {
-        state: Option<VoiceStateUpdate>,
-    },
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SfuCommand {
@@ -113,10 +73,9 @@ pub struct MediaData {
 pub struct SfuTrack {
     pub mid: Mid,
     pub peer_id: UserId,
-    // pub thread_id: ThreadId,
+    pub thread_id: ThreadId,
     pub kind: MediaKind,
-    // TODO: replace with ssrc
-    pub key: Option<String>,
+    pub key: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -140,6 +99,8 @@ impl TrackState {
 pub struct TrackIn {
     pub kind: MediaKind,
     pub state: TrackState,
+    pub thread_id: ThreadId,
+    pub key: String,
 }
 
 #[derive(Debug)]
@@ -150,6 +111,8 @@ pub struct TrackOut {
     pub source_mid: Mid,
     pub enabled: bool,
     pub needs_keyframe: bool,
+    pub thread_id: ThreadId,
+    pub key: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -159,17 +122,20 @@ pub enum Error {
     NotConnected,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum MediaKindSerde {
-    Video,
-    Audio,
-}
+// impl From<MediaKindSerde> for MediaKind {
+//     fn from(kind: MediaKindSerde) -> Self {
+//         match kind {
+//             MediaKindSerde::Audio => MediaKind::Audio,
+//             MediaKindSerde::Video => MediaKind::Video,
+//         }
+//     }
+// }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TrackMetadata {
-    pub mid: Mid,
-    pub kind: MediaKindSerde,
-
-    // group tracks together into streams; identical to ssrc but easier to manage client side
-    pub key: String,
-}
+// impl From<MediaKind> for MediaKindSerde {
+//     fn from(kind: MediaKind) -> Self {
+//         match kind {
+//             MediaKind::Audio => MediaKindSerde::Audio,
+//             MediaKind::Video => MediaKindSerde::Video,
+//         }
+//     }
+// }

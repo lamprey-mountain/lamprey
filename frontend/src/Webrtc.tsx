@@ -18,25 +18,54 @@ export const DebugWebrtc = () => {
 	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
 	const [voiceState, setVoiceState] = createSignal();
 
-	let pendingTracks: RTCRtpTransceiver[] = [];
-	const pendingTrackToStream = new Map<string, MediaStream>();
-
 	const tracks = new ReactiveMap<string, MediaStreamTrack>();
+	const streams = new ReactiveMap<string, Array<string>>();
 	const voiceStates = new ReactiveMap();
-	const streams = new ReactiveMap<string, MediaStream>();
 
-	let trackMic: MediaStreamTrack | undefined;
-	let trackCam: MediaStreamTrack | undefined;
-	let trackScreenVideo: MediaStreamTrack | undefined;
-	let trackScreenAudio: MediaStreamTrack | undefined;
+	let transceiverMic: RTCRtpTransceiver | undefined;
+	let transceiverCam: RTCRtpTransceiver | undefined;
+	let transceiverScreenVideo: RTCRtpTransceiver | undefined;
+	let transceiverScreenAudio: RTCRtpTransceiver | undefined;
 	let reconnectable = true;
+
+	// Helper to get track key from transceiver
+	const getTrackKey = (tcr: RTCRtpTransceiver): string => {
+		if (tcr === transceiverMic) return "user";
+		if (tcr === transceiverCam) return "user";
+		if (tcr === transceiverScreenVideo) return "screen";
+		if (tcr === transceiverScreenAudio) return "screen";
+		throw "unknown track key";
+	};
+
+	const getTransceivers = () =>
+		[
+			transceiverMic,
+			transceiverCam,
+			transceiverScreenVideo,
+			transceiverScreenAudio,
+		]
+			.filter((tcr): tcr is RTCRtpTransceiver => !!tcr);
+
+	// Complete track metadata using our transceiver references
+	const getTrackMetadata = () => {
+		return getTransceivers()
+			.map((tcr) => ({
+				mid: tcr.mid!,
+				kind: tcr.sender.track!.kind === "video" ? "Video" : "Audio" as const,
+				key: getTrackKey(tcr),
+			}));
+	};
 
 	setup();
 
 	function setup() {
+		// // Reset transceivers on new connection
+		// transceiverMic = undefined;
+		// transceiverCam = undefined;
+		// transceiverScreenVideo = undefined;
+		// transceiverScreenAudio = undefined;
+
 		const conn = new RTCPeerConnection(RTC_CONFIG);
-		pendingTracks = [];
-		pendingTrackToStream.clear();
 		tracks.clear();
 		streams.clear();
 
@@ -80,14 +109,12 @@ export const DebugWebrtc = () => {
 			console.info("[rtc:sdp] create offer");
 			const offer = await conn.createOffer();
 			await conn.setLocalDescription(offer);
-			const tracks = conn.getTransceivers()
-				.filter((i) => i.direction === "sendonly" || i.direction === "sendrecv")
-				.map((i) => ({ mid: i.mid, kind: i.sender.track?.kind, key: "user" }));
+			const tracks = getTrackMetadata();
 			console.log("tcrs", tracks);
 			sendWebsocket({
 				type: "Offer",
 				sdp: conn.localDescription!.sdp,
-				tracks: [], // TODO
+				tracks,
 			});
 		};
 
@@ -95,16 +122,8 @@ export const DebugWebrtc = () => {
 
 		conn.addEventListener("track", (e) => {
 			console.info("[rtc:track] track", e.track, e.streams, e.transceiver);
-			// tracks.set(e.transceiver.mid, e.transceiver);
-			tracks.set(e.transceiver.mid, e.track);
-			const s = pendingTrackToStream.get(e.transceiver.mid!);
-			if (s) {
-				s.addTrack(e.track);
-				pendingTrackToStream.delete(e.transceiver.mid!);
-			}
+			tracks.set(e.transceiver.mid!, e.track);
 		});
-
-		// conn.addEventListener("signalingstatechange", () => { })
 
 		setRtcState("new");
 		setConn(conn);
@@ -113,7 +132,6 @@ export const DebugWebrtc = () => {
 	api.temp_events.on("sync", async (msg) => {
 		const c = conn();
 		if (msg.type === "VoiceDispatch") {
-			console.log("got signalling message", msg.payload);
 			if (msg.payload.type === "Answer") {
 				console.log("[rtc:signal] accept answer");
 				await c.setRemoteDescription({
@@ -146,35 +164,16 @@ export const DebugWebrtc = () => {
 				// 	// 		if (tcr.mid === mid) tcr.sender.track!.enabled = true;
 				// 	// 	}
 			} else if (msg.payload.type === "Have") {
-				console.log("[rtc:signal] have");
-				// 	const tcri = pendingTracks.findIndex((i) => i.mid === msg.payload.mid);
-				// 	if (typeof tcri !== "number") return;
-				// 	const tcr = pendingTracks[tcri];
-				// 	sendWebsocket({
-				// 		type: "Publish",
-				// 		mid: tcr.mid,
-				// 		kind: tcr.sender.track?.kind === "video" ? "Video" : "Audio",
-				// 		key: "user",
-				// 	});
-				// 	pendingTracks.splice(tcri, 1);
-
-				// 	const { user_id, key, mid } = msg.payload;
-				// 	const stream = streams.get(`${user_id}:${key}`) ?? new MediaStream();
-				// 	const t = tracks.get(mid);
-				// 	if (t) {
-				// 		stream.addTrack(t);
-				// 	} else {
-				// 		pendingTrackToStream.set(mid, stream);
-				// 	}
-				// 	streams.set(`${user_id}:${key}`, stream);
-				// 	const my_user_id = api.users.cache.get("@self")!.id;
-				// 	if (user_id !== my_user_id) {
-				// 		// TODO: only subscribe on demand
-				// 		sendWebsocket({
-				// 			type: "Subscribe",
-				// 			mid,
-				// 		});
-				// 	}
+				console.log(
+					"[rtc:signal] have from " + msg.payload.user_id,
+					msg.payload,
+				);
+				const { user_id, tracks } = msg.payload;
+				for (const track of tracks) {
+					const id = `${user_id}:${track.key}`;
+					const stream = streams.get(id) ?? [];
+					streams.set(id, [...stream, track.mid]);
+				}
 			} else if (msg.payload.type === "Want") {
 				console.log("[rtc:signal] want");
 			} else {
@@ -201,6 +200,27 @@ export const DebugWebrtc = () => {
 	onCleanup(() => {
 		reconnectable = false;
 		conn().close();
+		// // Stop all tracks and clear transceivers
+		// [transceiverMic, transceiverCam, transceiverScreenVideo, transceiverScreenAudio].forEach(tcr => {
+		//     if (tcr?.sender.track) {
+		//         tcr.sender.track.stop();
+		//     }
+		// });
+
+		// // Reset transceiver references
+		// transceiverMic = undefined;
+		// transceiverCam = undefined;
+		// transceiverScreenVideo = undefined;
+		// transceiverScreenAudio = undefined;
+
+		// // Clear other resources
+		// tracks.clear();
+		// streams.clear();
+
+		// const currentConn = conn();
+		// if (currentConn.connectionState !== 'closed') {
+		//     currentConn.close();
+		// }
 	});
 
 	function connect() {
@@ -234,20 +254,24 @@ export const DebugWebrtc = () => {
 		console.log("reconnect");
 		const c = conn();
 
-		if (trackMic) {
-			pendingTracks.push(c.addTransceiver(trackMic));
+		if (transceiverMic?.sender.track) {
+			transceiverMic = c.addTransceiver(transceiverMic.sender.track);
 		}
 
-		if (trackCam) {
-			pendingTracks.push(c.addTransceiver(trackCam));
+		if (transceiverCam?.sender.track) {
+			transceiverCam = c.addTransceiver(transceiverCam.sender.track);
 		}
 
-		if (trackScreenVideo) {
-			pendingTracks.push(c.addTransceiver(trackScreenVideo));
+		if (transceiverScreenVideo?.sender.track) {
+			transceiverScreenVideo = c.addTransceiver(
+				transceiverScreenVideo.sender.track,
+			);
 		}
 
-		if (trackScreenAudio) {
-			pendingTracks.push(c.addTransceiver(trackScreenAudio));
+		if (transceiverScreenAudio?.sender.track) {
+			transceiverScreenAudio = c.addTransceiver(
+				transceiverScreenAudio.sender.track,
+			);
 		}
 	}
 
@@ -285,12 +309,12 @@ export const DebugWebrtc = () => {
 		const tcr = conn().addTransceiver(tracks[0]);
 		console.log("add transceiver", tcr);
 		audio.play();
-		pendingTracks.push(tcr);
 	}
 
 	const toggleMic = async () => {
-		if (trackMic) {
-			trackMic.enabled = !trackMic.enabled;
+		if (transceiverMic?.sender.track) {
+			transceiverMic.sender.track.enabled = !transceiverMic.sender.track
+				.enabled;
 			return;
 		}
 
@@ -306,13 +330,13 @@ export const DebugWebrtc = () => {
 			conn().removeTrack(tcr.sender);
 		});
 		track.enabled = false;
-		pendingTracks.push(tcr);
-		trackMic = track;
+		transceiverMic = tcr;
 	};
 
 	const toggleCam = async () => {
-		if (trackCam) {
-			trackCam.enabled = !trackCam.enabled;
+		if (transceiverCam?.sender.track) {
+			transceiverCam.sender.track.enabled = !transceiverCam.sender.track
+				.enabled;
 			return;
 		}
 
@@ -327,52 +351,52 @@ export const DebugWebrtc = () => {
 		track.addEventListener("ended", () => {
 			conn().removeTrack(tcr.sender);
 		});
-		pendingTracks.push(tcr);
-		track.enabled = false;
-		trackCam = track;
+		// track.enabled = false;
+		transceiverCam = tcr;
 	};
 
 	const toggleScreen = async () => {
-		if (trackScreenVideo) {
-			trackScreenVideo.enabled = !trackScreenVideo.enabled;
-			if (trackScreenAudio) {
-				trackScreenAudio.enabled = !trackScreenAudio.enabled;
-			}
-			return;
-		}
+		// TODO
+		// if (trackScreenVideo) {
+		// 	trackScreenVideo.enabled = !trackScreenVideo.enabled;
+		// 	if (trackScreenAudio) {
+		// 		trackScreenAudio.enabled = !trackScreenAudio.enabled;
+		// 	}
+		// 	return;
+		// }
 
-		const stream = await navigator.mediaDevices.getDisplayMedia({
-			video: true,
-			audio: true,
-		});
+		// const stream = await navigator.mediaDevices.getDisplayMedia({
+		// 	video: true,
+		// 	audio: true,
+		// });
 
-		{
-			const track = stream.getVideoTracks()[0];
-			if (!track) {
-				console.warn("no video track");
-				return;
-			}
-			const tcr = conn().addTransceiver(track);
-			console.log("add transceiver", tcr.mid, tcr);
-			track.addEventListener("ended", () => {
-				conn().removeTrack(tcr.sender);
-			});
-			trackScreenVideo = track;
-		}
+		// {
+		// 	const track = stream.getVideoTracks()[0];
+		// 	if (!track) {
+		// 		console.warn("no video track");
+		// 		return;
+		// 	}
+		// 	const tcr = conn().addTransceiver(track);
+		// 	console.log("add transceiver", tcr.mid, tcr);
+		// 	track.addEventListener("ended", () => {
+		// 		conn().removeTrack(tcr.sender);
+		// 	});
+		// 	trackScreenVideo = track;
+		// }
 
-		{
-			const track = stream.getAudioTracks()[0];
-			if (!track) {
-				console.warn("no audio track");
-				return;
-			}
-			const tcr = conn().addTransceiver(track);
-			console.log("add transceiver", tcr.mid, tcr);
-			track.addEventListener("ended", () => {
-				conn().removeTrack(tcr.sender);
-			});
-			trackScreenAudio = track;
-		}
+		// {
+		// 	const track = stream.getAudioTracks()[0];
+		// 	if (!track) {
+		// 		console.warn("no audio track");
+		// 		return;
+		// 	}
+		// 	const tcr = conn().addTransceiver(track);
+		// 	console.log("add transceiver", tcr.mid, tcr);
+		// 	track.addEventListener("ended", () => {
+		// 		conn().removeTrack(tcr.sender);
+		// 	});
+		// 	trackScreenAudio = track;
+		// }
 	};
 
 	createEffect(() => {
@@ -405,11 +429,22 @@ export const DebugWebrtc = () => {
 				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
 			</div>
 			<For each={[...streams.values()]}>
-				{(t) => (
+				{(tcs) => (
 					<video
 						controls
 						autoplay
-						ref={(el) => el.srcObject = t}
+						ref={(el) => {
+							const stream = new MediaStream();
+							console.log("add stream", tcs, tracks);
+							for (const mid of tcs) {
+								const t = tracks.get(mid);
+								if (t) {
+									console.log("add stream track", mid, t);
+									stream.addTrack(t);
+								}
+							}
+							el.srcObject = stream;
+						}}
 					/>
 				)}
 			</For>

@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 // also causes some issues when trying to load old data, need to add migrations or #[serde(default)] attrs
 // TODO: rename to AuditLogEntry and AuditLogEntryId
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuditLog {
     /// Unique id idenfitying this entry

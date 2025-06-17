@@ -82,3 +82,58 @@ pub struct VoiceStateUpdate {
 //     pub suppress: bool,
 //     pub requested_to_speak_at: Option<Time>,
 // }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TrackMetadata {
+    pub mid: String,
+    pub kind: MediaKindSerde,
+
+    // group tracks together into streams; identical to ssrc but easier to manage client side
+    pub key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum SignallingMessage {
+    /// a sdp offer
+    Offer {
+        sdp: SessionDescription,
+        tracks: Vec<TrackMetadata>,
+    },
+
+    /// a sdp answer
+    Answer { sdp: SessionDescription },
+
+    /// an ice candidate
+    Candidate {
+        candidate: IceCandidate,
+        // not supported by str0m or not needed at all?
+        // sdp_mid: Mid,
+        // sdp_mline_index: u16,
+    },
+
+    // sent by server only
+    Have {
+        thread_id: ThreadId,
+        user_id: UserId,
+        tracks: Vec<TrackMetadata>,
+    },
+
+    /// sent by server and client
+    Want {
+        // tracks: Vec<Mid>,
+        tracks: Vec<String>,
+    },
+
+    /// sent by client.
+    VoiceState { state: Option<VoiceStateUpdate> },
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaKindSerde {
+    Video,
+    Audio,
+}

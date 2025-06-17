@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, Json};
-use common::v1::types::voice::VoiceState;
+use common::v1::types::voice::{SignallingMessage, VoiceState};
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
 use serde_json::Value;
@@ -16,7 +16,10 @@ use crate::{Error, ServerState};
 #[serde(tag = "type")]
 enum Command {
     #[cfg(feature = "voice")]
-    VoiceDispatch { user_id: UserId, payload: Value },
+    VoiceDispatch {
+        user_id: UserId,
+        payload: SignallingMessage,
+    },
 
     #[cfg(feature = "voice")]
     VoiceState {

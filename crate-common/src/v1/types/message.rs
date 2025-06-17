@@ -32,7 +32,7 @@ use super::{
     MessageId, MessageVerId, ThreadId, User,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Message {
@@ -61,7 +61,7 @@ pub struct Message {
 }
 
 /// who/what this message notified on send
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mentions {
     pub users: Vec<UserId>,
@@ -78,7 +78,7 @@ pub struct Mentions {
 
 /// data that has been resolved from the ids, provided on request
 // maybe don't put it in messages, this could be useful elsewhere
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Resolved {
     pub users: Vec<User>,
@@ -101,7 +101,7 @@ pub struct Resolved {
 //     avatar: Option<MediaId>,
 // }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageCreate {
@@ -187,7 +187,7 @@ pub struct MessagePatch {
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageType {
@@ -265,7 +265,7 @@ pub enum MessageType {
 }
 
 /// Information about a message being pinned or unpinned
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePin {
     pub message_id: MessageId,
@@ -274,14 +274,14 @@ pub struct MessagePin {
 }
 
 /// Information about a thread being updated
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageThreadUpdate {
     pub patch: ThreadPatch,
 }
 
 /// Information about the pingback
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageThreadPingback {
     pub source_room_id: RoomId,
@@ -293,7 +293,7 @@ pub struct MessageThreadPingback {
 /// Information about one or more messages being moved between threads
 /// probably want this being sent in both the source and target threads, maybe
 /// with a bit of different styling depending on whether its source/target
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagesMoved {
     // do messages keep their ids when being moved?
@@ -305,7 +305,7 @@ pub struct MessagesMoved {
 }
 
 /// Information about a member being added or removed from a thread
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageMember {
     pub target_user_id: UserId,
@@ -314,7 +314,7 @@ pub struct MessageMember {
 }
 
 /// Following a room and will receive announcement posts from it
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageRoomFollowed {
     pub thread_id: ThreadId,
@@ -323,7 +323,7 @@ pub struct MessageRoomFollowed {
 }
 
 /// audit log entries as a message (builtin moderation logging?)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationLog {
     pub audit_log_entry: AuditLog,
@@ -331,7 +331,7 @@ pub struct MessageModerationLog {
 
 /// automatic moderation reports
 #[cfg(feature = "feat_automod")]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationAuto {
     pub redex_id: RedexId,
@@ -339,7 +339,7 @@ pub struct MessageModerationAuto {
     pub context: Vec<AutomodContext>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(no_recursion))]
 #[serde(tag = "type", content = "data")]
 pub enum AutomodContext {
@@ -352,14 +352,14 @@ pub enum AutomodContext {
 }
 
 /// a report that moderators should look at
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationReport {
     pub report: Report,
 }
 
 /// a bot command
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageBotCommand {
     pub command_id: String,

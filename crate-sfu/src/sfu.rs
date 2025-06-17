@@ -55,13 +55,6 @@ impl Sfu {
         trace!("new rpc message {req:?}");
 
         let user_id = req.user_id.unwrap();
-        let ctl = match self.peers.entry(user_id) {
-            dashmap::Entry::Occupied(occupied_entry) => occupied_entry.into_ref(),
-            dashmap::Entry::Vacant(vacant_entry) => {
-                let peer = Peer::spawn(peer_send.clone(), user_id).await?;
-                vacant_entry.insert(peer)
-            }
-        };
 
         match &req.inner {
             SignallingMessage::VoiceState { state } => {
@@ -82,23 +75,32 @@ impl Sfu {
                 };
 
                 // user connected or moved
-                let state = VoiceState {
+                // let state = VoiceState {
+                //     user_id,
+                //     thread_id: state.thread_id,
+                //     joined_at: Time::now_utc(),
+                // };
+                // let old = self.voice_states.insert(user_id, state.clone());
+                // debug!("got voice state {state:?}");
+                let new_state = VoiceState {
                     user_id,
                     thread_id: state.thread_id,
                     joined_at: Time::now_utc(),
                 };
-                let old = self.voice_states.insert(user_id, state.clone());
-                debug!("got voice state {state:?}");
+                let old = self.voice_states.insert(user_id, new_state.clone());
+                debug!("got voice state {new_state:?}");
 
                 // broadcast all tracks in a thread to the user
-                let peer = self.peers.get(&user_id).unwrap();
-                for m in &self.tracks {
-                    if m.peer_id == user_id {
+                let peer = self
+                    .ensure_peer(user_id, peer_send.clone(), &new_state)
+                    .await?;
+                for track in &self.tracks {
+                    if track.peer_id == user_id {
                         continue;
                     }
 
-                    let Some(other) = self.voice_states.get(&m.peer_id) else {
-                        warn!("dead track not cleaned up?");
+                    let Some(other) = self.voice_states.get(&track.peer_id) else {
+                        warn!("dead track not cleaned up for peer {}", track.peer_id);
                         continue;
                     };
 
@@ -106,21 +108,31 @@ impl Sfu {
                         continue;
                     }
 
-                    peer.send(PeerCommand::MediaAdded(m.clone()))?;
+                    if let Err(e) = peer.send(PeerCommand::MediaAdded(track.clone())) {
+                        warn!("failed to send MediaAdded to peer {}: {}", user_id, e);
+                    }
                 }
 
                 // tell everyone about the voice state update
                 self.emit(SfuEvent::VoiceState {
                     user_id,
-                    state: Some(state),
+                    state: Some(new_state),
                     old,
                 })
                 .await?;
             }
-            _ => {}
-        }
+            _ => {
+                let Some(voice_state) = self.voice_states.get(&user_id) else {
+                    warn!("no voice state for {user_id}");
+                    return Ok(());
+                };
 
-        ctl.send(PeerCommand::Signalling(req.inner))?;
+                let peer = self
+                    .ensure_peer(user_id, peer_send.clone(), &voice_state)
+                    .await?;
+                peer.send(PeerCommand::Signalling(req.inner))?;
+            }
+        }
 
         Ok(())
     }
@@ -189,6 +201,22 @@ impl Sfu {
         }
 
         Ok(())
+    }
+
+    async fn ensure_peer(
+        &self,
+        user_id: UserId,
+        peer_send: UnboundedSender<PeerEventEnvelope>,
+        voice_state: &VoiceState,
+    ) -> Result<UnboundedSender<PeerCommand>> {
+        match self.peers.entry(user_id) {
+            dashmap::Entry::Occupied(entry) => Ok(entry.get().clone()),
+            dashmap::Entry::Vacant(entry) => {
+                let peer_sender = Peer::spawn(peer_send, user_id, voice_state.clone()).await?;
+                entry.insert(peer_sender.clone());
+                Ok(peer_sender)
+            }
+        }
     }
 
     async fn emit(&self, event: SfuEvent) -> Result<()> {

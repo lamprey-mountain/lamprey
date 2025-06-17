@@ -141,7 +141,7 @@ pub enum SyncTransport {
 // FIXME: i don't know why utoipa is breaking here
 
 /// an upsert to global state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageSynchronizeGlobal {
     pub room: HashMap<RoomId, Option<Room>>,
@@ -153,7 +153,7 @@ pub struct MessageSynchronizeGlobal {
 }
 
 /// an upsert to a room's state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageSynchronizeRoom {
     pub room_id: RoomId,
@@ -164,7 +164,7 @@ pub struct MessageSynchronizeRoom {
 }
 
 /// an upsert to a thread's state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageSynchronizeThread {
     pub thread_id: ThreadId,
@@ -187,7 +187,7 @@ pub struct MessageSynchronizeThread {
 // }
 
 /// a raw event from the server
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
 pub enum Event {
@@ -200,7 +200,7 @@ pub enum Event {
 }
 
 /// a payload
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
 pub enum Payload {

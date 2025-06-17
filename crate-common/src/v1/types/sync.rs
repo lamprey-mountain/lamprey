@@ -10,16 +10,18 @@ use crate::v1::types::{
 };
 
 use super::{
-    emoji::EmojiCustom, reaction::ReactionKey, voice::VoiceState, EmojiId, InviteCode, Message,
-    MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId,
-    SessionToken, Thread, ThreadId, User, UserId,
+    emoji::EmojiCustom,
+    reaction::ReactionKey,
+    voice::{SignallingMessage, VoiceState},
+    EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
+    Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
 
 mod sync2;
 
 pub use sync2::{SyncCompression, SyncFormat, SyncParams, SyncVersion};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageClient {
@@ -62,14 +64,14 @@ pub struct SyncResume {
     pub seq: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageEnvelope {
     #[serde(flatten)]
     pub payload: MessagePayload,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
 #[allow(clippy::large_enum_variant)]
@@ -107,7 +109,7 @@ pub enum MessagePayload {
 
 // TODO(#259): rename to NounVerb
 // maybe replace *Delete with *Upsert with state = deleted (but don't send actual full item content)
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 #[allow(clippy::large_enum_variant)]
@@ -234,7 +236,7 @@ pub enum MessageSync {
         user_id: UserId,
         // TODO: multiple servers
         // server_id: ServerId,
-        payload: Value,
+        payload: SignallingMessage,
     },
 
     VoiceState {

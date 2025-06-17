@@ -1,11 +1,17 @@
 use std::{collections::HashMap, time::Instant};
 
-use crate::{MediaData, PeerEvent, SignallingMessage, TrackMetadata};
+use crate::{MediaData, PeerEvent, SfuTrack, SignallingMessage};
 use anyhow::Result;
-use common::v1::types::{voice::SessionDescription, UserId};
+use common::{
+    unstable::types::media::stream::Track,
+    v1::types::{
+        voice::{MediaKindSerde, SessionDescription, TrackMetadata, VoiceState},
+        UserId,
+    },
+};
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
-    media::{Direction, Mid},
+    media::{Direction, MediaKind, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -17,7 +23,7 @@ use tokio::{
 };
 use tracing::{debug, error, info, trace, warn};
 
-use crate::{PeerCommand, PeerEventEnvelope, SfuTrack, TrackIn, TrackOut, TrackState};
+use crate::{PeerCommand, PeerEventEnvelope, TrackIn, TrackOut, TrackState};
 
 #[derive(Debug)]
 pub struct Peer {
@@ -29,6 +35,7 @@ pub struct Peer {
     // outbound: HashMap<Mid, TrackOut>,
     sdp_pending: Option<SdpPendingOffer>,
     user_id: UserId,
+    voice_state: VoiceState,
     commands: UnboundedReceiver<PeerCommand>,
     events: UnboundedSender<PeerEventEnvelope>,
 }
@@ -37,6 +44,7 @@ impl Peer {
     pub async fn spawn(
         sfu_send: UnboundedSender<PeerEventEnvelope>,
         user_id: UserId,
+        voice_state: VoiceState,
     ) -> Result<UnboundedSender<PeerCommand>> {
         info!("create new peer {user_id}");
 
@@ -51,6 +59,12 @@ impl Peer {
         debug!("listen on {}", socket.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
 
+        let addr = crate::util::select_host_address_ipv6();
+        let socket = UdpSocket::bind(format!("[{addr}]:0")).await?;
+        let candidate = Candidate::host(socket.local_addr()?, "udp")?;
+        debug!("listen on {}", socket.local_addr().unwrap());
+        rtc.add_local_candidate(candidate.clone());
+
         let (send, recv) = mpsc::unbounded_channel();
 
         let mut peer = Self {
@@ -61,6 +75,7 @@ impl Peer {
             outbound: vec![],
             sdp_pending: None,
             user_id,
+            voice_state,
             commands: recv,
             events: sfu_send,
         };
@@ -96,38 +111,40 @@ impl Peer {
                         Event::MediaAdded(m) => {
                             // TODO: enforce max bitrate, resolution
                             debug!("media added {m:?}");
-                            self.inbound.insert(
-                                m.mid,
-                                TrackIn {
-                                    kind: m.kind,
-                                    state: TrackState::Negotiating(m.mid),
-                                },
-                            );
 
-                            // broadcast to other sfus
-                            self.emit(PeerEvent::MediaAdded(SfuTrack {
-                                kind: m.kind,
-                                mid: m.mid,
-                                peer_id: self.user_id,
-                                key: None,
-                            }))?;
+                            let mid = m.mid;
 
-                            // broadcast to other users
-                            self.emit(PeerEvent::Signalling(SignallingMessage::Have {
-                                user_id: self.user_id,
-                                tracks: vec![TrackMetadata {
-                                    mid: m.mid,
-                                    kind: match m.kind {
-                                        str0m::media::MediaKind::Audio => {
-                                            crate::MediaKindSerde::Audio
-                                        }
-                                        str0m::media::MediaKind::Video => {
-                                            crate::MediaKindSerde::Video
-                                        }
-                                    },
-                                    key: "".to_owned(),
-                                }],
-                            }))?;
+                            let mut events = vec![];
+                            if let Some(track) = self.inbound.get_mut(&mid) {
+                                if let TrackState::Negotiating(_) = track.state {
+                                    track.state = TrackState::Open(mid);
+
+                                    events.push(PeerEvent::MediaAdded(SfuTrack {
+                                        mid,
+                                        kind: track.kind,
+                                        peer_id: self.user_id,
+                                        key: track.key.clone(),
+                                        thread_id: track.thread_id,
+                                    }));
+
+                                    events.push(PeerEvent::Signalling(SignallingMessage::Have {
+                                        user_id: self.user_id,
+                                        thread_id: track.thread_id,
+                                        tracks: vec![TrackMetadata {
+                                            mid: mid.to_string(),
+                                            kind: match track.kind {
+                                                MediaKind::Audio => MediaKindSerde::Audio,
+                                                MediaKind::Video => MediaKindSerde::Video,
+                                            },
+                                            key: track.key.clone(),
+                                        }],
+                                    }));
+                                }
+                            }
+
+                            for event in events {
+                                self.emit(event)?;
+                            }
                         }
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
@@ -193,7 +210,7 @@ impl Peer {
         match command {
             PeerCommand::Signalling(cmd) => {
                 debug!("handle peer command {cmd:?}");
-                self.handle_user_command(cmd).await?;
+                self.handle_signalling(cmd).await?;
             }
             PeerCommand::MediaAdded(t) => {
                 debug!("handle peer command {t:?}");
@@ -205,6 +222,8 @@ impl Peer {
                     source_mid: t.mid,
                     enabled: false,
                     needs_keyframe: false,
+                    thread_id: t.thread_id,
+                    key: t.key,
                 });
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
@@ -223,15 +242,15 @@ impl Peer {
             return;
         };
 
-        if !track.enabled {
-            return;
-        }
+        // if !track.enabled {
+        //     return;
+        // }
 
         let Some(mid) = track.state.mid() else {
             return;
         };
 
-        let Some(mut writer) = self.rtc.writer(mid) else {
+        let Some(writer) = self.rtc.writer(mid) else {
             return;
         };
 
@@ -254,7 +273,7 @@ impl Peer {
         }
     }
 
-    async fn handle_user_command(&mut self, command: SignallingMessage) -> Result<()> {
+    async fn handle_signalling(&mut self, command: SignallingMessage) -> Result<()> {
         match command {
             SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
@@ -265,9 +284,15 @@ impl Peer {
                     warn!("invalid candidate: {candidate:?}")
                 }
             }
-            SignallingMessage::Want { tracks } => todo!(),
-            SignallingMessage::Have { .. } => {}
-            SignallingMessage::VoiceState { .. } => {}
+            SignallingMessage::Want { tracks: _ } => todo!(),
+            SignallingMessage::Have {
+                tracks,
+                user_id,
+                thread_id,
+            } => panic!("server only"),
+            SignallingMessage::VoiceState { state } => {
+                self.voice_state.thread_id = state.unwrap().thread_id;
+            }
         }
         Ok(())
     }
@@ -282,6 +307,33 @@ impl Peer {
                     track.state = TrackState::Open(m);
                 }
             }
+
+            // let meta = self.inbound.iter().map(|(mid, a)| TrackMetadata {
+            //     mid: mid.to_string(),
+            //     kind: match a.kind {
+            //         str0m::media::MediaKind::Audio => MediaKindSerde::Audio,
+            //         str0m::media::MediaKind::Video => MediaKindSerde::Video,
+            //     },
+            //     key: a.key.clone(),
+            // }).collect();
+
+            // for track in self.inbound.values_mut() {
+            //     if let TrackState::Negotiating(m) = track.state {
+            //         track.state = TrackState::Open(m);
+            //         events.push(PeerEvent::Signalling(SignallingMessage::Have {
+            //             user_id: self.user_id,
+            //             thread_id: self.voice_state.thread_id,
+            //             tracks: vec![TrackMetadata {
+            //                 mid: m.to_string(),
+            //                 kind: match track.kind {
+            //                     str0m::media::MediaKind::Audio => MediaKindSerde::Audio,
+            //                     str0m::media::MediaKind::Video => MediaKindSerde::Video,
+            //                 },
+            //                 key: track.key.to_owned(),
+            //             }],
+            //         }));
+            //     }
+            // }
         }
 
         Ok(())
@@ -298,11 +350,24 @@ impl Peer {
             }
         }
 
-        // // redo renegotiate?
-        // // delete all outbound, readd ones that work
-        // for track in tracks {
-        //     self.outbound.entry(track.mid);
-        // }
+        // TODO: send clear events/track list to other peers
+        // TODO: verify that this does what i think it does
+        self.inbound.clear();
+        for track in tracks {
+            let mid = Mid::from(track.mid.as_str());
+            self.inbound.insert(
+                mid,
+                TrackIn {
+                    kind: match track.kind {
+                        MediaKindSerde::Video => MediaKind::Video,
+                        MediaKindSerde::Audio => MediaKind::Audio,
+                    },
+                    state: TrackState::Negotiating(mid),
+                    thread_id: self.voice_state.thread_id,
+                    key: track.key,
+                },
+            );
+        }
 
         self.sdp_pending = None;
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {

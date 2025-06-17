@@ -19,20 +19,19 @@ pub fn select_host_address_ipv4() -> IpAddr {
     panic!("Found no usable network interface");
 }
 
-// TODO: ipv6 support
-// pub fn select_host_address_ipv6() -> IpAddr {
-//     let system = System::new();
-//     let networks = system.networks().unwrap();
+pub fn select_host_address_ipv6() -> IpAddr {
+    let system = System::new();
+    let networks = system.networks().unwrap();
 
-//     for net in networks.values() {
-//         for n in &net.addrs {
-//             if let systemstat::IpAddr::V6(v) = n.addr {
-//                 if !v.is_loopback() && !v.is_unicast_link_local() && !v.is_multicast() {
-//                     return IpAddr::V6(v);
-//                 }
-//             }
-//         }
-//     }
+    for net in networks.values() {
+        for n in &net.addrs {
+            if let systemstat::IpAddr::V6(v) = n.addr {
+                if !v.is_loopback() && !v.is_unicast_link_local() && !v.is_multicast() {
+                    return IpAddr::V6(v);
+                }
+            }
+        }
+    }
 
-//     panic!("Found no usable network interface");
-// }
+    panic!("Found no usable network interface");
+}

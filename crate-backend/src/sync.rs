@@ -5,6 +5,7 @@ use axum::extract::ws::{Message, WebSocket};
 use common::v1::types;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
+use common::v1::types::voice::SignallingMessage;
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -316,7 +317,10 @@ impl Connection {
             MessageSync::ReactionRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::VoiceDispatch { user_id, payload } => match payload {
+                SignallingMessage::Have { thread_id, .. } => AuthCheck::Thread(*thread_id),
+                _ => AuthCheck::User(*user_id),
+            },
             MessageSync::VoiceState { state, user_id, .. } => {
                 if let Some(state) = dbg!(state) {
                     AuthCheck::Thread(state.thread_id)
