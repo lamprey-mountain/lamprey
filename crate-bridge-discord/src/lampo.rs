@@ -190,6 +190,8 @@ impl LampoHandle {
                 &types::PuppetCreate {
                     name,
                     description: None,
+                    bot: false, // TODO: mark remote bots as bots
+                    system: false,
                 },
             )
             .await?;

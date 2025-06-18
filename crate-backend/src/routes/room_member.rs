@@ -6,7 +6,7 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId, UserType,
+    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -113,23 +113,20 @@ async fn room_member_add(
         UserIdReq::UserId(id) => id,
     };
     let target_user = srv.users.get(target_user_id).await?;
-    match target_user.user_type {
-        UserType::Puppet { owner_id, .. } => {
-            if owner_id != auth_user_id {
-                return Err(Error::BadStatic("not puppet owner"));
-            }
-            if !matches!(
-                auth_user.user_type,
-                UserType::Bot {
-                    is_bridge: true,
-                    ..
-                }
-            ) {
-                return Err(Error::BadStatic("bot is not a bridge"));
-            }
-        }
-        _ => return Err(Error::BadStatic("can't add that user")),
+    let Some(puppet) = target_user.puppet else {
+        return Err(Error::BadStatic("can't add that user"));
+    };
+    let Some(bot) = auth_user.bot else {
+        return Err(Error::BadStatic("only bots can use this"));
+    };
+    if !bot.is_bridge {
+        return Err(Error::BadStatic("bot is not a bridge"));
     }
+
+    if puppet.owner_id != auth_user_id {
+        return Err(Error::BadStatic("not puppet owner"));
+    }
+
     let d = s.data();
     d.room_member_put(
         room_id,

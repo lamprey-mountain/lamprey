@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{self, BotAccess, BotOwner, ExternalPlatform, UserState, UserType};
+use common::v1::types::{self, BotAccess, ExternalPlatform, UserState};
 use serde::Deserialize;
+use serde_json::Value;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use url::Url;
@@ -22,90 +23,71 @@ pub struct DbUser {
     pub name: String,
     pub description: Option<String>,
     pub avatar: Option<Uuid>,
-    pub r#type: DbUserType,
-    pub state: DbUserState,
-    pub state_updated_at: PrimitiveDateTime,
-    pub puppet_external_platform: Option<String>,
-    pub puppet_external_id: Option<String>,
-    pub puppet_external_url: Option<String>,
-    pub puppet_alias_id: Option<Uuid>,
-    pub bot_is_bridge: bool,
-    pub bot_access: DbBotAccess,
+    pub puppet: Option<Value>,
+    pub bot: Option<Value>,
+    pub system: bool,
+    pub guest: Option<Value>,
+    pub suspended: Option<Value>,
+    pub registered_at: Option<time::PrimitiveDateTime>,
+    pub deleted_at: Option<time::PrimitiveDateTime>,
 }
 
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_type")]
-pub enum DbUserType {
-    Default,
-    Bot,
-    System,
-    Puppet,
-}
+// #[derive(Deserialize, sqlx::Type)]
+// #[sqlx(type_name = "bot_access_type")]
+// pub enum DbBotAccess {
+//     Private,
+//     Public,
+//     PublicDiscoverable,
+// }
 
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "user_state")]
-pub enum DbUserState {
-    Active,
-    Suspended,
-    Deleted,
-}
+// impl From<DbBotAccess> for BotAccess {
+//     fn from(value: DbBotAccess) -> Self {
+//         match value {
+//             DbBotAccess::Private => BotAccess::Private,
+//             DbBotAccess::Public => BotAccess::Public {
+//                 is_discoverable: false,
+//             },
+//             DbBotAccess::PublicDiscoverable => BotAccess::Public {
+//                 is_discoverable: true,
+//             },
+//         }
+//     }
+// }
 
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "bot_access_type")]
-pub enum DbBotAccess {
-    Private,
-    Public,
-    PublicDiscoverable,
-}
+// impl From<BotAccess> for DbBotAccess {
+//     fn from(value: BotAccess) -> Self {
+//         match value {
+//             BotAccess::Private => DbBotAccess::Private,
+//             BotAccess::Public { is_discoverable } => {
+//                 if is_discoverable {
+//                     DbBotAccess::Public
+//                 } else {
+//                     DbBotAccess::PublicDiscoverable
+//                 }
+//             }
+//         }
+//     }
+// }
 
-impl From<DbBotAccess> for BotAccess {
-    fn from(value: DbBotAccess) -> Self {
-        match value {
-            DbBotAccess::Private => BotAccess::Private,
-            DbBotAccess::Public => BotAccess::Public {
-                is_discoverable: false,
-            },
-            DbBotAccess::PublicDiscoverable => BotAccess::Public {
-                is_discoverable: true,
-            },
-        }
-    }
-}
+// impl From<DbUserState> for UserState {
+//     fn from(value: DbUserState) -> Self {
+//         match value {
+//             DbUserState::Active => UserState::Active,
+//             DbUserState::Suspended => UserState::Suspended,
+//             DbUserState::Deleted => UserState::Deleted,
+//         }
+//     }
+// }
 
-impl From<BotAccess> for DbBotAccess {
-    fn from(value: BotAccess) -> Self {
-        match value {
-            BotAccess::Private => DbBotAccess::Private,
-            BotAccess::Public { is_discoverable } => {
-                if is_discoverable {
-                    DbBotAccess::Public
-                } else {
-                    DbBotAccess::PublicDiscoverable
-                }
-            }
-        }
-    }
-}
-
-impl From<DbUserState> for UserState {
-    fn from(value: DbUserState) -> Self {
-        match value {
-            DbUserState::Active => UserState::Active,
-            DbUserState::Suspended => UserState::Suspended,
-            DbUserState::Deleted => UserState::Deleted,
-        }
-    }
-}
-
-impl From<UserState> for DbUserState {
-    fn from(value: UserState) -> Self {
-        match value {
-            UserState::Active => DbUserState::Active,
-            UserState::Suspended => DbUserState::Suspended,
-            UserState::Deleted => DbUserState::Deleted,
-        }
-    }
-}
+// impl From<UserState> for DbUserState {
+//     fn from(value: UserState) -> Self {
+//         match value {
+//             UserState::Active => DbUserState::Active,
+//             UserState::Suspended => DbUserState::Suspended,
+//             UserState::Deleted => DbUserState::Deleted,
+//         }
+//     }
+// }
 
 impl From<DbUser> for User {
     fn from(row: DbUser) -> Self {
@@ -116,95 +98,13 @@ impl From<DbUser> for User {
             description: row.description,
             status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
-            user_type: match row.r#type {
-                DbUserType::Default => UserType::Default,
-                DbUserType::Puppet => UserType::Puppet {
-                    owner_id: row.parent_id.unwrap().into(),
-                    external_platform: match row.puppet_external_platform {
-                        Some(p) => match p.as_str() {
-                            "discord" => ExternalPlatform::Discord,
-                            _ => ExternalPlatform::Other(p),
-                        },
-                        None => panic!("no platform set for puppet"),
-                    },
-                    external_id: row.puppet_external_id.expect("no id set for puppet"),
-                    external_url: row.puppet_external_url.map(|s| Url::parse(&s).unwrap()),
-                    alias_id: row.puppet_alias_id.map(Into::into),
-                },
-                DbUserType::Bot => UserType::Bot {
-                    owner: BotOwner::User {
-                        user_id: row.parent_id.unwrap().into(),
-                    },
-                    access: row.bot_access.into(),
-                    is_bridge: row.bot_is_bridge,
-                },
-                DbUserType::System => UserType::System,
-            },
-            state: row.state.into(),
-            state_updated_at: row.state_updated_at.into(),
-        }
-    }
-}
-
-impl From<User> for DbUser {
-    fn from(u: User) -> Self {
-        let base = DbUser {
-            id: u.id,
-            version_id: u.version_id,
-            parent_id: None,
-            name: u.name,
-            description: u.description,
-            avatar: u.avatar.map(|i| i.into_inner()),
-            r#type: match &u.user_type {
-                UserType::Default => DbUserType::Default,
-                UserType::Bot { .. } => DbUserType::Bot,
-                UserType::Puppet { .. } => DbUserType::Puppet,
-                UserType::System => DbUserType::System,
-            },
-            state: u.state.into(),
-            state_updated_at: {
-                let ts = u.state_updated_at.into_inner();
-                PrimitiveDateTime::new(ts.date(), ts.time())
-            },
-            puppet_external_platform: None,
-            puppet_external_id: None,
-            puppet_external_url: None,
-            puppet_alias_id: None,
-            bot_is_bridge: false,
-            bot_access: DbBotAccess::Private,
-        };
-        match u.user_type {
-            UserType::Bot {
-                owner,
-                access,
-                is_bridge,
-            } => DbUser {
-                parent_id: match owner {
-                    BotOwner::User { user_id } => Some(user_id.into_inner()),
-                    _ => todo!(),
-                },
-                bot_access: access.into(),
-                bot_is_bridge: is_bridge,
-                ..base
-            },
-            UserType::Puppet {
-                owner_id,
-                external_platform,
-                external_id,
-                external_url,
-                alias_id,
-            } => DbUser {
-                parent_id: Some(owner_id.into_inner()),
-                puppet_external_id: Some(external_id),
-                puppet_external_url: external_url.map(|u| u.to_string()),
-                puppet_external_platform: Some(match external_platform {
-                    ExternalPlatform::Discord => "Discord".to_string(),
-                    ExternalPlatform::Other(p) => p,
-                }),
-                puppet_alias_id: alias_id.map(Into::into),
-                ..base
-            },
-            _ => base,
+            bot: row.bot.map(|r| serde_json::from_value(dbg!(r)).unwrap()),
+            puppet: row.puppet.map(|r| serde_json::from_value(r).unwrap()),
+            guest: row.guest.map(|r| serde_json::from_value(r).unwrap()),
+            suspended: row.suspended.map(|r| serde_json::from_value(r).unwrap()),
+            system: row.system,
+            registered_at: row.registered_at.map(|i| i.into()),
+            deleted_at: row.deleted_at.map(|i| i.into()),
         }
     }
 }
@@ -213,50 +113,39 @@ impl From<User> for DbUser {
 impl DataUser for Postgres {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User> {
         let user_id = Uuid::now_v7();
-        let user: DbUser = User {
+        let user = User {
             id: user_id.into(),
             version_id: user_id.into(),
             name: patch.name,
             description: patch.description,
             avatar: None,
-            user_type: patch.user_type,
-            state: UserState::Active,
-            state_updated_at: Time::now_utc(),
             status: types::user_status::Status::online(),
-        }
-        .into();
-        let row = query_as!(
-            DbUser,
+            bot: patch.bot,
+            system: false, // TODO: system users/messages
+            puppet: patch.puppet,
+            guest: None,         // TODO: guest users
+            suspended: None,     // TODO: account suspension
+            registered_at: None, // FIXME
+            deleted_at: None,
+        };
+        query!(
             r#"
-            INSERT INTO usr (
-                id, version_id, parent_id, name, description, state, state_updated_at, type, avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access,
-                can_fork
-            )
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, false)
-            RETURNING
-                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, bot, suspended, can_fork)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)
         "#,
-            user.id.into_inner(),
-            user.version_id.into_inner(),
-            user.parent_id,
+            *user.id,
+            *user.version_id,
+            patch.parent_id.map(|i| *i),
             user.name,
             user.description,
-            user.state as _,
-            user.state_updated_at,
-            user.r#type as _,
-            user.avatar,
-            user.puppet_external_platform,
-            user.puppet_external_id,
-            user.puppet_external_url,
-            user.puppet_alias_id,
-            user.bot_is_bridge,
-            user.bot_access as _,
+            user.avatar.map(|i| *i),
+            serde_json::to_value(user.puppet)?,
+            serde_json::to_value(user.bot)?,
+            serde_json::to_value(user.suspended)?,
         )
-        .fetch_one(&self.pool)
+        .execute(&self.pool)
         .await?;
-        Ok(row.into())
+        self.user_get(user_id.into()).await
     }
 
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId> {
@@ -265,13 +154,11 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT
-                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
+            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
-            user_id.into_inner()
+            *user_id
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -280,8 +167,8 @@ impl DataUser for Postgres {
         let avatar = patch.avatar.unwrap_or(user.avatar).map(|i| i.into_inner());
         query!(
             "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",
-            user_id.into_inner(),
-            version_id.into_inner(),
+            *user_id,
+            *version_id,
             patch.name.unwrap_or(user.name),
             patch.description.unwrap_or(user.description),
             avatar,
@@ -296,8 +183,8 @@ impl DataUser for Postgres {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
-            "UPDATE usr SET state = 'Deleted', state_updated_at = $2 WHERE id = $1",
-            user_id.into_inner(),
+            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+            *user_id,
             now
         )
         .execute(&self.pool)
@@ -309,9 +196,7 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT
-                id, version_id, parent_id, name, description, state as "state: _", state_updated_at, type as "type: _", avatar,
-                puppet_external_platform, puppet_external_id, puppet_external_url, puppet_alias_id, bot_is_bridge, bot_access as "bot_access: _"
+            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
         "#,
             id.into_inner()
@@ -330,7 +215,7 @@ impl DataUser for Postgres {
         let id = query_scalar!(
             r#"
             SELECT id FROM usr
-            WHERE parent_id = $1 AND puppet_external_platform = $2 AND puppet_external_id = $3
+            WHERE parent_id = $1 AND puppet->>'external_platform' = $2 AND puppet->>'external_id' = $3
             "#,
             owner_id.into_inner(),
             external_platform,

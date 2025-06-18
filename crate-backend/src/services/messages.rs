@@ -284,7 +284,7 @@ impl ServiceMessages {
                 MessageType::DefaultTagged(m) => Some(m.embeds.clone()),
                 _ => None,
             };
-            if let Some(embeds) = dbg!(embeds) {
+            if let Some(embeds) = embeds {
                 let srv = s.services();
                 for (ordering, link) in LinkFinder::new().links(content).enumerate() {
                     if let Some(url) = link.as_str().parse::<Url>().ok() {

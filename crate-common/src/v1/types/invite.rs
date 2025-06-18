@@ -18,7 +18,7 @@ use super::{Room, Thread, User};
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("a1b2c3")))]
 pub struct InviteCode(pub String);
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Invite {
     /// the invite code for this invite
@@ -69,7 +69,7 @@ pub struct InviteWithMetadata {
 }
 
 /// where this invite leads
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum InviteTarget {
@@ -204,23 +204,10 @@ impl Invite {
     }
 }
 
-// this runs into a recursion problem
-// #[derive(Serialize)]
-// struct InviteSer<'a> {
-//     #[serde(flatten)]
-//     invite: &'a Invite,
-//     is_dead: bool,
-// }
+impl PartialEq for Invite {
+    fn eq(&self, other: &Self) -> bool {
+        self.code == other.code
+    }
+}
 
-// impl Serialize for Invite {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         let s = InviteSer {
-//             invite: self,
-//             is_dead: self.is_dead(),
-//         };
-//         s.serialize(serializer)
-//     }
-// }
+impl Eq for Invite {}

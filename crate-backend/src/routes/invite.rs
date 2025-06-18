@@ -293,6 +293,7 @@ pub async fn invite_room_list(
 /// Invite user create (TODO)
 ///
 /// Create an invite that goes to a user
+/// Using this invite will make you friends
 #[utoipa::path(
     post,
     path = "/user/{user_id}/invite",

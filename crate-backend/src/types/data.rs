@@ -1,9 +1,9 @@
 use common::v1::types::{
     thread::chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     util::Time,
-    MediaId, MessageId, MessageType, MessageVerId, Permission, Role, RoleId, RoleVerId, Room,
-    RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, Thread, ThreadId,
-    ThreadMembership, ThreadPrivate, ThreadPublic, ThreadVerId, UserId, UserType,
+    Bot, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
+    RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
+    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadVerId, UserId,
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -23,7 +23,8 @@ pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
-    pub user_type: UserType,
+    pub bot: Option<Bot>,
+    pub puppet: Option<Puppet>,
 }
 
 #[derive(sqlx::Type)]

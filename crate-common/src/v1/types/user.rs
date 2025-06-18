@@ -14,7 +14,7 @@ use crate::v1::types::{MediaId, RoomId, ThreadId};
 use super::user_config::UserConfig;
 use super::{UserId, UserVerId};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct User {
@@ -36,18 +36,80 @@ pub struct User {
     // it's nice to have but is redundant, immutable, and common data
     pub avatar: Option<MediaId>,
 
-    #[serde(flatten)]
-    pub user_type: UserType,
-
-    pub state: UserState,
-    pub state_updated_at: Time,
+    pub bot: Option<Bot>,
+    pub system: bool,
+    pub puppet: Option<Puppet>,
+    pub guest: Option<Guest>,
+    pub suspended: Option<Suspended>,
     pub status: Status,
-    // pub deleted_at: Option<Time>,
-    // pub suspended_at: Option<Time>,
-    // pub suspended_reason: SuspendedReason, // ???
+    pub registered_at: Option<Time>,
+    pub deleted_at: Option<Time>,
+    // pub email: Vec<Email>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Suspended {
+    pub at: Time,
+    pub until: Option<Time>,
+    pub reason: String,
+}
+
+/// represents a user on another platform
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Puppet {
+    /// the user who created this puppet
+    pub owner_id: UserId,
+
+    /// what platform this puppet is connected to
+    pub external_platform: ExternalPlatform,
+
+    /// an opaque identifier from the other platform
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 8192)
+    )]
+    pub external_id: String,
+
+    /// a url on the other platform that this account can be reached at
+    pub external_url: Option<Url>,
+
+    /// makes two users be considered the same user, for importing
+    /// stuff from other platforms
+    /// can you alias to another puppet?
+    pub alias_id: Option<UserId>,
+}
+
+/// a special type of bot designed to represent a user on another platform
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Bot {
+    /// who has control over this bot
+    pub owner_id: UserId,
+
+    /// who can use the bot
+    pub access: BotAccess,
+
+    /// enables managing Puppet users
+    // maybe all bots/user types can create puppets, but there's an extra permission for bridging?
+    pub is_bridge: bool,
+    // do i really need all these urls properties, or can i get away with a vec?
+    // url_terms_of_service: Option<Url>,
+    // url_privacy_policy: Option<Url>,
+    // url_help_docs: Vec<Url>,
+    // url_main_site: Vec<Url>,
+    // url_interactions: Vec<Url>, // webhook
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Guest {
+    /// if this guest user can register
+    pub registerable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UserWithPrivate {
@@ -59,6 +121,7 @@ pub struct UserWithPrivate {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
+#[deprecated]
 pub struct UserCreate {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
@@ -70,25 +133,33 @@ pub struct UserCreate {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
-
-    #[serde(flatten)]
-    pub user_type: UserType,
 }
+
+pub struct BotCreate;
+pub struct GuestCreate;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct PuppetCreate {
+    /// display name
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
 
+    /// about/bio
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
+
+    /// if this is a remote bot
+    pub bot: bool,
+
+    /// if this is for the service itself. usually paired with bot: true
+    pub system: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -114,80 +185,26 @@ pub struct UserPatch {
     pub avatar: Option<Option<MediaId>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-pub enum UserType {
-    /// a normal user
-    Default,
+// // TODO: later
+// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// #[serde(tag = "owner_type")]
+// pub enum BotOwner {
+//     /// owned by a thread (ie. for webhooks)
+//     Thread { thread_id: ThreadId },
 
-    /// automated account
-    Bot {
-        /// who/what has control over this bot
-        #[serde(flatten)]
-        owner: BotOwner,
+//     /// owned by a room (one off room-specific bot account)
+//     Room { room_id: RoomId },
 
-        /// who can use the bot
-        access: BotAccess,
+//     /// owned by a user (most bots)
+//     User { user_id: UserId },
 
-        /// enables managing Puppet users
-        is_bridge: bool,
-        // do i really need all these urls?
-        // url_terms_of_service: Option<Url>,
-        // url_privacy_policy: Option<Url>,
-        // url_help_docs: Vec<Url>,
-        // url_main_site: Vec<Url>,
-        // url_interactions: Vec<Url>, // webhook
-    },
-
-    /// a special type of bot designed to represent a user on another platform
-    // maybe all bots/user types can create puppets, but there's an extra permission for bridging?
-    Puppet {
-        /// the user who created this puppet
-        owner_id: UserId,
-
-        /// what platform this puppet is connected to
-        external_platform: ExternalPlatform,
-
-        /// an opaque identifier from the other platform
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 8192)
-        )]
-        external_id: String,
-
-        /// a url on the other platform that this account can be reached at
-        external_url: Option<Url>,
-
-        /// makes two users be considered the same user, for importing
-        /// stuff from other platforms
-        /// can you alias to another puppet?
-        alias_id: Option<UserId>,
-    },
-
-    /// system/service account
-    System,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "owner_type")]
-pub enum BotOwner {
-    /// owned by a thread (ie. for webhooks)
-    Thread { thread_id: ThreadId },
-
-    /// owned by a room (one off room-specific bot account)
-    Room { room_id: RoomId },
-
-    /// owned by a user (most bots)
-    User { user_id: UserId },
-
-    /// an official system bot
-    ///
-    /// avoid using the system user directly since its effectively root. create
-    /// Server bots instead.
-    Server,
-}
+//     /// an official system bot
+//     ///
+//     /// avoid using the system user directly since its effectively root. create
+//     /// Server bots instead.
+//     Server,
+// }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -260,7 +277,7 @@ pub struct RelationshipWithUserId {
     pub user_id: UserId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct UserWithRelationship {
     #[serde(flatten)]
@@ -317,40 +334,6 @@ pub enum RelationshipType {
 
     /// blocked
     Block,
-}
-
-impl UserType {
-    pub fn can_create(&self, other: &UserType) -> bool {
-        match (self, other) {
-            // allowed as a fast path (maybe get to skip some captchas)
-            // though this might be abusable
-            (UserType::Default, UserType::Default) => true,
-
-            // TODO: ensure that user_id is correct
-            // users can create bots
-            (UserType::Default, UserType::Bot { .. }) => true,
-
-            // if you want to use a bridge, create a bot
-            (UserType::Default, UserType::Puppet { .. }) => false,
-
-            // for bridging
-            // (UserType::Bot { is_bridge, .. }, UserType::Puppet { .. }) => *is_bridge,
-            (UserType::Bot { .. }, UserType::Puppet { .. }) => true,
-
-            // doesn't really make sense for a bot to be able to create more non-puppet users
-            // maybe creating accounts for users, idk
-            (UserType::Bot { .. }, UserType::Default | UserType::Bot { .. }) => false,
-
-            // puppets cant create new accounts, but their owner can
-            (UserType::Puppet { .. }, _) => false,
-
-            // system user is root and can do anything
-            (UserType::System, _) => true,
-
-            // there is only one system user
-            (_, UserType::System) => false,
-        }
-    }
 }
 
 impl Diff<Relationship> for RelationshipPatch {

@@ -109,7 +109,7 @@ async fn message_context(
     };
     let after = data.message_list(thread_id, after_q).await?;
     let message = data.message_get(thread_id, message_id).await?;
-    let mut res = dbg!(ContextResponse {
+    let mut res = ContextResponse {
         items: before
             .items
             .into_iter()
@@ -119,7 +119,7 @@ async fn message_context(
         total: after.total,
         has_after: after.has_more,
         has_before: before.has_more,
-    });
+    };
     for message in &mut res.items {
         s.presign_message(message).await?;
     }

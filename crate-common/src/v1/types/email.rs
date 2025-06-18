@@ -28,14 +28,14 @@ pub struct EmailInfo {
     /// user verified they have access to the email address
     pub is_verified: bool,
 
-    /// can see by everyone
-    pub is_public: bool,
+    // /// can see by everyone
+    // pub is_public: bool,
 
-    /// whether this is the user's primary email address
-    pub is_primary: bool,
+    // /// whether this is the user's primary email address
+    // pub is_primary: bool,
 
-    /// can someone with access to email can do
-    pub trust: EmailTrust,
+    // /// can someone with access to email can do
+    // pub trust: EmailTrust,
 
     /// spam prevention
     #[serde(skip)]
@@ -46,17 +46,17 @@ pub struct EmailInfo {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmailInfoPatch {
-    /// can see by everyone
-    pub is_public: Option<bool>,
+    // /// can see by everyone
+    // pub is_public: Option<bool>,
 
-    /// whether this is the user's primary email address
-    ///
-    /// - there can only be one primary email address
-    /// - the primary address has EmailTrust::Full
-    pub is_primary: Option<bool>,
+    // /// whether this is the user's primary email address
+    // ///
+    // /// - there can only be one primary email address
+    // /// - the primary address has EmailTrust::Full
+    // pub is_primary: Option<bool>,
 
-    /// can someone with access to email can do
-    pub trust: Option<EmailTrust>,
+    // /// can someone with access to email can do
+    // pub trust: Option<EmailTrust>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

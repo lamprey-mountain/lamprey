@@ -7,8 +7,8 @@ use axum::{
 };
 use common::v1::types::{
     application::{Application, ApplicationCreate},
-    ApplicationId, BotAccess, ExternalPlatform, PaginationQuery, PuppetCreate, SessionCreate,
-    SessionStatus, SessionToken, SessionWithToken, UserType,
+    ApplicationId, Bot, BotAccess, ExternalPlatform, PaginationQuery, Puppet, PuppetCreate,
+    SessionCreate, SessionStatus, SessionToken, SessionWithToken,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -38,17 +38,16 @@ async fn app_create(
             parent_id: Some(auth_user_id),
             name: json.name.clone(),
             description: json.description.clone(),
-            user_type: UserType::Bot {
-                owner: common::v1::types::BotOwner::User {
-                    user_id: auth_user_id,
-                },
+            bot: Some(Bot {
+                owner_id: auth_user_id,
                 access: if json.public {
                     return Err(Error::Unimplemented);
                 } else {
                     BotAccess::Private
                 },
                 is_bridge: json.bridge,
-            },
+            }),
+            puppet: None,
         })
         .await?;
     let app = Application {
@@ -188,14 +187,7 @@ async fn puppet_ensure(
     let data = s.data();
     let srv = s.services();
     let parent = srv.users.get(auth_user_id).await?;
-    let uty = UserType::Puppet {
-        owner_id: auth_user_id,
-        external_platform: ExternalPlatform::Discord,
-        external_id: puppet_id.clone(),
-        external_url: None,
-        alias_id: None,
-    };
-    if !parent.user_type.can_create(&uty) {
+    if !parent.bot.is_some_and(|b| b.is_bridge) {
         return Err(Error::BadStatic("can't create that user"));
     };
     // let p = match &external_platform {
@@ -214,7 +206,14 @@ async fn puppet_ensure(
             parent_id,
             name: json.name,
             description: json.description,
-            user_type: uty,
+            bot: None,
+            puppet: Some(Puppet {
+                owner_id: auth_user_id,
+                external_platform: ExternalPlatform::Discord,
+                external_id: puppet_id.clone(),
+                external_url: None,
+                alias_id: None,
+            }),
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))

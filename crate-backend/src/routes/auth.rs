@@ -19,7 +19,6 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::util::Time;
 use common::v1::types::MessageSync;
 use common::v1::types::SessionStatus;
-use common::v1::types::UserType;
 use http::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
@@ -102,7 +101,8 @@ async fn auth_oauth_redirect(
                     parent_id: None,
                     name: dc.user.global_name.unwrap_or(dc.user.username),
                     description: None,
-                    user_type: UserType::Default,
+                    bot: None,
+                    puppet: None,
                 })
                 .await?;
             data.auth_oauth_put("discord".into(), user.id, dc.user.id, true)

@@ -12,7 +12,6 @@ use anyhow::Result;
 use common::v1::types::media::MediaRef;
 use common::v1::types::EmbedCreate;
 use common::v1::types::RoomId;
-use common::v1::types::UserType;
 use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
 use reqwest::Url;
 use serenity::all::CreateAllowedMentions;
@@ -87,7 +86,7 @@ impl Portal {
         match msg {
             PortalMessage::LampoMessageUpsert { message } => {
                 let user = ly.user_fetch(message.author_id).await?;
-                if matches!(user.user_type, UserType::Puppet { .. }) {
+                if user.puppet.is_some() {
                     return Ok(());
                 }
 
@@ -377,7 +376,7 @@ impl Portal {
                         ext_avatar: message.author.avatar_url(),
                         name: puppet.name,
                         avatar: puppet.avatar.map(|a| a.to_string()),
-                        bot: Some(matches!(puppet.user_type, UserType::Bot { .. })),
+                        bot: Some(puppet.bot.is_some()),
                     })
                     .await?;
 
