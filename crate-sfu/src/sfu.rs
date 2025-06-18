@@ -138,7 +138,6 @@ impl Sfu {
     }
 
     async fn handle_event(&mut self, envelope: PeerEventEnvelope) -> Result<()> {
-        debug!("handle_event {envelope:?}");
         let user_id = envelope.user_id;
         let event = envelope.payload;
         match event {
@@ -149,21 +148,24 @@ impl Sfu {
             }
 
             PeerEvent::MediaAdded(ref m) => {
-                debug!("peer event payload {event:?}");
+                debug!("media added event {event:?}");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
                     warn!("user has no voice state");
                     return Ok(());
                 };
                 for a in &self.peers {
                     if a.key() == &user_id {
+                        debug!("drop: no echo");
                         continue;
                     }
 
                     let Some(state) = self.voice_states.get(a.key()) else {
+                        debug!("drop: no voice state");
                         continue;
                     };
 
                     if state.thread_id != my_state.thread_id {
+                        debug!("drop: no thread id");
                         continue;
                     }
 
@@ -195,6 +197,7 @@ impl Sfu {
             }
 
             PeerEvent::Dead => {
+                debug!("peerevent::dead");
                 self.peers.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
             }

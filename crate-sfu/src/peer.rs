@@ -21,7 +21,7 @@ use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     time::sleep_until,
 };
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, trace, warn, Instrument};
 
 use crate::{PeerCommand, PeerEventEnvelope, TrackIn, TrackOut, TrackState};
 

@@ -36,7 +36,6 @@ pub struct EmailInfo {
 
     // /// can someone with access to email can do
     // pub trust: EmailTrust,
-
     /// spam prevention
     #[serde(skip)]
     pub last_verification_email_sent_at: Option<Time>,
