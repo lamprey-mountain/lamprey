@@ -125,9 +125,6 @@ impl ServiceOauth {
             .oauth_states
             .remove(&state)
             .ok_or(Error::BadStatic("invalid or expired state"))?;
-        if &s.provider != "discord" {
-            return Err(Error::Unimplemented);
-        }
         let client = reqwest::Client::new();
         let p = self
             .state

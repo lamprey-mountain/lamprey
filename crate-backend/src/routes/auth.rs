@@ -81,42 +81,79 @@ async fn auth_oauth_init(
     )
 )]
 async fn auth_oauth_redirect(
-    Path(_provider): Path<String>,
+    Path(provider): Path<String>,
     Query(q): Query<OauthRedirectQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
-    let dc = srv.oauth.discord_get_user(auth.access_token).await?;
-    debug!("new discord user {:?}", dc);
     let data = s.data();
-    let user_id = match data
-        .auth_oauth_get_remote("discord".into(), dc.user.id.clone())
-        .await
-    {
-        Ok(user_id) => user_id,
-        Err(Error::NotFound) => {
-            let user = data
-                .user_create(DbUserCreate {
-                    parent_id: None,
-                    name: dc.user.global_name.unwrap_or(dc.user.username),
-                    description: None,
-                    bot: None,
-                    puppet: None,
-                })
+    match provider.as_str() {
+        "discord" => {
+            let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
+            let u = srv.oauth.discord_get_user(auth.access_token).await?;
+            debug!("new discord user {:?}", u);
+            let user_id = match data
+                .auth_oauth_get_remote("discord".into(), u.user.id.clone())
+                .await
+            {
+                Ok(user_id) => user_id,
+                Err(Error::NotFound) => {
+                    let user = data
+                        .user_create(DbUserCreate {
+                            parent_id: None,
+                            name: u.user.global_name.unwrap_or(u.user.username),
+                            description: None,
+                            bot: None,
+                            puppet: None,
+                        })
+                        .await?;
+                    data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
+                        .await?;
+                    user.id
+                }
+                Err(err) => return Err(err),
+            };
+            data.session_set_status(session_id, SessionStatus::Authorized { user_id })
                 .await?;
-            data.auth_oauth_put("discord".into(), user.id, dc.user.id, true)
-                .await?;
-            user.id
+            srv.sessions.invalidate(session_id).await;
+            let session = srv.sessions.get(session_id).await?;
+            s.broadcast(MessageSync::UpsertSession { session })?;
+            Ok(Html(include_str!("../oauth.html")))
         }
-        Err(err) => return Err(err),
-    };
-    data.session_set_status(session_id, SessionStatus::Authorized { user_id })
-        .await?;
-    srv.sessions.invalidate(session_id).await;
-    let session = srv.sessions.get(session_id).await?;
-    s.broadcast(MessageSync::UpsertSession { session })?;
-    Ok(Html(include_str!("../oauth.html")))
+        "github" => {
+            let (auth, session_id) = srv.oauth.exchange_code_for_token(q.state, q.code).await?;
+            let u = srv.oauth.github_get_user(auth.access_token).await?;
+            debug!("new github user {:?}", u);
+            let user_id = match data
+                .auth_oauth_get_remote("github".into(), u.id.to_string())
+                .await
+            {
+                Ok(user_id) => user_id,
+                Err(Error::NotFound) => {
+                    let user = data
+                        .user_create(DbUserCreate {
+                            parent_id: None,
+                            name: u.name,
+                            description: None,
+                            bot: None,
+                            puppet: None,
+                        })
+                        .await?;
+                    data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)
+                        .await?;
+                    user.id
+                }
+                Err(err) => return Err(err),
+            };
+            data.session_set_status(session_id, SessionStatus::Authorized { user_id })
+                .await?;
+            srv.sessions.invalidate(session_id).await;
+            let session = srv.sessions.get(session_id).await?;
+            s.broadcast(MessageSync::UpsertSession { session })?;
+            Ok(Html(include_str!("../oauth.html")))
+        }
+        _ => return Err(Error::Unimplemented),
+    }
 }
 
 /// Auth oauth logout (TODO)
