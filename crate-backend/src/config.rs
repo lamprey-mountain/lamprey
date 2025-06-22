@@ -8,7 +8,8 @@ use url::Url;
 pub struct Config {
     pub rust_log: String,
     pub database_url: String,
-    pub base_url: Url,
+    pub api_url: Url,
+    pub cdn_url: Url,
     /// for media/file uploads
     pub s3: ConfigS3,
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,

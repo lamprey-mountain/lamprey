@@ -103,7 +103,7 @@ impl ServiceOauth {
         let redirect_uri: Url = self
             .state
             .config
-            .base_url
+            .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", provider))?;
         let url = Url::parse_with_params(
             &p.authorization_url,
@@ -135,7 +135,7 @@ impl ServiceOauth {
         let redirect_uri: Url = self
             .state
             .config
-            .base_url
+            .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
         let body = OauthTokenExchange {
             grant_type: "authorization_code".to_string(),

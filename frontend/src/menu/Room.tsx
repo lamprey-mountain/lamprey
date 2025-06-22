@@ -13,7 +13,7 @@ export function RoomMenu(props: { room_id: string }) {
 	const copyId = () => navigator.clipboard.writeText(props.room_id);
 
 	const copyLink = () => {
-		const url = `${ctx.client.opts.baseUrl}/room/${props.room_id}`;
+		const url = `${ctx.client.opts.apiUrl}/room/${props.room_id}`;
 		navigator.clipboard.writeText(url);
 	};
 

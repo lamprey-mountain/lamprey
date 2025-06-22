@@ -53,7 +53,7 @@ async fn media_create(
                 .await?;
             let upload_url = Some(
                 s.config()
-                    .base_url
+                    .api_url
                     .join(&format!("/api/v1/internal/media-upload/{media_id}"))?,
             );
             let res = MediaCreated {

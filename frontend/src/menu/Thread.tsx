@@ -39,7 +39,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 	};
 
 	const copyLink = () => {
-		const url = `${ctx.client.opts.baseUrl}/thread/${props.thread_id}`;
+		const url = `${ctx.client.opts.apiUrl}/thread/${props.thread_id}`;
 		navigator.clipboard.writeText(url);
 	};
 

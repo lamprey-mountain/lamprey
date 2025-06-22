@@ -57,7 +57,7 @@ import {
 	RouteVoice,
 } from "./routes.tsx";
 
-const BASE_URL = localStorage.getItem("base_url") ??
+const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
 
 const App: Component = () => {
@@ -89,7 +89,7 @@ const App: Component = () => {
 export const Root: Component = (props: ParentProps) => {
 	const events = createEmitter<Events>();
 	const client = createClient({
-		baseUrl: BASE_URL,
+		apiUrl: BASE_URL,
 		onSync(msg) {
 			console.log("recv", msg);
 			events.emit("sync", msg);

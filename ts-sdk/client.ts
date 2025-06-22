@@ -8,7 +8,7 @@ export * from "./observable.ts";
 export type ClientState = "stopped" | "connecting" | "connected" | "ready";
 
 export type ClientOptions = {
-	baseUrl: string;
+	apiUrl: string;
 	token?: string;
 	onReady: (event: MessageReady) => void;
 	onSync: (event: MessageSync) => void;
@@ -42,7 +42,7 @@ export function createClient(opts: ClientOptions): Client {
 	const state = createObservable<ClientState>("stopped");
 
 	const http = createFetch<paths>({
-		baseUrl: opts.baseUrl,
+		baseUrl: opts.apiUrl,
 	});
 
 	http.use({
@@ -61,7 +61,7 @@ export function createClient(opts: ClientOptions): Client {
 	function setupWebsocket() {
 		if (state.get() !== "connecting") return;
 
-		ws = new WebSocket(new URL("/api/v1/sync?version=1", opts.baseUrl));
+		ws = new WebSocket(new URL("/api/v1/sync?version=1", opts.apiUrl));
 		ws.addEventListener("message", (e) => {
 			const msg: MessageEnvelope = JSON.parse(e.data);
 			if (msg.op === "Ping") {

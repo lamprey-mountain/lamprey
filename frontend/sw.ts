@@ -65,7 +65,12 @@ self.addEventListener("fetch", (e) => {
 				if (!target) return makeError("missing url");
 
 				const cached = await caches.match(target, { ignoreSearch: true });
-				if (cached) return cached;
+				if (cached) {
+					const lifetime = Date.now() - Date.parse(cached.headers.get("Date")!);
+					if (lifetime >= 60 * 60 * 24 * 1000) {
+						return cached;
+					}
+				}
 
 				const res = await fetch(target, { mode: "cors" });
 				if (res.status === 206) return res; // range requests are a bit h right now
