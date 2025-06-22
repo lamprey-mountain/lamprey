@@ -168,14 +168,14 @@ async fn serve(config: Config) -> Result<()> {
             "/api/docs",
             get(|| async { Html(include_str!("scalar.html")) }),
         )
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
+        .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
         .layer(CatchPanicLayer::new())
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",
-        )))
-        .layer(cors())
-        .layer(DefaultBodyLimit::max(1024 * 1024 * 16));
+        )));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
     axum::serve(listener, router).await?;
     Ok(())
