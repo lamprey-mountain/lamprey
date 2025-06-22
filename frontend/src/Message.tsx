@@ -406,7 +406,11 @@ export function AttachmentView(props: MediaProps) {
 	if (b() === "image") {
 		return (
 			<li class="raw">
-				<ImageView media={props.media} />
+				<ImageView
+					media={props.media}
+					thumb_height={props.size}
+					thumb_width={props.size}
+				/>
 			</li>
 		);
 	} else if (b() === "video") {

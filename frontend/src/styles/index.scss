@@ -208,7 +208,22 @@ input[type="submit"] {
 		}
 
 		& > .attachments {
-			padding-left: 124px;
+			position: absolute;
+			top: 0;
+			translate: 0 -100%;
+			right: 4px;
+			display: flex;
+			border: solid $sep-500 1px;
+			flex-direction: column;
+			max-width: 320px;
+			max-height: 320px;
+			overflow: auto;
+			padding: 4px;
+			background: $bg-200;
+
+			& > article {
+				background: red;
+			}
 		}
 
 		& > .text {

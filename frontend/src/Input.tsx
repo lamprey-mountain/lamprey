@@ -92,7 +92,7 @@ export function Input(props: InputProps) {
 	};
 
 	return (
-		<div class="input">
+		<div class="input" style="position:relative">
 			<div class="typing">
 				<Show when={getTyping().length}>
 					typing: {getTyping()}
@@ -101,11 +101,7 @@ export function Input(props: InputProps) {
 			<Show when={atts()?.length}>
 				<ul class="attachments">
 					<For each={atts()}>
-						{(att) => (
-							<li>
-								<RenderAttachment2 thread={props.thread} att={att} />
-							</li>
-						)}
+						{(att) => <RenderAttachment2 thread={props.thread} att={att} />}
 					</For>
 				</ul>
 			</Show>
@@ -158,7 +154,8 @@ function RenderAttachment2(props: { thread: ThreadT; att: Attachment }) {
 				return `uploading (${percent}%)`;
 			}
 		} else {
-			return <AttachmentView media={att.media} />;
+			// return "done";
+			return <AttachmentView media={att.media} size={64} />;
 		}
 	}
 
@@ -168,34 +165,43 @@ function RenderAttachment2(props: { thread: ThreadT; att: Attachment }) {
 
 	return (
 		<>
-			<div>{renderInfo(props.att)}</div>
-			<button onClick={() => removeAttachment(props.att.local_id)}>
-				cancel/remove
-			</button>
-			<Switch>
-				<Match when={props.att.status === "uploading" && props.att.paused}>
-					<button
-						onClick={() =>
-							ctx.dispatch({
-								do: "upload.resume",
-								local_id: props.att.local_id,
-							})}
-					>
-						resume
+			<div style="display:grid;grid-template-rows:auto auto;border: red 1px">
+				<div>
+					<div>{props.att.file.name} {renderInfo(props.att)}</div>
+					<button onClick={() => removeAttachment(props.att.local_id)}>
+						cancel/remove
 					</button>
-				</Match>
-				<Match when={props.att.status === "uploading"}>
-					<button
-						onClick={() =>
-							ctx.dispatch({
-								do: "upload.pause",
-								local_id: props.att.local_id,
-							})}
-					>
-						pause
-					</button>
-				</Match>
-			</Switch>
+					<Switch>
+						<Match when={props.att.status === "uploading" && props.att.paused}>
+							<button
+								onClick={() =>
+									ctx.dispatch({
+										do: "upload.resume",
+										local_id: props.att.local_id,
+									})}
+							>
+								resume
+							</button>
+						</Match>
+						<Match when={props.att.status === "uploading"}>
+							<button
+								onClick={() =>
+									ctx.dispatch({
+										do: "upload.pause",
+										local_id: props.att.local_id,
+									})}
+							>
+								pause
+							</button>
+						</Match>
+					</Switch>
+				</div>
+				<div>
+					<div style="background:$sep-500;width: 100%;height:4px;border-radius:2px;overflow:hidden">
+						<div style="background:$link-500;width:30%">s</div>
+					</div>
+				</div>
+			</div>
 		</>
 	);
 }

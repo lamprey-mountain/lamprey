@@ -9,6 +9,7 @@ import {
 	Resize,
 } from "./util.tsx";
 import iconDownload from "../assets/download.png";
+import { createEffect } from "solid-js";
 
 type ImageViewProps = MediaProps & {
 	thumb_width?: number;
@@ -37,6 +38,10 @@ export const ImageView = (props: ImageViewProps) => {
 		return 0;
 	};
 
+	createEffect(() => {
+		console.log("img", loaded());
+	});
+
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
@@ -53,29 +58,27 @@ export const ImageView = (props: ImageViewProps) => {
 				}}
 			>
 				<Loader loaded={loaded()} />
-				<Show when={loaded()}>
-					<img
-						src={url()}
-						alt={props.media.alt ?? undefined}
-						height={height()!}
-						width={width()!}
-						onLoad={[setLoaded, true]}
-						onEmptied={[setLoaded, false]}
-					/>
-					<a
-						class="download"
-						download={props.media.filename}
-						href={getUrl(props.media.source)}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<button>
-							<img src={iconDownload} class="icon" />
-						</button>
-					</a>
-					<footer class="info dim">
-						{props.media.filename} - {byteFmt.format(props.media.source.size)}
-					</footer>
-				</Show>
+				<img
+					src={url()}
+					alt={props.media.alt ?? undefined}
+					height={height()!}
+					width={width()!}
+					onLoad={() => setLoaded(true)}
+					onEmptied={() => setLoaded(false)}
+				/>
+				<a
+					class="download"
+					download={props.media.filename}
+					href={getUrl(props.media.source)}
+					onClick={(e) => e.stopPropagation()}
+				>
+					<button>
+						<img src={iconDownload} class="icon" />
+					</button>
+				</a>
+				<footer class="info dim">
+					{props.media.filename} - {byteFmt.format(props.media.source.size)}
+				</footer>
 			</article>
 		</Resize>
 	);
