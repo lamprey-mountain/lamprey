@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended\n            FROM usr WHERE id = $1\n            FOR UPDATE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "avatar",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "puppet",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "bot",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "system",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "guest",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "registered_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 12,
+        "name": "suspended",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "832b66a3847a4b3be02ba5516d7fae62cefc43ce9723feba569dab28c8a29d1b"
+}
