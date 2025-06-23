@@ -29,8 +29,8 @@ export const Nav2 = () => {
 					</li>
 					<For each={rooms()?.items}>
 						{(room) => (
-							<li>
-								<A href={`/room/${room.id}`} end>{room.name}</A>
+							<li draggable="true">
+								<A draggable="false" href={`/room/${room.id}`}>{room.name}</A>
 							</li>
 						)}
 					</For>

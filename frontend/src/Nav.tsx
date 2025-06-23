@@ -1,117 +1,114 @@
-import { For, from, Show } from "solid-js";
+import { createEffect, createSignal, For, onMount, Show } from "solid-js";
 import { useCtx } from "./context.ts";
-import { A, useMatch } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import type { Room, Thread } from "sdk";
+import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
 
 export const ChatNav = (props: { room_id?: string }) => {
-	const ctx = useCtx();
 	const api = useApi();
+
+	// track drag indices
+	const [dragging, setDragging] = createSignal<number | null>(null);
+	const [target, setTarget] = createSignal<number | null>(null);
+
+	// local list of threads for this room
+	const [list, setList] = createSignal<Thread[]>([]);
+
+	// initialize list from API cache
+	onMount(() => {
+		const threads = [...api.threads.cache.values()]
+			.filter((t) => t.room_id === props.room_id && !t.deleted_at);
+		setList(threads);
+	});
+
+	// helper to get index from the element's data-index
+	const getIndex = (e: DragEvent) =>
+		Number((e.currentTarget as HTMLElement).dataset.index ?? -1);
+
+	const handleDragStart = (e: DragEvent) => {
+		setDragging(getIndex(e));
+	};
+
+	const handleDragEnter = (e: DragEvent) => {
+		e.preventDefault();
+		setTarget(getIndex(e));
+	};
+
+	const handleDragOver = (e: DragEvent) => {
+		e.preventDefault();
+	};
+
+	const handleDrop = (e: DragEvent) => {
+		e.preventDefault();
+		const from = dragging();
+		const to = target();
+		if (from === null || to === null || from === to) return;
+
+		const updated = [...list()];
+		// splice out the dragged item
+		const [moved] = updated.splice(from, 1);
+		// insert it at the target index
+		updated.splice(to, 0, moved);
+		setList(updated);
+
+		setDragging(null);
+		setTarget(null);
+	};
 
 	return (
 		<nav id="nav">
 			<Show when={flags.has("nav_header")}>
 				<header style="background: #eef1;padding:8px">header</header>
 			</Show>
+
 			<ul>
 				<li>
-					<Show when={!!props.room_id}>
-						<A href={`/room/${props.room_id}`} class="menu-thread">
-							home
-						</A>
-					</Show>
+					<A
+						href={`/room/${props.room_id}`}
+						class="menu-thread"
+						draggable={false}
+					>
+						home
+					</A>
 				</li>
-				<For
-					each={[...api.threads.cache.values()].filter((i) =>
-						i.room_id === props.room_id && !i.deleted_at
-					)}
-				>
-					{(thread) => <ItemThread thread={thread} />}
-				</For>
-			</ul>
-			<div style="margin: 8px">
-			</div>
-		</nav>
-	);
-};
 
-const ChatNav_ = () => {
-	const ctx = useCtx();
-	const api = useApi();
-
-	const rooms = api.rooms.list();
-
-	return (
-		<nav id="nav">
-			<ul>
-				<li>
-					<A href="/" end>home</A>
-				</li>
-				<For each={rooms()?.items}>
-					{(room) => <ItemRoom room={room} />}
-				</For>
-			</ul>
-			<div style="margin: 8px">
-			</div>
-		</nav>
-	);
-};
-
-const ItemRoom = (props: { room: Room }) => {
-	const api = useApi();
-
-	// TODO: send self room member in api? this works for now though
-	const shouldShow = () => {
-		const user_id = api.users.cache.get("@self")?.id;
-		const c = api.room_members.cache.get(props.room.id);
-		const m = c?.get(user_id!);
-		if (m && m.membership !== "Join") return false;
-		return true;
-	};
-
-	return (
-		<Show when={shouldShow()}>
-			<li>
-				<A
-					class="menu-room"
-					data-room-id={props.room.id}
-					href={`/room/${props.room.id}`}
-				>
-					{props.room.name}
-				</A>
-				<Show when={true}>
-					<ul>
-						<li>
-							<A
-								class="menu-room"
-								href={`/room/${props.room.id}`}
-								data-room-id={props.room.id}
-							>
-								home
-							</A>
+				<For each={list()}>
+					{(thread, idx) => (
+						<li
+							data-index={idx()}
+							draggable
+							onDragStart={handleDragStart}
+							onDragEnter={handleDragEnter}
+							onDragOver={handleDragOver}
+							onDrop={handleDrop}
+							classList={{
+								dragging: dragging() === idx(),
+								over: target() === idx(),
+							}}
+						>
+							<ItemThread thread={thread} />
 						</li>
-					</ul>
-				</Show>
-			</li>
-		</Show>
+					)}
+				</For>
+			</ul>
+			<div style="margin: 8px" />
+		</nav>
 	);
 };
 
 const ItemThread = (props: { thread: Thread }) => {
 	return (
-		<li>
-			<A
-				href={`/thread/${props.thread.id}`}
-				class="menu-thread"
-				classList={{
-					"closed": !!props.thread.archived_at,
-					"unread": props.thread.is_unread,
-				}}
-				data-thread-id={props.thread.id}
-			>
-				{props.thread.name}
-			</A>
-		</li>
+		<A
+			href={`/thread/${props.thread.id}`}
+			class="menu-thread"
+			classList={{
+				closed: !!props.thread.archived_at,
+				unread: props.thread.is_unread,
+			}}
+			data-thread-id={props.thread.id}
+		>
+			{props.thread.name}
+		</A>
 	);
 };

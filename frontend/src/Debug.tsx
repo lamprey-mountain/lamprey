@@ -19,10 +19,6 @@ export const Debug = () => {
 				<summary>webrtc</summary>
 				<DebugWebrtc />
 			</details>
-			<details open>
-				<summary>drag and drop</summary>
-				<DragAndDrop />
-			</details>
 			<details>
 				<summary>invite json</summary>
 				<InviteView />
