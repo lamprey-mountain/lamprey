@@ -27,4 +27,4 @@ join message_count on message_count.thread_id = thread.id
 join last_id on last_id.thread_id = thread.id
 full outer join usr on true
 left join unread on usr.id = unread.user_id and thread.id = unread.thread_id
-where thread.id = $1 and usr.id = $2
+where thread.id = $1 and usr.id = $2 and deleted_at is null
