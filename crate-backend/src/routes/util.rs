@@ -94,7 +94,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
                 return Err(Error::BadStatic("bot is not a bridge"));
             }
 
-            let Some(p) = user.puppet else {
+            let Some(p) = puppet.puppet else {
                 return Err(Error::BadStatic("can only puppet users of type Puppet"));
             };
 
