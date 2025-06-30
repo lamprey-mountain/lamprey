@@ -98,10 +98,12 @@ impl From<DbUser> for User {
             description: row.description,
             status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
-            bot: row.bot.map(|r| serde_json::from_value(dbg!(r)).unwrap()),
-            puppet: row.puppet.map(|r| serde_json::from_value(r).unwrap()),
-            guest: row.guest.map(|r| serde_json::from_value(r).unwrap()),
-            suspended: row.suspended.map(|r| serde_json::from_value(r).unwrap()),
+            bot: row.bot.and_then(|r| serde_json::from_value(dbg!(r)).ok()),
+            puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
+            guest: row.guest.and_then(|r| serde_json::from_value(r).ok()),
+            suspended: row
+                .suspended
+                .and_then(|r| serde_json::from_value(r).unwrap()),
             system: row.system,
             registered_at: row.registered_at.map(|i| i.into()),
             deleted_at: row.deleted_at.map(|i| i.into()),
