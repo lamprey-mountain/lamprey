@@ -493,7 +493,11 @@ async fn upload_extracted_thumb(
     let (width, height, mime) = async {
         let cursor = Cursor::new(&bytes);
         let reader = image::ImageReader::new(cursor).with_guessed_format()?;
-        let mime: Mime = reader.format().ok_or(Error::BadStatic("failed to get mime type"))?.to_mime_type().parse()?;
+        let mime: Mime = reader
+            .format()
+            .ok_or(Error::BadStatic("failed to get mime type"))?
+            .to_mime_type()
+            .parse()?;
         let (width, height) = reader.into_dimensions()?;
         Result::Ok((width, height, mime))
     }

@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    util::Time, voice::SignallingMessage, InviteCode, InviteWithMetadata, Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId
+    util::Time, voice::SignallingMessage, InviteCode, InviteWithMetadata, Message, MessageId,
+    MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
+    SessionId, Thread, ThreadId, ThreadMember, User, UserId,
 };
 use std::future::{ready, Future};
 

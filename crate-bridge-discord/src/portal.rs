@@ -86,7 +86,8 @@ impl Portal {
         let ly = self.globals.lampo_handle().await?;
         match msg {
             // TODO: split apart
-            PortalMessage::LampoMessageCreate { message } | PortalMessage::LampoMessageUpdate { message } => {
+            PortalMessage::LampoMessageCreate { message }
+            | PortalMessage::LampoMessageUpdate { message } => {
                 let user = ly.user_fetch(message.author_id).await?;
                 if user.puppet.is_some() {
                     return Ok(());

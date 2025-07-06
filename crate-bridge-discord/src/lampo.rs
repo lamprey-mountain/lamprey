@@ -62,10 +62,8 @@ impl EventHandler for Handle {
 
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
-        self.globals.portal_send(
-            thread_id,
-            PortalMessage::LampoMessageDelete { message_id },
-        );
+        self.globals
+            .portal_send(thread_id, PortalMessage::LampoMessageDelete { message_id });
         Ok(())
     }
 }
