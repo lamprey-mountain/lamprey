@@ -69,7 +69,7 @@ pub async fn invite_delete(
         d.invite_delete(code.clone()).await?;
         match id_target {
             InviteTargetId::User { .. } => {
-                s.broadcast(MessageSync::DeleteInvite {
+                s.broadcast(MessageSync::InviteDelete {
                     code,
                     target: id_target,
                 })?;
@@ -79,7 +79,7 @@ pub async fn invite_delete(
                     room_id,
                     user_id,
                     reason,
-                    MessageSync::DeleteInvite {
+                    MessageSync::InviteDelete {
                         code,
                         target: id_target,
                     },
@@ -91,7 +91,7 @@ pub async fn invite_delete(
                     thread_id,
                     user_id,
                     reason,
-                    MessageSync::DeleteInvite {
+                    MessageSync::InviteDelete {
                         code,
                         target: id_target,
                     },
@@ -188,7 +188,7 @@ pub async fn invite_use(
                 room.id,
                 user_id,
                 reason,
-                MessageSync::UpsertRoomMember { member },
+                MessageSync::RoomMemberUpsert { member },
             )
             .await?;
         }
@@ -232,7 +232,7 @@ pub async fn invite_room_create(
         room_id,
         user_id,
         reason,
-        MessageSync::UpsertInvite {
+        MessageSync::InviteUpsert {
             invite: invite.clone(),
         },
     )

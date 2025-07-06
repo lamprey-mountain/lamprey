@@ -50,26 +50,26 @@ export type MessageEnvelope =
 	| { op: "Reconnect"; can_resume: boolean };
 
 export type MessageSync =
-	| { type: "UpsertRoom"; room: Room }
-	| { type: "UpsertThread"; thread: Thread }
-	| { type: "UpsertMessage"; message: Message }
-	| { type: "UpsertUser"; user: User }
-	| { type: "UpsertRoomMember"; member: RoomMember }
-	| { type: "UpsertThreadMember"; member: ThreadMember }
-	| { type: "UpsertSession"; session: Session }
-	| { type: "UpsertRole"; role: Role }
-	| { type: "UpsertInvite"; invite: Invite }
-	| { type: "DeleteMessage"; thread_id: string; message_id: string }
+	| { type: "InviteDelete"; code: string }
+	| { type: "InviteUpsert"; invite: Invite }
+	| { type: "MessageDelete"; thread_id: string; message_id: string }
+	| { type: "MessageUpsert"; message: Message }
 	| {
-		type: "DeleteMessageVersion";
+		type: "MessageVersionDelete";
 		thread_id: string;
 		message_id: string;
 		version_id: string;
 	}
-	| { type: "DeleteUser"; id: string }
-	| { type: "DeleteSession"; id: string }
-	| { type: "DeleteRole"; room_id: string; role_id: string }
-	| { type: "DeleteRoomMember"; room_id: string; user_id: string }
-	| { type: "DeleteInvite"; code: string }
+	| { type: "RoleDelete"; room_id: string; role_id: string }
+	| { type: "RoleUpsert"; role: Role }
+	| { type: "RoomMemberDelete"; room_id: string; user_id: string }
+	| { type: "RoomMemberUpsert"; member: RoomMember }
+	| { type: "RoomUpsert"; room: Room }
+	| { type: "SessionDelete"; id: string }
+	| { type: "SessionUpsert"; session: Session }
+	| { type: "ThreadMemberUpsert"; member: ThreadMember }
+	| { type: "ThreadUpsert"; thread: Thread }
 	| { type: "Typing"; thread_id: string; user_id: string; until: string }
+	| { type: "UserDelete"; id: string }
+	| { type: "UserUpsert"; user: User }
 	| { type: "VoiceDispatch"; user_id: string; payload: any };

@@ -142,7 +142,7 @@ impl ServiceMessages {
                             thread_id,
                             user_id,
                             None,
-                            MessageSync::UpsertMessage { message },
+                            MessageSync::MessageUpsert { message },
                         )
                         .await?;
                         Result::Ok(())
@@ -161,7 +161,7 @@ impl ServiceMessages {
             },
         )
         .await?;
-        let msg = MessageSync::UpsertMessage {
+        let msg = MessageSync::MessageUpsert {
             message: message.clone(),
         };
         srv.threads.invalidate(thread_id); // message count
@@ -309,7 +309,7 @@ impl ServiceMessages {
                                 thread_id,
                                 user_id,
                                 None,
-                                MessageSync::UpsertMessage { message },
+                                MessageSync::MessageUpsert { message },
                             )
                             .await?;
                             Result::Ok(())
@@ -364,7 +364,7 @@ impl ServiceMessages {
             thread_id,
             user_id,
             reason,
-            MessageSync::UpsertMessage {
+            MessageSync::MessageUpsert {
                 message: message.clone(),
             },
         )

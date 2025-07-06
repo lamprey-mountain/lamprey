@@ -86,7 +86,7 @@ export function createApi(
 	const emoji = new Emoji();
 
 	temp_events.on("sync", (msg) => {
-		if (msg.type === "UpsertRoom") {
+		if (msg.type === "RoomUpsert") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
 			if (rooms._cachedListing?.pagination) {
@@ -106,7 +106,7 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "UpsertThread") {
+		} else if (msg.type === "ThreadUpsert") {
 			const { thread } = msg;
 			threads.cache.set(thread.id, thread);
 			const l = threads._cachedListings.get(thread.room_id);
@@ -134,16 +134,16 @@ export function createApi(
 					}
 				}
 			}
-		} else if (msg.type === "UpsertUser") {
+		} else if (msg.type === "UserUpsert") {
 			users.cache.set(msg.user.id, msg.user);
 			if (msg.user.id === users.cache.get("@self")?.id) {
 				users.cache.set("@self", msg.user);
 			}
-		} else if (msg.type === "UpsertSession") {
+		} else if (msg.type === "SessionUpsert") {
 			if (msg.session?.id === session()?.id) {
 				setSession(session);
 			}
-		} else if (msg.type === "UpsertRoomMember") {
+		} else if (msg.type === "RoomMemberUpsert") {
 			const m = msg.member;
 			const c = room_members.cache.get(m.room_id);
 			if (c) {
@@ -169,7 +169,7 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "UpsertThreadMember") {
+		} else if (msg.type === "ThreadMemberUpsert") {
 			const m = msg.member;
 			const c = thread_members.cache.get(m.thread_id);
 			if (c) {
@@ -195,7 +195,7 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "UpsertMessage") {
+		} else if (msg.type === "MessageUpsert") {
 			const m = msg.message;
 			const r = messages.cacheRanges.get(m.thread_id);
 			let is_new = false;
@@ -203,7 +203,7 @@ export function createApi(
 			if (r) {
 				if (m.nonce) {
 					// local echo
-					console.log("UpsertMessage local echo");
+					console.log("Message Upsertlocal echo");
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
 					if (idx !== -1) {
 						r.live.items.splice(idx, 1);
@@ -215,10 +215,10 @@ export function createApi(
 					// edits
 					const idx = r.live.items.findIndex((i) => i.id === m.id);
 					if (idx !== -1) {
-						console.log("UpsertMessage edit");
+						console.log("Message Upsertedit");
 						r.live.items.splice(idx, 1, m);
 					} else {
-						console.log("UpsertMessage new message");
+						console.log("Message Upsertnew message");
 						r.live.items.push(m);
 						is_new = true;
 					}
@@ -251,7 +251,7 @@ export function createApi(
 			for (const att of m.attachments ?? []) {
 				media.cacheInfo.set(att.id, att);
 			}
-		} else if (msg.type === "DeleteMessage") {
+		} else if (msg.type === "MessageDelete") {
 			batch(() => {
 				const { message_id, thread_id } = msg;
 				const ranges = messages.cacheRanges.get(thread_id);
@@ -279,7 +279,7 @@ export function createApi(
 					});
 				}
 			});
-		} else if (msg.type === "UpsertInvite") {
+		} else if (msg.type === "InviteUpsert") {
 			const { invite } = msg;
 			invites.cache.set(invite.code, invite);
 			console.log("upsert", invites);
@@ -305,7 +305,7 @@ export function createApi(
 					}
 				}
 			}
-		} else if (msg.type === "DeleteInvite") {
+		} else if (msg.type === "InviteDelete") {
 			const invite = invites.cache.get(msg.code);
 			console.log("delete invite", invite);
 			if (invite) {
@@ -329,7 +329,7 @@ export function createApi(
 				}
 			}
 			invites.cache.delete(msg.code);
-		} else if (msg.type === "UpsertRole") {
+		} else if (msg.type === "RoleUpsert") {
 			const r = msg.role;
 			roles.cache.set(r.id, r);
 			const l = roles._cachedListings.get(r.room_id);
@@ -349,7 +349,7 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "DeleteRole") {
+		} else if (msg.type === "RoleDelete") {
 			roles.cache.delete(msg.role_id);
 			const l = roles._cachedListings.get(msg.room_id);
 			if (l?.resource.latest) {

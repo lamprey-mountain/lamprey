@@ -137,7 +137,7 @@ pub async fn thread_member_add(
             thread_id,
             auth_user_id,
             reason,
-            MessageSync::UpsertThreadMember {
+            MessageSync::ThreadMemberUpsert {
                 member: res.clone(),
             },
         )
@@ -197,7 +197,7 @@ pub async fn thread_member_update(
         thread_id,
         auth_user_id,
         reason,
-        MessageSync::UpsertThreadMember {
+        MessageSync::ThreadMemberUpsert {
             member: res.clone(),
         },
     )
@@ -252,7 +252,7 @@ pub async fn thread_member_delete(
         thread_id,
         auth_user_id,
         reason,
-        MessageSync::UpsertThreadMember { member: res },
+        MessageSync::ThreadMemberUpsert { member: res },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)

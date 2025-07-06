@@ -260,17 +260,17 @@ impl Connection {
         }
 
         let auth_check = match &msg {
-            MessageSync::UpsertRoom { room } => AuthCheck::Room(room.id),
-            MessageSync::UpsertThread { thread } => AuthCheck::Thread(thread.id),
-            MessageSync::UpsertMessage { message } => AuthCheck::Thread(message.thread_id),
-            MessageSync::UpsertUser { user } => AuthCheck::UserMutual(user.id),
-            MessageSync::UpsertRoomMember { member } => {
+            MessageSync::RoomUpsert { room } => AuthCheck::Room(room.id),
+            MessageSync::ThreadUpsert { thread } => AuthCheck::Thread(thread.id),
+            MessageSync::MessageUpsert { message } => AuthCheck::Thread(message.thread_id),
+            MessageSync::UserUpsert { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::RoomMemberUpsert { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
-            MessageSync::UpsertThreadMember { member } => {
+            MessageSync::ThreadMemberUpsert { member } => {
                 AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
             }
-            MessageSync::UpsertSession {
+            MessageSync::SessionUpsert {
                 session: upserted_session,
             } => {
                 if session.id == upserted_session.id {
@@ -281,17 +281,17 @@ impl Connection {
                 }
                 AuthCheck::Custom(session.can_see(upserted_session))
             }
-            MessageSync::UpsertRole { role } => AuthCheck::Room(role.room_id),
-            MessageSync::UpsertInvite { invite } => match &invite.invite.target {
+            MessageSync::RoleUpsert { role } => AuthCheck::Room(role.room_id),
+            MessageSync::InviteUpsert { invite } => match &invite.invite.target {
                 InviteTarget::User { user } => AuthCheck::User(user.id),
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => todo!(),
             },
-            MessageSync::DeleteMessage { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::DeleteMessageVersion { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::DeleteUser { id } => AuthCheck::UserMutual(*id),
-            MessageSync::DeleteSession { id, user_id } => {
+            MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::UserDelete { id } => AuthCheck::UserMutual(*id),
+            MessageSync::SessionDelete { id, user_id } => {
                 // TODO: send message when other sessions from the same user are deleted
                 if *id == session.id {
                     self.state = ConnectionState::Unauthed;
@@ -302,15 +302,15 @@ impl Connection {
                     AuthCheck::Custom(false)
                 }
             }
-            MessageSync::DeleteRole { room_id, .. } => AuthCheck::Room(*room_id),
-            MessageSync::DeleteInvite { target, .. } => match target {
+            MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
+            MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::User { user_id } => {
                     AuthCheck::Custom(session.user_id().is_some_and(|id| id == *user_id))
                 }
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },
-            MessageSync::Typing { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ThreadAck { .. } => todo!(),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipDelete { user_id } => AuthCheck::User(*user_id),

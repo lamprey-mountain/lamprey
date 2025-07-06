@@ -1018,6 +1018,31 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/server/invite": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Invite server list (TODO)
+		 * @description List invites that allow registration on a server
+		 */
+		get: operations["invite_server_list"];
+		put?: never;
+		/**
+		 * Invite server create (TODO)
+		 * @description Create an invite that allows registration on a server.
+		 *     Using the invite upgrades a guest (readonly?) account (also todo) into a full account
+		 */
+		post: operations["invite_server_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/session": {
 		parameters: {
 			query?: never;
@@ -1502,26 +1527,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/user": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * User create
-		 * @deprecated
-		 */
-		post: operations["user_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/user/@self/block/{target_id}": {
 		parameters: {
 			query?: never;
@@ -1766,6 +1771,7 @@ export interface paths {
 		/**
 		 * Invite user create (TODO)
 		 * @description Create an invite that goes to a user
+		 *     Using this invite will make you friends
 		 */
 		post: operations["invite_user_create"];
 		delete?: never;
@@ -1899,28 +1905,21 @@ export interface components {
 			/** @description the oauth providers this user has authenticated with */
 			oauth_providers: string[];
 		};
+		/** @description a special type of bot designed to represent a user on another platform */
+		Bot: {
+			/** @description who can use the bot */
+			access: components["schemas"]["BotAccess"];
+			/** @description enables managing Puppet users */
+			is_bridge: boolean;
+			/** @description who has control over this bot */
+			owner_id: components["schemas"]["Id"];
+		};
 		BotAccess: "Private" | {
 			/** @description anyone can use the bot */
 			Public: {
 				/** @description anyone can search for and find this; otherwise, this is unlisted */
 				is_discoverable: boolean;
 			};
-		};
-		BotOwner: {
-			/** @enum {string} */
-			owner_type: "Thread";
-			thread_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			owner_type: "Room";
-			room_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			owner_type: "User";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			owner_type: "Server";
 		};
 		CaptchaChallenge: {
 			code: string;
@@ -1931,7 +1930,7 @@ export interface components {
 		/** @description a color */
 		Color: string;
 		Command: {
-			payload: unknown;
+			payload: components["schemas"]["SignallingMessage"];
 			/** @enum {string} */
 			type: "VoiceDispatch";
 			user_id: components["schemas"]["Id"];
@@ -1956,20 +1955,9 @@ export interface components {
 		EmailInfo: {
 			/** @description the email address itself */
 			email: components["schemas"]["EmailAddr"];
-			/** @description whether this is the user's primary email address */
-			is_primary: boolean;
-			/** @description can see by everyone */
-			is_public: boolean;
 			/** @description user verified they have access to the email address */
 			is_verified: boolean;
-			/** @description can someone with access to email can do */
-			trust: components["schemas"]["EmailTrust"];
 		};
-		/**
-		 * @description what someone can do with this email address
-		 * @enum {string}
-		 */
-		EmailTrust: "Never" | "Trusted" | "Full";
 		Embed: {
 			author_avatar?: null | components["schemas"]["Media"];
 			author_name?: string | null;
@@ -2045,6 +2033,12 @@ export interface components {
 		/** @description a single unicode emoji */
 		EmojiUnicode: string;
 		ExternalPlatform: null | string;
+		Guest: {
+			/** @description if this guest user can register */
+			registerable: boolean;
+		};
+		/** @description webrtc ice candidate */
+		IceCandidate: string;
 		/**
 		 * Uuid
 		 * Format: uuid
@@ -2189,6 +2183,9 @@ export interface components {
 			thread: components["schemas"]["Thread"];
 			/** @enum {string} */
 			type: "Thread";
+		} | {
+			/** @enum {string} */
+			type: "Server";
 		};
 		/** @description the type and id of this invite's target */
 		InviteTargetId: {
@@ -2265,6 +2262,8 @@ export interface components {
 			 */
 			upload_url?: string | null;
 		};
+		/** @enum {string} */
+		MediaKindSerde: "Video" | "Audio";
 		MediaPatch: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
@@ -2500,77 +2499,15 @@ export interface components {
 		MessageSync: {
 			room: components["schemas"]["Room"];
 			/** @enum {string} */
-			type: "UpsertRoom";
+			type: "RoomUpsert";
 		} | {
 			thread: components["schemas"]["Thread"];
 			/** @enum {string} */
-			type: "UpsertThread";
-		} | {
-			message: components["schemas"]["Message"];
-			/** @enum {string} */
-			type: "UpsertMessage";
-		} | {
-			/** @enum {string} */
-			type: "UpsertUser";
-			user: components["schemas"]["User"];
-		} | {
-			member: components["schemas"]["RoomMember"];
-			/** @enum {string} */
-			type: "UpsertRoomMember";
-		} | {
-			member: components["schemas"]["ThreadMember"];
-			/** @enum {string} */
-			type: "UpsertThreadMember";
-		} | {
-			session: components["schemas"]["Session"];
-			/** @enum {string} */
-			type: "UpsertSession";
-		} | {
-			role: components["schemas"]["Role"];
-			/** @enum {string} */
-			type: "UpsertRole";
-		} | {
-			invite: components["schemas"]["InviteWithMetadata"];
-			/** @enum {string} */
-			type: "UpsertInvite";
-		} | {
-			message_id: components["schemas"]["Id"];
-			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "DeleteMessage";
-		} | {
-			message_id: components["schemas"]["Id"];
-			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "DeleteMessageVersion";
-			version_id: components["schemas"]["Id"];
-		} | {
-			id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "DeleteUser";
-		} | {
-			id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "DeleteSession";
-			user_id?: null | components["schemas"]["Id"];
-		} | {
-			role_id: components["schemas"]["Id"];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "DeleteRole";
-		} | {
-			code: components["schemas"]["InviteCode"];
-			target: components["schemas"]["InviteTargetId"];
-			/** @enum {string} */
-			type: "DeleteInvite";
+			type: "ThreadUpsert";
 		} | {
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "Typing";
+			type: "ThreadTyping";
 			until: components["schemas"]["Time"];
 			user_id: components["schemas"]["Id"];
 		} | {
@@ -2580,14 +2517,55 @@ export interface components {
 			type: "ThreadAck";
 			version_id: components["schemas"]["Id"];
 		} | {
-			relationship: components["schemas"]["Relationship"];
+			message: components["schemas"]["Message"];
 			/** @enum {string} */
-			type: "RelationshipUpsert";
-			user_id: components["schemas"]["Id"];
+			type: "MessageUpsert";
 		} | {
+			message_id: components["schemas"]["Id"];
+			/** @description deprecated = "keyed by thread_id" */
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "RelationshipDelete";
-			user_id: components["schemas"]["Id"];
+			type: "MessageDelete";
+		} | {
+			message_id: components["schemas"]["Id"];
+			/** @description deprecated = "keyed by thread_id" */
+			room_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageVersionDelete";
+			version_id: components["schemas"]["Id"];
+		} | {
+			message_ids: components["schemas"]["Id"][];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageDeleteBulk";
+		} | {
+			member: components["schemas"]["RoomMember"];
+			/** @enum {string} */
+			type: "RoomMemberUpsert";
+		} | {
+			member: components["schemas"]["ThreadMember"];
+			/** @enum {string} */
+			type: "ThreadMemberUpsert";
+		} | {
+			role: components["schemas"]["Role"];
+			/** @enum {string} */
+			type: "RoleUpsert";
+		} | {
+			role_id: components["schemas"]["Id"];
+			room_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "RoleDelete";
+		} | {
+			invite: components["schemas"]["InviteWithMetadata"];
+			/** @enum {string} */
+			type: "InviteUpsert";
+		} | {
+			code: components["schemas"]["InviteCode"];
+			target: components["schemas"]["InviteTargetId"];
+			/** @enum {string} */
+			type: "InviteDelete";
 		} | {
 			key: components["schemas"]["ReactionKey"];
 			message_id: components["schemas"]["Id"];
@@ -2608,11 +2586,6 @@ export interface components {
 			/** @enum {string} */
 			type: "ReactionPurge";
 		} | {
-			message_ids: components["schemas"]["Id"][];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageDeleteBulk";
-		} | {
 			emoji: components["schemas"]["EmojiCustom"];
 			/** @enum {string} */
 			type: "EmojiCreate";
@@ -2622,7 +2595,7 @@ export interface components {
 			/** @enum {string} */
 			type: "EmojiDelete";
 		} | {
-			payload: unknown;
+			payload: components["schemas"]["SignallingMessage"];
 			/** @enum {string} */
 			type: "VoiceDispatch";
 			user_id: components["schemas"]["Id"];
@@ -2630,6 +2603,32 @@ export interface components {
 			state?: null | components["schemas"]["VoiceState"];
 			/** @enum {string} */
 			type: "VoiceState";
+			user_id: components["schemas"]["Id"];
+		} | {
+			/** @enum {string} */
+			type: "UserUpsert";
+			user: components["schemas"]["User"];
+		} | {
+			id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "UserDelete";
+		} | {
+			session: components["schemas"]["Session"];
+			/** @enum {string} */
+			type: "SessionUpsert";
+		} | {
+			id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "SessionDelete";
+			user_id?: null | components["schemas"]["Id"];
+		} | {
+			relationship: components["schemas"]["Relationship"];
+			/** @enum {string} */
+			type: "RelationshipUpsert";
+			user_id: components["schemas"]["Id"];
+		} | {
+			/** @enum {string} */
+			type: "RelationshipDelete";
 			user_id: components["schemas"]["Id"];
 		};
 		/** @description a message (announcement? motd?) from the system */
@@ -3149,9 +3148,30 @@ export interface components {
 		PermissionOverrideWithTarget:
 			& components["schemas"]["PermissionOverridable"]
 			& components["schemas"]["PermissionOverride"];
+		/** @description represents a user on another platform */
+		Puppet: {
+			alias_id?: null | components["schemas"]["Id"];
+			/** @description an opaque identifier from the other platform */
+			external_id?: string;
+			/** @description what platform this puppet is connected to */
+			external_platform: components["schemas"]["ExternalPlatform"];
+			/**
+			 * Format: uri
+			 * @description a url on the other platform that this account can be reached at
+			 */
+			external_url?: string | null;
+			/** @description the user who created this puppet */
+			owner_id: components["schemas"]["Id"];
+		};
 		PuppetCreate: {
+			/** @description if this is a remote bot */
+			bot: boolean;
+			/** @description about/bio */
 			description?: string | null;
+			/** @description display name */
 			name: string;
+			/** @description if this is for the service itself. usually paired with bot: true */
+			system: boolean;
 		};
 		/** @description the total reaction counts for an emoji */
 		ReactionCount: {
@@ -3399,6 +3419,8 @@ export interface components {
 		SessionCreate: {
 			name?: string | null;
 		};
+		/** @description webrtc session description */
+		SessionDescription: string;
 		SessionPatch: {
 			name?: string | null;
 		};
@@ -3419,6 +3441,34 @@ export interface components {
 		SessionToken: string;
 		SessionWithToken: components["schemas"]["Session"] & {
 			token: components["schemas"]["SessionToken"];
+		};
+		SignallingMessage: {
+			sdp: components["schemas"]["SessionDescription"];
+			tracks: components["schemas"]["TrackMetadata"][];
+			/** @enum {string} */
+			type: "Offer";
+		} | {
+			sdp: components["schemas"]["SessionDescription"];
+			/** @enum {string} */
+			type: "Answer";
+		} | {
+			candidate: components["schemas"]["IceCandidate"];
+			/** @enum {string} */
+			type: "Candidate";
+		} | {
+			thread_id: components["schemas"]["Id"];
+			tracks: components["schemas"]["TrackMetadata"][];
+			/** @enum {string} */
+			type: "Have";
+			user_id: components["schemas"]["Id"];
+		} | {
+			tracks: string[];
+			/** @enum {string} */
+			type: "Want";
+		} | {
+			state?: null | components["schemas"]["VoiceStateUpdate"];
+			/** @enum {string} */
+			type: "VoiceState";
 		};
 		/** @description the current status of the user */
 		Status:
@@ -3447,6 +3497,11 @@ export interface components {
 		} | {
 			/** @enum {string} */
 			type: "Available";
+		};
+		Suspended: {
+			at: components["schemas"]["Time"];
+			reason: string;
+			until?: null | components["schemas"]["Time"];
 		};
 		/** @description a tag that can be applied to things */
 		Tag: {
@@ -3648,6 +3703,11 @@ export interface components {
 		TotpVerificationRequest: {
 			code: string;
 		};
+		TrackMetadata: {
+			key: string;
+			kind: components["schemas"]["MediaKindSerde"];
+			mid: string;
+		};
 		/** @description Where this track came from. */
 		TrackSource: {
 			/** @enum {string} */
@@ -3664,14 +3724,19 @@ export interface components {
 			/** @enum {string} */
 			source: "Generated";
 		};
-		User: components["schemas"]["UserType"] & {
+		User: {
 			avatar?: null | components["schemas"]["Id"];
+			bot?: null | components["schemas"]["Bot"];
+			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
+			guest?: null | components["schemas"]["Guest"];
 			id: components["schemas"]["Id"];
 			name: string;
-			state: components["schemas"]["UserState"];
-			state_updated_at: components["schemas"]["Time"];
+			puppet?: null | components["schemas"]["Puppet"];
+			registered_at?: null | components["schemas"]["Time"];
 			status: components["schemas"]["Status"];
+			suspended?: null | components["schemas"]["Suspended"];
+			system: boolean;
 			version_id: components["schemas"]["Id"];
 		};
 		/** @description configuration for a user */
@@ -3683,52 +3748,12 @@ export interface components {
 			/** @description global notification config */
 			notifs: components["schemas"]["NotifsGlobal"];
 		};
-		UserCreate: components["schemas"]["UserType"] & {
-			description?: string | null;
-			name: string;
-		};
 		UserIdReq: null | components["schemas"]["Id"];
 		UserPatch: {
 			avatar?: null | components["schemas"]["Id"];
 			description?: string | null;
 			name?: string | null;
 		};
-		/** @enum {string} */
-		UserState: "Active" | "Suspended" | "Deleted";
-		UserType:
-			| {
-				/** @enum {string} */
-				type: "Default";
-			}
-			| (components["schemas"]["BotOwner"] & {
-				/** @description who can use the bot */
-				access: components["schemas"]["BotAccess"];
-				/** @description enables managing Puppet users */
-				is_bridge: boolean;
-			} & {
-				/** @enum {string} */
-				type: "Bot";
-			})
-			| {
-				alias_id?: null | components["schemas"]["Id"];
-				/** @description an opaque identifier from the other platform */
-				external_id?: string;
-				/** @description what platform this puppet is connected to */
-				external_platform: components["schemas"]["ExternalPlatform"];
-				/**
-				 * Format: uri
-				 * @description a url on the other platform that this account can be reached at
-				 */
-				external_url?: string | null;
-				/** @description the user who created this puppet */
-				owner_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "Puppet";
-			}
-			| {
-				/** @enum {string} */
-				type: "System";
-			};
 		/** @description metadata for videos */
 		Video: {
 			codec: string;
@@ -3745,6 +3770,9 @@ export interface components {
 			joined_at: components["schemas"]["Time"];
 			thread_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
+		};
+		VoiceStateUpdate: {
+			thread_id: components["schemas"]["Id"];
 		};
 	};
 	responses: never;
@@ -5978,6 +6006,56 @@ export interface operations {
 			};
 		};
 	};
+	invite_server_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Invite"];
+				};
+			};
+		};
+	};
+	invite_server_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["InviteCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Invite"];
+				};
+			};
+		};
+	};
 	session_list: {
 		parameters: {
 			query?: {
@@ -7135,39 +7213,6 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
-			};
-		};
-	};
-	user_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["UserCreate"];
-			};
-		};
-		responses: {
-			/** @description user exists (puppet with same external_platform/id) */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["User"];
-				};
-			};
-			/** @description user created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["User"];
-				};
 			};
 		};
 	};

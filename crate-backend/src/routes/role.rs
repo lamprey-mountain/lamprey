@@ -53,7 +53,7 @@ pub async fn role_create(
             is_default: json.is_default,
         })
         .await?;
-    let msg = MessageSync::UpsertRole { role: role.clone() };
+    let msg = MessageSync::RoleUpsert { role: role.clone() };
     s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok((StatusCode::CREATED, Json(role)))
 }
@@ -90,7 +90,7 @@ pub async fn role_update(
     }
     d.role_update(room_id, role_id, json.clone()).await?;
     let role = d.role_select(room_id, role_id).await?;
-    let msg = MessageSync::UpsertRole { role: role.clone() };
+    let msg = MessageSync::RoleUpsert { role: role.clone() };
     if json.permissions.is_some_and(|p| p != role.permissions) {
         s.services().perms.invalidate_room_all(room_id);
     }
@@ -125,7 +125,7 @@ pub async fn role_delete(
     let existing = d.role_member_count(role_id).await?;
     if existing == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
-        let msg = MessageSync::DeleteRole { room_id, role_id };
+        let msg = MessageSync::RoleDelete { room_id, role_id };
         s.services().perms.invalidate_room_all(room_id);
         s.broadcast_room(room_id, user_id, reason, msg).await?;
         Ok(StatusCode::NO_CONTENT)
@@ -240,7 +240,7 @@ pub async fn role_member_add(
     if !matches!(member.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
-    let msg = MessageSync::UpsertRoomMember {
+    let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
     s.services()
@@ -280,7 +280,7 @@ pub async fn role_member_remove(
     if !matches!(member.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
-    let msg = MessageSync::UpsertRoomMember {
+    let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
     s.services()

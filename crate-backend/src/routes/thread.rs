@@ -88,7 +88,7 @@ async fn thread_create(
         room_id,
         user_id,
         reason,
-        MessageSync::UpsertThread {
+        MessageSync::ThreadUpsert {
             thread: thread.clone(),
         },
     )
@@ -97,7 +97,7 @@ async fn thread_create(
         thread.id,
         user_id,
         None,
-        MessageSync::UpsertMessage {
+        MessageSync::MessageUpsert {
             message: starter_message,
         },
     )
@@ -395,7 +395,7 @@ async fn thread_typing(
         thread_id,
         user_id,
         reason,
-        MessageSync::Typing {
+        MessageSync::ThreadTyping {
             thread_id,
             user_id,
             until: until.into(),

@@ -138,7 +138,7 @@ async fn user_update(
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id).await?;
-    s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
+    s.broadcast(MessageSync::UserUpsert { user: user.clone() })?;
     Ok(Json(user))
 }
 
@@ -172,7 +172,7 @@ async fn user_delete(
         .await?;
     let srv = s.services();
     srv.users.invalidate(target_user_id).await;
-    s.broadcast(MessageSync::DeleteUser { id: target_user_id })?;
+    s.broadcast(MessageSync::UserDelete { id: target_user_id })?;
     Ok(StatusCode::NO_CONTENT)
 }
 

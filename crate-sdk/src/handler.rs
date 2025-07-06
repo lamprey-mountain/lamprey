@@ -148,23 +148,23 @@ where
     async fn handle(&mut self, payload: MessagePayload) {
         let _ = match payload {
             MessagePayload::Sync { data, .. } => match data {
-                MessageSync::UpsertRoom { room } => self.upsert_room(room).await,
-                MessageSync::UpsertThread { thread } => self.upsert_thread(thread).await,
-                MessageSync::UpsertMessage { message } => self.upsert_message(message).await,
-                MessageSync::UpsertUser { user } => self.upsert_user(user).await,
-                MessageSync::UpsertRoomMember { member } => self.upsert_room_member(member).await,
-                MessageSync::UpsertThreadMember { member } => {
+                MessageSync::RoomUpsert { room } => self.upsert_room(room).await,
+                MessageSync::ThreadUpsert { thread } => self.upsert_thread(thread).await,
+                MessageSync::MessageUpsert { message } => self.upsert_message(message).await,
+                MessageSync::UserUpsert { user } => self.upsert_user(user).await,
+                MessageSync::RoomMemberUpsert { member } => self.upsert_room_member(member).await,
+                MessageSync::ThreadMemberUpsert { member } => {
                     self.upsert_thread_member(member).await
                 }
-                MessageSync::UpsertSession { session } => self.upsert_session(session).await,
-                MessageSync::UpsertRole { role } => self.upsert_role(role).await,
-                MessageSync::UpsertInvite { invite } => self.upsert_invite(invite).await,
-                MessageSync::DeleteMessage {
+                MessageSync::SessionUpsert { session } => self.upsert_session(session).await,
+                MessageSync::RoleUpsert { role } => self.upsert_role(role).await,
+                MessageSync::InviteUpsert { invite } => self.upsert_invite(invite).await,
+                MessageSync::MessageDelete {
                     thread_id,
                     message_id,
                     ..
                 } => self.delete_message(thread_id, message_id).await,
-                MessageSync::DeleteMessageVersion {
+                MessageSync::MessageVersionDelete {
                     thread_id,
                     message_id,
                     version_id,
@@ -173,13 +173,13 @@ where
                     self.delete_message_version(thread_id, message_id, version_id)
                         .await
                 }
-                MessageSync::DeleteUser { id } => self.delete_user(id).await,
-                MessageSync::DeleteSession { id, .. } => self.delete_session(id).await,
-                MessageSync::DeleteRole { room_id, role_id } => {
+                MessageSync::UserDelete { id } => self.delete_user(id).await,
+                MessageSync::SessionDelete { id, .. } => self.delete_session(id).await,
+                MessageSync::RoleDelete { room_id, role_id } => {
                     self.delete_role(room_id, role_id).await
                 }
-                MessageSync::DeleteInvite { code, .. } => self.delete_invite(code).await,
-                MessageSync::Typing {
+                MessageSync::InviteDelete { code, .. } => self.delete_invite(code).await,
+                MessageSync::ThreadTyping {
                     thread_id,
                     user_id,
                     until,

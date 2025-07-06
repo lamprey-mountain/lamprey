@@ -98,7 +98,7 @@ pub async fn session_update(
     let srv = s.services();
     srv.sessions.invalidate(session_id).await;
     let session = srv.sessions.get(session_id).await?;
-    s.broadcast(MessageSync::UpsertSession {
+    s.broadcast(MessageSync::SessionUpsert {
         session: session.clone(),
     })?;
     Ok((StatusCode::OK, Json(session)))
@@ -137,7 +137,7 @@ pub async fn session_delete(
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(session_id).await?;
     srv.sessions.invalidate(session_id).await;
-    s.broadcast(MessageSync::DeleteSession {
+    s.broadcast(MessageSync::SessionDelete {
         id: session_id,
         user_id: target_session.user_id(),
     })?;

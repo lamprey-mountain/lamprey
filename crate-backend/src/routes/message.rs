@@ -244,7 +244,7 @@ async fn message_delete(
         thread.id,
         user_id,
         reason,
-        MessageSync::DeleteMessage {
+        MessageSync::MessageDelete {
             room_id: thread.room_id,
             thread_id,
             message_id,

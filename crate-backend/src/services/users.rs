@@ -94,7 +94,7 @@ impl ServiceUsers {
                 let data = s.data();
                 let mut user = data.user_get(user_id).await?;
                 user.status = Status::offline();
-                s.broadcast(MessageSync::UpsertUser { user: user.clone() })?;
+                s.broadcast(MessageSync::UserUpsert { user: user.clone() })?;
             }
             Result::Ok(())
         });
@@ -116,7 +116,7 @@ impl ServiceUsers {
 
         if old.is_none_or(|s| s.status != status) && !skip_broadcast {
             self.state
-                .broadcast(MessageSync::UpsertUser { user: user.clone() })?;
+                .broadcast(MessageSync::UserUpsert { user: user.clone() })?;
         }
 
         Ok(user)

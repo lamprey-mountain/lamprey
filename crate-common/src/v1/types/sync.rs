@@ -114,65 +114,15 @@ pub enum MessagePayload {
 #[serde(tag = "type")]
 #[allow(clippy::large_enum_variant)]
 pub enum MessageSync {
-    UpsertRoom {
+    RoomUpsert {
         room: Room,
     },
-    UpsertThread {
+
+    ThreadUpsert {
         thread: Thread,
     },
-    UpsertMessage {
-        message: Message,
-    },
-    UpsertUser {
-        user: User,
-    },
-    UpsertRoomMember {
-        member: RoomMember,
-    },
-    UpsertThreadMember {
-        member: ThreadMember,
-    },
-    UpsertSession {
-        session: Session,
-    },
-    UpsertRole {
-        role: Role,
-    },
-    UpsertInvite {
-        invite: InviteWithMetadata,
-    },
-    DeleteMessage {
-        /// deprecated = "keyed by thread_id"
-        #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: RoomId,
-        thread_id: ThreadId,
-        message_id: MessageId,
-    },
-    DeleteMessageVersion {
-        /// deprecated = "keyed by thread_id"
-        #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: RoomId,
-        thread_id: ThreadId,
-        message_id: MessageId,
-        version_id: MessageVerId,
-    },
-    DeleteUser {
-        id: UserId,
-    },
-    DeleteSession {
-        id: SessionId,
-        user_id: Option<UserId>,
-    },
-    DeleteRole {
-        room_id: RoomId,
-        role_id: RoleId,
-    },
-    DeleteInvite {
-        code: InviteCode,
-        target: InviteTargetId,
-    },
 
-    Typing {
+    ThreadTyping {
         thread_id: ThreadId,
         user_id: UserId,
         until: Time,
@@ -185,13 +135,57 @@ pub enum MessageSync {
         version_id: MessageVerId,
     },
 
-    RelationshipUpsert {
-        user_id: UserId,
-        relationship: Relationship,
+    MessageUpsert {
+        message: Message,
     },
 
-    RelationshipDelete {
-        user_id: UserId,
+    MessageDelete {
+        /// deprecated = "keyed by thread_id"
+        #[cfg_attr(feature = "utoipa", schema(deprecated))]
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
+
+    MessageVersionDelete {
+        /// deprecated = "keyed by thread_id"
+        #[cfg_attr(feature = "utoipa", schema(deprecated))]
+        room_id: RoomId,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    },
+
+    /// remove multiple messages at once
+    MessageDeleteBulk {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
+
+    RoomMemberUpsert {
+        member: RoomMember,
+    },
+
+    ThreadMemberUpsert {
+        member: ThreadMember,
+    },
+
+    RoleUpsert {
+        role: Role,
+    },
+
+    RoleDelete {
+        room_id: RoomId,
+        role_id: RoleId,
+    },
+
+    InviteUpsert {
+        invite: InviteWithMetadata,
+    },
+
+    InviteDelete {
+        code: InviteCode,
+        target: InviteTargetId,
     },
 
     ReactionUpsert {
@@ -212,12 +206,6 @@ pub enum MessageSync {
     ReactionPurge {
         thread_id: ThreadId,
         message_id: MessageId,
-    },
-
-    /// remove multiple messages at once
-    MessageDeleteBulk {
-        thread_id: ThreadId,
-        message_ids: Vec<MessageId>,
     },
 
     EmojiCreate {
@@ -243,34 +231,32 @@ pub enum MessageSync {
         user_id: UserId,
         state: Option<VoiceState>,
     },
-    // snip... ----- >8 ----
-    // everything below is TODO
 
-    // EventRsvp {
-    //     thread_id: ThreadId,
-    //     user_id: UserId,
-    //     status: EventRsvpType,
-    // },
+    UserUpsert {
+        user: User,
+    },
 
-    // DocumentEdit {
-    //     thread_id: ThreadId,
-    //     edit: DocumentEdit,
-    // },
+    UserDelete {
+        id: UserId,
+    },
 
-    // TableRowUpsert {
-    //     thread_id: ThreadId,
-    //     row: Row,
-    // },
+    SessionUpsert {
+        session: Session,
+    },
 
-    // TableRowDelete {
-    //     thread_id: ThreadId,
-    //     row_id: RowId,
-    // },
+    SessionDelete {
+        id: SessionId,
+        user_id: Option<UserId>,
+    },
 
-    // ReportUpsert {
-    //     report: Report,
-    // },
+    RelationshipUpsert {
+        user_id: UserId,
+        relationship: Relationship,
+    },
 
+    RelationshipDelete {
+        user_id: UserId,
+    },
     // /// arbitrary user defined event
     // Dispatch {
     //     user_id: UserId,
@@ -279,37 +265,20 @@ pub enum MessageSync {
     // },
 }
 
-// TODO: maybe split out different message types
-
-// /// messages specific to a user
-// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
-// #[serde(tag = "type")]
-// enum MessageUser {}
-
-// /// messages specific to a thread
-// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
-// #[serde(tag = "type")]
-// enum MessageThread {}
-
-// /// messages specific to a room
-// #[derive(Debug, PartialEq, Eq, ToSchema, Serialize, Deserialize)]
-// #[serde(tag = "type")]
-// enum MessageRoom {}
-
 impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {
         matches!(
             self,
-            MessageSync::UpsertRoom { .. }
-                | MessageSync::UpsertThread { .. }
-                | MessageSync::UpsertRoomMember { .. }
-                | MessageSync::UpsertThreadMember { .. }
-                | MessageSync::UpsertRole { .. }
-                | MessageSync::UpsertInvite { .. }
-                | MessageSync::DeleteMessage { .. }
-                | MessageSync::DeleteMessageVersion { .. }
-                | MessageSync::DeleteRole { .. }
-                | MessageSync::DeleteInvite { .. }
+            MessageSync::RoomUpsert { .. }
+                | MessageSync::ThreadUpsert { .. }
+                | MessageSync::RoomMemberUpsert { .. }
+                | MessageSync::ThreadMemberUpsert { .. }
+                | MessageSync::RoleUpsert { .. }
+                | MessageSync::InviteUpsert { .. }
+                | MessageSync::MessageDelete { .. }
+                | MessageSync::MessageVersionDelete { .. }
+                | MessageSync::RoleDelete { .. }
+                | MessageSync::InviteDelete { .. }
                 | MessageSync::ReactionPurge { .. }
                 | MessageSync::EmojiCreate { .. }
                 | MessageSync::EmojiDelete { .. }
@@ -323,21 +292,21 @@ impl MessageSync {
     /// get id to populate payload_prev
     pub fn get_audit_target_id(&self) -> Option<String> {
         match self {
-            MessageSync::UpsertRoom { room } => Some(room.id.to_string()),
-            MessageSync::UpsertThread { thread } => Some(thread.id.to_string()),
-            MessageSync::UpsertMessage { message } => Some(message.id.to_string()),
-            MessageSync::UpsertRoomMember { member } => Some(member.user_id.to_string()),
-            MessageSync::UpsertRole { role } => Some(role.id.to_string()),
-            MessageSync::UpsertInvite { invite } => Some(invite.invite.code.to_string()),
-            MessageSync::DeleteRole { role_id, .. } => Some(role_id.to_string()),
-            MessageSync::DeleteInvite { code, .. } => Some(code.to_string()),
-            MessageSync::DeleteMessage { message_id, .. } => Some(message_id.to_string()),
-            MessageSync::DeleteMessageVersion { message_id, .. } => Some(message_id.to_string()),
+            MessageSync::RoomUpsert { room } => Some(room.id.to_string()),
+            MessageSync::ThreadUpsert { thread } => Some(thread.id.to_string()),
+            MessageSync::MessageUpsert { message } => Some(message.id.to_string()),
+            MessageSync::RoomMemberUpsert { member } => Some(member.user_id.to_string()),
+            MessageSync::RoleUpsert { role } => Some(role.id.to_string()),
+            MessageSync::InviteUpsert { invite } => Some(invite.invite.code.to_string()),
+            MessageSync::RoleDelete { role_id, .. } => Some(role_id.to_string()),
+            MessageSync::InviteDelete { code, .. } => Some(code.to_string()),
+            MessageSync::MessageDelete { message_id, .. } => Some(message_id.to_string()),
+            MessageSync::MessageVersionDelete { message_id, .. } => Some(message_id.to_string()),
             MessageSync::EmojiCreate { emoji } => Some(emoji.id.to_string()),
             MessageSync::EmojiDelete { emoji_id, .. } => Some(emoji_id.to_string()),
 
             // HACK: prob. should impl thread-specific audit logs?
-            MessageSync::UpsertThreadMember { member } => {
+            MessageSync::ThreadMemberUpsert { member } => {
                 Some(format!("{}-{}", member.user_id, member.thread_id))
             }
 

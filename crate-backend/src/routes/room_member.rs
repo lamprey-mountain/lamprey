@@ -149,7 +149,7 @@ async fn room_member_add(
         room_id,
         auth_user_id,
         reason,
-        MessageSync::UpsertRoomMember {
+        MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
     )
@@ -203,7 +203,7 @@ async fn room_member_update(
         room_id,
         auth_user_id,
         reason,
-        MessageSync::UpsertRoomMember {
+        MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
     )
@@ -268,7 +268,7 @@ async fn room_member_delete(
         room_id,
         auth_user_id,
         reason,
-        MessageSync::UpsertRoomMember { member: res },
+        MessageSync::RoomMemberUpsert { member: res },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
