@@ -115,7 +115,7 @@ impl LampoHandle {
                 size: bytes.len() as u64,
             },
         };
-        let upload = self.http.for_puppet(user_id).media_create(&req).await?;
+        let upload = dbg!(self.http.for_puppet(user_id).media_create(&req).await?);
         let media = self
             .http
             .for_puppet(user_id)

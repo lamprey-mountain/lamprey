@@ -284,7 +284,6 @@ pub trait DataUser {
     async fn user_lookup_puppet(
         &self,
         owner_id: UserId,
-        external_platform: &str,
         external_id: &str,
     ) -> Result<Option<UserId>>;
 }

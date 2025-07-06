@@ -70,6 +70,8 @@ impl Http {
             .client
             .patch(target.upload_url.clone().unwrap())
             .header("upload-offset", "0")
+            .header("content-type", "application/octet-stream")
+            .header("content-length", body.len())
             .body(body)
             .send()
             .await?

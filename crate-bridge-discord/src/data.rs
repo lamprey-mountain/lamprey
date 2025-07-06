@@ -34,6 +34,7 @@ struct AttachmentMetadataRow {
     discord_id: String,
 }
 
+#[derive(Debug)]
 pub struct Puppet {
     pub id: Uuid,
     pub ext_platform: String,

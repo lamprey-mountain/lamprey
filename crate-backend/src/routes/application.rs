@@ -190,14 +190,10 @@ async fn puppet_ensure(
     if !parent.bot.is_some_and(|b| b.is_bridge) {
         return Err(Error::BadStatic("can't create that user"));
     };
-    // let p = match &external_platform {
-    //     ExternalPlatform::Discord => "Discord",
-    //     ExternalPlatform::Other(o) => o.as_str(),
-    // };
     let existing = data
-        .user_lookup_puppet(auth_user_id, "Discord", &puppet_id)
+        .user_lookup_puppet(dbg!(auth_user_id), dbg!(&puppet_id))
         .await?;
-    if let Some(id) = existing {
+    if let Some(id) = dbg!(existing) {
         let user = data.user_get(id).await?;
         return Ok((StatusCode::OK, Json(user)));
     }

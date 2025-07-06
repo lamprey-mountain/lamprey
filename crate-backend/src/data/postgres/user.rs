@@ -211,16 +211,14 @@ impl DataUser for Postgres {
     async fn user_lookup_puppet(
         &self,
         owner_id: UserId,
-        external_platform: &str,
         external_id: &str,
     ) -> Result<Option<UserId>> {
         let id = query_scalar!(
             r#"
             SELECT id FROM usr
-            WHERE parent_id = $1 AND puppet->>'external_platform' = $2 AND puppet->>'external_id' = $3
+            WHERE parent_id = $1 AND puppet->>'external_id' = $2
             "#,
             owner_id.into_inner(),
-            external_platform,
             external_id,
         )
         .fetch_optional(&self.pool)

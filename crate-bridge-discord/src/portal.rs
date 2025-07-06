@@ -290,7 +290,7 @@ impl Portal {
                     .globals
                     .get_puppet("discord", &message.author.id.to_string())
                     .await?;
-                if let Some(p) = p {
+                if let Some(p) = dbg!(p) {
                     if p.ext_avatar != message.author.avatar_url() {
                         if let Some(url) = message.author.avatar_url() {
                             info!("set user pfp for {user_id}");
