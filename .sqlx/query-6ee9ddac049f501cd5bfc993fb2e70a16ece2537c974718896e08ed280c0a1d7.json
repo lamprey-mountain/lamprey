@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id FROM usr\n            WHERE parent_id = $1 AND puppet->>'external_platform' = $2 AND puppet->>'external_id' = $3\n            ",
+  "query": "\n            SELECT id FROM usr\n            WHERE parent_id = $1 AND puppet->>'external_id' = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -12,7 +12,6 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Text",
         "Text"
       ]
     },
@@ -20,5 +19,5 @@
       false
     ]
   },
-  "hash": "b4603df666f9b4b45ec1ddee913110b25c804b1eaeae3404dd131ab891c2e516"
+  "hash": "6ee9ddac049f501cd5bfc993fb2e70a16ece2537c974718896e08ed280c0a1d7"
 }
