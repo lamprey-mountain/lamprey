@@ -339,12 +339,26 @@ async fn thread_unarchive(
     )
 )]
 async fn thread_delete(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    let data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure(Permission::ThreadDelete)?;
+    data.thread_delete(thread_id, user_id).await?;
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    s.broadcast_room(
+        thread.room_id,
+        user_id,
+        reason,
+        MessageSync::ThreadUpdate {
+            thread: thread.clone(),
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Undelete thread
@@ -360,12 +374,26 @@ async fn thread_delete(
     )
 )]
 async fn thread_undelete(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    let data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure(Permission::ThreadDelete)?;
+    data.thread_undelete(thread_id, user_id).await?;
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    s.broadcast_room(
+        thread.room_id,
+        user_id,
+        reason,
+        MessageSync::ThreadUpdate {
+            thread: thread.clone(),
+        },
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Send typing

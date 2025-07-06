@@ -262,6 +262,8 @@ pub trait DataThread {
         user_id: UserId,
         patch: ThreadPatch,
     ) -> Result<ThreadVerId>;
+    async fn thread_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
+    async fn thread_undelete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
 }
 
 #[async_trait]

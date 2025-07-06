@@ -111,4 +111,44 @@ impl DataThread for Postgres {
         tx.commit().await?;
         Ok(version_id)
     }
+
+    async fn thread_delete(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let version_id = ThreadVerId::new();
+        query!(
+            r#"
+            UPDATE thread SET
+                version_id = $2,
+                deleted_at = NOW()
+            WHERE id = $1
+            "#,
+            thread_id.into_inner(),
+            version_id.into_inner(),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn thread_undelete(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let version_id = ThreadVerId::new();
+        query!(
+            r#"
+            UPDATE thread SET
+                version_id = $2,
+                deleted_at = NULL
+            WHERE id = $1
+            "#,
+            thread_id.into_inner(),
+            version_id.into_inner(),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
 }
