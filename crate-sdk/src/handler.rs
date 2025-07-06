@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    util::Time, voice::SignallingMessage, InviteCode, InviteWithMetadata, Message, MessageId,
-    MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId, RoomMember, Session,
-    SessionId, Thread, ThreadId, ThreadMember, User, UserId,
+    user_config::UserConfig, util::Time, voice::SignallingMessage, InviteCode, InviteWithMetadata,
+    Message, MessageId, MessagePayload, MessageSync, MessageVerId, Role, RoleId, Room, RoomId,
+    RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
 };
 use std::future::{ready, Future};
 
@@ -127,6 +127,13 @@ pub trait EventHandler: Send {
     }
 
     fn user_delete(&mut self, id: UserId) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        ready(Ok(()))
+    }
+
+    fn user_config(
+        &mut self,
+        config: UserConfig,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }
 
@@ -395,6 +402,7 @@ where
                         .await
                 }
                 MessageSync::UserDelete { id } => self.user_delete(id).await,
+                MessageSync::UserConfig { user_id: _, config } => self.user_config(config).await,
                 MessageSync::SessionDelete { id, .. } => self.session_delete(id).await,
                 MessageSync::RoleDelete { room_id, role_id } => {
                     self.role_delete(room_id, role_id).await

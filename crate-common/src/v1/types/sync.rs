@@ -12,6 +12,7 @@ use crate::v1::types::{
 use super::{
     emoji::EmojiCustom,
     reaction::ReactionKey,
+    user_config::UserConfig,
     voice::{SignallingMessage, VoiceState},
     EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
     Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
@@ -257,6 +258,11 @@ pub enum MessageSync {
 
     UserUpdate {
         user: User,
+    },
+
+    UserConfig {
+        user_id: UserId,
+        config: UserConfig,
     },
 
     UserDelete {

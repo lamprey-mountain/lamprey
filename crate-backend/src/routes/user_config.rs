@@ -19,13 +19,17 @@ use crate::ServerState;
     tags = ["user"],
     responses((status = OK, body = UserConfig, description = "success"))
 )]
-#[axum::debug_handler]
 async fn user_config_set(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<UserConfig>,
 ) -> Result<impl IntoResponse> {
     s.data().user_config_set(auth_user_id, &json).await?;
+    // FIXME: limit max size for config
+    s.broadcast(common::v1::types::MessageSync::UserConfig {
+        user_id: auth_user_id,
+        config: json.clone(),
+    })?;
     Ok(Json(json))
 }
 

@@ -268,6 +268,7 @@ impl Connection {
             MessageSync::MessageUpdate { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::UserConfig { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberUpsert { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
