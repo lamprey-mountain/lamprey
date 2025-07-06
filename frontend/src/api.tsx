@@ -86,7 +86,19 @@ export function createApi(
 	const emoji = new Emoji();
 
 	temp_events.on("sync", (msg) => {
-		if (msg.type === "RoomUpsert") {
+		if (msg.type === "RoomCreate") {
+			const { room } = msg;
+			rooms.cache.set(room.id, room);
+			if (rooms._cachedListing?.pagination) {
+				const l = rooms._cachedListing;
+				const p = l.pagination!;
+				l.mutate({
+					...p,
+					items: [...p.items, room],
+					total: p.total + 1,
+				});
+			}
+		} else if (msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
 			if (rooms._cachedListing?.pagination) {
@@ -98,15 +110,25 @@ export function createApi(
 						...p,
 						items: p.items.toSpliced(idx, 1, room),
 					});
-				} else if (p.items.length === 0 || room.id > p.items[0].id) {
-					l.mutate({
-						...p,
-						items: [...p.items, room],
-						total: p.total + 1,
-					});
 				}
 			}
-		} else if (msg.type === "ThreadUpsert") {
+		} else if (msg.type === "ThreadCreate") {
+			const { thread } = msg;
+			threads.cache.set(thread.id, thread);
+			const l = threads._cachedListings.get(thread.room_id);
+			if (l?.pagination) {
+				const p = l.pagination;
+				for (const mut of threads._listingMutators) {
+					if (mut.room_id === thread.room_id) {
+						mut.mutate({
+							...p,
+							items: [...p.items, thread],
+							total: p.total + 1,
+						});
+					}
+				}
+			}
+		} else if (msg.type === "ThreadUpdate") {
 			const { thread } = msg;
 			threads.cache.set(thread.id, thread);
 			const l = threads._cachedListings.get(thread.room_id);
@@ -122,27 +144,127 @@ export function createApi(
 							});
 						}
 					}
-				} else if (p.items.length === 0 || thread.id > p.items[0].id) {
-					for (const mut of threads._listingMutators) {
-						if (mut.room_id === thread.room_id) {
-							mut.mutate({
-								...p,
-								items: [...p.items, thread],
-								total: p.total + 1,
-							});
-						}
-					}
 				}
 			}
-		} else if (msg.type === "UserUpsert") {
-			users.cache.set(msg.user.id, msg.user);
-			if (msg.user.id === users.cache.get("@self")?.id) {
-				users.cache.set("@self", msg.user);
+		} else if (msg.type === "ThreadTyping") {
+			const { thread_id, user_id, until } = msg;
+			const t = typing.get(thread_id) ?? new Set();
+			typing.set(thread_id, new Set([...t, user_id]));
+
+			const timeout = setTimeout(() => {
+				console.log("remove typing");
+				const t = typing.get(thread_id)!;
+				t.delete(user_id);
+				typing.set(thread_id, new Set(t));
+			}, Date.parse(until) - Date.now());
+
+			const tt = typing_timeout.get(thread_id);
+			if (tt) {
+				const tu = tt.get(user_id);
+				if (tu) clearTimeout(tu);
+				tt.set(user_id, timeout);
+			} else {
+				const tt = new Map();
+				tt.set(user_id, timeout);
+				typing_timeout.set(thread_id, tt);
 			}
-		} else if (msg.type === "SessionUpsert") {
-			if (msg.session?.id === session()?.id) {
-				setSession(session);
+		} else if (msg.type === "ThreadAck") {
+			// TODO
+		} else if (msg.type === "MessageCreate") {
+			const m = msg.message;
+			const r = messages.cacheRanges.get(m.thread_id);
+			let is_new = false;
+			let is_unread = true;
+			if (r) {
+				if (m.nonce) {
+					// local echo
+					console.log("Message Create local echo");
+					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
+					if (idx !== -1) {
+						r.live.items.splice(idx, 1);
+					}
+					r.live.items.push(m);
+					is_new = true;
+					is_unread = false;
+				} else {
+					console.log("Message Create new message");
+					r.live.items.push(m);
+					is_new = true;
+				}
+				batch(() => {
+					messages.cache.set(m.id, m);
+					messages._updateMutators(r, m.thread_id);
+				});
 			}
+
+			const t = api.threads.cache.get(m.thread_id);
+			if (t) {
+				api.threads.cache.set(m.thread_id, {
+					...t,
+					message_count: t.message_count + (is_new ? 1 : 0),
+					last_version_id: m.version_id,
+					is_unread,
+				});
+			}
+
+			{
+				const t = typing.get(m.thread_id);
+				if (t) {
+					t.delete(m.author_id);
+					typing.set(m.thread_id, new Set(t));
+					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author_id));
+				}
+			}
+
+			for (const att of m.attachments ?? []) {
+				media.cacheInfo.set(att.id, att);
+			}
+		} else if (msg.type === "MessageUpdate") {
+			const m = msg.message;
+			const r = messages.cacheRanges.get(m.thread_id);
+			if (r) {
+				const idx = r.live.items.findIndex((i) => i.id === m.id);
+				if (idx !== -1) {
+					console.log("Message Update edit");
+					r.live.items.splice(idx, 1, m);
+				}
+				batch(() => {
+					messages.cache.set(m.id, m);
+					messages._updateMutators(r, m.thread_id);
+				});
+			}
+		} else if (msg.type === "MessageDelete") {
+			batch(() => {
+				const { message_id, thread_id } = msg;
+				const ranges = messages.cacheRanges.get(thread_id);
+				const r = ranges?.find(message_id);
+				if (ranges && r) {
+					const idx = r.items.findIndex((i) => i.id === message_id);
+					if (idx !== -1) {
+						r.items.splice(idx, 1);
+					}
+					batch(() => {
+						messages.cache.delete(thread_id);
+						messages._updateMutators(ranges, thread_id);
+					});
+				}
+				const t = api.threads.cache.get(msg.thread_id);
+				if (t) {
+					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
+						t.last_version_id;
+					console.log({ last_version_id });
+					api.threads.cache.set(msg.thread_id, {
+						...t,
+						message_count: t.message_count - 1,
+						last_version_id,
+						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
+					});
+				}
+			});
+		} else if (msg.type === "MessageDeleteBulk") {
+			// TODO
+		} else if (msg.type === "MessageVersionDelete") {
+			// TODO
 		} else if (msg.type === "RoomMemberUpsert") {
 			const m = msg.member;
 			const c = room_members.cache.get(m.room_id);
@@ -195,141 +317,19 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "MessageUpsert") {
-			const m = msg.message;
-			const r = messages.cacheRanges.get(m.thread_id);
-			let is_new = false;
-			let is_unread = true;
-			if (r) {
-				if (m.nonce) {
-					// local echo
-					console.log("Message Upsertlocal echo");
-					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
-					if (idx !== -1) {
-						r.live.items.splice(idx, 1);
-					}
-					r.live.items.push(m);
-					is_new = true;
-					is_unread = false;
-				} else {
-					// edits
-					const idx = r.live.items.findIndex((i) => i.id === m.id);
-					if (idx !== -1) {
-						console.log("Message Upsertedit");
-						r.live.items.splice(idx, 1, m);
-					} else {
-						console.log("Message Upsertnew message");
-						r.live.items.push(m);
-						is_new = true;
-					}
-				}
-				batch(() => {
-					messages.cache.set(m.id, m);
-					messages._updateMutators(r, m.thread_id);
+		} else if (msg.type === "RoleCreate") {
+			const r = msg.role;
+			roles.cache.set(r.id, r);
+			const l = roles._cachedListings.get(r.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				l.mutate({
+					...p,
+					items: [...p.items, r],
+					total: p.total + 1,
 				});
 			}
-
-			const t = api.threads.cache.get(m.thread_id);
-			if (t) {
-				api.threads.cache.set(m.thread_id, {
-					...t,
-					message_count: t.message_count + (is_new ? 1 : 0),
-					last_version_id: m.version_id,
-					is_unread,
-				});
-			}
-
-			{
-				const t = typing.get(m.thread_id);
-				if (t) {
-					t.delete(m.author_id);
-					typing.set(m.thread_id, new Set(t));
-					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author_id));
-				}
-			}
-
-			for (const att of m.attachments ?? []) {
-				media.cacheInfo.set(att.id, att);
-			}
-		} else if (msg.type === "MessageDelete") {
-			batch(() => {
-				const { message_id, thread_id } = msg;
-				const ranges = messages.cacheRanges.get(thread_id);
-				const r = ranges?.find(message_id);
-				if (ranges && r) {
-					const idx = r.items.findIndex((i) => i.id === message_id);
-					if (idx !== -1) {
-						r.items.splice(idx, 1);
-					}
-					batch(() => {
-						messages.cache.delete(thread_id);
-						messages._updateMutators(ranges, thread_id);
-					});
-				}
-				const t = api.threads.cache.get(msg.thread_id);
-				if (t) {
-					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
-						t.last_version_id;
-					console.log({ last_version_id });
-					api.threads.cache.set(msg.thread_id, {
-						...t,
-						message_count: t.message_count - 1,
-						last_version_id,
-						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
-					});
-				}
-			});
-		} else if (msg.type === "InviteUpsert") {
-			const { invite } = msg;
-			invites.cache.set(invite.code, invite);
-			console.log("upsert", invites);
-			if (invite.target.type === "Room") {
-				const room_id = invite.target.room.id;
-				const l = invites._cachedListings.get(room_id);
-				if (l?.pagination) {
-					const p = l.resource.latest;
-					if (p) {
-						const idx = p.items.findIndex((i) => i.code === invite.code);
-						if (idx !== -1) {
-							l.mutate({
-								...p,
-								items: p.items.toSpliced(idx, 1, invite),
-							});
-						} else {
-							l.mutate({
-								...p,
-								items: [...p.items, invite],
-								total: p.total + 1,
-							});
-						}
-					}
-				}
-			}
-		} else if (msg.type === "InviteDelete") {
-			const invite = invites.cache.get(msg.code);
-			console.log("delete invite", invite);
-			if (invite) {
-				if (invite.target.type === "Room") {
-					const room_id = invite.target.room.id;
-					const l = invites._cachedListings.get(room_id);
-					console.log(l);
-					if (l?.pagination) {
-						const p = l.resource.latest;
-						if (p) {
-							const idx = p.items.findIndex((i) => i.code === invite.code);
-							console.log("splice", idx);
-							if (idx !== -1) {
-								l.mutate({
-									...p,
-									items: p.items.toSpliced(idx, 1),
-								});
-							}
-						}
-					}
-				}
-			}
-			invites.cache.delete(msg.code);
-		} else if (msg.type === "RoleUpsert") {
+		} else if (msg.type === "RoleUpdate") {
 			const r = msg.role;
 			roles.cache.set(r.id, r);
 			const l = roles._cachedListings.get(r.room_id);
@@ -340,12 +340,6 @@ export function createApi(
 					l.mutate({
 						...p,
 						items: p.items.toSpliced(idx, 1, r),
-					});
-				} else {
-					l.mutate({
-						...p,
-						items: [...p.items, r],
-						total: p.total + 1,
 					});
 				}
 			}
@@ -363,28 +357,75 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "Typing") {
-			const { thread_id, user_id, until } = msg;
-			const t = typing.get(thread_id) ?? new Set();
-			typing.set(thread_id, new Set([...t, user_id]));
-
-			const timeout = setTimeout(() => {
-				console.log("remove typing");
-				const t = typing.get(thread_id)!;
-				t.delete(user_id);
-				typing.set(thread_id, new Set(t));
-			}, Date.parse(until) - Date.now());
-
-			const tt = typing_timeout.get(thread_id);
-			if (tt) {
-				const tu = tt.get(user_id);
-				if (tu) clearTimeout(tu);
-				tt.set(user_id, timeout);
-			} else {
-				const tt = new Map();
-				tt.set(user_id, timeout);
-				typing_timeout.set(thread_id, tt);
+		} else if (msg.type === "InviteCreate") {
+			const { invite } = msg;
+			invites.cache.set(invite.code, invite);
+			if (invite.target.type === "Room") {
+				const room_id = invite.target.room.id;
+				const l = invites._cachedListings.get(room_id);
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						l.mutate({
+							...p,
+							items: [...p.items, invite],
+							total: p.total + 1,
+						});
+					}
+				}
 			}
+		} else if (msg.type === "InviteDelete") {
+			const invite = invites.cache.get(msg.code);
+			if (invite) {
+				if (invite.target.type === "Room") {
+					const room_id = invite.target.room.id;
+					const l = invites._cachedListings.get(room_id);
+					if (l?.pagination) {
+						const p = l.resource.latest;
+						if (p) {
+							const idx = p.items.findIndex((i) => i.code === invite.code);
+							if (idx !== -1) {
+								l.mutate({
+									...p,
+									items: p.items.toSpliced(idx, 1),
+								});
+							}
+						}
+					}
+				}
+			}
+			invites.cache.delete(msg.code);
+		} else if (msg.type === "ReactionCreate") {
+			// TODO
+		} else if (msg.type === "ReactionDelete") {
+			// TODO
+		} else if (msg.type === "ReactionPurge") {
+			// TODO
+		} else if (msg.type === "EmojiCreate") {
+			// TODO
+		} else if (msg.type === "EmojiDelete") {
+			// TODO
+		} else if (msg.type === "UserCreate") {
+			users.cache.set(msg.user.id, msg.user);
+		} else if (msg.type === "UserUpdate") {
+			users.cache.set(msg.user.id, msg.user);
+			if (msg.user.id === users.cache.get("@self")?.id) {
+				users.cache.set("@self", msg.user);
+			}
+		} else if (msg.type === "UserDelete") {
+			users.cache.delete(msg.id);
+		} else if (msg.type === "SessionCreate") {
+			// TODO
+		} else if (msg.type === "SessionUpdate") {
+			if (msg.session?.id === session()?.id) {
+				setSession(session);
+			}
+		} else if (msg.type === "SessionDelete") {
+			// TODO
+		} else if (msg.type === "RelationshipUpsert") {
+			// TODO
+		} else if (msg.type === "RelationshipDelete") {
+			// TODO
 		} else {
 			// console.warn(`unknown event ${msg.type}`, msg);
 		}

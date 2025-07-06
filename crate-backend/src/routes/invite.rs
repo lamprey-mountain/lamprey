@@ -232,7 +232,7 @@ pub async fn invite_room_create(
         room_id,
         user_id,
         reason,
-        MessageSync::InviteUpsert {
+        MessageSync::InviteCreate {
             invite: invite.clone(),
         },
     )

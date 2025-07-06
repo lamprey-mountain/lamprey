@@ -53,7 +53,7 @@ pub async fn role_create(
             is_default: json.is_default,
         })
         .await?;
-    let msg = MessageSync::RoleUpsert { role: role.clone() };
+    let msg = MessageSync::RoleCreate { role: role.clone() };
     s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok((StatusCode::CREATED, Json(role)))
 }
@@ -90,7 +90,7 @@ pub async fn role_update(
     }
     d.role_update(room_id, role_id, json.clone()).await?;
     let role = d.role_select(room_id, role_id).await?;
-    let msg = MessageSync::RoleUpsert { role: role.clone() };
+    let msg = MessageSync::RoleUpdate { role: role.clone() };
     if json.permissions.is_some_and(|p| p != role.permissions) {
         s.services().perms.invalidate_room_all(room_id);
     }

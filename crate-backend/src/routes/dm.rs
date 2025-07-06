@@ -39,7 +39,7 @@ async fn dm_init(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let (room, is_new) = srv.users.init_dm(auth_user_id, target_user_id).await?;
-    s.broadcast(MessageSync::RoomUpsert { room: room.clone() })?;
+    s.broadcast(MessageSync::RoomCreate { room: room.clone() })?;
     if is_new {
         Ok((StatusCode::CREATED, Json(room)))
     } else {

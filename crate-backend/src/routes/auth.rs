@@ -117,7 +117,7 @@ async fn auth_oauth_redirect(
                 .await?;
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
-            s.broadcast(MessageSync::SessionUpsert { session })?;
+            s.broadcast(MessageSync::SessionCreate { session })?;
             Ok(Html(include_str!("../oauth.html")))
         }
         "github" => {
@@ -149,7 +149,7 @@ async fn auth_oauth_redirect(
                 .await?;
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
-            s.broadcast(MessageSync::SessionUpsert { session })?;
+            s.broadcast(MessageSync::SessionCreate { session })?;
             Ok(Html(include_str!("../oauth.html")))
         }
         _ => return Err(Error::Unimplemented),

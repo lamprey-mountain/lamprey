@@ -138,7 +138,7 @@ async fn user_update(
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id).await?;
-    s.broadcast(MessageSync::UserUpsert { user: user.clone() })?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
 

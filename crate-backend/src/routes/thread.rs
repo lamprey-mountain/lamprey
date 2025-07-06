@@ -88,7 +88,7 @@ async fn thread_create(
         room_id,
         user_id,
         reason,
-        MessageSync::ThreadUpsert {
+        MessageSync::ThreadCreate {
             thread: thread.clone(),
         },
     )
@@ -97,7 +97,7 @@ async fn thread_create(
         thread.id,
         user_id,
         None,
-        MessageSync::MessageUpsert {
+        MessageSync::MessageCreate {
             message: starter_message,
         },
     )

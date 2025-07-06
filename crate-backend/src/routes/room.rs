@@ -39,7 +39,7 @@ async fn room_create(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let room = s.services().rooms.create(json, user_id).await?;
-    s.broadcast(MessageSync::RoomUpsert { room: room.clone() })?;
+    s.broadcast(MessageSync::RoomCreate { room: room.clone() })?;
     Ok((StatusCode::CREATED, Json(room)))
 }
 
@@ -150,7 +150,7 @@ async fn room_edit(
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
     let room = s.services().rooms.update(room_id, user_id, json).await?;
-    let msg = MessageSync::RoomUpsert { room: room.clone() };
+    let msg = MessageSync::RoomUpdate { room: room.clone() };
     s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok(Json(room))
 }

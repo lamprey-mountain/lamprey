@@ -260,17 +260,21 @@ impl Connection {
         }
 
         let auth_check = match &msg {
-            MessageSync::RoomUpsert { room } => AuthCheck::Room(room.id),
-            MessageSync::ThreadUpsert { thread } => AuthCheck::Thread(thread.id),
-            MessageSync::MessageUpsert { message } => AuthCheck::Thread(message.thread_id),
-            MessageSync::UserUpsert { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::RoomCreate { room } => AuthCheck::Room(room.id),
+            MessageSync::RoomUpdate { room } => AuthCheck::Room(room.id),
+            MessageSync::ThreadCreate { thread } => AuthCheck::Thread(thread.id),
+            MessageSync::ThreadUpdate { thread } => AuthCheck::Thread(thread.id),
+            MessageSync::MessageCreate { message } => AuthCheck::Thread(message.thread_id),
+            MessageSync::MessageUpdate { message } => AuthCheck::Thread(message.thread_id),
+            MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::RoomMemberUpsert { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
             MessageSync::ThreadMemberUpsert { member } => {
                 AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
             }
-            MessageSync::SessionUpsert {
+            MessageSync::SessionCreate {
                 session: upserted_session,
             } => {
                 if session.id == upserted_session.id {
@@ -281,8 +285,20 @@ impl Connection {
                 }
                 AuthCheck::Custom(session.can_see(upserted_session))
             }
-            MessageSync::RoleUpsert { role } => AuthCheck::Room(role.room_id),
-            MessageSync::InviteUpsert { invite } => match &invite.invite.target {
+            MessageSync::SessionUpdate {
+                session: upserted_session,
+            } => {
+                if session.id == upserted_session.id {
+                    session = upserted_session.to_owned();
+                    self.state = ConnectionState::Authenticated {
+                        session: upserted_session.to_owned(),
+                    };
+                }
+                AuthCheck::Custom(session.can_see(upserted_session))
+            }
+            MessageSync::RoleCreate { role } => AuthCheck::Room(role.room_id),
+            MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
+            MessageSync::InviteCreate { invite } => match &invite.invite.target {
                 InviteTarget::User { user } => AuthCheck::User(user.id),
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
@@ -314,8 +330,8 @@ impl Connection {
             MessageSync::ThreadAck { .. } => todo!(),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipDelete { user_id } => AuthCheck::User(*user_id),
-            MessageSync::ReactionUpsert { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ReactionRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionCreate { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::VoiceDispatch { user_id, payload } => match payload {

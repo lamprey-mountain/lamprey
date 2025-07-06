@@ -148,17 +148,17 @@ where
     async fn handle(&mut self, payload: MessagePayload) {
         let _ = match payload {
             MessagePayload::Sync { data, .. } => match data {
-                MessageSync::RoomUpsert { room } => self.upsert_room(room).await,
-                MessageSync::ThreadUpsert { thread } => self.upsert_thread(thread).await,
-                MessageSync::MessageUpsert { message } => self.upsert_message(message).await,
-                MessageSync::UserUpsert { user } => self.upsert_user(user).await,
+                MessageSync::RoomCreate { room } => self.upsert_room(room).await,
+                MessageSync::ThreadCreate { thread } => self.upsert_thread(thread).await,
+                MessageSync::MessageCreate { message } => self.upsert_message(message).await,
+                MessageSync::UserCreate { user } => self.upsert_user(user).await,
                 MessageSync::RoomMemberUpsert { member } => self.upsert_room_member(member).await,
                 MessageSync::ThreadMemberUpsert { member } => {
                     self.upsert_thread_member(member).await
                 }
-                MessageSync::SessionUpsert { session } => self.upsert_session(session).await,
-                MessageSync::RoleUpsert { role } => self.upsert_role(role).await,
-                MessageSync::InviteUpsert { invite } => self.upsert_invite(invite).await,
+                MessageSync::SessionCreate { session } => self.upsert_session(session).await,
+                MessageSync::RoleCreate { role } => self.upsert_role(role).await,
+                MessageSync::InviteCreate { invite } => self.upsert_invite(invite).await,
                 MessageSync::MessageDelete {
                     thread_id,
                     message_id,

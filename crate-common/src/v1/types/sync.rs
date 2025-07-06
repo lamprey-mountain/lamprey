@@ -114,11 +114,19 @@ pub enum MessagePayload {
 #[serde(tag = "type")]
 #[allow(clippy::large_enum_variant)]
 pub enum MessageSync {
-    RoomUpsert {
+    RoomCreate {
         room: Room,
     },
 
-    ThreadUpsert {
+    RoomUpdate {
+        room: Room,
+    },
+
+    ThreadCreate {
+        thread: Thread,
+    },
+
+    ThreadUpdate {
         thread: Thread,
     },
 
@@ -135,7 +143,11 @@ pub enum MessageSync {
         version_id: MessageVerId,
     },
 
-    MessageUpsert {
+    MessageCreate {
+        message: Message,
+    },
+
+    MessageUpdate {
         message: Message,
     },
 
@@ -170,7 +182,11 @@ pub enum MessageSync {
         member: ThreadMember,
     },
 
-    RoleUpsert {
+    RoleCreate {
+        role: Role,
+    },
+
+    RoleUpdate {
         role: Role,
     },
 
@@ -179,23 +195,26 @@ pub enum MessageSync {
         role_id: RoleId,
     },
 
-    InviteUpsert {
+    InviteCreate {
         invite: InviteWithMetadata,
     },
 
+    // InviteUpdate {
+    //     invite: InviteWithMetadata,
+    // },
     InviteDelete {
         code: InviteCode,
         target: InviteTargetId,
     },
 
-    ReactionUpsert {
+    ReactionCreate {
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
         key: ReactionKey,
     },
 
-    ReactionRemove {
+    ReactionDelete {
         user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
@@ -232,7 +251,11 @@ pub enum MessageSync {
         state: Option<VoiceState>,
     },
 
-    UserUpsert {
+    UserCreate {
+        user: User,
+    },
+
+    UserUpdate {
         user: User,
     },
 
@@ -240,7 +263,11 @@ pub enum MessageSync {
         id: UserId,
     },
 
-    SessionUpsert {
+    SessionCreate {
+        session: Session,
+    },
+
+    SessionUpdate {
         session: Session,
     },
 
@@ -269,15 +296,18 @@ impl MessageSync {
     pub fn is_room_audit_loggable(&self) -> bool {
         matches!(
             self,
-            MessageSync::RoomUpsert { .. }
-                | MessageSync::ThreadUpsert { .. }
+            MessageSync::RoomCreate { .. }
+                | MessageSync::RoomUpdate { .. }
+                | MessageSync::ThreadCreate { .. }
+                | MessageSync::ThreadUpdate { .. }
                 | MessageSync::RoomMemberUpsert { .. }
                 | MessageSync::ThreadMemberUpsert { .. }
-                | MessageSync::RoleUpsert { .. }
-                | MessageSync::InviteUpsert { .. }
+                | MessageSync::RoleCreate { .. }
+                | MessageSync::RoleUpdate { .. }
+                | MessageSync::RoleDelete { .. }
+                | MessageSync::InviteCreate { .. }
                 | MessageSync::MessageDelete { .. }
                 | MessageSync::MessageVersionDelete { .. }
-                | MessageSync::RoleDelete { .. }
                 | MessageSync::InviteDelete { .. }
                 | MessageSync::ReactionPurge { .. }
                 | MessageSync::EmojiCreate { .. }
@@ -292,13 +322,17 @@ impl MessageSync {
     /// get id to populate payload_prev
     pub fn get_audit_target_id(&self) -> Option<String> {
         match self {
-            MessageSync::RoomUpsert { room } => Some(room.id.to_string()),
-            MessageSync::ThreadUpsert { thread } => Some(thread.id.to_string()),
-            MessageSync::MessageUpsert { message } => Some(message.id.to_string()),
+            MessageSync::RoomCreate { room } => Some(room.id.to_string()),
+            MessageSync::RoomUpdate { room } => Some(room.id.to_string()),
+            MessageSync::ThreadCreate { thread } => Some(thread.id.to_string()),
+            MessageSync::ThreadUpdate { thread } => Some(thread.id.to_string()),
+            MessageSync::MessageCreate { message } => Some(message.id.to_string()),
+            MessageSync::MessageUpdate { message } => Some(message.id.to_string()),
             MessageSync::RoomMemberUpsert { member } => Some(member.user_id.to_string()),
-            MessageSync::RoleUpsert { role } => Some(role.id.to_string()),
-            MessageSync::InviteUpsert { invite } => Some(invite.invite.code.to_string()),
+            MessageSync::RoleCreate { role } => Some(role.id.to_string()),
+            MessageSync::RoleUpdate { role } => Some(role.id.to_string()),
             MessageSync::RoleDelete { role_id, .. } => Some(role_id.to_string()),
+            MessageSync::InviteCreate { invite } => Some(invite.invite.code.to_string()),
             MessageSync::InviteDelete { code, .. } => Some(code.to_string()),
             MessageSync::MessageDelete { message_id, .. } => Some(message_id.to_string()),
             MessageSync::MessageVersionDelete { message_id, .. } => Some(message_id.to_string()),

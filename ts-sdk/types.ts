@@ -50,26 +50,28 @@ export type MessageEnvelope =
 	| { op: "Reconnect"; can_resume: boolean };
 
 export type MessageSync =
+	| { type: "InviteCreate"; invite: Invite }
+	| { type: "InviteUpdate"; invite: Invite }
 	| { type: "InviteDelete"; code: string }
-	| { type: "InviteUpsert"; invite: Invite }
+	| { type: "MessageCreate"; message: Message }
+	| { type: "MessageUpdate"; message: Message }
 	| { type: "MessageDelete"; thread_id: string; message_id: string }
-	| { type: "MessageUpsert"; message: Message }
 	| {
 		type: "MessageVersionDelete";
 		thread_id: string;
 		message_id: string;
 		version_id: string;
 	}
+	| { type: "RoleCreate"; role: Role }
+	| { type: "RoleUpdate"; role: Role }
 	| { type: "RoleDelete"; room_id: string; role_id: string }
-	| { type: "RoleUpsert"; role: Role }
-	| { type: "RoomMemberDelete"; room_id: string; user_id: string }
 	| { type: "RoomMemberUpsert"; member: RoomMember }
-	| { type: "RoomUpsert"; room: Room }
+	| { type: "RoomMemberDelete"; room_id: string; user_id: string }
+	| { type: "RoomCreate"; room: Room }
+	| { type: "RoomUpdate"; room: Room }
 	| { type: "SessionDelete"; id: string }
-	| { type: "SessionUpsert"; session: Session }
-	| { type: "ThreadMemberUpsert"; member: ThreadMember }
-	| { type: "ThreadUpsert"; thread: Thread }
 	| { type: "Typing"; thread_id: string; user_id: string; until: string }
+	| { type: "SessionCreate"; session: Session }
+	| { type: "SessionUpdate"; session: Session }
 	| { type: "UserDelete"; id: string }
-	| { type: "UserUpsert"; user: User }
 	| { type: "VoiceDispatch"; user_id: string; payload: any };

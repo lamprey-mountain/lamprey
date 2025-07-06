@@ -98,7 +98,7 @@ pub async fn session_update(
     let srv = s.services();
     srv.sessions.invalidate(session_id).await;
     let session = srv.sessions.get(session_id).await?;
-    s.broadcast(MessageSync::SessionUpsert {
+    s.broadcast(MessageSync::SessionUpdate {
         session: session.clone(),
     })?;
     Ok((StatusCode::OK, Json(session)))

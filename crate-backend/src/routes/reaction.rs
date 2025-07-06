@@ -48,7 +48,7 @@ async fn reaction_add(
         thread_id,
         auth_user_id,
         reason,
-        MessageSync::ReactionUpsert {
+        MessageSync::ReactionCreate {
             thread_id,
             user_id: auth_user_id,
             message_id,
@@ -92,7 +92,7 @@ async fn reaction_remove(
         thread_id,
         auth_user_id,
         reason,
-        MessageSync::ReactionRemove {
+        MessageSync::ReactionDelete {
             thread_id,
             user_id: auth_user_id,
             message_id,

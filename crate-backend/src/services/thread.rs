@@ -108,12 +108,12 @@ impl ServiceThreads {
                 thread.id,
                 user_id,
                 None,
-                MessageSync::MessageUpsert {
+                MessageSync::MessageCreate {
                     message: update_message,
                 },
             )
             .await?;
-        let msg = MessageSync::ThreadUpsert {
+        let msg = MessageSync::ThreadUpdate {
             thread: thread.clone(),
         };
         self.state
