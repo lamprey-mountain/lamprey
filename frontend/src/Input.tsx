@@ -40,7 +40,7 @@ export function Input(props: InputProps) {
 	// const typing = () => api.typing.get(props.thread.id);
 
 	const sendTyping = leading(throttle, () => {
-		ctx.client.http.PUT("/api/v1/thread/{thread_id}/typing", {
+		ctx.client.http.POST("/api/v1/thread/{thread_id}/typing", {
 			params: {
 				path: { thread_id: props.thread.id },
 			},
