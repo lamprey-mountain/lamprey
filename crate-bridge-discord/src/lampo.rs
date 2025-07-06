@@ -36,26 +36,35 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn upsert_thread(&mut self, _thread: Thread) -> Result<()> {
+    async fn thread_create(&mut self, _thread: Thread) -> Result<()> {
         info!("chat upsert thread");
         // TODO: what to do here?
         Ok(())
     }
 
-    async fn upsert_message(&mut self, message: types::Message) -> Result<()> {
+    async fn message_create(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
         self.globals.portal_send(
             message.thread_id,
-            PortalMessage::LampoMessageUpsert { message },
+            PortalMessage::LampoMessageCreate { message },
         );
         Ok(())
     }
 
-    async fn delete_message(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+    async fn message_update(&mut self, message: types::Message) -> Result<()> {
+        info!("chat upsert message");
+        self.globals.portal_send(
+            message.thread_id,
+            PortalMessage::LampoMessageUpdate { message },
+        );
+        Ok(())
+    }
+
+    async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
         self.globals.portal_send(
             thread_id,
-            PortalMessage::UnnamedMessageDelete { message_id },
+            PortalMessage::LampoMessageDelete { message_id },
         );
         Ok(())
     }
