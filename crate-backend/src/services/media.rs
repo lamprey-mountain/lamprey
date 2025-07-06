@@ -493,7 +493,7 @@ async fn upload_extracted_thumb(
     let (width, height, mime) = async {
         let cursor = Cursor::new(&bytes);
         let reader = image::ImageReader::new(cursor).with_guessed_format()?;
-        let mime: Mime = reader.format().unwrap().to_mime_type().parse()?;
+        let mime: Mime = reader.format().ok_or(Error::BadStatic("failed to get mime type"))?.to_mime_type().parse()?;
         let (width, height) = reader.into_dimensions()?;
         Result::Ok((width, height, mime))
     }
@@ -532,7 +532,7 @@ async fn upload_extracted_thumb(
 async fn get_mime(file: &std::path::Path) -> Result<String> {
     let out = Command::new("file").arg("-ib").arg(file).output().await?;
     let mime = String::from_utf8(out.stdout)
-        .expect("file has failed me")
+        .map_err(|_| Error::BadStatic("failed to get mime type"))?
         .trim()
         .to_owned();
     Ok(mime)
