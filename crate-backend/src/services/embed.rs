@@ -396,7 +396,7 @@ impl ServiceEmbed {
                 },
                 title,
                 description,
-                color: theme_color.map(|c| Color::from_hex_string(c.to_hex_string())),
+                color: theme_color.map(|c| Color::from_hex_string(c.to_css_hex())),
                 media: media.clone(),
                 media_is_thumbnail: match media_type {
                     ImageInstructions::Thumb => true,
