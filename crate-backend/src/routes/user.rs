@@ -5,13 +5,10 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
-use common::v1::types::{
-    ExternalPlatform, MediaTrackInfo, MessageSync, User, UserCreate, UserPatch,
-    UserWithRelationship,
-};
+use common::v1::types::{MediaTrackInfo, MessageSync, User, UserPatch, UserWithRelationship};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
+use crate::types::{MediaLinkType, UserIdReq};
 use crate::ServerState;
 
 use super::util::Auth;

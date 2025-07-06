@@ -2,12 +2,9 @@ use std::{collections::HashMap, time::Instant};
 
 use crate::{MediaData, PeerEvent, SfuTrack, SignallingMessage};
 use anyhow::Result;
-use common::{
-    unstable::types::media::stream::Track,
-    v1::types::{
-        voice::{MediaKindSerde, SessionDescription, TrackMetadata, VoiceState},
-        UserId,
-    },
+use common::v1::types::{
+    voice::{MediaKindSerde, SessionDescription, TrackMetadata, VoiceState},
+    UserId,
 };
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
@@ -21,7 +18,7 @@ use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     time::sleep_until,
 };
-use tracing::{debug, error, info, trace, warn, Instrument};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{PeerCommand, PeerEventEnvelope, TrackIn, TrackOut, TrackState};
 

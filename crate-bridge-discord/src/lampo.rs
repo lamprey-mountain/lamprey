@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use common::v1::types::{
     self, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaCreateSource, MediaId,
-    MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User, UserCreate, UserId,
+    MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};

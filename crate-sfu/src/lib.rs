@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{SignallingMessage, TrackMetadata, VoiceState},
+    voice::{SignallingMessage, VoiceState},
     ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};

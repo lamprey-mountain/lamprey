@@ -1,11 +1,8 @@
 use async_trait::async_trait;
-use common::v1::types::util::Time;
-use common::v1::types::{self, BotAccess, ExternalPlatform, UserState};
+use common::v1::types::{self};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as, query_scalar, Acquire};
-use time::PrimitiveDateTime;
-use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;

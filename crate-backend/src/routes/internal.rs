@@ -4,7 +4,6 @@ use axum::{extract::State, http::StatusCode, Json};
 use common::v1::types::voice::{SignallingMessage, VoiceState};
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
-use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;

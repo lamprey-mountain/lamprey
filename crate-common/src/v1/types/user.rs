@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
-use crate::v1::types::{MediaId, RoomId, ThreadId};
+use crate::v1::types::MediaId;
 
 use super::user_config::UserConfig;
 use super::{UserId, UserVerId};
