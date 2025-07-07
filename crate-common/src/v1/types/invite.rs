@@ -50,6 +50,7 @@ pub struct Invite {
     pub is_vanity: bool,
 
     #[serde(skip)]
+    #[allow(unused)]
     is_dead: bool,
 }
 

@@ -9,6 +9,8 @@ use uuid::Uuid;
 use crate::data::{DataInvite, DataRoom, DataThread, DataUser};
 use crate::error::Result;
 use crate::types::{DbInvite, Invite, InviteCode, RoomId, UserId};
+use common::v1::types::InvitePatch;
+use time::PrimitiveDateTime;
 
 use super::{Pagination, Postgres};
 
@@ -40,7 +42,7 @@ impl DataInvite for Postgres {
         let row = query_as!(
             DbInvite,
             r#"
-            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses
+            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
             where code = $1
         "#,
@@ -73,8 +75,7 @@ impl DataInvite for Postgres {
             creator_id,
             row.created_at.assume_utc().into(),
             row.expires_at.map(|t| t.assume_utc().into()),
-            // TODO(#260): description
-            None,
+            row.description,
             false,
         );
         let invite_with_meta = InviteWithMetadata {
@@ -105,7 +106,7 @@ impl DataInvite for Postgres {
         let raw = query_as!(
             DbInvite,
             "
-            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses
+            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
         	WHERE target_id = $1 AND code > $2 AND code < $3
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
@@ -141,8 +142,7 @@ impl DataInvite for Postgres {
                 creator_id,
                 row.created_at.assume_utc().into(),
                 row.expires_at.map(|t| t.assume_utc().into()),
-                // TODO(#260): description
-                None,
+                row.description,
                 false,
             );
             let invite_with_meta = InviteWithMetadata {
@@ -172,5 +172,56 @@ impl DataInvite for Postgres {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    async fn invite_update(
+        &self,
+        code: InviteCode,
+        patch: InvitePatch,
+    ) -> Result<InviteWithMetadata> {
+        let mut conn = self.pool.begin().await?;
+        let mut tx = conn.begin().await?;
+
+        let invite = query_as!(
+            DbInvite,
+            r#"
+            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            from invite
+            where code = $1
+            FOR UPDATE
+            "#,
+            code.0
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        let expires_at = patch.expires_at.map_or(invite.expires_at, |ea| {
+            ea.map(|t| {
+                let inner = t.into_inner();
+                PrimitiveDateTime::new(inner.date(), inner.time())
+            })
+        });
+        let max_uses = patch
+            .max_uses
+            .map_or(invite.max_uses, |mu| mu.map(|u| u as i32));
+        let description = patch.description.map_or(invite.description, |d| d);
+
+        query!(
+            r#"
+            UPDATE invite
+            SET expires_at = $1, max_uses = $2, description = $3
+            WHERE code = $4
+            "#,
+            expires_at,
+            max_uses,
+            description,
+            code.0
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        self.invite_select(code).await
     }
 }

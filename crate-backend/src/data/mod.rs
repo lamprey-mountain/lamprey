@@ -7,10 +7,10 @@ use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, EmojiId, InviteWithMetadata, MediaPatch,
-    MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
-    ThreadMemberPatch, ThreadMembership,
+    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, EmojiId, InvitePatch, InviteWithMetadata,
+    MediaPatch, MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role,
+    RoomMember, RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken,
+    ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
 use url::Url;
 use uuid::Uuid;
@@ -168,6 +168,11 @@ pub trait DataInvite {
     // async fn invite_list_user(user_id: UserId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
 
     async fn invite_incr_use(&self, target_id: Uuid) -> Result<()>;
+    async fn invite_update(
+        &self,
+        code: InviteCode,
+        patch: InvitePatch,
+    ) -> Result<InviteWithMetadata>;
 }
 
 #[async_trait]

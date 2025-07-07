@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE invite\n            SET expires_at = $1, max_uses = $2, description = $3\n            WHERE code = $4\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e1c1e345f5c826594b5e8e7e9cbfdaaec7465cf45033c850eb58e2d720d53ad"
+}

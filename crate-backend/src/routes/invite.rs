@@ -349,12 +349,57 @@ pub async fn invite_user_list(
     )
 )]
 pub async fn invite_patch(
-    Auth(_user_id): Auth,
+    Path(code): Path<InviteCode>,
+    Auth(user_id): Auth,
     HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<InvitePatch>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<InvitePatch>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let invite = d.invite_select(code.clone()).await?;
+
+    let (has_perm, _id_target) = match invite.invite.target {
+        InviteTarget::User { user } => (
+            user.id == user_id,
+            InviteTargetId::User { user_id: user.id },
+        ),
+        InviteTarget::Room { room } => (
+            s.services()
+                .perms
+                .for_room(user_id, room.id)
+                .await?
+                .has(Permission::InviteManage),
+            InviteTargetId::Room { room_id: room.id },
+        ),
+        InviteTarget::Thread { room, thread } => (
+            s.services()
+                .perms
+                .for_thread(user_id, thread.id)
+                .await?
+                .has(Permission::InviteManage),
+            InviteTargetId::Thread {
+                room_id: room.id,
+                thread_id: thread.id,
+            },
+        ),
+        InviteTarget::Server => todo!(),
+    };
+
+    let can_patch = user_id == invite.invite.creator_id || has_perm;
+    if !can_patch {
+        return Err(Error::MissingPermissions);
+    }
+
+    let updated_invite = d.invite_update(code.clone(), patch).await?;
+
+    // TODO: Check if any actual changes were made and return NOT_MODIFIED if not.
+    // This would require comparing `invite` and `updated_invite`.
+
+    s.broadcast(MessageSync::InviteUpdate {
+        invite: updated_invite.clone(),
+    })?;
+
+    Ok((StatusCode::OK, Json(updated_invite)))
 }
 
 /// Invite server create (TODO)

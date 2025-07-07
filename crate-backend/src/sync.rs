@@ -305,6 +305,12 @@ impl Connection {
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => todo!(),
             },
+            MessageSync::InviteUpdate { invite } => match &invite.invite.target {
+                InviteTarget::User { user } => AuthCheck::User(user.id),
+                InviteTarget::Room { room } => AuthCheck::Room(room.id),
+                InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Server => todo!(),
+            },
             MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::UserDelete { id } => AuthCheck::UserMutual(*id),

@@ -109,6 +109,13 @@ pub trait EventHandler: Send {
         ready(Ok(()))
     }
 
+    fn invite_update(
+        &mut self,
+        invite: InviteWithMetadata,
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send {
+        ready(Ok(()))
+    }
+
     fn message_delete(
         &mut self,
         thread_id: ThreadId,
@@ -387,6 +394,7 @@ where
                 MessageSync::RoleCreate { role } => self.role_create(role).await,
                 MessageSync::RoleUpdate { role } => self.role_update(role).await,
                 MessageSync::InviteCreate { invite } => self.invite_create(invite).await,
+                MessageSync::InviteUpdate { invite } => self.invite_update(invite).await,
                 MessageSync::MessageDelete {
                     thread_id,
                     message_id,

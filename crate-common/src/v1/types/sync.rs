@@ -200,9 +200,9 @@ pub enum MessageSync {
         invite: InviteWithMetadata,
     },
 
-    // InviteUpdate {
-    //     invite: InviteWithMetadata,
-    // },
+    InviteUpdate {
+        invite: InviteWithMetadata,
+    },
     InviteDelete {
         code: InviteCode,
         target: InviteTargetId,
@@ -339,6 +339,7 @@ impl MessageSync {
             MessageSync::RoleUpdate { role } => Some(role.id.to_string()),
             MessageSync::RoleDelete { role_id, .. } => Some(role_id.to_string()),
             MessageSync::InviteCreate { invite } => Some(invite.invite.code.to_string()),
+            MessageSync::InviteUpdate { invite } => Some(invite.invite.code.to_string()),
             MessageSync::InviteDelete { code, .. } => Some(code.to_string()),
             MessageSync::MessageDelete { message_id, .. } => Some(message_id.to_string()),
             MessageSync::MessageVersionDelete { message_id, .. } => Some(message_id.to_string()),

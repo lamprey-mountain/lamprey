@@ -376,6 +376,7 @@ pub struct DbInvite {
     pub uses: i32,
     pub created_at: time::PrimitiveDateTime,
     pub expires_at: Option<time::PrimitiveDateTime>,
+    pub description: Option<String>,
 }
 
 #[derive(Deserialize)]
