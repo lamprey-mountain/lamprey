@@ -4,7 +4,6 @@ use common::v1::types::{
     ThreadId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
-use uuid::Uuid;
 
 use crate::data::{DataInvite, DataRoom, DataThread, DataUser};
 use crate::error::Result;
@@ -21,15 +20,19 @@ impl DataInvite for Postgres {
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
+        expires_at: Option<common::v1::types::util::Time>,
+        max_uses: Option<u16>,
     ) -> Result<()> {
         query!(
             r#"
-            insert into invite (target_type, target_id, code, creator_id)
-            values ('room', $1, $2, $3)
+            insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
+            values ('room', $1, $2, $3, $4, $5)
         "#,
             room_id.into_inner(),
             code.0,
-            creator_id.into_inner()
+            creator_id.into_inner(),
+            expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
+            max_uses.map(|n| n as i32),
         )
         .execute(&self.pool)
         .await?;
@@ -83,7 +86,8 @@ impl DataInvite for Postgres {
             uses: row.uses.try_into().expect("invalid data in db"),
             max_uses: row
                 .max_uses
-                .map(|n| n.try_into().expect("invalid data in db")),
+                .map(|n| n.try_into().expect("invalid data in db"))
+                as Option<u16>,
         };
         Ok(invite_with_meta)
     }
@@ -150,7 +154,8 @@ impl DataInvite for Postgres {
                 uses: row.uses.try_into().expect("invalid data in db"),
                 max_uses: row
                     .max_uses
-                    .map(|n| n.try_into().expect("invalid data in db")),
+                    .map(|n| n.try_into().expect("invalid data in db"))
+                    as Option<u16>,
             };
             items.push(invite_with_meta);
         }
@@ -164,13 +169,10 @@ impl DataInvite for Postgres {
         })
     }
 
-    async fn invite_incr_use(&self, target_id: Uuid) -> Result<()> {
-        query!(
-            "update invite set uses = uses + 1 where target_id = $1",
-            target_id
-        )
-        .execute(&self.pool)
-        .await?;
+    async fn invite_incr_use(&self, code: InviteCode) -> Result<()> {
+        query!("update invite set uses = uses + 1 where code = $1", code.0)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 

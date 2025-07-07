@@ -165,7 +165,10 @@ pub async fn invite_use(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_select(code.clone()).await?;
+    if invite.is_dead() {
+        return Err(Error::NotFound);
+    }
     match invite.invite.target {
         InviteTarget::User { user: _ } => todo!("dms aren't implemented"),
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
@@ -194,6 +197,7 @@ pub async fn invite_use(
         }
         InviteTarget::Server => todo!(),
     }
+    d.invite_incr_use(code).await?;
     Ok(())
 }
 
@@ -216,7 +220,7 @@ pub async fn invite_room_create(
     Auth(user_id): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<InviteCreate>,
+    Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
@@ -226,7 +230,14 @@ pub async fn invite_room_create(
         .chars()
         .collect();
     let code = InviteCode(nanoid!(8, &alphabet));
-    d.invite_insert_room(room_id, user_id, code.clone()).await?;
+    d.invite_insert_room(
+        room_id,
+        user_id,
+        code.clone(),
+        json.expires_at,
+        json.max_uses,
+    )
+    .await?;
     let invite = d.invite_select(code).await?;
     s.broadcast_room(
         room_id,

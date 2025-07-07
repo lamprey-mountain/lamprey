@@ -151,6 +151,8 @@ pub trait DataInvite {
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
+        expires_at: Option<common::v1::types::util::Time>,
+        max_uses: Option<u16>,
     ) -> Result<()>;
     async fn invite_list_room(
         &self,
@@ -167,7 +169,7 @@ pub trait DataInvite {
     // ) -> Result<InviteWithMetadata>;
     // async fn invite_list_user(user_id: UserId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
 
-    async fn invite_incr_use(&self, target_id: Uuid) -> Result<()>;
+    async fn invite_incr_use(&self, code: InviteCode) -> Result<()>;
     async fn invite_update(
         &self,
         code: InviteCode,

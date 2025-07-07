@@ -38,28 +38,21 @@ pub struct Invite {
     pub created_at: Time,
 
     /// the time when this invite will stop working
-    // FIXME(#262): enforce expiration
     pub expires_at: Option<Time>,
 
     /// a description for this invite
-    // FIXME(#260): invite description
     pub description: Option<String>,
 
     /// if this invite's code is custom (instead of random)
     // TODO(#263): vanity (custom) invite codes
     pub is_vanity: bool,
-
-    #[serde(skip)]
-    #[allow(unused)]
-    is_dead: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct InviteWithMetadata {
     /// the maximum number of times this invite can be used
-    // FIXME(#261): enforce max uses
-    pub max_uses: Option<u64>,
+    pub max_uses: Option<u16>,
 
     /// the number of time this invite has been used
     pub uses: u64,
@@ -126,7 +119,7 @@ pub struct InvitePatch {
 
     /// the maximum number of times this invite can be used
     /// be sure to account for existing `uses` and `max_uses` when patching
-    pub max_uses: Option<Option<u64>>,
+    pub max_uses: Option<Option<u16>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -144,7 +137,7 @@ pub struct InviteCreate {
     /// the maximum number of times this invite can be used
     /// be sure to account for existing `uses` and `max_uses` when patching
     #[cfg_attr(feature = "utoipa", schema(required = false))]
-    pub max_uses: Option<u64>,
+    pub max_uses: Option<u16>,
 }
 
 impl fmt::Display for InviteCode {
@@ -173,6 +166,20 @@ impl InviteWithMetadata {
     pub fn strip_metadata(self) -> Invite {
         self.into()
     }
+
+    pub fn is_dead(&self) -> bool {
+        if let Some(max_uses) = self.max_uses {
+            if self.uses >= max_uses as u64 {
+                return true;
+            }
+        }
+        if let Some(ref expires_at) = self.invite.expires_at {
+            if *expires_at < Time::now_utc() {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl Invite {
@@ -195,13 +202,7 @@ impl Invite {
             expires_at,
             description,
             is_vanity,
-            is_dead: false,
         }
-    }
-
-    // FIXME: get serde to serialize this
-    pub fn is_dead(&self) -> bool {
-        todo!()
     }
 }
 
