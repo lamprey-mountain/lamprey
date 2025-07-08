@@ -15,8 +15,8 @@ export const ChatNav = (props: { room_id?: string }) => {
 	// local list of threads for this room
 	const [list, setList] = createSignal<Thread[]>([]);
 
-	// initialize list from API cache
-	onMount(() => {
+	// update list when room changes
+	createEffect(() => {
 		const threads = [...api.threads.cache.values()]
 			.filter((t) => t.room_id === props.room_id && !t.deleted_at);
 		setList(threads);
