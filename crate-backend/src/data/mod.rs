@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use async_trait::async_trait;
 use common::v1::types::application::Application;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
@@ -7,12 +5,11 @@ use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    ApplicationId, AuditLog, AuditLogId, Embed, EmbedId, EmojiId, InvitePatch, InviteWithMetadata,
-    MediaPatch, MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role,
-    RoomMember, RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken,
-    ThreadMember, ThreadMemberPatch, ThreadMembership,
+    ApplicationId, AuditLog, AuditLogId, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
+    MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember,
+    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
+    ThreadMemberPatch, ThreadMembership,
 };
-use url::Url;
 use uuid::Uuid;
 
 use crate::error::Result;

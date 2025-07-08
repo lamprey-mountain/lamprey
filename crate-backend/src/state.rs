@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use common::v1::types::{Embed, Media, Message, RoomId, ThreadId, UserId};
+use common::v1::types::{Media, Message, RoomId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 use moka::future::Cache;
