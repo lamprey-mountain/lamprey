@@ -20,10 +20,9 @@ select
     msg.override_name,
     msg.author_id,
     coalesce(att_json.attachments, '{}') as "attachments!",
-    coalesce(u.embeds, '{}') as "embeds!",
+    msg.embeds as "embeds",
     r.json as "reactions"
 from message as msg
 left join att_json on att_json.version_id = msg.version_id
-left join url_embed_json u on u.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
 where thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null

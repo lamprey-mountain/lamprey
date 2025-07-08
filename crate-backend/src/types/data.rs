@@ -1,7 +1,7 @@
 use common::v1::types::{
     thread::chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
     util::Time,
-    Bot, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
+    Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
     RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
     Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadVerId, UserId,
 };
@@ -216,6 +216,7 @@ pub struct DbMessageCreate {
     pub thread_id: ThreadId,
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,
+    pub embeds: Vec<Embed>,
 }
 
 // TODO: move to types

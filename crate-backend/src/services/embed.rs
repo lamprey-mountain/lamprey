@@ -14,7 +14,6 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
-use crate::types::MediaLinkType;
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -147,29 +146,12 @@ impl ServiceEmbed {
     pub async fn generate(&self, user_id: UserId, url: Url) -> Result<Embed> {
         let embed = self
             .cache
-            .try_get_with_by_ref(&url, self.generate_and_insert(user_id, url.clone()))
+            .try_get_with_by_ref(&url, self.generate_inner(user_id, url.clone()))
             .await
             .map_err(|err| {
                 error!("{err}");
                 Error::UrlEmbedOther(err.to_string())
             })?;
-        Ok(embed)
-    }
-
-    async fn generate_and_insert(&self, user_id: UserId, url: Url) -> Result<Embed> {
-        if let Some(embed) = self
-            .state
-            .data()
-            .embed_find(url.clone(), MAX_EMBED_AGE)
-            .await?
-        {
-            return Ok(embed);
-        }
-        let embed = self.generate_inner(user_id, url).await?;
-        self.state
-            .data()
-            .embed_insert(user_id, embed.clone())
-            .await?;
         Ok(embed)
     }
 
@@ -229,7 +211,7 @@ impl ServiceEmbed {
                 )
                 .await?;
             debug!("url embed inserted media");
-            let mut embed = Embed {
+            let embed = Embed {
                 id: EmbedId::new(),
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
@@ -248,11 +230,7 @@ impl ServiceEmbed {
                 site_name: None,
                 site_avatar: None,
             };
-            self.state
-                .data()
-                .media_link_insert(media.id, *embed.id, MediaLinkType::Embed)
-                .await?;
-            self.state.presign_url_embed(&mut embed).await?;
+
             embed
         } else {
             debug!("got html");
@@ -386,7 +364,7 @@ impl ServiceEmbed {
             //     None
             // };
 
-            let mut embed = Embed {
+            let embed = Embed {
                 id: EmbedId::new(),
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
@@ -415,13 +393,7 @@ impl ServiceEmbed {
                 // TODO: fetch favicon
                 site_avatar: None,
             };
-            if let Some(m) = media {
-                self.state
-                    .data()
-                    .media_link_insert(m.id, *embed.id, MediaLinkType::Embed)
-                    .await?;
-            }
-            self.state.presign_url_embed(&mut embed).await?;
+
             embed
         };
         debug!("done! {:?}", embed);

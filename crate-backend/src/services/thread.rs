@@ -91,6 +91,7 @@ impl ServiceThreads {
                 thread_id,
                 attachment_ids: vec![],
                 author_id: user_id,
+                embeds: vec![],
                 message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
                     patch: ThreadPatch {
                         name: patch.name,

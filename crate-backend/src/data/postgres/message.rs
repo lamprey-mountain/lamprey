@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged, MessageThreadUpdate,
-    MessageType, UserId,
+    Embed, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
+    MessageThreadUpdate, MessageType, UserId,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
@@ -16,7 +16,6 @@ use crate::types::{
 
 use crate::data::DataMessage;
 
-use super::embed::DbEmbed;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
@@ -33,7 +32,7 @@ pub struct DbMessage {
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
     pub author_id: UserId,
-    pub embeds: serde_json::Value,
+    pub embeds: Option<serde_json::Value>,
     pub reactions: Option<serde_json::Value>,
 }
 
@@ -64,22 +63,17 @@ impl From<DbMessage> for Message {
                 DbMessageType::DefaultMarkdown => {
                     let attachments: Vec<serde_json::Value> =
                         serde_json::from_value(row.attachments).unwrap_or_default();
-                    let embeds: Vec<serde_json::Value> =
-                        serde_json::from_value(row.embeds).unwrap_or_default();
+                    let embeds: Vec<Embed> = row
+                        .embeds
+                        .and_then(|e| serde_json::from_value(e).ok())
+                        .unwrap_or_default();
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
                         attachments: attachments.into_iter().map(media_from_db).collect(),
                         metadata: row.metadata,
                         reply_id: row.reply_id.map(Into::into),
                         override_name: row.override_name,
-                        embeds: embeds
-                            .into_iter()
-                            .map(|a| {
-                                let db: DbEmbed =
-                                    serde_json::from_value(a).expect("invalid data in database!");
-                                db.into()
-                            })
-                            .collect(),
+                        embeds,
                         reactions: row
                             .reactions
                             .map(|a| serde_json::from_value(a).unwrap())
@@ -89,21 +83,16 @@ impl From<DbMessage> for Message {
                 DbMessageType::DefaultTagged => {
                     let attachments: Vec<serde_json::Value> =
                         serde_json::from_value(row.attachments).unwrap_or_default();
-                    let embeds: Vec<serde_json::Value> =
-                        serde_json::from_value(row.embeds).unwrap_or_default();
+                    let embeds: Vec<Embed> = row
+                        .embeds
+                        .and_then(|e| serde_json::from_value(e).ok())
+                        .unwrap_or_default();
                     MessageType::DefaultTagged(MessageDefaultTagged {
                         content: row.content,
                         attachments: attachments.into_iter().map(media_from_db).collect(),
                         metadata: row.metadata,
                         reply_id: row.reply_id.map(Into::into),
-                        embeds: embeds
-                            .into_iter()
-                            .map(|a| {
-                                let db: DbEmbed =
-                                    serde_json::from_value(a).expect("invalid data in database!");
-                                db.into()
-                            })
-                            .collect(),
+                        embeds,
                         reactions: row
                             .reactions
                             .map(|a| serde_json::from_value(a).unwrap())
@@ -134,9 +123,10 @@ impl DataMessage for Postgres {
         let message_id = Uuid::now_v7();
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
+        let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10)
         "#,
             message_id,
             create.thread_id.into_inner(),
@@ -147,6 +137,7 @@ impl DataMessage for Postgres {
             create.author_id.into_inner(),
             message_type as _,
             create.override_name(),
+            embeds,
         )
         .execute(&mut *tx)
         .await?;
@@ -183,9 +174,10 @@ impl DataMessage for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10)
         "#,
             message_id.into_inner(),
             create.thread_id.into_inner(),
@@ -196,6 +188,7 @@ impl DataMessage for Postgres {
             create.author_id.into_inner(),
             message_type as _,
             create.override_name(),
+            embeds,
         )
         .execute(&mut *tx)
         .await?;

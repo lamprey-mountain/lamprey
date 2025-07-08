@@ -44,7 +44,6 @@ pub trait Data:
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
-    + DataEmbed
     + DataDm
     + DataUserRelationship
     + DataUserConfig
@@ -371,18 +370,6 @@ pub trait DataThreadMember {
         thread_id: ThreadId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
-}
-
-#[async_trait]
-pub trait DataEmbed {
-    async fn embed_insert(&self, user_id: UserId, embed: Embed) -> Result<()>;
-    async fn embed_find(&self, url: Url, max_age: Duration) -> Result<Option<Embed>>;
-    async fn embed_link(
-        &self,
-        version_id: MessageVerId,
-        embed_id: EmbedId,
-        ordering: u32,
-    ) -> Result<()>;
 }
 
 #[async_trait]

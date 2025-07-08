@@ -138,20 +138,6 @@ impl ServerStateInner {
         Ok(())
     }
 
-    /// presigns every relevant url in a UrlEmbed
-    pub async fn presign_url_embed(&self, embed: &mut Embed) -> Result<()> {
-        if let Some(m) = &mut embed.media {
-            self.presign(m).await?;
-        }
-        if let Some(m) = &mut embed.author_avatar {
-            self.presign(m).await?;
-        }
-        if let Some(m) = &mut embed.site_avatar {
-            self.presign(m).await?;
-        }
-        Ok(())
-    }
-
     /// presigns every relevant url in a Message
     pub async fn presign_message(&self, message: &mut Message) -> Result<()> {
         match &mut message.message_type {
@@ -160,7 +146,15 @@ impl ServerStateInner {
                     self.presign(media).await?;
                 }
                 for emb in &mut message.embeds {
-                    self.presign_url_embed(emb).await?;
+                    if let Some(m) = &mut emb.media {
+                        self.presign(m).await?;
+                    }
+                    if let Some(m) = &mut emb.author_avatar {
+                        self.presign(m).await?;
+                    }
+                    if let Some(m) = &mut emb.site_avatar {
+                        self.presign(m).await?;
+                    }
                 }
             }
             _ => {}
