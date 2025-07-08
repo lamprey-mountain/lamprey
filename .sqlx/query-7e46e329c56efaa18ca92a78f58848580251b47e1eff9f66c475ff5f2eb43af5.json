@@ -67,7 +67,7 @@
       {
         "ordinal": 10,
         "name": "attachments!",
-        "type_info": "JsonArray"
+        "type_info": "Json"
       },
       {
         "ordinal": 11,
