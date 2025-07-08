@@ -115,6 +115,33 @@ impl ServiceMessages {
             }
             .truncate();
             data.embed_insert(user_id, embed.clone()).await?;
+            if let Some(media) = &embed.media {
+                data.media_select(media.id).await?;
+                let has_link = !data.media_link_select(media.id).await?.is_empty();
+                if has_link {
+                    return Err(Error::BadStatic("cant reuse media"));
+                }
+                data.media_link_insert(media.id, message_uuid, MediaLinkType::Embed)
+                    .await?;
+            }
+            if let Some(thumbnail) = &embed.thumbnail {
+                data.media_select(thumbnail.id).await?;
+                let has_link = !data.media_link_select(thumbnail.id).await?.is_empty();
+                if has_link {
+                    return Err(Error::BadStatic("cant reuse media"));
+                }
+                data.media_link_insert(thumbnail.id, message_uuid, MediaLinkType::Embed)
+                    .await?;
+            }
+            if let Some(author_avatar) = &embed.author_avatar {
+                data.media_select(author_avatar.id).await?;
+                let has_link = !data.media_link_select(author_avatar.id).await?.is_empty();
+                if has_link {
+                    return Err(Error::BadStatic("cant reuse media"));
+                }
+                data.media_link_insert(author_avatar.id, message_uuid, MediaLinkType::Embed)
+                    .await?;
+            }
             data.embed_link(message.version_id, id, ordering as u32)
                 .await?;
             match &mut message.message_type {
@@ -326,6 +353,21 @@ impl ServiceMessages {
                 // TODO: don't create new embeds for every version
                 // TODO: don't always create a new version if any embeds for every version
                 let id = EmbedId::new();
+                let media = if let Some(media_ref) = &embed.media {
+                    Some(data.media_select(media_ref.id).await?.0)
+                } else {
+                    None
+                };
+                let thumbnail = if let Some(thumbnail_ref) = &embed.thumbnail {
+                    Some(data.media_select(thumbnail_ref.id).await?.0)
+                } else {
+                    None
+                };
+                let author_avatar = if let Some(author_avatar_ref) = &embed.author_avatar {
+                    Some(data.media_select(author_avatar_ref.id).await?.0)
+                } else {
+                    None
+                };
                 let embed = Embed {
                     id,
                     url: embed.url.clone(),
@@ -339,16 +381,52 @@ impl ServiceMessages {
                         .transpose()
                         .map_err(|e| Error::GenericError(e.to_string()))?
                         .map(|c| Color::from_hex_string(c.to_css_hex())),
-                    media: None,
-                    thumbnail: None,
+                    media,
+                    thumbnail,
                     author_name: embed.author_name.clone(),
                     author_url: embed.author_url.clone(),
-                    author_avatar: None,
+                    author_avatar,
                     site_name: None,
                     site_avatar: None,
                 }
                 .truncate();
                 data.embed_insert(user_id, embed.clone()).await?;
+                if let Some(media) = &embed.media {
+                    data.media_select(media.id).await?;
+                    let existing = data.media_link_select(media.id).await?;
+                    let has_link = existing.iter().any(|i| {
+                        i.link_type == MediaLinkType::Embed && i.target_id == version_uuid
+                    });
+                    if has_link {
+                        return Err(Error::BadStatic("cant reuse media"));
+                    }
+                    data.media_link_insert(media.id, version_uuid, MediaLinkType::Embed)
+                        .await?;
+                }
+                if let Some(thumbnail) = &embed.thumbnail {
+                    data.media_select(thumbnail.id).await?;
+                    let existing = data.media_link_select(thumbnail.id).await?;
+                    let has_link = existing.iter().any(|i| {
+                        i.link_type == MediaLinkType::Embed && i.target_id == version_uuid
+                    });
+                    if has_link {
+                        return Err(Error::BadStatic("cant reuse media"));
+                    }
+                    data.media_link_insert(thumbnail.id, version_uuid, MediaLinkType::Embed)
+                        .await?;
+                }
+                if let Some(author_avatar) = &embed.author_avatar {
+                    data.media_select(author_avatar.id).await?;
+                    let existing = data.media_link_select(author_avatar.id).await?;
+                    let has_link = existing.iter().any(|i| {
+                        i.link_type == MediaLinkType::Embed && i.target_id == version_uuid
+                    });
+                    if has_link {
+                        return Err(Error::BadStatic("cant reuse media"));
+                    }
+                    data.media_link_insert(author_avatar.id, version_uuid, MediaLinkType::Embed)
+                        .await?;
+                }
                 data.embed_link(message.version_id, id, ordering as u32)
                     .await?;
                 match &mut message.message_type {
