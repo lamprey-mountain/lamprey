@@ -52,16 +52,16 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 					</Show>
 				</div>
 			</Show>
-			<Show when={props.embed.media && props.embed.media_is_thumbnail}>
+			<Show when={props.embed.thumbnail}>
 				<div class="thumb">
 					<ImageView
-						media={props.embed.media!}
+						media={props.embed.thumbnail!}
 						thumb_width={64}
 						thumb_height={64}
 					/>
 				</div>
 			</Show>
-			<Show when={props.embed.media && !props.embed.media_is_thumbnail}>
+			<Show when={props.embed.media}>
 				<div class="media">
 					<ImageView
 						media={props.embed.media!}

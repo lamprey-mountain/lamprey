@@ -241,7 +241,7 @@ impl ServiceEmbed {
                 description: None,
                 color: None,
                 media: Some(media.clone()),
-                media_is_thumbnail: false,
+                thumbnail: None,
                 author_url: None,
                 author_name: None,
                 author_avatar: None,
@@ -397,11 +397,15 @@ impl ServiceEmbed {
                 title,
                 description,
                 color: theme_color.map(|c| Color::from_hex_string(c.to_css_hex())),
-                media: media.clone(),
-                media_is_thumbnail: match media_type {
-                    ImageInstructions::Thumb => true,
-                    ImageInstructions::Full => false,
-                    ImageInstructions::Hide => false,
+                media: if media_type == ImageInstructions::Full {
+                    media.clone()
+                } else {
+                    None
+                },
+                thumbnail: if media_type == ImageInstructions::Thumb {
+                    media.clone()
+                } else {
+                    None
                 },
                 // TODO: parse author information
                 author_url: None,

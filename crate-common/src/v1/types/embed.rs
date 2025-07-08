@@ -40,9 +40,7 @@ pub struct Embed {
 
     // TODO: Media with trackinfo Thumbnail
     pub media: Option<Media>,
-    // pub thumbnail: Option<Media>,
-    /// if `media` should be displayed as a small thumbnail or as a full size
-    pub media_is_thumbnail: bool,
+    pub thumbnail: Option<Media>,
 
     // pub media: Option<Media>,
     // pub thumbnail: Option<Media>,
@@ -95,10 +93,6 @@ pub struct EmbedCreate {
     /// the theme color of the site, as a hex string (`#rrggbb`)
     pub color: Option<String>,
 
-    /// if `media` should be displayed as a small thumbnail or as a full size
-    #[serde(default)]
-    pub media_is_thumbnail: bool,
-
     // TODO: allow using a url directly
     #[serde(default)]
     pub media: Vec<MediaRef>,
@@ -139,6 +133,7 @@ impl Embed {
 
             // already truncated media filenames
             media: self.media,
+            thumbnail: self.thumbnail,
             author_avatar: self.author_avatar,
             site_avatar: self.site_avatar,
             ..self

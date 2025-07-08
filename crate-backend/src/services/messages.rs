@@ -106,7 +106,7 @@ impl ServiceMessages {
                     .map_err(|e| Error::GenericError(e.to_string()))?
                     .map(|c| Color::from_hex_string(c.to_css_hex())),
                 media: None,
-                media_is_thumbnail: embed.media_is_thumbnail,
+                thumbnail: None,
                 author_name: embed.author_name.clone(),
                 author_url: embed.author_url.clone(),
                 author_avatar: None,
@@ -340,7 +340,7 @@ impl ServiceMessages {
                         .map_err(|e| Error::GenericError(e.to_string()))?
                         .map(|c| Color::from_hex_string(c.to_css_hex())),
                     media: None,
-                    media_is_thumbnail: embed.media_is_thumbnail,
+                    thumbnail: None,
                     author_name: embed.author_name.clone(),
                     author_url: embed.author_url.clone(),
                     author_avatar: None,

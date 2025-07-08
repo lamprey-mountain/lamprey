@@ -22,12 +22,12 @@ pub struct DbEmbed {
     pub description: Option<String>,
     pub color: Option<String>,
     pub media: Option<Value>,
-    pub media_is_thumbnail: Option<bool>,
     pub author_url: Option<String>,
     pub author_name: Option<String>,
     pub author_avatar: Option<Value>,
     pub site_name: Option<String>,
     pub site_avatar: Option<Value>,
+    pub thumbnail: Option<Value>,
 }
 
 impl From<DbEmbed> for Embed {
@@ -42,7 +42,7 @@ impl From<DbEmbed> for Embed {
             description: row.description,
             color: row.color.map(Color::from_hex_string),
             media: row.media.map(media_from_db),
-            media_is_thumbnail: row.media_is_thumbnail.expect("invalid data in db"),
+            thumbnail: row.thumbnail.map(media_from_db),
             author_url: row
                 .author_url
                 .map(|i| i.parse().expect("invalid data in db")),
@@ -67,7 +67,7 @@ impl DataEmbed for Postgres {
                 description,
                 color,
                 media,
-                media_is_thumbnail,
+                thumbnail,
                 author_url,
                 author_name,
                 author_avatar,
@@ -84,7 +84,7 @@ impl DataEmbed for Postgres {
             embed.description,
             embed.color.map(|c| c.as_ref().to_string()),
             embed.media.map(|m| m.id.into_inner()),
-            embed.media_is_thumbnail,
+            embed.thumbnail.map(|m| m.id.into_inner()),
             embed.author_url.map(|u| u.to_string()),
             embed.author_name,
             embed.author_avatar.map(|m| m.id.into_inner()),
@@ -112,7 +112,7 @@ impl DataEmbed for Postgres {
                 u.description,
                 u.color,
                 row_to_json(m) as media,
-                u.media_is_thumbnail,
+                row_to_json(t) as thumbnail,
                 u.author_url,
                 u.author_name,
                 row_to_json(a) as author_avatar,
@@ -120,6 +120,7 @@ impl DataEmbed for Postgres {
                 row_to_json(s) as site_avatar
             FROM url_embed u
             JOIN media_json m ON m.id = u.media
+            JOIN media_json t ON t.id = u.thumbnail
             JOIN media_json a ON a.id = u.author_avatar
             JOIN media_json s ON s.id = u.site_avatar
             WHERE u.url = $1 AND u.created_at > $2
