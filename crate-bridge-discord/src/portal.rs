@@ -434,7 +434,9 @@ impl Portal {
                         title: emb.title,
                         description: emb.description,
                         color: emb.colour.map(|c| format!("#{}", c.hex())),
-                        media: if let Some(url) = emb.image.as_ref().and_then(|i| i.proxy_url.as_deref()) {
+                        media: if let Some(url) =
+                            emb.image.as_ref().and_then(|i| i.proxy_url.as_deref())
+                        {
                             let filename = Url::from_str(url)?
                                 .path_segments()
                                 .unwrap()
@@ -449,7 +451,9 @@ impl Portal {
                         } else {
                             None
                         },
-                        thumbnail: if let Some(url) = emb.thumbnail.as_ref().and_then(|t| t.proxy_url.as_deref()) {
+                        thumbnail: if let Some(url) =
+                            emb.thumbnail.as_ref().and_then(|t| t.proxy_url.as_deref())
+                        {
                             let filename = Url::from_str(url)?
                                 .path_segments()
                                 .unwrap()

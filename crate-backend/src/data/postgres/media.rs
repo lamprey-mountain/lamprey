@@ -31,6 +31,7 @@ pub enum DbMediaData {
 #[derive(Debug, Serialize, Deserialize)]
 struct DbMediaRaw {
     id: MediaId,
+    user_id: UserId,
     filename: String,
     alt: Option<String>,
     tracks: Vec<MediaTrack>,
@@ -105,7 +106,7 @@ impl DataMedia for Postgres {
         )
         .fetch_one(&self.pool)
         .await?;
-        let parsed: DbMediaData = serde_json::from_value(media.data)?;
+        let parsed: DbMediaData = serde_json::from_value(media.data).unwrap();
         Ok((parsed.into(), media.user_id.into()))
     }
 

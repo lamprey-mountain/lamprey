@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use common::v1::types::{Media, PaginationKey};
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{
@@ -78,6 +79,11 @@ macro_rules! gen_paginate {
 }
 
 pub fn media_from_db(v: Value) -> Media {
-    let parsed: DbMediaData = serde_json::from_value(v).expect("invalid data in db");
-    parsed.into()
+    #[derive(Deserialize)]
+    struct Wrap {
+        data: DbMediaData,
+    }
+
+    let parsed: Wrap = serde_json::from_value(v).expect("invalid data in db");
+    parsed.data.into()
 }
