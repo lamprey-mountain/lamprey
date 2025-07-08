@@ -57,8 +57,10 @@ import {
 	RouteVoice,
 } from "./routes.tsx";
 
-const BASE_URL = localStorage.getItem("api_url") ??
+export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
+export const CDN_URL = localStorage.getItem("cdn_url") ??
+	"https://chat-files.celery.eu.org";
 
 const App: Component = () => {
 	return (

@@ -117,23 +117,24 @@ impl ServerStateInner {
         Ok(u)
     }
 
-    /// presigns every relevant url in a piece of media
+    /// "presigns" every relevant url in a piece of media
     pub async fn presign(&self, media: &mut Media) -> Result<()> {
         for t in media.all_tracks_mut() {
-            t.url = self
-                .cache_presigned
-                .try_get_with(t.url.to_owned(), async {
-                    let signed: Url = self
-                        .blobs
-                        .presign_read(t.url.path(), PRESIGNED_URL_LIFETIME)
-                        .await?
-                        .uri()
-                        .to_string()
-                        .parse()?;
-                    crate::Result::Ok(signed)
-                })
-                .await
-                .map_err(|err| err.fake_clone())?;
+            t.url = self.config.cdn_url.join(t.url.path()).unwrap();
+            // t.url = self
+            //     .cache_presigned
+            //     .try_get_with(t.url.to_owned(), async {
+            //         let signed: Url = self
+            //             .blobs
+            //             .presign_read(t.url.path(), PRESIGNED_URL_LIFETIME)
+            //             .await?
+            //             .uri()
+            //             .to_string()
+            //             .parse()?;
+            //         crate::Result::Ok(signed)
+            //     })
+            //     .await
+            //     .map_err(|err| err.fake_clone())?;
         }
         Ok(())
     }

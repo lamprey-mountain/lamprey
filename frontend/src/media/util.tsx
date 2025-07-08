@@ -1,6 +1,7 @@
 import type { Media, MediaTrack } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
 import { flags } from "../flags";
+import { CDN_URL } from "../App.tsx";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 
@@ -47,14 +48,15 @@ export const getHeight = (m: Media) => {
 };
 
 export const getUrl = (t: MediaTrack) => {
-	if (flags.has("service_worker_media")) {
-		if (navigator.serviceWorker.controller?.state !== "activated") return t.url;
-		const u = new URL("/_media", location.href);
-		u.searchParams.set("url", t.url);
-		return u.href;
-	} else {
-		return t.url;
-	}
+	return t.url;
+	// if (flags.has("service_worker_media")) {
+	// 	if (navigator.serviceWorker.controller?.state !== "activated") return t.url;
+	// 	const u = new URL("/_media", location.href);
+	// 	u.searchParams.set("url", t.url);
+	// 	return u.href;
+	// } else {
+	// 	return t.url;
+	// }
 };
 
 /**
