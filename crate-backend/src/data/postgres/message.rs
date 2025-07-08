@@ -27,12 +27,12 @@ pub struct DbMessage {
     pub version_id: MessageVerId,
     pub ordering: i32,
     pub content: Option<String>,
-    pub attachments: Vec<serde_json::Value>,
+    pub attachments: serde_json::Value,
     pub metadata: Option<serde_json::Value>,
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
     pub author_id: UserId,
-    pub embeds: Vec<serde_json::Value>,
+    pub embeds: serde_json::Value,
     pub reactions: Option<serde_json::Value>,
 }
 
@@ -61,14 +61,17 @@ impl From<DbMessage> for Message {
             id: row.id,
             message_type: match row.message_type {
                 DbMessageType::DefaultMarkdown => {
+                    let attachments: Vec<serde_json::Value> =
+                        serde_json::from_value(row.attachments).unwrap_or_default();
+                    let embeds: Vec<serde_json::Value> =
+                        serde_json::from_value(row.embeds).unwrap_or_default();
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
-                        attachments: row.attachments.into_iter().map(media_from_db).collect(),
+                        attachments: attachments.into_iter().map(media_from_db).collect(),
                         metadata: row.metadata,
                         reply_id: row.reply_id.map(Into::into),
                         override_name: row.override_name,
-                        embeds: row
-                            .embeds
+                        embeds: embeds
                             .into_iter()
                             .map(|a| {
                                 let db: DbEmbed =
@@ -82,26 +85,31 @@ impl From<DbMessage> for Message {
                             .unwrap_or_default(),
                     })
                 }
-                DbMessageType::DefaultTagged => MessageType::DefaultTagged(MessageDefaultTagged {
-                    content: row.content,
-                    attachments: row.attachments.into_iter().map(media_from_db).collect(),
-                    metadata: row.metadata,
-                    reply_id: row.reply_id.map(Into::into),
-                    embeds: row
-                        .embeds
-                        .into_iter()
-                        .map(|a| {
-                            let db: DbEmbed =
-                                serde_json::from_value(a).expect("invalid data in database!");
-                            db.into()
-                        })
-                        .collect(),
-                    reactions: row
-                        .reactions
-                        .map(|a| serde_json::from_value(a).unwrap())
-                        .unwrap_or_default(),
-                    interactions: Interactions::default(),
-                }),
+                DbMessageType::DefaultTagged => {
+                    let attachments: Vec<serde_json::Value> =
+                        serde_json::from_value(row.attachments).unwrap_or_default();
+                    let embeds: Vec<serde_json::Value> =
+                        serde_json::from_value(row.embeds).unwrap_or_default();
+                    MessageType::DefaultTagged(MessageDefaultTagged {
+                        content: row.content,
+                        attachments: attachments.into_iter().map(media_from_db).collect(),
+                        metadata: row.metadata,
+                        reply_id: row.reply_id.map(Into::into),
+                        embeds: embeds
+                            .into_iter()
+                            .map(|a| {
+                                let db: DbEmbed =
+                                    serde_json::from_value(a).expect("invalid data in database!");
+                                db.into()
+                            })
+                            .collect(),
+                        reactions: row
+                            .reactions
+                            .map(|a| serde_json::from_value(a).unwrap())
+                            .unwrap_or_default(),
+                        interactions: Interactions::default(),
+                    })
+                }
                 DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {
                     patch: row
                         .metadata

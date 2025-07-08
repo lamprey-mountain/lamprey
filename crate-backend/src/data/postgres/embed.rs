@@ -111,18 +111,18 @@ impl DataEmbed for Postgres {
                 u.title,
                 u.description,
                 u.color,
-                row_to_json(m) as media,
-                row_to_json(t) as thumbnail,
+                m.data as media,
+                t.data as thumbnail,
                 u.author_url,
                 u.author_name,
-                row_to_json(a) as author_avatar,
+                a.data as author_avatar,
                 u.site_name,
-                row_to_json(s) as site_avatar
+                s.data as site_avatar
             FROM url_embed u
-            JOIN media_json m ON m.id = u.media
-            JOIN media_json t ON t.id = u.thumbnail
-            JOIN media_json a ON a.id = u.author_avatar
-            JOIN media_json s ON s.id = u.site_avatar
+            JOIN media m ON m.id = u.media
+            JOIN media t ON t.id = u.thumbnail
+            JOIN media a ON a.id = u.author_avatar
+            JOIN media s ON s.id = u.site_avatar
             WHERE u.url = $1 AND u.created_at > $2
             "#,
             url.to_string(),

@@ -1,14 +1,14 @@
 use std::result::Result;
 
 use common::v1::types::{Media, PaginationKey};
-use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{
-    data::postgres::media::{DbMedia, DbMediaTrack},
     error::Error,
     types::{PaginationDirection, PaginationQuery},
 };
+
+use super::media::DbMediaData;
 
 #[derive(Debug)]
 pub struct Pagination<K> {
@@ -77,14 +77,7 @@ macro_rules! gen_paginate {
     };
 }
 
-pub fn media_from_db(value: Value) -> Media {
-    #[derive(Deserialize)]
-    struct Helper {
-        #[serde(flatten)]
-        media: DbMedia,
-        tracks: Vec<DbMediaTrack>,
-    }
-
-    let row: Helper = serde_json::from_value(value).expect("invalid data in database!");
-    row.media.upgrade(row.tracks).0
+pub fn media_from_db(v: Value) -> Media {
+    let parsed: DbMediaData = serde_json::from_value(v).expect("invalid data in db");
+    parsed.into()
 }
