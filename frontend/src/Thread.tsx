@@ -13,16 +13,14 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 	return (
 		<ul class="member-list" data-thread-id={props.thread.id}>
 			<For each={members()?.items}>
-				{(i) => {
-					const user_id = () => i.user_id;
+				{(member) => {
+					const user_id = () => member.user_id;
 					const user = api.users.fetch(user_id);
 					const room_member = api.room_members.fetch(room_id, user_id);
-					const thread_member = api.thread_members.fetch(thread_id, user_id);
 
 					function name() {
 						let name: string | undefined | null = null;
-						const tm = thread_member();
-						if (tm?.membership === "Join") name ??= tm.override_name;
+						if (member?.membership === "Join") name ??= member.override_name;
 
 						const rm = room_member();
 						if (rm?.membership === "Join") name ??= rm.override_name;
@@ -39,10 +37,10 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 							<UserView
 								user={user()}
 								room_member={room_member()}
-								thread_member={thread_member()}
+								thread_member={member()}
 							/>
 						</Show>,
-						<li class="menu-user" data-user-id={i.user_id}>
+						<li class="menu-user" data-user-id={member.user_id}>
 							<AvatarWithStatus user={user()} />
 							<span class="text">
 								<span class="name">{name()}</span>

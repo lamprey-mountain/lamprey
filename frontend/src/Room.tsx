@@ -15,15 +15,13 @@ export const RoomMembers = (props: { room: RoomT }) => {
 	return (
 		<ul class="member-list" data-room-id={props.room.id}>
 			<For each={members()?.items}>
-				{(i) => {
-					const user_id = () => i.user_id;
+				{(member) => {
+					const user_id = () => member.user_id;
 					const user = api.users.fetch(user_id);
-					const room_member = api.room_members.fetch(room_id, user_id);
 
 					function name() {
 						let name: string | undefined | null = null;
-						const rm = room_member?.();
-						if (rm?.membership === "Join") name ??= rm.override_name;
+						if (member?.membership === "Join") name ??= member.override_name;
 
 						name ??= user()?.name;
 						return name;
@@ -36,10 +34,10 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						<Show when={user()}>
 							<UserView
 								user={user()}
-								room_member={room_member()}
+								room_member={member}
 							/>
 						</Show>,
-						<li class="menu-user" data-user-id={i.user_id}>
+						<li class="menu-user" data-user-id={member.user_id}>
 							<AvatarWithStatus user={user()} />
 							<span class="text">
 								<span class="name">{name()}</span>
