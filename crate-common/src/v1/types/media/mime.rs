@@ -6,18 +6,26 @@ use serde::{Deserialize, Serialize};
 
 /// A mime/media type
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Mime(MediaTypeBuf);
+pub struct Mime(String);
+
+impl Mime {
+    pub fn parse(&self) -> Result<MediaTypeBuf, MediaTypeError> {
+        self.0.parse()
+    }
+}
 
 impl FromStr for Mime {
     type Err = MediaTypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse()?))
+        // Validate the string can be parsed into a MediaTypeBuf
+        s.parse::<MediaTypeBuf>()?;
+        Ok(Self(s.to_string()))
     }
 }
 
 impl Deref for Mime {
-    type Target = MediaTypeBuf;
+    type Target = String;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -44,6 +52,7 @@ mod schema {
             let schema = schema!(String)
                 .title(Some("Mime"))
                 .description(Some("a mime/media type"))
+                .example(Some(serde_json::to_value("application/json").unwrap()))
                 .build();
             RefOr::T(Schema::Object(schema))
         }

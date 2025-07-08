@@ -227,28 +227,31 @@ impl ServiceMedia {
             source: MediaTrack {
                 url: url.clone(),
                 mime: mime.clone(),
-                info: match mime.ty().as_str() {
-                    "image" => MediaTrackInfo::Image(types::Image {
-                        height: meta
-                            .as_ref()
-                            .and_then(|m| m.height())
-                            .expect("all images have a height"),
-                        width: meta
-                            .as_ref()
-                            .and_then(|m| m.width())
-                            .expect("all images have a width"),
-                        language: None,
-                    }),
-                    // this is quite a bit harder than it looks...
-                    "audio" | "video" => MediaTrackInfo::Mixed(types::Mixed {
-                        height: meta.as_ref().and_then(|m| m.height()),
-                        width: meta.as_ref().and_then(|m| m.width()),
-                        duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
-                        language: None,
-                    }),
-                    "text" => MediaTrackInfo::Text(types::Text { language: None }),
-                    // "application" => MediaTrackInfo::Other,
-                    _ => MediaTrackInfo::Other,
+                info: match mime.parse() {
+                    Ok(m) => match m.ty().as_str() {
+                        "image" => MediaTrackInfo::Image(types::Image {
+                            height: meta
+                                .as_ref()
+                                .and_then(|m| m.height())
+                                .expect("all images have a height"),
+                            width: meta
+                                .as_ref()
+                                .and_then(|m| m.width())
+                                .expect("all images have a width"),
+                            language: None,
+                        }),
+                        // this is quite a bit harder than it looks...
+                        "audio" | "video" => MediaTrackInfo::Mixed(types::Mixed {
+                            height: meta.as_ref().and_then(|m| m.height()),
+                            width: meta.as_ref().and_then(|m| m.width()),
+                            duration: meta.as_ref().and_then(|m| m.duration().map(|d| d as u64)),
+                            language: None,
+                        }),
+                        "text" => MediaTrackInfo::Text(types::Text { language: None }),
+                        // "application" => MediaTrackInfo::Other,
+                        _ => MediaTrackInfo::Other,
+                    },
+                    Err(_) => MediaTrackInfo::Other,
                 },
                 size: MediaSize::Bytes(up.current_size),
                 source: match up.create.source {
