@@ -434,8 +434,9 @@ impl Portal {
                         title: emb.title,
                         description: emb.description,
                         color: emb.colour.map(|c| format!("#{}", c.hex())),
-                        media_is_thumbnail: false,
-                        media: vec![], // FIXME
+                        // FIXME: allow uploading media and thumbnails
+                        media: None,
+                        thumbnail: None,
                         author_name: emb.author.as_ref().map(|a| a.name.clone()),
                         author_url: emb.author.and_then(|a| a.url).and_then(|u| u.parse().ok()),
                         author_avatar,

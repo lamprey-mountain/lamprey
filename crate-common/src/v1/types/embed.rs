@@ -35,15 +35,11 @@ pub struct Embed {
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
-    // pub color: Option<String>,
     pub color: Option<Color>,
 
-    // TODO: Media with trackinfo Thumbnail
     pub media: Option<Media>,
     pub thumbnail: Option<Media>,
 
-    // pub media: Option<Media>,
-    // pub thumbnail: Option<Media>,
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub author_name: Option<String>,
@@ -94,8 +90,8 @@ pub struct EmbedCreate {
     pub color: Option<String>,
 
     // TODO: allow using a url directly
-    #[serde(default)]
-    pub media: Vec<MediaRef>,
+    pub media: Option<MediaRef>,
+    pub thumbnail: Option<MediaRef>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
