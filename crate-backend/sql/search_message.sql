@@ -24,6 +24,8 @@ select
     msg.reply_id,
     msg.override_name,
     msg.author_id,
+    msg.edited_at,
+    msg.deleted_at,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"

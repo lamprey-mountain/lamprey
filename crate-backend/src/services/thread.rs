@@ -100,6 +100,7 @@ impl ServiceThreads {
                         tags: None,
                     },
                 }),
+                edited_at: None,
             })
             .await?;
         let update_message = data.message_get(thread_id, update_message_id).await?;

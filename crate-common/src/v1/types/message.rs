@@ -56,6 +56,7 @@ pub struct Message {
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
     pub deleted_at: Option<Time>,
+    pub edited_at: Option<Time>,
     // // drop the is_?
     // pub is_ephemeral: bool,
 }

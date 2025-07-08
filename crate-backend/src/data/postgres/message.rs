@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{
     Embed, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
     MessageThreadUpdate, MessageType, UserId,
@@ -34,6 +35,8 @@ pub struct DbMessage {
     pub author_id: UserId,
     pub embeds: Option<serde_json::Value>,
     pub reactions: Option<serde_json::Value>,
+    pub edited_at: Option<time::PrimitiveDateTime>,
+    pub deleted_at: Option<time::PrimitiveDateTime>,
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -112,7 +115,8 @@ impl From<DbMessage> for Message {
             nonce: None,
             author_id: row.author_id,
             mentions: Mentions::default(),
-            deleted_at: None,
+            deleted_at: row.deleted_at.map(Time::from),
+            edited_at: row.edited_at.map(Time::from),
         }
     }
 }
@@ -176,8 +180,8 @@ impl DataMessage for Postgres {
         .await?;
         let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, edited_at)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11)
         "#,
             message_id.into_inner(),
             create.thread_id.into_inner(),
@@ -189,6 +193,7 @@ impl DataMessage for Postgres {
             message_type as _,
             create.override_name(),
             embeds,
+            create.edited_at,
         )
         .execute(&mut *tx)
         .await?;
@@ -245,7 +250,8 @@ impl DataMessage for Postgres {
     }
 
     async fn message_delete(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
-        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
             "UPDATE message SET deleted_at = $2 WHERE id = $1",
             message_id.into_inner(),
@@ -261,7 +267,8 @@ impl DataMessage for Postgres {
         _thread_id: ThreadId,
         message_ids: &[MessageId],
     ) -> Result<()> {
-        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
         let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
         query!(
             "UPDATE message SET deleted_at = $2 WHERE id = ANY($1)",
@@ -294,7 +301,8 @@ impl DataMessage for Postgres {
         _thread_id: ThreadId,
         version_id: MessageVerId,
     ) -> Result<()> {
-        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
             "UPDATE message SET deleted_at = $2 WHERE version_id = $1",
             version_id.into_inner(),

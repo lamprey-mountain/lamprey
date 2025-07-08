@@ -212,11 +212,12 @@ pub struct DbRoleCreate {
 }
 
 pub struct DbMessageCreate {
-    pub message_type: MessageType,
     pub thread_id: ThreadId,
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
+    pub message_type: MessageType,
+    pub edited_at: Option<time::PrimitiveDateTime>,
 }
 
 // TODO: move to types

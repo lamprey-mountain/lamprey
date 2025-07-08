@@ -85,6 +85,7 @@ impl ServiceMessages {
                     .map(embed_from_create)
                     .collect(),
                 message_type: payload,
+                edited_at: None,
             })
             .await?;
         let message_uuid = message_id.into_inner();
@@ -140,6 +141,7 @@ impl ServiceMessages {
                                 author_id: message.author_id,
                                 embeds,
                                 message_type: new_message_type,
+                                edited_at: None,
                             },
                         )
                         .await?;
@@ -295,6 +297,7 @@ impl ServiceMessages {
                         .map(embed_from_create)
                         .collect(),
                     message_type: payload,
+                    edited_at: None,
                 },
             )
             .await?;
@@ -350,6 +353,7 @@ impl ServiceMessages {
                                 author_id: message.author_id,
                                 embeds,
                                 message_type: new_message_type,
+                                edited_at: None,
                             },
                         )
                         .await?;
