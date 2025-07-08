@@ -20,6 +20,7 @@ use super::embed::DbEmbed;
 use super::util::media_from_db;
 use super::{Pagination, Postgres};
 
+#[derive(Debug)]
 pub struct DbMessage {
     pub message_type: DbMessageType,
     pub id: MessageId,
@@ -36,7 +37,7 @@ pub struct DbMessage {
     pub reactions: Option<serde_json::Value>,
 }
 
-#[derive(sqlx::Type)]
+#[derive(Debug, sqlx::Type)]
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {
     DefaultMarkdown,

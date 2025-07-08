@@ -29,7 +29,7 @@ pub enum DbMediaData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct DbMediaRaw {
+pub struct DbMediaRaw {
     id: MediaId,
     user_id: UserId,
     filename: String,

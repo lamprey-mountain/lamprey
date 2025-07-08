@@ -79,11 +79,6 @@ macro_rules! gen_paginate {
 }
 
 pub fn media_from_db(v: Value) -> Media {
-    #[derive(Deserialize)]
-    struct Wrap {
-        data: DbMediaData,
-    }
-
-    let parsed: Wrap = serde_json::from_value(v).expect("invalid data in db");
-    parsed.data.into()
+    let parsed: DbMediaData = serde_json::from_value(v).expect("invalid data in db");
+    parsed.into()
 }
