@@ -37,7 +37,7 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 							<UserView
 								user={user()}
 								room_member={room_member()}
-								thread_member={member()}
+								thread_member={member}
 							/>
 						</Show>,
 						<li class="menu-user" data-user-id={member.user_id}>
