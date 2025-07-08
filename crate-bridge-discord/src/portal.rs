@@ -434,9 +434,36 @@ impl Portal {
                         title: emb.title,
                         description: emb.description,
                         color: emb.colour.map(|c| format!("#{}", c.hex())),
-                        // FIXME: allow uploading media and thumbnails
-                        media: None,
-                        thumbnail: None,
+                        media: if let Some(url) = emb.image.as_ref().and_then(|i| i.proxy_url.as_deref()) {
+                            let filename = Url::from_str(url)?
+                                .path_segments()
+                                .unwrap()
+                                .last()
+                                .unwrap()
+                                .to_owned();
+                            let bytes = reqwest::get(url).await?.bytes().await?;
+                            let media = ly
+                                .media_upload(filename.to_owned(), bytes.into(), user_id)
+                                .await?;
+                            Some(MediaRef { id: media.id })
+                        } else {
+                            None
+                        },
+                        thumbnail: if let Some(url) = emb.thumbnail.as_ref().and_then(|t| t.proxy_url.as_deref()) {
+                            let filename = Url::from_str(url)?
+                                .path_segments()
+                                .unwrap()
+                                .last()
+                                .unwrap()
+                                .to_owned();
+                            let bytes = reqwest::get(url).await?.bytes().await?;
+                            let media = ly
+                                .media_upload(filename.to_owned(), bytes.into(), user_id)
+                                .await?;
+                            Some(MediaRef { id: media.id })
+                        } else {
+                            None
+                        },
                         author_name: emb.author.as_ref().map(|a| a.name.clone()),
                         author_url: emb.author.and_then(|a| a.url).and_then(|u| u.parse().ok()),
                         author_avatar,
