@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                room.id,\n                room.version_id,\n                room.name,\n                room.description,\n                dm.user_a_id as \"dm_uid_a: Option<Uuid>\",\n                dm.user_b_id as \"dm_uid_b: Option<Uuid>\"\n            FROM room\n            LEFT JOIN dm ON dm.room_id = room.id\n            WHERE id = $1\n            ",
+  "query": "\n            SELECT\n                room.id,\n                room.version_id,\n                room.name,\n                room.description,\n                NULL::uuid as dm_uid_a,\n                NULL::uuid as dm_uid_b\n            FROM room\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -25,12 +25,12 @@
       },
       {
         "ordinal": 4,
-        "name": "dm_uid_a: Option<Uuid>",
+        "name": "dm_uid_a",
         "type_info": "Uuid"
       },
       {
         "ordinal": 5,
-        "name": "dm_uid_b: Option<Uuid>",
+        "name": "dm_uid_b",
         "type_info": "Uuid"
       }
     ],
@@ -44,9 +44,9 @@
       false,
       false,
       true,
-      false,
-      false
+      null,
+      null
     ]
   },
-  "hash": "e7e0fd669fea05a0d4daf4d311a7fcd286156373676415ff654cf35be1551899"
+  "hash": "0bd27b5efe23ffccdb4015edc6d3205db982e3545996f11f7168932b9c8bc6a9"
 }
