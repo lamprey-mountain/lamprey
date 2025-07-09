@@ -341,14 +341,14 @@ export const Root: Component = (props: ParentProps) => {
 	globalThis.addEventListener("keydown", handleKeypress);
 	globalThis.addEventListener("mousemove", handleMouseMove);
 	globalThis.addEventListener("contextmenu", handleContextMenu);
-	navigator.serviceWorker?.addEventListener("message", handleMessage);
+	// navigator.serviceWorker?.addEventListener("message", handleMessage);
 
 	onCleanup(() => {
 		globalThis.removeEventListener("click", handleClick);
 		globalThis.removeEventListener("keydown", handleKeypress);
 		globalThis.removeEventListener("mousemove", handleMouseMove);
 		globalThis.removeEventListener("contextmenu", handleContextMenu);
-		navigator.serviceWorker?.removeEventListener("message", handleMessage);
+		// navigator.serviceWorker?.removeEventListener("message", handleMessage);
 	});
 
 	// TEMP: debugging

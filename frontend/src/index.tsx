@@ -8,7 +8,8 @@ import App from "./App.tsx";
 if ("serviceWorker" in navigator) {
 	try {
 		console.log("registering service worker");
-		navigator.serviceWorker?.register("/sw.js", { scope: "/" });
+		// navigator.serviceWorker?.register("/sw.js", { scope: "/" });
+		navigator.serviceWorker?.ready.then((s) => s.unregister());
 	} catch (error) {
 		console.error(error);
 	}
