@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use common::v1::types::{RoomId, ThreadId, UserId};
 use moka::future::Cache;
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::Permissions;
@@ -55,11 +56,18 @@ impl ServicePermissions {
             .await?;
 
         self.cache_perm_thread
-            .try_get_with((user_id, t.room_id, thread_id), async {
-                let data = self.state.data();
-                let perms = data.permission_thread_get(user_id, thread_id).await?;
-                Result::Ok(perms)
-            })
+            .try_get_with(
+                (
+                    user_id,
+                    t.room_id.unwrap_or_else(|| Uuid::nil().into()),
+                    thread_id,
+                ),
+                async {
+                    let data = self.state.data();
+                    let perms = data.permission_thread_get(user_id, thread_id).await?;
+                    Result::Ok(perms)
+                },
+            )
             .await
             .map_err(|err| err.fake_clone())
     }

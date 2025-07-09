@@ -155,7 +155,7 @@ pub enum MessageSync {
     MessageDelete {
         /// deprecated = "keyed by thread_id"
         #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: RoomId,
+        room_id: Option<RoomId>,
         thread_id: ThreadId,
         message_id: MessageId,
     },
@@ -163,7 +163,7 @@ pub enum MessageSync {
     MessageVersionDelete {
         /// deprecated = "keyed by thread_id"
         #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: RoomId,
+        room_id: Option<RoomId>,
         thread_id: ThreadId,
         message_id: MessageId,
         version_id: MessageVerId,

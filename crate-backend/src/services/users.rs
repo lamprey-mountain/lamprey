@@ -1,15 +1,14 @@
-use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::{MessageSync, Room, RoomMembership};
+use common::v1::types::MessageSync;
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::{Error, Result, ServerStateInner};
+use crate::{Result, ServerStateInner};
 
 // currently relies on sync heartbeat time
 const STATUS_EXPIRE: Duration = Duration::from_secs(40);
@@ -18,7 +17,6 @@ pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
     statuses: DashMap<UserId, OnlineState>,
-    dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
 struct OnlineState {
@@ -35,7 +33,6 @@ impl ServiceUsers {
                 .support_invalidation_closures()
                 .build(),
             statuses: DashMap::new(),
-            dm_lock: DashMap::new(),
         }
     }
 
@@ -129,31 +126,5 @@ impl ServiceUsers {
         } else {
             Status::offline()
         }
-    }
-
-    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Room, bool)> {
-        let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
-        let data = self.state.data();
-        let srv = self.state.services();
-        let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
-        if let Ok(room_id) = data.dm_get(user_id, other_id).await {
-            let room = srv.rooms.get(room_id, Some(user_id)).await?;
-            data.room_member_put(room_id, user_id, RoomMembership::JOIN_BLANK)
-                .await?;
-            data.room_member_put(room_id, other_id, RoomMembership::JOIN_BLANK)
-                .await?;
-            return Ok((room, false));
-        }
-        let room = srv.rooms.create_dm(user_id, other_id).await?;
-        data.dm_put(user_id, other_id, room.id).await?;
-        Ok((room, true))
-    }
-}
-
-fn ensure_dm_canonical(a: UserId, b: UserId) -> Result<(UserId, UserId)> {
-    match a.cmp(&b) {
-        Ordering::Less => Ok((a, b)),
-        Ordering::Equal => Err(Error::BadStatic("cant dm yourself")),
-        Ordering::Greater => Ok((b, a)),
     }
 }

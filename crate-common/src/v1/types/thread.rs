@@ -60,7 +60,7 @@ use crate::v1::types::reaction::ReactionCounts;
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Thread {
     pub id: ThreadId,
-    pub room_id: RoomId,
+    pub room_id: Option<RoomId>,
     pub creator_id: UserId,
 
     /// only updates when the thread itself is updated, not the stuff in the thread

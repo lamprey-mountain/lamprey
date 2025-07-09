@@ -6,7 +6,7 @@ use common::v1::types::{
 use sqlx::{query, query_as, query_scalar, Acquire};
 
 use crate::data::{DataInvite, DataRoom, DataThread, DataUser};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::types::{DbInvite, Invite, InviteCode, RoomId, UserId};
 use common::v1::types::InvitePatch;
 use time::PrimitiveDateTime;
@@ -60,13 +60,11 @@ impl DataInvite for Postgres {
             }
             "thread" => {
                 let thread = self.thread_get(ThreadId::from(row.target_id), None).await?;
-                let room = self.room_get(thread.room_id).await?;
+                let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
+                let room = self.room_get(room_id).await?;
                 InviteTarget::Thread { room, thread }
             }
-            "user" => {
-                let user = self.user_get(UserId::from(row.target_id)).await?;
-                InviteTarget::User { user }
-            }
+
             _ => panic!("invalid data in db"),
         };
         let creator = self.user_get(UserId::from(row.creator_id)).await?;

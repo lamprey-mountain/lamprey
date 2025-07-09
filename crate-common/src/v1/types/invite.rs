@@ -67,9 +67,6 @@ pub struct InviteWithMetadata {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum InviteTarget {
-    /// start a dm and/or become friends with a user
-    User { user: User },
-
     /// join a room
     Room {
         room: Room,
@@ -94,10 +91,6 @@ pub enum InviteTarget {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum InviteTargetId {
-    User {
-        user_id: UserId,
-    },
-
     Room {
         room_id: RoomId,
     },

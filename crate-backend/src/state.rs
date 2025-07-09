@@ -1,13 +1,12 @@
 use std::{
     ops::Deref,
     sync::{Arc, Weak},
-    time::Duration,
 };
 
 use common::v1::types::{Media, Message, RoomId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
-use moka::future::Cache;
+
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
 use url::Url;
@@ -31,15 +30,11 @@ pub struct ServerStateInner {
 
     // TODO: write a wrapper around this
     pub blobs: opendal::Operator,
-
-    cache_presigned: Cache<Url, Url>,
 }
 
 // newly signed urls last for 24 hours = 1 day
-const PRESIGNED_URL_LIFETIME: Duration = Duration::from_secs(60 * 60 * 24);
 
 // the server will only return urls that are valid for at least 8 hours
-const PRESIGNED_MIN_LIFETIME: Duration = Duration::from_secs(60 * 60 * 8);
 
 pub struct ServerState {
     pub inner: Arc<ServerStateInner>,
@@ -97,8 +92,9 @@ impl ServerStateInner {
                 .threads
                 .get(thread_id, Some(user_id))
                 .await?;
-            self.broadcast_room(thread.room_id, user_id, reason, msg)
-                .await?;
+            if let Some(room_id) = thread.room_id {
+                self.broadcast_room(room_id, user_id, reason, msg).await?;
+            }
         } else {
             let _ = self.sushi.send(msg);
         }
@@ -177,10 +173,6 @@ impl ServerState {
 
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
-                cache_presigned: Cache::builder()
-                    .max_capacity(1_000_000)
-                    .time_to_live(PRESIGNED_URL_LIFETIME - PRESIGNED_MIN_LIFETIME)
-                    .build(),
             });
             Services::new(inner.clone())
         });

@@ -25,7 +25,7 @@ impl DataThread for Postgres {
             thread_id.into_inner(),
             thread_id.into_inner(),
             create.creator_id.into_inner(),
-            create.room_id.into_inner(),
+            create.room_id.map(|id| id),
             create.name,
             create.description,
         )

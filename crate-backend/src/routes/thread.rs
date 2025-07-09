@@ -62,7 +62,7 @@ async fn thread_create(
     };
     let thread_id = data
         .thread_create(DbThreadCreate {
-            room_id,
+            room_id: Some(room_id.into_inner()),
             creator_id: user_id,
             name: json.name.clone(),
             description: json.description.clone(),
@@ -311,15 +311,17 @@ async fn thread_archive(
     }
     data.thread_archive(thread_id, user_id).await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    s.broadcast_room(
-        thread.room_id,
-        user_id,
-        reason,
-        MessageSync::ThreadUpdate {
-            thread: thread.clone(),
-        },
-    )
-    .await?;
+    if let Some(room_id) = thread.room_id {
+        s.broadcast_room(
+            room_id,
+            user_id,
+            reason,
+            MessageSync::ThreadUpdate {
+                thread: thread.clone(),
+            },
+        )
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -350,15 +352,17 @@ async fn thread_unarchive(
     }
     data.thread_unarchive(thread_id, user_id).await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    s.broadcast_room(
-        thread.room_id,
-        user_id,
-        reason,
-        MessageSync::ThreadUpdate {
-            thread: thread.clone(),
-        },
-    )
-    .await?;
+    if let Some(room_id) = thread.room_id {
+        s.broadcast_room(
+            room_id,
+            user_id,
+            reason,
+            MessageSync::ThreadUpdate {
+                thread: thread.clone(),
+            },
+        )
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -385,15 +389,17 @@ async fn thread_delete(
     perms.ensure(Permission::ThreadDelete)?;
     data.thread_delete(thread_id, user_id).await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    s.broadcast_room(
-        thread.room_id,
-        user_id,
-        reason,
-        MessageSync::ThreadUpdate {
-            thread: thread.clone(),
-        },
-    )
-    .await?;
+    if let Some(room_id) = thread.room_id {
+        s.broadcast_room(
+            room_id,
+            user_id,
+            reason,
+            MessageSync::ThreadUpdate {
+                thread: thread.clone(),
+            },
+        )
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -420,15 +426,17 @@ async fn thread_undelete(
     perms.ensure(Permission::ThreadDelete)?;
     data.thread_undelete(thread_id, user_id).await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    s.broadcast_room(
-        thread.room_id,
-        user_id,
-        reason,
-        MessageSync::ThreadUpdate {
-            thread: thread.clone(),
-        },
-    )
-    .await?;
+    if let Some(room_id) = thread.room_id {
+        s.broadcast_room(
+            room_id,
+            user_id,
+            reason,
+            MessageSync::ThreadUpdate {
+                thread: thread.clone(),
+            },
+        )
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 

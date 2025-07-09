@@ -46,10 +46,9 @@ impl DataRoom for Postgres {
                 room.version_id,
                 room.name,
                 room.description,
-                dm.user_a_id as "dm_uid_a: Option<Uuid>",
-                dm.user_b_id as "dm_uid_b: Option<Uuid>"
+                NULL::uuid as dm_uid_a,
+                NULL::uuid as dm_uid_b
             FROM room
-            LEFT JOIN dm ON dm.room_id = room.id
             WHERE id = $1
             "#,
             id
@@ -76,11 +75,10 @@ impl DataRoom for Postgres {
                     room.version_id,
                     room.name,
                     room.description,
-                    dm.user_a_id as "dm_uid_a: Option<Uuid>",
-                    dm.user_b_id as "dm_uid_b: Option<Uuid>"
+                    NULL::uuid as dm_uid_a,
+                NULL::uuid as dm_uid_b
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
-                LEFT JOIN dm ON dm.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
                 "#,

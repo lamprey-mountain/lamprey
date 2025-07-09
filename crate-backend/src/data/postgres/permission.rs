@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sqlx::query_scalar;
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{DbPermission, Permissions, RoomId, ThreadId, UserId};
@@ -40,13 +41,19 @@ impl DataPermission for Postgres {
         user_id: UserId,
         thread_id: ThreadId,
     ) -> Result<Permissions> {
-        let room_id = query_scalar!(
+        let room_id: Option<Uuid> = query_scalar!(
             "SELECT room_id FROM thread WHERE id = $1",
             thread_id.into_inner()
         )
         .fetch_one(&self.pool)
         .await?;
-        let perms = self.permission_room_get(user_id, room_id.into()).await?;
+
+        let perms = if let Some(room_id_uuid) = room_id {
+            self.permission_room_get(user_id, room_id_uuid.into())
+                .await?
+        } else {
+            Permissions::empty()
+        };
         Ok(perms.into_iter().collect())
     }
 

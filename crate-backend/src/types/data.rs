@@ -70,7 +70,7 @@ impl From<DbRoom> for Room {
 #[derive(Deserialize)]
 pub struct DbThread {
     pub id: ThreadId,
-    pub room_id: RoomId,
+    pub room_id: Option<Uuid>,
     pub creator_id: UserId,
     pub version_id: ThreadVerId,
     pub name: String,
@@ -82,7 +82,7 @@ pub struct DbThread {
 }
 
 pub struct DbThreadCreate {
-    pub room_id: RoomId,
+    pub room_id: Option<Uuid>,
     pub creator_id: UserId,
     pub name: String,
     pub description: Option<String>,
@@ -97,7 +97,7 @@ impl From<DbThread> for Thread {
     fn from(row: DbThread) -> Self {
         Thread {
             id: row.id,
-            room_id: row.room_id,
+            room_id: row.room_id.map(Into::into),
             creator_id: row.creator_id,
             version_id: row.version_id,
             name: row.name,

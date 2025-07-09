@@ -300,13 +300,11 @@ impl Connection {
             MessageSync::RoleCreate { role } => AuthCheck::Room(role.room_id),
             MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
-                InviteTarget::User { user } => AuthCheck::User(user.id),
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => todo!(),
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
-                InviteTarget::User { user } => AuthCheck::User(user.id),
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => todo!(),
@@ -327,9 +325,6 @@ impl Connection {
             }
             MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {
-                InviteTargetId::User { user_id } => {
-                    AuthCheck::Custom(session.user_id().is_some_and(|id| id == *user_id))
-                }
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
             },

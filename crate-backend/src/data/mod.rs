@@ -41,7 +41,6 @@ pub trait Data:
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
-    + DataDm
     + DataUserRelationship
     + DataUserConfig
     + DataReaction
@@ -367,12 +366,6 @@ pub trait DataThreadMember {
         thread_id: ThreadId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
-}
-
-#[async_trait]
-pub trait DataDm {
-    async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, room_id: RoomId) -> Result<()>;
-    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<RoomId>;
 }
 
 #[async_trait]

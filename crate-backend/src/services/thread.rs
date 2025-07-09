@@ -118,9 +118,11 @@ impl ServiceThreads {
         let msg = MessageSync::ThreadUpdate {
             thread: thread.clone(),
         };
-        self.state
-            .broadcast_room(thread.room_id, user_id, reason, msg)
-            .await?;
+        if let Some(room_id) = thread.room_id {
+            self.state
+                .broadcast_room(room_id, user_id, reason, msg)
+                .await?;
+        }
 
         Ok(thread)
     }
