@@ -108,10 +108,13 @@ impl Portal {
                     None
                 };
                 let mut embeds = vec![];
-                let mut content = msg_inner
-                    .content
-                    .to_owned()
-                    .unwrap_or_else(|| "(no content?)".to_owned());
+                let mut content = msg_inner.content.to_owned().unwrap_or_else(|| {
+                    if msg_inner.attachments.is_empty() && msg_inner.embeds.is_empty() {
+                        "(no content?)".to_owned()
+                    } else {
+                        "".to_owned()
+                    }
+                });
                 if let Some(reply_ids) = reply_ids {
                     let (discord_id, _chat_id) = reply_ids;
                     let (send, recv) = oneshot::channel();
@@ -475,19 +478,20 @@ impl Portal {
                     req.embeds.push(create);
                 }
                 req.content = match message.kind {
-                    DcMessageType::Regular | DcMessageType::InlineReply
-                        if message.content.is_empty()
-                            && message.attachments.is_empty()
-                            && message.embeds.is_empty() =>
-                    {
-                        Some("(sticker, poll, or other unsupported message type)".to_string())
+                    DcMessageType::Regular | DcMessageType::InlineReply => {
+                        if message.content.is_empty() {
+                            if message.attachments.is_empty() && message.embeds.is_empty() {
+                                Some(
+                                    "(sticker, poll, or other unsupported message type)"
+                                        .to_string(),
+                                )
+                            } else {
+                                Some("".to_string())
+                            }
+                        } else {
+                            Some(message.content)
+                        }
                     }
-                    DcMessageType::Regular | DcMessageType::InlineReply
-                        if message.content.is_empty() =>
-                    {
-                        None
-                    }
-                    DcMessageType::Regular | DcMessageType::InlineReply => Some(message.content),
                     other => Some(format!("(discord message: {:?})", other)),
                 };
                 match message.message_reference.map(|r| r.kind) {
