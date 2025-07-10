@@ -1,7 +1,10 @@
 // TODO: port to https://docs.rs/oauth2/latest/oauth2/
 // TODO: make more generic
 
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use common::v1::types::SessionId;
 use dashmap::DashMap;
@@ -66,6 +69,7 @@ pub struct GithubUser {
 pub struct OauthState {
     provider: String,
     session_id: SessionId,
+    created_at: Instant,
 }
 
 impl OauthState {
@@ -73,7 +77,12 @@ impl OauthState {
         Self {
             provider,
             session_id,
+            created_at: Instant::now(),
         }
+    }
+
+    pub fn is_expired(&self, duration: Duration) -> bool {
+        self.created_at.elapsed() > duration
     }
 }
 
@@ -84,10 +93,20 @@ pub struct ServiceOauth {
 
 impl ServiceOauth {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self {
+        let s = Self {
             state,
             oauth_states: Arc::new(DashMap::new()),
-        }
+        };
+
+        let s_clone = s.oauth_states.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                s_clone.retain(|_, state| !state.is_expired(Duration::from_secs(60 * 5)));
+            }
+        });
+
+        s
     }
 
     pub fn create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
@@ -121,10 +140,16 @@ impl ServiceOauth {
         state: Uuid,
         code: String,
     ) -> Result<(OauthTokenResponse, SessionId)> {
+        const OAUTH_STATE_EXPIRATION: Duration = Duration::from_secs(60 * 5);
+
         let (_, s) = self
             .oauth_states
             .remove(&state)
             .ok_or(Error::BadStatic("invalid or expired state"))?;
+
+        if s.is_expired(OAUTH_STATE_EXPIRATION) {
+            return Err(Error::BadStatic("invalid or expired state"));
+        }
         let client = reqwest::Client::new();
         let p = self
             .state
@@ -215,5 +240,11 @@ impl ServiceOauth {
             .json()
             .await?;
         Ok(res)
+    }
+
+    fn cleanup_expired_states(&self) {
+        const OAUTH_STATE_EXPIRATION: Duration = Duration::from_secs(60 * 5);
+        self.oauth_states
+            .retain(|_, state| !state.is_expired(OAUTH_STATE_EXPIRATION));
     }
 }
