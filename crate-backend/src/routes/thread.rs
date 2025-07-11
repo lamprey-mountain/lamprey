@@ -50,10 +50,7 @@ async fn thread_create(
         ThreadType::Chat => {
             perms.ensure(Permission::ThreadCreateChat)?;
         }
-        ThreadType::ForumLinear => {
-            perms.ensure(Permission::ThreadCreateForumLinear)?;
-        }
-        ThreadType::ForumTree => {
+        ThreadType::Forum => {
             perms.ensure(Permission::ThreadCreateForumTree)?;
         }
         ThreadType::Voice => {
@@ -69,8 +66,7 @@ async fn thread_create(
             description: json.description.clone(),
             ty: match json.ty {
                 ThreadType::Chat => DbThreadType::Chat,
-                ThreadType::ForumLinear => DbThreadType::Forum,
-                ThreadType::ForumTree => DbThreadType::Forum,
+                ThreadType::Forum => DbThreadType::Forum,
                 ThreadType::Voice => DbThreadType::Voice,
                 _ => todo!(),
             },

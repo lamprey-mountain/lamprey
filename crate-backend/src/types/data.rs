@@ -6,7 +6,7 @@ use common::v1::types::{
     util::Time,
     Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
     RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
-    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadTypeForumTreePublic,
+    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadTypeForumPublic,
     ThreadVerId, UserId,
 };
 use serde::Deserialize;
@@ -109,7 +109,7 @@ impl From<DbThread> for Thread {
                 last_version_id: row.last_version_id,
                 message_count: row.message_count.try_into().expect("count is negative?"),
             }),
-            DbThreadType::Forum => ThreadPublic::ForumTree(ThreadTypeForumTreePublic {
+            DbThreadType::Forum => ThreadPublic::Forum(ThreadTypeForumPublic {
                 last_version_id: row.last_version_id,
                 message_count: row.message_count.try_into().expect("count is negative?"),
                 // TODO
@@ -128,7 +128,7 @@ impl From<DbThread> for Thread {
                 mention_count: 0,
                 notifications: Default::default(),
             }),
-            DbThreadType::Forum => ThreadPrivate::ForumTree(ThreadTypeChatPrivate {
+            DbThreadType::Forum => ThreadPrivate::Forum(ThreadTypeChatPrivate {
                 is_unread: row.is_unread,
                 last_read_id: row.last_read_id.map(Into::into),
                 mention_count: 0,

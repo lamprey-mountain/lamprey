@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 pub use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
-pub use forum::ThreadTypeForumTreePublic;
-pub use ThreadTypeChatPrivate as ThreadTypeForumLinearPrivate;
-pub use ThreadTypeChatPrivate as ThreadTypeForumTreePrivate;
-pub use ThreadTypeChatPublic as ThreadTypeForumLinearPublic;
+pub use forum::ThreadTypeForumTreePublic as ThreadTypeForumPublic;
+pub use ThreadTypeChatPrivate as ThreadTypeForumPrivate;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -128,13 +126,8 @@ pub enum ThreadPublic {
     Chat(ThreadTypeChatPublic),
 
     #[cfg(feature = "feat_thread_type_forums")]
-    /// linear long form chat history, similar to github/forgejo issues
-    // TODO: come up with a less terrible name
-    ForumLinear(ThreadTypeForumLinearPublic),
-
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// tree-style chat history
-    ForumTree(ThreadTypeForumTreePublic),
+    /// long form chat history
+    Forum(ThreadTypeForumPublic),
 
     #[cfg(feature = "feat_thread_type_voice")]
     /// call
@@ -169,12 +162,8 @@ pub enum ThreadPrivate {
     Chat(ThreadTypeChatPrivate),
 
     #[cfg(feature = "feat_thread_type_forums")]
-    /// linear long form chat history, similar to github/forgejo issues
-    ForumLinear(ThreadTypeForumLinearPrivate),
-
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// tree-style chat history
-    ForumTree(ThreadTypeForumTreePrivate),
+    /// long form chat history
+    Forum(ThreadTypeForumPrivate),
 
     #[cfg(feature = "feat_thread_type_voice")]
     /// call
@@ -208,13 +197,8 @@ pub enum ThreadType {
     Chat,
 
     #[cfg(feature = "feat_thread_type_forums")]
-    /// linear long form chat history, similar to github/forgejo issues
-    // TODO: come up with a less terrible name
-    ForumLinear,
-
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// tree-style chat history
-    ForumTree,
+    /// long form chat history
+    Forum,
 
     #[cfg(feature = "feat_thread_type_voice")]
     /// call
