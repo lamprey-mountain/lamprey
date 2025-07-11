@@ -64,7 +64,9 @@ export const ChatMain = (props: ChatProps) => {
 		!messages()?.has_forward && anchor().type !== "context";
 
 	let last_thread_id: string | undefined;
+	let chatRef: HTMLDivElement | undefined;
 	const list = createList({
+		containerRef: () => chatRef,
 		items: tl,
 		autoscroll,
 		topQuery: ".message > .content",
@@ -110,7 +112,7 @@ export const ChatMain = (props: ChatProps) => {
 			const a = anchor();
 			if (a.type === "context") {
 				// TODO: is this safe and performant?
-				const target = document.querySelector(
+				const target = chatRef?.querySelector(
 					`article[data-message-id="${a.message_id}"]`,
 				);
 				console.log("scroll restore: to anchor", a.message_id, target);
@@ -186,7 +188,7 @@ export const ChatMain = (props: ChatProps) => {
 	// called both during reanchor and when thread_highlight changes
 	function scrollAndHighlight(hl?: string) {
 		if (!hl) return;
-		const target = document.querySelector(
+		const target = chatRef?.querySelector(
 			`li:has(article.message[data-message-id="${hl}"])`,
 		);
 		console.log("scroll highlight", hl, target);
@@ -216,8 +218,13 @@ export const ChatMain = (props: ChatProps) => {
 
 	createEffect(on(list.scrollPos, setPos));
 
+	createEffect(() => {
+		ctx.scrollToChatList = (pos: number) => list.scrollTo(pos);
+	});
+
 	return (
 		<div
+			ref={chatRef}
 			class="chat"
 			data-thread-id={props.thread.id}
 			role="log"

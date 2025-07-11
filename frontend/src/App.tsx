@@ -7,6 +7,7 @@ import {
 	type ParentProps,
 	Show,
 } from "solid-js";
+import { useParams } from "@solidjs/router";
 import {
 	type ChatCtx,
 	chatctx,
@@ -16,6 +17,7 @@ import {
 	type Menu,
 	useCtx,
 } from "./context.ts";
+import { type Dispatcher } from "./dispatch/types";
 import { createStore } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient } from "sdk";
@@ -131,6 +133,7 @@ export const Root: Component = (props: ParentProps) => {
 		dispatch: (() => {
 			throw new Error("Dispatch not initialized");
 		}) as Dispatcher,
+		scrollToChatList: (_pos: number) => {},
 
 		t: i18n.translator(dict),
 		events,
@@ -203,9 +206,9 @@ export const Root: Component = (props: ParentProps) => {
 	};
 
 	const handleKeypress = (e: KeyboardEvent) => {
+		const params = useParams();
 		if (e.key === "Escape") {
-			const thread_id = (document.querySelector(".chat") as HTMLElement)
-				?.dataset.threadId;
+			const thread_id = params.thread_id;
 			if (ctx.data.modals.length) {
 				dispatch({ do: "modal.close" });
 			} else if (thread_id) {
@@ -233,8 +236,7 @@ export const Root: Component = (props: ParentProps) => {
 
 				// HACK: i need to make the update order less jank
 				setTimeout(() => {
-					const listEl = document.querySelector(".chat > .list") as HTMLElement;
-					listEl.scrollTo(0, 99999999);
+					ctx.scrollToChatList(99999999);
 				});
 			}
 		}
@@ -338,17 +340,9 @@ export const Root: Component = (props: ParentProps) => {
 		console.log("received message from serviceworker", e.data);
 	};
 
-	globalThis.addEventListener("click", handleClick);
-	globalThis.addEventListener("keydown", handleKeypress);
-	globalThis.addEventListener("mousemove", handleMouseMove);
-	globalThis.addEventListener("contextmenu", handleContextMenu);
 	// navigator.serviceWorker?.addEventListener("message", handleMessage);
 
 	onCleanup(() => {
-		globalThis.removeEventListener("click", handleClick);
-		globalThis.removeEventListener("keydown", handleKeypress);
-		globalThis.removeEventListener("mousemove", handleMouseMove);
-		globalThis.removeEventListener("contextmenu", handleContextMenu);
 		// navigator.serviceWorker?.removeEventListener("message", handleMessage);
 	});
 
@@ -379,15 +373,21 @@ export const Root: Component = (props: ParentProps) => {
 
 	const state = from(ctx.client.state);
 
+	let rootRef: HTMLDivElement | undefined;
 	return (
-		<div
-			id="root"
-			classList={{
-				"underline-links": ctx.settings.get("underline_links") === "yes",
-			}}
-		>
-			<api.Provider>
-				<chatctx.Provider value={ctx}>
+		<api.Provider>
+			<chatctx.Provider value={ctx}>
+				<div
+					ref={rootRef}
+					id="root"
+					classList={{
+						"underline-links": ctx.settings.get("underline_links") === "yes",
+					}}
+					onClick={handleClick}
+					onKeyDown={handleKeypress}
+					onMouseMove={handleMouseMove}
+					onContextMenu={handleContextMenu}
+				>
 					{props.children}
 					<Portal mount={document.getElementById("overlay")!}>
 						<Overlay />
@@ -397,9 +397,9 @@ export const Root: Component = (props: ParentProps) => {
 							{state()}
 						</div>
 					</Show>
-				</chatctx.Provider>
-			</api.Provider>
-		</div>
+				</div>
+			</chatctx.Provider>
+		</api.Provider>
 	);
 };
 

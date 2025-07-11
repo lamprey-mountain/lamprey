@@ -122,3 +122,5 @@ export type UploadAction =
 	| { do: "upload.cancel"; local_id: string; thread_id: string };
 
 export type WindowAction = { do: "window.mouse_move"; e: MouseEvent };
+
+export type Dispatcher = (action: Action) => void;

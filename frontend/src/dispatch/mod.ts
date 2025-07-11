@@ -20,6 +20,8 @@ function combine(
 	state: Data,
 	update: SetStoreFunction<Data>,
 	middleware: Array<Middleware>,
+	ctx: ChatCtx,
+	api: Api,
 ) {
 	let _dispatch = (_action: Action) => {};
 	const dispatch = (action: Action) => {
@@ -27,7 +29,7 @@ function combine(
 		update((s) => reduce(s, action as Reduction));
 	};
 	const merged = middleware.toReversed().reduce(
-		(dispatch, m) => m(dispatch),
+		(dispatch, m) => m(ctx, api, update)(dispatch),
 		dispatch,
 	);
 	_dispatch = merged;

@@ -41,8 +41,15 @@ export function createList<T>(options: {
 	// onScroll?: (pos: number) => void;
 	onContextMenu?: (e: MouseEvent) => void;
 	onRestore?: () => boolean;
+	containerRef?: Accessor<HTMLElement | undefined>;
 }) {
 	const [wrapperEl, setWrapperEl] = createSignal<HTMLElement>();
+
+	createEffect(() => {
+		if (options.containerRef) {
+			setWrapperEl(options.containerRef());
+		}
+	});
 	const [topEl, setTopEl] = createSignal<HTMLElement>();
 	const [bottomEl, setBottomEl] = createSignal<HTMLElement>();
 	const [isAtBottom, setIsAtBottom] = createSignal(true); // FIXME: should only be true if at slice end

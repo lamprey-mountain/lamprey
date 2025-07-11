@@ -5,6 +5,7 @@ import {
 	useContext,
 } from "solid-js";
 import type { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
+import type { Dispatcher } from "./dispatch/types";
 import type { EditorState } from "prosemirror-state";
 import type { MessageListAnchor } from "./api/messages.ts";
 import type { ReactiveMap } from "@solid-primitives/map";
@@ -101,6 +102,7 @@ export type ChatCtx = {
 	setCurrentMedia: Setter<MediaCtx | null>;
 
 	settings: ReactiveMap<string, string>;
+	scrollToChatList: (pos: number) => void;
 };
 
 export type MediaCtx = {
