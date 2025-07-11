@@ -106,7 +106,6 @@ export const Root: Component = (props: ParentProps) => {
 		console.log("client state", cs());
 	});
 
-	const api = createApi(client, events);
 	const [data, update] = createStore<Data>({
 		modals: [],
 		cursor: {
@@ -129,9 +128,9 @@ export const Root: Component = (props: ParentProps) => {
 	const ctx: ChatCtx = {
 		client,
 		data,
-		dispatch: () => {
-			throw new Error("oh no!");
-		},
+		dispatch: (() => {
+			throw new Error("Dispatch not initialized");
+		}) as Dispatcher,
 
 		t: i18n.translator(dict),
 		events,
@@ -152,6 +151,8 @@ export const Root: Component = (props: ParentProps) => {
 			JSON.parse(localStorage.getItem("settings") ?? "[]"),
 		),
 	};
+
+	const api = createApi(client, events, ctx);
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 

@@ -76,37 +76,6 @@ export type Modal =
 		message_id: string;
 	};
 
-export type Action =
-	| { do: "paginate"; thread_id: string; dir: "f" | "b" }
-	| { do: "goto"; thread_id: string; event_id: string }
-	| { do: "menu.preview"; id: string | null }
-	| { do: "modal.open"; modal: Modal }
-	| { do: "modal.close" }
-	| { do: "modal.alert"; text: string }
-	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
-	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
-	| { do: "thread.send"; thread_id: string; text: string }
-	| {
-		do: "thread.scroll_pos";
-		thread_id: string;
-		pos: number | null;
-		is_at_end: boolean;
-	}
-	| {
-		do: "thread.mark_read";
-		thread_id: string;
-		message_id?: string;
-		version_id: string;
-		delay?: boolean;
-		also_local?: boolean;
-	}
-	| { do: "upload.init"; local_id: string; thread_id: string; file: File }
-	| { do: "upload.pause"; local_id: string }
-	| { do: "upload.resume"; local_id: string }
-	| { do: "upload.cancel"; local_id: string; thread_id: string }
-	| { do: "server.init_session" }
-	| { do: "window.mouse_move"; e: MouseEvent };
-
 export type AttachmentCreateT = {
 	id: string;
 };

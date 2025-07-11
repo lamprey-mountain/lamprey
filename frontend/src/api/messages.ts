@@ -390,7 +390,10 @@ export class Messages {
 				},
 			},
 		);
-		if (error) throw new Error(error);
+		if (error) {
+			console.error(error);
+			throw new Error(error);
+		}
 		return data;
 	}
 
@@ -412,7 +415,10 @@ export class Messages {
 						},
 					},
 				);
-				if (error) throw new Error(error);
+				if (error) {
+					console.error(error);
+					throw new Error(error);
+				}
 				return data;
 			},
 		);
@@ -445,7 +451,10 @@ export class Messages {
 				},
 			},
 		);
-		if (error) throw new Error(error);
+		if (error) {
+			console.error(error);
+			throw new Error(error);
+		}
 		return data;
 	}
 
@@ -463,7 +472,10 @@ export class Messages {
 				},
 			},
 		);
-		if (error) throw new Error(error);
+		if (error) {
+			console.error(error);
+			throw new Error(error);
+		}
 		return data;
 	}
 
