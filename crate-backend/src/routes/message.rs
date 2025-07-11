@@ -511,40 +511,6 @@ async fn message_replies(
     Ok(Json(res))
 }
 
-// /// Message append (TODO)
-// ///
-// /// A restricted variant of message edit
-// ///
-// /// - Only allows appending to `content`
-// /// - Message version must be less than 5 minutes old
-// /// - Message will not get a new version
-// /// - Intended for dynamic/streaming responses
-// ///
-// /// maybe see InteractionStatus
-// #[utoipa::path(
-//     patch,
-//     path = "/thread/{thread_id}/message/{message_id}/append",
-//     params(
-//         RepliesQuery,
-//         ("thread_id", description = "Thread id"),
-//         ("message_id", description = "Message id"),
-//     ),
-//     tags = ["message"],
-//     responses(
-//         (status = OK, body = Message, description = "success"),
-//         (status = NOT_MODIFIED, description = "Not modified"),
-//     ),
-// )]
-// async fn message_append(
-//     Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
-//     Auth(_user_id): Auth,
-//     State(_s): State<Arc<ServerState>>,
-//     Json(_json): Json<MessagePatch>,
-// ) -> Result<()> {
-//     // json.can_append(other)
-//     Err(Error::Unimplemented)
-// }
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
