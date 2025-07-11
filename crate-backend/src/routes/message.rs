@@ -377,7 +377,7 @@ struct MessageBulkMove {
     target_thread_id: ThreadId,
 }
 
-/// Message delete bulk (TODO)
+/// Message delete bulk
 #[utoipa::path(
     post,
     path = "/thread/{thread_id}/messages/delete",
