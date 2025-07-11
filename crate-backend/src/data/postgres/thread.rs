@@ -5,8 +5,8 @@ use tracing::info;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, DbThreadCreate, PaginationDirection, PaginationQuery, PaginationResponse, RoomId,
-    Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
+    DbThread, DbThreadCreate, DbThreadType, PaginationDirection, PaginationQuery,
+    PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
 use crate::data::DataThread;
@@ -19,8 +19,8 @@ impl DataThread for Postgres {
         let thread_id = ThreadId::new();
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -28,6 +28,7 @@ impl DataThread for Postgres {
             create.room_id.map(|id| id),
             create.name,
             create.description,
+            create.ty as _,
         )
         .execute(&self.pool)
         .await?;

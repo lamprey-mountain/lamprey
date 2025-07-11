@@ -1,9 +1,13 @@
 use common::v1::types::{
-    thread::chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
+    thread::{
+        chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
+        voice::{ThreadTypeVoicePrivate, ThreadTypeVoicePublic},
+    },
     util::Time,
     Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
     RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
-    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadVerId, UserId,
+    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadTypeForumTreePublic,
+    ThreadVerId, UserId,
 };
 use serde::Deserialize;
 use uuid::Uuid;
@@ -75,6 +79,7 @@ pub struct DbThread {
     pub version_id: ThreadVerId,
     pub name: String,
     pub description: Option<String>,
+    pub ty: DbThreadType,
     pub last_version_id: MessageVerId,
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
@@ -86,15 +91,52 @@ pub struct DbThreadCreate {
     pub creator_id: UserId,
     pub name: String,
     pub description: Option<String>,
+    pub ty: DbThreadType,
 }
 
-// #[sqlx(type_name = "thread_type")]
-// pub enum ThreadType {
-// 	Default,
-// }
+#[derive(sqlx::Type, Deserialize)]
+#[sqlx(type_name = "thread_type")]
+pub enum DbThreadType {
+    Chat,
+    Forum,
+    Voice,
+}
 
 impl From<DbThread> for Thread {
     fn from(row: DbThread) -> Self {
+        let info = match row.ty {
+            DbThreadType::Chat => ThreadPublic::Chat(ThreadTypeChatPublic {
+                last_version_id: row.last_version_id,
+                message_count: row.message_count.try_into().expect("count is negative?"),
+            }),
+            DbThreadType::Forum => ThreadPublic::ForumTree(ThreadTypeForumTreePublic {
+                last_version_id: row.last_version_id,
+                message_count: row.message_count.try_into().expect("count is negative?"),
+                // TODO
+                root_message_count: 0,
+            }),
+            // TODO: save to db
+            DbThreadType::Voice => ThreadPublic::Voice(ThreadTypeVoicePublic {
+                bitrate: 64000,
+                user_limit: 100,
+            }),
+        };
+        let private = Some(match row.ty {
+            DbThreadType::Chat => ThreadPrivate::Chat(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                mention_count: 0,
+                notifications: Default::default(),
+            }),
+            DbThreadType::Forum => ThreadPrivate::ForumTree(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                mention_count: 0,
+                notifications: Default::default(),
+            }),
+            DbThreadType::Voice => ThreadPrivate::Voice(ThreadTypeVoicePrivate {}),
+        });
+
         Thread {
             id: row.id,
             room_id: row.room_id.map(Into::into),
@@ -102,17 +144,8 @@ impl From<DbThread> for Thread {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            info: ThreadPublic::Chat(ThreadTypeChatPublic {
-                last_version_id: row.last_version_id,
-                message_count: row.message_count.try_into().expect("count is negative?"),
-            }),
-            private: Some(ThreadPrivate::Chat(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                // FIXME: add field to db schema
-                mention_count: 0,
-                notifications: Default::default(),
-            })),
+            info,
+            private,
 
             // FIXME: add field to db schema or calculate
             member_count: 0,

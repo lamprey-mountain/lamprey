@@ -12,6 +12,7 @@ message_count as (
 )
 select
     thread.id,
+    thread.type as "ty: DbThreadType",
     thread.room_id,
     thread.creator_id,
     thread.name,

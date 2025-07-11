@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
-use forum::ThreadTypeForumTreePublic;
-use ThreadTypeChatPrivate as ThreadTypeForumLinearPrivate;
-use ThreadTypeChatPrivate as ThreadTypeForumTreePrivate;
-use ThreadTypeChatPublic as ThreadTypeForumLinearPublic;
+pub use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
+pub use forum::ThreadTypeForumTreePublic;
+pub use ThreadTypeChatPrivate as ThreadTypeForumLinearPrivate;
+pub use ThreadTypeChatPrivate as ThreadTypeForumTreePrivate;
+pub use ThreadTypeChatPublic as ThreadTypeForumLinearPublic;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;

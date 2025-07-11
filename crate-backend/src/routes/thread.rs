@@ -14,8 +14,9 @@ use validator::Validate;
 
 use crate::{
     types::{
-        DbMessageCreate, DbThreadCreate, MessageSync, MessageType, MessageVerId, PaginationQuery,
-        PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
+        DbMessageCreate, DbThreadCreate, DbThreadType, MessageSync, MessageType, MessageVerId,
+        PaginationQuery, PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId,
+        ThreadPatch,
     },
     ServerState,
 };
@@ -66,6 +67,13 @@ async fn thread_create(
             creator_id: user_id,
             name: json.name.clone(),
             description: json.description.clone(),
+            ty: match json.ty {
+                ThreadType::Chat => DbThreadType::Chat,
+                ThreadType::ForumLinear => DbThreadType::Forum,
+                ThreadType::ForumTree => DbThreadType::Forum,
+                ThreadType::Voice => DbThreadType::Voice,
+                _ => todo!(),
+            },
         })
         .await?;
     let starter_message_id = data
