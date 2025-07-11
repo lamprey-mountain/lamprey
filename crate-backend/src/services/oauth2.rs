@@ -241,10 +241,4 @@ impl ServiceOauth {
             .await?;
         Ok(res)
     }
-
-    fn cleanup_expired_states(&self) {
-        const OAUTH_STATE_EXPIRATION: Duration = Duration::from_secs(60 * 5);
-        self.oauth_states
-            .retain(|_, state| !state.is_expired(OAUTH_STATE_EXPIRATION));
-    }
 }
