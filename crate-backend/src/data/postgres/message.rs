@@ -340,4 +340,37 @@ impl DataMessage for Postgres {
             )
         )
     }
+
+    async fn message_replies(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        depth: u16,
+        breadth: Option<u16>,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_replies.sql",
+                thread_id.into_inner(),
+                message_id.into_inner(),
+                depth as i32,
+                breadth.map(|b| b as i64),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!(
+                "sql/message_replies_count.sql",
+                thread_id.into_inner(),
+                message_id.into_inner(),
+                depth as i32
+            )
+        )
+    }
 }

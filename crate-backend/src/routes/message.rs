@@ -468,6 +468,9 @@ struct RepliesQuery {
     #[serde(default = "fn_one")]
     #[validate(range(min = 1, max = 8))]
     depth: u16,
+
+    /// how many replies to fetch per branch
+    breadth: Option<u16>,
 }
 
 /// always returns one
@@ -475,7 +478,7 @@ fn fn_one() -> u16 {
     1
 }
 
-/// Message replies (TODO)
+/// Message replies
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/reply/{message_id}",
@@ -490,13 +493,22 @@ fn fn_one() -> u16 {
     ),
 )]
 async fn message_replies(
-    Path((_thread_id, _message_id)): Path<(ThreadId, MessageId)>,
-    Query(_q): Query<RepliesQuery>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Query(q): Query<RepliesQuery>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    q.validate()?;
+    let data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
+    let mut res = data
+        .message_replies(thread_id, message_id, q.depth, q.breadth, q.q)
+        .await?;
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+    Ok(Json(res))
 }
 
 // /// Message append (TODO)

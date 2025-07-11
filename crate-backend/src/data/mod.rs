@@ -231,6 +231,14 @@ pub trait DataMessage {
         message_id: MessageId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>>;
+    async fn message_replies(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        depth: u16,
+        breadth: Option<u16>,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
 }
 
 #[async_trait]
