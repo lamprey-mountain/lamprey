@@ -51,8 +51,8 @@ lettre = { version = "0.11.17", default-features = false, features = ["builder",
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio", "tokio"] }
 opentelemetry = "0.30.0"
 opentelemetry-stdout = "0.30.0"
-opentelemetry-otlp = { version = "0.30.0", features = ["tokio", "tonic"] }
 tracing-opentelemetry = "0.31.0"
+opentelemetry-otlp = { version = "0.30.0", features = ["reqwest", "tokio"] }
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }

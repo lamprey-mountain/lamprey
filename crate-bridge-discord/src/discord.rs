@@ -8,7 +8,7 @@ use serenity::{
         parse_webhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
         Http, MessagePagination, Ready, Webhook,
     },
-    model::prelude::{ChannelId, GuildId, Message, MessageId, MessageUpdateEvent},
+    model::prelude::{ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction},
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
@@ -164,6 +164,26 @@ impl EventHandler for Handler {
                 PortalMessage::DiscordMessageDelete { message_id },
             );
         }
+    }
+
+    async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
+        info!("discord reaction add");
+        let mut ctx_data = ctx.data.write().await;
+        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        globals.portal_send_dc(
+            add_reaction.channel_id,
+            PortalMessage::DiscordReactionAdd { add_reaction },
+        );
+    }
+
+    async fn reaction_remove(&self, ctx: Context, removed_reaction: Reaction) {
+        info!("discord reaction remove");
+        let mut ctx_data = ctx.data.write().await;
+        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        globals.portal_send_dc(
+            removed_reaction.channel_id,
+            PortalMessage::DiscordReactionRemove { removed_reaction },
+        );
     }
 
     // async fn typing_start(&self, ctx: Context, event: TypingStartEvent) {}

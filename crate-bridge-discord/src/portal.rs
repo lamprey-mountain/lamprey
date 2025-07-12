@@ -22,7 +22,7 @@ use serenity::all::EditWebhookMessage;
 use serenity::all::Mentionable;
 use serenity::all::{
     ChannelId as DcChannelId, Message as DcMessage, MessageId as DcMessageId,
-    MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate,
+    MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
 use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use tokio::sync::mpsc;
@@ -44,6 +44,8 @@ pub enum PortalMessage {
     DiscordMessageCreate { message: DcMessage },
     DiscordMessageUpdate { update: DcMessageUpdate },
     DiscordMessageDelete { message_id: DcMessageId },
+    DiscordReactionAdd { add_reaction: DcReaction },
+    DiscordReactionRemove { removed_reaction: DcReaction },
 }
 
 impl Portal {
@@ -594,6 +596,71 @@ impl Portal {
                 let thread_id = self.thread_id();
                 ly.message_delete(thread_id, existing.chat_id, user_id)
                     .await?;
+            }
+            PortalMessage::DiscordReactionAdd { add_reaction } => {
+                let Some(user_id) = add_reaction.user_id else {
+                    return Ok(());
+                };
+                let Some(message) = self.globals.get_message_dc(add_reaction.message_id).await?
+                else {
+                    return Ok(());
+                };
+
+                let puppet = ly
+                    .puppet_ensure(
+                        add_reaction
+                            .member
+                            .as_ref()
+                            .unwrap()
+                            .user
+                            .display_name()
+                            .to_owned(),
+                        user_id.to_string(),
+                        self.room_id(),
+                    )
+                    .await?;
+
+                ly.message_react(
+                    self.thread_id(),
+                    message.chat_id,
+                    puppet.id,
+                    add_reaction.emoji.to_string(),
+                )
+                .await?;
+            }
+            PortalMessage::DiscordReactionRemove { removed_reaction } => {
+                let Some(user_id) = removed_reaction.user_id else {
+                    return Ok(());
+                };
+                let Some(message) = self
+                    .globals
+                    .get_message_dc(removed_reaction.message_id)
+                    .await?
+                else {
+                    return Ok(());
+                };
+
+                let puppet = ly
+                    .puppet_ensure(
+                        removed_reaction
+                            .member
+                            .as_ref()
+                            .unwrap()
+                            .user
+                            .display_name()
+                            .to_owned(),
+                        user_id.to_string(),
+                        self.room_id(),
+                    )
+                    .await?;
+
+                ly.message_unreact(
+                    self.thread_id(),
+                    message.chat_id,
+                    puppet.id,
+                    removed_reaction.emoji.to_string(),
+                )
+                .await?;
             }
         }
         Ok(())

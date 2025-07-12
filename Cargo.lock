@@ -3770,7 +3770,6 @@ dependencies = [
  "reqwest 0.12.22",
  "thiserror 2.0.12",
  "tokio",
- "tonic",
  "tracing",
 ]
 
