@@ -16,6 +16,7 @@ pub struct Config {
     pub url_preview: ConfigUrlPreview,
     pub smtp: ConfigSmtp,
     pub otel_trace_endpoint: Option<String>,
+    pub sfu_token: String,
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,28 +1,41 @@
 use crate::{
-    peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent, SfuTrack,
-    SignallingMessage,
+    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent,
+    SfuTrack, SignallingMessage,
 };
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
+use std::fmt::Debug;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, trace, warn};
 
-#[derive(Debug, Default)]
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
     voice_states: DashMap<UserId, VoiceState>,
     tracks: Vec<SfuTrack>,
-    // config: Config,
+    config: Config,
 }
 
-// #[derive(Debug)]
-// pub struct Config {
-//     // TODO: use secret scrubbing/zeroizing string here
-//     token: String,
-// }
+impl Debug for Sfu {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Sfu")
+            .field("peers", &self.peers)
+            .field("voice_states", &self.voice_states)
+            .field("tracks", &self.tracks)
+            .finish()
+    }
+}
 
 impl Sfu {
+    pub fn new(config: Config) -> Self {
+        Self {
+            peers: DashMap::new(),
+            voice_states: DashMap::new(),
+            tracks: Vec::new(),
+            config,
+        }
+    }
+
     pub fn spawn(self) -> UnboundedSender<SfuCommand> {
         let (send, recv) = mpsc::unbounded_channel();
         tokio::spawn(self.run(recv));
@@ -224,8 +237,8 @@ impl Sfu {
 
     async fn emit(&self, event: SfuEvent) -> Result<()> {
         reqwest::Client::new()
-            .post("http://localhost:4000/api/v1/internal/rpc")
-            .header("authorization", "Server verysecrettoken")
+            .post(format!("{}/api/v1/internal/rpc", self.config.api_url))
+            .header("authorization", format!("Server {}", self.config.token))
             .json(&event)
             .send()
             .await?

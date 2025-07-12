@@ -10,6 +10,7 @@ use str0m::{
     media::{MediaKind, MediaTime, Mid},
 };
 
+pub mod config;
 pub mod peer;
 pub mod sfu;
 pub mod util;
