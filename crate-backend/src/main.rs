@@ -9,6 +9,9 @@ use common::v1::types::{email::EmailAddr, notifications::InboxFilters};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
+use opentelemetry::{global::ObjectSafeTracerProvider, InstrumentationScope};
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::trace::SdkTracerProvider;
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{
@@ -16,7 +19,7 @@ use tower_http::{
     sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
 };
 use tracing::info;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use utoipa::{openapi::extensions::Extensions, Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 
@@ -111,7 +114,6 @@ async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
     let args = cli::Args::parse();
-    dbg!(&args);
 
     let config: Config = figment::Figment::new()
         .merge(Toml::file(args.config))
@@ -119,10 +121,28 @@ async fn main() -> Result<()> {
         .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
-    let sub = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_str(&config.rust_log)?)
-        .finish();
-    tracing::subscriber::set_global_default(sub)?;
+    let mut exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_http()
+        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary);
+    if let Some(endpoint) = &config.otel_trace_endpoint {
+        exporter = exporter.with_endpoint(endpoint);
+    }
+    let exporter = exporter.build()?;
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_simple_exporter(exporter)
+        .build();
+    use opentelemetry::trace::TracerProvider;
+    let tracer = provider.tracer("backend");
+    opentelemetry::global::set_tracer_provider(provider);
+
+    let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    let subscriber = Registry::default()
+        .with(EnvFilter::from_str(&config.rust_log)?)
+        .with(tracing_subscriber::fmt::layer())
+        .with(telemetry_layer);
+
+    tracing::subscriber::set_global_default(subscriber)?;
 
     match &args.command {
         cli::Command::Serve {} => serve(config).await?,

@@ -15,6 +15,7 @@ pub struct Config {
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
     pub smtp: ConfigSmtp,
+    pub otel_trace_endpoint: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

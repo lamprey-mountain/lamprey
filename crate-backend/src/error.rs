@@ -2,6 +2,7 @@ use std::num::{ParseFloatError, ParseIntError};
 
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::{MessageEnvelope, MessagePayload};
+use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::error;
 
@@ -94,6 +95,9 @@ pub enum Error {
 
     #[error("generic error: {0}")]
     GenericError(String),
+
+    #[error("OtelExporterBuildError: {0}")]
+    OtelExporterBuildError(#[from] ExporterBuildError),
 }
 
 impl From<sqlx::Error> for Error {
