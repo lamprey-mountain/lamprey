@@ -290,7 +290,7 @@ impl DbMessageCreate {
 
 macro_rules! impl_perms {
     ($($e:ident,)*) => {
-        #[derive(sqlx::Type, PartialEq, Eq)]
+        #[derive(Debug, sqlx::Type, PartialEq, Eq)]
         #[sqlx(type_name = "permission")]
         pub enum DbPermission {
             $($e,)*

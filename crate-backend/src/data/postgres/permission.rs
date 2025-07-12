@@ -2,10 +2,9 @@ use async_trait::async_trait;
 use sqlx::query_scalar;
 use uuid::Uuid;
 
-use crate::error::Result;
 use crate::types::{DbPermission, Permissions, RoomId, ThreadId, UserId};
-
 use crate::data::DataPermission;
+use crate::error::Result;
 
 use super::Postgres;
 
@@ -35,7 +34,6 @@ impl DataPermission for Postgres {
         Ok(perms.into_iter().map(Into::into).collect())
     }
 
-    // TODO: thread overwrites
     async fn permission_thread_get(
         &self,
         user_id: UserId,
@@ -48,12 +46,38 @@ impl DataPermission for Postgres {
         .fetch_one(&self.pool)
         .await?;
 
-        let perms = if let Some(room_id_uuid) = room_id {
+        let mut perms = if let Some(room_id_uuid) = room_id {
             self.permission_room_get(user_id, room_id_uuid.into())
                 .await?
         } else {
             Permissions::empty()
         };
+
+        // FIXME: role overwrites
+        // apply in order: role allow, role deny, user allow, user deny (explicit deny, user overwrites role perms)
+        let overwrites = sqlx::query!(
+            r#"
+            SELECT
+                allow as "allow!: Vec<DbPermission>",
+                deny as "deny!: Vec<DbPermission>"
+            FROM permission_overwrite
+            WHERE target_id = $1 AND actor_id = $2
+            "#,
+            thread_id.into_inner(),
+            user_id.into_inner(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(overwrite) = overwrites {
+            for p in overwrite.allow {
+                perms.add(p.into());
+            }
+            for p in overwrite.deny {
+                perms.remove(p.into());
+            }
+        }
+
         Ok(perms.into_iter().collect())
     }
 

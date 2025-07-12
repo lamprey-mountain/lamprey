@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::v1::types::{util::deserialize_sorted, RoleId, UserId};
 
@@ -303,14 +304,33 @@ pub enum Permission {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct PermissionOverrides {
+pub struct PermissionOverwrites {
     #[serde(flatten)]
-    inner: Vec<PermissionOverrideWithTarget>,
+    inner: Vec<PermissionOverwrite>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct PermissionOverride {
+pub struct PermissionOverwrite {
+    /// id of role or user
+    pub id: Uuid,
+
+    /// whether this is for a user or role
+    #[serde(rename = "type")]
+    pub ty: PermissionOverwriteType,
+
+    /// extra permissions allowed here
+    #[serde(deserialize_with = "deserialize_sorted")]
+    pub allow: Vec<Permission>,
+
+    /// permissions denied here
+    #[serde(deserialize_with = "deserialize_sorted")]
+    pub deny: Vec<Permission>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct PermissionOverwriteSet {
     /// extra permissions allowed here
     #[serde(deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
@@ -322,21 +342,11 @@ pub struct PermissionOverride {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-pub enum PermissionOverridable {
+#[serde(untagged)]
+pub enum PermissionOverwriteType {
     /// permission overrides for a role
-    Role { role_id: RoleId },
+    Role,
 
     /// permission overrides for a user
-    User { user_id: UserId },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct PermissionOverrideWithTarget {
-    #[serde(flatten)]
-    pub target: PermissionOverridable,
-
-    #[serde(flatten)]
-    pub perms: PermissionOverride,
+    User,
 }

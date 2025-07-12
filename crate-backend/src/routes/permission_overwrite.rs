@@ -1,16 +1,21 @@
 use std::sync::Arc;
 
-use axum::{extract::State, Json};
-use common::v1::types::{PermissionOverride, PermissionOverrideWithTarget};
+use crate::{routes::util::HeaderReason, types::DbPermission};
+use axum::{
+    extract::{Path, State},
+    response::IntoResponse,
+    Json,
+};
+use common::v1::types::{MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet};
+use common::v1::types::{RoomId, ThreadId, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 
 use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
-/// Thread permission override upsert (TODO)
-///
-/// Upsert a thread permission override
+/// Thread permission overwrite
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/permission/{overwrite_id}",
@@ -19,19 +24,57 @@ use crate::ServerState;
         ("overwrite_id", description = "Role or user id"),
     ),
     tags = ["thread"],
-    responses((status = OK, body = PermissionOverrideWithTarget, description = "success"))
+    responses((status = NO_CONTENT, description = "success"))
 )]
-async fn permission_thread_override(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<PermissionOverride>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+async fn permission_thread_overwrite(
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<PermissionOverwriteSet>,
+) -> Result<impl IntoResponse> {
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+    // FIXME: allow editing permissions you can edit as long as you don't edit ones you can't
+    // word salad sandwich
+    for p in &json.allow {
+        perms.ensure(*p)?;
+    }
+    for p in &json.deny {
+        perms.ensure(*p)?;
+    }
+    sqlx::query!(
+        r#"
+        INSERT INTO permission_overwrite (target_id, actor_id, allow, deny)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (target_id, actor_id) DO UPDATE SET allow = $3, deny = $4
+        "#,
+        *thread_id,
+        overwrite_id,
+        serde_json::to_value(&json.allow)?,
+        serde_json::to_value(&json.deny)?,
+    )
+    .execute(&s.pool)
+    .await?;
+
+    let d = s.data();
+    let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ThreadUpdate { thread },
+    )
+    .await?;
+    Ok(())
 }
 
-/// Thread permission override delete (TODO)
-///
-/// Delete a thread permission override
+/// Thread permission delete
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/permission/{overwrite_id}",
@@ -43,10 +86,35 @@ async fn permission_thread_override(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_thread_delete(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user_id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+    sqlx::query!(
+        "DELETE FROM permission_overwrite WHERE target_id = $1 AND actor_id = $2",
+        *thread_id,
+        overwrite_id,
+    )
+    .execute(&s.pool)
+    .await?;
+    let d = s.data();
+    let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
+    s.broadcast_thread(
+        thread_id,
+        auth_user_id,
+        reason,
+        MessageSync::ThreadUpdate { thread },
+    )
+    .await?;
+    Ok(Json(()))
 }
 
 /// Tag permission override upsert (TODO)
@@ -61,13 +129,13 @@ async fn permission_thread_delete(
         ("overwrite_id", description = "Role or user id"),
     ),
     tags = ["tag"],
-    responses((status = OK, body = PermissionOverrideWithTarget, description = "success"))
+    responses((status = OK, body = PermissionOverwrite, description = "success"))
 )]
-async fn permission_tag_override(
+async fn permission_tag_overwrite(
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<PermissionOverride>,
-) -> Result<Json<PermissionOverride>> {
+    Json(_json): Json<PermissionOverwrite>,
+) -> Result<Json<PermissionOverwrite>> {
     Err(Error::Unimplemented)
 }
 
@@ -94,8 +162,8 @@ async fn permission_tag_delete(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(permission_thread_override))
+        .routes(routes!(permission_thread_overwrite))
         .routes(routes!(permission_thread_delete))
-        .routes(routes!(permission_tag_override))
+        .routes(routes!(permission_tag_overwrite))
         .routes(routes!(permission_tag_delete))
 }
