@@ -396,9 +396,45 @@ export function createApi(
 			}
 			invites.cache.delete(msg.code);
 		} else if (msg.type === "ReactionCreate") {
-			// TODO
+			const { message_id, thread_id, user_id, key } = msg;
+			const message = messages.cache.get(message_id);
+			if (message) {
+				const reactions = message.reactions ?? [];
+				const reaction = reactions.find((r) => r.key === key);
+				if (reaction) {
+					reaction.count++;
+					if (user_id === session()?.user_id) {
+						reaction.self = true;
+					}
+				} else {
+					reactions.push({
+						key,
+						count: 1,
+						self: user_id === session()?.user_id,
+					});
+				}
+				messages.cache.set(message_id, { ...message, reactions });
+			}
 		} else if (msg.type === "ReactionDelete") {
-			// TODO
+			const { message_id, thread_id, user_id, key } = msg;
+			const message = messages.cache.get(message_id);
+			if (message) {
+				const reactions = message.reactions ?? [];
+				const reaction = reactions.find((r) => r.key === key);
+				if (reaction) {
+					reaction.count--;
+					if (user_id === session()?.user_id) {
+						reaction.self = false;
+					}
+					if (reaction.count === 0) {
+						const idx = reactions.findIndex((r) => r.key === key);
+						if (idx !== -1) {
+							reactions.splice(idx, 1);
+						}
+					}
+				}
+				messages.cache.set(message_id, { ...message, reactions });
+			}
 		} else if (msg.type === "ReactionPurge") {
 			// TODO
 		} else if (msg.type === "EmojiCreate") {

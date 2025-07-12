@@ -7,16 +7,16 @@ use crate::v1::types::emoji::Emoji;
 
 use super::UserId;
 
-/// the total reaction counts for all emoji
+/// the total reaction counts for all keys
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ReactionCounts(pub Vec<ReactionCount>);
 
-/// the total reaction counts for an emoji
+/// the total reaction counts for a key
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ReactionCount {
-    pub emoji: Emoji,
+    pub key: Emoji,
     pub count: u64,
 
     #[serde(default, rename = "self")]

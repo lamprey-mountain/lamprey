@@ -1,9 +1,9 @@
 with
     message_reaction as (
-        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self
+        -- select message_id, key, count(*), bool_or(user_id = $123) as self
         select
             message_id,
-            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json
+            json_agg((select row_to_json(j) from (select key, count(*) as count) j)) as json
         from reaction
         group by message_id
         order by min(position)

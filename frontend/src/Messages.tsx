@@ -1,5 +1,6 @@
 // import { Tooltip } from "./Atoms.tsx";
-import { Match, Show, Switch } from "solid-js";
+import { createMemo, Match, Show, Switch } from "solid-js";
+import { useApi } from "./api.tsx";
 import type { MessageT, ThreadT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./Message.tsx";
@@ -27,17 +28,21 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 	switch (item.type) {
 		case "message": {
 			const ctx = useCtx();
+			const api = useApi();
+			const message = createMemo(() => api.messages.cache.get(item.message.id));
 			return (
-				<li
-					class="message"
-					classList={{
-						"selected": item.message.id === ctx.thread_reply_id.get(thread.id),
-						// "context": a()?.type === "context" &&
-						// 	item.message.id === a()!.message_id,
-					}}
-				>
-					<MessageView message={item.message} separate={item.separate} />
-				</li>
+				<Show when={message()}>
+					{(message) => (
+						<li
+							class="message"
+							classList={{
+								"selected": message().id === ctx.thread_reply_id.get(thread.id),
+							}}
+						>
+							<MessageView message={message()} separate={item.separate} />
+						</li>
+					)}
+				</Show>
 			);
 		}
 		case "info": {
