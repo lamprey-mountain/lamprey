@@ -1,7 +1,5 @@
 use sqlx::PgPool;
 
-use super::Data;
-
 #[derive(Debug)]
 pub struct Postgres {
     pub(crate) pool: PgPool,
@@ -37,3 +35,5 @@ mod user_relationship;
 mod util;
 
 pub use util::Pagination;
+
+use crate::data::Data;

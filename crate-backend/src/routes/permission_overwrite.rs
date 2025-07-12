@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use crate::{routes::util::HeaderReason, types::DbPermission};
+use crate::routes::util::HeaderReason;
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
     Json,
 };
+use common::v1::types::ThreadId;
 use common::v1::types::{MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet};
-use common::v1::types::{RoomId, ThreadId, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
@@ -48,19 +48,9 @@ async fn permission_thread_overwrite(
     for p in &json.deny {
         perms.ensure(*p)?;
     }
-    sqlx::query!(
-        r#"
-        INSERT INTO permission_overwrite (target_id, actor_id, allow, deny)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (target_id, actor_id) DO UPDATE SET allow = $3, deny = $4
-        "#,
-        *thread_id,
-        overwrite_id,
-        serde_json::to_value(&json.allow)?,
-        serde_json::to_value(&json.deny)?,
-    )
-    .execute(&s.pool)
-    .await?;
+    s.data()
+        .permission_overwrite_upsert(thread_id, overwrite_id, json.allow, json.deny)
+        .await?;
 
     let d = s.data();
     let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
@@ -98,13 +88,9 @@ async fn permission_thread_delete(
         .await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    sqlx::query!(
-        "DELETE FROM permission_overwrite WHERE target_id = $1 AND actor_id = $2",
-        *thread_id,
-        overwrite_id,
-    )
-    .execute(&s.pool)
-    .await?;
+    s.data()
+        .permission_overwrite_delete(thread_id, overwrite_id)
+        .await?;
     let d = s.data();
     let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
     s.broadcast_thread(

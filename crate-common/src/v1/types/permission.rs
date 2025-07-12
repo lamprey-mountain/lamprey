@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::v1::types::{util::deserialize_sorted, RoleId, UserId};
+use crate::v1::types::util::deserialize_sorted;
 
 pub mod defaults;
 

@@ -1,10 +1,11 @@
 use async_trait::async_trait;
+use common::v1::types::Permission;
 use sqlx::query_scalar;
 use uuid::Uuid;
 
-use crate::types::{DbPermission, Permissions, RoomId, ThreadId, UserId};
 use crate::data::DataPermission;
 use crate::error::Result;
+use crate::types::{DbPermission, Permissions, RoomId, ThreadId, UserId};
 
 use super::Postgres;
 
@@ -96,5 +97,43 @@ impl DataPermission for Postgres {
         .await?
         .is_some();
         Ok(exists)
+    }
+
+    async fn permission_overwrite_upsert(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+        allow: Vec<Permission>,
+        deny: Vec<Permission>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO permission_overwrite (target_id, actor_id, allow, deny)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (target_id, actor_id) DO UPDATE SET allow = $3, deny = $4
+            "#,
+            *thread_id,
+            overwrite_id,
+            serde_json::to_value(&allow)?,
+            serde_json::to_value(&deny)?,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn permission_overwrite_delete(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+    ) -> Result<()> {
+        sqlx::query!(
+            "DELETE FROM permission_overwrite WHERE target_id = $1 AND actor_id = $2",
+            *thread_id,
+            overwrite_id,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 }

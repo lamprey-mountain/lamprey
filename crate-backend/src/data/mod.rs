@@ -6,9 +6,9 @@ use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
     ApplicationId, AuditLog, AuditLogId, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
-    MessageSync, Relationship, RelationshipPatch, RelationshipWithUserId, Role, RoomMember,
-    RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
-    ThreadMemberPatch, ThreadMembership,
+    MessageSync, Permission, Relationship, RelationshipPatch, RelationshipWithUserId, Role,
+    RoomMember, RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken,
+    ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
 use uuid::Uuid;
 
@@ -134,6 +134,19 @@ pub trait DataPermission {
         thread_id: ThreadId,
     ) -> Result<Permissions>;
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool>;
+    async fn permission_overwrite_upsert(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+        allow: Vec<Permission>,
+        deny: Vec<Permission>,
+    ) -> Result<()>;
+
+    async fn permission_overwrite_delete(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+    ) -> Result<()>;
 }
 
 #[async_trait]
