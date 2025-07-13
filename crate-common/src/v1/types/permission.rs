@@ -71,7 +71,7 @@ pub enum Permission {
     // TODO: remove, not worth it
     MemberBanManage,
 
-    /// (unimplemented) allow adding users with type Puppet (and use timestamp massaging if/when implemented)
+    /// allow adding users with type Puppet and use timestamp massaging
     /// intended for bridge bots
     MemberBridge,
 

@@ -253,6 +253,7 @@ pub struct DbMessageCreate {
     pub embeds: Vec<Embed>,
     pub message_type: MessageType,
     pub edited_at: Option<time::PrimitiveDateTime>,
+    pub created_at: Option<time::PrimitiveDateTime>,
 }
 
 // TODO: move to types

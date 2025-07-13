@@ -35,6 +35,7 @@ pub struct DbMessage {
     pub author_id: UserId,
     pub embeds: Option<serde_json::Value>,
     pub reactions: Option<serde_json::Value>,
+    pub created_at: Option<time::PrimitiveDateTime>,
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
 }
@@ -117,6 +118,7 @@ impl From<DbMessage> for Message {
             mentions: Mentions::default(),
             deleted_at: row.deleted_at.map(Time::from),
             edited_at: row.edited_at.map(Time::from),
+            created_at: row.created_at.map(Time::from),
         }
     }
 }
@@ -129,8 +131,8 @@ impl DataMessage for Postgres {
         let mut tx = self.pool.begin().await?;
         let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()))
         "#,
             message_id,
             create.thread_id.into_inner(),
@@ -142,6 +144,7 @@ impl DataMessage for Postgres {
             message_type as _,
             create.override_name(),
             embeds,
+            create.created_at.map(|t| t.assume_utc()),
         )
         .execute(&mut *tx)
         .await?;
@@ -180,8 +183,8 @@ impl DataMessage for Postgres {
         .await?;
         let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, edited_at)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11)
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, edited_at)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11, coalesce($12, now()))
         "#,
             message_id.into_inner(),
             create.thread_id.into_inner(),
@@ -193,7 +196,8 @@ impl DataMessage for Postgres {
             message_type as _,
             create.override_name(),
             embeds,
-            create.edited_at,
+            create.created_at,
+            create.edited_at.map(|t| t.assume_utc()),
         )
         .execute(&mut *tx)
         .await?;

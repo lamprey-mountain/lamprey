@@ -46,6 +46,9 @@ impl ServiceMessages {
         if !json.embeds.is_empty() {
             perms.ensure(Permission::MessageEmbeds)?;
         }
+        if json.created_at.is_some() {
+            perms.ensure(Permission::MemberBridge)?;
+        }
         // TODO: move this to validation
         if json.content.as_ref().is_none_or(|s| s.is_empty())
             && json.attachments.is_empty()
@@ -86,6 +89,7 @@ impl ServiceMessages {
                     .collect(),
                 message_type: payload,
                 edited_at: None,
+                created_at: json.created_at.map(|t| t.into()),
             })
             .await?;
         let message_uuid = message_id.into_inner();
@@ -142,6 +146,7 @@ impl ServiceMessages {
                                 embeds,
                                 message_type: new_message_type,
                                 edited_at: None,
+                                created_at: None,
                             },
                         )
                         .await?;
@@ -214,6 +219,10 @@ impl ServiceMessages {
         if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
             perms.ensure(Permission::MessageEmbeds)?;
         }
+        if json.created_at.is_some() {
+            perms.ensure(Permission::MemberBridge)?;
+        }
+
         if !json.changes(&message) {
             return Ok((StatusCode::NOT_MODIFIED, message));
         }
@@ -298,6 +307,7 @@ impl ServiceMessages {
                         .collect(),
                     message_type: payload,
                     edited_at: None,
+                    created_at: None,
                 },
             )
             .await?;
@@ -354,6 +364,7 @@ impl ServiceMessages {
                                 embeds,
                                 message_type: new_message_type,
                                 edited_at: None,
+                                created_at: None,
                             },
                         )
                         .await?;

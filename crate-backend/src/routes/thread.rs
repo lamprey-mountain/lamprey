@@ -86,6 +86,7 @@ async fn thread_create(
                 },
             }),
             edited_at: None,
+            created_at: None,
         })
         .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;

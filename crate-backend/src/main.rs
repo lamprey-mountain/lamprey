@@ -119,8 +119,7 @@ async fn main() -> Result<()> {
         .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
-    let mut exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic();
+    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
     if let Some(endpoint) = &config.otel_trace_endpoint {
         exporter = exporter.with_endpoint(endpoint);
     }

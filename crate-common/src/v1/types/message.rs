@@ -55,6 +55,7 @@ pub struct Message {
     // pub pinned_order: Option<u8>,
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
+    pub created_at: Option<Time>,
     pub deleted_at: Option<Time>,
     pub edited_at: Option<Time>,
     // // drop the is_?
@@ -147,6 +148,8 @@ pub struct MessageCreate {
     #[cfg(feature = "feat_custom_embeds")]
     #[serde(default)]
     pub embeds: Vec<EmbedCreate>,
+
+    pub created_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -185,6 +188,8 @@ pub struct MessagePatch {
 
     #[cfg(feature = "feat_custom_embeds")]
     pub embeds: Option<Vec<EmbedCreate>>,
+
+    pub created_at: Option<Time>,
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
