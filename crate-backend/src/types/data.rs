@@ -9,7 +9,8 @@ use common::v1::types::{
     Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadTypeForumPublic,
     ThreadVerId, UserId,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use time::PrimitiveDateTime;
 use uuid::Uuid;
 
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
@@ -448,4 +449,22 @@ pub struct MediaLink {
     pub media_id: MediaId,
     pub target_id: Uuid,
     pub link_type: MediaLinkType,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct UrlEmbedQueue {
+    pub id: Uuid,
+    pub message_ref: Option<serde_json::Value>,
+    pub user_id: Uuid,
+    pub url: String,
+    pub created_at: PrimitiveDateTime,
+    pub claimed_at: Option<PrimitiveDateTime>,
+    pub finished_at: Option<PrimitiveDateTime>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MessageRef {
+    pub message_id: MessageId,
+    pub version_id: MessageVerId,
+    pub thread_id: ThreadId,
 }

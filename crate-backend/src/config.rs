@@ -43,6 +43,7 @@ pub struct ConfigOauthProvider {
 pub struct ConfigUrlPreview {
     pub user_agent: String,
     pub deny: Vec<IpNet>,
+    pub max_parallel_jobs: usize,
 }
 
 #[derive(Debug, Clone, Deserialize)]

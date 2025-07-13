@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
-use common::v1::types::{Embed, EmbedRequest};
+use axum::{extract::State, http::StatusCode, Json};
+use common::v1::types::EmbedRequest;
 use serde::Serialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -50,7 +50,7 @@ pub async fn debug_version() -> Result<impl IntoResponse> {
     path = "/debug/embed-url",
     tags = ["debug"],
     responses(
-        (status = OK, body = Embed, description = "success"),
+        (status = ACCEPTED, description = "success"),
     )
 )]
 pub async fn debug_embed_url(
@@ -58,8 +58,8 @@ pub async fn debug_embed_url(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
-    let embed = s.services().embed.generate(user_id, json.url).await?;
-    Ok(Json(embed))
+    s.services().embed.queue(None, user_id, json.url).await?;
+    Ok(StatusCode::ACCEPTED)
 }
 
 /// Trigger a panic

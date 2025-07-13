@@ -12,7 +12,6 @@ impl Data for Postgres {}
 mod application;
 mod audit_logs;
 mod auth;
-
 mod embed;
 mod emoji;
 mod invite;

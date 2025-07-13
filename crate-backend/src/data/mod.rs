@@ -17,8 +17,8 @@ use crate::types::{
     DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media, MediaId,
     MediaLink, MediaLinkType, Message, MessageId, MessageVerId, PaginationQuery,
     PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId, User,
-    UserId, UserPatch, UserVerId,
+    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId,
+    UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -46,6 +46,7 @@ pub trait Data:
     + DataReaction
     + DataApplication
     + DataEmoji
+    + DataEmbed
     + Send
     + Sync
 {
@@ -484,4 +485,20 @@ pub trait DataEmoji {
     ) -> Result<PaginationResponse<EmojiCustom>>;
     async fn emoji_update(&self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()>;
     async fn emoji_delete(&self, emoji_id: EmojiId) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataEmbed {
+    async fn url_embed_queue_insert(
+        &self,
+        message_ref: Option<crate::types::MessageRef>,
+        user_id: UserId,
+        url: String,
+    ) -> Result<Uuid>;
+    async fn url_embed_queue_claim(&self) -> Result<Option<UrlEmbedQueue>>;
+    async fn url_embed_queue_finish(
+        &self,
+        id: Uuid,
+        embed: Option<&common::v1::types::Embed>,
+    ) -> Result<()>;
 }

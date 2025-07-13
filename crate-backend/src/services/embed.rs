@@ -2,14 +2,17 @@ use std::io::Write;
 use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types;
 use common::v1::types::misc::Color;
+use common::v1::types::{self};
 use common::v1::types::{Embed, EmbedId};
 use common::v1::types::{Media, UserId};
 use mediatype::{MediaType, MediaTypeBuf};
 use moka::future::Cache;
+
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error};
+use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
+use tracing::{debug, error, info, warn};
 use url::Url;
 use webpage::HTML;
 
@@ -24,6 +27,8 @@ const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
 pub struct ServiceEmbed {
     state: Arc<ServerStateInner>,
     cache: Cache<Url, Embed>,
+    stop: broadcast::Sender<()>,
+    workers: Vec<JoinHandle<()>>,
 }
 
 /// an opengraph type
@@ -134,34 +139,129 @@ impl From<OpenGraphType> for &'static str {
 
 impl ServiceEmbed {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
+        let (tx, _) = broadcast::channel(1);
+        let mut workers = Vec::new();
+        for i in 0..state.config.url_preview.max_parallel_jobs {
+            let state = state.clone();
+            let mut stop = tx.subscribe();
+            workers.push(tokio::spawn(async move {
+                info!("starting embed worker {i}");
+                loop {
+                    tokio::select! {
+                        _ = stop.recv() => {
+                            info!("stopping embed worker {i}");
+                            break;
+                        }
+                        _ = tokio::time::sleep(Duration::from_secs(1)) => {}
+                    }
+                    if let Err(e) = Self::worker(state.clone()).await {
+                        error!("embed worker failed: {e:?}");
+                    }
+                }
+            }));
+        }
         Self {
             state,
             cache: Cache::builder()
                 .max_capacity(1000)
                 .time_to_live(MAX_EMBED_AGE)
                 .build(),
+            stop: tx,
+            workers,
         }
     }
 
-    pub async fn generate(&self, user_id: UserId, url: Url) -> Result<Embed> {
-        let embed = self
-            .cache
-            .try_get_with_by_ref(&url, self.generate_inner(user_id, url.clone()))
-            .await
-            .map_err(|err| {
-                error!("{err}");
-                Error::UrlEmbedOther(err.to_string())
-            })?;
-        Ok(embed)
+    pub async fn stop(self) {
+        if self.stop.send(()).is_err() {
+            warn!("no embed workers to stop");
+        }
+        for worker in self.workers {
+            if let Err(e) = worker.await {
+                error!("failed to stop embed worker: {e:?}");
+            }
+        }
     }
 
-    #[tracing::instrument(level = "info", skip(self))]
-    async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<Embed> {
+    async fn worker(state: Arc<ServerStateInner>) -> Result<()> {
+        let data = state.data();
+        let Some(job) = data.url_embed_queue_claim().await? else {
+            return Ok(());
+        };
+
+        let url: Url = job.url.parse()?;
+
+        let embed = match state
+            .services()
+            .embed
+            .cache
+            .try_get_with(url.clone(), async {
+                debug!("generating embed for {}", url);
+                Self::generate_inner(&state, job.user_id.into(), url)
+                    .await
+                    .map_err(Arc::new)
+            })
+            .await
+        {
+            Ok(embed) => embed,
+            Err(e_arc) => {
+                if let Err(e) = data.url_embed_queue_finish(job.id, None).await {
+                    error!("failed to finish url embed queue job with error: {e:?}");
+                }
+                return Err(e_arc.fake_clone());
+            }
+        };
+
+        if let Err(e) = data.url_embed_queue_finish(job.id, Some(&embed)).await {
+            error!("failed to finish url embed queue job: {e:?}");
+        }
+        if let Err(e) = Self::attach_embed(
+            &state,
+            job.message_ref.map(|v| serde_json::from_value(v).unwrap()),
+            job.user_id.into(),
+            embed,
+        )
+        .await
+        {
+            error!("failed to attach embed: {e:?}");
+        }
+        Ok(())
+    }
+
+    pub async fn queue(
+        &self,
+        message_ref: Option<crate::types::MessageRef>,
+        user_id: UserId,
+        url: Url,
+    ) -> Result<()> {
+        if let Some(embed) = self.cache.get(&url).await {
+            if let Some(message_ref) = message_ref {
+                if let Err(e) =
+                    Self::attach_embed(&self.state, Some(message_ref), user_id, embed).await
+                {
+                    error!("failed to attach embed from cache: {e:?}");
+                }
+            }
+            return Ok(());
+        }
+
+        self.state
+            .data()
+            .url_embed_queue_insert(message_ref, user_id, url.to_string())
+            .await?;
+        Ok(())
+    }
+
+    #[tracing::instrument(level = "info", skip(state))]
+    async fn generate_inner(
+        state: &Arc<ServerStateInner>,
+        user_id: UserId,
+        url: Url,
+    ) -> Result<Embed> {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(&self.state.config.url_preview.user_agent)
+            .user_agent(&state.config.url_preview.user_agent)
             .https_only(true)
             .build()?;
         let fetched = http
@@ -172,7 +272,7 @@ impl ServiceEmbed {
         let addr = fetched
             .remote_addr()
             .ok_or(Error::BadStatic("request has no remote ip address"))?;
-        for denied in &self.state.config.url_preview.deny {
+        for denied in &state.config.url_preview.deny {
             if denied.contains(&addr.ip()) {
                 return Err(Error::BadStatic("url blacklisted"));
             }
@@ -185,7 +285,7 @@ impl ServiceEmbed {
             .and_then(|h| h.to_str().ok())
             .and_then(|s| MediaTypeBuf::from_str(s).ok());
         // TODO: try to parse name from Content-Disposition
-        let srv = self.state.services();
+        let srv = state.services();
         let embed = if content_type.is_some_and(is_media) {
             debug!("got media");
             let canonical_url = fetched.url().to_owned();
@@ -398,6 +498,80 @@ impl ServiceEmbed {
         };
         debug!("done! {:?}", embed);
         Ok(embed)
+    }
+
+    async fn attach_embed(
+        state: &Arc<ServerStateInner>,
+        message_ref: Option<crate::types::MessageRef>,
+        user_id: UserId,
+        embed: Embed,
+    ) -> Result<()> {
+        let Some(message_ref) = message_ref else {
+            return Ok(());
+        };
+        let data = state.data();
+        let message = data
+            .message_get(message_ref.thread_id, message_ref.message_id)
+            .await?;
+        let mut new_message_type = message.message_type.clone();
+        let (embeds, attachments) = match &mut new_message_type {
+            common::v1::types::MessageType::DefaultMarkdown(m) => {
+                if m.embeds
+                    .iter()
+                    .any(|e| e.url.as_ref() == embed.url.as_ref())
+                {
+                    return Ok(());
+                }
+                m.embeds.push(embed);
+                (
+                    m.embeds.clone(),
+                    m.attachments.iter().map(|a| a.id).collect(),
+                )
+            }
+            common::v1::types::MessageType::DefaultTagged(m) => {
+                if m.embeds
+                    .iter()
+                    .any(|e| e.url.as_ref() == embed.url.as_ref())
+                {
+                    return Ok(());
+                }
+                m.embeds.push(embed);
+                (
+                    m.embeds.clone(),
+                    m.attachments.iter().map(|a| a.id).collect(),
+                )
+            }
+            _ => return Ok(()),
+        };
+
+        data.message_update(
+            message_ref.thread_id,
+            message_ref.message_id,
+            crate::types::DbMessageCreate {
+                thread_id: message_ref.thread_id,
+                attachment_ids: attachments,
+                author_id: message.author_id,
+                embeds,
+                message_type: new_message_type,
+                edited_at: None,
+                created_at: None,
+            },
+        )
+        .await?;
+
+        let mut message = data
+            .message_get(message_ref.thread_id, message_ref.message_id)
+            .await?;
+        state.presign_message(&mut message).await?;
+        state
+            .broadcast_thread(
+                message_ref.thread_id,
+                user_id,
+                None,
+                common::v1::types::MessageSync::MessageUpdate { message },
+            )
+            .await?;
+        Ok(())
     }
 }
 
