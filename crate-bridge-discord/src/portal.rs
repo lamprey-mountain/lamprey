@@ -25,6 +25,7 @@ use serenity::all::{
     MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
 use serenity::all::{ExecuteWebhook, MessageReferenceKind};
+use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tracing::error;
@@ -400,7 +401,11 @@ impl Portal {
                         .or(Some(message.author.name)),
                     nonce: None,
                     embeds: vec![],
-                    created_at: None,
+                    created_at: Some(
+                        OffsetDateTime::from_unix_timestamp(message.timestamp.unix_timestamp())
+                            .unwrap()
+                            .into(),
+                    ),
                 };
                 for a in &message.attachments {
                     let bytes = a.download().await?;
@@ -538,7 +543,11 @@ impl Portal {
                     reply_id: None,
                     override_name: None,
                     embeds: None,
-                    edited_at: None,
+                    edited_at: update.edited_timestamp.map(|t| {
+                        OffsetDateTime::from_unix_timestamp(t.unix_timestamp())
+                            .unwrap()
+                            .into()
+                    }),
                 };
                 req.attachments = if let Some(atts) = &update.attachments {
                     let mut v = vec![];
