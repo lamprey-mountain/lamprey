@@ -9,9 +9,7 @@ use common::v1::types::{email::EmailAddr, notifications::InboxFilters};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
-use opentelemetry::{global::ObjectSafeTracerProvider, InstrumentationScope};
 use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::trace::SdkTracerProvider;
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{
