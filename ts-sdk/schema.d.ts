@@ -911,7 +911,7 @@ export interface paths {
 		 * Tag permission override upsert (TODO)
 		 * @description Upsert a tag permission override
 		 */
-		put: operations["permission_tag_override"];
+		put: operations["permission_tag_overwrite"];
 		post?: never;
 		/**
 		 * Tag permission override delete (TODO)
@@ -1363,7 +1363,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Message delete bulk (TODO) */
+		/** Message delete bulk */
 		post: operations["message_delete_bulk"];
 		delete?: never;
 		options?: never;
@@ -1413,16 +1413,10 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Thread permission override upsert (TODO)
-		 * @description Upsert a thread permission override
-		 */
-		put: operations["permission_thread_override"];
+		/** Thread permission overwrite */
+		put: operations["permission_thread_overwrite"];
 		post?: never;
-		/**
-		 * Thread permission override delete (TODO)
-		 * @description Delete a thread permission override
-		 */
+		/** Thread permission delete */
 		delete: operations["permission_thread_delete"];
 		options?: never;
 		head?: never;
@@ -1436,7 +1430,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Message replies (TODO) */
+		/** Message replies */
 		get: operations["message_replies"];
 		put?: never;
 		post?: never;
@@ -1546,30 +1540,6 @@ export interface paths {
 		 * @description Unblock a user.
 		 */
 		delete: operations["block_remove"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/user/@self/dm/{target_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Dm get
-		 * @description Get a direct message room.
-		 */
-		get: operations["dm_get"];
-		/**
-		 * Dm initialize
-		 * @description Get or create a direct message room.
-		 */
-		put: operations["dm_init"];
-		post?: never;
-		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1755,31 +1725,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/user/{user_id}/invite": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Invite user list (TODO)
-		 * @description List invites that go to a user
-		 */
-		get: operations["invite_user_list"];
-		put?: never;
-		/**
-		 * Invite user create (TODO)
-		 * @description Create an invite that goes to a user
-		 *     Using this invite will make you friends
-		 */
-		post: operations["invite_user_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/user/{user_id}/report": {
 		parameters: {
 			query?: never;
@@ -1794,27 +1739,6 @@ export interface paths {
 		 * @description Report a user
 		 */
 		post: operations["report_user"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/user/{user_id}/room": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Mutual rooms list (TODO)
-		 * @description List rooms both you and the target are in. Calling it on yourself lists
-		 *     rooms you're in.
-		 */
-		get: operations["mutual_room_list"];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1972,12 +1896,13 @@ export interface components {
 			description?: string | null;
 			id: components["schemas"]["Id"];
 			media?: null | components["schemas"]["Media"];
-			/** @description if `media` should be displayed as a small thumbnail or as a full size */
-			media_is_thumbnail: boolean;
 			site_avatar?: null | components["schemas"]["Media"];
 			/** @description the name of the website */
 			site_name?: string | null;
+			thumbnail?: null | components["schemas"]["Media"];
 			title?: string | null;
+			/** @description what kind of thing this is */
+			type: components["schemas"]["EmbedType"];
 			/**
 			 * Format: uri
 			 * @description the url this embed was requested for
@@ -1992,9 +1917,8 @@ export interface components {
 			/** @description the theme color of the site, as a hex string (`#rrggbb`) */
 			color?: string | null;
 			description?: string | null;
-			media?: components["schemas"]["MediaRef"][];
-			/** @description if `media` should be displayed as a small thumbnail or as a full size */
-			media_is_thumbnail?: boolean;
+			media?: null | components["schemas"]["MediaRef"];
+			thumbnail?: null | components["schemas"]["MediaRef"];
 			title?: string | null;
 			/**
 			 * Format: uri
@@ -2006,6 +1930,8 @@ export interface components {
 			/** Format: uri */
 			url: string;
 		};
+		/** @enum {string} */
+		EmbedType: "Media" | "Link" | "Custom";
 		Emoji:
 			| components["schemas"]["EmojiCustom"]
 			| components["schemas"]["EmojiUnicode"];
@@ -2152,7 +2078,7 @@ export interface components {
 			description?: string | null;
 			expires_at?: null | components["schemas"]["Time"];
 			/**
-			 * Format: int64
+			 * Format: int32
 			 * @description the maximum number of times this invite can be used
 			 *     be sure to account for existing `uses` and `max_uses` when patching
 			 */
@@ -2163,7 +2089,7 @@ export interface components {
 			description?: string | null;
 			expires_at?: null | components["schemas"]["Time"];
 			/**
-			 * Format: int64
+			 * Format: int32
 			 * @description the maximum number of times this invite can be used
 			 *     be sure to account for existing `uses` and `max_uses` when patching
 			 */
@@ -2171,10 +2097,6 @@ export interface components {
 		};
 		/** @description where this invite leads */
 		InviteTarget: {
-			/** @enum {string} */
-			type: "User";
-			user: components["schemas"]["User"];
-		} | {
 			room: components["schemas"]["Room"];
 			/** @enum {string} */
 			type: "Room";
@@ -2189,10 +2111,6 @@ export interface components {
 		};
 		/** @description the type and id of this invite's target */
 		InviteTargetId: {
-			/** @enum {string} */
-			type: "User";
-			user_id: components["schemas"]["Id"];
-		} | {
 			room_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Room";
@@ -2204,7 +2122,7 @@ export interface components {
 		};
 		InviteWithMetadata: components["schemas"]["Invite"] & {
 			/**
-			 * Format: int64
+			 * Format: int32
 			 * @description the maximum number of times this invite can be used
 			 */
 			max_uses?: number | null;
@@ -2351,7 +2269,9 @@ export interface components {
 		Message: components["schemas"]["MessageType"] & {
 			/** @description the id of who sent this message */
 			author_id: components["schemas"]["Id"];
+			created_at?: null | components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
+			edited_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
 			mentions: components["schemas"]["Mentions"];
 			/** @description unique string sent by the client to identify this message
@@ -2384,6 +2304,7 @@ export interface components {
 			attachments?: components["schemas"]["MediaRef"][];
 			/** @description the message's content, in either markdown or the new format depending on if use_new_text_formatting is true */
 			content?: string | null;
+			created_at?: null | components["schemas"]["Time"];
 			embeds?: components["schemas"]["EmbedCreate"][];
 			/**
 			 * @deprecated
@@ -2467,6 +2388,7 @@ export interface components {
 			attachments?: components["schemas"]["MediaRef"][] | null;
 			/** @description the new message content. whether its markdown/new format depends on the target message's format */
 			content?: string | null;
+			edited_at?: null | components["schemas"]["Time"];
 			embeds?: components["schemas"]["EmbedCreate"][] | null;
 			/**
 			 * @deprecated
@@ -2499,11 +2421,19 @@ export interface components {
 		MessageSync: {
 			room: components["schemas"]["Room"];
 			/** @enum {string} */
-			type: "RoomUpsert";
+			type: "RoomCreate";
+		} | {
+			room: components["schemas"]["Room"];
+			/** @enum {string} */
+			type: "RoomUpdate";
 		} | {
 			thread: components["schemas"]["Thread"];
 			/** @enum {string} */
-			type: "ThreadUpsert";
+			type: "ThreadCreate";
+		} | {
+			thread: components["schemas"]["Thread"];
+			/** @enum {string} */
+			type: "ThreadUpdate";
 		} | {
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
@@ -2519,18 +2449,20 @@ export interface components {
 		} | {
 			message: components["schemas"]["Message"];
 			/** @enum {string} */
-			type: "MessageUpsert";
+			type: "MessageCreate";
+		} | {
+			message: components["schemas"]["Message"];
+			/** @enum {string} */
+			type: "MessageUpdate";
 		} | {
 			message_id: components["schemas"]["Id"];
-			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["Id"];
+			room_id?: null | components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "MessageDelete";
 		} | {
 			message_id: components["schemas"]["Id"];
-			/** @description deprecated = "keyed by thread_id" */
-			room_id: components["schemas"]["Id"];
+			room_id?: null | components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "MessageVersionDelete";
@@ -2551,7 +2483,11 @@ export interface components {
 		} | {
 			role: components["schemas"]["Role"];
 			/** @enum {string} */
-			type: "RoleUpsert";
+			type: "RoleCreate";
+		} | {
+			role: components["schemas"]["Role"];
+			/** @enum {string} */
+			type: "RoleUpdate";
 		} | {
 			role_id: components["schemas"]["Id"];
 			room_id: components["schemas"]["Id"];
@@ -2560,7 +2496,11 @@ export interface components {
 		} | {
 			invite: components["schemas"]["InviteWithMetadata"];
 			/** @enum {string} */
-			type: "InviteUpsert";
+			type: "InviteCreate";
+		} | {
+			invite: components["schemas"]["InviteWithMetadata"];
+			/** @enum {string} */
+			type: "InviteUpdate";
 		} | {
 			code: components["schemas"]["InviteCode"];
 			target: components["schemas"]["InviteTargetId"];
@@ -2571,14 +2511,14 @@ export interface components {
 			message_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "ReactionUpsert";
+			type: "ReactionCreate";
 			user_id: components["schemas"]["Id"];
 		} | {
 			key: components["schemas"]["ReactionKey"];
 			message_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "ReactionRemove";
+			type: "ReactionDelete";
 			user_id: components["schemas"]["Id"];
 		} | {
 			message_id: components["schemas"]["Id"];
@@ -2606,8 +2546,17 @@ export interface components {
 			user_id: components["schemas"]["Id"];
 		} | {
 			/** @enum {string} */
-			type: "UserUpsert";
+			type: "UserCreate";
 			user: components["schemas"]["User"];
+		} | {
+			/** @enum {string} */
+			type: "UserUpdate";
+			user: components["schemas"]["User"];
+		} | {
+			config: components["schemas"]["UserConfig"];
+			/** @enum {string} */
+			type: "UserConfig";
+			user_id: components["schemas"]["Id"];
 		} | {
 			id: components["schemas"]["Id"];
 			/** @enum {string} */
@@ -2615,7 +2564,11 @@ export interface components {
 		} | {
 			session: components["schemas"]["Session"];
 			/** @enum {string} */
-			type: "SessionUpsert";
+			type: "SessionCreate";
+		} | {
+			session: components["schemas"]["Session"];
+			/** @enum {string} */
+			type: "SessionUpdate";
 		} | {
 			id: components["schemas"]["Id"];
 			/** @enum {string} */
@@ -2707,6 +2660,7 @@ export interface components {
 		/**
 		 * Mime
 		 * @description a mime/media type
+		 * @example application/json
 		 */
 		Mime: string;
 		/** @description multiple pieces of metadata mixed together */
@@ -2864,7 +2818,9 @@ export interface components {
 			items: (components["schemas"]["MessageType"] & {
 				/** @description the id of who sent this message */
 				author_id: components["schemas"]["Id"];
+				created_at?: null | components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
+				edited_at?: null | components["schemas"]["Time"];
 				id: components["schemas"]["Id"];
 				mentions: components["schemas"]["Mentions"];
 				/** @description unique string sent by the client to identify this message
@@ -3015,9 +2971,11 @@ export interface components {
 					 *     does not not update with ThreadSync
 					 */
 					online_count: number;
+					/** @description permission overwrites for this thread */
+					permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 					/** @description emoji reactions to this thread */
 					reactions: components["schemas"]["ReactionCounts"];
-					room_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @description tags that are applied to this thread */
 					tags: components["schemas"]["Id"][];
 					/** @description only updates when the thread itself is updated, not the stuff in the thread */
@@ -3130,24 +3088,27 @@ export interface components {
 			| "VoicePriority"
 			| "VoiceSpeak"
 			| "VoiceVideo";
-		PermissionOverridable: {
-			role_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Role";
-		} | {
-			/** @enum {string} */
-			type: "User";
-			user_id: components["schemas"]["Id"];
+		PermissionOverwrite: {
+			/** @description extra permissions allowed here */
+			allow: components["schemas"]["Permission"][];
+			/** @description permissions denied here */
+			deny: components["schemas"]["Permission"][];
+			/**
+			 * Format: uuid
+			 * @description id of role or user
+			 */
+			id: string;
+			/** @description whether this is for a user or role */
+			type: components["schemas"]["PermissionOverwriteType"];
 		};
-		PermissionOverride: {
+		PermissionOverwriteSet: {
 			/** @description extra permissions allowed here */
 			allow: components["schemas"]["Permission"][];
 			/** @description permissions denied here */
 			deny: components["schemas"]["Permission"][];
 		};
-		PermissionOverrideWithTarget:
-			& components["schemas"]["PermissionOverridable"]
-			& components["schemas"]["PermissionOverride"];
+		/** @default null */
+		PermissionOverwriteType: null;
 		/** @description represents a user on another platform */
 		Puppet: {
 			alias_id?: null | components["schemas"]["Id"];
@@ -3173,14 +3134,14 @@ export interface components {
 			/** @description if this is for the service itself. usually paired with bot: true */
 			system: boolean;
 		};
-		/** @description the total reaction counts for an emoji */
+		/** @description the total reaction counts for a key */
 		ReactionCount: {
 			/** Format: int64 */
 			count: number;
-			emoji: components["schemas"]["Emoji"];
+			key: components["schemas"]["Emoji"];
 			self?: boolean;
 		};
-		/** @description the total reaction counts for all emoji */
+		/** @description the total reaction counts for all keys */
 		ReactionCounts: components["schemas"]["ReactionCount"][];
 		ReactionKey: components["schemas"]["Emoji"];
 		ReactionListItem: {
@@ -3559,9 +3520,11 @@ export interface components {
 				 *     does not not update with ThreadSync
 				 */
 				online_count: number;
+				/** @description permission overwrites for this thread */
+				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 				/** @description emoji reactions to this thread */
 				reactions: components["schemas"]["ReactionCounts"];
-				room_id: components["schemas"]["Id"];
+				room_id?: null | components["schemas"]["Id"];
 				/** @description tags that are applied to this thread */
 				tags: components["schemas"]["Id"][];
 				/** @description only updates when the thread itself is updated, not the stuff in the thread */
@@ -3615,11 +3578,7 @@ export interface components {
 			})
 			| (components["schemas"]["ThreadTypeChatPrivate"] & {
 				/** @enum {string} */
-				type: "ForumLinear";
-			})
-			| (components["schemas"]["ThreadTypeChatPrivate"] & {
-				/** @enum {string} */
-				type: "ForumTree";
+				type: "Forum";
 			})
 			| (components["schemas"]["ThreadTypeVoicePrivate"] & {
 				/** @enum {string} */
@@ -3631,20 +3590,16 @@ export interface components {
 				/** @enum {string} */
 				type: "Chat";
 			})
-			| (components["schemas"]["ThreadTypeChatPublic"] & {
-				/** @enum {string} */
-				type: "ForumLinear";
-			})
 			| (components["schemas"]["ThreadTypeForumTreePublic"] & {
 				/** @enum {string} */
-				type: "ForumTree";
+				type: "Forum";
 			})
 			| (components["schemas"]["ThreadTypeVoicePublic"] & {
 				/** @enum {string} */
 				type: "Voice";
 			});
 		/** @enum {string} */
-		ThreadType: "Chat" | "ForumLinear" | "ForumTree" | "Voice";
+		ThreadType: "Chat" | "Forum" | "Voice";
 		ThreadTypeChatPrivate: {
 			is_unread: boolean;
 			last_read_id?: null | components["schemas"]["Id"];
@@ -4344,13 +4299,11 @@ export interface operations {
 		};
 		responses: {
 			/** @description success */
-			200: {
+			202: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json": components["schemas"]["Embed"];
-				};
+				content?: never;
 			};
 		};
 	};
@@ -5755,7 +5708,7 @@ export interface operations {
 			};
 		};
 	};
-	permission_tag_override: {
+	permission_tag_overwrite: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -5771,7 +5724,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["PermissionOverride"];
+				"application/json": components["schemas"]["PermissionOverwrite"];
 			};
 		};
 		responses: {
@@ -5781,8 +5734,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PermissionOverrideWithTarget"];
+					"application/json": components["schemas"]["PermissionOverwrite"];
 				};
 			};
 		};
@@ -7002,13 +6954,13 @@ export interface operations {
 			};
 		};
 	};
-	permission_thread_override: {
+	permission_thread_overwrite: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: string;
+				thread_id: components["schemas"]["Id"];
 				/** @description Role or user id */
 				overwrite_id: string;
 			};
@@ -7016,19 +6968,16 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["PermissionOverride"];
+				"application/json": components["schemas"]["PermissionOverwriteSet"];
 			};
 		};
 		responses: {
 			/** @description success */
-			200: {
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content: {
-					"application/json":
-						components["schemas"]["PermissionOverrideWithTarget"];
-				};
+				content?: never;
 			};
 		};
 	};
@@ -7038,7 +6987,7 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: string;
+				thread_id: components["schemas"]["Id"];
 				/** @description Role or user id */
 				overwrite_id: string;
 			};
@@ -7061,6 +7010,8 @@ export interface operations {
 				q: components["schemas"]["PaginationQuery_Id"];
 				/** @description how deeply to fetch replies */
 				depth?: number;
+				/** @description how many replies to fetch per branch */
+				breadth?: number | null;
 			};
 			header?: never;
 			path: {
@@ -7251,55 +7202,6 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	dm_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target user's id */
-				target_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	dm_init: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target user's id */
-				target_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description already exists */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description new dm created */
-			201: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -7689,62 +7591,6 @@ export interface operations {
 			};
 		};
 	};
-	invite_user_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Invite"];
-				};
-			};
-		};
-	};
-	invite_user_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["InviteCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Invite"];
-				};
-			};
-		};
-	};
 	report_user: {
 		parameters: {
 			query?: never;
@@ -7768,34 +7614,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Report"];
-				};
-			};
-		};
-	};
-	mutual_room_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description user id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PaginationResponse_Room"];
 				};
 			};
 		};
