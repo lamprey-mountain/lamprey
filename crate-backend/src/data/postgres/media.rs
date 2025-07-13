@@ -14,7 +14,6 @@ use super::Postgres;
 
 #[derive(Debug, Deserialize)]
 pub struct DbMedia {
-    id: Uuid,
     user_id: Uuid,
     data: serde_json::Value,
 }
@@ -98,7 +97,7 @@ impl DataMedia for Postgres {
         let media = query_as!(
             DbMedia,
             r#"
-    	    SELECT id, user_id, data
+    	    SELECT user_id, data
     	    FROM media
     	    WHERE id = $1
         "#,
@@ -115,7 +114,7 @@ impl DataMedia for Postgres {
         let mut media = query_as!(
             DbMedia,
             r#"
-    	    SELECT id, user_id, data
+    	    SELECT user_id, data
     	    FROM media
     	    WHERE id = $1
     	    FOR UPDATE
