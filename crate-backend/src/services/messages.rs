@@ -1,4 +1,6 @@
+use std::future::Future;
 use std::sync::Arc;
+use tracing::error;
 
 use common::v1::types::misc::Color;
 use common::v1::types::reaction::ReactionCounts;
@@ -23,6 +25,114 @@ pub struct ServiceMessages {
 impl ServiceMessages {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self { state }
+    }
+
+    fn handle_url_embed(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        user_id: UserId,
+        content: String,
+    ) -> impl Future<Output = ()> + Send + 'static {
+        let s = self.state.clone();
+        let srv = s.services();
+        let data = s.data();
+        async move {
+            let links: Vec<_> = LinkFinder::new().links(&content).collect();
+            for link in links {
+                if let Some(url) = link.as_str().parse::<Url>().ok() {
+                    let message = match data.message_get(thread_id, message_id).await {
+                        Ok(msg) => msg,
+                        Err(e) => {
+                            error!("Failed to get message for embed generation: {:?}", e);
+                            return;
+                        }
+                    };
+                    let mut new_message_type = message.message_type.clone();
+                    let (embeds, attachments) = match &mut new_message_type {
+                        MessageType::DefaultMarkdown(m) => {
+                            if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
+                                return;
+                            }
+                            let embed = match srv.embed.generate(user_id, url.clone()).await {
+                                Ok(e) => e,
+                                Err(e) => {
+                                    error!("Failed to generate embed for URL {}: {:?}", url, e);
+                                    return;
+                                }
+                            };
+                            m.embeds.push(embed);
+                            (
+                                m.embeds.clone(),
+                                m.attachments.iter().map(|a| a.id).collect(),
+                            )
+                        }
+                        MessageType::DefaultTagged(m) => {
+                            if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
+                                return;
+                            }
+                            let embed = match srv.embed.generate(user_id, url.clone()).await {
+                                Ok(e) => e,
+                                Err(e) => {
+                                    error!("Failed to generate embed for URL {}: {:?}", url, e);
+                                    return;
+                                }
+                            };
+                            m.embeds.push(embed);
+                            (
+                                m.embeds.clone(),
+                                m.attachments.iter().map(|a| a.id).collect(),
+                            )
+                        }
+                        _ => return,
+                    };
+
+                    if let Err(e) = data
+                        .message_update(
+                            thread_id,
+                            message_id,
+                            DbMessageCreate {
+                                thread_id,
+                                attachment_ids: attachments,
+                                author_id: message.author_id,
+                                embeds,
+                                message_type: new_message_type,
+                                edited_at: None,
+                                created_at: None,
+                            },
+                        )
+                        .await
+                    {
+                        error!("Failed to update message with new embed: {:?}", e);
+                        return;
+                    }
+
+                    let mut message = match data.message_get(thread_id, message_id).await {
+                        Ok(msg) => msg,
+                        Err(e) => {
+                            error!("Failed to get updated message after embed: {:?}", e);
+                            return;
+                        }
+                    };
+                    if let Err(e) = s.presign_message(&mut message).await {
+                        error!("Failed to presign message after embed: {:?}", e);
+                        return;
+                    }
+                    if let Err(e) = s
+                        .broadcast_thread(
+                            thread_id,
+                            user_id,
+                            None,
+                            MessageSync::MessageUpdate { message },
+                        )
+                        .await
+                    {
+                        error!("Failed to broadcast message update after embed: {:?}", e);
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     pub async fn create(
@@ -109,68 +219,7 @@ impl ServiceMessages {
         let mut message = data.message_get(thread_id, message_id).await?;
 
         if let Some(content) = &content {
-            for link in LinkFinder::new().links(content) {
-                if let Some(url) = link.as_str().parse::<Url>().ok() {
-                    let s = s.clone();
-                    let srv = srv.clone();
-                    let data = s.data();
-                    tokio::spawn(async move {
-                        let message = data.message_get(thread_id, message_id).await?;
-                        let mut new_message_type = message.message_type.clone();
-                        let (embeds, attachments) = match &mut new_message_type {
-                            MessageType::DefaultMarkdown(m) => {
-                                if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
-                                    return Ok(());
-                                }
-                                let embed = srv.embed.generate(user_id, url.clone()).await?;
-                                m.embeds.push(embed);
-                                (
-                                    m.embeds.clone(),
-                                    m.attachments.iter().map(|a| a.id).collect(),
-                                )
-                            }
-                            MessageType::DefaultTagged(m) => {
-                                if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
-                                    return Ok(());
-                                }
-                                let embed = srv.embed.generate(user_id, url.clone()).await?;
-                                m.embeds.push(embed);
-                                (
-                                    m.embeds.clone(),
-                                    m.attachments.iter().map(|a| a.id).collect(),
-                                )
-                            }
-                            _ => return Ok(()),
-                        };
-
-                        data.message_update(
-                            thread_id,
-                            message_id,
-                            DbMessageCreate {
-                                thread_id,
-                                attachment_ids: attachments,
-                                author_id: message.author_id,
-                                embeds,
-                                message_type: new_message_type,
-                                edited_at: None,
-                                created_at: None,
-                            },
-                        )
-                        .await?;
-
-                        let mut message = data.message_get(thread_id, message_id).await?;
-                        s.presign_message(&mut message).await?;
-                        s.broadcast_thread(
-                            thread_id,
-                            user_id,
-                            None,
-                            MessageSync::MessageUpdate { message },
-                        )
-                        .await?;
-                        Result::Ok(())
-                    });
-                }
-            }
+            tokio::spawn(self.handle_url_embed(thread_id, message_id, user_id, content.clone()));
         }
         s.presign_message(&mut message).await?;
         message.nonce = nonce.or(json.nonce);
@@ -334,69 +383,7 @@ impl ServiceMessages {
         }
 
         if let Some(content) = &content {
-            let srv = s.services();
-            for link in LinkFinder::new().links(content).into_iter() {
-                if let Some(url) = link.as_str().parse::<Url>().ok() {
-                    let s = s.clone();
-                    let srv = srv.clone();
-                    let data = s.data();
-                    tokio::spawn(async move {
-                        let message = data.message_get(thread_id, message_id).await?;
-                        let mut new_message_type = message.message_type.clone();
-                        let (embeds, attachments) = match &mut new_message_type {
-                            MessageType::DefaultMarkdown(m) => {
-                                if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
-                                    return Ok(());
-                                }
-                                let embed = srv.embed.generate(user_id, url.clone()).await?;
-                                m.embeds.push(embed);
-                                (
-                                    m.embeds.clone(),
-                                    m.attachments.iter().map(|a| a.id).collect(),
-                                )
-                            }
-                            MessageType::DefaultTagged(m) => {
-                                if m.embeds.iter().any(|e| e.url.as_ref() == Some(&url)) {
-                                    return Ok(());
-                                }
-                                let embed = srv.embed.generate(user_id, url.clone()).await?;
-                                m.embeds.push(embed);
-                                (
-                                    m.embeds.clone(),
-                                    m.attachments.iter().map(|a| a.id).collect(),
-                                )
-                            }
-                            _ => return Ok(()),
-                        };
-
-                        data.message_update(
-                            thread_id,
-                            message_id,
-                            DbMessageCreate {
-                                thread_id,
-                                attachment_ids: attachments,
-                                author_id: message.author_id,
-                                embeds,
-                                message_type: new_message_type,
-                                edited_at: None,
-                                created_at: None,
-                            },
-                        )
-                        .await?;
-
-                        let mut message = data.message_get(thread_id, message_id).await?;
-                        s.presign_message(&mut message).await?;
-                        s.broadcast_thread(
-                            thread_id,
-                            user_id,
-                            None,
-                            MessageSync::MessageUpdate { message },
-                        )
-                        .await?;
-                        Result::Ok(())
-                    });
-                }
-            }
+            tokio::spawn(self.handle_url_embed(thread_id, message_id, user_id, content.clone()));
         }
 
         let mut message = data.message_version_get(thread_id, version_id).await?;
@@ -439,7 +426,9 @@ fn embed_from_create(value: common::v1::types::EmbedCreate) -> Embed {
             .color
             .map(|s| csscolorparser::parse(&s))
             .transpose()
-            .expect("invalid color")
+            .map_err(|e| error!("Failed to parse color: {:?}", e))
+            .ok()
+            .flatten()
             .map(|c| Color::from_hex_string(c.to_css_hex())),
         media: None,
         thumbnail: None,

@@ -73,6 +73,7 @@ pub enum Permission {
 
     /// allow adding users with type Puppet and use timestamp massaging
     /// intended for bridge bots
+    // TODO: rename to `Bridge`?
     MemberBridge,
 
     /// kick members
