@@ -127,7 +127,7 @@ async fn main() -> Result<()> {
     }
     let exporter = exporter.build()?;
     let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-        .with_simple_exporter(exporter)
+        .with_batch_exporter(exporter)
         .build();
     use opentelemetry::trace::TracerProvider;
     let tracer = provider.tracer("backend");
