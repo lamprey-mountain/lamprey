@@ -342,6 +342,7 @@ impl ServiceMessages {
 fn embed_from_create(value: common::v1::types::EmbedCreate) -> Embed {
     Embed {
         id: common::v1::types::EmbedId::new(),
+        ty: common::v1::types::EmbedType::Custom,
         url: value.url,
         canonical_url: None,
         title: value.title,

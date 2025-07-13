@@ -16,9 +16,26 @@ use super::media::MediaRef;
 // maybe allow iframes for some sites? probably could be done client side though
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum EmbedType {
+    /// this is a piece of media, ie. an image, video, or audio
+    Media,
+
+    /// this is from a webpage
+    Link,
+
+    /// this is manually specified from a bot
+    Custom,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Embed {
     pub id: EmbedId,
+
+    /// what kind of thing this is
+    #[serde(rename = "type")]
+    pub ty: EmbedType,
 
     /// the url this embed was requested for
     pub url: Option<Url>,

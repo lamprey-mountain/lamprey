@@ -313,6 +313,7 @@ impl ServiceEmbed {
             debug!("url embed inserted media");
             let embed = Embed {
                 id: EmbedId::new(),
+                ty: common::v1::types::EmbedType::Media,
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
@@ -466,6 +467,7 @@ impl ServiceEmbed {
 
             let embed = Embed {
                 id: EmbedId::new(),
+                ty: common::v1::types::EmbedType::Link,
                 url: Some(url.clone()),
                 canonical_url: if url == canonical_url {
                     None
