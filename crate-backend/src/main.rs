@@ -120,8 +120,7 @@ async fn main() -> Result<()> {
         .extract()?;
 
     let mut exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_http()
-        .with_protocol(opentelemetry_otlp::Protocol::HttpBinary);
+        .with_tonic();
     if let Some(endpoint) = &config.otel_trace_endpoint {
         exporter = exporter.with_endpoint(endpoint);
     }
