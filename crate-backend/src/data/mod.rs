@@ -6,9 +6,9 @@ use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
     ApplicationId, AuditLog, AuditLogId, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
-    MessageSync, Permission, Relationship, RelationshipPatch, RelationshipWithUserId, Role,
-    RoomMember, RoomMemberPatch, RoomMembership, SessionPatch, SessionStatus, SessionToken,
-    ThreadMember, ThreadMemberPatch, ThreadMembership,
+    MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
+    RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
 use uuid::Uuid;
 
@@ -138,6 +138,7 @@ pub trait DataPermission {
         &self,
         thread_id: ThreadId,
         overwrite_id: Uuid,
+        ty: PermissionOverwriteType,
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()>;

@@ -12,7 +12,7 @@ use validator::Validate;
 
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::TagId;
-use crate::v1::types::{util::Diff, ThreadVerId};
+use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
 
 use super::{RoomId, ThreadId, UserId};
 
@@ -112,6 +112,9 @@ pub struct Thread {
 
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
+
+    /// permission overwrites for this thread
+    pub permission_overwrites: Vec<PermissionOverwrite>,
 }
 
 /// type-specific data for threads

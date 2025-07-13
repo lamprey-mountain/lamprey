@@ -1,0 +1,1 @@
+ALTER TABLE permission_overwrite ALTER COLUMN type SET NOT NULL;

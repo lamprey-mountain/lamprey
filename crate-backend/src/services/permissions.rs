@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use common::v1::types::{RoomId, ThreadId, UserId};
+use common::v1::types::{PermissionOverwriteType, RoomId, ThreadId, UserId};
 use moka::future::Cache;
 use uuid::Uuid;
 
@@ -112,5 +112,48 @@ impl ServicePermissions {
         self.cache_is_mutual
             .invalidate_entries_if(move |(a, b), _| *a == user_id || *b == user_id)
             .expect("failed to invalidate");
+    }
+
+    pub async fn permission_overwrite_upsert(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+        ty: PermissionOverwriteType,
+        allow: Vec<common::v1::types::Permission>,
+        deny: Vec<common::v1::types::Permission>,
+    ) -> Result<()> {
+        let data = self.state.data();
+        data.permission_overwrite_upsert(thread_id.into(), overwrite_id, ty, allow, deny)
+            .await?;
+
+        // Invalidate caches
+        self.invalidate_thread_all(thread_id).await;
+        Ok(())
+    }
+
+    pub async fn permission_overwrite_delete(
+        &self,
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+    ) -> Result<()> {
+        let data = self.state.data();
+        data.permission_overwrite_delete(thread_id, overwrite_id)
+            .await?;
+
+        // Invalidate caches
+        self.invalidate_thread_all(thread_id).await;
+        Ok(())
+    }
+
+    async fn invalidate_thread_all(&self, thread_id: ThreadId) {
+        self.cache_perm_thread
+            .invalidate_entries_if(move |(_, _, tid), _| thread_id == *tid)
+            .expect("failed to invalidate");
+
+        if let Ok(t) = self.state.services().threads.get(thread_id, None).await {
+            if let Some(room_id) = t.room_id {
+                self.invalidate_room_all(room_id);
+            }
+        }
     }
 }

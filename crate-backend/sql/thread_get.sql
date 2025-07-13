@@ -10,6 +10,12 @@ message_count as (
     from message
     where is_latest
     group by thread_id
+),
+permission_overwrites as (
+    select target_id, json_agg(jsonb_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) as overwrites
+    from permission_overwrite
+    where target_id = $1
+    group by target_id
 )
 select
     thread.id,
@@ -22,10 +28,12 @@ select
     coalesce(count, 0) as "message_count!",
     last_version_id as "last_version_id!",
     unread.message_id as "last_read_id?",
-    coalesce(unread.version_id < last_version_id, true) as "is_unread!"
+    coalesce(unread.version_id < last_version_id, true) as "is_unread!",
+    coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!"
 from thread
 join message_count on message_count.thread_id = thread.id
 join last_id on last_id.thread_id = thread.id
 full outer join usr on true
 left join unread on usr.id = unread.user_id and thread.id = unread.thread_id
+left join permission_overwrites on permission_overwrites.target_id = thread.id
 where thread.id = $1 and usr.id = $2 and thread.deleted_at is null

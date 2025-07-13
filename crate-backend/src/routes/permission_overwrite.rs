@@ -6,8 +6,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::ThreadId;
 use common::v1::types::{MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet};
+use common::v1::types::{PermissionOverwriteType, ThreadId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
@@ -48,8 +48,15 @@ async fn permission_thread_overwrite(
     for p in &json.deny {
         perms.ensure(*p)?;
     }
-    s.data()
-        .permission_overwrite_upsert(thread_id, overwrite_id, json.allow, json.deny)
+    s.services()
+        .perms
+        .permission_overwrite_upsert(
+            thread_id,
+            overwrite_id,
+            PermissionOverwriteType::User,
+            json.allow,
+            json.deny,
+        )
         .await?;
 
     let d = s.data();
@@ -88,7 +95,8 @@ async fn permission_thread_delete(
         .await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    s.data()
+    s.services()
+        .perms
         .permission_overwrite_delete(thread_id, overwrite_id)
         .await?;
     let d = s.data();

@@ -84,6 +84,7 @@ pub struct DbThread {
     pub last_read_id: Option<Uuid>,
     pub message_count: i64,
     pub is_unread: bool,
+    pub permission_overwrites: serde_json::Value,
 }
 
 pub struct DbThreadCreate {
@@ -155,6 +156,7 @@ impl From<DbThread> for Thread {
             is_locked: Default::default(),
             is_announcement: Default::default(),
             reactions: Default::default(),
+            permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: None,
             deleted_at: None,
         }

@@ -1,0 +1,1 @@
+ALTER TABLE permission_overwrite ADD COLUMN type TEXT;
