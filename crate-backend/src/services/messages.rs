@@ -47,7 +47,14 @@ impl ServiceMessages {
             perms.ensure(Permission::MessageEmbeds)?;
         }
         if json.created_at.is_some() {
-            perms.ensure(Permission::MemberBridge)?;
+            let usr = data.user_get(user_id).await?;
+            if let Some(puppet) = usr.puppet {
+                let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
+                owner_perms.ensure_view()?;
+                owner_perms.ensure(Permission::MemberBridge)?;
+            } else {
+                return Err(Error::BadStatic("not a puppet"));
+            }
         }
         // TODO: move this to validation
         if json.content.as_ref().is_none_or(|s| s.is_empty())
@@ -195,6 +202,7 @@ impl ServiceMessages {
         let s = &self.state;
         json.validate()?;
         let data = s.data();
+        let srv = s.services();
         let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
         perms.ensure_view()?;
         let message = data.message_get(thread_id, message_id).await?;
@@ -219,8 +227,15 @@ impl ServiceMessages {
         if json.embeds.as_ref().is_none_or(|a| !a.is_empty()) {
             perms.ensure(Permission::MessageEmbeds)?;
         }
-        if json.created_at.is_some() {
-            perms.ensure(Permission::MemberBridge)?;
+        if json.edited_at.is_some() {
+            let usr = data.user_get(user_id).await?;
+            if let Some(puppet) = usr.puppet {
+                let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
+                owner_perms.ensure_view()?;
+                owner_perms.ensure(Permission::MemberBridge)?;
+            } else {
+                return Err(Error::BadStatic("not a puppet"));
+            }
         }
 
         if !json.changes(&message) {

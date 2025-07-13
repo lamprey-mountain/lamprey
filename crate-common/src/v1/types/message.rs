@@ -189,7 +189,7 @@ pub struct MessagePatch {
     #[cfg(feature = "feat_custom_embeds")]
     pub embeds: Option<Vec<EmbedCreate>>,
 
-    pub created_at: Option<Time>,
+    pub edited_at: Option<Time>,
 }
 
 // FIXME: utoipa doesnt seem to like #[deprecated] here
