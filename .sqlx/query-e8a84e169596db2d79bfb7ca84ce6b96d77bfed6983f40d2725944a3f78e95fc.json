@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_reaction as (\n        -- select message_id, key as emoji, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key as emoji, count(*) as count) j)) as json\n        from reaction\n        group by message_id\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.edited_at,\n    msg.deleted_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $3 and msg.id < $4\norder by (case when $5 = 'f' then msg.version_id end), msg.version_id desc limit $6\n",
+  "query": "with recursive message_tree as (\n    select\n        id,\n        reply_id,\n        1 as depth\n    from\n        message\n    where\n        id = $2\n    union all\n    select\n        m.id,\n        m.reply_id,\n        mt.depth + 1\n    from\n        message m\n        join message_tree mt on m.reply_id = mt.id\n    where\n        mt.depth < $3\n),\nranked_messages as (\n    select\n        id,\n        reply_id,\n        row_number() over (partition by reply_id order by id) as rn\n    from\n        message_tree\n),\nmessage_reaction as (\n    -- select message_id, key, count(*), bool_or(user_id = $123) as self\n    select\n        message_id,\n        json_agg((select row_to_json(j) from (select key, count(*) as count) j)) as json\n    from reaction\n    group by message_id\n    order by min(position)\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.edited_at,\n    msg.deleted_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\njoin ranked_messages rm on msg.id = rm.id\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere is_latest and thread_id = $1 and msg.deleted_at is null and (rm.rn <= $4 or $4 is null)\n  and msg.id > $5 AND msg.id < $6\norder by (CASE WHEN $7 = 'f' THEN msg.id END), msg.id DESC LIMIT $8\n",
   "describe": {
     "columns": [
       {
@@ -94,6 +94,8 @@
       "Left": [
         "Uuid",
         "Uuid",
+        "Int4",
+        "Int8",
         "Uuid",
         "Uuid",
         "Text",
@@ -118,5 +120,5 @@
       null
     ]
   },
-  "hash": "a7d9e50650ab6bc0f7ad234ddc1decab93c5d802e674e9a038182b69fc88723d"
+  "hash": "e8a84e169596db2d79bfb7ca84ce6b96d77bfed6983f40d2725944a3f78e95fc"
 }
