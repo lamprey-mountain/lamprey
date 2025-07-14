@@ -50,6 +50,16 @@ async fn emoji_create(
     ) {
         return Err(Error::BadStatic("media not an image"));
     }
+    match media.source.size {
+        common::v1::types::MediaSize::Bytes(size) => {
+            if size > 1024 * 256 {
+                return Err(Error::BadStatic(
+                    "media is too big (max file size is 256KiB)",
+                ));
+            }
+        }
+        common::v1::types::MediaSize::BytesPerSecond(_) => todo!(),
+    }
     if !data.media_link_select(json.media_id).await?.is_empty() {
         return Err(Error::BadStatic("media already used"));
     }
