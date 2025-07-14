@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -8,7 +9,7 @@ use validator::{Validate, ValidationErrors};
 
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(as = String))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmailAddr {
     #[cfg_attr(feature = "validator", validate(email))]
@@ -66,14 +67,18 @@ pub enum EmailTrust {
 }
 
 impl EmailAddr {
-    pub fn new(s: String) -> Result<EmailAddr, ValidationErrors> {
+    pub fn into_inner(self) -> String {
+        self.inner
+    }
+}
+
+impl TryFrom<String> for EmailAddr {
+    type Error = ValidationErrors;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
         let e = EmailAddr { inner: s };
         e.validate()?;
         Ok(e)
-    }
-
-    pub fn into_inner(self) -> String {
-        self.inner
     }
 }
 

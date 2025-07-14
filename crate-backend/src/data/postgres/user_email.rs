@@ -105,7 +105,7 @@ impl DataUserEmail for Postgres {
         let mut emails = Vec::with_capacity(db_emails.len());
         for db_email in db_emails {
             emails.push(EmailInfo {
-                email: EmailAddr::new(db_email.addr)?,
+                email: db_email.addr.try_into()?,
                 is_verified: db_email.is_verified,
                 is_primary: db_email.is_primary,
             });

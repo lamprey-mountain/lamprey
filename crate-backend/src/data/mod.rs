@@ -16,11 +16,11 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media, MediaId,
-    MediaLink, MediaLinkType, Message, MessageId, MessageRef, MessageVerId, PaginationQuery,
-    PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId,
-    UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media,
+    MediaId, MediaLink, MediaLinkType, Message, MessageId, MessageRef, MessageVerId,
+    PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room,
+    RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch,
+    ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -50,6 +50,7 @@ pub trait Data:
     + DataEmoji
     + DataEmbed
     + DataUserEmail
+    + DataEmailQueue
     + Send
     + Sync
 {
@@ -527,4 +528,19 @@ pub trait DataUserEmail {
         user_id: UserId,
         email_addr: EmailAddr,
     ) -> Result<String>;
+}
+
+#[async_trait]
+pub trait DataEmailQueue {
+    async fn email_queue_insert(
+        &self,
+        to: String,
+        from: String,
+        subject: String,
+        plain_text_body: String,
+        html_body: Option<String>,
+    ) -> Result<Uuid>;
+    async fn email_queue_claim(&self) -> Result<Option<DbEmailQueue>>;
+    async fn email_queue_finish(&self, id: Uuid) -> Result<()>;
+    async fn email_queue_fail(&self, error_message: String, id: Uuid) -> Result<()>;
 }

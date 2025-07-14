@@ -19,10 +19,16 @@ pub struct Config {
     pub sfu_token: String,
     #[serde(default = "default_max_user_emails")]
     pub max_user_emails: usize,
+    #[serde(default = "default_email_queue_workers")]
+    pub email_queue_workers: usize,
 }
 
 fn default_max_user_emails() -> usize {
     50
+}
+
+fn default_email_queue_workers() -> usize {
+    5
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,4 +63,5 @@ pub struct ConfigSmtp {
     pub username: String,
     pub password: String,
     pub host: String,
+    pub from: String,
 }

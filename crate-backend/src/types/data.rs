@@ -468,3 +468,13 @@ pub struct MessageRef {
     pub version_id: MessageVerId,
     pub thread_id: ThreadId,
 }
+
+#[derive(sqlx::FromRow)]
+pub struct DbEmailQueue {
+    pub id: Uuid,
+    pub to_addr: String,
+    pub from_addr: String,
+    pub subject: String,
+    pub plain_text_body: String,
+    pub html_body: Option<String>,
+}

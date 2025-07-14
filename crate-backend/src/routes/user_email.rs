@@ -30,10 +30,11 @@ use super::util::Auth;
     ),
 )]
 async fn email_add(
-    Path((target_user_id_req, email_addr)): Path<(UserIdReq, EmailAddr)>,
+    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -43,7 +44,7 @@ async fn email_add(
     }
 
     let email_info = EmailInfo {
-        email: email_addr,
+        email: email_addr.clone(),
         is_verified: false,
         is_primary: false,
     };
@@ -53,7 +54,24 @@ async fn email_add(
         .user_email_add(target_user_id, email_info, s.config.max_user_emails)
         .await
     {
-        Ok(_) => Ok(StatusCode::CREATED.into_response()),
+        Ok(_) => {
+            let code = s
+                .data()
+                .user_email_verify_create(target_user_id, email_addr.clone())
+                .await?;
+
+            s.services
+                .email
+                .send(
+                    email_addr,
+                    "Verify your email address".to_string(),
+                    format!("Your verification code is: {}", code),
+                    None,
+                )
+                .await?;
+
+            Ok(StatusCode::CREATED.into_response())
+        }
         Err(Error::EmailAlreadyExists) => Ok(StatusCode::OK.into_response()),
         Err(e) => Err(e),
     }
@@ -71,10 +89,11 @@ async fn email_add(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_delete(
-    Path((target_user_id_req, email)): Path<(UserIdReq, EmailAddr)>,
+    Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let email: EmailAddr = email.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -126,10 +145,11 @@ async fn email_list(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_resend(
-    Path((target_user_id_req, email_addr)): Path<(UserIdReq, EmailAddr)>,
+    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -159,6 +179,7 @@ async fn email_verification_resend(
             email_addr,
             "Verify your email address".to_string(),
             format!("Your verification code is: {}", code),
+            None,
         )
         .await?;
 
@@ -178,10 +199,11 @@ async fn email_verification_resend(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn email_verification_finish(
-    Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, EmailAddr, String)>,
+    Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(target_user_id) => target_user_id,

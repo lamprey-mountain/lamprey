@@ -21,12 +21,6 @@ pub enum Command {
 
     /// check config
     Check {},
-
-    /// send a test email
-    TestMail {
-        #[arg(short, long)]
-        to: String,
-    },
     // TODO
     // /// admin server management
     // Admin {},
