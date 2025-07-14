@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, edited_at)\n    \t    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11)\n        ",
+  "query": "\n    \t    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at)\n    \t    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()))\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -26,10 +26,10 @@
         },
         "Text",
         "Jsonb",
-        "Timestamp"
+        "Timestamptz"
       ]
     },
     "nullable": []
   },
-  "hash": "1c5306187cd68e2b948ecb54f107f5cc577b48e6e6d336d8e1a17f15d32b28db"
+  "hash": "49c1d1bd4758a8555d4c137632f9c9eba59eea29aeb5e0baeaae53d1e43cff45"
 }

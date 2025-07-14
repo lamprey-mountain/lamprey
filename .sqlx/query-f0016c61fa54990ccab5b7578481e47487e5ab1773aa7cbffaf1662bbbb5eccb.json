@@ -1,20 +1,15 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    \t    SELECT id, user_id, data\n    \t    FROM media\n    \t    WHERE id = $1\n    \t    FOR UPDATE\n        ",
+  "query": "\n    \t    SELECT user_id, data\n    \t    FROM media\n    \t    WHERE id = $1\n    \t    FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
-        "type_info": "Uuid"
-      },
-      {
-        "ordinal": 1,
         "name": "user_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 2,
+        "ordinal": 1,
         "name": "data",
         "type_info": "Jsonb"
       }
@@ -26,9 +21,8 @@
     },
     "nullable": [
       false,
-      false,
       false
     ]
   },
-  "hash": "ff891a0df576fefaa9dd4f1692c21beafec8a0658300be2336dd212bf65f8678"
+  "hash": "f0016c61fa54990ccab5b7578481e47487e5ab1773aa7cbffaf1662bbbb5eccb"
 }
