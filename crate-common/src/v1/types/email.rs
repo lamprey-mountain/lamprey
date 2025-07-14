@@ -9,6 +9,7 @@ use validator::{Validate, ValidationErrors};
 
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(as = String))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmailAddr {
