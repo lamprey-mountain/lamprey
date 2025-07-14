@@ -6,8 +6,6 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::{Validate, ValidationErrors};
 
-use crate::v1::types::util::Time;
-
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -30,15 +28,10 @@ pub struct EmailInfo {
 
     // /// can see by everyone
     // pub is_public: bool,
-
-    // /// whether this is the user's primary email address
-    // pub is_primary: bool,
-
+    /// whether this is the user's primary email address
+    pub is_primary: bool,
     // /// can someone with access to email can do
     // pub trust: EmailTrust,
-    /// spam prevention
-    #[serde(skip)]
-    pub last_verification_email_sent_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,13 +40,11 @@ pub struct EmailInfo {
 pub struct EmailInfoPatch {
     // /// can see by everyone
     // pub is_public: Option<bool>,
-
-    // /// whether this is the user's primary email address
-    // ///
-    // /// - there can only be one primary email address
-    // /// - the primary address has EmailTrust::Full
-    // pub is_primary: Option<bool>,
-
+    /// whether this is the user's primary email address
+    ///
+    /// - there can only be one primary email address
+    /// - the primary address has EmailTrust::Full
+    pub is_primary: Option<bool>,
     // /// can someone with access to email can do
     // pub trust: Option<EmailTrust>,
 }

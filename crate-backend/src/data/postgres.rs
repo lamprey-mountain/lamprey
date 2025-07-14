@@ -30,6 +30,7 @@ mod thread_member;
 mod unread;
 mod user;
 mod user_config;
+mod user_email;
 mod user_relationship;
 mod util;
 

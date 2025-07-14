@@ -11,6 +11,8 @@ use crate::types::MessageSync;
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
 pub enum Error {
+    #[error("sqlx error: {0}")]
+    Sqlx(sqlx::Error),
     #[error("blocked by other user")]
     Blocked,
     #[error("missing authentication")]
@@ -93,6 +95,12 @@ pub enum Error {
     #[error("lettre error: {0}")]
     Lettre(#[from] lettre::error::Error),
 
+    #[error("invalid credentials")]
+    InvalidCredentials,
+
+    #[error("email address already exists for this user")]
+    EmailAlreadyExists,
+
     #[error("generic error: {0}")]
     GenericError(String),
 
@@ -104,7 +112,7 @@ impl From<sqlx::Error> for Error {
     fn from(value: sqlx::Error) -> Self {
         match value {
             sqlx::Error::RowNotFound => Error::NotFound,
-            err => Error::Internal(err.to_string()),
+            err => Error::Sqlx(err),
         }
     }
 }

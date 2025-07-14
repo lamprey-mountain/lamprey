@@ -6,7 +6,7 @@ use lettre::{
     AsyncTransport, Message, Tokio1Executor,
 };
 
-use crate::{Result, ServerStateInner};
+use crate::{Error, Result, ServerStateInner};
 
 pub struct ServiceEmail {
     state: Arc<ServerStateInner>,
@@ -38,8 +38,11 @@ impl ServiceEmail {
             .date_now()
             .subject(subject)
             .body(body)
-            .unwrap();
-        dbg!(self.mailer.send(email).await).unwrap();
+            .map_err(|e| Error::Internal(e.to_string()))?;
+        self.mailer
+            .send(email)
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))?;
         Ok(())
     }
 

@@ -1,21 +1,23 @@
 use async_trait::async_trait;
 use common::v1::types::application::Application;
+use common::v1::types::email::{EmailAddr, EmailInfo};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    ApplicationId, AuditLog, AuditLogId, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
-    MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
+    ApplicationId, AuditLog, AuditLogId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
+    MediaPatch, MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
     SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
+
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
     DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media, MediaId,
-    MediaLink, MediaLinkType, Message, MessageId, MessageVerId, PaginationQuery,
+    MediaLink, MediaLinkType, Message, MessageId, MessageRef, MessageVerId, PaginationQuery,
     PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
     RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId,
     UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
@@ -47,6 +49,7 @@ pub trait Data:
     + DataApplication
     + DataEmoji
     + DataEmbed
+    + DataUserEmail
     + Send
     + Sync
 {
@@ -491,14 +494,37 @@ pub trait DataEmoji {
 pub trait DataEmbed {
     async fn url_embed_queue_insert(
         &self,
-        message_ref: Option<crate::types::MessageRef>,
+        message_ref: Option<MessageRef>,
         user_id: UserId,
         url: String,
     ) -> Result<Uuid>;
     async fn url_embed_queue_claim(&self) -> Result<Option<UrlEmbedQueue>>;
-    async fn url_embed_queue_finish(
+    async fn url_embed_queue_finish(&self, id: Uuid, embed: Option<&Embed>) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataUserEmail {
+    async fn user_email_add(
         &self,
-        id: Uuid,
-        embed: Option<&common::v1::types::Embed>,
+        user_id: UserId,
+        email: EmailInfo,
+        max_user_emails: usize,
     ) -> Result<()>;
+    async fn user_email_delete(&self, user_id: UserId, email_addr: EmailAddr) -> Result<()>;
+    async fn user_email_list(&self, user_id: UserId) -> Result<Vec<EmailInfo>>;
+
+    /// check and delete a code, and update is_verified
+    async fn user_email_verify_use(
+        &self,
+        user_id: UserId,
+        email_addr: EmailAddr,
+        code: String,
+    ) -> Result<()>;
+
+    /// create a code and update last_updated_at
+    async fn user_email_verify_create(
+        &self,
+        user_id: UserId,
+        email_addr: EmailAddr,
+    ) -> Result<String>;
 }

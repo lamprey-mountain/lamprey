@@ -17,6 +17,12 @@ pub struct Config {
     pub smtp: ConfigSmtp,
     pub otel_trace_endpoint: Option<String>,
     pub sfu_token: String,
+    #[serde(default = "default_max_user_emails")]
+    pub max_user_emails: usize,
+}
+
+fn default_max_user_emails() -> usize {
+    50
 }
 
 #[derive(Debug, Deserialize)]
