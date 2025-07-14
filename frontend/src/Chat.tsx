@@ -269,8 +269,8 @@ export const ChatHeader = (props: ChatProps) => {
 			<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
 			{props.thread.description ?? "(no description)"}
 			<Switch>
-				<Match when={props.thread.state === "Archived"}>{" (archived)"}</Match>
-				<Match when={props.thread.state === "Deleted"}>{" (deleted)"}</Match>
+				<Match when={props.thread.archived_at}>{" (archived)"}</Match>
+				<Match when={props.thread.deleted_at}>{" (deleted)"}</Match>
 			</Switch>
 		</header>
 	);
@@ -314,7 +314,7 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: `${msg.version_id}-${msg.embeds?.length}`,
+			id: msg.version_id,
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});
@@ -373,7 +373,7 @@ function shouldSplit(a: Message, b: Message) {
 function shouldSplitInner(a: Message, b: Message) {
 	shouldSplitMemo;
 	if (a.author_id !== b.author_id) return true;
-	if (a.override_name !== b.override_name) return true;
+	if ('override_name' in a && 'override_name' in b && a.override_name !== b.override_name) return true;
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
 	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;

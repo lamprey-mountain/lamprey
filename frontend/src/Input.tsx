@@ -76,7 +76,7 @@ export function Input(props: InputProps) {
 		);
 
 		const m = member();
-		return m?.membership === "Join" && m.override_name || user()?.name;
+		return m?.membership === "Join" && m.override_name || user()?.name || undefined;
 	};
 
 	const getNameNullable = (user_id?: string) => {
@@ -115,9 +115,9 @@ export function Input(props: InputProps) {
 					</button>
 					<div class="info">
 						replying to{" "}
-						{reply()?.override_name ?? getNameNullable(reply()?.author_id)}:
+						{('override_name' in reply()! && reply()?.override_name) ?? getNameNullable(reply()?.author_id)}:
 						{" "}
-						{reply()?.content}
+						{('content' in reply()! && reply()?.content) ?? undefined}
 					</div>
 				</div>
 			</Show>
