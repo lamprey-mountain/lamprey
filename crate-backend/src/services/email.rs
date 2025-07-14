@@ -87,7 +87,7 @@ impl ServiceEmail {
                     self.state.config.smtp.username.parse().unwrap(),
                 ))
                 .to(Mailbox::new(
-                    Some("remote".to_owned()),
+                    Some("user".to_owned()),
                     item.to_addr.parse().unwrap(),
                 ))
                 .date_now()
