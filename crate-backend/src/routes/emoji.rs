@@ -66,6 +66,9 @@ async fn emoji_create(
 
     let media_id = json.media_id;
     let emoji = data.emoji_create(user_id, room_id, json).await?;
+    s.blobs
+        .copy(&format!("media/{media_id}"), &format!("emoji/{}", emoji.id))
+        .await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
     s.broadcast_room(
