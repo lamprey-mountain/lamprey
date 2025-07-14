@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		// features
-		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Intl"],
 		"target": "ES2020",
 		"module": "ESNext",
 		"jsxImportSource": "solid-js",
@@ -24,6 +24,7 @@
 	},
 	"include": [
 		"frontend",
-		"ts-sdk"
+		"ts-sdk",
+		"frontend/src/custom.d.ts"
 	]
 }
