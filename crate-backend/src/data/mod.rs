@@ -9,7 +9,7 @@ use common::v1::types::{
     ApplicationId, AuditLog, AuditLogId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, ThreadPrivate,
 };
 
 use uuid::Uuid;
@@ -278,19 +278,18 @@ pub trait DataSession {
 #[async_trait]
 pub trait DataThread {
     async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId>;
-    async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread>;
-    async fn thread_list(
-        &self,
-        user_id: UserId,
-        room_id: RoomId,
-        pagination: PaginationQuery<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>>;
-    async fn thread_update(
+    async fn thread_get(&self, thread_id: ThreadId) -> Result<Thread>;
+    async fn thread_get_private(
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-        patch: ThreadPatch,
-    ) -> Result<ThreadVerId>;
+    ) -> Result<ThreadPrivate>;
+    async fn thread_list(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>>;
+    async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId>;
     async fn thread_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
     async fn thread_archive(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
     async fn thread_unarchive(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;

@@ -59,8 +59,8 @@ async fn permission_thread_overwrite(
         )
         .await?;
 
-    let d = s.data();
-    let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
+    let srv = s.services();
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     s.broadcast_thread(
         thread_id,
         auth_user_id,
@@ -99,8 +99,8 @@ async fn permission_thread_delete(
         .perms
         .permission_overwrite_delete(thread_id, overwrite_id)
         .await?;
-    let d = s.data();
-    let thread = d.thread_get(thread_id, Some(auth_user_id)).await?;
+    let srv = s.services();
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     s.broadcast_thread(
         thread_id,
         auth_user_id,

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch,
-    UserId,
+    ThreadPrivate, UserId,
 };
 use moka::future::Cache;
 
@@ -14,9 +14,8 @@ use crate::ServerStateInner;
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
 
-    // NOTE: i need to store a custom thread per user because threads might have user-specific data (unreads)
-    // TODO: don't do this
-    cache_thread: Cache<(ThreadId, Option<UserId>), Thread>,
+    cache_thread: Cache<ThreadId, Thread>,
+    cache_thread_private: Cache<(ThreadId, UserId), ThreadPrivate>,
 }
 
 impl ServiceThreads {
@@ -27,28 +26,45 @@ impl ServiceThreads {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
+            cache_thread_private: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
         }
     }
 
     pub async fn get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
-        self.cache_thread
-            .try_get_with(
-                (thread_id, user_id),
-                self.state.data().thread_get(thread_id, user_id),
-            )
+        let mut thread = self
+            .cache_thread
+            .try_get_with(thread_id, self.state.data().thread_get(thread_id))
             .await
-            .map_err(|err| err.fake_clone())
+            .map_err(|err| err.fake_clone())?;
+
+        if let Some(user_id) = user_id {
+            let private_data = self
+                .cache_thread_private
+                .try_get_with(
+                    (thread_id, user_id),
+                    self.state.data().thread_get_private(thread_id, user_id),
+                )
+                .await
+                .map_err(|err| err.fake_clone())?;
+            thread = thread.with_private(private_data);
+        }
+
+        Ok(thread)
     }
 
     pub fn invalidate(&self, thread_id: ThreadId) {
-        self.cache_thread
+        self.cache_thread.invalidate(&thread_id);
+        self.cache_thread_private
             .invalidate_entries_if(move |(t, _), _| *t == thread_id)
             .expect("failed to invalidate");
     }
 
     pub async fn invalidate_user(&self, thread_id: ThreadId, user_id: UserId) {
-        self.cache_thread
-            .invalidate(&(thread_id, Some(user_id)))
+        self.cache_thread_private
+            .invalidate(&(thread_id, user_id))
             .await
     }
 
@@ -68,7 +84,7 @@ impl ServiceThreads {
             .await?;
         perms.ensure_view()?;
         let data = self.state.data();
-        let thread = data.thread_get(thread_id, Some(user_id)).await?;
+        let thread = data.thread_get(thread_id).await?;
         if thread.creator_id == user_id {
             perms.add(Permission::ThreadEdit);
         }
@@ -80,9 +96,9 @@ impl ServiceThreads {
         }
 
         // update and refetch
-        data.thread_update(thread_id, user_id, patch.clone())
-            .await?;
+        data.thread_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id);
+        self.invalidate_user(thread_id, user_id).await;
         let thread = self.get(thread_id, Some(user_id)).await?;
 
         // send update message to thread

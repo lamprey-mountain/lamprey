@@ -1,11 +1,12 @@
 use async_trait::async_trait;
+use common::v1::types::ThreadPrivate;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbThread, DbThreadCreate, DbThreadType, PaginationDirection, PaginationQuery,
+    DbThread, DbThreadCreate, DbThreadPrivate, DbThreadType, PaginationDirection, PaginationQuery,
     PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
 
@@ -37,21 +38,15 @@ impl DataThread for Postgres {
     }
 
     /// get a thread, panics if there are no messages
-    async fn thread_get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
-        let thread = query_file_as!(
-            DbThread,
-            "sql/thread_get.sql",
-            thread_id.into_inner(),
-            user_id.map(|id| id.into_inner())
-        )
-        .fetch_one(&self.pool)
-        .await?;
+    async fn thread_get(&self, thread_id: ThreadId) -> Result<Thread> {
+        let thread = query_file_as!(DbThread, "sql/thread_get.sql", thread_id.into_inner())
+            .fetch_one(&self.pool)
+            .await?;
         Ok(thread.into())
     }
 
     async fn thread_list(
         &self,
-        user_id: UserId,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
@@ -62,36 +57,41 @@ impl DataThread for Postgres {
             query_file_as!(
                 DbThread,
                 "sql/thread_paginate.sql",
-                room_id.into_inner(),
-                user_id.into_inner(),
+                *room_id,
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1"#,
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL"#,
                 room_id.into_inner()
             )
         )
     }
 
-    async fn thread_update(
+    async fn thread_get_private(
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-        patch: ThreadPatch,
-    ) -> Result<ThreadVerId> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let thread = query_file_as!(
-            DbThread,
-            "sql/thread_get.sql",
-            thread_id.into_inner(),
-            user_id.into_inner(),
+    ) -> Result<ThreadPrivate> {
+        let thread_private = query_file_as!(
+            DbThreadPrivate,
+            "sql/thread_get_private.sql",
+            *thread_id,
+            *user_id,
         )
         .fetch_one(&self.pool)
         .await?;
+        Ok(thread_private.into())
+    }
+
+    async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let thread = query_file_as!(DbThread, "sql/thread_get.sql", *thread_id,)
+            .fetch_one(&self.pool)
+            .await?;
         let thread: Thread = thread.into();
         let version_id = ThreadVerId::new();
         query!(

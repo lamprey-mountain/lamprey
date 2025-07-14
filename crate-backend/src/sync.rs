@@ -416,6 +416,24 @@ impl Connection {
             (None, _) => false,
         };
         if should_send {
+            let d = self.s.data();
+            let srv = self.s.services();
+            let msg = match msg {
+                MessageSync::ThreadCreate { thread } => MessageSync::ThreadCreate {
+                    thread: srv.threads.get(thread.id, session.user_id()).await?,
+                },
+                MessageSync::ThreadUpdate { thread } => MessageSync::ThreadUpdate {
+                    thread: srv.threads.get(thread.id, session.user_id()).await?,
+                },
+                // TODO: for reactions
+                // MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
+                //     message: d.message_get(message.thread_id, message.id).await?,
+                // },
+                // MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
+                //     message: d.message_get(message.thread_id, message.id).await?,
+                // },
+                m => m,
+            };
             self.push_sync(msg);
         }
         Ok(())

@@ -59,7 +59,7 @@ impl DataInvite for Postgres {
                 InviteTarget::Room { room }
             }
             "thread" => {
-                let thread = self.thread_get(ThreadId::from(row.target_id), None).await?;
+                let thread = self.thread_get(ThreadId::from(row.target_id)).await?;
                 let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;
                 InviteTarget::Thread { room, thread }

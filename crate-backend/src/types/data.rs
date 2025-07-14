@@ -82,10 +82,16 @@ pub struct DbThread {
     pub description: Option<String>,
     pub ty: DbThreadType,
     pub last_version_id: MessageVerId,
-    pub last_read_id: Option<Uuid>,
     pub message_count: i64,
-    pub is_unread: bool,
     pub permission_overwrites: serde_json::Value,
+}
+
+#[derive(Deserialize)]
+pub struct DbThreadPrivate {
+    pub id: ThreadId,
+    pub ty: DbThreadType,
+    pub last_read_id: Option<Uuid>,
+    pub is_unread: bool,
 }
 
 pub struct DbThreadCreate {
@@ -123,21 +129,6 @@ impl From<DbThread> for Thread {
                 user_limit: 100,
             }),
         };
-        let private = Some(match row.ty {
-            DbThreadType::Chat => ThreadPrivate::Chat(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                mention_count: 0,
-                notifications: Default::default(),
-            }),
-            DbThreadType::Forum => ThreadPrivate::Forum(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                mention_count: 0,
-                notifications: Default::default(),
-            }),
-            DbThreadType::Voice => ThreadPrivate::Voice(ThreadTypeVoicePrivate {}),
-        });
 
         Thread {
             id: row.id,
@@ -147,7 +138,7 @@ impl From<DbThread> for Thread {
             name: row.name,
             description: row.description,
             info,
-            private,
+            private: None,
 
             // FIXME: add field to db schema or calculate
             member_count: 0,
@@ -477,4 +468,24 @@ pub struct DbEmailQueue {
     pub subject: String,
     pub plain_text_body: String,
     pub html_body: Option<String>,
+}
+
+impl From<DbThreadPrivate> for ThreadPrivate {
+    fn from(row: DbThreadPrivate) -> Self {
+        match row.ty {
+            DbThreadType::Chat => ThreadPrivate::Chat(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                mention_count: 0,
+                notifications: Default::default(),
+            }),
+            DbThreadType::Forum => ThreadPrivate::Forum(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                mention_count: 0,
+                notifications: Default::default(),
+            }),
+            DbThreadType::Voice => ThreadPrivate::Voice(ThreadTypeVoicePrivate {}),
+        }
+    }
 }

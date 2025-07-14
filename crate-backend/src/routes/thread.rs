@@ -153,7 +153,14 @@ async fn thread_list(
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    let res = data.thread_list(user_id, room_id, q).await?;
+    let mut res = dbg!(data.thread_list(room_id, q).await?);
+    let srv = s.services();
+    let mut threads = vec![];
+    for t in &res.items {
+        // FIXME: dubious performance
+        threads.push(srv.threads.get(t.id, Some(user_id)).await?);
+    }
+    res.items = threads;
     Ok(Json(res))
 }
 

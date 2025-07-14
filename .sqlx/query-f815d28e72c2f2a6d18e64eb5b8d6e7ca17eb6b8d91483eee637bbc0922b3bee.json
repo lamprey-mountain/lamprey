@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM thread WHERE room_id = $1",
+  "query": "SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "7b0b202a360c44c2bb14ceda612d321f218b0789a016fcf5c93fc4d0f0f3d284"
+  "hash": "f815d28e72c2f2a6d18e64eb5b8d6e7ca17eb6b8d91483eee637bbc0922b3bee"
 }
