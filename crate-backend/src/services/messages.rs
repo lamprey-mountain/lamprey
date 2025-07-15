@@ -140,7 +140,7 @@ impl ServiceMessages {
             data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
                 .await?;
         }
-        let mut message = data.message_get(thread_id, message_id).await?;
+        let mut message = data.message_get(thread_id, message_id, user_id).await?;
 
         if let Some(content) = &content {
             tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
@@ -159,7 +159,7 @@ impl ServiceMessages {
         let msg = MessageSync::MessageCreate {
             message: message.clone(),
         };
-        srv.threads.invalidate(thread_id); // message count
+        srv.threads.invalidate(thread_id).await; // message count
         s.broadcast_thread(thread_id, user_id, reason, msg).await?;
         Ok(message)
     }
@@ -178,7 +178,7 @@ impl ServiceMessages {
         let srv = s.services();
         let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
         perms.ensure_view()?;
-        let message = data.message_get(thread_id, message_id).await?;
+        let message = data.message_get(thread_id, message_id, user_id).await?;
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
         }
@@ -310,7 +310,9 @@ impl ServiceMessages {
             tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
         }
 
-        let mut message = data.message_version_get(thread_id, version_id).await?;
+        let mut message = data
+            .message_version_get(thread_id, version_id, user_id)
+            .await?;
 
         if let Some(embeds) = json.embeds {
             match &mut message.message_type {
@@ -334,7 +336,7 @@ impl ServiceMessages {
             },
         )
         .await?;
-        s.services().threads.invalidate(thread_id); // last version id
+        s.services().threads.invalidate(thread_id).await; // last version id
         Ok((StatusCode::CREATED, message))
     }
 }

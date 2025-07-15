@@ -100,15 +100,15 @@ async fn message_context(
         dir: Some(PaginationDirection::B),
         limit: Some(limit),
     };
-    let before = data.message_list(thread_id, before_q).await?;
+    let before = data.message_list(thread_id, user_id, before_q).await?;
     let after_q = PaginationQuery {
         from: Some(message_id),
         to: q.to_end,
         dir: Some(PaginationDirection::F),
         limit: Some(limit),
     };
-    let after = data.message_list(thread_id, after_q).await?;
-    let message = data.message_get(thread_id, message_id).await?;
+    let after = data.message_list(thread_id, user_id, after_q).await?;
+    let message = data.message_get(thread_id, message_id, user_id).await?;
     let mut res = ContextResponse {
         items: before
             .items
@@ -145,7 +145,7 @@ async fn message_list(
     let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut res = data.message_list(thread_id, q).await?;
+    let mut res = data.message_list(thread_id, user_id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -173,7 +173,7 @@ async fn message_get(
     let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut message = data.message_get(thread_id, message_id).await?;
+    let mut message = data.message_get(thread_id, message_id, user_id).await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
 }
@@ -229,7 +229,7 @@ async fn message_delete(
     let data = s.data();
     let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let message = data.message_get(thread_id, message_id).await?;
+    let message = data.message_get(thread_id, message_id, user_id).await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
@@ -251,7 +251,7 @@ async fn message_delete(
         },
     )
     .await?;
-    s.services().threads.invalidate(thread_id); // last version id, message count
+    s.services().threads.invalidate(thread_id).await; // last version id, message count
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -278,7 +278,9 @@ async fn message_version_list(
     let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut res = data.message_version_list(thread_id, message_id, q).await?;
+    let mut res = data
+        .message_version_list(thread_id, message_id, user_id, q)
+        .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -307,7 +309,9 @@ async fn message_version_get(
     let data = s.data();
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let mut message = data.message_version_get(thread_id, version_id).await?;
+    let mut message = data
+        .message_version_get(thread_id, version_id, user_id)
+        .await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
 }
@@ -334,7 +338,9 @@ async fn message_version_delete(
     let data = s.data();
     let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-    let message = data.message_version_get(thread_id, version_id).await?;
+    let message = data
+        .message_version_get(thread_id, version_id, user_id)
+        .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
@@ -343,7 +349,7 @@ async fn message_version_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
     data.message_version_delete(thread_id, version_id).await?;
-    s.services().threads.invalidate(thread_id); // last version id, message count
+    s.services().threads.invalidate(thread_id).await; // last version id, message count
     Ok(Json(()))
 }
 
@@ -397,7 +403,7 @@ async fn message_delete_bulk(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     for id in &json.message_ids {
-        let message = data.message_get(thread_id, *id).await?;
+        let message = data.message_get(thread_id, *id, user_id).await?;
         if !message.message_type.is_deletable() {
             return Err(Error::BadStatic("cant delete that message"));
         }
@@ -419,7 +425,7 @@ async fn message_delete_bulk(
         },
     )
     .await?;
-    s.services().threads.invalidate(thread_id); // last version id, message count
+    s.services().threads.invalidate(thread_id).await; // last version id, message count
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -503,7 +509,7 @@ async fn message_replies(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let mut res = data
-        .message_replies(thread_id, message_id, q.depth, q.breadth, q.q)
+        .message_replies(thread_id, message_id, user_id, q.depth, q.breadth, q.q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;

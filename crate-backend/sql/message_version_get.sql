@@ -1,13 +1,19 @@
 with
-    message_reaction as (
-        -- select message_id, key, count(*), bool_or(user_id = $123) as self
-        select
-            message_id,
-            json_agg((select row_to_json(j) from (select key, count(*) as count) j)) as json
-        from reaction
-        group by message_id
-        order by min(position)
-    )
+reaction_counts as (
+    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $2) as self_reacted
+    from reaction
+    group by message_id, key
+),
+message_reaction as (
+    select message_id,
+        json_agg(jsonb_build_object(
+            'key', key,
+            'count', count,
+            'self', self_reacted
+        ) order by pos) as json
+    from reaction_counts
+    group by message_id
+)
 select
     msg.type as "message_type: DbMessageType",
     msg.id,
@@ -28,4 +34,4 @@ select
 from message as msg
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
-where thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null
+where thread_id = $1 and msg.version_id = $3 and msg.deleted_at is null

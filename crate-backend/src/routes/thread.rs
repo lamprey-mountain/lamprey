@@ -90,7 +90,9 @@ async fn thread_create(
         })
         .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    let starter_message = data.message_get(thread_id, starter_message_id).await?;
+    let starter_message = data
+        .message_get(thread_id, starter_message_id, user_id)
+        .await?;
     s.broadcast_room(
         room_id,
         user_id,
@@ -238,7 +240,9 @@ async fn thread_ack(
     let message_id = if let Some(message_id) = json.message_id {
         message_id
     } else {
-        data.message_version_get(thread_id, version_id).await?.id
+        data.message_version_get(thread_id, version_id, user_id)
+            .await?
+            .id
     };
     data.unread_put(user_id, thread_id, message_id, version_id)
         .await?;

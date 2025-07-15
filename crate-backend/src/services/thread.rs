@@ -55,8 +55,8 @@ impl ServiceThreads {
         Ok(thread)
     }
 
-    pub fn invalidate(&self, thread_id: ThreadId) {
-        self.cache_thread.invalidate(&thread_id);
+    pub async fn invalidate(&self, thread_id: ThreadId) {
+        self.cache_thread.invalidate(&thread_id).await;
         self.cache_thread_private
             .invalidate_entries_if(move |(t, _), _| *t == thread_id)
             .expect("failed to invalidate");
@@ -97,7 +97,7 @@ impl ServiceThreads {
 
         // update and refetch
         data.thread_update(thread_id, patch.clone()).await?;
-        self.invalidate(thread_id);
+        self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, user_id).await;
         let thread = self.get(thread_id, Some(user_id)).await?;
 
@@ -120,7 +120,9 @@ impl ServiceThreads {
                 created_at: None,
             })
             .await?;
-        let update_message = data.message_get(thread_id, update_message_id).await?;
+        let update_message = data
+            .message_get(thread_id, update_message_id, user_id)
+            .await?;
 
         self.state
             .broadcast_thread(

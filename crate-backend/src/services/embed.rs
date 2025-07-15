@@ -513,7 +513,7 @@ impl ServiceEmbed {
         };
         let data = state.data();
         let message = data
-            .message_get(message_ref.thread_id, message_ref.message_id)
+            .message_get(message_ref.thread_id, message_ref.message_id, user_id)
             .await?;
         let mut new_message_type = message.message_type.clone();
         let (embeds, attachments) = match &mut new_message_type {
@@ -562,7 +562,7 @@ impl ServiceEmbed {
         .await?;
 
         let mut message = data
-            .message_get(message_ref.thread_id, message_ref.message_id)
+            .message_get(message_ref.thread_id, message_ref.message_id, user_id)
             .await?;
         state.presign_message(&mut message).await?;
         state

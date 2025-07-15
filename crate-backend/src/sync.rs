@@ -425,13 +425,16 @@ impl Connection {
                 MessageSync::ThreadUpdate { thread } => MessageSync::ThreadUpdate {
                     thread: srv.threads.get(thread.id, session.user_id()).await?,
                 },
-                // TODO: for reactions
-                // MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
-                //     message: d.message_get(message.thread_id, message.id).await?,
-                // },
-                // MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
-                //     message: d.message_get(message.thread_id, message.id).await?,
-                // },
+                MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
+                    message: d
+                        .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                        .await?,
+                },
+                MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
+                    message: d
+                        .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                        .await?,
+                },
                 m => m,
             };
             self.push_sync(msg);

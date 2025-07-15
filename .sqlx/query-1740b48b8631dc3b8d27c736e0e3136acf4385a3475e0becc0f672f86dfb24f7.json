@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\n    message_reaction as (\n        -- select message_id, key, count(*), bool_or(user_id = $123) as self\n        select\n            message_id,\n            json_agg((select row_to_json(j) from (select key, count(*) as count) j)) as json\n        from reaction\n        group by message_id\n        order by min(position)\n    )\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.version_id = $2 and msg.deleted_at is null\n",
+  "query": "with\nreaction_counts as (\n    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $3) as self_reacted\n    from reaction\n    group by message_id, key\n),\nmessage_reaction as (\n    select message_id,\n        json_agg(jsonb_build_object(\n            'key', key,\n            'count', count,\n            'self', self_reacted\n        ) order by pos) as json\n    from reaction_counts\n    group by message_id\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $4 and msg.id < $5\norder by (case when $6 = 'f' then msg.version_id end), msg.version_id desc limit $7\n",
   "describe": {
     "columns": [
       {
@@ -98,7 +98,12 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
@@ -120,5 +125,5 @@
       null
     ]
   },
-  "hash": "b48e98e34350b63d462487d20ecd7ebeffdad16e524b087ae5cc720283a738d4"
+  "hash": "1740b48b8631dc3b8d27c736e0e3136acf4385a3475e0becc0f672f86dfb24f7"
 }

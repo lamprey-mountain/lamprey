@@ -186,13 +186,13 @@ impl DataMessage for Postgres {
     	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, edited_at)
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11, coalesce($12, now()))
         "#,
-            message_id.into_inner(),
-            create.thread_id.into_inner(),
+            *message_id,
+            *create.thread_id,
             ver_id,
             create.content(),
             create.metadata(),
-            create.reply_id().map(|i| i.into_inner()),
-            create.author_id.into_inner(),
+            create.reply_id().map(|i| *i),
+            *create.author_id,
             message_type as _,
             create.override_name(),
             embeds,
@@ -207,7 +207,7 @@ impl DataMessage for Postgres {
         	    INSERT INTO message_attachment (version_id, media_id, ordering)
         	    VALUES ($1, $2, $3)
                 "#,
-                message_id.into_inner(),
+                *message_id,
                 att.into_inner(),
                 ord as i32
             )
@@ -219,21 +219,22 @@ impl DataMessage for Postgres {
         Ok(ver_id.into())
     }
 
-    async fn message_get(&self, thread_id: ThreadId, id: MessageId) -> Result<Message> {
-        let row = query_file_as!(
-            DbMessage,
-            "sql/message_get.sql",
-            thread_id.into_inner(),
-            id.into_inner()
-        )
-        .fetch_one(&self.pool)
-        .await?;
+    async fn message_get(
+        &self,
+        thread_id: ThreadId,
+        id: MessageId,
+        user_id: UserId,
+    ) -> Result<Message> {
+        let row = query_file_as!(DbMessage, "sql/message_get.sql", *thread_id, *id, *user_id)
+            .fetch_one(&self.pool)
+            .await?;
         Ok(row.into())
     }
 
     async fn message_list(
         &self,
         thread_id: ThreadId,
+        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -243,9 +244,10 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate.sql",
-                thread_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *thread_id,
+                *user_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
@@ -288,12 +290,14 @@ impl DataMessage for Postgres {
         &self,
         thread_id: ThreadId,
         version_id: MessageVerId,
+        user_id: UserId,
     ) -> Result<Message> {
         let row = query_file_as!(
             DbMessage,
             "sql/message_version_get.sql",
-            thread_id.into_inner(),
-            version_id.into_inner()
+            *thread_id,
+            *version_id,
+            *user_id,
         )
         .fetch_one(&self.pool)
         .await?;
@@ -321,6 +325,7 @@ impl DataMessage for Postgres {
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -330,10 +335,11 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 "sql/message_version_paginate.sql",
-                thread_id.into_inner(),
-                message_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *thread_id,
+                *message_id,
+                *user_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
@@ -349,6 +355,7 @@ impl DataMessage for Postgres {
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
@@ -360,19 +367,20 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_replies.sql",
-                thread_id.into_inner(),
-                message_id.into_inner(),
+                *thread_id,
+                *message_id,
                 depth as i32,
                 breadth.map(|b| b as i64),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                *user_id,
             ),
             query_file_scalar!(
                 "sql/message_replies_count.sql",
-                thread_id.into_inner(),
-                message_id.into_inner(),
+                *thread_id,
+                *message_id,
                 depth as i32
             )
         )

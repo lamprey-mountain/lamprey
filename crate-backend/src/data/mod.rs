@@ -222,10 +222,16 @@ pub trait DataMessage {
         message_id: MessageId,
         create: DbMessageCreate,
     ) -> Result<MessageVerId>;
-    async fn message_get(&self, thread_id: ThreadId, message_id: MessageId) -> Result<Message>;
+    async fn message_get(
+        &self,
+        thread_id: ThreadId,
+        message_id: MessageId,
+        user_id: UserId,
+    ) -> Result<Message>;
     async fn message_list(
         &self,
         thread_id: ThreadId,
+        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
@@ -238,6 +244,7 @@ pub trait DataMessage {
         &self,
         thread_id: ThreadId,
         version_id: MessageVerId,
+        user_id: UserId,
     ) -> Result<Message>;
     async fn message_version_delete(
         &self,
@@ -248,12 +255,14 @@ pub trait DataMessage {
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_replies(
         &self,
         thread_id: ThreadId,
         message_id: MessageId,
+        user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
