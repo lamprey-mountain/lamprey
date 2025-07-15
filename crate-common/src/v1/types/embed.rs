@@ -14,7 +14,7 @@ use validator::Validate;
 use super::media::MediaRef;
 
 // maybe allow iframes for some sites? probably could be done client side though
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum EmbedType {
     /// this is a piece of media, ie. an image, video, or audio
@@ -24,6 +24,7 @@ pub enum EmbedType {
     Link,
 
     /// this is manually specified from a bot
+    #[default]
     Custom,
 }
 
@@ -35,6 +36,7 @@ pub struct Embed {
 
     /// what kind of thing this is
     #[serde(rename = "type")]
+    #[serde(default)]
     pub ty: EmbedType,
 
     /// the url this embed was requested for
