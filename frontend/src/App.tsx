@@ -51,6 +51,7 @@ import {
 import { RouteInviteInner } from "./Invite.tsx";
 import {
 	Nav2,
+	RouteFeed,
 	RouteHome,
 	RouteRoom,
 	RouteRoomSettings,
@@ -83,6 +84,7 @@ const App: Component = () => {
 			<Route path="/thread/:thread_id" component={RouteThread} />
 			<Route path="/voice/:thread_id" component={RouteVoice} />
 			<Route path="/debug" component={Debug} />
+			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>

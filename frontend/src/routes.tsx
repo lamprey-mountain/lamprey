@@ -11,6 +11,7 @@ import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice } from "./Voice.tsx";
+import { Feed } from "./Feed.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -148,6 +149,16 @@ export const RouteVoice = (p: RouteSectionProps) => {
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
+		</>
+	);
+};
+
+export const RouteFeed = () => {
+	return (
+		<>
+			<Title title="feed" />
+			<Nav2 />
+			<Feed />
 		</>
 	);
 };
