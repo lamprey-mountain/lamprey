@@ -215,6 +215,14 @@ impl LampoHandle {
         Ok(())
     }
 
+    pub async fn typing_start(&self, thread_id: ThreadId, user_id: UserId) -> Result<()> {
+        self.http
+            .for_puppet(user_id)
+            .typing_start(thread_id)
+            .await?;
+        Ok(())
+    }
+
     pub async fn puppet_ensure(&self, name: String, key: String, room_id: RoomId) -> Result<User> {
         let app_id: ApplicationId = "01943cc1-62e0-7c0e-bb9b-a4ff42864d69".parse().unwrap();
         let user = self

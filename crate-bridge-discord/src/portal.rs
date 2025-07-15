@@ -39,14 +39,33 @@ pub struct Portal {
 
 /// portal actor message
 pub enum PortalMessage {
-    LampoMessageCreate { message: Message },
-    LampoMessageUpdate { message: Message },
-    LampoMessageDelete { message_id: MessageId },
-    DiscordMessageCreate { message: DcMessage },
-    DiscordMessageUpdate { update: DcMessageUpdate },
-    DiscordMessageDelete { message_id: DcMessageId },
-    DiscordReactionAdd { add_reaction: DcReaction },
-    DiscordReactionRemove { removed_reaction: DcReaction },
+    LampoMessageCreate {
+        message: Message,
+    },
+    LampoMessageUpdate {
+        message: Message,
+    },
+    LampoMessageDelete {
+        message_id: MessageId,
+    },
+    DiscordMessageCreate {
+        message: DcMessage,
+    },
+    DiscordMessageUpdate {
+        update: DcMessageUpdate,
+    },
+    DiscordMessageDelete {
+        message_id: DcMessageId,
+    },
+    DiscordReactionAdd {
+        add_reaction: DcReaction,
+    },
+    DiscordReactionRemove {
+        removed_reaction: DcReaction,
+    },
+    DiscordTyping {
+        user_id: serenity::model::id::UserId,
+    },
 }
 
 impl Portal {
@@ -672,6 +691,17 @@ impl Portal {
                     removed_reaction.emoji.to_string(),
                 )
                 .await?;
+            }
+            PortalMessage::DiscordTyping { user_id } => {
+                let Some(puppet) = self
+                    .globals
+                    .get_puppet("discord", &user_id.to_string())
+                    .await?
+                else {
+                    return Ok(());
+                };
+
+                ly.typing_start(self.thread_id(), puppet.id.into()).await?;
             }
         }
         Ok(())

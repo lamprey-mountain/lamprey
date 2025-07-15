@@ -178,6 +178,7 @@ route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(t
 route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreate);
 route!(put    "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_react(thread_id: ThreadId, message_id: MessageId, reaction: String));
 route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_unreact(thread_id: ThreadId, message_id: MessageId, reaction: String));
+route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ThreadId));
 route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId) -> RoomMember);
 // route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);

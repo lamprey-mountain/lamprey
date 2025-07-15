@@ -8,7 +8,9 @@ use serenity::{
         parse_webhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
         Http, MessagePagination, Ready, Webhook,
     },
-    model::prelude::{ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction},
+    model::prelude::{
+        ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction, TypingStartEvent,
+    },
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
@@ -186,7 +188,17 @@ impl EventHandler for Handler {
         );
     }
 
-    // async fn typing_start(&self, ctx: Context, event: TypingStartEvent) {}
+    async fn typing_start(&self, ctx: Context, event: TypingStartEvent) {
+        info!("discord typing start");
+        let mut ctx_data = ctx.data.write().await;
+        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        globals.portal_send_dc(
+            event.channel_id,
+            PortalMessage::DiscordTyping {
+                user_id: event.user_id,
+            },
+        );
+    }
 }
 
 /// discord actor
