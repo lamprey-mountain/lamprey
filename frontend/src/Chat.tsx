@@ -66,7 +66,6 @@ export const ChatMain = (props: ChatProps) => {
 	let last_thread_id: string | undefined;
 	let chatRef: HTMLDivElement | undefined;
 	const list = createList({
-		containerRef: () => chatRef,
 		items: tl,
 		autoscroll,
 		topQuery: ".message > .content",
@@ -218,16 +217,47 @@ export const ChatMain = (props: ChatProps) => {
 
 	createEffect(on(list.scrollPos, setPos));
 
-	createEffect(() => {
-		ctx.scrollToChatList = (pos: number) => list.scrollTo(pos);
-	});
-
 	return (
 		<div
 			ref={chatRef}
 			class="chat"
 			data-thread-id={props.thread.id}
 			role="log"
+			onKeyDown={(e) => {
+				console.log(e);
+				if (e.key === "Escape") {
+					const thread_id = props.thread.id;
+
+					// messages are approx. 20 px high, show 3 pages of messages
+					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+					ctx.thread_anchor.set(thread_id, {
+						type: "backwards",
+						limit: SLICE_LEN,
+					});
+
+					const version_id =
+						api.messages.cacheRanges.get(thread_id)?.live.end ??
+							props.thread.last_version_id;
+
+					ctx.dispatch({
+						do: "thread.mark_read",
+						thread_id: thread_id,
+						delay: false,
+						also_local: true,
+						version_id,
+					});
+
+					// HACK: i need to make the update order less jank
+					setTimeout(() => {
+						list.scrollTo(99999999);
+					});
+				} else if (e.key === "PageDown") {
+					list.scrollBy(globalThis.innerHeight * .8, true);
+				} else if (e.key === "PageUp") {
+					list.scrollBy(-globalThis.innerHeight * .8, true);
+				}
+			}}
 			onDragEnter={(e) => {
 				e.preventDefault();
 			}}
@@ -373,7 +403,10 @@ function shouldSplit(a: Message, b: Message) {
 function shouldSplitInner(a: Message, b: Message) {
 	shouldSplitMemo;
 	if (a.author_id !== b.author_id) return true;
-	if ('override_name' in a && 'override_name' in b && a.override_name !== b.override_name) return true;
+	if (
+		"override_name" in a && "override_name" in b &&
+		a.override_name !== b.override_name
+	) return true;
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
 	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;

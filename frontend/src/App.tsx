@@ -135,7 +135,6 @@ export const Root: Component = (props: ParentProps) => {
 		dispatch: (() => {
 			throw new Error("Dispatch not initialized");
 		}) as Dispatcher,
-		scrollToChatList: (_pos: number) => {},
 
 		t: i18n.translator(dict),
 		events,
@@ -208,38 +207,9 @@ export const Root: Component = (props: ParentProps) => {
 	};
 
 	const handleKeypress = (e: KeyboardEvent) => {
-		const params = useParams();
 		if (e.key === "Escape") {
-			const thread_id = params.thread_id;
 			if (ctx.data.modals.length) {
 				dispatch({ do: "modal.close" });
-			} else if (thread_id) {
-				// version_id may be undefined
-				const thread = api.threads.cache.get(thread_id);
-				if (!thread) return;
-
-				// messages are approx. 20 px high, show 3 pages of messages
-				const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
-
-				ctx.thread_anchor.set(thread_id, {
-					type: "backwards",
-					limit: SLICE_LEN,
-				});
-
-				const version_id = api.messages.cacheRanges.get(thread.id)?.live.end ??
-					thread.last_version_id;
-				ctx.dispatch({
-					do: "thread.mark_read",
-					thread_id: thread_id,
-					delay: false,
-					also_local: true,
-					version_id,
-				});
-
-				// HACK: i need to make the update order less jank
-				setTimeout(() => {
-					ctx.scrollToChatList(99999999);
-				});
 			}
 		}
 	};
