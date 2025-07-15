@@ -3,6 +3,7 @@ import type { RoomT } from "../types.ts";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { createUpload } from "sdk";
+import { CDN_URL } from "../App.tsx";
 
 export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();
@@ -77,6 +78,10 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 				<For each={emoji()?.items ?? []}>
 					{(i) => (
 						<li>
+							<img
+								src={`${CDN_URL}/emoji/${i.id}`}
+								style="height:1em;width:1em"
+							/>
 							{i.name} <button onClick={() => remove(i.id)}>remove</button>
 						</li>
 					)}
