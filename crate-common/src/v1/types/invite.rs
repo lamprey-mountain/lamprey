@@ -99,6 +99,8 @@ pub enum InviteTargetId {
         room_id: RoomId,
         thread_id: ThreadId,
     },
+
+    Server,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

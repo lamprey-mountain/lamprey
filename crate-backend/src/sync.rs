@@ -302,12 +302,12 @@ impl Connection {
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
-                InviteTarget::Server => todo!(),
+                InviteTarget::Server => unreachable!("events aren't emitted for server invites"),
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
-                InviteTarget::Server => todo!(),
+                InviteTarget::Server => unreachable!("events aren't emitted for server invites"),
             },
             MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
@@ -327,6 +327,7 @@ impl Connection {
             MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
+                InviteTargetId::Server => unreachable!("events aren't emitted for server invites"),
             },
             MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ThreadAck { .. } => todo!(),

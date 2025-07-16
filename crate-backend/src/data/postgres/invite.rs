@@ -39,6 +39,28 @@ impl DataInvite for Postgres {
         Ok(())
     }
 
+    async fn invite_insert_server(
+        &self,
+        creator_id: UserId,
+        code: InviteCode,
+        expires_at: Option<common::v1::types::util::Time>,
+        max_uses: Option<u16>,
+    ) -> Result<()> {
+        query!(
+            r#"
+            insert into invite (target_type, code, creator_id, expires_at, max_uses)
+            values ('server', $1, $2, $3, $4)
+        "#,
+            code.0,
+            creator_id.into_inner(),
+            expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
+            max_uses.map(|n| n as i32),
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     async fn invite_select(&self, code: InviteCode) -> Result<InviteWithMetadata> {
         let mut conn = self.pool.begin().await?;
         let mut tx = conn.begin().await?;
@@ -64,7 +86,7 @@ impl DataInvite for Postgres {
                 let room = self.room_get(room_id).await?;
                 InviteTarget::Thread { room, thread }
             }
-
+            "server" => InviteTarget::Server,
             _ => panic!("invalid data in db"),
         };
         let creator = self.user_get(UserId::from(row.creator_id)).await?;
@@ -135,6 +157,69 @@ impl DataInvite for Postgres {
             assert_eq!(row.target_type, "room");
             assert_eq!(row.target_id, room_id.into_inner());
             let target = InviteTarget::Room { room: room.clone() };
+            let creator = self.user_get(UserId::from(row.creator_id)).await?;
+            let creator_id = creator.id;
+            let invite = Invite::new(
+                InviteCode(row.code),
+                target,
+                creator,
+                creator_id,
+                row.created_at.assume_utc().into(),
+                row.expires_at.map(|t| t.assume_utc().into()),
+                row.description,
+                false,
+            );
+            let invite_with_meta = InviteWithMetadata {
+                invite,
+                uses: row.uses.try_into().expect("invalid data in db"),
+                max_uses: row
+                    .max_uses
+                    .map(|n| n.try_into().expect("invalid data in db"))
+                    as Option<u16>,
+            };
+            items.push(invite_with_meta);
+        }
+        if p.dir == PaginationDirection::B {
+            items.reverse();
+        }
+        Ok(PaginationResponse {
+            items,
+            total: total.unwrap_or(0) as u64,
+            has_more,
+        })
+    }
+
+    async fn invite_list_server(
+        &self,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>> {
+        let p: Pagination<_> = paginate.try_into()?;
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let raw = query_as!(
+            DbInvite,
+            r#"
+            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            from invite
+        	WHERE target_type = 'server' AND code > $1 AND code < $2
+        	ORDER BY (CASE WHEN $3 = 'f' THEN code END), code DESC LIMIT $4
+        "#,
+            p.after.to_string(),
+            p.before.to_string(),
+            p.dir.to_string(),
+            (p.limit + 1) as i32
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        let total = query_scalar!("SELECT count(*) FROM invite WHERE target_type = 'server'",)
+            .fetch_one(&mut *tx)
+            .await?;
+        tx.rollback().await?;
+        let has_more = raw.len() > p.limit as usize;
+        let mut items = vec![];
+        for row in raw.into_iter().take(p.limit as usize) {
+            assert_eq!(row.target_type, "server");
+            let target = InviteTarget::Server;
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
             let creator_id = creator.id;
             let invite = Invite::new(

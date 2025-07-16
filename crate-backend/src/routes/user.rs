@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     MediaTrackInfo, MessageSync, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
 };
@@ -13,7 +13,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
-use super::util::{Auth, AuthRelaxed, AuthWithSession};
+use super::util::{Auth, AuthRelaxed};
 use crate::error::{Error, Result};
 
 /// User update
@@ -227,7 +227,7 @@ async fn guest_create(
     responses((status = OK, body = User, description = "upgraded")),
 )]
 async fn guest_upgrade(
-    AuthWithSession(_session, auth_user_id): AuthWithSession,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -242,14 +242,14 @@ async fn guest_upgrade(
     }
 
     // Set registered_at to now to make them a regular user
-    data.user_set_registered_at(auth_user_id, Some(common::v1::types::util::Time::now_utc()))
+    data.user_set_registered_at(auth_user_id, Some(Time::now_utc()))
         .await?;
     srv.users.invalidate(auth_user_id).await; // Invalidate user cache
     let updated_user = srv.users.get(auth_user_id).await?; // Get the updated user
 
     s.broadcast(MessageSync::UserUpdate {
         user: updated_user.clone(),
-    })?; // Broadcast user update
+    })?;
 
     Ok(Json(updated_user))
 }

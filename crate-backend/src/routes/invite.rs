@@ -8,6 +8,7 @@ use common::v1::types::{
     InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
     RoomMembership,
 };
+use futures::future::join_all;
 use http::StatusCode;
 use nanoid::nanoid;
 use serde::Serialize;
@@ -58,7 +59,10 @@ pub async fn invite_delete(
                 thread_id: thread.id,
             },
         ),
-        InviteTarget::Server => todo!(),
+        InviteTarget::Server => (
+            s.services.perms.is_admin(user_id).await?,
+            InviteTargetId::Server,
+        ),
     };
     let can_delete = user_id == invite.invite.creator_id || has_perm;
     if can_delete {
@@ -87,6 +91,9 @@ pub async fn invite_delete(
                     },
                 )
                 .await?;
+            }
+            InviteTargetId::Server => {
+                // don't emit events
             }
         };
     }
@@ -126,7 +133,7 @@ pub async fn invite_resolve(
             let perms = s.perms.for_thread(user_id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
-        InviteTarget::Server => todo!(),
+        InviteTarget::Server => !s.perms.is_admin(user_id).await?,
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -177,8 +184,8 @@ pub async fn invite_use(
             .await?;
             d.role_apply_default(room.id, user_id).await?;
             let member = d.room_member_get(room.id, user_id).await?;
-            s.services().perms.invalidate_room(user_id, room.id).await;
-            s.services().perms.invalidate_is_mutual(user_id);
+            s.services.perms.invalidate_room(user_id, room.id).await;
+            s.services.perms.invalidate_is_mutual(user_id);
             s.broadcast_room(
                 room.id,
                 user_id,
@@ -187,7 +194,15 @@ pub async fn invite_use(
             )
             .await?;
         }
-        InviteTarget::Server => todo!(),
+        InviteTarget::Server => {
+            // Upgrade the user to a full account
+            s.data()
+                .user_set_registered_at(user_id, Some(common::v1::types::util::Time::now_utc()))
+                .await?;
+            s.services().users.invalidate(user_id).await;
+            let updated_user = s.services().users.get(user_id).await?;
+            s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
+        }
     }
     d.invite_incr_use(code).await?;
     Ok(())
@@ -215,7 +230,7 @@ pub async fn invite_room_create(
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::InviteCreate)?;
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -272,7 +287,7 @@ pub async fn invite_room_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.invite_list_room(room_id, paginate).await?;
     let res = PaginationResponse {
@@ -338,7 +353,10 @@ pub async fn invite_patch(
                 thread_id: thread.id,
             },
         ),
-        InviteTarget::Server => todo!(),
+        InviteTarget::Server => (
+            s.services.perms.is_admin(user_id).await?,
+            InviteTargetId::Server,
+        ),
     };
 
     let can_patch = user_id == invite.invite.creator_id || has_perm;
@@ -358,10 +376,9 @@ pub async fn invite_patch(
     Ok((StatusCode::OK, Json(updated_invite)))
 }
 
-/// Invite server create (TODO)
+/// Invite server create
 ///
 /// Create an invite that allows registration on a server.
-/// Using the invite upgrades a guest (readonly?) account (also todo) into a full account
 #[utoipa::path(
     post,
     path = "/server/invite",
@@ -369,15 +386,31 @@ pub async fn invite_patch(
     responses((status = OK, body = Invite, description = "success")),
 )]
 pub async fn invite_server_create(
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<InviteCreate>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<InviteCreate>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let user = s.services().users.get(user_id).await?;
+    if user.registered_at.is_none() {
+        return Err(Error::BadStatic("Guest users cannot create server invites"));
+    }
+
+    let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        .chars()
+        .collect();
+    let code = InviteCode(nanoid!(8, &alphabet));
+    d.invite_insert_server(user_id, code.clone(), json.expires_at, json.max_uses)
+        .await?;
+    let invite = d.invite_select(code).await?;
+    s.broadcast(MessageSync::InviteCreate {
+        invite: invite.clone(),
+    })?;
+    Ok((StatusCode::CREATED, Json(invite)))
 }
 
-/// Invite server list (TODO)
+/// Invite server list
 ///
 /// List invites that allow registration on a server
 #[utoipa::path(
@@ -392,11 +425,35 @@ pub async fn invite_server_create(
     )
 )]
 pub async fn invite_server_list(
-    Query(_paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Query(paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let user = s.services().users.get(user_id).await?;
+    if user.registered_at.is_none() {
+        return Err(Error::BadStatic("Guest users cannot list server invites"));
+    }
+    let res = d.invite_list_server(paginate).await?;
+    let items: Vec<InviteWithPotentialMetadata> = join_all(res.items.into_iter().map(|i| {
+        let s = s.clone();
+        async move {
+            if i.invite.creator_id != user_id
+                && !s.services.perms.is_admin(user_id).await.unwrap_or(false)
+            {
+                InviteWithPotentialMetadata::Invite(i.strip_metadata())
+            } else {
+                InviteWithPotentialMetadata::InviteWithMetadata(i)
+            }
+        }
+    }))
+    .await;
+    let res = PaginationResponse {
+        items,
+        total: res.total,
+        has_more: res.has_more,
+    };
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

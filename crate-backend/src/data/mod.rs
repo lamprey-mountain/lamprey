@@ -174,6 +174,18 @@ pub trait DataInvite {
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>>;
 
+    async fn invite_insert_server(
+        &self,
+        creator_id: UserId,
+        code: InviteCode,
+        expires_at: Option<common::v1::types::util::Time>,
+        max_uses: Option<u16>,
+    ) -> Result<()>;
+    async fn invite_list_server(
+        &self,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>>;
+
     // TODO: user invites
     // async fn invite_insert_user(
     //     &self,

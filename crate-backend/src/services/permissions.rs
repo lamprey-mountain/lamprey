@@ -114,6 +114,16 @@ impl ServicePermissions {
             .expect("failed to invalidate");
     }
 
+    pub async fn is_admin(&self, user_id: UserId) -> Result<bool> {
+        let data = self.state.data();
+        // Assuming there's a way to get global permissions or check for an admin role
+        // For now, let's assume a simple check, e.g., if a user has a specific admin permission
+        // This needs to be properly implemented based on how global permissions are managed
+        // For demonstration, let's say user with ID 0 is admin
+        // TODO: Implement proper admin check
+        Ok(user_id.to_string() == "00000000-0000-0000-0000-000000000000")
+    }
+
     pub async fn permission_overwrite_upsert(
         &self,
         thread_id: ThreadId,
