@@ -170,10 +170,10 @@ export function createEditorState(
 }
 
 export const Editor = (props: EditorProps) => {
-	let editorEl: HTMLDivElement;
+	let editorEl: HTMLDivElement | undefined;
 
 	onMount(() => {
-		const view = new EditorView({ mount: editorEl }, {
+		const view = new EditorView({ mount: editorEl! }, {
 			domParser: DOMParser.fromSchema(schema),
 			state: props.state,
 			decorations(state) {
@@ -392,7 +392,7 @@ export const Editor = (props: EditorProps) => {
 			},
 			handlePaste(view, event, slice) {
 				const files = event.clipboardData?.files ?? [];
-				for (const file of files) props.onUpload?.(file);
+				for (const file of Array.from(files)) props.onUpload?.(file);
 				const str = slice.content.textBetween(0, slice.size);
 				const tr = view.state.tr;
 				if (/^(https?:\/\/|mailto:)\S+$/i.test(str) && !tr.selection.empty) {
@@ -422,11 +422,11 @@ export const Editor = (props: EditorProps) => {
 				const tmp = parser.parseFromString(html, "text/html");
 
 				for (
-					const node of tmp.querySelectorAll(
+					const node of Array.from(tmp.querySelectorAll(
 						"script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " +
 							["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"]
 								.map((i) => `[class*=${i}], [id*=${i}]`).join(", "),
-					)
+					))
 				) {
 					node.remove();
 				}
@@ -437,7 +437,7 @@ export const Editor = (props: EditorProps) => {
 					if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
 
 					// TODO: tables
-					const c = [...n.childNodes];
+					const c = Array.from(n.childNodes);
 					switch (n.nodeName) {
 						case "#document":
 						case "HTML":
@@ -559,7 +559,7 @@ export const Editor = (props: EditorProps) => {
 			aria-label="chat input"
 			aria-placeholder={props.placeholder}
 			aria-multiline="true"
-			enterkeyhint="send"
+			
 		>
 		</div>
 	);

@@ -134,7 +134,7 @@ export const Root: Component = (props: ParentProps) => {
 			throw new Error("Dispatch not initialized");
 		}) as Dispatcher,
 
-		t: i18n.translator(dict),
+		t: i18n.translator(() => dict()),
 		events,
 		menu,
 		thread_anchor: new ReactiveMap(),
@@ -152,6 +152,10 @@ export const Root: Component = (props: ParentProps) => {
 		settings: new ReactiveMap(
 			JSON.parse(localStorage.getItem("settings") ?? "[]"),
 		),
+		scrollToChatList: (pos: number) => {
+			// TODO: Implement actual scroll logic if needed
+			console.log("scrollToChatList called with position:", pos);
+		},
 	};
 
 	const api = createApi(client, events, ctx);

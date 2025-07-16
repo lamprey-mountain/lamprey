@@ -60,5 +60,5 @@ const flagsProd: Flag[] = [
 ];
 
 export const flags = new ReactiveSet(
-	(import.meta as unknown as ImportMeta).env.DEV ? flagsDev : flagsProd,
+	import.meta.env.DEV ? flagsDev : flagsProd,
 );

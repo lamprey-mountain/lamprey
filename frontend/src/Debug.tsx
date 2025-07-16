@@ -125,9 +125,12 @@ const InviteView = () => {
 	const api = useApi();
 	const [inviteCode, setInviteCodeRaw] = createSignal<string>("");
 	const setInviteCode = leadingAndTrailing(throttle, setInviteCodeRaw, 300);
-	const invite = inviteCode() !== ""
-		? api.invites.fetch(inviteCode)
-		: () => null;
+	const [invite] = createResource(inviteCode, async (code) => {
+		if (!code) return null;
+		const { data, error } = await api.invites.fetch(() => code);
+		if (error) throw new Error(error);
+		return data;
+	});
 
 	return (
 		<>
@@ -137,9 +140,11 @@ const InviteView = () => {
 			</label>
 			<br />
 			<Show when={invite.loading}>loading...</Show>
-			<pre>
-				{JSON.stringify(invite(), null, 4)}
-			</pre>
+			<Show when={invite.latest}>
+				<pre>
+					{JSON.stringify(invite.latest, null, 4)}
+				</pre>
+			</Show>
 		</>
 	);
 };

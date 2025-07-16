@@ -11,7 +11,7 @@ export const Home = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "name?",
-			cont(name) {
+			cont: (name: string | null) => {
 				if (!name) return;
 				ctx.client.http.POST("/api/v1/room", {
 					body: { name },

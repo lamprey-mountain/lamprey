@@ -30,7 +30,7 @@ export function Input(props: InputProps) {
 
 	function uploadFile(e: InputEvent) {
 		const target = e.target! as HTMLInputElement;
-		const files = target.files!;
+		const files = Array.from(target.files!);
 		for (const file of files) {
 			handleUpload(file);
 		}

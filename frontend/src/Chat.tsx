@@ -269,7 +269,7 @@ export const ChatMain = (props: ChatProps) => {
 			}}
 			onDrop={(e) => {
 				e.preventDefault();
-				for (const file of e.dataTransfer?.files ?? []) {
+				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
 					console.log(file);
 					const local_id = uuidv7();
 					ctx.dispatch({
