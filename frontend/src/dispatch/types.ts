@@ -2,58 +2,8 @@ import { type Api } from "../api.tsx";
 import { type ChatCtx, type Data } from "../context.ts";
 import { type SetStoreFunction } from "solid-js/store";
 
-export type Reduction =
-	| { do: "modal.close" }
-	| { do: "modal.open"; modal: Modal }
-	| { do: "modal.alert"; text: string }
-	| { do: "modal.prompt"; text: string; cont: (text: string | null) => void }
-	| { do: "modal.confirm"; text: string; cont: (confirmed: boolean) => void }
-	| { do: "menu.preview"; id: string };
 
-export function reduce(
-	state: Data,
-	delta: Reduction,
-): Data {
-	switch (delta.do) {
-		case "modal.close": {
-			return { ...state, modals: state.modals.slice(1) };
-		}
-		case "modal.open": {
-			return { ...state, modals: [...state.modals, delta.modal] };
-		}
-		case "modal.alert": {
-			return {
-				...state,
-				modals: [{ type: "alert", text: delta.text }, ...state.modals],
-			};
-		}
-		case "modal.prompt": {
-			const modal = {
-				type: "prompt" as const,
-				text: delta.text,
-				cont: delta.cont,
-			};
-			return { ...state, modals: [modal, ...state.modals] };
-		}
-		case "modal.confirm": {
-			const modal = {
-				type: "confirm" as const,
-				text: delta.text,
-				cont: delta.cont,
-			};
-			return { ...state, modals: [modal, ...state.modals] };
-		}
-		case "menu.preview": {
-			return {
-				...state,
-				cursor: {
-					...state.cursor,
-					preview: delta.id,
-				},
-			};
-		}
-	}
-}
+
 
 export type Middleware = (
 	ctx: ChatCtx,

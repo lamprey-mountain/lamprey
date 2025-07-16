@@ -7,7 +7,6 @@ import {
 	type ParentProps,
 	Show,
 } from "solid-js";
-import { useParams } from "@solidjs/router";
 import {
 	type ChatCtx,
 	chatctx,
@@ -17,7 +16,7 @@ import {
 	type Menu,
 	useCtx,
 } from "./context.ts";
-import { type Dispatcher } from "./dispatch/types";
+import { type Dispatcher } from "./dispatch/types.ts";
 import { createStore } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
 import { createClient } from "sdk";
@@ -25,6 +24,7 @@ import { createApi, useApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createSignal } from "solid-js";
+import { useMouseTracking } from "./hooks/useMouseTracking";
 import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
 import { Route, Router, type RouteSectionProps } from "@solidjs/router";
@@ -162,6 +162,8 @@ export const Root: Component = (props: ParentProps) => {
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 
+	useMouseTracking(update);
+
 	onCleanup(() => client.stop());
 
 	createEffect(() => {
@@ -216,10 +218,7 @@ export const Root: Component = (props: ParentProps) => {
 		}
 	};
 
-	const handleMouseMove = (e: MouseEvent) => {
-		// TEMP: disable because spammy events
-		// dispatch({ do: "window.mouse_move", e });
-	};
+	
 
 	// TODO: refactor
 	const handleContextMenu = (e: MouseEvent) => {
@@ -359,7 +358,7 @@ export const Root: Component = (props: ParentProps) => {
 					}}
 					onClick={handleClick}
 					onKeyDown={handleKeypress}
-					onMouseMove={handleMouseMove}
+					
 					onContextMenu={handleContextMenu}
 				>
 					{props.children}
@@ -476,7 +475,7 @@ function Overlay() {
 
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
-	const menuFloating = useFloating(menuParentRef, menuRef, {
+	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
 		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 		placement: "right-start",
 	});
