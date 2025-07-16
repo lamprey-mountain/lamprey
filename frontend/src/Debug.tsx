@@ -8,17 +8,11 @@ import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 import { transformBlock } from "./text.tsx";
-import { DebugWebrtc } from "./Webrtc.tsx";
-import { DragAndDrop } from "./DragAndDrop.tsx";
 
 export const Debug = () => {
 	return (
 		<div class="debug">
 			<h3>area 51</h3>
-			<details open>
-				<summary>webrtc</summary>
-				<DebugWebrtc />
-			</details>
 			<details>
 				<summary>invite json</summary>
 				<InviteView />

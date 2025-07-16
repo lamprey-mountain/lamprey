@@ -353,7 +353,10 @@ function ReplyView(props: ReplyProps) {
 	const content = () => {
 		const r = reply();
 		if (!r) return;
-		return ('content' in r && r.content) ?? (('attachments' in r && r.attachments) ? `${r.attachments.length} attachment(s)` : undefined);
+		return ("content" in r && r.content) ??
+			(("attachments" in r && r.attachments)
+				? `${r.attachments.length} attachment(s)`
+				: undefined);
 	};
 
 	const scrollToReply = () => {
@@ -457,7 +460,9 @@ function Author(props: { message: Message; thread?: Thread }) {
 	const user = api.users.fetch(() => props.message.author_id);
 
 	function name() {
-		let name = ('override_name' in props.message) ? props.message.override_name : undefined;
+		let name = ("override_name" in props.message)
+			? props.message.override_name
+			: undefined;
 		const tm = thread_member();
 		if (tm?.membership === "Join") name ??= tm.override_name;
 

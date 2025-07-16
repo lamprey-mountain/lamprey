@@ -65,7 +65,7 @@ export function createList<T>(options: {
 	function handleIntersections(entries: IntersectionObserverEntry[]) {
 		// PERF: run intersection callback takes too long
 		for (const el of entries) {
-			console.log("intersectionobserver", el.isIntersecting, el.target)
+			console.log("intersectionobserver", el.isIntersecting, el.target);
 			if (el.target === topEl()) {
 				if (el.isIntersecting) {
 					anchorRef = el.target;
@@ -95,8 +95,8 @@ export function createList<T>(options: {
 		const newBottomEl = wrapperEl()!.querySelector(
 			options.bottomQuery,
 		)! as HTMLElement;
-		console.log("newTopEl", newTopEl)
-		console.log("newBottomEl", newBottomEl)
+		console.log("newTopEl", newTopEl);
+		console.log("newBottomEl", newBottomEl);
 		setTopEl(newTopEl);
 		setBottomEl(newBottomEl);
 	}

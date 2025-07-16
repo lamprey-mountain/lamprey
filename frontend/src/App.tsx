@@ -57,7 +57,6 @@ import {
 	RouteRoomSettings,
 	RouteThread,
 	RouteThreadSettings,
-	RouteVoice,
 } from "./routes.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
@@ -82,7 +81,6 @@ const App: Component = () => {
 				component={RouteThreadSettings}
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
-			<Route path="/voice/:thread_id" component={RouteVoice} />
 			<Route path="/debug" component={Debug} />
 			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />

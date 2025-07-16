@@ -4,7 +4,7 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ChatNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { createEffect, For, Show } from "solid-js";
+import { Accessor, createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
@@ -108,7 +108,12 @@ export const RouteThread = (p: RouteSectionProps) => {
 			<ChatNav room_id={thread()?.room_id} />
 			<Show when={room() && thread()}>
 				<ChatHeader room={room()!} thread={thread()!} />
-				<ChatMain room={room()!} thread={thread()!} />
+				<Show when={thread().type === "Chat"}>
+					<ChatMain room={room()!} thread={thread()!} />
+				</Show>
+				<Show when={thread().type === "Voice"}>
+					<Voice room={room()!} thread={thread()!} />
+				</Show>
 				<Show when={flags.has("thread_member_list")}>
 					<ThreadMembers thread={thread()!} />
 				</Show>
@@ -125,30 +130,6 @@ export const RouteHome = () => {
 			<Nav2 />
 			<ChatNav />
 			<Home />
-		</>
-	);
-};
-
-export const RouteVoice = (p: RouteSectionProps) => {
-	const { t } = useCtx();
-	const api = useApi();
-	const thread = api.threads.fetch(() => p.params.thread_id);
-	const room = api.rooms.fetch(() => thread()?.room_id!);
-
-	return (
-		<>
-			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
-				<Title title={`${thread()!.name} - ${room()!.name}`} />
-			</Show>
-			<Nav2 />
-			<ChatNav room_id={thread()?.room_id} />
-			<Show when={room() && thread()}>
-				<ChatHeader room={room()!} thread={thread()!} />
-				<Voice room={room()!} thread={thread()!} />
-				<Show when={flags.has("thread_member_list")}>
-					<ThreadMembers thread={thread()!} />
-				</Show>
-			</Show>
 		</>
 	);
 };

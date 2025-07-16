@@ -6,6 +6,7 @@ import iconMic from "./assets/mic.png";
 import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconX from "./assets/x.png";
+import { DebugWebrtc } from "./Webrtc.tsx";
 
 export const Voice = (p: { room: Room; thread: Thread }) => {
 	const [muted, setMuted] = createSignal(false);
@@ -34,6 +35,10 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 
 	return (
 		<div class="webrtc">
+			<DebugWebrtc />
+			<br />
+			<br />
+			<br />
 			<div
 				class="ui"
 				onMouseOver={handleMouseOver}
