@@ -39,7 +39,6 @@ pub struct User {
     pub bot: Option<Bot>,
     pub system: bool,
     pub puppet: Option<Puppet>,
-    pub guest: Option<Guest>,
     pub suspended: Option<Suspended>,
     pub status: Status,
     pub registered_at: Option<Time>,
@@ -104,13 +103,6 @@ pub struct Bot {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Guest {
-    /// if this guest user can register
-    pub registerable: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct UserWithPrivate {
     #[serde(flatten)]
@@ -136,7 +128,6 @@ pub struct UserCreate {
 }
 
 pub struct BotCreate;
-pub struct GuestCreate;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

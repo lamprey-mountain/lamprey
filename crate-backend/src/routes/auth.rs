@@ -51,6 +51,7 @@ pub struct OauthInitResponse {
     url: Url,
 }
 
+// NOTE: in the future, this will no longer be able to create new accounts. a guest account would need to be created first, then have this linked to it.
 /// Auth oauth init
 #[utoipa::path(
     post,
@@ -105,6 +106,7 @@ async fn auth_oauth_redirect(
                             description: None,
                             bot: None,
                             puppet: None,
+                            registered_at: Some(Time::now_utc()),
                         })
                         .await?;
                     data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
@@ -137,6 +139,7 @@ async fn auth_oauth_redirect(
                             description: None,
                             bot: None,
                             puppet: None,
+                            registered_at: Some(Time::now_utc()),
                         })
                         .await?;
                     data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)
@@ -196,6 +199,7 @@ async fn auth_oauth_delete(
     tags = ["auth"],
     responses((status = OK, description = "success"))
 )]
+#[deprecated = "use auth status to get a list of linked oauth accounts"]
 async fn auth_oauth_get(
     Path(_provider): Path<String>,
     Auth(_auth_user_id): Auth,
@@ -435,7 +439,7 @@ async fn auth_captcha_submit(
 
 /// Auth sudo (TEMP)
 ///
-/// for debugging
+/// instantly upgrade to sudo mode; this is intended for debugging
 #[utoipa::path(
     post,
     path = "/auth/_sudo",

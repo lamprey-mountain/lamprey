@@ -136,6 +136,10 @@ pub async fn invite_resolve(
 }
 
 /// Invite use
+///
+/// - A room invite will add the user to the room
+/// - A thread invite will currently do the same thing as a room invite
+/// - A server invite will upgrade the user to a full account
 #[utoipa::path(
     post,
     path = "/invite/{invite_code}",

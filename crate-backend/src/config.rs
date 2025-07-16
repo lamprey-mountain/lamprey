@@ -21,6 +21,12 @@ pub struct Config {
     pub max_user_emails: usize,
     #[serde(default = "default_email_queue_workers")]
     pub email_queue_workers: usize,
+    #[serde(default = "default_require_server_invite")]
+    pub require_server_invite: bool,
+}
+
+fn default_require_server_invite() -> bool {
+    true
 }
 
 fn default_max_user_emails() -> usize {

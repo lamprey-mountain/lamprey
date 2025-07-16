@@ -7,6 +7,7 @@ use axum::{
 };
 use common::v1::types::{
     application::{Application, ApplicationCreate},
+    util::Time,
     ApplicationId, Bot, BotAccess, ExternalPlatform, PaginationQuery, Puppet, PuppetCreate,
     SessionCreate, SessionStatus, SessionToken, SessionWithToken,
 };
@@ -48,6 +49,7 @@ async fn app_create(
                 is_bridge: json.bridge,
             }),
             puppet: None,
+            registered_at: Some(Time::now_utc()),
         })
         .await?;
     let app = Application {
@@ -210,6 +212,7 @@ async fn puppet_ensure(
                 external_url: None,
                 alias_id: None,
             }),
+            registered_at: Some(Time::now_utc()),
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))

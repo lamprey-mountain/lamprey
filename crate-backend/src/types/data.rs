@@ -30,6 +30,7 @@ pub struct DbUserCreate {
     pub description: Option<String>,
     pub bot: Option<Bot>,
     pub puppet: Option<Puppet>,
+    pub registered_at: Option<Time>,
 }
 
 #[derive(sqlx::Type)]

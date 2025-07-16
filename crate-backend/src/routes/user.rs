@@ -5,80 +5,16 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
-use common::v1::types::{MediaTrackInfo, MessageSync, User, UserPatch, UserWithRelationship};
+use common::v1::types::{
+    MediaTrackInfo, MessageSync, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::types::{MediaLinkType, UserIdReq};
+use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
-use super::util::Auth;
+use super::util::{Auth, AuthRelaxed, AuthWithSession};
 use crate::error::{Error, Result};
-
-// /// User create
-// #[utoipa::path(
-//     post,
-//     path = "/user",
-//     tags = ["user"],
-//     responses(
-//         (status = CREATED, body = User, description = "user created"),
-//         (status = OK, body = User, description = "user exists (puppet with same external_platform/id)"),
-//     ),
-// )]
-// #[deprecated = "will be split into different routes depending on user type"]
-// async fn user_create(
-//     Auth(auth_user_id): Auth,
-//     State(s): State<Arc<ServerState>>,
-//     Json(body): Json<UserCreate>,
-// ) -> Result<impl IntoResponse> {
-//     let parent_id = Some(auth_user_id);
-//     let data = s.data();
-//     let srv = s.services();
-//     let parent = srv.users.get(auth_user_id).await?;
-//     if !parent.user_type.can_create(&body.user_type) {
-//         return Err(Error::BadStatic("can't create that user"));
-//     };
-//     match &body.user_type {
-//         UserType::Bot { owner, .. } => match owner {
-//             BotOwner::User { user_id } if *user_id != auth_user_id => {
-//                 return Err(Error::BadStatic("bad owner id"));
-//             }
-//             _ => {}
-//         },
-//         UserType::Puppet {
-//             owner_id,
-//             alias_id,
-//             external_platform,
-//             external_id,
-//             ..
-//         } => {
-//             if alias_id.is_some() {
-//                 return Err(Error::Unimplemented);
-//             }
-//             if *owner_id != auth_user_id {
-//                 return Err(Error::BadStatic("bad owner id"));
-//             }
-//             let p = match &external_platform {
-//                 ExternalPlatform::Discord => "Discord",
-//                 ExternalPlatform::Other(o) => o.as_str(),
-//             };
-//             let existing = data.user_lookup_puppet(*owner_id, p, external_id).await?;
-//             if let Some(id) = existing {
-//                 let user = data.user_get(id).await?;
-//                 return Ok((StatusCode::OK, Json(user)));
-//             }
-//         }
-//         _ => {}
-//     };
-//     let user = data
-//         .user_create(DbUserCreate {
-//             parent_id,
-//             name: body.name,
-//             description: body.description,
-//             user_type: body.user_type,
-//         })
-//         .await?;
-//     Ok((StatusCode::CREATED, Json(user)))
-// }
 
 /// User update
 #[utoipa::path(
@@ -232,11 +168,98 @@ async fn user_audit_logs(
     Err(Error::Unimplemented)
 }
 
+/// Guest create
+///
+/// Create a guest account, with limited access to the platform.
+///
+/// - guests can read but not write public rooms, threads, messages, etc
+/// - when using an invite, they can act like a standard account in that one specific room/thread
+/// - they can be given an invite to a public room to bypass
+#[utoipa::path(
+    post,
+    path = "/guest",
+    tags = ["user"],
+    responses((status = CREATED, body = User, description = "guest account created")),
+)]
+async fn guest_create(
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+    Json(create): Json<UserCreate>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+
+    // Create a new guest user
+    let user = data
+        .user_create(DbUserCreate {
+            parent_id: None,
+            name: create.name,
+            description: create.description,
+            bot: None, // No longer using bot for guest status
+            puppet: None,
+            registered_at: None, // Mark as guest
+        })
+        .await?;
+
+    // Associate the current session with the new guest user
+    data.session_set_status(session.id, SessionStatus::Authorized { user_id: user.id })
+        .await?;
+    srv.sessions.invalidate(session.id).await; // Invalidate old session to force reload
+    let updated_session = srv.sessions.get(session.id).await?; // Get the updated session
+    s.broadcast(MessageSync::SessionCreate {
+        session: updated_session,
+    })?; // Broadcast session update
+
+    Ok((StatusCode::CREATED, Json(user)))
+}
+
+/// Guest upgrade
+///
+/// Attempt to upgrade this account to a full account. One or more of the following may need to be done:
+///
+/// - use a server invite
+/// - solve an antispam challenge, such as a captcha
+/// - add an authentication method, such as (email && password) || oauth
+#[utoipa::path(
+    post,
+    path = "/guest/upgrade",
+    tags = ["user"],
+    responses((status = OK, body = User, description = "upgraded")),
+)]
+async fn guest_upgrade(
+    AuthWithSession(_session, auth_user_id): AuthWithSession,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+
+    // Get the current user
+    let user = srv.users.get(auth_user_id).await?;
+
+    // Check if the user is actually a guest (registered_at is None)
+    if user.registered_at.is_some() {
+        return Err(Error::BadStatic("User is not a guest account"));
+    }
+
+    // Set registered_at to now to make them a regular user
+    data.user_set_registered_at(auth_user_id, Some(common::v1::types::util::Time::now_utc()))
+        .await?;
+    srv.users.invalidate(auth_user_id).await; // Invalidate user cache
+    let updated_user = srv.users.get(auth_user_id).await?; // Get the updated user
+
+    s.broadcast(MessageSync::UserUpdate {
+        user: updated_user.clone(),
+    })?; // Broadcast user update
+
+    Ok(Json(updated_user))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        // .routes(routes!(user_create))
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))
         .routes(routes!(user_audit_logs))
+        .routes(routes!(guest_create))
+        .routes(routes!(guest_upgrade))
 }

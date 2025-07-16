@@ -23,7 +23,6 @@ pub struct DbUser {
     pub puppet: Option<Value>,
     pub bot: Option<Value>,
     pub system: bool,
-    pub guest: Option<Value>,
     pub suspended: Option<Value>,
     pub registered_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
@@ -97,7 +96,6 @@ impl From<DbUser> for User {
             avatar: row.avatar.map(Into::into),
             bot: row.bot.and_then(|r| serde_json::from_value(dbg!(r)).ok()),
             puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
-            guest: row.guest.and_then(|r| serde_json::from_value(r).ok()),
             suspended: row
                 .suspended
                 .and_then(|r| serde_json::from_value(r).unwrap()),
@@ -120,17 +118,16 @@ impl DataUser for Postgres {
             avatar: None,
             status: types::user_status::Status::online(),
             bot: patch.bot,
-            system: false, // TODO: system users/messages
+            system: false,
             puppet: patch.puppet,
-            guest: None,         // TODO: guest users
-            suspended: None,     // TODO: account suspension
-            registered_at: None, // FIXME
+            suspended: None,
+            registered_at: patch.registered_at,
             deleted_at: None,
         };
         query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, bot, suspended, can_fork)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, bot, suspended, can_fork, registered_at)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
         "#,
             *user.id,
             *user.version_id,
@@ -141,6 +138,7 @@ impl DataUser for Postgres {
             serde_json::to_value(user.puppet)?,
             serde_json::to_value(user.bot)?,
             serde_json::to_value(user.suspended)?,
+            user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
         )
         .execute(&self.pool)
         .await?;
@@ -153,7 +151,7 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended
+            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
@@ -195,7 +193,7 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended
+            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
         "#,
             id.into_inner()
@@ -221,5 +219,22 @@ impl DataUser for Postgres {
         .fetch_optional(&self.pool)
         .await?;
         Ok(id.map(Into::into))
+    }
+
+    async fn user_set_registered_at(
+        &self,
+        user_id: UserId,
+        registered_at: Option<common::v1::types::util::Time>,
+    ) -> Result<UserVerId> {
+        let version_id = UserVerId::new();
+        query!(
+            "UPDATE usr SET version_id = $2, registered_at = $3 WHERE id = $1",
+            *user_id,
+            *version_id,
+            registered_at.map(|t| time::PrimitiveDateTime::from(t)),
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(version_id)
     }
 }
