@@ -25,8 +25,8 @@ use crate::{PeerCommand, PeerEventEnvelope, TrackIn, TrackOut, TrackState};
 #[derive(Debug)]
 pub struct Peer {
     rtc: Rtc,
-    socket: UdpSocket,
-    packet: [u8; 2000],
+    socket_v4: UdpSocket,
+    socket_v6: UdpSocket,
     inbound: HashMap<Mid, TrackIn>,
     outbound: Vec<TrackOut>,
     // outbound: HashMap<Mid, TrackOut>,
@@ -51,23 +51,23 @@ impl Peer {
             .build();
 
         let addr = crate::util::select_host_address_ipv4();
-        let socket = UdpSocket::bind(format!("{addr}:0")).await?;
-        let candidate = Candidate::host(socket.local_addr()?, "udp")?;
-        debug!("listen on {}", socket.local_addr().unwrap());
+        let socket_v4 = UdpSocket::bind(format!("{addr}:0")).await?;
+        let candidate = Candidate::host(socket_v4.local_addr()?, "udp")?;
+        debug!("listen on {}", socket_v4.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
 
         let addr = crate::util::select_host_address_ipv6();
-        let socket = UdpSocket::bind(format!("[{addr}]:0")).await?;
-        let candidate = Candidate::host(socket.local_addr()?, "udp")?;
-        debug!("listen on {}", socket.local_addr().unwrap());
+        let socket_v6 = UdpSocket::bind(format!("[{addr}]:0")).await?;
+        let candidate = Candidate::host(socket_v6.local_addr()?, "udp")?;
+        debug!("listen on {}", socket_v6.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
 
         let (send, recv) = mpsc::unbounded_channel();
 
         let mut peer = Self {
             rtc,
-            socket,
-            packet: [0; 2000],
+            socket_v4,
+            socket_v6,
             inbound: HashMap::new(),
             outbound: vec![],
             sdp_pending: None,
@@ -97,7 +97,15 @@ impl Peer {
                 Output::Timeout(v) => v,
                 Output::Transmit(v) => {
                     trace!("transmit {} bytes to {}", v.contents.len(), v.destination);
-                    self.socket.send_to(&v.contents, v.destination).await?;
+
+                    match v.destination {
+                        std::net::SocketAddr::V4(_) => {
+                            self.socket_v4.send_to(&v.contents, v.destination).await?;
+                        }
+                        std::net::SocketAddr::V6(_) => {
+                            self.socket_v6.send_to(&v.contents, v.destination).await?;
+                        }
+                    }
                     continue;
                 }
                 Output::Event(v) => {
@@ -161,19 +169,33 @@ impl Peer {
                 }
             };
 
+            let mut packet_v4 = [0u8; 2000];
+            let mut packet_v6 = [0u8; 2000];
             let input = select! {
                 _ = sleep_until(timeout.into()) => {
                     Input::Timeout(Instant::now())
                 }
-                recv = self.socket.recv_from(&mut self.packet) => {
+                recv = self.socket_v4.recv_from(&mut packet_v4) => {
                     let (n, source) = recv?;
                     Input::Receive(
                         Instant::now(),
                         Receive {
                             proto: Protocol::Udp,
                             source,
-                            destination: self.socket.local_addr()?,
-                            contents: self.packet[..n].try_into()?,
+                            destination: self.socket_v4.local_addr()?,
+                            contents: packet_v4[..n].try_into()?,
+                        },
+                    )
+                }
+                recv = self.socket_v6.recv_from(&mut packet_v6) => {
+                    let (n, source) = recv?;
+                    Input::Receive(
+                        Instant::now(),
+                        Receive {
+                            proto: Protocol::Udp,
+                            source,
+                            destination: self.socket_v6.local_addr()?,
+                            contents: packet_v6[..n].try_into()?,
                         },
                     )
                 }
@@ -282,11 +304,7 @@ impl Peer {
                 }
             }
             SignallingMessage::Want { tracks: _ } => todo!(),
-            SignallingMessage::Have {
-                tracks,
-                user_id,
-                thread_id,
-            } => panic!("server only"),
+            SignallingMessage::Have { .. } => panic!("server only"),
             SignallingMessage::VoiceState { state } => {
                 self.voice_state.thread_id = state.unwrap().thread_id;
             }
