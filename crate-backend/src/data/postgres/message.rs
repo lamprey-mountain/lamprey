@@ -38,6 +38,7 @@ pub struct DbMessage {
     pub created_at: Option<time::PrimitiveDateTime>,
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
+    pub removed_at: Option<time::PrimitiveDateTime>,
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -119,6 +120,7 @@ impl From<DbMessage> for Message {
             deleted_at: row.deleted_at.map(Time::from),
             edited_at: row.edited_at.map(Time::from),
             created_at: row.created_at.map(Time::from),
+            removed_at: row.removed_at.map(Time::from),
         }
     }
 }

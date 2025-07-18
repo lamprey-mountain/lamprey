@@ -57,6 +57,7 @@ pub struct Message {
     // pub moved_from: Option<(ThreadId, MessageId)>,
     pub created_at: Option<Time>,
     pub deleted_at: Option<Time>,
+    pub removed_at: Option<Time>,
     pub edited_at: Option<Time>,
     // // drop the is_?
     // pub is_ephemeral: bool,
@@ -578,6 +579,10 @@ impl MessageType {
     }
 
     pub fn is_editable(&self) -> bool {
+        matches!(self, MessageType::DefaultMarkdown(_))
+    }
+
+    pub fn is_movable(&self) -> bool {
         matches!(self, MessageType::DefaultMarkdown(_))
     }
 }

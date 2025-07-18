@@ -55,6 +55,7 @@ select
     msg.created_at,
     msg.edited_at,
     msg.deleted_at,
+    msg.removed_at,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"

@@ -208,6 +208,9 @@ async fn message_edit(
 }
 
 /// Delete message
+///
+/// Note that this endpoint allows deleting your own messages, while message
+/// moderate always requires the full permission
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/message/{message_id}",
@@ -362,25 +365,32 @@ struct MessageBulkDelete {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageBulkUndelete {
-    /// which messages to undelete
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    message_ids: Vec<MessageId>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageBulkMove {
+struct MessageMigrate {
     /// which messages to move
     #[serde(default)]
     #[validate(length(min = 1, max = 128))]
     message_ids: Vec<MessageId>,
 
-    /// keep original messages intact
-    copy: bool,
-
     /// must be in same room (for now...)
-    target_thread_id: ThreadId,
+    target_id: ThreadId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
+struct MessageModerate {
+    /// which messages to delete
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    delete: Vec<MessageId>,
+
+    /// which messages to remove
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    remove: Vec<MessageId>,
+
+    /// which messages to restore
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    restore: Vec<MessageId>,
 }
 
 /// Message delete bulk
@@ -391,6 +401,7 @@ struct MessageBulkMove {
     tags = ["message"],
     responses((status = NO_CONTENT, description = "bulk delete success")),
 )]
+#[deprecated = "use message_moderate"]
 async fn message_delete_bulk(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
@@ -429,38 +440,79 @@ async fn message_delete_bulk(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Message undelete (TODO)
+/// Message moderate (WIP)
 #[utoipa::path(
-    post,
-    path = "/thread/{thread_id}/messages/undelete",
+    patch,
+    path = "/thread/{thread_id}/message",
     params(("thread_id", description = "Thread id")),
     tags = ["message"],
-    responses((status = NO_CONTENT, description = "undelete success")),
+    responses((status = OK, description = "success")),
 )]
-async fn message_undelete(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<MessageBulkUndelete>,
-) -> Result<()> {
-    todo!()
+async fn message_moderate(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<MessageModerate>,
+) -> Result<StatusCode> {
+    json.validate()?;
+
+    if !json.remove.is_empty() || !json.restore.is_empty() {
+        return Err(Error::BadStatic(
+            "remove and restore are not implemented yet",
+        ));
+    }
+
+    if json.delete.is_empty() {
+        // nothing to do
+        return Ok(StatusCode::OK);
+    }
+
+    let data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::MessageDelete)?;
+
+    for id in &json.delete {
+        let message = data.message_get(thread_id, *id, user_id).await?;
+        if !message.message_type.is_deletable() {
+            return Err(Error::BadStatic("cant delete one of the messages"));
+        }
+    }
+
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    data.message_delete_bulk(thread_id, &json.delete).await?;
+    for id in &json.delete {
+        data.media_link_delete_all(id.into_inner()).await?;
+    }
+    s.broadcast_thread(
+        thread.id,
+        user_id,
+        reason,
+        MessageSync::MessageDeleteBulk {
+            thread_id,
+            message_ids: json.delete,
+        },
+    )
+    .await?;
+    s.services().threads.invalidate(thread_id).await; // last version id, message count
+    Ok(StatusCode::OK)
 }
 
 /// Message move (TODO)
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/messages/move",
+    path = "/thread/{thread_id}/migrate",
     params(("thread_id", description = "Thread id")),
     tags = ["message"],
     responses((status = NO_CONTENT, description = "move success")),
 )]
-async fn message_move(
+async fn message_migrate(
     Path(_thread_id): Path<ThreadId>,
     Auth(_user_id): Auth,
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<MessageBulkMove>,
+    Json(_json): Json<MessageMigrate>,
 ) -> Result<()> {
     todo!()
 }
@@ -530,6 +582,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_delete))
         .routes(routes!(message_delete_bulk))
         .routes(routes!(message_replies))
-        .routes(routes!(message_undelete))
-        .routes(routes!(message_move))
+        .routes(routes!(message_moderate))
+        .routes(routes!(message_migrate))
 }
