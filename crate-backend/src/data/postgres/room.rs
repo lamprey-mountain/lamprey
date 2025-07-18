@@ -21,13 +21,14 @@ impl DataRoom for Postgres {
         let room_id = Uuid::now_v7();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description)
-    	    VALUES ($1, $2, $3, $4)
+    	    INSERT INTO room (id, version_id, name, description, icon)
+    	    VALUES ($1, $2, $3, $4, $5)
         ",
             room_id,
             room_id,
             create.name,
             create.description,
+            create.icon.map(|i| *i),
         )
         .execute(&mut *conn)
         .await?;
@@ -46,6 +47,7 @@ impl DataRoom for Postgres {
                 room.version_id,
                 room.name,
                 room.description,
+                room.icon,
                 NULL::uuid as dm_uid_a,
                 NULL::uuid as dm_uid_b
             FROM room
@@ -75,6 +77,7 @@ impl DataRoom for Postgres {
                     room.version_id,
                     room.name,
                     room.description,
+                    room.icon,
                     NULL::uuid as dm_uid_a,
                 NULL::uuid as dm_uid_b
                 FROM room_member
@@ -100,7 +103,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT room.id, room.name, room.description
+            SELECT room.id, room.name, room.description, room.icon
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -111,11 +114,12 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
             patch.description.unwrap_or(room.description),
+            patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
         )
         .execute(&mut *tx)
         .await?;

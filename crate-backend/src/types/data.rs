@@ -22,6 +22,7 @@ pub struct DbRoom {
     pub description: Option<String>,
     pub dm_uid_a: Option<Uuid>,
     pub dm_uid_b: Option<Uuid>,
+    pub icon: Option<Uuid>,
 }
 
 pub struct DbUserCreate {
@@ -56,6 +57,7 @@ impl From<DbRoom> for Room {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
+            icon: row.icon.map(|i| i.into()),
             room_type: if row.dm_uid_a.is_some() {
                 RoomType::Dm {
                     participants: (row.dm_uid_a.unwrap().into(), row.dm_uid_b.unwrap().into()),
@@ -432,6 +434,7 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
+    AvatarRoom,
     Embed,
     CustomEmoji,
 }

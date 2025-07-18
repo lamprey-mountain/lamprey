@@ -17,8 +17,8 @@ use validator::Validate;
 use crate::{
     error::Result,
     types::{
-        MessageSync, PaginationQuery, PaginationResponse, Permission, Room, RoomCreate, RoomId,
-        RoomPatch,
+        MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission, Room,
+        RoomCreate, RoomId, RoomPatch,
     },
     Error, ServerState,
 };
@@ -38,8 +38,41 @@ async fn room_create(
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
+
+    // FIXME: run this in a transaction
+    let icon = json.icon;
+    if let Some(media_id) = icon {
+        let data = s.data();
+        let (media, _) = data.media_select(media_id).await?;
+        if !matches!(
+            media.source.info,
+            common::v1::types::MediaTrackInfo::Image(_)
+        ) {
+            return Err(Error::BadStatic("media not an image"));
+        }
+        match media.source.size {
+            common::v1::types::MediaSize::Bytes(size) => {
+                if size > 1024 * 256 {
+                    return Err(Error::BadStatic(
+                        "media is too big (max file size is 256KiB)",
+                    ));
+                }
+            }
+            common::v1::types::MediaSize::BytesPerSecond(_) => todo!(),
+        }
+        if !data.media_link_select(media_id).await?.is_empty() {
+            return Err(Error::BadStatic("media already used"));
+        }
+    }
+
     let room = s.services().rooms.create(json, user_id).await?;
+    if let Some(media_id) = icon {
+        let data = s.data();
+        data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
+            .await?;
+    }
     s.broadcast(MessageSync::RoomCreate { room: room.clone() })?;
+
     Ok((StatusCode::CREATED, Json(room)))
 }
 
@@ -149,7 +182,39 @@ async fn room_edit(
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
+
+    let icon = json.icon;
+    if let Some(Some(media_id)) = icon {
+        let data = s.data();
+        let (media, _) = data.media_select(media_id).await?;
+        if !matches!(
+            media.source.info,
+            common::v1::types::MediaTrackInfo::Image(_)
+        ) {
+            return Err(Error::BadStatic("media not an image"));
+        }
+        match media.source.size {
+            common::v1::types::MediaSize::Bytes(size) => {
+                if size > 1024 * 256 {
+                    return Err(Error::BadStatic(
+                        "media is too big (max file size is 256KiB)",
+                    ));
+                }
+            }
+            common::v1::types::MediaSize::BytesPerSecond(_) => todo!(),
+        }
+        if !data.media_link_select(media_id).await?.is_empty() {
+            return Err(Error::BadStatic("media already used"));
+        }
+    }
+
     let room = s.services().rooms.update(room_id, user_id, json).await?;
+    if let Some(Some(media_id)) = icon {
+        let data = s.data();
+        // TODO: cleanup old avatars
+        data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
+            .await?;
+    }
     let msg = MessageSync::RoomUpdate { room: room.clone() };
     s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok(Json(room))

@@ -102,6 +102,7 @@ impl ServiceRooms {
             .room_create(RoomCreate {
                 name: "(dm)".into(),
                 description: None,
+                icon: None,
             })
             .await?;
         let room_id = room.id;

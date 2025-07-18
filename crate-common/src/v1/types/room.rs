@@ -10,7 +10,7 @@ use validator::Validate;
 use crate::v1::types::{
     notifications::NotifsRoom,
     util::{some_option, Diff},
-    Permission, UserId,
+    MediaId, Permission, UserId,
 };
 
 use super::{ids::RoomId, util::Time};
@@ -38,6 +38,8 @@ pub struct Room {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
+
+    pub icon: Option<MediaId>,
 
     #[serde(flatten)]
     pub room_type: RoomType,
@@ -80,6 +82,8 @@ pub struct RoomCreate {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
+
+    pub icon: Option<MediaId>,
 }
 
 /// An update to a room
@@ -98,6 +102,8 @@ pub struct RoomPatch {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
+
+    pub icon: Option<Option<MediaId>>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
