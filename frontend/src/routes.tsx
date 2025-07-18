@@ -99,6 +99,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 	const thread = api.threads.fetch(() => p.params.thread_id);
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
+	// fetch threads to populate sidebar
+	api.threads.list(() => thread()?.room_id!);
+
 	return (
 		<>
 			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
