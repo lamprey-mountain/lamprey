@@ -158,9 +158,13 @@ export function Info(props: VoidProps<{ user: User }>) {
 				always underline links
 			</label>
 			<br />
+			<div class="danger">
+				<h3>danger zone</h3>
+				<label>
+					<button onClick={() => alert("todo")}>self destruct</button>
+					<span style="margin-left:8px">this will delete your account</span>
+				</label>
+			</div>
 		</div>
 	);
-	// <div style="border: solid red 1px;padding:2px;margin: 0 -2px">
-	// 	<h3>todo</h3>
-	// </div>
 }

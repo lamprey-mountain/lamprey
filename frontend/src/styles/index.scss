@@ -554,26 +554,26 @@ input[type="url"] {
 
 	& > header {
 		grid-column: span 2 / span 2;
-		background-color: $bg-300;
+		background-color: $bg-200;
 		border-bottom: solid 1px $sep-500;
 		padding: 0.5rem;
 	}
 
 	& > nav {
-		background-color: $bg-300;
-		padding: 0.25rem;
+		background-color: $bg-150;
 
-		& button {
-			width: 100%;
+		& a, button {
+		display: block;
+		padding: 2px 4px;
 			background-color: none;
 
 			&:hover,
 			&:focus {
-				background-color: $bg-400;
+				background-color: $bg-100;
 			}
 
 			&.selected {
-				background-color: $bg-300;
+				background-color: $bg-400;
 			}
 		}
 	}
@@ -581,6 +581,7 @@ input[type="url"] {
 	& > main {
 		&.padded {
 			padding: 0.25rem;
+			padding-right: calc(100% - 60ch);
 		}
 
 		overflow-y: auto;
@@ -588,6 +589,17 @@ input[type="url"] {
 
 	& button.spaced {
 		margin-left: 4px;
+	}
+
+	& .danger {
+		border: solid #e8374f 1px;
+		padding: 2px;
+		margin: 0 -2px;
+
+		& button {
+			background: #ba2f42;
+			border: solid #e8374f 1px;
+		}
 	}
 }
 
@@ -1486,8 +1498,6 @@ table {
 }
 
 .user-settings-info {
-	padding: 8px;
-
 	.profile {
 		display: grid;
 		grid-template-rows: auto 1fr;

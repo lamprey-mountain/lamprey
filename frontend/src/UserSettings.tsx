@@ -1,10 +1,8 @@
 import { For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Info, Sessions } from "./user_settings/mod.tsx";
+import { Applications, Email, Info, Sessions, Todo } from "./user_settings/mod.tsx";
 import type { User } from "sdk";
-import { Todo } from "./user_settings/Todo.tsx";
-import { Applications } from "./user_settings/Applications.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
@@ -12,7 +10,7 @@ const tabs = [
 	{ name: "audit log", path: "audit-log", component: Todo },
 	{ name: "notifications", path: "notifications", component: Todo },
 	{ name: "blocked users", path: "blocks", component: Todo },
-	{ name: "email", path: "email", component: Todo },
+	{ name: "email", path: "email", component: Email },
 	{ name: "applications", path: "applications", component: Applications },
 ];
 
@@ -37,7 +35,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 					</For>
 				</ul>
 			</nav>
-			<main>
+			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
 						component={currentTab()?.component}

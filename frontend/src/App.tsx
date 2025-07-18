@@ -58,6 +58,7 @@ import {
 	RouteThread,
 	RouteThreadSettings,
 } from "./routes.tsx";
+import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
@@ -84,6 +85,7 @@ const App: Component = () => {
 			<Route path="/debug" component={Debug} />
 			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />
+			<Route path="/verify-email" component={RouteVerifyEmail} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);
