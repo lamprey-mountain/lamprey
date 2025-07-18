@@ -110,7 +110,7 @@ const Search = () => {
 			</label>
 			<br />
 			<Show when={searchResults.loading}>loading...</Show>
-			<For each={searchResults() as any}>
+			<For each={searchResults.latest as any}>
 				{(m: Message) => (
 					<li class="message menu-message" data-message-id={m.id}>
 						<MessageView message={m} />
@@ -127,8 +127,7 @@ const InviteView = () => {
 	const setInviteCode = leadingAndTrailing(throttle, setInviteCodeRaw, 300);
 	const [invite] = createResource(inviteCode, async (code) => {
 		if (!code) return null;
-		const { data, error } = await api.invites.fetch(() => code);
-		if (error) throw new Error(error);
+		const data = await api.invites.fetch(() => code);
 		return data;
 	});
 
@@ -136,14 +135,15 @@ const InviteView = () => {
 		<>
 			<label>
 				invite code:{" "}
-				<input type="text" onInput={(e) => setInviteCode(e.target.value)} />
+				<input
+					type="text"
+					onInput={(e) => setInviteCode(e.currentTarget.value)}
+				/>
 			</label>
 			<br />
 			<Show when={invite.loading}>loading...</Show>
 			<Show when={invite.latest}>
-				<pre>
-					{JSON.stringify(invite.latest, null, 4)}
-				</pre>
+				<pre>{JSON.stringify(invite.latest, null, 4)}</pre>
 			</Show>
 		</>
 	);
@@ -157,17 +157,18 @@ const UrlEmbedDbg = () => {
 	async function generate(e: SubmitEvent) {
 		e.preventDefault();
 		if (!url) return;
-		const { data } = await api.client.http.POST("/api/v1/debug/embed-url", {
+		const res = await api.client.http.POST("/api/v1/debug/embed-url", {
 			body: { url },
 		});
-		setData(data as any);
+		setData(res.data as any);
 	}
 
 	return (
 		<>
 			<form onSubmit={generate}>
 				<label>
-					url: <input type="url" onInput={(e) => url = e.target.value} />
+					url:{" "}
+					<input type="url" onInput={(e) => (url = e.currentTarget.value)} />
 				</label>
 			</form>
 			<Show when={data()}>
@@ -187,7 +188,7 @@ const TextDbg = () => {
 
 	return (
 		<>
-			<textarea onInput={(e) => setText(e.target.value)}>
+			<textarea onInput={(e) => setText(e.currentTarget.value)}>
 				{defaultText}
 			</textarea>
 			<div>{transformBlock(text())}</div>

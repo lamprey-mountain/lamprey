@@ -24,7 +24,7 @@ export const Home = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "invite code?",
-			cont(invite_code) {
+			cont(invite_code: string | null) {
 				if (!invite_code) return;
 				ctx.client.http.POST("/api/v1/invite/{invite_code}", {
 					params: {

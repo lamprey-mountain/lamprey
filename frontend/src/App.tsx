@@ -160,7 +160,7 @@ export const Root: Component = (props: ParentProps) => {
 		},
 	};
 
-	const api = createApi(client, events, ctx);
+	const api = createApi(client, events);
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 
