@@ -225,16 +225,6 @@ export const Root: Component = (props: ParentProps) => {
 
 	const { handleContextMenu } = useContextMenu(setMenu);
 
-	const handleMessage = (e: MessageEvent) => {
-		console.log("received message from serviceworker", e.data);
-	};
-
-	// navigator.serviceWorker?.addEventListener("message", handleMessage);
-
-	onCleanup(() => {
-		// navigator.serviceWorker?.removeEventListener("message", handleMessage);
-	});
-
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
 	(globalThis as any).client = client;
@@ -249,16 +239,6 @@ export const Root: Component = (props: ParentProps) => {
 			ctx.dispatch({ do: "server.init_session" });
 		});
 	}
-
-	// createEffect(() => {
-	// 	// FIXME: don't fetch all threads every time room cache changes
-	// 	// fine for now, but will be massively less efficient the more rooms/threads there are
-	// 	for (const room_id of api.rooms.cache.keys()) {
-	// 		api.threads.list(() => room_id);
-	// 	}
-	// });
-
-	// const [sw] = createResource(() => navigator.serviceWorker.ready);
 
 	const state = from(ctx.client.state);
 
