@@ -559,7 +559,6 @@ export const Editor = (props: EditorProps) => {
 			aria-label="chat input"
 			aria-placeholder={props.placeholder}
 			aria-multiline="true"
-			
 		>
 		</div>
 	);

@@ -2,9 +2,6 @@ import { type Api } from "../api.tsx";
 import { type ChatCtx, type Data } from "../context.ts";
 import { type SetStoreFunction } from "solid-js/store";
 
-
-
-
 export type Middleware = (
 	ctx: ChatCtx,
 	api: Api,

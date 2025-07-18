@@ -7,7 +7,6 @@ import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
-import { transformBlock } from "./text.tsx";
 
 export const Debug = () => {
 	return (
@@ -74,10 +73,6 @@ export const Debug = () => {
 						<div class="colored teal"></div> teal
 					</li>
 				</ul>
-			</details>
-			<details>
-				<summary>text</summary>
-				<TextDbg />
 			</details>
 		</div>
 	);
@@ -177,21 +172,6 @@ const UrlEmbedDbg = () => {
 				</div>
 			</Show>
 			<pre>{JSON.stringify(data(), null, 4)}</pre>
-		</>
-	);
-};
-
-const TextDbg = () => {
-	const defaultText =
-		`hello ~b{world} with ~b{~em{nesting}}, and ~em{maybe} even a ~a{https://example.com}{~em{nice} link}`;
-	const [text, setText] = createSignal<string>(defaultText);
-
-	return (
-		<>
-			<textarea onInput={(e) => setText(e.currentTarget.value)}>
-				{defaultText}
-			</textarea>
-			<div>{transformBlock(text())}</div>
 		</>
 	);
 };

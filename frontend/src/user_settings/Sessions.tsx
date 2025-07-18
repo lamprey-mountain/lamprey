@@ -2,6 +2,7 @@ import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import type { Pagination, SessionT, UserT } from "../types.ts";
+import { ResourceFetcherInfo } from "solid-js";
 
 export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();
@@ -11,33 +12,41 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const [sessions, { refetch: fetchSessions }] = createResource<
 		Pagination<SessionT> & { user_id: string },
 		string
-	>(() => props.user.id, async (user_id, { value }) => {
-		if (value?.user_id !== user_id) value = undefined;
-		if (value?.has_more === false) return value;
-		const lastId = value?.items.at(-1)?.id ??
-			"00000000-0000-0000-0000-000000000000";
-		const { data, error } = await ctx.client.http.GET("/api/v1/session", {
-			params: {
-				query: {
-					from: lastId,
-					limit: 100,
-					dir: "f",
+	>(
+		() => props.user.id,
+		async (
+			user_id: string,
+			{ value }: ResourceFetcherInfo<
+				Pagination<SessionT> & { user_id: string }
+			>,
+		) => {
+			if (value?.user_id !== user_id) value = undefined;
+			if (value?.has_more === false) return value;
+			const lastId = value?.items.at(-1)?.id ??
+				"00000000-0000-0000-0000-000000000000";
+			const { data, error } = await ctx.client.http.GET("/api/v1/session", {
+				params: {
+					query: {
+						from: lastId,
+						limit: 100,
+						dir: "f",
+					},
 				},
-			},
-		});
-		if (error) throw new Error(error);
-		return {
-			...data,
-			items: [...value?.items ?? [], ...data.items],
-			user_id,
-		};
-	});
+			});
+			if (error) throw new Error(error);
+			return {
+				...data,
+				items: [...value?.items ?? [], ...data.items],
+				user_id,
+			};
+		},
+	);
 
 	function renameSession(session_id: string) {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "name?",
-			cont(name) {
+			cont(name: string | null) {
 				if (!name) return;
 				ctx.client.http.PATCH("/api/v1/session/{session_id}", {
 					params: { path: { session_id } },
@@ -51,7 +60,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "really delete this session?",
-			cont(confirmed) {
+			cont(confirmed: string | null) {
 				if (!confirmed) return;
 				ctx.client.http.DELETE("/api/v1/session/{session_id}", {
 					params: { path: { session_id } },
@@ -73,8 +82,12 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 										{s.name}
 									</Show>{" "}
 									- {s.status}
-									<button onClick={() => renameSession(s.id)}>rename</button>
-									<button onClick={() => revokeSession(s.id)}>revoke</button>
+									<button type="button" onClick={() => renameSession(s.id)}>
+										rename
+									</button>
+									<button type="button" onClick={() => revokeSession(s.id)}>
+										revoke
+									</button>
 								</div>
 								<div>
 									<code class="dim">{s.id}</code>
@@ -86,7 +99,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 						)}
 					</For>
 				</ul>
-				<button onClick={fetchSessions}>more</button>
+				<button type="button" onClick={fetchSessions}>more</button>
 			</Show>
 		</>
 	);

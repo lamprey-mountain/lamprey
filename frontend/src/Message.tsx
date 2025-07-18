@@ -26,7 +26,6 @@ import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
-import { transformBlock } from "./text.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -112,7 +111,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 function MessageTextTagged(props: MessageTextTaggedProps) {
 	return (
 		<div class="body markdown" classList={{ local: props.message.is_local }}>
-			{transformBlock(props.message.content ?? "")}
+			(deprecated message :( will be removed)
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited">{" "}(edited)</span>
 			</Show>

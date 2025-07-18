@@ -34,7 +34,10 @@ function combine(
 				break;
 			}
 			case "modal.alert": {
-				update("modals", (modals) => [{ type: "alert", text: action.text }, ...modals]);
+				update(
+					"modals",
+					(modals) => [{ type: "alert", text: action.text }, ...modals],
+				);
 				break;
 			}
 			case "modal.prompt": {

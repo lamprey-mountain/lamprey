@@ -27,7 +27,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	return (
 		<>
 			<h2>applications</h2>
-			<button onClick={create}>create</button>
+			<button type="button" onClick={create}>create</button>
 			<For each={list()?.items ?? []}>
 				{(app) => {
 					return (

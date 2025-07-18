@@ -60,6 +60,8 @@ import {
 } from "./routes.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
 export const CDN_URL = localStorage.getItem("cdn_url") ??
@@ -220,8 +222,6 @@ export const Root: Component = (props: ParentProps) => {
 		}
 	};
 
-	
-
 	// TODO: refactor
 	const handleContextMenu = (e: MouseEvent) => {
 		const targetEl = e.target as HTMLElement;
@@ -349,32 +349,35 @@ export const Root: Component = (props: ParentProps) => {
 	const state = from(ctx.client.state);
 
 	let rootRef: HTMLDivElement | undefined;
+
+	const tanstackClient = new QueryClient();
 	return (
-		<api.Provider>
-			<chatctx.Provider value={ctx}>
-				<div
-					ref={rootRef}
-					id="root"
-					classList={{
-						"underline-links": ctx.settings.get("underline_links") === "yes",
-					}}
-					onClick={handleClick}
-					onKeyDown={handleKeypress}
-					
-					onContextMenu={handleContextMenu}
-				>
-					{props.children}
-					<Portal mount={document.getElementById("overlay")!}>
-						<Overlay />
-					</Portal>
-					<Show when={state() !== "ready"}>
-						<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
-							{state()}
-						</div>
-					</Show>
-				</div>
-			</chatctx.Provider>
-		</api.Provider>
+		<QueryClientProvider client={tanstackClient}>
+			<api.Provider>
+				<chatctx.Provider value={ctx}>
+					<div
+						ref={rootRef}
+						id="root"
+						classList={{
+							"underline-links": ctx.settings.get("underline_links") === "yes",
+						}}
+						onClick={handleClick}
+						onKeyDown={handleKeypress}
+						onContextMenu={handleContextMenu}
+					>
+						{props.children}
+						<Portal mount={document.getElementById("overlay")!}>
+							<Overlay />
+						</Portal>
+						<Show when={state() !== "ready"}>
+							<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
+								{state()}
+							</div>
+						</Show>
+					</div>
+				</chatctx.Provider>
+			</api.Provider>
+		</QueryClientProvider>
 	);
 };
 

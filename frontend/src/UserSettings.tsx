@@ -1,7 +1,13 @@
 import { For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Applications, Email, Info, Sessions, Todo } from "./user_settings/mod.tsx";
+import {
+	Applications,
+	Email,
+	Info,
+	Sessions,
+	Todo,
+} from "./user_settings/mod.tsx";
 import type { User } from "sdk";
 
 const tabs = [

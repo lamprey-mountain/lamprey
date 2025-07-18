@@ -19,7 +19,7 @@ export function Email(_props: VoidProps<{ user: User }>) {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "email?",
-			cont(email) {
+			cont(email: string | null) {
 				if (!email) return;
 				api.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
 					params: { path: { user_id: "@self", addr: email } },
@@ -32,7 +32,7 @@ export function Email(_props: VoidProps<{ user: User }>) {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "delete email?",
-			cont(conf) {
+			cont(conf: boolean) {
 				if (!conf) return;
 				api.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
 					params: { path: { user_id: "@self", addr: email } },
@@ -56,18 +56,22 @@ export function Email(_props: VoidProps<{ user: User }>) {
 			<For each={emails()}>
 				{(email) => (
 					<div>
-						{email.email}{" "}
-						{email.is_verified ? "(verified)" : "(unverified)"}
-						<button onClick={() => deleteEmail(email.email)}>delete</button>
+						{email.email} {email.is_verified ? "(verified)" : "(unverified)"}
+						<button type="button" onClick={() => deleteEmail(email.email)}>
+							delete
+						</button>
 						{!email.is_verified && (
-							<button onClick={() => resendVerification(email.email)}>
+							<button
+								type="button"
+								onClick={() => resendVerification(email.email)}
+							>
 								resend verification
 							</button>
 						)}
 					</div>
 				)}
 			</For>
-			<button onClick={addEmail}>add email</button>
+			<button type="button" onClick={addEmail}>add email</button>
 		</>
 	);
 }
