@@ -5,7 +5,6 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
-use common::v1::types::notifications::InboxFilters;
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
@@ -44,7 +43,6 @@ use error::Result;
         types::Role,
         // utoipa seems to forget to add these types specifically
         types::UserIdReq,
-        InboxFilters,
         MessageSync,
         PaginationQuery<MessageId>,
     )),

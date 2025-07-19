@@ -191,3 +191,5 @@ genid!(Application);
 genid!(Server); // rename? Worker, Host
 genid!(Livestream);
 genid!(RtcPeer);
+
+genid!(Notification);
