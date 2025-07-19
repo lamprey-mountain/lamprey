@@ -213,47 +213,6 @@ async fn guest_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-/// Guest upgrade
-///
-/// Attempt to upgrade this account to a full account. One or more of the following may need to be done:
-///
-/// - use a server invite
-/// - solve an antispam challenge, such as a captcha
-/// - add an authentication method, such as (email && password) || oauth
-#[utoipa::path(
-    post,
-    path = "/guest/upgrade",
-    tags = ["user"],
-    responses((status = OK, body = User, description = "upgraded")),
-)]
-async fn guest_upgrade(
-    Auth(auth_user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let srv = s.services();
-
-    // Get the current user
-    let user = srv.users.get(auth_user_id).await?;
-
-    // Check if the user is actually a guest (registered_at is None)
-    if user.registered_at.is_some() {
-        return Err(Error::BadStatic("User is not a guest account"));
-    }
-
-    // Set registered_at to now to make them a regular user
-    data.user_set_registered_at(auth_user_id, Some(Time::now_utc()))
-        .await?;
-    srv.users.invalidate(auth_user_id).await; // Invalidate user cache
-    let updated_user = srv.users.get(auth_user_id).await?; // Get the updated user
-
-    s.broadcast(MessageSync::UserUpdate {
-        user: updated_user.clone(),
-    })?;
-
-    Ok(Json(updated_user))
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -261,5 +220,4 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_delete))
         .routes(routes!(user_audit_logs))
         .routes(routes!(guest_create))
-        .routes(routes!(guest_upgrade))
 }

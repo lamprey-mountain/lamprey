@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::util::Time;
 use common::v1::types::{
     Invite, InviteCode, InviteCreate, InvitePatch, InviteTarget, InviteTargetId,
     InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
@@ -147,6 +148,12 @@ pub async fn invite_resolve(
 /// - A room invite will add the user to the room
 /// - A thread invite will currently do the same thing as a room invite
 /// - A server invite will upgrade the user to a full account
+///
+/// using a server invite may require the guest to first
+///
+/// - solve an antispam challenge, such as a captcha
+/// - add an authentication method, such as (email && password) || oauth
+
 #[utoipa::path(
     post,
     path = "/invite/{invite_code}",
@@ -195,9 +202,13 @@ pub async fn invite_use(
             .await?;
         }
         InviteTarget::Server => {
-            // Upgrade the user to a full account
+            let srv = s.services();
+            let user = srv.users.get(user_id).await?;
+            if user.registered_at.is_some() {
+                return Err(Error::BadStatic("User is not a guest account"));
+            }
             s.data()
-                .user_set_registered_at(user_id, Some(common::v1::types::util::Time::now_utc()))
+                .user_set_registered_at(user_id, Some(Time::now_utc()))
                 .await?;
             s.services().users.invalidate(user_id).await;
             let updated_user = s.services().users.get(user_id).await?;
