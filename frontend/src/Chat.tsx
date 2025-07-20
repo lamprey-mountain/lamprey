@@ -19,6 +19,7 @@ import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "./api/messages.ts";
 import { getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
+import { Portal } from "solid-js/web";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -217,6 +218,8 @@ export const ChatMain = (props: ChatProps) => {
 
 	createEffect(on(list.scrollPos, setPos));
 
+	const [dragging, setDragging] = createSignal(false);
+
 	return (
 		<div
 			ref={chatRef}
@@ -260,15 +263,19 @@ export const ChatMain = (props: ChatProps) => {
 			}}
 			onDragEnter={(e) => {
 				e.preventDefault();
+				setDragging(true);
 			}}
 			onDragOver={(e) => {
 				e.preventDefault();
+				setDragging(true);
 			}}
 			onDragLeave={(e) => {
 				e.preventDefault();
+				setDragging(false);
 			}}
 			onDrop={(e) => {
 				e.preventDefault();
+				setDragging(false);
 				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
 					console.log(file);
 					const local_id = uuidv7();
@@ -288,6 +295,15 @@ export const ChatMain = (props: ChatProps) => {
 				{(item) => renderTimelineItem(props.thread, item)}
 			</list.List>
 			<Input thread={props.thread} />
+			<Portal>
+				<Show when={dragging()}>
+					<div class="dnd-upload-message">
+						<div class="inner">
+							drop to upload
+						</div>
+					</div>
+				</Show>
+			</Portal>
 		</div>
 	);
 };

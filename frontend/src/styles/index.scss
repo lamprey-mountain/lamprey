@@ -1640,3 +1640,22 @@ del {
 	border: 2px solid transparent;
 	background-clip: content-box;
 }
+
+.dnd-upload-message {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: #111d;
+	display: grid;
+	place-items: center;
+	pointer-events: none;
+
+	.inner {
+		background: $bg-200;
+		border: solid $sep-500 1px;
+		padding: 16px;
+		border-radius: 4px;
+	}
+}
