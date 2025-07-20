@@ -213,17 +213,26 @@ input[type="submit"] {
 			top: 0;
 			translate: 0 -100%;
 			right: 4px;
-			display: flex;
 			border: solid $sep-500 1px;
-			flex-direction: column;
-			max-width: 320px;
 			max-height: 320px;
 			overflow: auto;
-			padding: 4px;
 			background: $bg-200;
+			display: flex;
+			flex-direction: column;
+			box-shadow: 2px 2px 8px #1114;
 
-			& > article {
-				background: red;
+			header {
+				background: $bg-150;
+				padding: 4px;
+				margin-bottom: 4px;
+				line-height: 1;
+			}
+
+			ul {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				padding: 4px;
 			}
 		}
 
@@ -499,7 +508,7 @@ em {
 	}
 }
 
-menu {
+.contextmenu menu {
 	background-color: $bg-300;
 	border: solid 1px $sep-500;
 	box-shadow: 2px 2px 8px $bg-100;
@@ -562,7 +571,8 @@ input[type="url"] {
 	& > nav {
 		background-color: $bg-150;
 
-		& a, button {
+		& a,
+		button {
 			display: block;
 			padding: 2px 4px;
 			background-color: none;
@@ -1550,6 +1560,7 @@ table {
 .reactions {
 	display: flex;
 	gap: 4px;
+
 	li {
 		cursor: pointer;
 		border: solid #445 1px;
@@ -1576,4 +1587,40 @@ del {
 	color: $color-red;
 	background: oklch(var(--color-red) / 0.1);
 	text-decoration: line-through;
+}
+
+.upload-item {
+	background: $bg-300;
+	border-radius: 4px;
+	display: flex;
+	overflow: hidden;
+	width: 320px;
+	height: 48px;
+
+	.thumb {
+		background: #8af;
+		aspect-ratio: 1;
+		height: 100%;
+		background-size: cover;
+		border: solid $bg-300 1px;
+		border-right: none;
+		border-radius: 4px;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.info {
+		padding: 4px;
+		flex: 1;
+	}
+
+	.progress {
+		height: 8px;
+		width: 100%;
+		background-color: $bg-400;
+
+		.bar {
+			fill: $link-500;
+		}
+	}
 }

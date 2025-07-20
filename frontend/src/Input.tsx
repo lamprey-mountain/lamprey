@@ -6,6 +6,7 @@ import { uuidv7 } from "uuidv7";
 import { AttachmentView } from "./Message.tsx";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
+import { onCleanup } from "solid-js";
 
 type InputProps = {
 	thread: ThreadT;
@@ -100,11 +101,14 @@ export function Input(props: InputProps) {
 				</Show>
 			</div>
 			<Show when={atts()?.length}>
-				<ul class="attachments">
-					<For each={atts()}>
-						{(att) => <RenderAttachment2 thread={props.thread} att={att} />}
-					</For>
-				</ul>
+				<div class="attachments">
+					<header>attachments</header>
+					<ul>
+						<For each={atts()}>
+							{(att) => <RenderUploadItem thread={props.thread} att={att} />}
+						</For>
+					</ul>
+				</div>
 			</Show>
 			<Show when={reply_id()}>
 				<div class="reply">
@@ -143,20 +147,32 @@ export function Input(props: InputProps) {
 	);
 }
 
-function RenderAttachment2(props: { thread: ThreadT; att: Attachment }) {
+function RenderUploadItem(props: { thread: ThreadT; att: Attachment }) {
 	const ctx = useCtx();
+	const thumbUrl = URL.createObjectURL(props.att.file);
+	onCleanup(() => {
+		URL.revokeObjectURL(thumbUrl);
+	});
 
 	function renderInfo(att: Attachment) {
 		if (att.status === "uploading") {
 			if (att.progress === 1) {
-				return `processing...`;
+				return `processing`;
 			} else {
 				const percent = (att.progress * 100).toFixed(2);
-				return `uploading (${percent}%)`;
+				return `${percent}%`;
 			}
 		} else {
-			// return "done";
-			return <AttachmentView media={att.media} size={64} />;
+			return "";
+			// return <AttachmentView media={att.media} size={64} />;
+		}
+	}
+
+	function getProgress(att: Attachment) {
+		if (att.status === "uploading") {
+			return att.progress;
+		} else {
+			return 1;
 		}
 	}
 
@@ -164,42 +180,53 @@ function RenderAttachment2(props: { thread: ThreadT; att: Attachment }) {
 		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: props.thread.id });
 	}
 
+	function pause() {
+		ctx.dispatch({
+			do: "upload.pause",
+			local_id: props.att.local_id,
+		});
+	}
+
+	function resume() {
+		ctx.dispatch({
+			do: "upload.resume",
+			local_id: props.att.local_id,
+		});
+	}
+
 	return (
 		<>
-			<div style="display:grid;grid-template-rows:auto auto;border: red 1px">
-				<div>
-					<div>{props.att.file.name} {renderInfo(props.att)}</div>
-					<button onClick={() => removeAttachment(props.att.local_id)}>
-						cancel/remove
-					</button>
-					<Switch>
-						<Match when={props.att.status === "uploading" && props.att.paused}>
-							<button
-								onClick={() =>
-									ctx.dispatch({
-										do: "upload.resume",
-										local_id: props.att.local_id,
-									})}
-							>
-								resume
-							</button>
-						</Match>
-						<Match when={props.att.status === "uploading"}>
-							<button
-								onClick={() =>
-									ctx.dispatch({
-										do: "upload.pause",
-										local_id: props.att.local_id,
-									})}
-							>
-								pause
-							</button>
-						</Match>
-					</Switch>
+			<div class="upload-item">
+				<div class="thumb" style={{ "background-image": `url(${thumbUrl})` }}>
 				</div>
-				<div>
-					<div style="background:$sep-500;width: 100%;height:4px;border-radius:2px;overflow:hidden">
-						<div style="background:$link-500;width:30%">s</div>
+				<div class="info">
+					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
+					</svg>
+					<div style="display: flex">
+						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+							{props.att.file.name}
+							<span style="color:#888;margin-left:.5ex">
+								{renderInfo(props.att)}
+							</span>
+						</div>
+						<menu>
+							<Switch>
+								<Match
+									when={props.att.status === "uploading" && props.att.paused}
+								>
+									<button onClick={resume}>
+										⬆️
+									</button>
+								</Match>
+								<Match when={props.att.status === "uploading"}>
+									<button onClick={pause}>⏸️</button>
+								</Match>
+							</Switch>
+							<button onClick={() => removeAttachment(props.att.local_id)}>
+								🗑️
+							</button>
+						</menu>
 					</div>
 				</div>
 			</div>
