@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, guest, registered_at, deleted_at, suspended\n            FROM usr WHERE id = $1\n            FOR UPDATE\n            ",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n            FROM usr WHERE id = $1\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -50,21 +50,16 @@
       },
       {
         "ordinal": 9,
-        "name": "guest",
-        "type_info": "Jsonb"
-      },
-      {
-        "ordinal": 10,
         "name": "registered_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 11,
+        "ordinal": 10,
         "name": "deleted_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 12,
+        "ordinal": 11,
         "name": "suspended",
         "type_info": "Jsonb"
       }
@@ -86,9 +81,8 @@
       false,
       true,
       true,
-      true,
       true
     ]
   },
-  "hash": "832b66a3847a4b3be02ba5516d7fae62cefc43ce9723feba569dab28c8a29d1b"
+  "hash": "900e06739337973a26c41a25e9aae114bcf6e80cf159228ee1ad3b39c181f2ce"
 }

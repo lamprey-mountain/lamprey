@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, bot, suspended, can_fork, registered_at)\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Jsonb",
+        "Jsonb",
+        "Jsonb",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f109f3f340b32009f78849a13cf7a51d4290e4cf3b36161acf119100e6493644"
+}

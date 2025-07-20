@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT room.id, room.name, room.description\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
+  "query": "\n            SELECT room.id, room.name, room.description, room.icon\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "description",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "icon",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -27,8 +32,9 @@
     "nullable": [
       false,
       false,
+      true,
       true
     ]
   },
-  "hash": "7f7c690be9ec3e7870df9fbf62315b968737400647795d18d164d8c1183f5f25"
+  "hash": "54f73d60c4a83af4caad69af9e7bb6642153c77475c595925d7fcd234206b001"
 }
