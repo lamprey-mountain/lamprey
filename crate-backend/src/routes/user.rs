@@ -213,11 +213,45 @@ async fn guest_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
+/// User suspend (TODO)
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/suspend",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = OK, body = User, description = "success")),
+)]
+async fn user_suspend(
+    Path(_target_user_id): Path<UserIdReq>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// User unsuspend (TODO)
+#[utoipa::path(
+    delete,
+    path = "/user/{user_id}/suspend",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = OK, body = User, description = "success")),
+)]
+async fn user_unsuspend(
+    Path(_target_user_id): Path<UserIdReq>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))
         .routes(routes!(user_audit_logs))
+        .routes(routes!(user_suspend))
+        .routes(routes!(user_unsuspend))
         .routes(routes!(guest_create))
 }

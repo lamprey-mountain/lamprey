@@ -1,6 +1,7 @@
-use crate::v1::types::{AuditLogId, MessageSync, RoomId, UserId};
+use crate::v1::types::{AuditLogId, MessageSync, RoomId, SessionId, UserId};
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -32,4 +33,132 @@ pub struct AuditLog {
     // theres probably a better way to do this, but its the best solution i could think of for now
     pub payload_prev: Option<Box<MessageSync>>,
     // pub payload_prev: Option<Box<Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AuditLogEntryWip {
+    /// Unique id idenfitying this entry
+    pub id: AuditLogId,
+
+    /// Room this happened in
+    pub room_id: RoomId,
+
+    /// User who caused this entry to be created
+    pub user_id: UserId,
+
+    /// Session of the user who caused this
+    pub session_id: Option<SessionId>,
+
+    /// User supplied reason why this happened
+    pub reason: Option<String>,
+
+    pub changes: Vec<AuditLogChange>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AuditLogChange {
+    pub new: Value,
+    pub old: Value,
+    pub key: Value,
+}
+
+mod entry_type {
+    use crate::v1::types::{EmojiId, InviteCode, MessageId, MessageVerId, RoleId, ThreadId};
+
+    use super::AuditLogChange;
+
+    pub enum AuditLogEntryTypeWip {
+        RoomCreate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        RoomUpdate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        ThreadCreate {
+            thread_id: ThreadId,
+            changes: Vec<AuditLogChange>,
+        },
+
+        ThreadUpdate {
+            thread_id: ThreadId,
+            changes: Vec<AuditLogChange>,
+        },
+
+        MessageDelete {
+            thread_id: ThreadId,
+            message_id: MessageId,
+        },
+
+        MessageVersionDelete {
+            thread_id: ThreadId,
+            message_id: MessageId,
+            version_id: MessageVerId,
+        },
+
+        MessageDeleteBulk {
+            thread_id: ThreadId,
+            message_ids: Vec<MessageId>,
+        },
+
+        RoleCreate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        RoleUpdate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        RoleDelete {
+            role_id: RoleId,
+        },
+
+        InviteCreate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        InviteUpdate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        InviteDelete {
+            code: InviteCode,
+        },
+
+        /// remove all reactions
+        ReactionPurge {
+            thread_id: ThreadId,
+            message_id: MessageId,
+        },
+
+        EmojiCreate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        EmojiUpdate {
+            changes: Vec<AuditLogChange>,
+        },
+
+        EmojiDelete {
+            emoji_id: EmojiId,
+        },
+
+        // below aren't sync events
+        ThreadOverwriteSet,
+        ThreadOverwriteDelete,
+        MemberKick,
+        MemberBan,
+        MemberUnban,
+        MemberUpdate,
+        RoleApply,
+        RoleUnapply,
+        MessagePin,
+        MessageUnpin,
+        BotAdd,
+        MessageRemove,
+        MessageRestore,
+    }
 }

@@ -71,6 +71,7 @@ impl From<DbRoom> for Room {
             online_count: Default::default(),
             thread_count: Default::default(),
             archived_at: None,
+            public: false,
         }
     }
 }
@@ -148,12 +149,10 @@ impl From<DbThread> for Thread {
             // FIXME: calculate field
             online_count: 0,
             tags: Default::default(),
-            is_locked: Default::default(),
-            is_announcement: Default::default(),
-            reactions: Default::default(),
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: None,
             deleted_at: None,
+            locked_at: None,
         }
     }
 }

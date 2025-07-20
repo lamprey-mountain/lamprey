@@ -56,6 +56,9 @@ pub struct Room {
     // rooms can't be outright deleted, but some people might want to "clean up"
     // or "close" old rooms. archiving could be a good way to do that.
     pub archived_at: Option<Time>,
+
+    /// anyone can view and join
+    pub public: bool,
 }
 
 /// User-specific room data

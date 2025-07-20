@@ -24,10 +24,9 @@ use crate::{
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
-/// Create a thread
+/// Create a thread in a room
 #[utoipa::path(
     post,
-    // path = "/thread",
     path = "/room/{room_id}/thread",
     params(("room_id", description = "Room id")),
     tags = ["thread"],
@@ -35,7 +34,7 @@ use crate::error::Result;
         (status = CREATED, body = Thread, description = "Create thread success"),
     )
 )]
-async fn thread_create(
+async fn thread_create_room(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -112,6 +111,25 @@ async fn thread_create(
     )
     .await?;
     Ok((StatusCode::CREATED, Json(thread)))
+}
+
+/// Create a thread outside of a room, for dms
+#[utoipa::path(
+    post,
+    path = "/thread",
+    tags = ["thread"],
+    responses(
+        (status = CREATED, body = Thread, description = "Create thread success"),
+    )
+)]
+async fn thread_create(
+    Path((room_id,)): Path<(RoomId,)>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<ThreadCreate>,
+) -> Result<()> {
+    todo!()
 }
 
 /// Get a thread
@@ -382,19 +400,15 @@ async fn thread_unarchive(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Delete thread
+/// Remove thread
 #[utoipa::path(
-    delete,
-    path = "/thread/{thread_id}",
-    params(
-        ("thread_id", description = "Thread id"),
-    ),
+    put,
+    path = "/thread/{thread_id}/remove",
+    params(("thread_id", description = "Thread id")),
     tags = ["thread"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
+    responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_delete(
+async fn thread_remove(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     HeaderReason(reason): HeaderReason,
@@ -419,19 +433,15 @@ async fn thread_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Undelete thread
+/// Restore thread
 #[utoipa::path(
-    post,
-    path = "/thread/{thread_id}/undelete",
-    params(
-        ("thread_id", description = "Thread id"),
-    ),
+    delete,
+    path = "/thread/{thread_id}/remove",
+    params(("thread_id", description = "Thread id")),
     tags = ["thread"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
+    responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_undelete(
+async fn thread_restore(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
     HeaderReason(reason): HeaderReason,
@@ -493,8 +503,49 @@ async fn thread_typing(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Lock thread (TODO)
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/lock",
+    params(("thread_id", description = "Thread id")),
+    tags = ["thread"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn thread_lock(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<()> {
+    let _data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure(Permission::ThreadLock)?;
+    todo!()
+}
+
+/// Unlock thread (TODO)
+#[utoipa::path(
+    delete,
+    path = "/thread/{thread_id}/lock",
+    params(("thread_id", description = "Thread id")),
+    tags = ["thread"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn thread_unlock(
+    Path(thread_id): Path<ThreadId>,
+    Auth(user_id): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<()> {
+    let _data = s.data();
+    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure(Permission::ThreadLock)?;
+    todo!()
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .routes(routes!(thread_create_room))
         .routes(routes!(thread_create))
         .routes(routes!(thread_get))
         .routes(routes!(thread_list))
@@ -504,7 +555,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_unpin))
         .routes(routes!(thread_archive))
         .routes(routes!(thread_unarchive))
-        .routes(routes!(thread_delete))
-        .routes(routes!(thread_undelete))
+        .routes(routes!(thread_remove))
+        .routes(routes!(thread_restore))
         .routes(routes!(thread_typing))
+        .routes(routes!(thread_lock))
+        .routes(routes!(thread_unlock))
 }

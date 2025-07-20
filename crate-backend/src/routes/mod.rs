@@ -16,6 +16,7 @@ mod message;
 mod moderation;
 mod notification;
 mod permission_overwrite;
+mod public;
 mod reaction;
 mod relationship;
 mod role;
@@ -46,6 +47,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(moderation::routes())
         .merge(notification::routes())
         .merge(permission_overwrite::routes())
+        .merge(public::routes())
         .merge(reaction::routes())
         .merge(relationship::routes())
         .merge(role::routes())

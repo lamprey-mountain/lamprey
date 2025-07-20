@@ -49,9 +49,6 @@ use table::{ThreadTypeTablePrivate, ThreadTypeTablePublic};
 #[cfg(feature = "feat_thread_type_report")]
 use report::{ThreadTypeReportPrivate, ThreadTypeReportPublic};
 
-#[cfg(feature = "feat_reactions")]
-use crate::v1::types::reaction::ReactionCounts;
-
 /// A thread
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -98,20 +95,9 @@ pub struct Thread {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Vec<TagId>,
 
-    /// if this thread is locked and cannot be interacted with anymore
-    // TODO(#243): implement this. it makes life much easier.
-    pub is_locked: bool,
-
-    /// if this should be treated as an announcement
-    /// contents will be copied into a new room in all following room
-    pub is_announcement: bool,
-
-    /// emoji reactions to this thread
-    #[cfg(feature = "feat_reactions")]
-    pub reactions: ReactionCounts,
-
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
+    pub locked_at: Option<Time>,
 
     /// permission overwrites for this thread
     pub permission_overwrites: Vec<PermissionOverwrite>,
