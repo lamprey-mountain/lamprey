@@ -77,6 +77,52 @@ export const Home = () => {
 		location.reload(); // TODO: less hacky logout
 	}
 
+	async function createSession() {
+		const { data } = await ctx.client.http.POST("/api/v1/session", { body: {} });
+		localStorage.setItem("token", data?.token!);
+		location.reload();
+	}
+
+	async function createGuest() {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "name?",
+			cont(name) {
+				if (!name) return;
+				ctx.client.http.POST("/api/v1/guest", { body: { name } });
+			}
+		});
+	}
+
+	async function setPassword() {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "password?",
+			cont(password) {
+				if (!password) return;
+				ctx.client.http.PUT("/api/v1/auth/password", { body: { password } })
+			}
+		});
+	}
+
+	async function loginWithEmailPassword() {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "email?",
+			cont(email) {
+				if (!email) return;
+				ctx.dispatch({
+					do: "modal.prompt",
+					text: "password?",
+					cont(password) {
+						if (!password) return;
+						ctx.client.http.POST("/api/v1/auth/password", { body: { email, type: "Email", password } })
+					}
+				});
+			}
+		});
+	}
+
 	const api = useApi();
 
 	return (
@@ -87,6 +133,18 @@ export const Home = () => {
 			<button onClick={loginGithub}>login with github</button>
 			<br />
 			<button onClick={logout}>logout</button>
+			<br />
+			<br />
+			<button onClick={createSession}>create session</button>
+			<br />
+			<button onClick={createGuest}>create guest</button>
+			<br />
+			<button onClick={setPassword}>set password</button>
+			<br />
+			<button onClick={loginWithEmailPassword}>
+				login with email/password
+			</button>
+			<br />
 			<br />
 			<Show when={api.users.cache.get("@self")}>
 				<button onClick={createRoom}>
