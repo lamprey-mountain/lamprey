@@ -389,30 +389,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/guest/upgrade": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Guest upgrade
-		 * @description Attempt to upgrade this account to a full account. One or more of the following may need to be done:
-		 *
-		 *     - use a server invite
-		 *     - solve an antispam challenge, such as a captcha
-		 *     - add an authentication method, such as (email && password) || oauth
-		 */
-		post: operations["guest_upgrade"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/inbox": {
 		parameters: {
 			query?: never;
@@ -421,20 +397,16 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Inbox list (TODO)
+		 * Inbox get (TODO)
 		 * @description List notifications.
 		 */
-		get: operations["inbox_query"];
+		get: operations["inbox_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Inbox edit (TODO)
-		 * @description Edit notifications in the inbox.
-		 */
-		patch: operations["inbox_patch"];
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/internal/rpc": {
@@ -469,6 +441,11 @@ export interface paths {
 		 * @description - A room invite will add the user to the room
 		 *     - A thread invite will currently do the same thing as a room invite
 		 *     - A server invite will upgrade the user to a full account
+		 *
+		 *     using a server invite may require the guest to first
+		 *
+		 *     - solve an antispam challenge, such as a captcha
+		 *     - add an authentication method, such as (email && password) || oauth
 		 */
 		post: operations["invite_use"];
 		/** Invite delete */
@@ -558,6 +535,40 @@ export interface paths {
 		 * @description Report media
 		 */
 		post: operations["report_media"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/public/rooms": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Public rooms list (TODO) */
+		get: operations["public_rooms"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/public/threads": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Public threads list (TODO) */
+		get: operations["public_threads"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -681,16 +692,16 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
 		/**
 		 * Notification room configure (TODO)
 		 * @description Edit notification settings for a room.
 		 */
-		patch: operations["notification_room_configure"];
+		put: operations["notification_room_configure"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/emoji": {
@@ -1015,8 +1026,8 @@ export interface paths {
 		/** List threads in a room */
 		get: operations["thread_list"];
 		put?: never;
-		/** Create a thread */
-		post: operations["thread_create"];
+		/** Create a thread in a room */
+		post: operations["thread_create_room"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1082,15 +1093,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Invite server list (TODO)
+		 * Invite server list
 		 * @description List invites that allow registration on a server
 		 */
 		get: operations["invite_server_list"];
 		put?: never;
 		/**
-		 * Invite server create (TODO)
+		 * Invite server create
 		 * @description Create an invite that allows registration on a server.
-		 *     Using the invite upgrades a guest (readonly?) account (also todo) into a full account
 		 */
 		post: operations["invite_server_create"];
 		delete?: never;
@@ -1136,6 +1146,23 @@ export interface paths {
 		patch: operations["session_update"];
 		trace?: never;
 	};
+	"/api/v1/thread": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Create a thread outside of a room, for dms */
+		post: operations["thread_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/thread/{thread_id}": {
 		parameters: {
 			query?: never;
@@ -1147,8 +1174,7 @@ export interface paths {
 		get: operations["thread_get"];
 		put?: never;
 		post?: never;
-		/** Delete thread */
-		delete: operations["thread_delete"];
+		delete?: never;
 		options?: never;
 		head?: never;
 		/** Edit a thread */
@@ -1201,16 +1227,16 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
 		/**
 		 * Notification thread configure (TODO)
 		 * @description Edit notification settings for a thread.
 		 */
-		patch: operations["notification_thread_configure"];
+		put: operations["notification_thread_configure"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/context/{message_id}": {
@@ -1228,6 +1254,24 @@ export interface paths {
 		put?: never;
 		post?: never;
 		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/lock": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Lock thread (TODO) */
+		put: operations["thread_lock"];
+		post?: never;
+		/** Unlock thread (TODO) */
+		delete: operations["thread_unlock"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1285,7 +1329,8 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Message moderate (WIP) */
+		patch: operations["message_moderate"];
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/message/{message_id}": {
@@ -1299,7 +1344,11 @@ export interface paths {
 		get: operations["message_get"];
 		put?: never;
 		post?: never;
-		/** Delete message */
+		/**
+		 * Delete message
+		 * @description Note that this endpoint allows deleting your own messages, while message
+		 *     moderate always requires the full permission
+		 */
 		delete: operations["message_delete"];
 		options?: never;
 		head?: never;
@@ -1419,7 +1468,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Message delete bulk */
+		/**
+		 * Message delete bulk
+		 * @deprecated
+		 */
 		post: operations["message_delete_bulk"];
 		delete?: never;
 		options?: never;
@@ -1427,7 +1479,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/messages/move": {
+	"/api/v1/thread/{thread_id}/migrate": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1437,24 +1489,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Message move (TODO) */
-		post: operations["message_move"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/messages/undelete": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Message undelete (TODO) */
-		post: operations["message_undelete"];
+		post: operations["message_migrate"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1474,6 +1509,24 @@ export interface paths {
 		post?: never;
 		/** Thread permission delete */
 		delete: operations["permission_thread_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/thread/{thread_id}/remove": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Remove thread */
+		put: operations["thread_remove"];
+		post?: never;
+		/** Restore thread */
+		delete: operations["thread_restore"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1554,23 +1607,6 @@ export interface paths {
 		 * @description Send a typing notification to a thread
 		 */
 		post: operations["thread_typing"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/undelete": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Undelete thread */
-		post: operations["thread_undelete"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1817,6 +1853,24 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/suspend": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** User suspend (TODO) */
+		post: operations["user_suspend"];
+		/** User unsuspend (TODO) */
+		delete: operations["user_unsuspend"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/voice/region": {
 		parameters: {
 			query?: never;
@@ -2029,10 +2083,6 @@ export interface components {
 		/** @description a single unicode emoji */
 		EmojiUnicode: string;
 		ExternalPlatform: null | string;
-		Guest: {
-			/** @description if this guest user can register */
-			registerable: boolean;
-		};
 		/** @description webrtc ice candidate */
 		IceCandidate: string;
 		/**
@@ -2057,67 +2107,6 @@ export interface components {
 			language?: null | components["schemas"]["Language"];
 			/** Format: int64 */
 			width: number;
-		};
-		/** @enum {string} */
-		InboxFilter:
-			| "Reminder"
-			| "MentionsUser"
-			| "MentionsBulk"
-			| "Reply"
-			| "JoinedUnread"
-			| "Suggestion"
-			| "IncludeRead"
-			| "IncludeMuted";
-		/** @description Which notifications to include */
-		InboxFilters: components["schemas"]["InboxFilter"][];
-		InboxPatch: {
-			/** @description add something to the thread as a notification */
-			add?: components["schemas"]["InboxPatchAdd"][];
-			/** @description mark notifications as read */
-			mark_read?: components["schemas"]["InboxPatchRead"][];
-			/** @description mark notifications as unread */
-			mark_unread?: components["schemas"]["InboxPatchUnread"][];
-			prune_before?: null | components["schemas"]["Time"];
-		};
-		InboxPatchAdd: {
-			added_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Thread";
-		} | {
-			added_at?: null | components["schemas"]["Time"];
-			message_id: components["schemas"]["Id"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
-		};
-		InboxPatchRead: {
-			read_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Thread";
-		} | {
-			message_id: components["schemas"]["Id"];
-			read_at?: null | components["schemas"]["Time"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
-		};
-		InboxPatchUnread: {
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Thread";
-		} | {
-			message_id: components["schemas"]["Id"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
 		};
 		/** @description ways to interact with a message */
 		Interactions: {
@@ -2189,6 +2178,9 @@ export interface components {
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Thread";
+		} | {
+			/** @enum {string} */
+			type: "Server";
 		};
 		InviteWithMetadata: components["schemas"]["Invite"] & {
 			/**
@@ -2347,6 +2339,7 @@ export interface components {
 			/** @description unique string sent by the client to identify this message
 			 *     maybe i will replace with a header so nonces can be used everywhere */
 			nonce?: string | null;
+			removed_at?: null | components["schemas"]["Time"];
 			thread_id: components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
@@ -2356,18 +2349,6 @@ export interface components {
 		};
 		MessageBulkDelete: {
 			/** @description which messages to delete */
-			message_ids?: components["schemas"]["Id"][];
-		};
-		MessageBulkMove: {
-			/** @description keep original messages intact */
-			copy: boolean;
-			/** @description which messages to move */
-			message_ids?: components["schemas"]["Id"][];
-			/** @description must be in same room (for now...) */
-			target_thread_id: components["schemas"]["Id"];
-		};
-		MessageBulkUndelete: {
-			/** @description which messages to undelete */
 			message_ids?: components["schemas"]["Id"][];
 		};
 		MessageCreate: {
@@ -2445,6 +2426,20 @@ export interface components {
 			actor_user_id: components["schemas"]["Id"];
 			reason?: string | null;
 			target_user_id: components["schemas"]["Id"];
+		};
+		MessageMigrate: {
+			/** @description which messages to move */
+			message_ids?: components["schemas"]["Id"][];
+			/** @description must be in same room (for now...) */
+			target_id: components["schemas"]["Id"];
+		};
+		MessageModerate: {
+			/** @description which messages to delete */
+			delete?: components["schemas"]["Id"][];
+			/** @description which messages to remove */
+			remove?: components["schemas"]["Id"][];
+			/** @description which messages to restore */
+			restore?: components["schemas"]["Id"][];
 		};
 		/** @description audit log entries as a message (builtin moderation logging?) */
 		MessageModerationLog: {
@@ -2744,8 +2739,8 @@ export interface components {
 			width?: number | null;
 		};
 		/** @description how long to mute for */
-		MuteDuration: "Forever" | {
-			Until: components["schemas"]["Time"];
+		Mute: {
+			expires_at?: null | components["schemas"]["Time"];
 		};
 		/**
 		 * @description how to handle an event
@@ -2753,39 +2748,24 @@ export interface components {
 		 */
 		NotifAction: "Notify" | "Watching" | "Ignore";
 		/** @description a notification; a unit of stuff that may show up in your inbox or be pushed to you */
-		Notification: components["schemas"]["NotificationInfo"] & {
-			/** @description when this notification was created
-			 *     can be set in the future to create a reminder */
-			added_at: components["schemas"]["Time"];
-			read_at?: null | components["schemas"]["Time"];
-		};
-		NotificationInfo: {
-			reason: components["schemas"]["NotificationReasonThread"];
-			room_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Thread";
-		} | {
+		Notification: {
+			/** @description when this was created */
+			created_at: components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			/** @description the id of the message that was sent */
 			message_id: components["schemas"]["Id"];
-			reason: components["schemas"]["NotificationReasonMessage"];
-			room_id: components["schemas"]["Id"];
+			/** @description why this was created */
+			reason: components["schemas"]["NotificationReason"];
+			/** @description the thread this message was sent in */
 			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
 		};
 		/** @enum {string} */
-		NotificationReasonMessage:
-			| "Reminder"
-			| "MentionsUser"
-			| "MentionsBulk"
-			| "Reply";
-		/** @enum {string} */
-		NotificationReasonThread: "Reminder" | "JoinedUnread" | "Suggestion";
+		NotificationReason: "Mention" | "MentionBulk" | "Reply" | "New";
 		/** @description notification config for a user (works globally) */
 		NotifsGlobal: {
 			mentions: components["schemas"]["NotifAction"];
 			messages: components["schemas"]["NotifAction"];
-			mute?: null | components["schemas"]["MuteDuration"];
+			mute?: null | components["schemas"]["Mute"];
 			room_dm: components["schemas"]["NotifAction"];
 			room_private: components["schemas"]["NotifAction"];
 			room_public: components["schemas"]["NotifAction"];
@@ -2795,14 +2775,14 @@ export interface components {
 		NotifsRoom: {
 			mentions?: null | components["schemas"]["NotifAction"];
 			messages?: null | components["schemas"]["NotifAction"];
-			mute?: null | components["schemas"]["MuteDuration"];
+			mute?: null | components["schemas"]["Mute"];
 			threads?: null | components["schemas"]["NotifAction"];
 		};
 		/** @description notification config for a thread */
 		NotifsThread: {
 			mentions?: null | components["schemas"]["NotifAction"];
 			messages?: null | components["schemas"]["NotifAction"];
-			mute?: null | components["schemas"]["MuteDuration"];
+			mute?: null | components["schemas"]["Mute"];
 		};
 		OauthInitResponse: {
 			/** Format: uri */
@@ -2896,6 +2876,7 @@ export interface components {
 				/** @description unique string sent by the client to identify this message
 				 *     maybe i will replace with a header so nonces can be used everywhere */
 				nonce?: string | null;
+				removed_at?: null | components["schemas"]["Time"];
 				thread_id: components["schemas"]["Id"];
 				version_id: components["schemas"]["Id"];
 			})[];
@@ -2904,12 +2885,17 @@ export interface components {
 		};
 		PaginationResponse_Notification: {
 			has_more: boolean;
-			items: (components["schemas"]["NotificationInfo"] & {
-				/** @description when this notification was created
-				 *     can be set in the future to create a reminder */
-				added_at: components["schemas"]["Time"];
-				read_at?: null | components["schemas"]["Time"];
-			})[];
+			items: {
+				/** @description when this was created */
+				created_at: components["schemas"]["Time"];
+				id: components["schemas"]["Id"];
+				/** @description the id of the message that was sent */
+				message_id: components["schemas"]["Id"];
+				/** @description why this was created */
+				reason: components["schemas"]["NotificationReason"];
+				/** @description the thread this message was sent in */
+				thread_id: components["schemas"]["Id"];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -2950,6 +2936,7 @@ export interface components {
 			items: (components["schemas"]["RoomType"] & {
 				archived_at?: null | components["schemas"]["Time"];
 				description?: string | null;
+				icon?: null | components["schemas"]["Id"];
 				/** @description A unique identifier for this room */
 				id: components["schemas"]["Id"];
 				/**
@@ -2963,6 +2950,8 @@ export interface components {
 				 * @description number of people who are online in this room
 				 */
 				online_count: number;
+				/** @description anyone can view and join */
+				public: boolean;
 				/**
 				 * Format: int64
 				 * @description number of active threads
@@ -3023,11 +3012,7 @@ export interface components {
 					deleted_at?: null | components["schemas"]["Time"];
 					description?: string | null;
 					id: components["schemas"]["Id"];
-					/** @description if this should be treated as an announcement
-					 *     contents will be copied into a new room in all following room */
-					is_announcement: boolean;
-					/** @description if this thread is locked and cannot be interacted with anymore */
-					is_locked: boolean;
+					locked_at?: null | components["schemas"]["Time"];
 					/**
 					 * Format: int64
 					 * @description number of people in this room
@@ -3043,8 +3028,6 @@ export interface components {
 					online_count: number;
 					/** @description permission overwrites for this thread */
 					permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-					/** @description emoji reactions to this thread */
-					reactions: components["schemas"]["ReactionCounts"];
 					room_id?: null | components["schemas"]["Id"];
 					/** @description tags that are applied to this thread */
 					tags: components["schemas"]["Id"][];
@@ -3330,6 +3313,7 @@ export interface components {
 		Room: components["schemas"]["RoomType"] & {
 			archived_at?: null | components["schemas"]["Time"];
 			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["Id"];
 			/**
@@ -3343,6 +3327,8 @@ export interface components {
 			 * @description number of people who are online in this room
 			 */
 			online_count: number;
+			/** @description anyone can view and join */
+			public: boolean;
 			/**
 			 * Format: int64
 			 * @description number of active threads
@@ -3357,6 +3343,7 @@ export interface components {
 		/** @description Data required to create a room */
 		RoomCreate: {
 			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
 			name: string;
 		};
 		RoomMember: components["schemas"]["RoomMembership"] & {
@@ -3389,6 +3376,7 @@ export interface components {
 		/** @description An update to a room */
 		RoomPatch: {
 			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
 			name?: string | null;
 		};
 		RoomType: {
@@ -3576,11 +3564,7 @@ export interface components {
 				deleted_at?: null | components["schemas"]["Time"];
 				description?: string | null;
 				id: components["schemas"]["Id"];
-				/** @description if this should be treated as an announcement
-				 *     contents will be copied into a new room in all following room */
-				is_announcement: boolean;
-				/** @description if this thread is locked and cannot be interacted with anymore */
-				is_locked: boolean;
+				locked_at?: null | components["schemas"]["Time"];
 				/**
 				 * Format: int64
 				 * @description number of people in this room
@@ -3596,8 +3580,6 @@ export interface components {
 				online_count: number;
 				/** @description permission overwrites for this thread */
 				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-				/** @description emoji reactions to this thread */
-				reactions: components["schemas"]["ReactionCounts"];
 				room_id?: null | components["schemas"]["Id"];
 				/** @description tags that are applied to this thread */
 				tags: components["schemas"]["Id"][];
@@ -3758,7 +3740,6 @@ export interface components {
 			bot?: null | components["schemas"]["Bot"];
 			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
-			guest?: null | components["schemas"]["Guest"];
 			id: components["schemas"]["Id"];
 			name: string;
 			puppet?: null | components["schemas"]["Puppet"];
@@ -3776,6 +3757,10 @@ export interface components {
 			};
 			/** @description global notification config */
 			notifs: components["schemas"]["NotifsGlobal"];
+		};
+		UserCreate: {
+			description?: string | null;
+			name: string;
 		};
 		UserIdReq: null | components["schemas"]["Id"];
 		UserPatch: {
@@ -4426,7 +4411,11 @@ export interface operations {
 			path?: never;
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["UserCreate"];
+			};
+		};
 		responses: {
 			/** @description guest account created */
 			201: {
@@ -4439,38 +4428,13 @@ export interface operations {
 			};
 		};
 	};
-	guest_upgrade: {
+	inbox_get: {
 		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description upgraded */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["User"];
-				};
-			};
-		};
-	};
-	inbox_query: {
-		parameters: {
-			query: {
+			query?: {
 				from?: string;
 				to?: string;
 				dir?: "b" | "f";
 				limit?: number;
-				include: components["schemas"]["InboxFilters"];
-				/** @description only include notifications from this room */
-				room_id?: components["schemas"]["Id"][];
-				/** @description only include notifications from this thread */
-				thread_id?: components["schemas"]["Id"][];
 			};
 			header?: never;
 			path?: never;
@@ -4487,28 +4451,6 @@ export interface operations {
 					"application/json":
 						components["schemas"]["PaginationResponse_Notification"];
 				};
-			};
-		};
-	};
-	inbox_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["InboxPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 		};
 	};
@@ -4788,6 +4730,46 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Report"];
+				};
+			};
+		};
+	};
+	public_rooms: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	public_threads: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
 				};
 			};
 		};
@@ -5971,7 +5953,7 @@ export interface operations {
 			};
 		};
 	};
-	thread_create: {
+	thread_create_room: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -6252,6 +6234,30 @@ export interface operations {
 			};
 		};
 	};
+	thread_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ThreadCreate"];
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
 	thread_get: {
 		parameters: {
 			query?: never;
@@ -6272,27 +6278,6 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Thread"];
 				};
-			};
-		};
-	};
-	thread_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 		};
 	};
@@ -6474,6 +6459,48 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["ContextResponse"];
 				};
+			};
+		};
+	};
+	thread_lock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_unlock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -6679,6 +6706,31 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Message"];
 				};
+			};
+		};
+	};
+	message_moderate: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageModerate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -7018,7 +7070,7 @@ export interface operations {
 			};
 		};
 	};
-	message_move: {
+	message_migrate: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7030,36 +7082,11 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["MessageBulkMove"];
+				"application/json": components["schemas"]["MessageMigrate"];
 			};
 		};
 		responses: {
 			/** @description move success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_undelete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessageBulkUndelete"];
-			};
-		};
-		responses: {
-			/** @description undelete success */
 			204: {
 				headers: {
 					[name: string]: unknown;
@@ -7104,6 +7131,48 @@ export interface operations {
 				thread_id: components["schemas"]["Id"];
 				/** @description Role or user id */
 				overwrite_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_restore: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
 			};
 			cookie?: never;
 		};
@@ -7240,27 +7309,6 @@ export interface operations {
 		};
 	};
 	thread_typing: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_undelete: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7721,6 +7769,52 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Report"];
+				};
+			};
+		};
+	};
+	user_suspend: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["User"];
+				};
+			};
+		};
+	};
+	user_unsuspend: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["User"];
 				};
 			};
 		};
