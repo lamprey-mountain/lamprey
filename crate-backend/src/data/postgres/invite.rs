@@ -28,9 +28,9 @@ impl DataInvite for Postgres {
             insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
             values ('room', $1, $2, $3, $4, $5)
         "#,
-            room_id.into_inner(),
+            *room_id,
             code.0,
-            creator_id.into_inner(),
+            *creator_id,
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
             max_uses.map(|n| n as i32),
         )
@@ -77,11 +77,13 @@ impl DataInvite for Postgres {
         .await?;
         let target = match row.target_type.as_str() {
             "room" => {
-                let room = self.room_get(RoomId::from(row.target_id)).await?;
+                let room = self.room_get(RoomId::from(row.target_id.unwrap())).await?;
                 InviteTarget::Room { room }
             }
             "thread" => {
-                let thread = self.thread_get(ThreadId::from(row.target_id)).await?;
+                let thread = self
+                    .thread_get(ThreadId::from(row.target_id.unwrap()))
+                    .await?;
                 let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;
                 InviteTarget::Thread { room, thread }
@@ -155,7 +157,7 @@ impl DataInvite for Postgres {
         let room = self.room_get(room_id).await?;
         for row in raw.into_iter().take(p.limit as usize) {
             assert_eq!(row.target_type, "room");
-            assert_eq!(row.target_id, room_id.into_inner());
+            assert_eq!(row.target_id, Some(*room_id));
             let target = InviteTarget::Room { room: room.clone() };
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
             let creator_id = creator.id;

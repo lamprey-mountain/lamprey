@@ -402,7 +402,7 @@ impl From<ThreadMembership> for DbMembership {
 pub struct DbInvite {
     pub code: String,
     pub target_type: String,
-    pub target_id: Uuid,
+    pub target_id: Option<Uuid>,
     pub creator_id: Uuid,
     pub max_uses: Option<i32>,
     pub uses: i32,
