@@ -208,7 +208,7 @@ pub async fn invite_use(
                 return Err(Error::BadStatic("User is not a guest account"));
             }
             s.data()
-                .user_set_registered_at(user_id, Some(Time::now_utc()))
+                .user_set_registered(user_id, Some(Time::now_utc()), invite.invite.code.0)
                 .await?;
             s.services().users.invalidate(user_id).await;
             let updated_user = s.services().users.get(user_id).await?;

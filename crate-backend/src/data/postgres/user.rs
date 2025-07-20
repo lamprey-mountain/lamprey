@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{self};
 use serde::Deserialize;
 use serde_json::Value;
@@ -221,17 +222,19 @@ impl DataUser for Postgres {
         Ok(id.map(Into::into))
     }
 
-    async fn user_set_registered_at(
+    async fn user_set_registered(
         &self,
         user_id: UserId,
-        registered_at: Option<common::v1::types::util::Time>,
+        registered_at: Option<Time>,
+        parent_invite: String,
     ) -> Result<UserVerId> {
         let version_id = UserVerId::new();
         query!(
-            "UPDATE usr SET version_id = $2, registered_at = $3 WHERE id = $1",
+            "UPDATE usr SET version_id = $2, registered_at = $3, parent_invite = $4 WHERE id = $1",
             *user_id,
             *version_id,
             registered_at.map(|t| time::PrimitiveDateTime::from(t)),
+            parent_invite,
         )
         .execute(&self.pool)
         .await?;

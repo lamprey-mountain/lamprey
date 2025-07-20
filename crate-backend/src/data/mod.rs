@@ -339,10 +339,11 @@ pub trait DataUser {
         owner_id: UserId,
         external_id: &str,
     ) -> Result<Option<UserId>>;
-    async fn user_set_registered_at(
+    async fn user_set_registered(
         &self,
         user_id: UserId,
         registered_at: Option<common::v1::types::util::Time>,
+        parent_invite: String,
     ) -> Result<UserVerId>;
 }
 
