@@ -1624,3 +1624,19 @@ del {
 		}
 	}
 }
+
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: $bg-150;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: $bg-300;
+	border-radius: 4px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
