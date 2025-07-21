@@ -62,6 +62,7 @@ import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
+import { generateNickname } from "./nick.ts";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";

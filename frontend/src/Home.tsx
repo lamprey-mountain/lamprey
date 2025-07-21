@@ -1,4 +1,4 @@
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi } from "./api.tsx";
@@ -6,6 +6,10 @@ import { flags } from "./flags.ts";
 
 export const Home = () => {
 	const ctx = useCtx();
+	const api = useApi();
+	const [email, setEmail] = createSignal("");
+	const [password, setPassword] = createSignal("");
+	const [confirmPassword, setConfirmPassword] = createSignal("");
 
 	function createRoom() {
 		ctx.dispatch({
@@ -77,10 +81,54 @@ export const Home = () => {
 		location.reload(); // TODO: less hacky logout
 	}
 
-	async function createSession() {
-		const { data } = await ctx.client.http.POST("/api/v1/session", { body: {} });
-		localStorage.setItem("token", data?.token!);
-		location.reload();
+	async function handleAuthSubmit(e: SubmitEvent) {
+		e.preventDefault();
+
+		if (!email()) {
+			ctx.dispatch({
+				do: "modal.alert",
+				text: "missing email",
+			});
+		}
+
+		if (!password()) {
+			ctx.dispatch({
+				do: "modal.alert",
+				text: "missing password",
+			});
+		}
+
+		ctx.client.http.POST("/api/v1/auth/password", {
+			body: { type: "Email", email: email(), password: password() },
+		});
+	}
+
+	async function handlePasswordSet(e: SubmitEvent) {
+		e.preventDefault();
+
+		if (!password()) {
+			ctx.dispatch({
+				do: "modal.alert",
+				text: "missing password",
+			});
+		}
+		if (!confirmPassword()) {
+			ctx.dispatch({
+				do: "modal.alert",
+				text: "missing confirmPassword",
+			});
+		}
+
+		if (password() !== confirmPassword()) {
+			ctx.dispatch({
+				do: "modal.alert",
+				text: "password !== confirmPassword",
+			});
+		}
+
+		ctx.client.http.PUT("/api/v1/auth/password", {
+			body: { password: password() },
+		});
 	}
 
 	async function createGuest() {
@@ -90,60 +138,81 @@ export const Home = () => {
 			cont(name) {
 				if (!name) return;
 				ctx.client.http.POST("/api/v1/guest", { body: { name } });
-			}
+			},
 		});
 	}
-
-	async function setPassword() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "password?",
-			cont(password) {
-				if (!password) return;
-				ctx.client.http.PUT("/api/v1/auth/password", { body: { password } })
-			}
-		});
-	}
-
-	async function loginWithEmailPassword() {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "email?",
-			cont(email) {
-				if (!email) return;
-				ctx.dispatch({
-					do: "modal.prompt",
-					text: "password?",
-					cont(password) {
-						if (!password) return;
-						ctx.client.http.POST("/api/v1/auth/password", { body: { email, type: "Email", password } })
-					}
-				});
-			}
-		});
-	}
-
-	const api = useApi();
 
 	return (
 		<div class="home">
 			<h2>home</h2>
 			<p>work in progress. expect bugs and missing polish.</p>
-			<button onClick={loginDiscord}>login with discord</button>
-			<button onClick={loginGithub}>login with github</button>
 			<br />
-			<button onClick={logout}>logout</button>
+			<div class="auth">
+				<section class="form-wrapper">
+					<form onSubmit={handleAuthSubmit}>
+						<label>
+							<div class="label-text">email</div>
+							<input
+								class="input"
+								type="email"
+								placeholder="noreply@example.com"
+								value={email()}
+								onInput={(e) => setEmail(e.currentTarget.value)}
+							/>
+						</label>
+						<br />
+						<label>
+							<div class="label-text">password</div>
+							<input
+								class="input"
+								type="password"
+								placeholder="dolphins"
+								value={password()}
+								onInput={(e) => setPassword(e.currentTarget.value)}
+							/>
+						</label>
+						<br />
+						<input class="submit-btn" type="submit" value="login" />
+					</form>
+				</section>
+				<section class="social-wrapper">
+					<ul class="social-list">
+						<li class="social-item">
+							<button class="social-button" onClick={loginDiscord}>
+								login with discord
+							</button>
+						</li>
+						<li class="social-item">
+							<button class="social-button" onClick={loginGithub}>
+								login with github
+							</button>
+						</li>
+					</ul>
+				</section>
+			</div>
 			<br />
-			<br />
-			<button onClick={createSession}>create session</button>
+			<div class="auth">
+				<section class="form-wrapper">
+					reset password
+					<form onSubmit={handlePasswordSet}>
+						<label>
+							<div class="label-text">password</div>
+							<input class="input" type="password" placeholder="dolphins" />
+						</label>
+						<br />
+						<label>
+							<div class="label-text">confirm password</div>
+							<input class="input" type="password" placeholder="dolphins" />
+						</label>
+						<br />
+						<br />
+						<input class="submit-btn" type="submit" value={"set password"} />
+					</form>
+				</section>
+			</div>
 			<br />
 			<button onClick={createGuest}>create guest</button>
-			<br />
-			<button onClick={setPassword}>set password</button>
-			<br />
-			<button onClick={loginWithEmailPassword}>
-				login with email/password
-			</button>
+			<button onClick={logout}>logout</button>
 			<br />
 			<br />
 			<Show when={api.users.cache.get("@self")}>

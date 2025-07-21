@@ -1659,3 +1659,49 @@ del {
 		border-radius: 4px;
 	}
 }
+
+.auth {
+	border: solid #444 1px;
+	display: flex;
+	flex-wrap: wrap;
+
+	.form-wrapper {
+		flex: 1;
+		padding: 8px;
+	}
+
+	.label-text {
+		color: #aaa;
+		font-size: 0.9rem;
+	}
+
+	.input {
+		background: #111;
+		border: solid #444 1px;
+		padding: 0 2px;
+	}
+
+	.submit-btn {
+		border: solid #444 1px;
+	}
+
+	.social-wrapper {
+		flex: 1;
+		background: #111;
+	}
+
+	.social-list {
+		display: flex;
+		flex-direction: column;
+		padding: 4px;
+		gap: 2px;
+	}
+
+	.social-item {
+		display: contents;
+	}
+
+	.social-button {
+		padding: 4px;
+	}
+}
