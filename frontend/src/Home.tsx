@@ -103,34 +103,6 @@ export const Home = () => {
 		});
 	}
 
-	async function handlePasswordSet(e: SubmitEvent) {
-		e.preventDefault();
-
-		if (!password()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing password",
-			});
-		}
-		if (!confirmPassword()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "missing confirmPassword",
-			});
-		}
-
-		if (password() !== confirmPassword()) {
-			ctx.dispatch({
-				do: "modal.alert",
-				text: "password !== confirmPassword",
-			});
-		}
-
-		ctx.client.http.PUT("/api/v1/auth/password", {
-			body: { password: password() },
-		});
-	}
-
 	async function createGuest() {
 		ctx.dispatch({
 			do: "modal.prompt",
@@ -147,7 +119,7 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>work in progress. expect bugs and missing polish.</p>
 			<br />
-			<div class="auth">
+			<div class="auth border">
 				<section class="form-wrapper">
 					<form onSubmit={handleAuthSubmit}>
 						<label>
@@ -188,26 +160,6 @@ export const Home = () => {
 							</button>
 						</li>
 					</ul>
-				</section>
-			</div>
-			<br />
-			<div class="auth">
-				<section class="form-wrapper">
-					reset password
-					<form onSubmit={handlePasswordSet}>
-						<label>
-							<div class="label-text">password</div>
-							<input class="input" type="password" placeholder="dolphins" />
-						</label>
-						<br />
-						<label>
-							<div class="label-text">confirm password</div>
-							<input class="input" type="password" placeholder="dolphins" />
-						</label>
-						<br />
-						<br />
-						<input class="submit-btn" type="submit" value={"set password"} />
-					</form>
 				</section>
 			</div>
 			<br />

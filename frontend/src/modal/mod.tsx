@@ -13,6 +13,7 @@ import { useApi } from "../api.tsx";
 import { createResource } from "solid-js";
 import { MessageView } from "../Message.tsx";
 import { diffChars } from "diff";
+import { ModalResetPassword } from "../user_settings/mod.tsx";
 
 export const Modal = (props: ParentProps) => {
 	const ctx = useCtx()!;
@@ -50,6 +51,9 @@ export function getModal(modal: ContextModal) {
 					message_id={modal.message_id}
 				/>
 			);
+		}
+		case "reset_password": {
+			return <ModalResetPassword />;
 		}
 	}
 }

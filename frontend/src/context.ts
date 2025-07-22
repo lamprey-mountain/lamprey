@@ -75,6 +75,9 @@ export type Modal =
 		type: "message_edits";
 		thread_id: string;
 		message_id: string;
+	}
+	| {
+		type: "reset_password";
 	};
 
 export type AttachmentCreateT = {

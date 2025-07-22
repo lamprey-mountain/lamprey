@@ -1661,9 +1661,12 @@ del {
 }
 
 .auth {
-	border: solid #444 1px;
 	display: flex;
 	flex-wrap: wrap;
+
+	&.border {
+		border: solid #444 1px;
+	}
 
 	.form-wrapper {
 		flex: 1;
