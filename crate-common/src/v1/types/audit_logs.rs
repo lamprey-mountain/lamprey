@@ -1,7 +1,7 @@
-use crate::v1::types::{AuditLogId, MessageSync, RoomId, SessionId, UserId};
+use crate::v1::types::{AuditLogId, MessageSync, RoomId, UserId};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -35,41 +35,50 @@ pub struct AuditLog {
     // pub payload_prev: Option<Box<Value>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AuditLogEntryWip {
-    /// Unique id idenfitying this entry
-    pub id: AuditLogId,
+mod next {
+    use serde::{Deserialize, Serialize};
+    use serde_json::Value;
+    use utoipa::ToSchema;
 
-    /// Room this happened in
-    pub room_id: RoomId,
+    use crate::v1::types::{
+        AuditLogId, EmojiId, InviteCode, MessageId, MessageVerId, RoleId, RoomId, SessionId,
+        ThreadId, UserId,
+    };
 
-    /// User who caused this entry to be created
-    pub user_id: UserId,
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct AuditLogEntry {
+        /// Unique id idenfitying this entry
+        pub id: AuditLogId,
 
-    /// Session of the user who caused this
-    pub session_id: Option<SessionId>,
+        /// Room this happened in
+        pub room_id: RoomId,
 
-    /// User supplied reason why this happened
-    pub reason: Option<String>,
+        /// User who caused this entry to be created
+        pub user_id: UserId,
 
-    pub changes: Vec<AuditLogChange>,
-}
+        /// Session of the user who caused this
+        pub session_id: Option<SessionId>,
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AuditLogChange {
-    pub new: Value,
-    pub old: Value,
-    pub key: Value,
-}
+        /// User supplied reason why this happened
+        pub reason: Option<String>,
 
-mod entry_type {
-    use crate::v1::types::{EmojiId, InviteCode, MessageId, MessageVerId, RoleId, ThreadId};
+        #[serde(flatten)]
+        pub ty: AuditLogEntryType,
+    }
 
-    use super::AuditLogChange;
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct AuditLogChange {
+        pub new: Value,
+        pub old: Value,
+        pub key: Value,
+    }
 
-    pub enum AuditLogEntryTypeWip {
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    #[serde(tag = "type")]
+    pub enum AuditLogEntryType {
         RoomCreate {
             changes: Vec<AuditLogChange>,
         },
@@ -160,5 +169,12 @@ mod entry_type {
         BotAdd,
         MessageRemove,
         MessageRestore,
+
+        // user events
+        UserUpdate,
+        FriendAdd,
+        FriendRemove,
+        BlockAdd,
+        BlockRemove,
     }
 }
