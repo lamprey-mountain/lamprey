@@ -12,3 +12,7 @@ probably won't be stable enough to seriously use.
 ## does this use the lamp stack
 
 nuh uh
+
+## license
+
+dual licensed under mit and apache 2.0
