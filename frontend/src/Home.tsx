@@ -119,52 +119,56 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>work in progress. expect bugs and missing polish.</p>
 			<br />
-			<div class="auth border">
-				<section class="form-wrapper">
-					<form onSubmit={handleAuthSubmit}>
-						<label>
-							<div class="label-text">email</div>
-							<input
-								class="input"
-								type="email"
-								placeholder="noreply@example.com"
-								value={email()}
-								onInput={(e) => setEmail(e.currentTarget.value)}
-							/>
-						</label>
-						<br />
-						<label>
-							<div class="label-text">password</div>
-							<input
-								class="input"
-								type="password"
-								placeholder="dolphins"
-								value={password()}
-								onInput={(e) => setPassword(e.currentTarget.value)}
-							/>
-						</label>
-						<br />
-						<input class="submit-btn" type="submit" value="login" />
-					</form>
-				</section>
-				<section class="social-wrapper">
-					<ul class="social-list">
-						<li class="social-item">
-							<button class="social-button" onClick={loginDiscord}>
-								login with discord
-							</button>
-						</li>
-						<li class="social-item">
-							<button class="social-button" onClick={loginGithub}>
-								login with github
-							</button>
-						</li>
-					</ul>
-				</section>
-			</div>
-			<br />
-			<button onClick={createGuest}>create guest</button>
-			<button onClick={logout}>logout</button>
+			<Show when={!api.session() || api.session()?.status === "Unauthorized"}>
+				<div class="auth border">
+					<section class="form-wrapper">
+						<form onSubmit={handleAuthSubmit}>
+							<label>
+								<div class="label-text">email</div>
+								<input
+									class="input"
+									type="email"
+									placeholder="noreply@example.com"
+									value={email()}
+									onInput={(e) => setEmail(e.currentTarget.value)}
+								/>
+							</label>
+							<br />
+							<label>
+								<div class="label-text">password</div>
+								<input
+									class="input"
+									type="password"
+									placeholder="dolphins"
+									value={password()}
+									onInput={(e) => setPassword(e.currentTarget.value)}
+								/>
+							</label>
+							<br />
+							<input class="submit-btn" type="submit" value="login" />
+						</form>
+					</section>
+					<section class="social-wrapper">
+						<ul class="social-list">
+							<li class="social-item">
+								<button class="social-button" onClick={loginDiscord}>
+									login with discord
+								</button>
+							</li>
+							<li class="social-item">
+								<button class="social-button" onClick={loginGithub}>
+									login with github
+								</button>
+							</li>
+						</ul>
+					</section>
+				</div>
+				<br />
+				<button onClick={createGuest}>create guest</button>
+			</Show>
+			<Show when={api.session() && api.session()?.status !== "Unauthorized"}>
+				<button onClick={logout}>logout</button>
+			</Show>
 			<br />
 			<br />
 			<Show when={api.users.cache.get("@self")}>
