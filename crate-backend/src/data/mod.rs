@@ -539,6 +539,7 @@ pub trait DataUserEmail {
     ) -> Result<()>;
     async fn user_email_delete(&self, user_id: UserId, email_addr: EmailAddr) -> Result<()>;
     async fn user_email_list(&self, user_id: UserId) -> Result<Vec<EmailInfo>>;
+    async fn user_email_lookup(&self, email_addr: &EmailAddr) -> Result<UserId>;
 
     /// check and delete a code, and update is_verified
     async fn user_email_verify_use(

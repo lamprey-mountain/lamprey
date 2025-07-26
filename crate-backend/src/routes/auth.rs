@@ -367,11 +367,11 @@ async fn auth_password_exec(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PasswordExec>,
 ) -> Result<impl IntoResponse> {
+    let data = s.data();
     let user_id = match json.ident {
         PasswordExecIdent::UserId { user_id } => user_id,
-        PasswordExecIdent::Email { email: _ } => todo!("lookup email stuff"),
+        PasswordExecIdent::Email { email } => data.user_email_lookup(&email).await?,
     };
-    let data = s.data();
     let config = argon2::Config::default();
     let (hash, salt) = data
         .auth_password_get(user_id)

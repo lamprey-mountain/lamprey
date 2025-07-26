@@ -29,7 +29,7 @@ impl DataUserEmail for Postgres {
         let mut tx = self.pool.begin().await?;
 
         let email_count: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM user_email_addresses WHERE user_id = $1")
+            query_scalar("SELECT count(*) FROM user_email_addresses WHERE user_id = $1")
                 .bind(*user_id)
                 .fetch_one(&mut *tx)
                 .await?;
@@ -122,7 +122,7 @@ impl DataUserEmail for Postgres {
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        let existing_verified_owner: Option<Uuid> = sqlx::query_scalar(
+        let existing_verified_owner: Option<Uuid> = query_scalar(
             "SELECT user_id FROM user_email_addresses WHERE addr = $1 AND is_verified = true",
         )
         .bind(email_addr.as_ref())
@@ -230,5 +230,16 @@ impl DataUserEmail for Postgres {
         tx.commit().await?;
 
         Ok(code)
+    }
+
+    async fn user_email_lookup(&self, email_addr: &EmailAddr) -> Result<UserId> {
+        let user_id = query_scalar!(
+            "SELECT user_id FROM user_email_addresses WHERE addr = $1 AND is_verified = true",
+            email_addr.as_ref()
+        )
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(Error::NotFound)?;
+        Ok(user_id.into())
     }
 }
