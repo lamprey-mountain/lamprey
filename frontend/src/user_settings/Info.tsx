@@ -107,7 +107,12 @@ export function Info(props: VoidProps<{ user: User }>) {
 					{props.user.name}
 				</div>
 				<div class="description" onClick={setDescription}>
-					{props.user.description}
+					<Show
+						when={props.user.description}
+						fallback={<em style="color:#aaa">click to add description</em>}
+					>
+						{props.user.description}
+					</Show>
 				</div>
 				<Show
 					when={props.user.avatar}
