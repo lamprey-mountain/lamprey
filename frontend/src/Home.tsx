@@ -109,7 +109,9 @@ export const Home = () => {
 			text: "name?",
 			cont(name) {
 				if (!name) return;
-				ctx.client.http.POST("/api/v1/guest", { body: { name } });
+				ctx.client.http.POST("/api/v1/guest", { body: { name } }).then(() => {
+					location.reload();
+				});
 			},
 		});
 	}
