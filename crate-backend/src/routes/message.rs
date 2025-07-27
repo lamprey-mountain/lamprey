@@ -393,53 +393,6 @@ struct MessageModerate {
     restore: Vec<MessageId>,
 }
 
-/// Message delete bulk
-#[utoipa::path(
-    post,
-    path = "/thread/{thread_id}/messages/delete",
-    params(("thread_id", description = "Thread id")),
-    tags = ["message"],
-    responses((status = NO_CONTENT, description = "bulk delete success")),
-)]
-#[deprecated = "use message_moderate"]
-async fn message_delete_bulk(
-    Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
-    Json(json): Json<MessageBulkDelete>,
-) -> Result<impl IntoResponse> {
-    json.validate()?;
-    let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
-    perms.ensure_view()?;
-    for id in &json.message_ids {
-        let message = data.message_get(thread_id, *id, user_id).await?;
-        if !message.message_type.is_deletable() {
-            return Err(Error::BadStatic("cant delete that message"));
-        }
-        perms.ensure(Permission::MessageDelete)?;
-    }
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    data.message_delete_bulk(thread_id, &json.message_ids)
-        .await?;
-    for id in &json.message_ids {
-        data.media_link_delete_all(id.into_inner()).await?;
-    }
-    s.broadcast_thread(
-        thread.id,
-        user_id,
-        reason,
-        MessageSync::MessageDeleteBulk {
-            thread_id,
-            message_ids: json.message_ids,
-        },
-    )
-    .await?;
-    s.services().threads.invalidate(thread_id).await; // last version id, message count
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Message moderate (WIP)
 #[utoipa::path(
     patch,
@@ -580,7 +533,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
         .routes(routes!(message_version_delete))
-        .routes(routes!(message_delete_bulk))
         .routes(routes!(message_replies))
         .routes(routes!(message_moderate))
         .routes(routes!(message_migrate))

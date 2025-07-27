@@ -50,8 +50,8 @@ pub mod user_status;
 pub mod voice;
 
 pub use media::{
-    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack,
-    MediaTrackInfo, Mime, Mixed, Text, TimedText, TrackSource, Video,
+    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack, MediaTrackInfo,
+    Mime, Mixed, Text, TimedText, TrackSource, Video,
 };
 
 // TODO: probably should stop exporting *everything*

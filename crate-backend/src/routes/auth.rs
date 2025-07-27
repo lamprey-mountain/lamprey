@@ -191,23 +191,6 @@ async fn auth_oauth_delete(
     Err(Error::Unimplemented)
 }
 
-/// Auth oauth get (TODO)
-#[utoipa::path(
-    get,
-    path = "/auth/oauth/{provider}",
-    params(("provider", description = "oauth provider")),
-    tags = ["auth"],
-    responses((status = OK, description = "success"))
-)]
-#[deprecated = "use auth status to get a list of linked oauth accounts"]
-async fn auth_oauth_get(
-    Path(_provider): Path<String>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// Auth email exec (TODO)
 ///
 /// Send a "magic link" email to login
@@ -469,7 +452,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_oauth_redirect))
         .routes(routes!(auth_oauth_logout))
         .routes(routes!(auth_oauth_delete))
-        .routes(routes!(auth_oauth_get))
         .routes(routes!(auth_email_exec))
         .routes(routes!(auth_email_reset))
         .routes(routes!(auth_totp_init))
