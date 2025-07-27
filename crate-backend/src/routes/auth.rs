@@ -51,7 +51,6 @@ pub struct OauthInitResponse {
     url: Url,
 }
 
-// NOTE: in the future, this will no longer be able to create new accounts. a guest account would need to be created first, then have this linked to it.
 /// Auth oauth init
 #[utoipa::path(
     post,
@@ -106,7 +105,7 @@ async fn auth_oauth_redirect(
                             description: None,
                             bot: None,
                             puppet: None,
-                            registered_at: Some(Time::now_utc()),
+                            registered_at: None,
                         })
                         .await?;
                     data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
@@ -139,7 +138,7 @@ async fn auth_oauth_redirect(
                             description: None,
                             bot: None,
                             puppet: None,
-                            registered_at: Some(Time::now_utc()),
+                            registered_at: None,
                         })
                         .await?;
                     data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)
