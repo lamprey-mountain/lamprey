@@ -1663,6 +1663,7 @@ del {
 .auth {
 	display: flex;
 	flex-wrap: wrap;
+	max-width: 550px;
 
 	&.border {
 		border: solid #444 1px;
