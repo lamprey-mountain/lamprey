@@ -21,8 +21,7 @@ pub struct MediaTrack {
     pub url: Url,
 
     /// The blob's length in bytes
-    #[serde(flatten)]
-    pub size: MediaSize,
+    pub size: u64,
 
     /// the mime type of this view
     pub mime: Mime,
@@ -173,32 +172,6 @@ pub enum TrackSource {
 
     /// generated from a file
     Generated,
-}
-
-// TODO: impl media streaming
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "size_unit", content = "size")]
-pub enum MediaSize {
-    /// if the size is known
-    Bytes(u64),
-
-    /// approximate bandwidth if the size is unknown (media streaming)
-    BytesPerSecond(u64),
-}
-
-impl MediaTrack {
-    pub fn approximate_bytes(&self) -> u64 {
-        match self.size {
-            MediaSize::Bytes(s) => s,
-            MediaSize::BytesPerSecond(bps) => {
-                self.info
-                    .duration()
-                    .expect("MediaSize::BytesPerSecond without duration is invalid")
-                    * bps
-            }
-        }
-    }
 }
 
 impl MediaTrackInfo {

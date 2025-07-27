@@ -8,7 +8,7 @@ use std::{
 use async_tempfile::TempFile;
 use common::v1::types::{
     self, util::truncate::truncate_filename, Media, MediaCreate, MediaCreateSource, MediaId,
-    MediaSize, MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
+    MediaTrack, MediaTrackInfo, Mime, TrackSource, UserId,
 };
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
@@ -253,7 +253,7 @@ impl ServiceMedia {
                     },
                     Err(_) => MediaTrackInfo::Other,
                 },
-                size: MediaSize::Bytes(up.current_size),
+                size: up.current_size,
                 source: match up.create.source {
                     MediaCreateSource::Upload { .. } => TrackSource::Uploaded,
                     MediaCreateSource::Download { source_url, .. } => {
@@ -478,7 +478,7 @@ async fn generate_and_upload_thumb(
             language: None,
         }),
         url,
-        size: MediaSize::Bytes(len as u64),
+        size: len as u64,
         mime: "image/avif".parse().expect("image/avif is always valid"),
         source: TrackSource::Generated,
     };
@@ -529,7 +529,7 @@ async fn upload_extracted_thumb(
             language: None,
         }),
         url,
-        size: MediaSize::Bytes(len as u64),
+        size: len as u64,
         mime,
         source: TrackSource::Extracted,
     };

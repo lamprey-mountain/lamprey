@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::v1::types::{MediaCreateSource, MediaPatch, MediaSize};
+use common::v1::types::{MediaCreateSource, MediaPatch};
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, trace};
@@ -73,12 +73,7 @@ async fn media_create(
             let srv = s.services();
             let media = srv.media.import_from_url(user_id, json).await?;
             let mut headers = HeaderMap::new();
-            let size = match media.source.size {
-                MediaSize::Bytes(b) => b,
-                MediaSize::BytesPerSecond(_) => {
-                    panic!("BytesPerSecond invalid for upload?")
-                }
-            };
+            let size = media.source.size;
             headers.insert("content-length", size.into());
             let res = MediaCreated {
                 media_id: media.id,
@@ -131,10 +126,7 @@ async fn media_patch(
     }
     s.data().media_update(media_id, json).await?;
     let mut headers = HeaderMap::new();
-    let size = match media.source.size {
-        MediaSize::Bytes(b) => b,
-        MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
-    };
+    let size = media.source.size;
     headers.insert("upload-offset", size.into());
     headers.insert("upload-length", size.into());
     Ok((StatusCode::NO_CONTENT, headers))
@@ -208,10 +200,7 @@ async fn media_done(
             debug!("finished processing media");
             s.presign(&mut media).await?;
             let mut headers = HeaderMap::new();
-            let size = match media.source.size {
-                MediaSize::Bytes(b) => b,
-                MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
-            };
+            let size = media.source.size;
             headers.insert("upload-offset", size.into());
             headers.insert("upload-length", size.into());
             Ok((StatusCode::OK, headers, Json(Some(media))))
@@ -312,10 +301,7 @@ async fn media_upload(
             debug!("finished processing media");
             s.presign(&mut media).await?;
             let mut headers = HeaderMap::new();
-            let size = match media.source.size {
-                MediaSize::Bytes(b) => b,
-                MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
-            };
+            let size = media.source.size;
             headers.insert("upload-offset", size.into());
             headers.insert("upload-length", size.into());
             Ok((StatusCode::OK, headers, Json(Some(media))))
@@ -384,10 +370,7 @@ async fn media_check(
     }
     let (media, _) = s.data().media_select(media_id).await?;
     let mut headers = HeaderMap::new();
-    let size = match media.source.size {
-        MediaSize::Bytes(b) => b,
-        MediaSize::BytesPerSecond(_) => panic!("BytesPerSecond invalid for upload?"),
-    };
+    let size = media.source.size;
     headers.insert("upload-offset", size.into());
     headers.insert("upload-length", size.into());
     Ok((StatusCode::NO_CONTENT, headers))

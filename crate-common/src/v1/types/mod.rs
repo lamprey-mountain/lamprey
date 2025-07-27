@@ -50,7 +50,7 @@ pub mod user_status;
 pub mod voice;
 
 pub use media::{
-    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaSize, MediaTrack,
+    Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack,
     MediaTrackInfo, Mime, Mixed, Text, TimedText, TrackSource, Video,
 };
 
