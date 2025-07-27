@@ -257,52 +257,6 @@ pub enum Permission {
     VoiceVideo,
 }
 
-// other potential permissions
-//
-// - ViewHistory: doesn't make sense here. can see all {messages,threads} {after
-//   they join,while they're online}? maybe it could make all previous threads
-//   private by default and require mentions/manual adding
-// - ViewAnalytics: view some sort of analytics. that would require me to add
-//   some sort of analytics thing which im not sure i want.
-// - VoiceVAD: seems like it should be a user setting? and if people keep
-//   turning it on, its probably a moderation problem?
-// - RoomOwner: let rooms have one(?) owner who has full control over
-//   everything. this is a good way to prevent softlocking by ensuring at least
-//   one person has full permissions.
-// - VoiceRequest: request to speak. VoiceSpeak and VoiceVideo allow override for that person in that thread
-//   could be useful, but maybe later
-// - WebhooksManage: this can be done with Bot* permissions
-// - EventManage: manage document threads
-// - EventRsvp: exactly what it sounds like
-// - EventRsvpManage: exactly what it sounds like
-// - DocumentEdit: exactly what it sounds like
-// - DocumentManage: manage event threads
-// - MessagePoll: needs impl
-// - MessageForms: needs impl; see guilded
-// - MessageInteractions: needs impl; for bots
-// - MessageMasquerade: set custom names/avatars similar to webhooks on other
-//   platforms. puppets exist, so this might not be necessary? this is certainly
-//   more convenient though.
-// - InteractionFoo: alternative to MessageInteractions
-// - ThreadAssign: assign a thread to someone
-// - Reports: needs impl; can access the reporting system; copies thread perms (eg. ThreadArchive for closing reports)
-// - SlowmodeBypassThread: unsure about slowmode in general. leaning towards
-//   "will add", but idk it feels like another inelegant moderation hack
-// - SlowmodeBypassMessage: see above
-// - ThreadList: see ViewHistory; if disabled, threads are unlisted by default?
-//   (eg. you can only view joined threads). kind of an interesting idea.
-// - RoomManage: might want to split out safer perms from more dangerous
-//   ones, eg. changing name/topic vs changing visibility. i'll probably dump
-//   everything into RoomEdit for now, until i hear of a use case.
-// - MessageEmail: sending messages by email?
-// - MessageTodos: check/uncheck checkboxes in messages
-//
-// would i rename ThreadCreateFoo to FooCreate? maybe!
-// also, i don't want it to become too complicated or have too many perms!
-
-// remove and replace Voice{Mute,Deafen} with editing permission overwrites
-// directly? i'd need granular permission assigning/removing then.
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverwrites {
