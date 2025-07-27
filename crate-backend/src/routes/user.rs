@@ -4,7 +4,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::{Diff, Time};
+use common::v1::types::util::Diff;
 use common::v1::types::{
     MediaTrackInfo, MessageSync, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
 };

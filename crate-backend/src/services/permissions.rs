@@ -115,7 +115,7 @@ impl ServicePermissions {
     }
 
     pub async fn is_admin(&self, user_id: UserId) -> Result<bool> {
-        let data = self.state.data();
+        let _data = self.state.data();
         // Assuming there's a way to get global permissions or check for an admin role
         // For now, let's assume a simple check, e.g., if a user has a specific admin permission
         // This needs to be properly implemented based on how global permissions are managed

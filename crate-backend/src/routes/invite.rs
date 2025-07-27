@@ -402,7 +402,7 @@ pub async fn invite_patch(
 pub async fn invite_server_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();

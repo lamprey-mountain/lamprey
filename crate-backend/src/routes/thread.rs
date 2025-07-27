@@ -123,11 +123,11 @@ async fn thread_create_room(
     )
 )]
 async fn thread_create(
-    Path((room_id,)): Path<(RoomId,)>,
-    Auth(user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
-    Json(json): Json<ThreadCreate>,
+    Path((_room_id,)): Path<(RoomId,)>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<ThreadCreate>,
 ) -> Result<()> {
     todo!()
 }

@@ -1,13 +1,6 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::{Path, State},
-    Json,
-};
-use common::v1::types::{ThreadId, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
-
-use super::util::{Auth, HeaderReason};
 
 use crate::error::Result;
 use crate::{Error, ServerState};
