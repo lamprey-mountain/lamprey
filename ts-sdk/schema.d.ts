@@ -655,7 +655,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Room ban list (TODO) */
+		/** Room ban list */
 		get: operations["room_ban_list"];
 		put?: never;
 		post?: never;
@@ -672,12 +672,12 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Room ban get (TODO) */
+		/** Room ban get */
 		get: operations["room_ban_get"];
-		/** Room ban create (TODO) */
+		/** Room ban create */
 		put: operations["room_ban_create"];
 		post?: never;
-		/** Room ban remove (TODO) */
+		/** Room ban remove */
 		delete: operations["room_ban_remove"];
 		options?: never;
 		head?: never;
@@ -2251,32 +2251,19 @@ export interface components {
 		MediaRef: {
 			id: components["schemas"]["Id"];
 		};
-		MediaSize: {
-			/**
-			 * Format: int64
-			 * @description if the size is known
-			 */
-			size: number;
-			/** @enum {string} */
-			size_unit: "Bytes";
-		} | {
-			/**
-			 * Format: int64
-			 * @description approximate bandwidth if the size is unknown (media streaming)
-			 */
-			size: number;
-			/** @enum {string} */
-			size_unit: "BytesPerSecond";
-		};
 		/** @description A unique "view" of this piece of media. Could be the source, an
 		 *     audio/video track, a thumbnail, other metadata, etc. */
 		MediaTrack:
 			& components["schemas"]["MediaTrackInfo"]
-			& components["schemas"]["MediaSize"]
 			& components["schemas"]["TrackSource"]
 			& {
 				/** @description the mime type of this view */
 				mime: components["schemas"]["Mime"];
+				/**
+				 * Format: int64
+				 * @description The blob's length in bytes
+				 */
+				size: number;
 				/**
 				 * Format: uri
 				 * @description The url where this track may be downloaded from
@@ -4927,13 +4914,14 @@ export interface operations {
 	};
 	room_ban_list: {
 		parameters: {
-			query?: never;
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 				/** @description Room id */
 				room_id: components["schemas"]["Id"];
 			};
@@ -4942,11 +4930,14 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description success */
-			204: {
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RoomMember"];
+				};
 			};
 		};
 	};
@@ -4965,11 +4956,13 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description success */
-			204: {
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["RoomMember"];
+				};
 			};
 		};
 	};
