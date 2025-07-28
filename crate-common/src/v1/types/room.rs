@@ -127,6 +127,8 @@ pub enum RoomType {
 
 impl Diff<Room> for RoomPatch {
     fn changes(&self, other: &Room) -> bool {
-        self.name.changes(&other.name) || self.description.changes(&other.description)
+        self.name.changes(&other.name)
+            || self.description.changes(&other.description)
+            || self.icon.changes(&other.icon)
     }
 }
