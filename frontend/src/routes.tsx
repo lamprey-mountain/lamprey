@@ -12,6 +12,7 @@ import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
+import { getUrl } from "./media/util.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -21,6 +22,22 @@ const Title = (props: { title?: string }) => {
 export const Nav2 = () => {
 	const api = useApi();
 	const rooms = api.rooms.list();
+
+	function getThumb(media_id: string) {
+		const media = api.media.fetchInfo(() => media_id);
+		const m = media();
+		if (!m) return;
+		const tracks = [m.source, ...m.tracks];
+		const source =
+			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
+				tracks.find((s) => s.type === "Image");
+		if (source) {
+			return getUrl(source);
+		} else {
+			console.error("no valid avatar source?", m);
+		}
+	}
+
 	return (
 		<Show when={flags.has("two_tier_nav")}>
 			<nav class="nav2">
@@ -31,7 +48,17 @@ export const Nav2 = () => {
 					<For each={rooms()?.items}>
 						{(room) => (
 							<li draggable="true">
-								<A draggable="false" href={`/room/${room.id}`}>{room.name}</A>
+								<A draggable="false" href={`/room/${room.id}`}>
+									<Show
+										when={room.icon}
+										fallback={<div class="avatar">{room.name}</div>}
+									>
+										<img
+											src={getThumb(room.icon!)}
+											class="avatar"
+										/>
+									</Show>
+								</A>
 							</li>
 						)}
 					</For>

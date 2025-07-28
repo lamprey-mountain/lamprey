@@ -1549,11 +1549,21 @@ table {
 		& > li {
 			min-height: 48px;
 			width: 48px;
-			background: #2a2a2a;
 			margin-top: 4px;
 			border-radius: 4px;
 			display: flex;
 			overflow: hidden;
+			background: #2a2a2a;
+
+			& .avatar {
+				height: 48px;
+				width: 48px;
+				background: none;
+			}
+
+			& a {
+				padding: 0;
+			}
 		}
 	}
 }
