@@ -1,6 +1,9 @@
-import type { VoidProps } from "solid-js";
+import { Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
+import { getUrl } from "../media/util.tsx";
+import { createUpload } from "sdk";
+import { useApi } from "../api.tsx";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -32,11 +35,92 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			},
 		});
 	};
+
+	let avatarInputEl!: HTMLInputElement;
+	const openAvatarPicker = () => {
+		avatarInputEl?.click();
+	};
+
+	function getThumb(media_id: string) {
+		const media = api.media.fetchInfo(() => media_id);
+		const m = media();
+		if (!m) return;
+		const tracks = [m.source, ...m.tracks];
+		const source =
+			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
+				tracks.find((s) => s.type === "Image");
+		if (source) {
+			return getUrl(source);
+		} else {
+			console.error("no valid avatar source?", m);
+		}
+	}
+
+	const api = useApi();
+	const setAvatar = async (f: File) => {
+		if (f) {
+			await createUpload({
+				client: api.client,
+				file: f,
+				onComplete(media) {
+					api.client.http.PATCH("/api/v1/room/{room_id}", {
+						params: { path: { room_id: props.room.id } },
+						body: { icon: media.id },
+					});
+				},
+				onFail(_error) {},
+				onPause() {},
+				onResume() {},
+				onProgress(_progress) {},
+			});
+		} else {
+			ctx.dispatch({
+				do: "modal.confirm",
+				text: "remove avatar?",
+				cont(conf) {
+					if (!conf) return;
+					ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+						params: { path: { room_id: props.room.id } },
+						body: { icon: null },
+					});
+				},
+			});
+		}
+	};
+
 	return (
 		<>
 			<h2>info</h2>
 			<div>room name: {props.room.name}</div>
 			<div>room description: {props.room.description}</div>
+			<div>
+				room avatar:
+				<Show
+					when={props.room.icon}
+					fallback={
+						<div
+							onClick={openAvatarPicker}
+							class="avatar"
+						>
+						</div>
+					}
+				>
+					<img
+						onClick={openAvatarPicker}
+						src={getThumb(props.room.icon!)}
+						class="avatar"
+					/>
+				</Show>
+				<input
+					style="display:none"
+					ref={avatarInputEl}
+					type="file"
+					onInput={(e) => {
+						const f = e.target.files?.[0];
+						if (f) setAvatar(f);
+					}}
+				/>
+			</div>
 			<div>
 				room id: <code class="select-all">{props.room.id}</code>
 			</div>
