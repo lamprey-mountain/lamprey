@@ -40,10 +40,7 @@ impl ServiceRooms {
         }
 
         data.room_update(room_id, patch).await?;
-        self.cache_room
-            .remove(&room_id)
-            .await
-            .expect("failed to invalidate");
+        self.cache_room.invalidate(&room_id).await;
         self.get(room_id, Some(user_id)).await
     }
 
