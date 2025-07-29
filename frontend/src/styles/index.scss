@@ -1133,30 +1133,6 @@ button[disabled] {
 	}
 }
 
-.dbg-resize {
-	border: solid red 1px;
-	resize: both;
-	overflow: scroll;
-	width: 100px;
-	height: 100px;
-
-	& > .inner {
-		border: solid blue 1px;
-		height: 10px;
-
-		& > .main {
-			max-height: min(var(--height), 300px, round(50vh, 1px));
-			max-width: min(var(--width), 300px, round(50vw, 1px));
-
-			border: solid green 1px;
-			height: 10px;
-			width: 10px;
-			resize: both;
-			overflow: hidden;
-		}
-	}
-}
-
 .embed {
 	display: inline-grid;
 	grid-template-columns: minmax(0, 1fr) auto;

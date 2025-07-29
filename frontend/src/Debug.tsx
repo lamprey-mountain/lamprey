@@ -23,14 +23,6 @@ export const Debug = () => {
 				</details>
 			</Show>
 			<details>
-				<summary>resizing</summary>
-				<div class="dbg-resize">
-					<div class="inner">
-						<div class="main"></div>
-					</div>
-				</div>
-			</details>
-			<details>
 				<summary>url embedder</summary>
 				<UrlEmbedDbg />
 			</details>
