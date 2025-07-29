@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use axum::response::IntoResponse;
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{extract::State, Json};
 use common::v1::types::EmbedRequest;
 use serde::Serialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::services::embed::ServiceEmbed;
 use crate::ServerState;
 
 use super::util::Auth;
@@ -58,8 +59,8 @@ pub async fn debug_embed_url(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
-    s.services().embed.queue(None, user_id, json.url).await?;
-    Ok(StatusCode::ACCEPTED)
+    let embed = ServiceEmbed::generate_inner(&s.inner, user_id, json.url).await?;
+    Ok(Json(embed))
 }
 
 /// Trigger a panic

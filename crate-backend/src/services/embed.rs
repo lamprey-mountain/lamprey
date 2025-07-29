@@ -252,7 +252,7 @@ impl ServiceEmbed {
     }
 
     #[tracing::instrument(level = "info", skip(state))]
-    async fn generate_inner(
+    pub(crate) async fn generate_inner(
         state: &Arc<ServerStateInner>,
         user_id: UserId,
         url: Url,
