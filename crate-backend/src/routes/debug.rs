@@ -59,7 +59,16 @@ pub async fn debug_embed_url(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
-    let embed = ServiceEmbed::generate_inner(&s.inner, user_id, json.url).await?;
+    let mut embed = ServiceEmbed::generate_inner(&s.inner, user_id, json.url).await?;
+    if let Some(m) = &mut embed.media {
+        s.presign(m).await?;
+    }
+    if let Some(m) = &mut embed.thumbnail {
+        s.presign(m).await?;
+    }
+    if let Some(m) = &mut embed.author_avatar {
+        s.presign(m).await?;
+    }
     Ok(Json(embed))
 }
 
