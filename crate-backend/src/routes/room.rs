@@ -232,7 +232,7 @@ async fn room_audit_logs(
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::RoomManage)?;
+    perms.ensure(Permission::ViewAuditLog)?;
     let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
     Ok(Json(logs))
 }
