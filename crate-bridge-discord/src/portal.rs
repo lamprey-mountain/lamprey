@@ -513,7 +513,7 @@ impl Portal {
                                         .to_string(),
                                 )
                             } else {
-                                Some("".to_string())
+                                None
                             }
                         } else {
                             Some(message.content)
