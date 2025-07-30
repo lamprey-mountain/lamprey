@@ -26,7 +26,7 @@ function isDirty(a: Role, b: Role): boolean {
 }
 
 // unused permissions commented out for now
-const permissions: Array<{ id: Permission }> = [
+export const permissions: Array<{ id: Permission }> = [
 	{ id: "Admin" },
 	{ id: "BotsAdd" },
 	{ id: "BotsManage" },

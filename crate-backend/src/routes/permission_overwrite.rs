@@ -53,6 +53,7 @@ async fn permission_thread_overwrite(
         .permission_overwrite_upsert(
             thread_id,
             overwrite_id,
+            // FIXME: use role/user depending on what id is
             PermissionOverwriteType::User,
             json.allow,
             json.deny,

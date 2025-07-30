@@ -112,7 +112,6 @@ export const RouteThreadSettings = (p: RouteSectionProps) => {
 	return (
 		<>
 			<Title title={title()} />
-			<ChatNav room_id={thread()?.room_id} />
 			<Show when={thread()}>
 				<ThreadSettings thread={thread()!} page={p.params.page} />
 			</Show>
