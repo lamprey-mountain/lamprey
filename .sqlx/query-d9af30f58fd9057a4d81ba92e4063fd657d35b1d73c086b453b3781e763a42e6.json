@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM invite WHERE target_type = 'server'",
+  "query": "SELECT count(*) FROM invite WHERE target_id = $1 and deleted_at is null",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,13 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid"
+      ]
     },
     "nullable": [
       null
     ]
   },
-  "hash": "ea121c537528ac17c1054946ca037783f551c77fd36599df0d0c9dc31824ce66"
+  "hash": "d9af30f58fd9057a4d81ba92e4063fd657d35b1d73c086b453b3781e763a42e6"
 }

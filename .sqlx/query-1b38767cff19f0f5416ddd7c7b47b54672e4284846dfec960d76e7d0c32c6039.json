@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n        \tWHERE target_type = 'server' AND code > $1 AND code < $2\n        \tORDER BY (CASE WHEN $3 = 'f' THEN code END), code DESC LIMIT $4\n        ",
+  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n            where code = $1 and deleted_at is null\n        ",
   "describe": {
     "columns": [
       {
@@ -51,10 +51,7 @@
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
-        "Text",
-        "Int8"
+        "Text"
       ]
     },
     "nullable": [
@@ -69,5 +66,5 @@
       true
     ]
   },
-  "hash": "274160a44f64bdd6288d3dd5b879db55f6e220dc7df1559d55ec568700ed5476"
+  "hash": "1b38767cff19f0f5416ddd7c7b47b54672e4284846dfec960d76e7d0c32c6039"
 }

@@ -69,7 +69,7 @@ impl DataInvite for Postgres {
             r#"
             select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
-            where code = $1
+            where code = $1 and deleted_at is null
         "#,
             code.0
         )
@@ -115,9 +115,12 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_delete(&self, code: InviteCode) -> Result<()> {
-        query!("DELETE FROM invite WHERE code = $1", code.0)
-            .execute(&self.pool)
-            .await?;
+        query!(
+            "update invite set deleted_at = now() where code = $1",
+            code.0
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 
@@ -134,7 +137,7 @@ impl DataInvite for Postgres {
             "
             select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
-        	WHERE target_id = $1 AND code > $2 AND code < $3
+        	WHERE target_id = $1 AND code > $2 AND code < $3 and deleted_at is null
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
         ",
             room_id.into_inner(),
@@ -146,7 +149,7 @@ impl DataInvite for Postgres {
         .fetch_all(&mut *tx)
         .await?;
         let total = query_scalar!(
-            "SELECT count(*) FROM invite WHERE target_id = $1",
+            "SELECT count(*) FROM invite WHERE target_id = $1 and deleted_at is null",
             room_id.into_inner()
         )
         .fetch_one(&mut *tx)
@@ -203,7 +206,7 @@ impl DataInvite for Postgres {
             r#"
             select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
-        	WHERE target_type = 'server' AND code > $1 AND code < $2
+        	WHERE target_type = 'server' AND code > $1 AND code < $2 and deleted_at is null
         	ORDER BY (CASE WHEN $3 = 'f' THEN code END), code DESC LIMIT $4
         "#,
             p.after.to_string(),
@@ -213,9 +216,11 @@ impl DataInvite for Postgres {
         )
         .fetch_all(&mut *tx)
         .await?;
-        let total = query_scalar!("SELECT count(*) FROM invite WHERE target_type = 'server'",)
-            .fetch_one(&mut *tx)
-            .await?;
+        let total = query_scalar!(
+            "SELECT count(*) FROM invite WHERE target_type = 'server' and deleted_at is null",
+        )
+        .fetch_one(&mut *tx)
+        .await?;
         tx.rollback().await?;
         let has_more = raw.len() > p.limit as usize;
         let mut items = vec![];
@@ -274,7 +279,7 @@ impl DataInvite for Postgres {
             r#"
             select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
             from invite
-            where code = $1
+            where code = $1 and deleted_at is null
             FOR UPDATE
             "#,
             code.0

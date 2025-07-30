@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n            where code = $1\n            FOR UPDATE\n            ",
+  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n            where code = $1 and deleted_at is null\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -66,5 +66,5 @@
       true
     ]
   },
-  "hash": "166c1ba855d704a5bedb711c7b583bb6e7de341efe1976ceda91a6a11b918161"
+  "hash": "7a006bb687cc50d413062f6f61b3403ddf3c5c25bfd8df78428967b5265a8e6e"
 }

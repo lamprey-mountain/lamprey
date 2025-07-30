@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM invite WHERE code = $1",
+  "query": "update invite set deleted_at = now() where code = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "8077cde0899405f625a7a000a9dad1eee0e3c319c5a61685cb4f43212ccf451a"
+  "hash": "4c31d0959acbbe8e98ecddec25ede6ce13c3316c2830024aca8cc9513a598c62"
 }
