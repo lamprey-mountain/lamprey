@@ -98,6 +98,7 @@ pub struct PaginationResponse<T> {
     pub items: Vec<T>,
     pub total: u64,
     pub has_more: bool,
+    pub cursor: Option<String>,
 }
 
 // pub trait HasKey {

@@ -422,14 +422,17 @@ async fn room_ban_list(
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_list(room_id, paginate).await?;
+    let items: Vec<_> = res
+        .items
+        .into_iter()
+        .filter(|m| matches!(m.membership, RoomMembership::Ban { .. }))
+        .collect();
+    let cursor = items.last().map(|i| i.user_id.to_string());
     let res = PaginationResponse {
-        items: res
-            .items
-            .into_iter()
-            .filter(|m| matches!(m.membership, RoomMembership::Ban { .. }))
-            .collect(),
+        items,
         has_more: res.has_more,
         total: 0, // FIXME
+        cursor,
     };
     Ok(Json(res))
 }

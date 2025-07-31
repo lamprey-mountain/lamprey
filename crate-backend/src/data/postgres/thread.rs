@@ -66,7 +66,8 @@ impl DataThread for Postgres {
             query_scalar!(
                 r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL"#,
                 room_id.into_inner()
-            )
+            ),
+            |i: &Thread| i.id.to_string()
         )
     }
 

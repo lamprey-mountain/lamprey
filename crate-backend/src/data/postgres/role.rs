@@ -67,7 +67,8 @@ impl DataRole for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM role WHERE room_id = $1",
                 room_id.into_inner(),
-            )
+            ),
+            |i: &Role| i.id.to_string()
         )
     }
 

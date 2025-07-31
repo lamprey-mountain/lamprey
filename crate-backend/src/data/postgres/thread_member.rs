@@ -206,7 +206,8 @@ impl DataThreadMember for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM thread_member WHERE thread_id = $1 AND membership = 'Join'",
                 thread_id.into_inner()
-            )
+            ),
+            |i: &ThreadMember| i.user_id.to_string()
         )
     }
 }

@@ -94,7 +94,8 @@ impl DataSession for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
                 user_id.into_inner()
-            )
+            ),
+            |i: &Session| i.id.to_string()
         )
     }
 

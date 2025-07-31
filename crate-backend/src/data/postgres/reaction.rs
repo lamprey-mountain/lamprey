@@ -146,7 +146,8 @@ impl DataReaction for Postgres {
                 r#"SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2"#,
                 message_id.into_inner(),
                 key,
-            )
+            ),
+            |i: &ReactionListItem| i.user_id.to_string()
         )
     }
 

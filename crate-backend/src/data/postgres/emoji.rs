@@ -103,7 +103,8 @@ impl DataEmoji for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM custom_emoji WHERE room_id = $1",
                 *room_id
-            )
+            ),
+            |i: &EmojiCustom| i.id.to_string()
         )
     }
 

@@ -56,7 +56,8 @@ impl DataAuditLogs for Postgres {
                 payload_prev: row
                     .payload_prev
                     .map(|p| serde_json::from_value(p).expect("corrupted data in db!")),
-            }
+            },
+            |i| i.id.to_string()
         )
     }
 

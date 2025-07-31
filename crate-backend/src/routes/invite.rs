@@ -304,20 +304,28 @@ pub async fn invite_room_list(
     let perms = s.services.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.invite_list_room(room_id, paginate).await?;
+    let items: Vec<_> = res
+        .items
+        .into_iter()
+        .map(|i| {
+            if i.invite.creator_id != user_id && !perms.has(Permission::InviteManage) {
+                InviteWithPotentialMetadata::Invite(i.strip_metadata())
+            } else {
+                InviteWithPotentialMetadata::InviteWithMetadata(i)
+            }
+        })
+        .collect();
+    let cursor = items.last().map(|i| match i {
+        InviteWithPotentialMetadata::Invite(invite) => invite.code.0.clone(),
+        InviteWithPotentialMetadata::InviteWithMetadata(invite_with_metadata) => {
+            invite_with_metadata.invite.code.0.clone()
+        }
+    });
     let res = PaginationResponse {
-        items: res
-            .items
-            .into_iter()
-            .map(|i| {
-                if i.invite.creator_id != user_id && !perms.has(Permission::InviteManage) {
-                    InviteWithPotentialMetadata::Invite(i.strip_metadata())
-                } else {
-                    InviteWithPotentialMetadata::InviteWithMetadata(i)
-                }
-            })
-            .collect(),
+        items,
         total: res.total,
         has_more: res.has_more,
+        cursor,
     };
     Ok(Json(res))
 }
@@ -462,10 +470,17 @@ pub async fn invite_server_list(
         }
     }))
     .await;
+    let cursor = items.last().map(|i| match i {
+        InviteWithPotentialMetadata::Invite(invite) => invite.code.0.clone(),
+        InviteWithPotentialMetadata::InviteWithMetadata(invite_with_metadata) => {
+            invite_with_metadata.invite.code.0.clone()
+        }
+    });
     let res = PaginationResponse {
         items,
         total: res.total,
         has_more: res.has_more,
+        cursor,
     };
     Ok(Json(res))
 }

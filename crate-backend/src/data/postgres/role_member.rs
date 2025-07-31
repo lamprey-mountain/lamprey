@@ -86,7 +86,7 @@ impl DataRoleMember for Postgres {
         .await?;
         tx.rollback().await?;
         let has_more = items.len() > p.limit as usize;
-        let mut items: Vec<_> = items
+        let mut items: Vec<RoomMember> = items
             .into_iter()
             .take(p.limit as usize)
             .map(Into::into)
@@ -94,10 +94,12 @@ impl DataRoleMember for Postgres {
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
+        let cursor = items.last().map(|i| i.user_id.to_string());
         Ok(PaginationResponse {
             items,
             total: total.unwrap_or(0) as u64,
             has_more,
+            cursor,
         })
     }
 

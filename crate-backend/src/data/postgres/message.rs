@@ -253,7 +253,8 @@ impl DataMessage for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_file_scalar!("sql/message_count.sql", thread_id.into_inner())
+            query_file_scalar!("sql/message_count.sql", thread_id.into_inner()),
+            |i: &Message| i.id.to_string()
         )
     }
 
@@ -349,7 +350,8 @@ impl DataMessage for Postgres {
                 r"select count(*) from message where thread_id = $1 and id = $2",
                 thread_id.into_inner(),
                 message_id.into_inner(),
-            )
+            ),
+            |i: &Message| i.version_id.to_string()
         )
     }
 
@@ -384,7 +386,8 @@ impl DataMessage for Postgres {
                 *thread_id,
                 *message_id,
                 depth as i32
-            )
+            ),
+            |i: &Message| i.id.to_string()
         )
     }
 }

@@ -94,7 +94,8 @@ impl DataRoom for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM room_member WHERE room_member.user_id = $1",
                 user_id.into_inner()
-            )
+            ),
+            |i: &Room| i.id.to_string()
         )
     }
 

@@ -41,7 +41,8 @@ impl DataSearch for Postgres {
                 "sql/search_message_count.sql",
                 user_id.into_inner(),
                 query.query,
-            )
+            ),
+            |i: &Message| i.id.to_string()
         )
     }
 }

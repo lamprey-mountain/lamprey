@@ -258,7 +258,8 @@ impl DataUserRelationship for Postgres {
             query_scalar!(
                 r#"SELECT count(*) FROM user_relationship WHERE user_id = $1"#,
                 user_id.into_inner(),
-            )
+            ),
+            |i: &RelationshipWithUserId| i.user_id.to_string()
         )
     }
 }

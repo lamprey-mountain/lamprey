@@ -187,10 +187,12 @@ impl DataInvite for Postgres {
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
+        let cursor = items.last().map(|i| i.invite.code.to_string());
         Ok(PaginationResponse {
             items,
             total: total.unwrap_or(0) as u64,
             has_more,
+            cursor,
         })
     }
 
@@ -252,10 +254,12 @@ impl DataInvite for Postgres {
         if p.dir == PaginationDirection::B {
             items.reverse();
         }
+        let cursor = items.last().map(|i| i.invite.code.to_string());
         Ok(PaginationResponse {
             items,
             total: total.unwrap_or(0) as u64,
             has_more,
+            cursor,
         })
     }
 

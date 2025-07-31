@@ -48,7 +48,7 @@ impl<K: PaginationKey> TryInto<Pagination<K>> for PaginationQuery<K> {
 
 #[macro_export]
 macro_rules! gen_paginate {
-    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $map:expr) => {{
+    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $map:expr, $id:expr) => {{
         let mut conn = $pool.acquire().await?;
         let mut tx = conn.begin().await?;
 
@@ -63,6 +63,7 @@ macro_rules! gen_paginate {
         if $p.dir == PaginationDirection::B {
             items.reverse();
         }
+        let cursor = items.last().map($id);
 
         // tx intentionally dropped to rollback here
 
@@ -70,10 +71,11 @@ macro_rules! gen_paginate {
             items,
             total: total.unwrap_or(0) as u64,
             has_more,
+            cursor,
         })
     }};
-    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr) => {
-        gen_paginate!($p, $pool, $qlist, $qtotal, Into::into)
+    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $id:expr) => {
+        gen_paginate!($p, $pool, $qlist, $qtotal, Into::into, $id)
     };
 }
 

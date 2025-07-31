@@ -102,7 +102,8 @@ impl DataApplication for Postgres {
             query_scalar!(
                 "SELECT count(*) FROM application WHERE owner_id = $1",
                 *owner_id
-            )
+            ),
+            |i: &Application| i.id.to_string()
         )
     }
 }
