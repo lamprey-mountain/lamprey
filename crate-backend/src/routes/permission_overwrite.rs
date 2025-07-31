@@ -6,8 +6,9 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::{MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet};
-use common::v1::types::{PermissionOverwriteType, ThreadId};
+use common::v1::types::{
+    MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet, ThreadId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
@@ -50,14 +51,7 @@ async fn permission_thread_overwrite(
     }
     s.services()
         .perms
-        .permission_overwrite_upsert(
-            thread_id,
-            overwrite_id,
-            // FIXME: use role/user depending on what id is
-            PermissionOverwriteType::User,
-            json.allow,
-            json.deny,
-        )
+        .permission_overwrite_upsert(thread_id, overwrite_id, json.ty, json.allow, json.deny)
         .await?;
 
     let srv = s.services();

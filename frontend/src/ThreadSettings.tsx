@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import type { ThreadT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Info, Todo, Permissions } from "./thread_settings/mod.tsx";
+import { Info, Permissions, Todo } from "./thread_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },

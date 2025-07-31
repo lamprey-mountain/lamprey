@@ -286,6 +286,10 @@ pub struct PermissionOverwrite {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverwriteSet {
+    /// whether this is for a user or role
+    #[serde(rename = "type")]
+    pub ty: PermissionOverwriteType,
+
     /// extra permissions allowed here
     #[serde(deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
@@ -297,7 +301,6 @@ pub struct PermissionOverwriteSet {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(untagged)]
 pub enum PermissionOverwriteType {
     /// permission overrides for a role
     Role,

@@ -76,7 +76,7 @@ impl From<DbRoom> for Room {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct DbThread {
     pub id: ThreadId,
     pub room_id: Option<Uuid>,
@@ -106,7 +106,7 @@ pub struct DbThreadCreate {
     pub ty: DbThreadType,
 }
 
-#[derive(sqlx::Type, Deserialize)]
+#[derive(sqlx::Type, Debug, Deserialize)]
 #[sqlx(type_name = "thread_type")]
 pub enum DbThreadType {
     Chat,
@@ -116,6 +116,7 @@ pub enum DbThreadType {
 
 impl From<DbThread> for Thread {
     fn from(row: DbThread) -> Self {
+        dbg!(&row);
         let info = match row.ty {
             DbThreadType::Chat => ThreadPublic::Chat(ThreadTypeChatPublic {
                 last_version_id: row.last_version_id,
