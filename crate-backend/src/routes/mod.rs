@@ -8,6 +8,7 @@ mod application;
 mod auth;
 mod debug;
 
+mod dm;
 mod emoji;
 mod internal;
 mod invite;
@@ -39,6 +40,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(application::routes())
         .merge(auth::routes())
         .merge(debug::routes())
+        .merge(dm::routes())
         .merge(emoji::routes())
         .merge(internal::routes())
         .merge(invite::routes())

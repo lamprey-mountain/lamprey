@@ -114,6 +114,9 @@ pub enum ThreadPublic {
     /// instant messaging
     Chat(ThreadTypeChatPublic),
 
+    /// instant messaging direct message
+    Dm(ThreadTypeChatPublic),
+
     #[cfg(feature = "feat_thread_type_forums")]
     /// long form chat history
     Forum(ThreadTypeForumPublic),
@@ -150,6 +153,9 @@ pub enum ThreadPrivate {
     /// instant messaging
     Chat(ThreadTypeChatPrivate),
 
+    /// instant messaging direct message
+    Dm(ThreadTypeChatPrivate),
+
     #[cfg(feature = "feat_thread_type_forums")]
     /// long form chat history
     Forum(ThreadTypeForumPrivate),
@@ -184,6 +190,9 @@ pub enum ThreadType {
     /// instant messaging
     #[default]
     Chat,
+
+    /// instant messaging direct message
+    Dm,
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// long form chat history

@@ -24,6 +24,8 @@ use crate::{
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
+/// Thread create room
+///
 /// Create a thread in a room
 #[utoipa::path(
     post,
@@ -113,6 +115,8 @@ async fn thread_create_room(
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
+/// Thread create direct (TODO)
+///
 /// Create a thread outside of a room, for dms
 #[utoipa::path(
     post,

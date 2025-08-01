@@ -96,6 +96,13 @@ pub enum ThreadMembership {
     },
 }
 
+impl ThreadMembership {
+    pub const JOIN_BLANK: ThreadMembership = ThreadMembership::Join {
+        override_name: None,
+        override_description: None,
+    };
+}
+
 impl Diff<ThreadMember> for ThreadMemberPatch {
     fn changes(&self, other: &ThreadMember) -> bool {
         match &other.membership {

@@ -112,6 +112,7 @@ pub enum DbThreadType {
     Chat,
     Forum,
     Voice,
+    Dm,
 }
 
 impl From<DbThread> for Thread {
@@ -119,6 +120,10 @@ impl From<DbThread> for Thread {
         dbg!(&row);
         let info = match row.ty {
             DbThreadType::Chat => ThreadPublic::Chat(ThreadTypeChatPublic {
+                last_version_id: row.last_version_id,
+                message_count: row.message_count.try_into().expect("count is negative?"),
+            }),
+            DbThreadType::Dm => ThreadPublic::Dm(ThreadTypeChatPublic {
                 last_version_id: row.last_version_id,
                 message_count: row.message_count.try_into().expect("count is negative?"),
             }),
@@ -478,6 +483,12 @@ impl From<DbThreadPrivate> for ThreadPrivate {
     fn from(row: DbThreadPrivate) -> Self {
         match row.ty {
             DbThreadType::Chat => ThreadPrivate::Chat(ThreadTypeChatPrivate {
+                is_unread: row.is_unread,
+                last_read_id: row.last_read_id.map(Into::into),
+                mention_count: 0,
+                notifications: Default::default(),
+            }),
+            DbThreadType::Dm => ThreadPrivate::Dm(ThreadTypeChatPrivate {
                 is_unread: row.is_unread,
                 last_read_id: row.last_read_id.map(Into::into),
                 mention_count: 0,

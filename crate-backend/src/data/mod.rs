@@ -51,6 +51,7 @@ pub trait Data:
     + DataEmbed
     + DataUserEmail
     + DataEmailQueue
+    + DataDm
     + Send
     + Sync
 {
@@ -570,4 +571,11 @@ pub trait DataEmailQueue {
     async fn email_queue_claim(&self) -> Result<Option<DbEmailQueue>>;
     async fn email_queue_finish(&self, id: Uuid) -> Result<()>;
     async fn email_queue_fail(&self, error_message: String, id: Uuid) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataDm {
+    async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, thread_id: ThreadId)
+        -> Result<()>;
+    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ThreadId>>;
 }

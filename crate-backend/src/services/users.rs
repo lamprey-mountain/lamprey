@@ -1,14 +1,16 @@
+use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::MessageSync;
+use common::v1::types::{MessageSync, Thread, ThreadMembership};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::{Result, ServerStateInner};
+use crate::types::{DbThreadCreate, DbThreadType};
+use crate::{Error, Result, ServerStateInner};
 
 // currently relies on sync heartbeat time
 const STATUS_EXPIRE: Duration = Duration::from_secs(40);
@@ -17,6 +19,7 @@ pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     cache_users: Cache<UserId, User>,
     statuses: DashMap<UserId, OnlineState>,
+    dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
 struct OnlineState {
@@ -33,6 +36,7 @@ impl ServiceUsers {
                 .support_invalidation_closures()
                 .build(),
             statuses: DashMap::new(),
+            dm_lock: DashMap::new(),
         }
     }
 
@@ -126,5 +130,40 @@ impl ServiceUsers {
         } else {
             Status::offline()
         }
+    }
+
+    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Thread, bool)> {
+        let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
+        let data = self.state.data();
+        let srv = self.state.services();
+        let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
+        if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
+            let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+            data.thread_member_put(thread_id, user_id, ThreadMembership::JOIN_BLANK)
+                .await?;
+            data.thread_member_put(thread_id, other_id, ThreadMembership::JOIN_BLANK)
+                .await?;
+            return Ok((thread, false));
+        }
+        let thread_id = data
+            .thread_create(DbThreadCreate {
+                room_id: None,
+                creator_id: user_id,
+                name: "dm".to_string(),
+                description: None,
+                ty: DbThreadType::Dm,
+            })
+            .await?;
+        let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+        data.dm_put(user_id, other_id, thread.id).await?;
+        Ok((thread, true))
+    }
+}
+
+fn ensure_dm_canonical(a: UserId, b: UserId) -> Result<(UserId, UserId)> {
+    match a.cmp(&b) {
+        Ordering::Less => Ok((a, b)),
+        Ordering::Equal => Err(Error::BadStatic("cant dm yourself")),
+        Ordering::Greater => Ok((b, a)),
     }
 }
