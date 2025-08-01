@@ -85,7 +85,7 @@ pub struct DbThread {
     pub name: String,
     pub description: Option<String>,
     pub ty: DbThreadType,
-    pub last_version_id: MessageVerId,
+    pub last_version_id: Option<Uuid>,
     pub message_count: i64,
     pub permission_overwrites: serde_json::Value,
 }
@@ -120,15 +120,15 @@ impl From<DbThread> for Thread {
         dbg!(&row);
         let info = match row.ty {
             DbThreadType::Chat => ThreadPublic::Chat(ThreadTypeChatPublic {
-                last_version_id: row.last_version_id,
+                last_version_id: row.last_version_id.map(|i| i.into()),
                 message_count: row.message_count.try_into().expect("count is negative?"),
             }),
             DbThreadType::Dm => ThreadPublic::Dm(ThreadTypeChatPublic {
-                last_version_id: row.last_version_id,
+                last_version_id: row.last_version_id.map(|i| i.into()),
                 message_count: row.message_count.try_into().expect("count is negative?"),
             }),
             DbThreadType::Forum => ThreadPublic::Forum(ThreadTypeForumPublic {
-                last_version_id: row.last_version_id,
+                last_version_id: row.last_version_id.map(|i| i.into()),
                 message_count: row.message_count.try_into().expect("count is negative?"),
                 // TODO
                 root_message_count: 0,
