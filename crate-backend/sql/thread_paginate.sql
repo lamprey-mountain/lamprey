@@ -27,7 +27,7 @@ select
     last_version_id as "last_version_id",
     coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!"
 from thread
-join message_count on message_count.thread_id = thread.id
+left join message_count on message_count.thread_id = thread.id
 left join last_id on last_id.thread_id = thread.id
 left join permission_overwrites on permission_overwrites.target_id = thread.id
 where room_id = $1 AND thread.id > $2 AND thread.id < $3 and thread.deleted_at is null

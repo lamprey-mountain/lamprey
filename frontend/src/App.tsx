@@ -333,6 +333,19 @@ function RouteInbox() {
 }
 
 function RouteFriends() {
+	const api = useApi();
+
+	const [friends] = createResource(async () => {
+		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/friend", { params: { path: { user_id: "@self" } } });
+		return data;
+	});
+
+	const sendRequest = () => {
+		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+			params: { path: { target_id: prompt("target_id") } },
+		});
+	}
+
 	return (
 		<>
 			<Title title="friends" />
@@ -344,6 +357,8 @@ function RouteFriends() {
 					<li>bar</li>
 					<li>baz</li>
 				</ul>
+				<pre>{JSON.stringify(friends())}</pre>
+				<button onClick={sendRequest}>send request</button>
 			</div>
 		</>
 	);

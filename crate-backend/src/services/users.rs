@@ -138,6 +138,7 @@ impl ServiceUsers {
         let srv = self.state.services();
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
         if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
+            debug!("dm thread id {thread_id}");
             let thread = srv.threads.get(thread_id, Some(user_id)).await?;
             data.thread_member_put(thread_id, user_id, ThreadMembership::JOIN_BLANK)
                 .await?;
@@ -154,8 +155,12 @@ impl ServiceUsers {
                 ty: DbThreadType::Dm,
             })
             .await?;
+        data.dm_put(user_id, other_id, thread_id).await?;
+        data.thread_member_put(thread_id, user_id, ThreadMembership::JOIN_BLANK)
+            .await?;
+        data.thread_member_put(thread_id, other_id, ThreadMembership::JOIN_BLANK)
+            .await?;
         let thread = srv.threads.get(thread_id, Some(user_id)).await?;
-        data.dm_put(user_id, other_id, thread.id).await?;
         Ok((thread, true))
     }
 }

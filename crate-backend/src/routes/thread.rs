@@ -152,6 +152,7 @@ async fn thread_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    dbg!(&perms);
     perms.ensure_view()?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     Ok((StatusCode::OK, Json(thread)))

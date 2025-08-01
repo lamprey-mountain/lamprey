@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
+use common::v1::types::{
+    defaults::EVERYONE_TRUSTED, Permission, PermissionOverwriteType, RoomId, ThreadId, UserId,
+};
 use sqlx::{query_scalar, types::Json};
 use uuid::Uuid;
 
@@ -106,7 +108,12 @@ impl DataPermission for Postgres {
             self.permission_room_get(user_id, room_id_uuid.into())
                 .await?
         } else {
-            Permissions::empty()
+            let mut p = Permissions::empty();
+            p.add(Permission::View);
+            for a in EVERYONE_TRUSTED {
+                p.add(*a);
+            }
+            p
         };
 
         // Apply role overwrites
