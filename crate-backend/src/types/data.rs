@@ -90,6 +90,7 @@ pub struct DbThread {
     pub last_version_id: Option<Uuid>,
     pub message_count: i64,
     pub permission_overwrites: serde_json::Value,
+    pub nsfw: bool,
 }
 
 #[derive(Deserialize)]
@@ -151,6 +152,7 @@ impl From<DbThread> for Thread {
             description: row.description,
             info,
             private: None,
+            nsfw: row.nsfw,
 
             // FIXME: add field to db schema or calculate
             member_count: 0,

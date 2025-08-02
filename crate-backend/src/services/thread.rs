@@ -114,6 +114,7 @@ impl ServiceThreads {
                         description: patch.description,
                         // tags: patch.tags,
                         tags: None,
+                        nsfw: patch.nsfw,
                     },
                 }),
                 edited_at: None,

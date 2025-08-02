@@ -23,6 +23,7 @@ select
     thread.name,
     thread.version_id,
     thread.description,
+    thread.nsfw,
     coalesce(count, 0) as "message_count!",
     last_version_id as "last_version_id",
     coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!"

@@ -101,6 +101,9 @@ pub struct Thread {
 
     /// permission overwrites for this thread
     pub permission_overwrites: Vec<PermissionOverwrite>,
+
+    /// not safe for work
+    pub nsfw: bool,
 }
 
 /// type-specific data for threads
@@ -243,6 +246,10 @@ pub struct ThreadCreate {
     /// tags to apply to this thread (overwrite, not append)
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub tags: Option<Vec<TagId>>,
+
+    /// not safe for work
+    #[serde(default)]
+    pub nsfw: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -264,6 +271,9 @@ pub struct ThreadPatch {
     /// tags to apply to this thread (overwrite, not append)
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub tags: Option<Vec<TagId>>,
+
+    /// not safe for work
+    pub nsfw: Option<bool>,
 }
 
 impl Diff<Thread> for ThreadPatch {
@@ -271,6 +281,7 @@ impl Diff<Thread> for ThreadPatch {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.tags.changes(&other.tags)
+            || self.nsfw.changes(&other.nsfw)
     }
 }
 
@@ -307,6 +318,11 @@ impl ThreadPatch {
             },
             tags: if self.tags.changes(&other.tags) {
                 self.tags
+            } else {
+                None
+            },
+            nsfw: if self.nsfw.changes(&other.nsfw) {
+                self.nsfw
             } else {
                 None
             },

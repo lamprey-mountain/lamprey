@@ -100,13 +100,15 @@ impl DataThread for Postgres {
             UPDATE thread SET
                 version_id = $2,
                 name = $3, 
-                description = $4
+                description = $4,
+                nsfw = $5
             WHERE id = $1
         "#,
             thread_id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(thread.name),
             patch.description.unwrap_or(thread.description),
+            patch.nsfw.unwrap_or(thread.nsfw),
         )
         .execute(&mut *tx)
         .await?;

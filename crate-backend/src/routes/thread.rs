@@ -84,6 +84,7 @@ async fn thread_create_room(
                     name: Some(json.name),
                     description: Some(json.description),
                     tags: None,
+                    nsfw: Some(json.nsfw),
                 },
             }),
             edited_at: None,
