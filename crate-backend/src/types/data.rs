@@ -23,6 +23,8 @@ pub struct DbRoom {
     pub dm_uid_a: Option<Uuid>,
     pub dm_uid_b: Option<Uuid>,
     pub icon: Option<Uuid>,
+    pub archived_at: Option<PrimitiveDateTime>,
+    pub public: bool,
 }
 
 pub struct DbUserCreate {
@@ -65,13 +67,13 @@ impl From<DbRoom> for Room {
             } else {
                 RoomType::Default
             },
+            archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
+            public: row.public,
 
             // FIXME: add to db or calculate
             member_count: Default::default(),
             online_count: Default::default(),
             thread_count: Default::default(),
-            archived_at: None,
-            public: false,
         }
     }
 }

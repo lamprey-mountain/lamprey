@@ -21,14 +21,15 @@ impl DataRoom for Postgres {
         let room_id = Uuid::now_v7();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon)
-    	    VALUES ($1, $2, $3, $4, $5)
+    	    INSERT INTO room (id, version_id, name, description, icon, public)
+    	    VALUES ($1, $2, $3, $4, $5, $6)
         ",
             room_id,
             room_id,
             create.name,
             create.description,
             create.icon.map(|i| *i),
+            create.public,
         )
         .execute(&mut *conn)
         .await?;
@@ -48,6 +49,8 @@ impl DataRoom for Postgres {
                 room.name,
                 room.description,
                 room.icon,
+                room.archived_at,
+                room.public,
                 NULL::uuid as dm_uid_a,
                 NULL::uuid as dm_uid_b
             FROM room
@@ -78,8 +81,10 @@ impl DataRoom for Postgres {
                     room.name,
                     room.description,
                     room.icon,
+                    room.archived_at,
+                    room.public,
                     NULL::uuid as dm_uid_a,
-                NULL::uuid as dm_uid_b
+                    NULL::uuid as dm_uid_b
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
@@ -104,7 +109,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT room.id, room.name, room.description, room.icon
+            SELECT id, name, description, icon, archived_at, public
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -115,12 +120,13 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
             patch.description.unwrap_or(room.description),
             patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
+            patch.public.unwrap_or(room.public),
         )
         .execute(&mut *tx)
         .await?;

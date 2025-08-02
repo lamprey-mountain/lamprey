@@ -87,6 +87,7 @@ pub struct RoomCreate {
     pub description: Option<String>,
 
     pub icon: Option<MediaId>,
+    pub public: Option<bool>,
 }
 
 /// An update to a room
@@ -107,6 +108,7 @@ pub struct RoomPatch {
     pub description: Option<Option<String>>,
 
     pub icon: Option<Option<MediaId>>,
+    pub public: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,9 +119,11 @@ pub enum RoomType {
     #[default]
     Default,
 
+    #[deprecated]
     /// direct messages between two people
     Dm { participants: (UserId, UserId) },
 
+    #[deprecated]
     /// system messages
     // or maybe these are dms from a System user
     System,
@@ -130,5 +134,6 @@ impl Diff<Room> for RoomPatch {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.icon.changes(&other.icon)
+            || self.public.changes(&other.public)
     }
 }
