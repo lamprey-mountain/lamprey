@@ -1,17 +1,14 @@
-# lampo
+# lamprey mountain
 
-i have no idea what i'm doing but at this point this exists as my random idea
-testing playground
+testing playground for interesting ideas
 
-## why should i use this instead of (xyz)
+## status
 
-you shouldn't. this is full of strange experiments and hacks what will probably
-lead nowhere. it might end up with a ton of state-of-the-art fancy tech, but it
-probably won't be stable enough to seriously use.
+do not use this yet!
 
-## does this use the lamp stack
-
-nuh uh
+ley is full of strange experiments and hacks what will probably lead nowhere. it
+might end up with a ton of state-of-the-art fancy tech, but it probably won't be
+stable enough to seriously use... at least for now
 
 ## license
 
