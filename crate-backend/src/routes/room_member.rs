@@ -130,6 +130,19 @@ async fn room_member_add(
     }
 
     let d = s.data();
+    if let Ok(existing) = d.room_member_get(room_id, target_user_id).await {
+        if let RoomMembership::Join {
+            override_name: n,
+            override_description: d,
+            roles: _,
+        } = &existing.membership
+        {
+            if n == &json.override_name && d == &json.override_description {
+                return Err(Error::NotModified);
+            }
+        }
+    }
+
     d.room_member_put(
         room_id,
         target_user_id,
