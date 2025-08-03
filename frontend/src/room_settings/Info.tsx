@@ -1,4 +1,4 @@
-import { Show, type VoidProps } from "solid-js";
+import { createEffect, createSignal, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
 import { getUrl } from "../media/util.tsx";
@@ -88,13 +88,41 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		}
 	};
 
+	const [editingName, setEditingName] = createSignal(props.room.name);
+	const [editingDescription, setEditingDescription] = createSignal(
+		props.room.description,
+	);
+
+	const save = () => {
+		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+			params: { path: { room_id: props.room.id } },
+			body: { name: editingName(), description: editingDescription() },
+		});
+	};
+
 	return (
 		<>
 			<h2>info</h2>
-			<div>room name: {props.room.name}</div>
-			<div>room description: {props.room.description}</div>
+			<button onClick={save}>save changes</button>
+			<br />
+			name
+			<br />
+			<input
+				value={editingName()}
+				type="text"
+				onInput={(e) => setEditingName(e.target.value)}
+			/>
+			<br />
+			<br />
+			description
+			<br />
+			<textarea onInput={(e) => setEditingDescription(e.target.value)}>
+				{editingDescription()}
+			</textarea>
+			<br />
+			<br />
 			<div>
-				room avatar:
+				room avatar (click to upload):
 				<Show
 					when={props.room.icon}
 					fallback={
@@ -124,11 +152,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<div>
 				room id: <code class="select-all">{props.room.id}</code>
 			</div>
-			<button onClick={setName}>set name</button>
 			<br />
-			<button onClick={setDescription}>set description</button>
-			<br />
-			<div>(todo) tags</div>
 			<div>(todo) visibility</div>
 			<div>(todo) order, layout</div>
 			<br />

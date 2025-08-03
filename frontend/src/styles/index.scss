@@ -1696,3 +1696,9 @@ del {
 		padding: 4px;
 	}
 }
+
+textarea,
+input[type="text"] {
+	border: solid $sep-500 1px;
+	background: $bg-300;
+}

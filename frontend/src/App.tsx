@@ -336,7 +336,10 @@ function RouteFriends() {
 	const api = useApi();
 
 	const [friends] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/friend", { params: { path: { user_id: "@self" } } });
+		const { data } = await api.client.http.GET(
+			"/api/v1/user/{user_id}/friend",
+			{ params: { path: { user_id: "@self" } } },
+		);
 		return data;
 	});
 
@@ -344,7 +347,7 @@ function RouteFriends() {
 		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: prompt("target_id") } },
 		});
-	}
+	};
 
 	return (
 		<>
