@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "95789ff59c2d78dc7805c39f4330e5cf9d2df9cb9470384dac014bf159706ce1"
+}

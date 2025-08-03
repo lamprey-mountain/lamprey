@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.type as \"ty: DbThreadType\",\n    unread.message_id as \"last_read_id?\",\n    coalesce(unread.version_id < last_version_id, true) as \"is_unread!\"\nfrom thread\njoin last_id on last_id.thread_id = thread.id\nfull outer join usr on true\nleft join unread on usr.id = unread.user_id and thread.id = unread.thread_id\nwhere thread.id = $1 and usr.id = $2\n",
+  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.type as \"ty: DbThreadType\",\n    unread.message_id as \"last_read_id?\",\n    coalesce(unread.version_id < last_version_id, true) as \"is_unread!\"\nfrom thread\nleft join last_id on last_id.thread_id = thread.id\nfull outer join usr on true\nleft join unread on usr.id = unread.user_id and thread.id = unread.thread_id\nwhere thread.id = $1 and usr.id = $2\n",
   "describe": {
     "columns": [
       {
@@ -19,7 +19,8 @@
                 "Chat",
                 "DmUnused",
                 "Forum",
-                "Voice"
+                "Voice",
+                "Dm"
               ]
             }
           }
@@ -49,5 +50,5 @@
       null
     ]
   },
-  "hash": "9848991ed1542cf8bbfb34dcfe7b9bbe9f4e01b54c9455b8d352333d8953bbef"
+  "hash": "70ffe9f0229402c26ec3851042fbf36512c038a851f7545c687a9f677dd68b8f"
 }

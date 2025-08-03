@@ -19,7 +19,8 @@
                 "Chat",
                 "DmUnused",
                 "Forum",
-                "Voice"
+                "Voice",
+                "Dm"
               ]
             }
           }

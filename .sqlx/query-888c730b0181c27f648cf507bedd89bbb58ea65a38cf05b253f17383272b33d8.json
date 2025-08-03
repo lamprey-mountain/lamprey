@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    room.id,\n                    room.version_id,\n                    room.name,\n                    room.description,\n                    room.icon,\n                    room.archived_at,\n                    room.public,\n                    NULL::uuid as dm_uid_a,\n                    NULL::uuid as dm_uid_b\n                FROM room_member\n            \tJOIN room ON room_member.room_id = room.id\n            \tWHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "icon",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "dm_uid_a",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "dm_uid_b",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "888c730b0181c27f648cf507bedd89bbb58ea65a38cf05b253f17383272b33d8"
+}
