@@ -178,9 +178,10 @@ pub async fn invite_use(
     }
     match invite.invite.target {
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
-            let existing = d.room_member_get(room.id, user_id).await?;
-            if matches!(existing.membership, RoomMembership::Ban { .. }) {
-                return Err(Error::BadStatic("banned"));
+            if let Ok(existing) = d.room_member_get(room.id, user_id).await {
+                if matches!(existing.membership, RoomMembership::Ban { .. }) {
+                    return Err(Error::BadStatic("banned"));
+                }
             }
             d.room_member_put(
                 room.id,
