@@ -39,13 +39,13 @@ pub struct Portal {
 
 /// portal actor message
 pub enum PortalMessage {
-    LampoMessageCreate {
+    LampreyMessageCreate {
         message: Message,
     },
-    LampoMessageUpdate {
+    LampreyMessageUpdate {
         message: Message,
     },
-    LampoMessageDelete {
+    LampreyMessageDelete {
         message_id: MessageId,
     },
     DiscordMessageCreate {
@@ -105,11 +105,11 @@ impl Portal {
     }
 
     async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
-        let ly = self.globals.lampo_handle().await?;
+        let ly = self.globals.lamprey_handle().await?;
         match msg {
             // TODO: split apart
-            PortalMessage::LampoMessageCreate { message }
-            | PortalMessage::LampoMessageUpdate { message } => {
+            PortalMessage::LampreyMessageCreate { message }
+            | PortalMessage::LampreyMessageUpdate { message } => {
                 let user = ly.user_fetch(message.author_id).await?;
                 if user.puppet.is_some() {
                     return Ok(());
@@ -283,7 +283,7 @@ impl Portal {
                         .await?;
                 }
             }
-            PortalMessage::LampoMessageDelete { message_id } => {
+            PortalMessage::LampreyMessageDelete { message_id } => {
                 let Some(existing) = self.globals.get_message(message_id).await? else {
                     return Ok(());
                 };

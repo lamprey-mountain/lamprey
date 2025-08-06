@@ -5,14 +5,14 @@ use common::{Config, Globals};
 use dashmap::DashMap;
 use data::Data;
 use discord::Discord;
-use lampo::Lampo;
+use lamprey::Lamprey;
 use tokio::sync::mpsc;
 use tracing_subscriber::EnvFilter;
 
 mod common;
 mod data;
 mod discord;
-mod lampo;
+mod lamprey;
 mod portal;
 
 #[tokio::main]
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     }
 
     let dc = Discord::new(globals.clone(), dc_chan.1);
-    let ch = Lampo::new(globals.clone(), ch_chan.1);
+    let ch = Lamprey::new(globals.clone(), ch_chan.1);
 
     let _ = tokio::join!(dc.connect(), ch.connect());
 

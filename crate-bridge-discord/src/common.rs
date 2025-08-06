@@ -8,9 +8,9 @@ use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::data::MessageMetadata;
-use crate::lampo::LampoHandle;
+use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
-use crate::{discord::DiscordMessage, lampo::LampoMessage};
+use crate::{discord::DiscordMessage, lamprey::LampreyMessage};
 
 #[derive(Clone)]
 pub struct Globals {
@@ -19,7 +19,7 @@ pub struct Globals {
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
-    pub(super) ch_chan: mpsc::Sender<LampoMessage>,
+    pub(super) ch_chan: mpsc::Sender<LampreyMessage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -86,10 +86,10 @@ impl GlobalsTrait for Arc<Globals> {
 }
 
 impl Globals {
-    pub async fn lampo_handle(&self) -> Result<LampoHandle> {
+    pub async fn lamprey_handle(&self) -> Result<LampreyHandle> {
         let (send, recv) = oneshot::channel();
         self.ch_chan
-            .send(LampoMessage::Handle { response: send })
+            .send(LampreyMessage::Handle { response: send })
             .await?;
         Ok(recv.await?)
     }

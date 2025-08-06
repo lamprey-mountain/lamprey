@@ -14,14 +14,14 @@ use crate::{
     portal::PortalMessage,
 };
 
-pub struct Lampo {
-    recv: mpsc::Receiver<LampoMessage>,
+pub struct Lamprey {
+    recv: mpsc::Receiver<LampreyMessage>,
     client: Client,
 }
 
-pub enum LampoMessage {
+pub enum LampreyMessage {
     Handle {
-        response: oneshot::Sender<LampoHandle>,
+        response: oneshot::Sender<LampreyHandle>,
     },
 }
 
@@ -46,7 +46,7 @@ impl EventHandler for Handle {
         info!("chat upsert message");
         self.globals.portal_send(
             message.thread_id,
-            PortalMessage::LampoMessageCreate { message },
+            PortalMessage::LampreyMessageCreate { message },
         );
         Ok(())
     }
@@ -55,21 +55,23 @@ impl EventHandler for Handle {
         info!("chat upsert message");
         self.globals.portal_send(
             message.thread_id,
-            PortalMessage::LampoMessageUpdate { message },
+            PortalMessage::LampreyMessageUpdate { message },
         );
         Ok(())
     }
 
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
-        self.globals
-            .portal_send(thread_id, PortalMessage::LampoMessageDelete { message_id });
+        self.globals.portal_send(
+            thread_id,
+            PortalMessage::LampreyMessageDelete { message_id },
+        );
         Ok(())
     }
 }
 
-impl Lampo {
-    pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<LampoMessage>) -> Self {
+impl Lamprey {
+    pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<LampreyMessage>) -> Self {
         let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
         let base_url = std::env::var("BASE_URL").expect("missing BASE_URL");
         let base_url_ws = std::env::var("BASE_URL_WS").expect("missing BASE_URL_WS");
@@ -95,20 +97,20 @@ impl Lampo {
     }
 }
 
-async fn handle(msg: LampoMessage, http: &Http) -> Result<()> {
+async fn handle(msg: LampreyMessage, http: &Http) -> Result<()> {
     match msg {
-        LampoMessage::Handle { response } => {
-            let _ = response.send(LampoHandle { http: http.clone() });
+        LampreyMessage::Handle { response } => {
+            let _ = response.send(LampreyHandle { http: http.clone() });
         }
     }
     Ok(())
 }
 
-pub struct LampoHandle {
+pub struct LampreyHandle {
     http: Http,
 }
 
-impl LampoHandle {
+impl LampreyHandle {
     pub async fn media_upload(
         &self,
         filename: String,
