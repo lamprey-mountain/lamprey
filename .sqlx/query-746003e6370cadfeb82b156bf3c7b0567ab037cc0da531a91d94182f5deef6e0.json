@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM portal WHERE lamprey_thread_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "lamprey_thread_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "lamprey_room_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_guild_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_channel_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_thread_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_webhook",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "746003e6370cadfeb82b156bf3c7b0567ab037cc0da531a91d94182f5deef6e0"
+}
