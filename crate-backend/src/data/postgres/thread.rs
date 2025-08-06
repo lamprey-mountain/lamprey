@@ -20,8 +20,8 @@ impl DataThread for Postgres {
         let thread_id = ThreadId::new();
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -30,6 +30,7 @@ impl DataThread for Postgres {
             create.name,
             create.description,
             create.ty as _,
+            create.nsfw,
         )
         .execute(&self.pool)
         .await?;

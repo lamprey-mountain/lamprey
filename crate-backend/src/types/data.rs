@@ -107,6 +107,7 @@ pub struct DbThreadCreate {
     pub name: String,
     pub description: Option<String>,
     pub ty: DbThreadType,
+    pub nsfw: bool,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize)]

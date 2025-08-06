@@ -15,11 +15,11 @@ use validator::Validate;
 use crate::{
     types::{
         DbMessageCreate, DbThreadCreate, DbThreadType, MessageSync, MessageType, MessageVerId,
-        PaginationQuery, PaginationResponse, Permission, RoomId, Thread, ThreadCreate, ThreadId,
-        ThreadPatch,
+        Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
     ServerState,
 };
+use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
@@ -71,6 +71,7 @@ async fn thread_create_room(
                 ThreadType::Voice => DbThreadType::Voice,
                 _ => todo!(),
             },
+            nsfw: json.nsfw,
         })
         .await?;
     let starter_message_id = data
