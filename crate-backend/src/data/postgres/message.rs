@@ -299,8 +299,8 @@ impl DataMessage for Postgres {
             DbMessage,
             "sql/message_version_get.sql",
             *thread_id,
-            *version_id,
             *user_id,
+            *version_id,
         )
         .fetch_one(&self.pool)
         .await?;
