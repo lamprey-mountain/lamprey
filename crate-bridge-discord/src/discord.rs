@@ -244,7 +244,7 @@ impl Discord {
     }
 
     pub async fn connect(mut self) -> Result<()> {
-        let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
+        let token = self.globals.config.discord_token.clone();
         let handler = Handler;
         let mut client = serenity::Client::builder(token, GatewayIntents::all())
             .event_handler(handler)

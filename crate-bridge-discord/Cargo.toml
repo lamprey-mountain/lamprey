@@ -15,7 +15,6 @@ serde = "1.0.217"
 serenity = "0.12.4"
 sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread"] }
-toml_edit = { version = "0.22.22", features = ["serde"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { version = "0.1.0", path = "../crate-common" }
@@ -24,3 +23,4 @@ crate-hakari = { version = "0.1", path = "../crate-hakari" }
 sdk = { version = "0.1.0", path = "../crate-sdk" }
 time = { version = "0.3", features = ["serde-human-readable", "macros"] }
 anyhow = "1.0.95"
+figment = { version = "0.10.19", features = ["env", "toml"] }

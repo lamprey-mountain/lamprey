@@ -5,6 +5,7 @@ use common::{Config, Globals};
 use dashmap::DashMap;
 use data::Data;
 use discord::Discord;
+use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
 use tokio::sync::mpsc;
 use tracing_subscriber::EnvFilter;
@@ -24,11 +25,13 @@ async fn main() -> Result<()> {
         .finish();
     tracing::subscriber::set_global_default(sub)?;
 
-    let config = tokio::fs::read_to_string("config.toml").await?;
-    let config: Config = toml_edit::de::from_str(&config)?;
+    let config: Config = figment::Figment::new()
+        .merge(Toml::file("config.toml"))
+        .merge(Env::raw().only(&["RUST_LOG"]))
+        .extract()?;
 
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect(&std::env::var("DATABASE_URL").expect("missing env var"))
+        .connect(&config.database_url)
         .await?;
 
     sqlx::migrate!("./migrations").run(&pool).await?;

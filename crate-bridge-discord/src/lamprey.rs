@@ -62,21 +62,31 @@ impl EventHandler for Handle {
 
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
-        self.globals
-            .portal_send(thread_id, PortalMessage::LampreyMessageDelete { message_id });
+        self.globals.portal_send(
+            thread_id,
+            PortalMessage::LampreyMessageDelete { message_id },
+        );
         Ok(())
     }
 }
 
 impl Lamprey {
     pub fn new(globals: Arc<Globals>, recv: mpsc::Receiver<LampreyMessage>) -> Self {
-        let token = std::env::var("MY_TOKEN").expect("missing MY_TOKEN");
-        let base_url = std::env::var("BASE_URL").expect("missing BASE_URL");
-        let base_url_ws = std::env::var("BASE_URL_WS").expect("missing BASE_URL_WS");
+        let token = globals.config.lamprey_token.clone();
+        let base_url = globals.config.lamprey_base_url.clone();
+        let ws_url = globals.config.lamprey_ws_url.clone();
         let handle = Handle { globals };
         let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
-        client.http = client.http.with_base_url(base_url.parse().unwrap());
-        client.syncer = client.syncer.with_base_url(base_url_ws.parse().unwrap());
+        client.http = if let Some(base_url) = base_url {
+            client.http.with_base_url(base_url.parse().unwrap())
+        } else {
+            client.http
+        };
+        client.syncer = if let Some(ws_url) = ws_url {
+            client.syncer.with_base_url(ws_url.parse().unwrap())
+        } else {
+            client.syncer
+        };
         Self { client, recv }
     }
 

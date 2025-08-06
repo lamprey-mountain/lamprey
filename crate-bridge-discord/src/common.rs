@@ -24,7 +24,12 @@ pub struct Globals {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
+    pub database_url: String,
     pub portal: Vec<ConfigPortal>,
+    pub lamprey_token: String,
+    pub lamprey_base_url: Option<String>,
+    pub lamprey_ws_url: Option<String>,
+    pub discord_token: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
