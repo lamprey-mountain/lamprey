@@ -29,7 +29,7 @@ impl DataRoom for Postgres {
             create.name,
             create.description,
             create.icon.map(|i| *i),
-            create.public,
+            create.public.unwrap_or(false),
         )
         .execute(&mut *conn)
         .await?;
