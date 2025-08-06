@@ -28,6 +28,7 @@ use serenity::all::{ExecuteWebhook, MessageReferenceKind};
 use time::OffsetDateTime;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tracing::debug;
 use tracing::error;
 use tracing::info;
 
@@ -313,6 +314,7 @@ impl Portal {
                         self.room_id(),
                     )
                     .await?;
+                debug!("created puppet");
                 let user_id = puppet.id;
                 let p = self
                     .globals
@@ -407,6 +409,7 @@ impl Portal {
                         bot: Some(puppet.bot.is_some()),
                     })
                     .await?;
+                debug!("inserted puppet");
 
                 let mut req = types::MessageCreate {
                     content: None,
@@ -428,15 +431,18 @@ impl Portal {
                 };
                 for a in &message.attachments {
                     let bytes = a.download().await?;
+                    debug!("downloaded attachment");
                     let media = ly
                         .media_upload(a.filename.to_owned(), bytes, user_id)
                         .await?;
+                    debug!("reuploaded attachment");
                     self.globals
                         .insert_attachment(AttachmentMetadata {
                             chat_id: media.id,
                             discord_id: a.id,
                         })
                         .await?;
+                    debug!("saved attachment metadata to db");
                     req.attachments.push(MediaRef { id: media.id });
                 }
                 for emb in message.embeds.iter().cloned() {
@@ -535,6 +541,7 @@ impl Portal {
                 };
                 let thread_id = self.thread_id();
                 let res = ly.message_create(thread_id, user_id, req).await?;
+                debug!("sent message");
                 self.globals
                     .insert_message(MessageMetadata {
                         chat_id: res.id,

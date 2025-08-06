@@ -82,6 +82,7 @@ async fn room_member_get(
     }
 }
 
+// FIXME: only return 304 not modified if an etag is sent
 /// Room member add
 ///
 /// Only `Puppet` users can be added to rooms (via MemberBridge permission)

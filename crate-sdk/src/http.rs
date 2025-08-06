@@ -1,7 +1,7 @@
 use anyhow::Result;
 use common::v1::types::{
     media::MediaCreated, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaId, Message,
-    MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, RoomMember, SessionToken, Thread,
+    MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, SessionToken, Thread,
     ThreadCreate, ThreadId, ThreadPatch, User, UserId, UserPatch,
 };
 use headers::HeaderMapExt;
@@ -168,6 +168,7 @@ macro_rules! route {
     };
 }
 
+// FIXME: 304 not modified (see room_member.rs)
 route!(get    "/api/v1/media/{media_id}"                        => media_info_get(media_id: MediaId) -> Media);
 route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Thread, ThreadCreate);
 route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ThreadId) -> Thread, ThreadPatch);
@@ -180,7 +181,7 @@ route!(put    "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reactio
 route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_unreact(thread_id: ThreadId, message_id: MessageId, reaction: String));
 route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ThreadId));
 route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
-route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId) -> RoomMember);
+route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId));
 // route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
 route!(patch  "/api/v1/user/{user_id}"                          => user_update(user_id: UserIdReq) -> User, UserPatch);
 route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"         => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);

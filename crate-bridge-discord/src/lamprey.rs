@@ -7,7 +7,7 @@ use common::v1::types::{
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
     common::{Globals, GlobalsTrait},
@@ -62,10 +62,8 @@ impl EventHandler for Handle {
 
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
-        self.globals.portal_send(
-            thread_id,
-            PortalMessage::LampreyMessageDelete { message_id },
-        );
+        self.globals
+            .portal_send(thread_id, PortalMessage::LampreyMessageDelete { message_id });
         Ok(())
     }
 }
@@ -240,7 +238,9 @@ impl LampreyHandle {
                 },
             )
             .await?;
+        debug!("ensured user");
         self.http.room_member_put(room_id, user.id).await?;
+        debug!("ensured room member");
         Ok(user)
     }
 
