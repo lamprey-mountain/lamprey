@@ -320,7 +320,7 @@ impl Portal {
                     .globals
                     .get_puppet("discord", &message.author.id.to_string())
                     .await?;
-                if let Some(p) = dbg!(p) {
+                if let Some(p) = p {
                     if p.ext_avatar != message.author.avatar_url() {
                         if let Some(url) = message.author.avatar_url() {
                             info!("set user pfp for {user_id}");
@@ -368,10 +368,9 @@ impl Portal {
                         };
                         let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
                         info!("set user pfp download");
-                        let media = dbg!(
-                            ly.media_upload(name.to_owned(), bytes.to_vec(), user_id)
-                                .await
-                        )?;
+                        let media = ly
+                            .media_upload(name.to_owned(), bytes.to_vec(), user_id)
+                            .await?;
                         info!("set user pfp upload");
                         ly.user_update(
                             user_id,
