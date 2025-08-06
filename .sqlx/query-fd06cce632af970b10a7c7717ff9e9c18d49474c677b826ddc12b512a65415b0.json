@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n\t\t\tINSERT INTO thread (id, version_id, creator_id, room_id, name, description, type)\n\t\t\tVALUES ($1, $2, $3, $4, $5, $6, $7)\n        ",
+  "query": "\n\t\t\tINSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw)\n\t\t\tVALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -24,10 +24,11 @@
               ]
             }
           }
-        }
+        },
+        "Bool"
       ]
     },
     "nullable": []
   },
-  "hash": "4ee9c423263217a6c74a4ff9c590d5221de15f22f95300fa0991ebcb4e8adc74"
+  "hash": "fd06cce632af970b10a7c7717ff9e9c18d49474c677b826ddc12b512a65415b0"
 }

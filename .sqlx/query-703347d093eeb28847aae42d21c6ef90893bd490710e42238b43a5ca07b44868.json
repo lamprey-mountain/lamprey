@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR IGNORE INTO portal\n            (lamprey_thread_id, lamprey_room_id, discord_guild_id, discord_channel_id, discord_thread_id, discord_webhook)\n            VALUES (?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "703347d093eeb28847aae42d21c6ef90893bd490710e42238b43a5ca07b44868"
+}
