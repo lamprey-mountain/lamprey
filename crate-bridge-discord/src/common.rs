@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use common::v1::types::{RoomId, ThreadId};
+use async_trait::async_trait;
+use common::v1::types::ThreadId;
 use dashmap::DashMap;
 use serde::Deserialize;
-use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
+use serenity::all::ChannelId as DcChannelId;
 use tokio::sync::{mpsc, oneshot};
 
-use crate::data::MessageMetadata;
+use crate::data::{Data, MessageMetadata};
 use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
 use crate::{discord::DiscordMessage, lamprey::LampreyMessage};
@@ -25,66 +26,38 @@ pub struct Globals {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub database_url: String,
-    pub portal: Vec<ConfigPortal>,
     pub lamprey_token: String,
     pub lamprey_base_url: Option<String>,
     pub lamprey_ws_url: Option<String>,
     pub discord_token: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct ConfigPortal {
-    pub my_thread_id: ThreadId,
-    pub my_room_id: RoomId,
-    pub discord_guild_id: DcGuildId,
-    pub discord_channel_id: DcChannelId,
-    pub discord_thread_id: Option<DcChannelId>,
-    pub discord_webhook: String,
-}
-
-impl ConfigPortal {
-    #[inline]
-    pub fn discord_channel_or_thread_id(&self) -> DcChannelId {
-        self.discord_thread_id.unwrap_or(self.discord_channel_id)
-    }
-}
-
-impl Config {
-    pub fn portal_by_discord_id(&self, id: DcChannelId) -> Option<&ConfigPortal> {
-        self.portal
-            .iter()
-            .find(|i| i.discord_channel_or_thread_id() == id)
-    }
-
-    pub fn portal_by_thread_id(&self, id: ThreadId) -> Option<&ConfigPortal> {
-        self.portal.iter().find(|i| i.my_thread_id == id)
-    }
-}
-
+#[async_trait]
 pub trait GlobalsTrait {
-    fn portal_send(&mut self, thread_id: ThreadId, msg: PortalMessage);
-    fn portal_send_dc(&mut self, channel_id: DcChannelId, msg: PortalMessage);
+    async fn portal_send(&self, thread_id: ThreadId, msg: PortalMessage);
+    async fn portal_send_dc(&self, channel_id: DcChannelId, msg: PortalMessage);
 }
 
+#[async_trait]
 impl GlobalsTrait for Arc<Globals> {
-    fn portal_send(&mut self, thread_id: ThreadId, msg: PortalMessage) {
-        let Some(config) = self.config.portal_by_thread_id(thread_id) else {
+    async fn portal_send(&self, thread_id: ThreadId, msg: PortalMessage) {
+        let Ok(Some(config)) = self.get_portal_by_thread_id(thread_id).await else {
             return;
         };
         let portal = self
             .portals
-            .entry(config.my_thread_id)
+            .entry(config.lamprey_thread_id)
             .or_insert_with(|| Portal::summon(self.clone(), config.to_owned()));
         let _ = portal.send(msg);
     }
 
-    fn portal_send_dc(&mut self, channel_id: DcChannelId, msg: PortalMessage) {
-        let Some(config) = self.config.portal_by_discord_id(channel_id) else {
+    async fn portal_send_dc(&self, channel_id: DcChannelId, msg: PortalMessage) {
+        let Ok(Some(config)) = self.get_portal_by_discord_channel(channel_id).await else {
             return;
         };
         let portal = self
             .portals
-            .entry(config.my_thread_id)
+            .entry(config.lamprey_thread_id)
             .or_insert_with(|| Portal::summon(self.clone(), config.to_owned()));
         let _ = portal.send(msg);
     }

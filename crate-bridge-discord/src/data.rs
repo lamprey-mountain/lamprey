@@ -1,13 +1,53 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{MediaId, MessageId, ThreadId};
+use common::v1::types::{MediaId, MessageId, RoomId, ThreadId};
 use serenity::all::{
-    AttachmentId as DcAttachmentId, ChannelId as DcChannelId, MessageId as DcMessageId,
+    AttachmentId as DcAttachmentId, ChannelId as DcChannelId, GuildId as DcGuildId,
+    MessageId as DcMessageId,
 };
 use sqlx::{query, query_as};
 use uuid::Uuid;
 
 use crate::common::Globals;
+
+#[derive(Debug, Clone)]
+pub struct PortalConfig {
+    pub lamprey_thread_id: ThreadId,
+    pub lamprey_room_id: RoomId,
+    pub discord_guild_id: DcGuildId,
+    pub discord_channel_id: DcChannelId,
+    pub discord_thread_id: Option<DcChannelId>,
+    pub discord_webhook: String,
+}
+
+
+
+struct PortalConfigRow {
+    pub lamprey_thread_id: String,
+    pub lamprey_room_id: String,
+    pub discord_guild_id: String,
+    pub discord_channel_id: String,
+    pub discord_thread_id: Option<String>,
+    pub discord_webhook: String,
+}
+
+impl TryFrom<PortalConfigRow> for PortalConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(value: PortalConfigRow) -> Result<Self, Self::Error> {
+        Ok(Self {
+            lamprey_thread_id: value.lamprey_thread_id.parse()?,
+            lamprey_room_id: value.lamprey_room_id.parse()?,
+            discord_guild_id: value.discord_guild_id.parse()?,
+            discord_channel_id: value.discord_channel_id.parse()?,
+            discord_thread_id: value
+                .discord_thread_id
+                .map(|v| v.parse())
+                .transpose()?,
+            discord_webhook: value.discord_webhook,
+        })
+    }
+}
 
 pub struct MessageMetadata {
     pub chat_id: MessageId,
@@ -92,6 +132,12 @@ impl From<AttachmentMetadata> for AttachmentMetadataRow {
 
 #[async_trait]
 pub trait Data {
+    async fn get_portals(&self) -> Result<Vec<PortalConfig>>;
+    async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>>;
+    async fn get_portal_by_discord_channel(
+        &self,
+        id: DcChannelId,
+    ) -> Result<Option<PortalConfig>>;
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
     async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>>;
@@ -110,6 +156,41 @@ pub trait Data {
 
 #[async_trait]
 impl Data for Globals {
+    async fn get_portals(&self) -> Result<Vec<PortalConfig>> {
+        let rows = query_as!(PortalConfigRow, "SELECT * FROM portal")
+            .fetch_all(&self.pool)
+            .await?;
+        rows.into_iter().map(|r| r.try_into()).collect()
+    }
+
+    async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>> {
+        let id = id.to_string();
+        let row = query_as!(
+            PortalConfigRow,
+            "SELECT * FROM portal WHERE lamprey_thread_id = ?",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        row.map(|r| r.try_into()).transpose()
+    }
+
+    async fn get_portal_by_discord_channel(
+        &self,
+        id: DcChannelId,
+    ) -> Result<Option<PortalConfig>> {
+        let id = id.to_string();
+        let row = query_as!(
+            PortalConfigRow,
+            "SELECT * FROM portal WHERE discord_channel_id = ? OR discord_thread_id = ?",
+            id,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        row.map(|r| r.try_into()).transpose()
+    }
+
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>> {
         let b1 = message_id.to_string();
         let row = query_as!(

@@ -44,28 +44,31 @@ impl EventHandler for Handle {
 
     async fn message_create(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        self.globals.portal_send(
-            message.thread_id,
-            PortalMessage::LampreyMessageCreate { message },
-        );
+        self.globals
+            .portal_send(
+                message.thread_id,
+                PortalMessage::LampreyMessageCreate { message },
+            )
+            .await;
         Ok(())
     }
 
     async fn message_update(&mut self, message: types::Message) -> Result<()> {
         info!("chat upsert message");
-        self.globals.portal_send(
-            message.thread_id,
-            PortalMessage::LampreyMessageUpdate { message },
-        );
+        self.globals
+            .portal_send(
+                message.thread_id,
+                PortalMessage::LampreyMessageUpdate { message },
+            )
+            .await;
         Ok(())
     }
 
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
-        self.globals.portal_send(
-            thread_id,
-            PortalMessage::LampreyMessageDelete { message_id },
-        );
+        self.globals
+            .portal_send(thread_id, PortalMessage::LampreyMessageDelete { message_id })
+            .await;
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::common::ConfigPortal;
+use crate::data::PortalConfig;
 use crate::common::Globals;
 use crate::data::AttachmentMetadata;
 use crate::data::Data;
@@ -35,7 +35,7 @@ use tracing::info;
 pub struct Portal {
     globals: Arc<Globals>,
     recv: mpsc::UnboundedReceiver<PortalMessage>,
-    config: ConfigPortal,
+    config: PortalConfig,
 }
 
 /// portal actor message
@@ -72,7 +72,7 @@ pub enum PortalMessage {
 impl Portal {
     pub fn summon(
         globals: Arc<Globals>,
-        config: ConfigPortal,
+        config: PortalConfig,
     ) -> mpsc::UnboundedSender<PortalMessage> {
         let (send, recv) = mpsc::unbounded_channel();
         let portal = Self {
@@ -89,11 +89,11 @@ impl Portal {
     }
 
     pub fn thread_id(&self) -> ThreadId {
-        self.config.my_thread_id
+        self.config.lamprey_thread_id
     }
 
     pub fn room_id(&self) -> RoomId {
-        self.config.my_room_id
+        self.config.lamprey_room_id
     }
 
     async fn activate(mut self) {

@@ -48,10 +48,14 @@ async fn main() -> Result<()> {
         ch_chan: ch_chan.0,
     });
 
-    for config in &globals.config.portal {
-        let last_id = globals.get_last_message_ch(config.my_thread_id).await?;
+    for config in globals.get_portals().await? {
+        let last_id = globals
+            .get_last_message_ch(config.lamprey_thread_id)
+            .await?;
         if let Some(last_id) = last_id {
-            globals.last_ids.insert(config.my_thread_id, last_id);
+            globals
+                .last_ids
+                .insert(config.lamprey_thread_id, last_id);
         }
     }
 

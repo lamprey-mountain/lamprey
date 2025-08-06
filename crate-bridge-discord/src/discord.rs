@@ -18,6 +18,7 @@ use tracing::{error, info};
 
 use crate::{
     common::{Globals, GlobalsTrait},
+    data::Data,
     portal::{Portal, PortalMessage},
 };
 
@@ -41,12 +42,12 @@ impl EventHandler for Handler {
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
         let chans = guild.channels.values().chain(&guild.threads);
         for ch in chans {
-            let Some(config) = globals.config.portal_by_discord_id(ch.id) else {
+            let Ok(Some(config)) = globals.get_portal_by_discord_channel(ch.id).await else {
                 continue;
             };
             let portal = globals
                 .portals
-                .entry(config.my_thread_id)
+                .entry(config.lamprey_thread_id)
                 .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
             let last_id = globals
                 .last_ids
@@ -78,29 +79,32 @@ impl EventHandler for Handler {
 
     async fn message(&self, ctx: Context, message: Message) {
         info!("discord message create");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
         // ignore bridged messages
         if let Some(w) = message.webhook_id {
-            if let Some(h) = globals.config.portal_by_discord_id(message.channel_id) {
-                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
-                    .unwrap()
-                    .0;
+            if let Ok(Some(h)) = globals
+                .get_portal_by_discord_channel(message.channel_id)
+                .await
+            {
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap()).unwrap().0;
                 if msg_wh_id == w {
                     return;
                 }
             }
         }
 
-        globals.portal_send_dc(
-            message
-                .thread
-                .as_ref()
-                .map(|t| t.id)
-                .unwrap_or(message.channel_id),
-            PortalMessage::DiscordMessageCreate { message },
-        );
+        globals
+            .portal_send_dc(
+                message
+                    .thread
+                    .as_ref()
+                    .map(|t| t.id)
+                    .unwrap_or(message.channel_id),
+                PortalMessage::DiscordMessageCreate { message },
+            )
+            .await;
     }
 
     async fn message_update(
@@ -111,25 +115,28 @@ impl EventHandler for Handler {
         event: MessageUpdateEvent,
     ) {
         info!("discord message update");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
         // ignore bridged messages
         if let Some(w) = new.and_then(|m| m.webhook_id) {
-            if let Some(h) = globals.config.portal_by_discord_id(event.channel_id) {
-                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
-                    .unwrap()
-                    .0;
+            if let Ok(Some(h)) = globals
+                .get_portal_by_discord_channel(event.channel_id)
+                .await
+            {
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap()).unwrap().0;
                 if msg_wh_id == w {
                     return;
                 }
             }
         }
 
-        globals.portal_send_dc(
-            event.channel_id,
-            PortalMessage::DiscordMessageUpdate { update: event },
-        );
+        globals
+            .portal_send_dc(
+                event.channel_id,
+                PortalMessage::DiscordMessageUpdate { update: event },
+            )
+            .await;
     }
 
     async fn message_delete(
@@ -140,14 +147,16 @@ impl EventHandler for Handler {
         _guild_id: Option<GuildId>,
     ) {
         info!("discord message delete");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(
-            channel_id,
-            PortalMessage::DiscordMessageDelete {
-                message_id: deleted_message_id,
-            },
-        );
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
+        globals
+            .portal_send_dc(
+                channel_id,
+                PortalMessage::DiscordMessageDelete {
+                    message_id: deleted_message_id,
+                },
+            )
+            .await;
     }
 
     async fn message_delete_bulk(
@@ -158,46 +167,51 @@ impl EventHandler for Handler {
         _guild_id: Option<GuildId>,
     ) {
         info!("discord message delete bulk");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
         for message_id in multiple_deleted_messages_ids {
-            globals.portal_send_dc(
-                channel_id,
-                PortalMessage::DiscordMessageDelete { message_id },
-            );
+            globals
+                .portal_send_dc(
+                    channel_id,
+                    PortalMessage::DiscordMessageDelete { message_id },
+                )
+                .await;
         }
     }
 
     async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
         info!("discord reaction add");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(
-            add_reaction.channel_id,
-            PortalMessage::DiscordReactionAdd { add_reaction },
-        );
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
+        globals
+            .portal_send_dc(
+                add_reaction.channel_id,
+                PortalMessage::DiscordReactionAdd { add_reaction },
+            )
+            .await;
     }
 
     async fn reaction_remove(&self, ctx: Context, removed_reaction: Reaction) {
         info!("discord reaction remove");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(
-            removed_reaction.channel_id,
-            PortalMessage::DiscordReactionRemove { removed_reaction },
-        );
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
+        globals
+            .portal_send_dc(
+                removed_reaction.channel_id,
+                PortalMessage::DiscordReactionRemove { removed_reaction },
+            )
+            .await;
     }
 
     async fn typing_start(&self, ctx: Context, event: TypingStartEvent) {
         info!("discord typing start");
-        let mut ctx_data = ctx.data.write().await;
-        let globals = ctx_data.get_mut::<GlobalsKey>().unwrap();
-        globals.portal_send_dc(
-            event.channel_id,
-            PortalMessage::DiscordTyping {
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap();
+        globals
+            .portal_send_dc(event.channel_id, PortalMessage::DiscordTyping {
                 user_id: event.user_id,
-            },
-        );
+            })
+            .await;
     }
 }
 
