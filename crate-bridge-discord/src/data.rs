@@ -20,8 +20,6 @@ pub struct PortalConfig {
     pub discord_webhook: String,
 }
 
-
-
 struct PortalConfigRow {
     pub lamprey_thread_id: String,
     pub lamprey_room_id: String,
@@ -40,12 +38,22 @@ impl TryFrom<PortalConfigRow> for PortalConfig {
             lamprey_room_id: value.lamprey_room_id.parse()?,
             discord_guild_id: value.discord_guild_id.parse()?,
             discord_channel_id: value.discord_channel_id.parse()?,
-            discord_thread_id: value
-                .discord_thread_id
-                .map(|v| v.parse())
-                .transpose()?,
+            discord_thread_id: value.discord_thread_id.map(|v| v.parse()).transpose()?,
             discord_webhook: value.discord_webhook,
         })
+    }
+}
+
+impl From<PortalConfig> for PortalConfigRow {
+    fn from(value: PortalConfig) -> Self {
+        Self {
+            lamprey_thread_id: value.lamprey_thread_id.to_string(),
+            lamprey_room_id: value.lamprey_room_id.to_string(),
+            discord_guild_id: value.discord_guild_id.to_string(),
+            discord_channel_id: value.discord_channel_id.to_string(),
+            discord_thread_id: value.discord_thread_id.map(|v| v.to_string()),
+            discord_webhook: value.discord_webhook,
+        }
     }
 }
 
@@ -134,10 +142,8 @@ impl From<AttachmentMetadata> for AttachmentMetadataRow {
 pub trait Data {
     async fn get_portals(&self) -> Result<Vec<PortalConfig>>;
     async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>>;
-    async fn get_portal_by_discord_channel(
-        &self,
-        id: DcChannelId,
-    ) -> Result<Option<PortalConfig>>;
+    async fn get_portal_by_discord_channel(&self, id: DcChannelId) -> Result<Option<PortalConfig>>;
+    async fn insert_portal(&self, portal: PortalConfig) -> Result<()>;
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
     async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>>;
@@ -175,10 +181,7 @@ impl Data for Globals {
         row.map(|r| r.try_into()).transpose()
     }
 
-    async fn get_portal_by_discord_channel(
-        &self,
-        id: DcChannelId,
-    ) -> Result<Option<PortalConfig>> {
+    async fn get_portal_by_discord_channel(&self, id: DcChannelId) -> Result<Option<PortalConfig>> {
         let id = id.to_string();
         let row = query_as!(
             PortalConfigRow,
@@ -189,6 +192,26 @@ impl Data for Globals {
         .fetch_optional(&self.pool)
         .await?;
         row.map(|r| r.try_into()).transpose()
+    }
+
+    async fn insert_portal(&self, portal: PortalConfig) -> Result<()> {
+        let row: PortalConfigRow = portal.into();
+        query!(
+            r#"
+            INSERT OR IGNORE INTO portal
+            (lamprey_thread_id, lamprey_room_id, discord_guild_id, discord_channel_id, discord_thread_id, discord_webhook)
+            VALUES (?, ?, ?, ?, ?, ?)
+            "#,
+            row.lamprey_thread_id,
+            row.lamprey_room_id,
+            row.discord_guild_id,
+            row.discord_channel_id,
+            row.discord_thread_id,
+            row.discord_webhook
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>> {

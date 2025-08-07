@@ -1,11 +1,11 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::data::PortalConfig;
 use crate::common::Globals;
 use crate::data::AttachmentMetadata;
 use crate::data::Data;
 use crate::data::MessageMetadata;
+use crate::data::PortalConfig;
 use crate::data::Puppet;
 use crate::discord::DiscordMessage;
 use anyhow::Result;

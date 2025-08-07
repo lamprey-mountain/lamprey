@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaCreateSource, MediaId,
-    MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User, UserId,
+    self, misc::UserIdReq, pagination::PaginationQuery, ApplicationId, Media, MediaCreate,
+    MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User,
+    UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -67,7 +68,10 @@ impl EventHandler for Handle {
     async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         info!("chat delete message");
         self.globals
-            .portal_send(thread_id, PortalMessage::LampreyMessageDelete { message_id })
+            .portal_send(
+                thread_id,
+                PortalMessage::LampreyMessageDelete { message_id },
+            )
             .await;
         Ok(())
     }
@@ -96,6 +100,7 @@ impl Lamprey {
     pub async fn connect(mut self) -> Result<()> {
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
+                info!("got msg");
                 match handle(msg, &self.client.http).await {
                     Ok(_) => {}
                     Err(err) => error!("{err}"),
@@ -269,5 +274,24 @@ impl LampreyHandle {
             .user_update(UserIdReq::UserId(user_id), patch)
             .await?;
         Ok(res)
+    }
+
+    pub async fn room_threads(&self, room_id: RoomId) -> Result<Vec<Thread>> {
+        let mut all_threads = Vec::new();
+        let mut query = PaginationQuery::default();
+        loop {
+            info!("get room threads");
+            let res = dbg!(self.http.thread_list(room_id, &query).await)?;
+            all_threads.extend(res.items);
+            if let Some(cursor) = res.cursor {
+                query.from = Some(cursor.parse().unwrap());
+            } else {
+                break;
+            }
+            if !res.has_more {
+                break;
+            }
+        }
+        Ok(all_threads)
     }
 }

@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        parse_webhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
-        Http, MessagePagination, Ready, Webhook,
+        parse_webhook, CreateChannel, CreateWebhook, EditWebhookMessage, EventHandler,
+        ExecuteWebhook, GatewayIntents, Guild, Http, MessagePagination, Ready, Webhook,
     },
     model::prelude::{
         ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction, TypingStartEvent,
@@ -88,7 +88,9 @@ impl EventHandler for Handler {
                 .get_portal_by_discord_channel(message.channel_id)
                 .await
             {
-                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap()).unwrap().0;
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
+                    .unwrap()
+                    .0;
                 if msg_wh_id == w {
                     return;
                 }
@@ -124,7 +126,9 @@ impl EventHandler for Handler {
                 .get_portal_by_discord_channel(event.channel_id)
                 .await
             {
-                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap()).unwrap().0;
+                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
+                    .unwrap()
+                    .0;
                 if msg_wh_id == w {
                     return;
                 }
@@ -208,9 +212,12 @@ impl EventHandler for Handler {
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
         globals
-            .portal_send_dc(event.channel_id, PortalMessage::DiscordTyping {
-                user_id: event.user_id,
-            })
+            .portal_send_dc(
+                event.channel_id,
+                PortalMessage::DiscordTyping {
+                    user_id: event.user_id,
+                },
+            )
             .await;
     }
 }
@@ -245,6 +252,16 @@ pub enum DiscordMessage {
         message_id: MessageId,
         channel_id: ChannelId,
         response: oneshot::Sender<Message>,
+    },
+    ChannelCreate {
+        guild_id: GuildId,
+        name: String,
+        response: oneshot::Sender<ChannelId>,
+    },
+    WebhookCreate {
+        channel_id: ChannelId,
+        name: String,
+        response: oneshot::Sender<Webhook>,
     },
 }
 
@@ -289,7 +306,7 @@ impl Discord {
             } => {
                 let hook = self.get_hook(url, http).await?;
                 let msg = hook
-                    .execute(&http, true, payload)
+                    .execute(http, true, payload)
                     .await?
                     .expect("wait should return message");
                 response.send(msg).unwrap();
@@ -301,7 +318,7 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
-                let msg = hook.edit_message(&http, message_id, payload).await?;
+                let msg = hook.edit_message(http, message_id, payload).await?;
                 response.send(msg).unwrap();
             }
             DiscordMessage::WebhookMessageDelete {
@@ -311,7 +328,7 @@ impl Discord {
                 response,
             } => {
                 let hook = self.get_hook(url, http).await?;
-                hook.delete_message(&http, thread_id, message_id).await?;
+                hook.delete_message(http, thread_id, message_id).await?;
                 response.send(()).unwrap();
             }
             DiscordMessage::MessageGet {
@@ -321,6 +338,26 @@ impl Discord {
             } => {
                 let message = http.get_message(channel_id, message_id).await?;
                 response.send(message).unwrap();
+            }
+            DiscordMessage::ChannelCreate {
+                guild_id,
+                name,
+                response,
+            } => {
+                let channel = guild_id
+                    .create_channel(http, CreateChannel::new(name))
+                    .await?;
+                response.send(channel.id).unwrap();
+            }
+            DiscordMessage::WebhookCreate {
+                channel_id,
+                name,
+                response,
+            } => {
+                let hook = channel_id
+                    .create_webhook(http, CreateWebhook::new(name))
+                    .await?;
+                response.send(hook).unwrap();
             }
         }
         Ok(())

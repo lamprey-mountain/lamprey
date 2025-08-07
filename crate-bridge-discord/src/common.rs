@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::ThreadId;
+use common::v1::types::{RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
-use serenity::all::ChannelId as DcChannelId;
+use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::data::{Data, MessageMetadata};
@@ -24,12 +24,20 @@ pub struct Globals {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct AutoBridgeConfig {
+    pub lamprey_room_id: RoomId,
+    pub discord_guild_id: DcGuildId,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub database_url: String,
     pub lamprey_token: String,
     pub lamprey_base_url: Option<String>,
     pub lamprey_ws_url: Option<String>,
     pub discord_token: String,
+    #[serde(default)]
+    pub autobridge: Vec<AutoBridgeConfig>,
 }
 
 #[async_trait]

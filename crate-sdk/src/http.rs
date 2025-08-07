@@ -1,4 +1,5 @@
 use anyhow::Result;
+use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::{
     media::MediaCreated, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaId, Message,
     MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, SessionToken, Thread,
@@ -81,6 +82,26 @@ impl Http {
             StatusCode::NO_CONTENT => Ok(None),
             _ => unreachable!("technically reachable with a bad server"),
         }
+    }
+
+    pub async fn thread_list(
+        &self,
+        room_id: RoomId,
+        query: &PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>> {
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/room/{room_id}/thread"))?;
+        let res = self
+            .client
+            .get(url)
+            .query(query)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
     }
 }
 
