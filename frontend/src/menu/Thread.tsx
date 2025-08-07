@@ -23,13 +23,13 @@ export function ThreadMenu(props: { thread_id: string }) {
 		});
 	};
 
-	const deleteThread = () => {
+	const removeThread = () => {
 		ctx.dispatch({
 			do: "modal.confirm",
-			text: "are you sure you want to leave?",
+			text: "are you sure you want to remove this tread?",
 			cont(confirmed) {
 				if (!confirmed) return;
-				ctx.client.http.DELETE("/api/v1/thread/{thread_id}", {
+				ctx.client.http.PUT("/api/v1/thread/{thread_id}/remove", {
 					params: {
 						path: { thread_id: props.thread_id },
 					},
@@ -48,14 +48,14 @@ export function ThreadMenu(props: { thread_id: string }) {
 	const settings = (to: string) => () =>
 		nav(`/thread/${props.thread_id}/settings${to}`);
 
-	const closeThread = () => {
+	const archiveThread = () => {
 		ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
 			params: { path: { thread_id: props.thread_id } },
 		});
 	};
 
-	const openThread = () => {
-		ctx.client.http.PUT("/api/v1/thread/{thread_id}/activate", {
+	const unarchiveThread = () => {
+		ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
 			params: { path: { thread_id: props.thread_id } },
 		});
 	};
@@ -77,15 +77,15 @@ export function ThreadMenu(props: { thread_id: string }) {
 			</Submenu>
 			<Item>pin</Item>
 			<Switch>
-				<Match when={thread()?.state === "Active"}>
-					<Item onClick={closeThread}>close</Item>
+				<Match when={!thread()?.archived_at}>
+					<Item onClick={archiveThread}>archive</Item>
 				</Match>
-				<Match when={thread()?.state === "Archived"}>
-					<Item onClick={openThread}>open</Item>
+				<Match when={thread()?.archived_at}>
+					<Item onClick={unarchiveThread}>unarchive</Item>
 				</Match>
 			</Switch>
 			<Item>lock</Item>
-			<Item onClick={deleteThread}>delete</Item>
+			<Item onClick={removeThread}>remove</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
