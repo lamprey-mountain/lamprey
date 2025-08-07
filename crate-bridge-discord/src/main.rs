@@ -1,56 +1,21 @@
 use anyhow::Result;
-use common::{Config, Globals};
+use common::{BridgeMessage, Config, Globals};
 use dashmap::DashMap;
 use data::{Data, PortalConfig};
-use discord::{Discord, DiscordMessage};
-use serenity::all::{GuildId, Webhook};
-use tokio::sync::oneshot;
-use tracing::info;
-mod discord;
+use discord::Discord;
 use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
+use portal::Portal;
 use std::sync::Arc;
 use tokio::sync::mpsc;
+use tracing::{error, info};
+mod discord;
 use tracing_subscriber::EnvFilter;
 
 mod common;
 mod data;
 mod lamprey;
 mod portal;
-
-async fn discord_create_channel(
-    globals: Arc<Globals>,
-    guild_id: GuildId,
-    name: String,
-) -> Result<serenity::all::ChannelId> {
-    let (send, recv) = oneshot::channel();
-    globals
-        .dc_chan
-        .send(DiscordMessage::ChannelCreate {
-            guild_id,
-            name,
-            response: send,
-        })
-        .await?;
-    Ok(recv.await?)
-}
-
-async fn discord_create_webhook(
-    globals: Arc<Globals>,
-    channel_id: serenity::all::ChannelId,
-    name: String,
-) -> Result<Webhook> {
-    let (send, recv) = oneshot::channel();
-    globals
-        .dc_chan
-        .send(DiscordMessage::WebhookCreate {
-            channel_id,
-            name,
-            response: send,
-        })
-        .await?;
-    Ok(recv.await?)
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -74,6 +39,7 @@ async fn main() -> Result<()> {
 
     let dc_chan = mpsc::channel(100);
     let ch_chan = mpsc::channel(100);
+    let (bridge_chan_tx, mut bridge_chan_rx) = mpsc::channel(100);
 
     let globals = Arc::new(Globals {
         pool,
@@ -82,6 +48,7 @@ async fn main() -> Result<()> {
         last_ids: Arc::new(DashMap::new()),
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
+        bridge_chan: bridge_chan_tx,
     });
 
     for config in globals.get_portals().await? {
@@ -96,42 +63,196 @@ async fn main() -> Result<()> {
     let dc = Discord::new(globals.clone(), dc_chan.1);
     let ch = Lamprey::new(globals.clone(), ch_chan.1);
 
-    let task_autobridge = async {
+    let bridge_globals = globals.clone();
+    let bridge_task = tokio::spawn(async move {
+        while let Some(msg) = bridge_chan_rx.recv().await {
+            match msg {
+                BridgeMessage::LampreyThreadCreate {
+                    thread_id,
+                    room_id,
+                    thread_name,
+                    discord_guild_id,
+                } => {
+                    if bridge_globals
+                        .get_portal_by_thread_id(thread_id)
+                        .await
+                        .is_ok_and(|a| a.is_some())
+                    {
+                        info!("already exists");
+                        continue;
+                    }
+
+                    info!("autobridging thread {}", thread_id);
+                    let name = if thread_name.is_empty() {
+                        "thread".to_string()
+                    } else {
+                        thread_name
+                    };
+                    let channel_id = match discord::discord_create_channel(
+                        bridge_globals.clone(),
+                        discord_guild_id,
+                        name.clone(),
+                    )
+                    .await
+                    {
+                        Ok(channel_id) => channel_id,
+                        Err(e) => {
+                            error!("failed to create discord channel: {e}");
+                            continue;
+                        }
+                    };
+                    let webhook = match discord::discord_create_webhook(
+                        bridge_globals.clone(),
+                        channel_id,
+                        "bridge".to_string(),
+                    )
+                    .await
+                    {
+                        Ok(webhook) => webhook,
+                        Err(e) => {
+                            error!("failed to create discord webhook: {e}");
+                            continue;
+                        }
+                    };
+                    let portal = PortalConfig {
+                        lamprey_thread_id: thread_id,
+                        lamprey_room_id: room_id,
+                        discord_guild_id,
+                        discord_channel_id: channel_id,
+                        discord_thread_id: None,
+                        discord_webhook: webhook.url().unwrap().to_string(),
+                    };
+                    if let Err(e) = bridge_globals.insert_portal(portal.clone()).await {
+                        error!("failed to insert portal: {e}");
+                        continue;
+                    }
+                    bridge_globals
+                        .portals
+                        .entry(portal.lamprey_thread_id)
+                        .or_insert_with(|| Portal::summon(bridge_globals.clone(), portal));
+                }
+                BridgeMessage::DiscordChannelCreate {
+                    guild_id,
+                    channel_id,
+                    channel_name,
+                } => {
+                    let Some(autobridge_config) = bridge_globals
+                        .config
+                        .autobridge
+                        .iter()
+                        .find(|c| c.discord_guild_id == guild_id)
+                    else {
+                        continue;
+                    };
+
+                    if bridge_globals
+                        .get_portal_by_discord_channel(channel_id)
+                        .await
+                        .is_ok_and(|a| a.is_some())
+                    {
+                        info!("already exists");
+                        continue;
+                    }
+
+                    info!("autobridging discord channel {}", channel_id);
+                    let ly = match bridge_globals.lamprey_handle().await {
+                        Ok(ly) => ly,
+                        Err(e) => {
+                            error!("failed to get lamprey handle: {e}");
+                            continue;
+                        }
+                    };
+
+                    let thread_name = if channel_name.is_empty() {
+                        "thread".to_string()
+                    } else {
+                        channel_name.clone()
+                    };
+
+                    let thread = match ly
+                        .create_thread(autobridge_config.lamprey_room_id, thread_name.clone(), None)
+                        .await
+                    {
+                        Ok(thread) => thread,
+                        Err(e) => {
+                            error!("failed to create lamprey thread: {e}");
+                            continue;
+                        }
+                    };
+
+                    let webhook = match discord::discord_create_webhook(
+                        bridge_globals.clone(),
+                        channel_id,
+                        "bridge".to_string(),
+                    )
+                    .await
+                    {
+                        Ok(webhook) => webhook,
+                        Err(e) => {
+                            error!("failed to create discord webhook: {e}");
+                            continue;
+                        }
+                    };
+
+                    let portal_config = PortalConfig {
+                        lamprey_thread_id: thread.id,
+                        lamprey_room_id: autobridge_config.lamprey_room_id,
+                        discord_guild_id: guild_id,
+                        discord_channel_id: channel_id,
+                        discord_thread_id: None,
+                        discord_webhook: webhook.url().unwrap().to_string(),
+                    };
+
+                    if let Err(e) = bridge_globals.insert_portal(portal_config.clone()).await {
+                        error!(
+                            "failed to insert portal for discord channel {}: {e}",
+                            channel_id
+                        );
+                        continue;
+                    }
+
+                    bridge_globals
+                        .portals
+                        .entry(portal_config.lamprey_thread_id)
+                        .or_insert_with(|| Portal::summon(bridge_globals.clone(), portal_config));
+                }
+            }
+        }
+    });
+
+    let startup_autobridge_task = tokio::spawn(async move {
+        let globals = globals.clone();
         for bridge in &globals.config.autobridge {
             info!("autobridging {}", bridge.lamprey_room_id);
             let ly = globals.lamprey_handle().await?;
-            info!("a");
             let threads = ly.room_threads(bridge.lamprey_room_id).await?;
-            info!("b");
             for thread in threads {
                 if globals.get_portal_by_thread_id(thread.id).await?.is_some() {
                     continue;
                 }
-                info!("autobridging thread {}", thread.id);
-                let name = if thread.name.is_empty() {
-                    "thread".to_string()
-                } else {
-                    thread.name
-                };
-                let channel_id =
-                    discord_create_channel(globals.clone(), bridge.discord_guild_id, name.clone())
-                        .await?;
-                let webhook = discord_create_webhook(globals.clone(), channel_id, name).await?;
-                let portal = PortalConfig {
-                    lamprey_thread_id: thread.id,
-                    lamprey_room_id: bridge.lamprey_room_id,
-                    discord_guild_id: bridge.discord_guild_id,
-                    discord_channel_id: channel_id,
-                    discord_thread_id: None,
-                    discord_webhook: webhook.url()?,
-                };
-                globals.insert_portal(portal).await?;
+                if let Err(e) = globals
+                    .bridge_chan
+                    .send(BridgeMessage::LampreyThreadCreate {
+                        thread_id: thread.id,
+                        room_id: bridge.lamprey_room_id,
+                        thread_name: thread.name,
+                        discord_guild_id: bridge.discord_guild_id,
+                    })
+                    .await
+                {
+                    error!("failed to send lamprey thread create message: {e}");
+                }
             }
         }
         Ok::<(), anyhow::Error>(())
-    };
+    });
 
-    let _ = tokio::join!(dc.connect(), ch.connect(), task_autobridge);
+    let _ = tokio::join!(
+        dc.connect(),
+        ch.connect(),
+        bridge_task,
+        startup_autobridge_task
+    );
 
     Ok(())
 }

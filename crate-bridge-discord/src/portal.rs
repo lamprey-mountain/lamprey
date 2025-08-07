@@ -119,7 +119,7 @@ impl Portal {
                 let existing = self.globals.get_message(message.id).await?;
                 let msg_inner = match message.message_type {
                     types::MessageType::DefaultMarkdown(m) => m,
-                    _ => todo!(),
+                    _ => return Ok(()),
                 };
 
                 let reply_ids = if let Some(reply_id) = msg_inner.reply_id {

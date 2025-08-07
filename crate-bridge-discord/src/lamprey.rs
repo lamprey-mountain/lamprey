@@ -3,15 +3,16 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use common::v1::types::{
     self, misc::UserIdReq, pagination::PaginationQuery, ApplicationId, Media, MediaCreate,
-    MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, User,
-    UserId,
+    MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId,
+    ThreadType, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 use crate::{
-    common::{Globals, GlobalsTrait},
+    common::{BridgeMessage, Globals, GlobalsTrait},
+    data::Data,
     portal::PortalMessage,
 };
 
@@ -37,9 +38,40 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn thread_create(&mut self, _thread: Thread) -> Result<()> {
+    async fn thread_create(&mut self, thread: Thread) -> Result<()> {
         info!("chat upsert thread");
-        // TODO: what to do here?
+        let Some(autobridge_config) = self
+            .globals
+            .config
+            .autobridge
+            .iter()
+            .find(|c| c.lamprey_room_id == thread.room_id.unwrap())
+        else {
+            return Ok(());
+        };
+
+        if self
+            .globals
+            .get_portal_by_thread_id(thread.id)
+            .await?
+            .is_some()
+        {
+            return Ok(());
+        }
+
+        if let Err(e) = self
+            .globals
+            .bridge_chan
+            .send(BridgeMessage::LampreyThreadCreate {
+                thread_id: thread.id,
+                room_id: autobridge_config.lamprey_room_id,
+                thread_name: thread.name,
+                discord_guild_id: autobridge_config.discord_guild_id,
+            })
+            .await
+        {
+            error!("failed to send lamprey thread create message: {e}");
+        }
         Ok(())
     }
 
@@ -293,5 +325,27 @@ impl LampreyHandle {
             }
         }
         Ok(all_threads)
+    }
+
+    pub async fn create_thread(
+        &self,
+        room_id: RoomId,
+        name: String,
+        topic: Option<String>,
+    ) -> Result<Thread> {
+        let res = self
+            .http
+            .thread_create(
+                room_id,
+                &types::ThreadCreate {
+                    name,
+                    description: topic,
+                    ty: ThreadType::Chat,
+                    tags: None,
+                    nsfw: false,
+                },
+            )
+            .await?;
+        Ok(res)
     }
 }

@@ -20,7 +20,8 @@ pub struct Globals {
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
-    pub(super) ch_chan: mpsc::Sender<LampreyMessage>,
+    pub ch_chan: mpsc::Sender<LampreyMessage>,
+    pub bridge_chan: mpsc::Sender<BridgeMessage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -79,4 +80,19 @@ impl Globals {
             .await?;
         Ok(recv.await?)
     }
+}
+
+#[derive(Clone)]
+pub enum BridgeMessage {
+    LampreyThreadCreate {
+        thread_id: ThreadId,
+        room_id: RoomId,
+        thread_name: String,
+        discord_guild_id: DcGuildId,
+    },
+    DiscordChannelCreate {
+        guild_id: DcGuildId,
+        channel_id: DcChannelId,
+        channel_name: String,
+    },
 }
