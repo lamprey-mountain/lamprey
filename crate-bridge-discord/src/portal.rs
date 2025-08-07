@@ -312,6 +312,7 @@ impl Portal {
                         message.author.display_name().to_owned(),
                         message.author.id.to_string(),
                         self.room_id(),
+                        message.author.bot,
                     )
                     .await?;
                 debug!("created puppet");
@@ -647,12 +648,11 @@ impl Portal {
                         add_reaction
                             .member
                             .as_ref()
-                            .unwrap()
-                            .user
-                            .display_name()
-                            .to_owned(),
+                            .map(|m| m.user.display_name().to_owned())
+                            .unwrap_or_else(|| user_id.to_string()),
                         user_id.to_string(),
                         self.room_id(),
+                        add_reaction.member.as_ref().map_or(false, |m| m.user.bot),
                     )
                     .await?;
 
@@ -681,12 +681,14 @@ impl Portal {
                         removed_reaction
                             .member
                             .as_ref()
-                            .unwrap()
-                            .user
-                            .display_name()
-                            .to_owned(),
+                            .map(|m| m.user.display_name().to_owned())
+                            .unwrap_or_else(|| user_id.to_string()),
                         user_id.to_string(),
                         self.room_id(),
+                        removed_reaction
+                            .member
+                            .as_ref()
+                            .map_or(false, |m| m.user.bot),
                     )
                     .await?;
 
