@@ -1,13 +1,7 @@
 use common::v1::types::{
-    thread::{
-        chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic},
-        voice::{ThreadTypeVoicePrivate, ThreadTypeVoicePublic},
-    },
-    util::Time,
-    Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, Role, RoleId,
-    RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
-    Thread, ThreadId, ThreadMembership, ThreadPrivate, ThreadPublic, ThreadTypeForumPublic,
-    ThreadVerId, UserId,
+    util::Time, Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet,
+    Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus,
+    SessionToken, Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
@@ -93,7 +87,7 @@ pub struct DbThread {
     pub nsfw: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DbThreadPrivate {
     pub id: ThreadId,
     pub ty: DbThreadType,
@@ -110,7 +104,7 @@ pub struct DbThreadCreate {
     pub nsfw: bool,
 }
 
-#[derive(sqlx::Type, Debug, Deserialize)]
+#[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[sqlx(type_name = "thread_type")]
 pub enum DbThreadType {
     Chat,
@@ -119,31 +113,20 @@ pub enum DbThreadType {
     Dm,
 }
 
+impl From<DbThreadType> for ThreadType {
+    fn from(value: DbThreadType) -> Self {
+        match value {
+            DbThreadType::Chat => ThreadType::Chat,
+            DbThreadType::Forum => ThreadType::Forum,
+            DbThreadType::Voice => ThreadType::Voice,
+            DbThreadType::Dm => ThreadType::Dm,
+        }
+    }
+}
+
 impl From<DbThread> for Thread {
     fn from(row: DbThread) -> Self {
         dbg!(&row);
-        let info = match row.ty {
-            DbThreadType::Chat => ThreadPublic::Chat(ThreadTypeChatPublic {
-                last_version_id: row.last_version_id.map(|i| i.into()),
-                message_count: row.message_count.try_into().expect("count is negative?"),
-            }),
-            DbThreadType::Dm => ThreadPublic::Dm(ThreadTypeChatPublic {
-                last_version_id: row.last_version_id.map(|i| i.into()),
-                message_count: row.message_count.try_into().expect("count is negative?"),
-            }),
-            DbThreadType::Forum => ThreadPublic::Forum(ThreadTypeForumPublic {
-                last_version_id: row.last_version_id.map(|i| i.into()),
-                message_count: row.message_count.try_into().expect("count is negative?"),
-                // TODO
-                root_message_count: 0,
-            }),
-            // TODO: save to db
-            DbThreadType::Voice => ThreadPublic::Voice(ThreadTypeVoicePublic {
-                bitrate: 64000,
-                user_limit: 100,
-            }),
-        };
-
         Thread {
             id: row.id,
             room_id: row.room_id.map(Into::into),
@@ -151,8 +134,6 @@ impl From<DbThread> for Thread {
             version_id: row.version_id,
             name: row.name,
             description: row.description,
-            info,
-            private: None,
             nsfw: row.nsfw,
 
             // FIXME: add field to db schema or calculate
@@ -164,6 +145,25 @@ impl From<DbThread> for Thread {
             archived_at: None,
             deleted_at: None,
             locked_at: None,
+
+            ty: row.ty.into(),
+            last_version_id: row.last_version_id.map(|i| i.into()),
+            message_count: Some(row.message_count.try_into().expect("count is negative?")),
+            root_message_count: None, // TODO
+            bitrate: if row.ty == DbThreadType::Voice {
+                Some(64000)
+            } else {
+                None
+            },
+            user_limit: if row.ty == DbThreadType::Voice {
+                Some(100)
+            } else {
+                None
+            },
+            is_unread: None,
+            last_read_id: None,
+            mention_count: None,
+            notifications: None,
         }
     }
 }
@@ -482,30 +482,4 @@ pub struct DbEmailQueue {
     pub subject: String,
     pub plain_text_body: String,
     pub html_body: Option<String>,
-}
-
-impl From<DbThreadPrivate> for ThreadPrivate {
-    fn from(row: DbThreadPrivate) -> Self {
-        match row.ty {
-            DbThreadType::Chat => ThreadPrivate::Chat(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                mention_count: 0,
-                notifications: Default::default(),
-            }),
-            DbThreadType::Dm => ThreadPrivate::Dm(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                mention_count: 0,
-                notifications: Default::default(),
-            }),
-            DbThreadType::Forum => ThreadPrivate::Forum(ThreadTypeChatPrivate {
-                is_unread: row.is_unread,
-                last_read_id: row.last_read_id.map(Into::into),
-                mention_count: 0,
-                notifications: Default::default(),
-            }),
-            DbThreadType::Voice => ThreadPrivate::Voice(ThreadTypeVoicePrivate {}),
-        }
-    }
 }

@@ -3,19 +3,19 @@ use std::sync::Arc;
 use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch,
-    ThreadPrivate, UserId,
+    UserId,
 };
 use moka::future::Cache;
 
 use crate::error::{Error, Result};
-use crate::types::DbMessageCreate;
+use crate::types::{DbMessageCreate, DbThreadPrivate};
 use crate::ServerStateInner;
 
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
 
     cache_thread: Cache<ThreadId, Thread>,
-    cache_thread_private: Cache<(ThreadId, UserId), ThreadPrivate>,
+    cache_thread_private: Cache<(ThreadId, UserId), DbThreadPrivate>,
 }
 
 impl ServiceThreads {
@@ -49,7 +49,13 @@ impl ServiceThreads {
                 )
                 .await
                 .map_err(|err| err.fake_clone())?;
-            thread = thread.with_private(private_data);
+            thread = Thread {
+                is_unread: Some(private_data.is_unread),
+                last_read_id: private_data.last_read_id.map(Into::into),
+                mention_count: Some(0),            // TODO
+                notifications: Default::default(), // TODO
+                ..thread
+            }
         }
 
         Ok(thread)

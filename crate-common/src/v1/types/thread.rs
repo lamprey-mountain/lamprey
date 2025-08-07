@@ -10,9 +10,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::notifications::NotifsThread;
 use crate::v1::types::util::{some_option, Time};
-use crate::v1::types::TagId;
 use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
+use crate::v1::types::{MessageVerId, TagId};
 
 use super::{RoomId, ThreadId, UserId};
 
@@ -33,9 +34,6 @@ pub mod table;
 
 #[cfg(feature = "feat_thread_type_report")]
 pub mod report;
-
-#[cfg(feature = "feat_thread_type_voice")]
-use voice::{ThreadTypeVoicePrivate, ThreadTypeVoicePublic};
 
 #[cfg(feature = "feat_thread_type_event")]
 use event::{ThreadTypeEventPrivate, ThreadTypeEventPublic};
@@ -73,14 +71,8 @@ pub struct Thread {
     pub description: Option<String>,
 
     /// type specific data for this thread
-    #[serde(flatten)]
-    pub info: ThreadPublic,
-
-    /// user-specific data for this thread
-    /// this should be the same type as info
-    // i couldn't figure out how to get bootleg dependent types to work in rust, so eh
-    #[serde(flatten)]
-    pub private: Option<ThreadPrivate>,
+    #[serde(rename = "type")]
+    pub ty: ThreadType,
 
     /// number of people in this room
     /// does not not update with ThreadSync
@@ -104,92 +96,22 @@ pub struct Thread {
 
     /// not safe for work
     pub nsfw: bool,
-}
 
-/// type-specific data for threads
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[derive(strum::EnumDiscriminants)]
-// #[strum_discriminants(vis(pub), name(ThreadType))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-#[non_exhaustive]
-pub enum ThreadPublic {
-    /// instant messaging
-    Chat(ThreadTypeChatPublic),
+    pub last_version_id: Option<MessageVerId>,
+    pub message_count: Option<u64>,
+    pub root_message_count: Option<u64>,
+    pub bitrate: Option<u64>,
+    pub user_limit: Option<u64>,
 
-    /// instant messaging direct message
-    Dm(ThreadTypeChatPublic),
-
-    /// instant messaging group direct message
-    Gdm(ThreadTypeChatPublic),
-
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// long form chat history
-    Forum(ThreadTypeForumPublic),
-
-    #[cfg(feature = "feat_thread_type_voice")]
-    /// call
-    Voice(ThreadTypeVoicePublic),
-
-    #[cfg(feature = "feat_thread_type_event")]
-    /// event
-    // seems surprisingly hard to get right
-    Event(ThreadTypeEventPublic),
-
-    #[cfg(feature = "feat_thread_type_document")]
-    /// document
-    // maybe some crdt document/wiki page...?
-    // another far future thing that needs design
-    Document(ThreadTypeDocumentPublic),
-
-    #[cfg(feature = "feat_thread_type_table")]
-    // arbitrary data storage? like a spreadsheet or database table?
-    Table(ThreadTypeTablePublic),
-
-    #[cfg(feature = "feat_thread_type_report")]
-    Report(ThreadTypeReportPublic),
-}
-
-/// user-specific data for threads
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
-#[non_exhaustive]
-pub enum ThreadPrivate {
-    /// instant messaging
-    Chat(ThreadTypeChatPrivate),
-
-    /// instant messaging direct message
-    Dm(ThreadTypeChatPrivate),
-
-    /// instant messaging group direct message
-    Gdm(ThreadTypeChatPrivate),
-
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// long form chat history
-    Forum(ThreadTypeForumPrivate),
-
-    #[cfg(feature = "feat_thread_type_voice")]
-    /// call
-    Voice(ThreadTypeVoicePrivate),
-
-    #[cfg(feature = "feat_thread_type_event")]
-    /// event
-    // seems surprisingly hard to get right
-    Event(ThreadTypeEventPrivate),
-
-    #[cfg(feature = "feat_thread_type_document")]
-    /// document
-    // maybe some crdt document/wiki page...?
-    // another far future thing that needs design
-    Document(ThreadTypeDocumentPrivate),
-
-    #[cfg(feature = "feat_thread_type_table")]
-    // arbitrary data storage? like a spreadsheet or database table?
-    Table(ThreadTypeTablePrivate),
-
-    #[cfg(feature = "feat_thread_type_report")]
-    Report(ThreadTypeReportPrivate),
+    // private
+    pub is_unread: Option<bool>,
+    pub last_read_id: Option<MessageVerId>,
+    pub mention_count: Option<u64>,
+    // being able to have an exact unread count would be nice, but would be hard
+    // to implement efficiently. if someone marks a very old message as unread,
+    // i don't want to hang while counting potentially thousands of messages!
+    // pub unread_count: u64,
+    pub notifications: Option<NotifsThread>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -298,15 +220,10 @@ impl Thread {
     /// remove private user data
     pub fn strip(self) -> Thread {
         Thread {
-            private: None,
-            ..self
-        }
-    }
-
-    /// add private user data
-    pub fn with_private(self, data: ThreadPrivate) -> Thread {
-        Thread {
-            private: Some(data),
+            is_unread: None,
+            last_read_id: None,
+            mention_count: None,
+            notifications: None,
             ..self
         }
     }

@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use common::v1::types::ThreadPrivate;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
@@ -76,7 +75,7 @@ impl DataThread for Postgres {
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-    ) -> Result<ThreadPrivate> {
+    ) -> Result<DbThreadPrivate> {
         let thread_private = query_file_as!(
             DbThreadPrivate,
             "sql/thread_get_private.sql",

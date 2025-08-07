@@ -9,18 +9,18 @@ use common::v1::types::{
     ApplicationId, AuditLog, AuditLogId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership, ThreadPrivate,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
 
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbThreadCreate, DbUserCreate, InviteCode, Media,
-    MediaId, MediaLink, MediaLinkType, Message, MessageId, MessageRef, MessageVerId,
-    PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room,
-    RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch,
-    ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbThreadCreate, DbThreadPrivate, DbUserCreate,
+    InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageId, MessageRef,
+    MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId,
+    Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId,
+    ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -305,7 +305,7 @@ pub trait DataThread {
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-    ) -> Result<ThreadPrivate>;
+    ) -> Result<DbThreadPrivate>;
     async fn thread_list(
         &self,
         room_id: RoomId,
