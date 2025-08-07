@@ -1,6 +1,7 @@
-use crate::v1::types::{AuditLogId, MessageSync, RoomId, UserId};
+use crate::v1::types::{AuditLogId, RoomId, UserId};
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
