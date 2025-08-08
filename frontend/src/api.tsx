@@ -395,6 +395,8 @@ export function createApi(
 				}
 			}
 			invites.cache.delete(msg.code);
+		} else if (msg.type === "BotAdd") {
+			// TODO: maybe do something here?
 		} else if (msg.type === "ReactionCreate") {
 			const { message_id, thread_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);

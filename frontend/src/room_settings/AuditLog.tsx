@@ -1,6 +1,11 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
-import { type AuditLogEntry, getTimestampFromUUID, type Room } from "sdk";
+import {
+	type AuditLogChange,
+	type AuditLogEntry,
+	getTimestampFromUUID,
+	type Room,
+} from "sdk";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api = useApi();
@@ -34,7 +39,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 							return (
 								<li data-id={entry.id}>
 									<div class="info">
-										<h3>{entry.payload.type}</h3>
+										<h3>{entry.type}</h3>
 									</div>
 									<ul>
 										<li>
@@ -55,14 +60,14 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 									<br />
 									<h3>changes</h3>
 									<ul>
-										<For each={getNotableChanges(entry)}>
+										<For each={getNotableChanges(entry as any)}>
 											{(c) => {
 												return (
 													<li>
 														<em class="light">{c.key}:</em>{" "}
-														{String(c.old ?? "[null]")}{" "}
+														{JSON.stringify(c.old) ?? "[null]"}{" "}
 														<em class="light">-&gt;</em>{" "}
-														{String(c.new ?? "[null]")}
+														{JSON.stringify(c.new) ?? "[null]"}
 													</li>
 												);
 											}}
@@ -83,90 +88,114 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 	);
 }
 
-function getNotableChanges(ent: AuditLogEntry) {
-	const prev = ent.payload_prev as any;
-	switch (ent.payload.type) {
-		case "UpsertRoom":
-			return pickDiff(
-				prev?.room ?? {},
-				ent.payload.room,
-				["name", "description"],
-			);
-		case "UpsertThread":
-			return pickDiff(
-				prev?.thread ?? {},
-				ent.payload.thread,
-				["name", "description", "type", "visibility", "state", "room_id"],
-			);
-		case "UpsertRole":
-			return pickDiff(
-				prev?.role ?? {},
-				ent.payload.role,
-				[
-					"name",
-					"description",
-					"is_default",
-					"is_mentionable",
-					"is_self_applicable",
-					"permissions",
-				],
-			);
-		case "UpsertRoomMember":
-			return pickDiff(
-				prev?.member ?? {},
-				ent.payload.member,
-				["membership", "override_name", "override_description", "roles"],
-			);
-		case "UpsertInvite":
-			return pickDiff(
-				prev?.invite ?? {},
-				ent.payload.invite,
-				["expires_at", "target"],
-			);
+function getNotableChanges(ent: AuditLogEntry): AuditLogChange[] {
+	if ("changes" in ent) {
+		return (ent as any).changes;
+	}
+	switch (ent.type) {
+		case "MessageDelete":
+			return [
+				{
+					key: "message_id",
+					old: ent.message_id,
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "MessageVersionDelete":
+			return [
+				{
+					key: "version_id",
+					old: ent.version_id,
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "MessageDeleteBulk":
+			return [
+				{
+					key: "message_ids",
+					old: ent.message_ids.join(", "),
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "RoleDelete":
+			return [
+				{
+					key: "role_id",
+					old: ent.role_id,
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "InviteDelete":
+			return [
+				{ key: "code", old: ent.code, new: "(deleted)" } as AuditLogChange,
+			];
+		case "ReactionPurge":
+			return [
+				{
+					key: "message_id",
+					old: ent.message_id,
+					new: "(reactions purged)",
+				} as AuditLogChange,
+			];
+		case "EmojiDelete":
+			return [
+				{
+					key: "emoji_id",
+					old: ent.emoji_id,
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "ThreadOverwriteSet":
+			return [
+				{ key: "target", old: null, new: `${ent.ty} ${ent.overwrite_id}` },
+				{ key: "allow", old: null, new: ent.allow.join(", ") },
+				{ key: "deny", old: null, new: ent.deny.join(", ") },
+			] as AuditLogChange[];
+		case "ThreadOverwriteDelete":
+			return [
+				{
+					key: "overwrite_id",
+					old: ent.overwrite_id,
+					new: "(deleted)",
+				} as AuditLogChange,
+			];
+		case "MemberKick":
+			return [
+				{ key: "user_id", old: ent.user_id, new: "(kicked)" } as AuditLogChange,
+			];
+		case "MemberBan":
+			return [
+				{ key: "user_id", old: ent.user_id, new: "(banned)" } as AuditLogChange,
+			];
+		case "MemberUnban":
+			return [
+				{
+					key: "user_id",
+					old: ent.user_id,
+					new: "(unbanned)",
+				} as AuditLogChange,
+			];
+		case "RoleApply":
+			return [
+				{
+					key: "user_id",
+					old: ent.user_id,
+					new: `+role ${ent.role_id}`,
+				} as AuditLogChange,
+			];
+		case "RoleUnapply":
+			return [
+				{
+					key: "user_id",
+					old: ent.user_id,
+					new: `-role ${ent.role_id}`,
+				} as AuditLogChange,
+			];
+		case "BotAdd":
+			return [
+				{ key: "bot_id", old: null, new: ent.bot_id } as AuditLogChange,
+			];
 		default:
-			return diff(prev ?? {}, ent.payload);
+			return [];
 	}
-}
-
-function pickDiff<T extends Record<string, unknown>, K extends keyof T>(
-	a: T,
-	b: T,
-	keys: Array<K>,
-) {
-	return diff(
-		pick(a, keys),
-		pick(b, keys),
-	);
-}
-
-function pick<T extends Record<string, unknown>>(
-	obj: T,
-	keys: Array<keyof T>,
-): Exclude<T, typeof keys[number]> {
-	const out = {} as any;
-	for (const key of keys) {
-		out[key] = obj[key];
-	}
-	return out;
-}
-
-function diff(
-	a: Record<string, unknown>,
-	b: Record<string, unknown>,
-): Array<{ key: string; old: unknown; new: unknown }> {
-	const changes = [];
-	for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
-		if (typeof a[key] === "object" || typeof b[key] === "object") {
-			changes.push(
-				...diff(
-					a[key] as Record<string, unknown> ?? {},
-					b[key] as Record<string, unknown> ?? {},
-				)
-					.map((c) => ({ ...c, key: `${key}.${c.key}` })),
-			);
-		} else if (a[key] !== b[key]) {
-			changes.push({ key, old: a[key], new: b[key] });
-		}
-	}
-	return changes;
 }
