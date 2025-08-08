@@ -93,7 +93,7 @@ pub struct Thread {
     pub locked: bool,
     pub parent_id: Option<ThreadId>,
 
-	/// tiebroken by id
+    /// tiebroken by id
     pub position: Option<u8>,
 
     /// permission overwrites for this thread
@@ -158,7 +158,6 @@ pub enum ThreadType {
 
     #[cfg(feature = "feat_thread_type_report")]
     Report,
-
     // Category,
     // Calendar,
     // Files,

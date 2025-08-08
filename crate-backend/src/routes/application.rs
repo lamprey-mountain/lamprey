@@ -8,15 +8,18 @@ use axum::{
 use common::v1::types::{
     application::{Application, ApplicationCreate},
     util::Time,
-    ApplicationId, Bot, BotAccess, ExternalPlatform, PaginationQuery, Puppet, PuppetCreate,
-    SessionCreate, SessionStatus, SessionToken, SessionWithToken,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
+    ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
+    RoomMembership, SessionCreate, SessionStatus, SessionToken, SessionWithToken, UserId,
 };
 use http::StatusCode;
+use serde::Deserialize;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::{types::DbUserCreate, ServerState};
+use crate::{routes::util::HeaderReason, types::DbUserCreate, ServerState};
 
 use super::util::Auth;
 use crate::error::{Error, Result};
@@ -168,6 +171,79 @@ async fn app_create_session(
     }
 }
 
+#[derive(Deserialize, ToSchema)]
+struct AppInviteBot {
+    room_id: RoomId,
+}
+
+/// App invite bot
+///
+/// Add a bot to a room
+#[utoipa::path(
+    post,
+    path = "/app/{app_id}/invite",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn app_invite_bot(
+    Path((app_id,)): Path<(ApplicationId,)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<AppInviteBot>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let app = data.application_get(app_id).await?;
+
+    if !app.public && app.owner_id != auth_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user_id, json.room_id).await?;
+    perms.ensure(Permission::BotsAdd)?;
+
+    let bot_user_id: UserId = app.id.into_inner().into();
+
+    data.room_member_put(
+        json.room_id,
+        bot_user_id,
+        RoomMembership::Join {
+            override_name: None,
+            override_description: None,
+            roles: vec![],
+        },
+    )
+    .await?;
+
+    data.role_apply_default(json.room_id, bot_user_id).await?;
+
+    let member = data.room_member_get(json.room_id, bot_user_id).await?;
+
+    s.broadcast_room(
+        json.room_id,
+        auth_user_id,
+        MessageSync::RoomMemberUpsert {
+            member: member.clone(),
+        },
+    )
+    .await?;
+
+    data.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: json.room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::BotAdd {
+            bot_id: bot_user_id,
+        },
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Puppet ensure
 #[utoipa::path(
     put,
@@ -227,4 +303,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(app_delete))
         .routes(routes!(app_create_session))
         .routes(routes!(puppet_ensure))
+        .routes(routes!(app_invite_bot))
 }

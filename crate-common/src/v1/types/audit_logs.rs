@@ -155,8 +155,10 @@ pub enum AuditLogEntryType {
         user_id: UserId,
         role_id: RoleId,
     },
+    BotAdd {
+        bot_id: UserId,
+    },
     // // cant be logged because this isn't yet implemented
-    // BotAdd,
     // MessagePin,
     // MessageUnpin,
     // MessageRemove,
