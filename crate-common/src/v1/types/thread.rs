@@ -89,7 +89,12 @@ pub struct Thread {
 
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
-    pub locked_at: Option<Time>,
+
+    pub locked: bool,
+    pub parent_id: Option<ThreadId>,
+
+	/// tiebroken by id
+    pub position: Option<u8>,
 
     /// permission overwrites for this thread
     pub permission_overwrites: Vec<PermissionOverwrite>,
@@ -153,6 +158,11 @@ pub enum ThreadType {
 
     #[cfg(feature = "feat_thread_type_report")]
     Report,
+
+    // Category,
+    // Calendar,
+    // Files,
+    // Redex,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

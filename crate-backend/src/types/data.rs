@@ -144,7 +144,9 @@ impl From<DbThread> for Thread {
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: None,
             deleted_at: None,
-            locked_at: None,
+            locked: false,
+            parent_id: None,
+            position: None,
 
             ty: row.ty.into(),
             last_version_id: row.last_version_id.map(|i| i.into()),

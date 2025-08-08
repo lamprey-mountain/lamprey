@@ -40,10 +40,12 @@ pub enum Permission {
     Admin,
 
     /// can add bots, configure bots they have added, and kick bots they have added
+    // TODO: deprecate
     BotsAdd,
 
     /// can configure all bots and kick all bots
     /// implies BotsAdd
+    // TODO: rename to IntegrationsManage?
     BotsManage,
 
     /// can add emoji and remove emoji they have added
