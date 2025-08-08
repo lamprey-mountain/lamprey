@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    MessageSync, MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch,
-    UserId,
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
+    MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
 };
 use moka::future::Cache;
 
@@ -90,14 +90,14 @@ impl ServiceThreads {
             .await?;
         perms.ensure_view()?;
         let data = self.state.data();
-        let thread = data.thread_get(thread_id).await?;
-        if thread.creator_id == user_id {
+        let thread_old = data.thread_get(thread_id).await?;
+        if thread_old.creator_id == user_id {
             perms.add(Permission::ThreadEdit);
         }
         perms.ensure(Permission::ThreadEdit)?;
 
         // shortcut if it wont modify the thread
-        if !patch.changes(&thread) {
+        if !patch.changes(&thread_old) {
             return Err(Error::NotModified);
         }
 
@@ -105,7 +105,37 @@ impl ServiceThreads {
         data.thread_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, user_id).await;
-        let thread = self.get(thread_id, Some(user_id)).await?;
+        let thread_new = self.get(thread_id, Some(user_id)).await?;
+        if let Some(room_id) = thread_new.room_id {
+            data.audit_logs_room_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::ThreadUpdate {
+                    thread_id,
+                    changes: vec![
+                        AuditLogChange {
+                            key: "name".to_string(),
+                            old: serde_json::to_value(&thread_old.name).unwrap(),
+                            new: serde_json::to_value(&thread_new.name).unwrap(),
+                        },
+                        AuditLogChange {
+                            key: "description".to_string(),
+                            old: serde_json::to_value(&thread_old.description).unwrap(),
+                            new: serde_json::to_value(&thread_new.description).unwrap(),
+                        },
+                        AuditLogChange {
+                            key: "nsfw".to_string(),
+                            old: serde_json::to_value(&thread_old.nsfw).unwrap(),
+                            new: serde_json::to_value(&thread_new.nsfw).unwrap(),
+                        },
+                    ],
+                },
+            })
+            .await?;
+        }
 
         // send update message to thread
         let update_message_id = data
@@ -133,7 +163,7 @@ impl ServiceThreads {
 
         self.state
             .broadcast_thread(
-                thread.id,
+                thread_new.id,
                 user_id,
                 None,
                 MessageSync::MessageCreate {
@@ -142,14 +172,14 @@ impl ServiceThreads {
             )
             .await?;
         let msg = MessageSync::ThreadUpdate {
-            thread: thread.clone(),
+            thread: thread_new.clone(),
         };
-        if let Some(room_id) = thread.room_id {
+        if let Some(room_id) = thread_new.room_id {
             self.state
                 .broadcast_room(room_id, user_id, reason, msg)
                 .await?;
         }
 
-        Ok(thread)
+        Ok(thread_new)
     }
 }

@@ -5,8 +5,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember,
-    RoomMemberPatch, RoomMemberPut, RoomMembership, UserId,
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch,
+    RoomMemberPut, RoomMembership, UserId,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -161,6 +162,21 @@ async fn room_member_add(
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::MemberUpdate {
+            room_id,
+            user_id: target_user_id,
+            changes: vec![],
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         auth_user_id,
@@ -215,6 +231,34 @@ async fn room_member_update(
     }
     d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
+
+    let changes = vec![
+        AuditLogChange {
+            key: "override_name".to_string(),
+            old: serde_json::to_value(&start.membership).unwrap(),
+            new: serde_json::to_value(&res.membership).unwrap(),
+        },
+        AuditLogChange {
+            key: "override_description".to_string(),
+            old: serde_json::to_value(&start.membership).unwrap(),
+            new: serde_json::to_value(&res.membership).unwrap(),
+        },
+    ];
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::MemberUpdate {
+            room_id,
+            user_id: target_user_id,
+            changes,
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         auth_user_id,
@@ -280,6 +324,20 @@ async fn room_member_delete(
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::MemberKick {
+            room_id,
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         auth_user_id,
@@ -325,6 +383,20 @@ async fn room_ban_create(
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::MemberBan {
+            room_id,
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         auth_user_id,
@@ -370,6 +442,20 @@ async fn room_ban_remove(
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::MemberUnban {
+            room_id,
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         auth_user_id,

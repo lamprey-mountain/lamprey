@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::PaginationDirection;
+use common::v1::types::{AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -243,6 +243,22 @@ async fn message_delete(
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
+
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessageDelete {
+                thread_id,
+                message_id,
+            },
+        })
+        .await?;
+    }
+
     s.broadcast_thread(
         thread.id,
         user_id,
@@ -438,6 +454,22 @@ async fn message_moderate(
     for id in &json.delete {
         data.media_link_delete_all(id.into_inner()).await?;
     }
+
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessageDeleteBulk {
+                thread_id,
+                message_ids: json.delete.clone(),
+            },
+        })
+        .await?;
+    }
+
     s.broadcast_thread(
         thread.id,
         user_id,

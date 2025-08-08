@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
-use common::v1::types::{AuditLog, AuditLogId};
+use common::v1::types::{AuditLogEntry, AuditLogEntryId};
 use headers::ETag;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -220,12 +220,12 @@ async fn room_edit(
     ),
     tags = ["room"],
     responses(
-        (status = 200, description = "fetch audit logs success", body = PaginationResponse<AuditLog>),
+        (status = 200, description = "fetch audit logs success", body = PaginationResponse<AuditLogEntry>),
     )
 )]
 async fn room_audit_logs(
     Path(room_id): Path<RoomId>,
-    Query(paginate): Query<PaginationQuery<AuditLogId>>,
+    Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {

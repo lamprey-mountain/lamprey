@@ -5,9 +5,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Invite, InviteCode, InviteCreate, InvitePatch, InviteTarget, InviteTargetId,
-    InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
-    RoomMembership,
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode,
+    InviteCreate, InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
 };
 use futures::future::join_all;
 use http::StatusCode;
@@ -68,6 +68,19 @@ pub async fn invite_delete(
     let can_delete = user_id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
+        d.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: match id_target {
+                InviteTargetId::Room { room_id } => room_id,
+                InviteTargetId::Thread { room_id, .. } => room_id,
+                InviteTargetId::Server => todo!(),
+            },
+            user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::InviteDelete { code: code.clone() },
+        })
+        .await?;
         match id_target {
             InviteTargetId::Room { room_id } => {
                 s.broadcast_room(
@@ -261,6 +274,35 @@ pub async fn invite_room_create(
     )
     .await?;
     let invite = d.invite_select(code).await?;
+
+    let changes = vec![
+        AuditLogChange {
+            key: "description".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&invite.invite.description).unwrap(),
+        },
+        AuditLogChange {
+            key: "expires_at".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&invite.invite.expires_at).unwrap(),
+        },
+        AuditLogChange {
+            key: "max_uses".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&invite.max_uses).unwrap(),
+        },
+    ];
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::InviteCreate { changes },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         user_id,
@@ -349,14 +391,14 @@ pub async fn invite_room_list(
 pub async fn invite_patch(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let invite = d.invite_select(code.clone()).await?;
+    let start_invite = d.invite_select(code.clone()).await?;
 
-    let (has_perm, _id_target) = match invite.invite.target {
+    let (has_perm, _id_target) = match start_invite.invite.target {
         InviteTarget::Room { room } => (
             s.services()
                 .perms
@@ -382,12 +424,47 @@ pub async fn invite_patch(
         ),
     };
 
-    let can_patch = user_id == invite.invite.creator_id || has_perm;
+    let can_patch = user_id == start_invite.invite.creator_id || has_perm;
     if !can_patch {
         return Err(Error::MissingPermissions);
     }
 
     let updated_invite = d.invite_update(code.clone(), patch).await?;
+
+    let changes = vec![
+        AuditLogChange {
+            key: "description".to_string(),
+            old: serde_json::to_value(&start_invite.invite.description).unwrap(),
+            new: serde_json::to_value(&updated_invite.invite.description).unwrap(),
+        },
+        AuditLogChange {
+            key: "expires_at".to_string(),
+            old: serde_json::to_value(&start_invite.invite.expires_at).unwrap(),
+            new: serde_json::to_value(&updated_invite.invite.expires_at).unwrap(),
+        },
+        AuditLogChange {
+            key: "max_uses".to_string(),
+            old: serde_json::to_value(&start_invite.max_uses).unwrap(),
+            new: serde_json::to_value(&updated_invite.max_uses).unwrap(),
+        },
+    ];
+
+    let room_id = match &updated_invite.invite.target {
+        InviteTarget::Room { room } => Some(room.id),
+        InviteTarget::Thread { room, .. } => Some(room.id),
+        InviteTarget::Server => None,
+    };
+    if let Some(room_id) = room_id {
+        d.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::InviteUpdate { changes },
+        })
+        .await?;
+    }
 
     // TODO: Check if any actual changes were made and return NOT_MODIFIED if not.
     // This would require comparing `invite` and `updated_invite`.

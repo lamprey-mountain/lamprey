@@ -1,20 +1,18 @@
-use crate::v1::types::{AuditLogId, RoomId, UserId};
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-#[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
-// TODO(#239): redesign audit log schema, since recursion
-// also causes some issues when trying to load old data, need to add migrations or #[serde(default)] attrs
-// TODO: rename to AuditLogEntry and AuditLogEntryId
+use crate::v1::types::{
+    AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, Permission,
+    PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AuditLog {
+pub struct AuditLogEntry {
     /// Unique id idenfitying this entry
-    pub id: AuditLogId,
+    pub id: AuditLogEntryId,
 
     /// Room this happened in
     pub room_id: RoomId,
@@ -22,158 +20,152 @@ pub struct AuditLog {
     /// User who caused this entry to be created
     pub user_id: UserId,
 
+    /// Session of the user who caused this
+    // will be for user audit logs
+    pub session_id: Option<SessionId>,
+
     /// User supplied reason why this happened
     pub reason: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(no_recursion))]
-    /// Generated sync payload (sent in websocket)
-    pub payload: Box<Value>,
-
-    #[cfg_attr(feature = "utoipa", schema(no_recursion))]
-    /// The previous payload, or None if this resource is newly created
-    pub payload_prev: Option<Box<Value>>,
+    #[serde(flatten)]
+    pub ty: AuditLogEntryType,
 }
 
-mod next {
-    use serde::{Deserialize, Serialize};
-    use serde_json::Value;
-    use utoipa::ToSchema;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AuditLogChange {
+    pub new: Value,
+    pub old: Value,
+    pub key: String,
+}
 
-    use crate::v1::types::{
-        AuditLogId, EmojiId, InviteCode, MessageId, MessageVerId, RoleId, RoomId, SessionId,
-        ThreadId, UserId,
-    };
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum AuditLogEntryType {
+    RoomCreate {
+        changes: Vec<AuditLogChange>,
+    },
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct AuditLogEntry {
-        /// Unique id idenfitying this entry
-        pub id: AuditLogId,
+    RoomUpdate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        /// Room this happened in
-        pub room_id: RoomId,
+    ThreadCreate {
+        thread_id: ThreadId,
+        changes: Vec<AuditLogChange>,
+    },
 
-        /// User who caused this entry to be created
-        pub user_id: UserId,
+    ThreadUpdate {
+        thread_id: ThreadId,
+        changes: Vec<AuditLogChange>,
+    },
 
-        /// Session of the user who caused this
-        pub session_id: Option<SessionId>,
+    MessageDelete {
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
 
-        /// User supplied reason why this happened
-        pub reason: Option<String>,
+    MessageVersionDelete {
+        thread_id: ThreadId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    },
 
-        #[serde(flatten)]
-        pub ty: AuditLogEntryType,
-    }
+    MessageDeleteBulk {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    pub struct AuditLogChange {
-        pub new: Value,
-        pub old: Value,
-        pub key: Value,
-    }
+    RoleCreate {
+        changes: Vec<AuditLogChange>,
+    },
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-    #[serde(tag = "type")]
-    pub enum AuditLogEntryType {
-        RoomCreate {
-            changes: Vec<AuditLogChange>,
-        },
+    RoleUpdate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        RoomUpdate {
-            changes: Vec<AuditLogChange>,
-        },
+    RoleDelete {
+        role_id: RoleId,
+    },
 
-        ThreadCreate {
-            thread_id: ThreadId,
-            changes: Vec<AuditLogChange>,
-        },
+    InviteCreate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        ThreadUpdate {
-            thread_id: ThreadId,
-            changes: Vec<AuditLogChange>,
-        },
+    InviteUpdate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        MessageDelete {
-            thread_id: ThreadId,
-            message_id: MessageId,
-        },
+    InviteDelete {
+        code: InviteCode,
+    },
 
-        MessageVersionDelete {
-            thread_id: ThreadId,
-            message_id: MessageId,
-            version_id: MessageVerId,
-        },
+    /// remove all reactions
+    ReactionPurge {
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
 
-        MessageDeleteBulk {
-            thread_id: ThreadId,
-            message_ids: Vec<MessageId>,
-        },
+    EmojiCreate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        RoleCreate {
-            changes: Vec<AuditLogChange>,
-        },
+    EmojiUpdate {
+        changes: Vec<AuditLogChange>,
+    },
 
-        RoleUpdate {
-            changes: Vec<AuditLogChange>,
-        },
+    EmojiDelete {
+        emoji_id: EmojiId,
+    },
 
-        RoleDelete {
-            role_id: RoleId,
-        },
+    ThreadOverwriteSet {
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+        ty: PermissionOverwriteType,
+        allow: Vec<Permission>,
+        deny: Vec<Permission>,
+    },
+    ThreadOverwriteDelete {
+        thread_id: ThreadId,
+        overwrite_id: Uuid,
+    },
+    MemberKick {
+        room_id: RoomId,
+        user_id: UserId,
+    },
+    MemberBan {
+        room_id: RoomId,
+        user_id: UserId,
+    },
+    MemberUnban {
+        room_id: RoomId,
+        user_id: UserId,
+    },
+    MemberUpdate {
+        room_id: RoomId,
+        user_id: UserId,
+        changes: Vec<AuditLogChange>,
+    },
+    RoleApply {
+        user_id: UserId,
+        role_id: RoleId,
+    },
+    RoleUnapply {
+        user_id: UserId,
+        role_id: RoleId,
+    },
+    // // cant be logged because this isn't yet implemented
+    // BotAdd,
+    // MessagePin,
+    // MessageUnpin,
+    // MessageRemove,
+    // MessageRestore,
 
-        InviteCreate {
-            changes: Vec<AuditLogChange>,
-        },
-
-        InviteUpdate {
-            changes: Vec<AuditLogChange>,
-        },
-
-        InviteDelete {
-            code: InviteCode,
-        },
-
-        /// remove all reactions
-        ReactionPurge {
-            thread_id: ThreadId,
-            message_id: MessageId,
-        },
-
-        EmojiCreate {
-            changes: Vec<AuditLogChange>,
-        },
-
-        EmojiUpdate {
-            changes: Vec<AuditLogChange>,
-        },
-
-        EmojiDelete {
-            emoji_id: EmojiId,
-        },
-
-        // below aren't sync events
-        ThreadOverwriteSet,
-        ThreadOverwriteDelete,
-        MemberKick,
-        MemberBan,
-        MemberUnban,
-        MemberUpdate,
-        RoleApply,
-        RoleUnapply,
-        MessagePin,
-        MessageUnpin,
-        BotAdd,
-        MessageRemove,
-        MessageRestore,
-
-        // user events
-        UserUpdate,
-        FriendAdd,
-        FriendRemove,
-        BlockAdd,
-        BlockRemove,
-    }
+    // // for user audit log, which doesn't exist yet
+    // UserUpdate,
+    // FriendAdd,
+    // FriendRemove,
+    // BlockAdd,
+    // BlockRemove,
 }

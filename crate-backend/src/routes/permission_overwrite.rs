@@ -7,7 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    MessageSync, Permission, PermissionOverwrite, PermissionOverwriteSet, ThreadId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
+    PermissionOverwrite, PermissionOverwriteSet, ThreadId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -95,6 +96,23 @@ async fn permission_thread_delete(
         .await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+
+    if let Some(room_id) = thread.room_id {
+        s.data()
+            .audit_logs_room_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user_id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::ThreadOverwriteDelete {
+                    thread_id,
+                    overwrite_id,
+                },
+            })
+            .await?;
+    }
+
     s.broadcast_thread(
         thread_id,
         auth_user_id,

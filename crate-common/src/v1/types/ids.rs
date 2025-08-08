@@ -177,7 +177,7 @@ genid!(RoleVer, "00000000-0000-0000-0ver-00000000role");
 genid!(Media, "00000000-0000-0000-0000-0000000media");
 genid!(Session, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVer, "00000000-0000-0000-0ver-00000session");
-genid!(AuditLog, "00000000-0000-0000-0000-0auditlogent");
+genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
 genid!(Tag, "00000000-0000-0000-0000-000000000tag");
 genid!(TagVer, "00000000-0000-0000-0ver-000000000tag");

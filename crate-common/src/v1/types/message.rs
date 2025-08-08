@@ -23,7 +23,7 @@ use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
 use crate::v1::types::RoomId;
 use crate::v1::types::{
-    AuditLog, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UserId,
+    AuditLogEntry, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UserId,
 };
 
 use super::EmbedCreate;
@@ -333,7 +333,7 @@ pub struct MessageRoomFollowed {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationLog {
-    pub audit_log_entry: AuditLog,
+    pub audit_log_entry: AuditLogEntry,
 }
 
 /// automatic moderation reports

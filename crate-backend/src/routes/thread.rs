@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::{MessageId, MessageThreadUpdate, ThreadType};
+use common::v1::types::{AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, MessageThreadUpdate, ThreadType};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -93,18 +93,48 @@ async fn thread_create_room(
         })
         .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    data.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::ThreadCreate {
+            thread_id,
+            changes: vec![
+                AuditLogChange {
+                    key: "name".to_string(),
+                    old: serde_json::Value::Null,
+                    new: serde_json::to_value(&thread.name).unwrap(),
+                },
+                AuditLogChange {
+                    key: "description".to_string(),
+                    old: serde_json::Value::Null,
+                    new: serde_json::to_value(&thread.description).unwrap(),
+                },
+                AuditLogChange {
+                    key: "nsfw".to_string(),
+                    old: serde_json::Value::Null,
+                    new: serde_json::to_value(&thread.nsfw).unwrap(),
+                },
+            ],
+        },
+    })
+    .await?;
+
     let starter_message = data
         .message_get(thread_id, starter_message_id, user_id)
         .await?;
     s.broadcast_room(
         room_id,
         user_id,
-        reason,
+        reason.clone(),
         MessageSync::ThreadCreate {
             thread: thread.clone(),
         },
     )
     .await?;
+
     s.broadcast_thread(
         thread.id,
         user_id,

@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::Diff;
-use common::v1::types::{Permission, Room, RoomCreate, RoomId, RoomMembership, RoomPatch, UserId};
+use common::v1::types::{
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, Room,
+    RoomCreate, RoomId, RoomMembership, RoomPatch, UserId,
+};
 use moka::future::Cache;
 
 use crate::error::{Error, Result};
@@ -39,6 +42,39 @@ impl ServiceRooms {
             return Err(Error::NotModified);
         }
 
+        let changes = vec![
+            AuditLogChange {
+                key: "name".to_string(),
+                old: serde_json::to_value(&start.name).unwrap(),
+                new: serde_json::to_value(&patch.name).unwrap(),
+            },
+            AuditLogChange {
+                key: "description".to_string(),
+                old: serde_json::to_value(&start.description).unwrap(),
+                new: serde_json::to_value(&patch.description).unwrap(),
+            },
+            AuditLogChange {
+                key: "icon".to_string(),
+                old: serde_json::to_value(&start.icon).unwrap(),
+                new: serde_json::to_value(&patch.icon).unwrap(),
+            },
+            AuditLogChange {
+                key: "public".to_string(),
+                old: serde_json::to_value(&start.public).unwrap(),
+                new: serde_json::to_value(&patch.public).unwrap(),
+            },
+        ];
+
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None, // TODO: get session id
+            reason: None,     // TODO: get reason
+            ty: AuditLogEntryType::RoomUpdate { changes },
+        })
+        .await?;
+
         data.room_update(room_id, patch).await?;
         self.cache_room.invalidate(&room_id).await;
         self.get(room_id, Some(user_id)).await
@@ -48,6 +84,40 @@ impl ServiceRooms {
         let data = self.state.data();
         let room = data.room_create(create).await?;
         let room_id = room.id;
+
+        let changes = vec![
+            AuditLogChange {
+                key: "name".to_string(),
+                old: serde_json::Value::Null,
+                new: serde_json::to_value(&room.name).unwrap(),
+            },
+            AuditLogChange {
+                key: "description".to_string(),
+                old: serde_json::Value::Null,
+                new: serde_json::to_value(&room.description).unwrap(),
+            },
+            AuditLogChange {
+                key: "icon".to_string(),
+                old: serde_json::Value::Null,
+                new: serde_json::to_value(&room.icon).unwrap(),
+            },
+            AuditLogChange {
+                key: "public".to_string(),
+                old: serde_json::Value::Null,
+                new: serde_json::to_value(&room.public).unwrap(),
+            },
+        ];
+
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: creator,
+            session_id: None, // TODO: get session id
+            reason: None,     // TODO: get reason
+            ty: AuditLogEntryType::RoomCreate { changes },
+        })
+        .await?;
+
         let role_admin = DbRoleCreate {
             room_id,
             name: "admin".to_owned(),

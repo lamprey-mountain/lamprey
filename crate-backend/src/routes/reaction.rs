@@ -5,7 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::{
-    MessageId, MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, ThreadId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -130,6 +131,23 @@ async fn reaction_purge(
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionClear)?;
     data.reaction_purge(thread_id, message_id).await?;
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::ReactionPurge {
+                thread_id,
+                message_id,
+            },
+        })
+        .await?;
+    }
+
     s.broadcast_thread(
         thread_id,
         auth_user_id,

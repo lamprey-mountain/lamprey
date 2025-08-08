@@ -65,39 +65,23 @@ impl ServerStateInner {
 
     pub async fn broadcast_room(
         &self,
-        room_id: RoomId,
-        user_id: UserId,
-        reason: Option<String>,
+        _room_id: RoomId,
+        _user_id: UserId,
+        _reason: Option<String>,
         msg: MessageSync,
     ) -> Result<()> {
-        if msg.is_room_audit_loggable() {
-            self.data()
-                .audit_logs_room_append(room_id, user_id, reason, msg.clone())
-                .await?;
-        }
         let _ = self.sushi.send(msg);
         Ok(())
     }
 
     pub async fn broadcast_thread(
         &self,
-        thread_id: ThreadId,
-        user_id: UserId,
-        reason: Option<String>,
+        _thread_id: ThreadId,
+        _user_id: UserId,
+        _reason: Option<String>,
         msg: MessageSync,
     ) -> Result<()> {
-        if msg.is_room_audit_loggable() {
-            let thread = self
-                .services()
-                .threads
-                .get(thread_id, Some(user_id))
-                .await?;
-            if let Some(room_id) = thread.room_id {
-                self.broadcast_room(room_id, user_id, reason, msg).await?;
-            }
-        } else {
-            let _ = self.sushi.send(msg);
-        }
+        let _ = self.sushi.send(msg);
         Ok(())
     }
 

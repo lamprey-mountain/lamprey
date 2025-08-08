@@ -5,8 +5,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId,
-    RolePatch, RoomId, RoomMember, RoomMembership, UserId,
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, RolePatch, RoomId,
+    RoomMember, RoomMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -53,6 +54,50 @@ pub async fn role_create(
             is_default: json.is_default,
         })
         .await?;
+
+    let changes = vec![
+        AuditLogChange {
+            key: "name".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.name).unwrap(),
+        },
+        AuditLogChange {
+            key: "description".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.description).unwrap(),
+        },
+        AuditLogChange {
+            key: "permissions".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.permissions).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_self_applicable".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.is_self_applicable).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_mentionable".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.is_mentionable).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_default".to_string(),
+            old: serde_json::Value::Null,
+            new: serde_json::to_value(&role.is_default).unwrap(),
+        },
+    ];
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoleCreate { changes },
+    })
+    .await?;
+
     let msg = MessageSync::RoleCreate { role: role.clone() };
     s.broadcast_room(room_id, user_id, reason, msg).await?;
     Ok((StatusCode::CREATED, Json(role)))
@@ -84,18 +129,64 @@ pub async fn role_update(
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    let role = d.role_select(room_id, role_id).await?;
-    if !json.changes(&role) {
+    let start_role = d.role_select(room_id, role_id).await?;
+    if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
     d.role_update(room_id, role_id, json.clone()).await?;
-    let role = d.role_select(room_id, role_id).await?;
-    let msg = MessageSync::RoleUpdate { role: role.clone() };
-    if json.permissions.is_some_and(|p| p != role.permissions) {
+    let end_role = d.role_select(room_id, role_id).await?;
+
+    let changes = vec![
+        AuditLogChange {
+            key: "name".to_string(),
+            old: serde_json::to_value(&start_role.name).unwrap(),
+            new: serde_json::to_value(&end_role.name).unwrap(),
+        },
+        AuditLogChange {
+            key: "description".to_string(),
+            old: serde_json::to_value(&start_role.description).unwrap(),
+            new: serde_json::to_value(&end_role.description).unwrap(),
+        },
+        AuditLogChange {
+            key: "permissions".to_string(),
+            old: serde_json::to_value(&start_role.permissions).unwrap(),
+            new: serde_json::to_value(&end_role.permissions).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_self_applicable".to_string(),
+            old: serde_json::to_value(&start_role.is_self_applicable).unwrap(),
+            new: serde_json::to_value(&end_role.is_self_applicable).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_mentionable".to_string(),
+            old: serde_json::to_value(&start_role.is_mentionable).unwrap(),
+            new: serde_json::to_value(&end_role.is_mentionable).unwrap(),
+        },
+        AuditLogChange {
+            key: "is_default".to_string(),
+            old: serde_json::to_value(&start_role.is_default).unwrap(),
+            new: serde_json::to_value(&end_role.is_default).unwrap(),
+        },
+    ];
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoleUpdate { changes },
+    })
+    .await?;
+
+    let msg = MessageSync::RoleUpdate {
+        role: end_role.clone(),
+    };
+    if json.permissions.is_some_and(|p| p != end_role.permissions) {
         s.services().perms.invalidate_room_all(room_id);
     }
     s.broadcast_room(room_id, user_id, reason, msg).await?;
-    Ok(Json(role).into_response())
+    Ok(Json(end_role).into_response())
 }
 
 /// Role delete
@@ -125,6 +216,17 @@ pub async fn role_delete(
     let existing = d.role_member_count(role_id).await?;
     if existing == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
+
+        d.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::RoleDelete { role_id },
+        })
+        .await?;
+
         let msg = MessageSync::RoleDelete { room_id, role_id };
         s.services().perms.invalidate_room_all(room_id);
         s.broadcast_room(room_id, user_id, reason, msg).await?;
@@ -243,6 +345,18 @@ pub async fn role_member_add(
     let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoleApply {
+            user_id: target_user_id,
+            role_id,
+        },
+    })
+    .await?;
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
@@ -283,6 +397,20 @@ pub async fn role_member_remove(
     let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoleUnapply {
+            user_id: target_user_id,
+            role_id,
+        },
+    })
+    .await?;
+
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)

@@ -5,7 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiOwner};
 use common::v1::types::{
-    EmojiId, MessageSync, PaginationQuery, PaginationResponse, Permission, RoomId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, RoomId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -135,6 +136,17 @@ async fn emoji_delete(
         perms.ensure(Permission::EmojiManage)?;
     }
     data.emoji_delete(emoji_id).await?;
+
+    data.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::EmojiDelete { emoji_id },
+    })
+    .await?;
+
     if let EmojiOwner::Room { room_id } = emoji.owner {
         s.broadcast_room(
             room_id,

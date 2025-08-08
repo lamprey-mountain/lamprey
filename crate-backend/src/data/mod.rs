@@ -6,8 +6,8 @@ use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
-    ApplicationId, AuditLog, AuditLogId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
-    MediaPatch, MessageSync, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
+    MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
     SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
 };
@@ -380,15 +380,9 @@ pub trait DataAuditLogs {
     async fn audit_logs_room_fetch(
         &self,
         room_id: RoomId,
-        paginate: PaginationQuery<AuditLogId>,
-    ) -> Result<PaginationResponse<AuditLog>>;
-    async fn audit_logs_room_append(
-        &self,
-        room_id: RoomId,
-        user_id: UserId,
-        reason: Option<String>,
-        payload: MessageSync,
-    ) -> Result<()>;
+        paginate: PaginationQuery<AuditLogEntryId>,
+    ) -> Result<PaginationResponse<AuditLogEntry>>;
+    async fn audit_logs_room_append(&self, entry: AuditLogEntry) -> Result<()>;
 }
 
 #[async_trait]
