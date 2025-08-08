@@ -35,7 +35,13 @@ impl ServiceRooms {
             .map_err(|err| err.fake_clone())
     }
 
-    pub async fn update(&self, room_id: RoomId, user_id: UserId, patch: RoomPatch) -> Result<Room> {
+    pub async fn update(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        patch: RoomPatch,
+        reason: Option<String>,
+    ) -> Result<Room> {
         let data = self.state.data();
         let start = data.room_get(room_id).await?;
         if !patch.changes(&start) {
@@ -58,7 +64,7 @@ impl ServiceRooms {
             room_id,
             user_id,
             session_id: None, // TODO: get session id
-            reason: None,     // TODO: get reason
+            reason,
             ty: AuditLogEntryType::RoomUpdate { changes },
         })
         .await?;

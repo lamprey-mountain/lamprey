@@ -198,7 +198,7 @@ async fn room_edit(
         }
     }
 
-    let room = s.services().rooms.update(room_id, user_id, json).await?;
+    let room = s.services().rooms.update(room_id, user_id, json, reason.clone()).await?;
     if let Some(Some(media_id)) = icon {
         let data = s.data();
         // TODO: cleanup old avatars
