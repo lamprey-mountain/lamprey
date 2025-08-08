@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, is_default)\n            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id, version_id, room_id, name, description, permissions as \"permissions: _\", is_mentionable, is_self_applicable, is_default\n        ",
+  "query": "\n            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, is_default)\n            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id, version_id, room_id, name, description, permissions as \"permissions: _\", is_mentionable, is_self_applicable, is_default, 0 as \"member_count!\"\n        ",
   "describe": {
     "columns": [
       {
@@ -126,6 +126,11 @@
         "ordinal": 8,
         "name": "is_default",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "member_count!",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -228,8 +233,9 @@
       false,
       false,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "e9a84332961157688d2e26bfd69243f236911cac4ef2fafb9ae0a35e11ff0c5f"
+  "hash": "d163d5a1ca5224eee226e3dfcfab3360dfb365f66bece8f4564bb53db2a4ec60"
 }

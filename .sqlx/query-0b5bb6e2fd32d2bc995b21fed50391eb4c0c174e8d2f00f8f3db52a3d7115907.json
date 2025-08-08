@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            \tSELECT\n                \tid,\n                \tdescription,\n                \tis_default,\n                \tis_mentionable,\n                \tpermissions as \"permissions: _\",\n                \tversion_id,\n                \troom_id,\n                \tis_self_applicable,\n                \tname\n                FROM role\n            \tWHERE room_id = $1 AND id > $2 AND id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "query": "\n            SELECT\n                id, version_id, room_id, name, description, permissions as \"permissions: _\",\n                is_mentionable, is_self_applicable, is_default, 0 as \"member_count!\"\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -10,21 +10,26 @@
       },
       {
         "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 2,
-        "name": "is_default",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 3,
-        "name": "is_mentionable",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "permissions: _",
         "type_info": {
           "Custom": {
@@ -108,14 +113,9 @@
         }
       },
       {
-        "ordinal": 5,
-        "name": "version_id",
-        "type_info": "Uuid"
-      },
-      {
         "ordinal": 6,
-        "name": "room_id",
-        "type_info": "Uuid"
+        "name": "is_mentionable",
+        "type_info": "Bool"
       },
       {
         "ordinal": 7,
@@ -124,30 +124,33 @@
       },
       {
         "ordinal": 8,
-        "name": "name",
-        "type_info": "Text"
+        "name": "is_default",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "member_count!",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
+      false,
+      false,
       false,
       true,
       false,
       false,
       false,
       false,
-      false,
-      false,
-      false
+      null
     ]
   },
-  "hash": "b9173b49afa38f8763c565ab8a523e3e9901884365af422ab75ae715cbe7d3f3"
+  "hash": "0b5bb6e2fd32d2bc995b21fed50391eb4c0c174e8d2f00f8f3db52a3d7115907"
 }
