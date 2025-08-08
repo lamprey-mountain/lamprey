@@ -36,7 +36,7 @@ pub struct Role {
     // pub priority: u64,
 
     // pub includes: Vec<Role>,
-    // pub member_count: u64,
+    pub member_count: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -237,6 +237,7 @@ impl From<DbRole> for Role {
             is_self_applicable: row.is_self_applicable,
             is_mentionable: row.is_mentionable,
             is_default: row.is_default,
+            member_count: 0, // Placeholder, will be populated by the query
         }
     }
 }
