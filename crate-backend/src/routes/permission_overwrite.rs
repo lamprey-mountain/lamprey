@@ -49,12 +49,11 @@ async fn permission_thread_overwrite(
     for p in &json.deny {
         perms.ensure(*p)?;
     }
-    s.services()
-        .perms
+    let srv = s.services();
+    srv.perms
         .permission_overwrite_upsert(thread_id, overwrite_id, json.ty, json.allow, json.deny)
         .await?;
-
-    let srv = s.services();
+    srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     s.broadcast_thread(
         thread_id,
@@ -90,11 +89,11 @@ async fn permission_thread_delete(
         .await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    s.services()
-        .perms
+    let srv = s.services();
+    srv.perms
         .permission_overwrite_delete(thread_id, overwrite_id)
         .await?;
-    let srv = s.services();
+    srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     s.broadcast_thread(
         thread_id,
