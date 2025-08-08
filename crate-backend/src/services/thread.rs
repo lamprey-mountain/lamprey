@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
-    MessageThreadUpdate, MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageThreadUpdate,
+    MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
 };
 use moka::future::Cache;
 
@@ -115,23 +115,15 @@ impl ServiceThreads {
                 reason: reason.clone(),
                 ty: AuditLogEntryType::ThreadUpdate {
                     thread_id,
-                    changes: vec![
-                        AuditLogChange {
-                            key: "name".to_string(),
-                            old: serde_json::to_value(&thread_old.name).unwrap(),
-                            new: serde_json::to_value(&thread_new.name).unwrap(),
-                        },
-                        AuditLogChange {
-                            key: "description".to_string(),
-                            old: serde_json::to_value(&thread_old.description).unwrap(),
-                            new: serde_json::to_value(&thread_new.description).unwrap(),
-                        },
-                        AuditLogChange {
-                            key: "nsfw".to_string(),
-                            old: serde_json::to_value(&thread_old.nsfw).unwrap(),
-                            new: serde_json::to_value(&thread_new.nsfw).unwrap(),
-                        },
-                    ],
+                    changes: Changes::new()
+                        .change("name", &thread_old.name, &thread_new.name)
+                        .change(
+                            "description",
+                            &thread_old.description,
+                            &thread_new.description,
+                        )
+                        .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
+                        .build(),
                 },
             })
             .await?;

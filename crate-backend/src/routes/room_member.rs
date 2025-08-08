@@ -5,9 +5,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch,
-    RoomMemberPut, RoomMembership, UserId,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
+    RoomMembership, UserId,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -164,31 +164,28 @@ async fn room_member_add(
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "membership".to_string(),
-            old: serde_json::to_value(&RoomMembership::Leave {}).unwrap(),
-            new: serde_json::to_value(&res.membership).unwrap(),
-        },
-        AuditLogChange {
-            key: "override_name".to_string(),
-            old: if let Ok(existing) = &existing {
-                serde_json::to_value(&existing.membership).unwrap()
-            } else {
-                serde_json::Value::Null
-            },
-            new: serde_json::to_value(&res.membership).unwrap(),
-        },
-        AuditLogChange {
-            key: "override_description".to_string(),
-            old: if let Ok(existing) = &existing {
-                serde_json::to_value(&existing.membership).unwrap()
-            } else {
-                serde_json::Value::Null
-            },
-            new: serde_json::to_value(&res.membership).unwrap(),
-        },
-    ];
+    let changes = if let Ok(existing) = existing {
+        Changes::new()
+            .change("membership", &existing.membership, &res.membership)
+            .change(
+                "override_name",
+                &existing.membership.override_name(),
+                &res.membership.override_name(),
+            )
+            .change(
+                "override_description",
+                &existing.membership.override_description(),
+                &res.membership.override_description(),
+            )
+    } else {
+        Changes::new()
+            .add("membership", &res.membership)
+            .add("override_name", &res.membership.override_name())
+            .add(
+                "override_description",
+                &res.membership.override_description(),
+            )
+    };
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -199,7 +196,7 @@ async fn room_member_add(
         ty: AuditLogEntryType::MemberUpdate {
             room_id,
             user_id: target_user_id,
-            changes,
+            changes: changes.build(),
         },
     })
     .await?;
@@ -259,18 +256,31 @@ async fn room_member_update(
     d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "override_name".to_string(),
-            old: serde_json::to_value(&start.membership).unwrap(),
-            new: serde_json::to_value(&res.membership).unwrap(),
-        },
-        AuditLogChange {
-            key: "override_description".to_string(),
-            old: serde_json::to_value(&start.membership).unwrap(),
-            new: serde_json::to_value(&res.membership).unwrap(),
-        },
-    ];
+    let changes = if let RoomMembership::Join {
+        override_name,
+        override_description,
+        ..
+    } = start.membership
+    {
+        Changes::new()
+            .change(
+                "override_name",
+                &override_name.as_deref(),
+                &res.membership.override_name(),
+            )
+            .change(
+                "override_description",
+                &override_description.as_deref(),
+                &res.membership.override_description(),
+            )
+    } else {
+        Changes::new()
+            .add("override_name", &res.membership.override_name())
+            .add(
+                "override_description",
+                &res.membership.override_description(),
+            )
+    };
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -281,7 +291,7 @@ async fn room_member_update(
         ty: AuditLogEntryType::MemberUpdate {
             room_id,
             user_id: target_user_id,
-            changes,
+            changes: changes.build(),
         },
     })
     .await?;

@@ -5,8 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiOwner};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, RoomId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -61,12 +61,17 @@ async fn emoji_create(
     }
 
     let media_id = json.media_id;
-    let emoji = data.emoji_create(user_id, room_id, json).await?;
+    let emoji = data.emoji_create(user_id, room_id, json.clone()).await?;
     s.blobs
         .copy(&format!("media/{media_id}"), &format!("emoji/{}", emoji.id))
         .await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
+
+    let changes = Changes::new()
+        .add("name", &json.name)
+        .add("animated", &json.animated)
+        .add("media_id", &json.media_id);
 
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -75,7 +80,7 @@ async fn emoji_create(
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiCreate {
-            changes: vec![], // TODO: Populate changes
+            changes: changes.build(),
         },
     })
     .await?;

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, Room,
-    RoomCreate, RoomId, RoomMembership, RoomPatch, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, Room, RoomCreate, RoomId,
+    RoomMembership, RoomPatch, UserId,
 };
 use moka::future::Cache;
 
@@ -42,28 +42,16 @@ impl ServiceRooms {
             return Err(Error::NotModified);
         }
 
-        let changes = vec![
-            AuditLogChange {
-                key: "name".to_string(),
-                old: serde_json::to_value(&start.name).unwrap(),
-                new: serde_json::to_value(&patch.name).unwrap(),
-            },
-            AuditLogChange {
-                key: "description".to_string(),
-                old: serde_json::to_value(&start.description).unwrap(),
-                new: serde_json::to_value(&patch.description).unwrap(),
-            },
-            AuditLogChange {
-                key: "icon".to_string(),
-                old: serde_json::to_value(&start.icon).unwrap(),
-                new: serde_json::to_value(&patch.icon).unwrap(),
-            },
-            AuditLogChange {
-                key: "public".to_string(),
-                old: serde_json::to_value(&start.public).unwrap(),
-                new: serde_json::to_value(&patch.public).unwrap(),
-            },
-        ];
+        data.room_update(room_id, patch).await?;
+        self.cache_room.invalidate(&room_id).await;
+        let end = self.get(room_id, Some(user_id)).await?;
+
+        let changes = Changes::new()
+            .change("name", &start.name, &end.name)
+            .change("description", &start.description, &end.description)
+            .change("icon", &start.icon, &end.icon)
+            .change("public", &start.public, &end.public)
+            .build();
 
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -75,9 +63,7 @@ impl ServiceRooms {
         })
         .await?;
 
-        data.room_update(room_id, patch).await?;
-        self.cache_room.invalidate(&room_id).await;
-        self.get(room_id, Some(user_id)).await
+        Ok(end)
     }
 
     pub async fn create(&self, create: RoomCreate, creator: UserId) -> Result<Room> {
@@ -85,28 +71,12 @@ impl ServiceRooms {
         let room = data.room_create(create).await?;
         let room_id = room.id;
 
-        let changes = vec![
-            AuditLogChange {
-                key: "name".to_string(),
-                old: serde_json::Value::Null,
-                new: serde_json::to_value(&room.name).unwrap(),
-            },
-            AuditLogChange {
-                key: "description".to_string(),
-                old: serde_json::Value::Null,
-                new: serde_json::to_value(&room.description).unwrap(),
-            },
-            AuditLogChange {
-                key: "icon".to_string(),
-                old: serde_json::Value::Null,
-                new: serde_json::to_value(&room.icon).unwrap(),
-            },
-            AuditLogChange {
-                key: "public".to_string(),
-                old: serde_json::Value::Null,
-                new: serde_json::to_value(&room.public).unwrap(),
-            },
-        ];
+        let changes = Changes::new()
+            .add("name", &room.name)
+            .add("description", &room.description)
+            .add("icon", &room.icon)
+            .add("public", &room.public)
+            .build();
 
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),

@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
     MessageThreadUpdate, ThreadType,
 };
 use serde::{Deserialize, Serialize};
@@ -104,23 +104,11 @@ async fn thread_create_room(
         reason: reason.clone(),
         ty: AuditLogEntryType::ThreadCreate {
             thread_id,
-            changes: vec![
-                AuditLogChange {
-                    key: "name".to_string(),
-                    old: serde_json::Value::Null,
-                    new: serde_json::to_value(&thread.name).unwrap(),
-                },
-                AuditLogChange {
-                    key: "description".to_string(),
-                    old: serde_json::Value::Null,
-                    new: serde_json::to_value(&thread.description).unwrap(),
-                },
-                AuditLogChange {
-                    key: "nsfw".to_string(),
-                    old: serde_json::Value::Null,
-                    new: serde_json::to_value(&thread.nsfw).unwrap(),
-                },
-            ],
+            changes: Changes::new()
+                .add("name", &thread.name)
+                .add("description", &thread.description)
+                .add("nsfw", &thread.nsfw)
+                .build(),
         },
     })
     .await?;

@@ -3,11 +3,11 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Time;
+use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode,
-    InviteCreate, InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMembership,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
+    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, RoomId, RoomMembership,
 };
 use futures::future::join_all;
 use http::StatusCode;
@@ -275,23 +275,11 @@ pub async fn invite_room_create(
     .await?;
     let invite = d.invite_select(code).await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "description".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&invite.invite.description).unwrap(),
-        },
-        AuditLogChange {
-            key: "expires_at".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&invite.invite.expires_at).unwrap(),
-        },
-        AuditLogChange {
-            key: "max_uses".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&invite.max_uses).unwrap(),
-        },
-    ];
+    let changes = Changes::new()
+        .add("description", &invite.invite.description)
+        .add("expires_at", &invite.invite.expires_at)
+        .add("max_uses", &invite.max_uses)
+        .build();
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -431,23 +419,19 @@ pub async fn invite_patch(
 
     let updated_invite = d.invite_update(code.clone(), patch).await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "description".to_string(),
-            old: serde_json::to_value(&start_invite.invite.description).unwrap(),
-            new: serde_json::to_value(&updated_invite.invite.description).unwrap(),
-        },
-        AuditLogChange {
-            key: "expires_at".to_string(),
-            old: serde_json::to_value(&start_invite.invite.expires_at).unwrap(),
-            new: serde_json::to_value(&updated_invite.invite.expires_at).unwrap(),
-        },
-        AuditLogChange {
-            key: "max_uses".to_string(),
-            old: serde_json::to_value(&start_invite.max_uses).unwrap(),
-            new: serde_json::to_value(&updated_invite.max_uses).unwrap(),
-        },
-    ];
+    let changes = Changes::new()
+        .change(
+            "description",
+            &start_invite.invite.description,
+            &updated_invite.invite.description,
+        )
+        .change(
+            "expires_at",
+            &start_invite.invite.expires_at,
+            &updated_invite.invite.expires_at,
+        )
+        .change("max_uses", &start_invite.max_uses, &updated_invite.max_uses)
+        .build();
 
     let room_id = match &updated_invite.invite.target {
         InviteTarget::Room { room } => Some(room.id),

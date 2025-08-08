@@ -149,6 +149,23 @@ impl RoomMembership {
         override_description: None,
         roles: Vec::new(),
     };
+
+    pub fn override_name(&self) -> Option<&str> {
+        match self {
+            RoomMembership::Join { override_name, .. } => override_name.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn override_description(&self) -> Option<&str> {
+        match self {
+            RoomMembership::Join {
+                override_description,
+                ..
+            } => override_description.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(feature = "validator")]

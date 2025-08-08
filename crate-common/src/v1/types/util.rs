@@ -1,8 +1,10 @@
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 pub mod truncate;
 
 // TEMP: pub use here for compatibility
+pub use super::audit_logs::AuditLogChange;
 pub use super::misc::Time;
 
 // TODO: derive macro
@@ -63,4 +65,48 @@ where
     D: Deserializer<'de>,
 {
     Option::<T>::deserialize(deserializer).map(Some)
+}
+
+pub struct Changes {
+    changes: Vec<AuditLogChange>,
+}
+
+impl Changes {
+    pub fn new() -> Self {
+        Self {
+            changes: Vec::new(),
+        }
+    }
+
+    pub fn add<T: Serialize + PartialEq>(mut self, key: impl Into<String>, new: &T) -> Self {
+        let val = serde_json::to_value(new).unwrap_or(Value::Null);
+        if val != Value::Null {
+            self.changes.push(AuditLogChange {
+                key: key.into(),
+                old: Value::Null,
+                new: val,
+            });
+        }
+        self
+    }
+
+    pub fn change<T: Serialize + PartialEq>(
+        mut self,
+        key: impl Into<String>,
+        old: &T,
+        new: &T,
+    ) -> Self {
+        if old != new {
+            self.changes.push(AuditLogChange {
+                key: key.into(),
+                old: serde_json::to_value(old).unwrap_or(Value::Null),
+                new: serde_json::to_value(new).unwrap_or(Value::Null),
+            });
+        }
+        self
+    }
+
+    pub fn build(self) -> Vec<AuditLogChange> {
+        self.changes
+    }
 }

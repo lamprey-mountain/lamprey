@@ -3,11 +3,11 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync,
-    PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, RolePatch, RoomId,
-    RoomMember, RoomMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, Role, RoleCreate, RoleId, RolePatch, RoomId, RoomMember,
+    RoomMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -55,38 +55,14 @@ pub async fn role_create(
         })
         .await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "name".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.name).unwrap(),
-        },
-        AuditLogChange {
-            key: "description".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.description).unwrap(),
-        },
-        AuditLogChange {
-            key: "permissions".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.permissions).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_self_applicable".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.is_self_applicable).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_mentionable".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.is_mentionable).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_default".to_string(),
-            old: serde_json::Value::Null,
-            new: serde_json::to_value(&role.is_default).unwrap(),
-        },
-    ];
+    let changes = Changes::new()
+        .add("name", &role.name)
+        .add("description", &role.description)
+        .add("permissions", &role.permissions)
+        .add("is_self_applicable", &role.is_self_applicable)
+        .add("is_mentionable", &role.is_mentionable)
+        .add("is_default", &role.is_default)
+        .build();
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -136,38 +112,30 @@ pub async fn role_update(
     d.role_update(room_id, role_id, json.clone()).await?;
     let end_role = d.role_select(room_id, role_id).await?;
 
-    let changes = vec![
-        AuditLogChange {
-            key: "name".to_string(),
-            old: serde_json::to_value(&start_role.name).unwrap(),
-            new: serde_json::to_value(&end_role.name).unwrap(),
-        },
-        AuditLogChange {
-            key: "description".to_string(),
-            old: serde_json::to_value(&start_role.description).unwrap(),
-            new: serde_json::to_value(&end_role.description).unwrap(),
-        },
-        AuditLogChange {
-            key: "permissions".to_string(),
-            old: serde_json::to_value(&start_role.permissions).unwrap(),
-            new: serde_json::to_value(&end_role.permissions).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_self_applicable".to_string(),
-            old: serde_json::to_value(&start_role.is_self_applicable).unwrap(),
-            new: serde_json::to_value(&end_role.is_self_applicable).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_mentionable".to_string(),
-            old: serde_json::to_value(&start_role.is_mentionable).unwrap(),
-            new: serde_json::to_value(&end_role.is_mentionable).unwrap(),
-        },
-        AuditLogChange {
-            key: "is_default".to_string(),
-            old: serde_json::to_value(&start_role.is_default).unwrap(),
-            new: serde_json::to_value(&end_role.is_default).unwrap(),
-        },
-    ];
+    let changes = Changes::new()
+        .change("name", &start_role.name, &end_role.name)
+        .change(
+            "description",
+            &start_role.description,
+            &end_role.description,
+        )
+        .change(
+            "permissions",
+            &start_role.permissions,
+            &end_role.permissions,
+        )
+        .change(
+            "is_self_applicable",
+            &start_role.is_self_applicable,
+            &end_role.is_self_applicable,
+        )
+        .change(
+            "is_mentionable",
+            &start_role.is_mentionable,
+            &end_role.is_mentionable,
+        )
+        .change("is_default", &start_role.is_default, &end_role.is_default)
+        .build();
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
