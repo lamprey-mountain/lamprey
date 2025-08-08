@@ -129,6 +129,28 @@ pub enum RoomType {
     System,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomMetrics {
+    /// Total number of threads in this room (including archived or removed ones).
+    pub thread_count: u64,
+
+    /// Number of active threads in this room (excluding archived or removed ones).
+    pub active_thread_count: u64,
+
+    /// Total number of messages across all active threads in this room (excluding removed messages).
+    pub message_count: u64,
+
+    /// Total number of members in this room.
+    pub member_count: u64,
+
+    /// Total number of attachments from messages in this room.
+    pub media_count: u64,
+
+    /// Combined size (in bytes) of all attachments in this room.
+    pub media_size: u64,
+}
+
 impl Diff<Room> for RoomPatch {
     fn changes(&self, other: &Room) -> bool {
         self.name.changes(&other.name)

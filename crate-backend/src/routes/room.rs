@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
-use common::v1::types::{AuditLogEntry, AuditLogEntryId};
+use common::v1::types::{AuditLogEntry, AuditLogEntryId, RoomMetrics};
 use headers::ETag;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -263,6 +263,24 @@ async fn room_ack(
     Err(Error::Unimplemented)
 }
 
+/// Room metrics (TODO)
+///
+/// Get metrics for a room
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/metrics",
+    params(("room_id", description = "Room id")),
+    tags = ["room"],
+    responses((status = OK, description = "success", body = RoomMetrics))
+)]
+async fn room_metrics(
+    Path(_room_id): Path<RoomId>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<Json<()>> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
@@ -271,4 +289,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_edit))
         .routes(routes!(room_audit_logs))
         .routes(routes!(room_ack))
+        .routes(routes!(room_metrics))
 }
