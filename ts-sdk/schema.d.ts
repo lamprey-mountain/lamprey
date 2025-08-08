@@ -193,11 +193,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Auth oauth get (TODO)
-		 * @deprecated
-		 */
-		get: operations["auth_oauth_get"];
+		get?: never;
 		put?: never;
 		/** Auth oauth init */
 		post: operations["auth_oauth_init"];
@@ -1026,7 +1022,10 @@ export interface paths {
 		/** List threads in a room */
 		get: operations["thread_list"];
 		put?: never;
-		/** Create a thread in a room */
+		/**
+		 * Thread create room
+		 * @description Create a thread in a room
+		 */
 		post: operations["thread_create_room"];
 		delete?: never;
 		options?: never;
@@ -1155,7 +1154,10 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Create a thread outside of a room, for dms */
+		/**
+		 * Thread create direct (TODO)
+		 * @description Create a thread outside of a room, for dms
+		 */
 		post: operations["thread_create"];
 		delete?: never;
 		options?: never;
@@ -1459,26 +1461,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/messages/delete": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Message delete bulk
-		 * @deprecated
-		 */
-		post: operations["message_delete_bulk"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/thread/{thread_id}/migrate": {
 		parameters: {
 			query?: never;
@@ -1632,6 +1614,30 @@ export interface paths {
 		 * @description Unblock a user.
 		 */
 		delete: operations["block_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/@self/dm/{target_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Dm get
+		 * @description Get a direct message room.
+		 */
+		get: operations["dm_get"];
+		put?: never;
+		/**
+		 * Dm initialize
+		 * @description Get or create a direct message thread.
+		 */
+		post: operations["dm_init"];
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1853,6 +1859,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/room": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Mutual rooms list (TODO)
+		 * @description List rooms both you and the target are in. Calling it on yourself lists
+		 *     rooms you're in.
+		 */
+		get: operations["mutual_room_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/suspend": {
 		parameters: {
 			query?: never;
@@ -1932,17 +1959,142 @@ export interface components {
 			duration: number;
 			language?: null | components["schemas"]["Language"];
 		};
-		AuditLog: {
+		AuditLogChange: {
+			key: string;
+			new: unknown;
+			old: unknown;
+		};
+		AuditLogEntry: components["schemas"]["AuditLogEntryType"] & {
 			/** @description Unique id idenfitying this entry */
 			id: components["schemas"]["Id"];
-			/** @description Generated sync payload (sent in websocket) */
-			payload: components["schemas"]["MessageSync"];
-			payload_prev?: null | components["schemas"]["MessageSync"];
 			/** @description User supplied reason why this happened */
 			reason?: string | null;
 			/** @description Room this happened in */
 			room_id: components["schemas"]["Id"];
+			session_id?: null | components["schemas"]["Id"];
 			/** @description User who caused this entry to be created */
+			user_id: components["schemas"]["Id"];
+		};
+		AuditLogEntryType: {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "RoomCreate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "RoomUpdate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "ThreadCreate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "ThreadUpdate";
+		} | {
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageDelete";
+		} | {
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageVersionDelete";
+			version_id: components["schemas"]["Id"];
+		} | {
+			message_ids: components["schemas"]["Id"][];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MessageDeleteBulk";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "RoleCreate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "RoleUpdate";
+		} | {
+			role_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "RoleDelete";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "InviteCreate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "InviteUpdate";
+		} | {
+			code: components["schemas"]["InviteCode"];
+			/** @enum {string} */
+			type: "InviteDelete";
+		} | {
+			message_id: components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "ReactionPurge";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "EmojiCreate";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "EmojiUpdate";
+		} | {
+			emoji_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "EmojiDelete";
+		} | {
+			allow: components["schemas"]["Permission"][];
+			deny: components["schemas"]["Permission"][];
+			/** Format: uuid */
+			overwrite_id: string;
+			thread_id: components["schemas"]["Id"];
+			ty: components["schemas"]["PermissionOverwriteType"];
+			/** @enum {string} */
+			type: "ThreadOverwriteSet";
+		} | {
+			/** Format: uuid */
+			overwrite_id: string;
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "ThreadOverwriteDelete";
+		} | {
+			room_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MemberKick";
+			user_id: components["schemas"]["Id"];
+		} | {
+			room_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MemberBan";
+			user_id: components["schemas"]["Id"];
+		} | {
+			room_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MemberUnban";
+			user_id: components["schemas"]["Id"];
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			room_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MemberUpdate";
+			user_id: components["schemas"]["Id"];
+		} | {
+			role_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "RoleApply";
+			user_id: components["schemas"]["Id"];
+		} | {
+			role_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "RoleUnapply";
 			user_id: components["schemas"]["Id"];
 		};
 		AuthStatus: {
@@ -2334,10 +2486,6 @@ export interface components {
 		MessageBotCommand: {
 			command_id: string;
 		};
-		MessageBulkDelete: {
-			/** @description which messages to delete */
-			message_ids?: components["schemas"]["Id"][];
-		};
 		MessageCreate: {
 			attachments?: components["schemas"]["MediaRef"][];
 			/** @description the message's content, in either markdown or the new format depending on if use_new_text_formatting is true */
@@ -2430,7 +2578,7 @@ export interface components {
 		};
 		/** @description audit log entries as a message (builtin moderation logging?) */
 		MessageModerationLog: {
-			audit_log_entry: components["schemas"]["AuditLog"];
+			audit_log_entry: components["schemas"]["AuditLogEntry"];
 		};
 		/** @description a report that moderators should look at */
 		MessageModerationReport: {
@@ -2797,25 +2945,25 @@ export interface components {
 			 */
 			to?: string;
 		};
-		PaginationResponse_AuditLog: {
+		PaginationResponse_AuditLogEntry: {
+			cursor?: string | null;
 			has_more: boolean;
-			items: {
+			items: (components["schemas"]["AuditLogEntryType"] & {
 				/** @description Unique id idenfitying this entry */
 				id: components["schemas"]["Id"];
-				/** @description Generated sync payload (sent in websocket) */
-				payload: components["schemas"]["MessageSync"];
-				payload_prev?: null | components["schemas"]["MessageSync"];
 				/** @description User supplied reason why this happened */
 				reason?: string | null;
 				/** @description Room this happened in */
 				room_id: components["schemas"]["Id"];
+				session_id?: null | components["schemas"]["Id"];
 				/** @description User who caused this entry to be created */
 				user_id: components["schemas"]["Id"];
-			}[];
+			})[];
 			/** Format: int64 */
 			total: number;
 		};
 		PaginationResponse_EmojiCustom: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				animated: boolean;
@@ -2829,6 +2977,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Invite: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				/** @description the invite code for this invite */
@@ -2851,6 +3000,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Message: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["MessageType"] & {
 				/** @description the id of who sent this message */
@@ -2871,6 +3021,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Notification: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				/** @description when this was created */
@@ -2887,6 +3038,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_ReactionListItem: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				user_id: components["schemas"]["Id"];
@@ -2895,6 +3047,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_RelationshipWithUserId: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["Relationship"] & {
 				user_id: components["schemas"]["Id"];
@@ -2903,6 +3056,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Role: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				description?: string | null;
@@ -2910,6 +3064,8 @@ export interface components {
 				is_default: boolean;
 				is_mentionable: boolean;
 				is_self_applicable: boolean;
+				/** Format: int64 */
+				member_count: number;
 				name: string;
 				permissions: components["schemas"]["Permission"][];
 				room_id: components["schemas"]["Id"];
@@ -2919,6 +3075,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Room: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["RoomType"] & {
 				archived_at?: null | components["schemas"]["Time"];
@@ -2954,6 +3111,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_RoomMember: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["RoomMembership"] & {
 				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
@@ -2965,6 +3123,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Session: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["SessionStatus"] & {
 				id: components["schemas"]["Id"];
@@ -2974,6 +3133,7 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Tag: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: {
 				color?: null | components["schemas"]["Color"];
@@ -2989,43 +3149,59 @@ export interface components {
 			total: number;
 		};
 		PaginationResponse_Thread: {
+			cursor?: string | null;
 			has_more: boolean;
-			items: (
-				& components["schemas"]["ThreadPublic"]
-				& (null | components["schemas"]["ThreadPrivate"])
-				& {
-					archived_at?: null | components["schemas"]["Time"];
-					creator_id: components["schemas"]["Id"];
-					deleted_at?: null | components["schemas"]["Time"];
-					description?: string | null;
-					id: components["schemas"]["Id"];
-					locked_at?: null | components["schemas"]["Time"];
-					/**
-					 * Format: int64
-					 * @description number of people in this room
-					 *     does not not update with ThreadSync
-					 */
-					member_count: number;
-					name: string;
-					/**
-					 * Format: int64
-					 * @description number of people who are online in this room
-					 *     does not not update with ThreadSync
-					 */
-					online_count: number;
-					/** @description permission overwrites for this thread */
-					permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-					room_id?: null | components["schemas"]["Id"];
-					/** @description tags that are applied to this thread */
-					tags: components["schemas"]["Id"][];
-					/** @description only updates when the thread itself is updated, not the stuff in the thread */
-					version_id: components["schemas"]["Id"];
-				}
-			)[];
+			items: {
+				archived_at?: null | components["schemas"]["Time"];
+				/** Format: int64 */
+				bitrate?: number | null;
+				creator_id: components["schemas"]["Id"];
+				deleted_at?: null | components["schemas"]["Time"];
+				description?: string | null;
+				id: components["schemas"]["Id"];
+				is_unread?: boolean | null;
+				last_read_id?: null | components["schemas"]["Id"];
+				last_version_id?: null | components["schemas"]["Id"];
+				locked_at?: null | components["schemas"]["Time"];
+				/**
+				 * Format: int64
+				 * @description number of people in this room
+				 *     does not not update with ThreadSync
+				 */
+				member_count: number;
+				/** Format: int64 */
+				mention_count?: number | null;
+				/** Format: int64 */
+				message_count?: number | null;
+				name: string;
+				notifications?: null | components["schemas"]["NotifsThread"];
+				/** @description not safe for work */
+				nsfw: boolean;
+				/**
+				 * Format: int64
+				 * @description number of people who are online in this room
+				 *     does not not update with ThreadSync
+				 */
+				online_count: number;
+				/** @description permission overwrites for this thread */
+				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+				room_id?: null | components["schemas"]["Id"];
+				/** Format: int64 */
+				root_message_count?: number | null;
+				/** @description tags that are applied to this thread */
+				tags: components["schemas"]["Id"][];
+				/** @description type specific data for this thread */
+				type: components["schemas"]["ThreadType"];
+				/** Format: int64 */
+				user_limit?: number | null;
+				/** @description only updates when the thread itself is updated, not the stuff in the thread */
+				version_id: components["schemas"]["Id"];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
 		PaginationResponse_ThreadMember: {
+			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["ThreadMembership"] & {
 				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
@@ -3146,9 +3322,11 @@ export interface components {
 			allow: components["schemas"]["Permission"][];
 			/** @description permissions denied here */
 			deny: components["schemas"]["Permission"][];
+			/** @description whether this is for a user or role */
+			type: components["schemas"]["PermissionOverwriteType"];
 		};
-		/** @default null */
-		PermissionOverwriteType: null;
+		/** @enum {string} */
+		PermissionOverwriteType: "Role" | "User";
 		/** @description represents a user on another platform */
 		Puppet: {
 			alias_id?: null | components["schemas"]["Id"];
@@ -3273,6 +3451,8 @@ export interface components {
 			is_default: boolean;
 			is_mentionable: boolean;
 			is_self_applicable: boolean;
+			/** Format: int64 */
+			member_count: number;
 			name: string;
 			permissions: components["schemas"]["Permission"][];
 			room_id: components["schemas"]["Id"];
@@ -3332,6 +3512,7 @@ export interface components {
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
 			name: string;
+			public?: boolean | null;
 		};
 		RoomMember: components["schemas"]["RoomMembership"] & {
 			/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
@@ -3365,6 +3546,7 @@ export interface components {
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
 			name?: string | null;
+			public?: boolean | null;
 		};
 		RoomType: {
 			/** @enum {string} */
@@ -3542,40 +3724,57 @@ export interface components {
 			language?: null | components["schemas"]["Language"];
 		};
 		/** @description A thread */
-		Thread:
-			& components["schemas"]["ThreadPublic"]
-			& (null | components["schemas"]["ThreadPrivate"])
-			& {
-				archived_at?: null | components["schemas"]["Time"];
-				creator_id: components["schemas"]["Id"];
-				deleted_at?: null | components["schemas"]["Time"];
-				description?: string | null;
-				id: components["schemas"]["Id"];
-				locked_at?: null | components["schemas"]["Time"];
-				/**
-				 * Format: int64
-				 * @description number of people in this room
-				 *     does not not update with ThreadSync
-				 */
-				member_count: number;
-				name: string;
-				/**
-				 * Format: int64
-				 * @description number of people who are online in this room
-				 *     does not not update with ThreadSync
-				 */
-				online_count: number;
-				/** @description permission overwrites for this thread */
-				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-				room_id?: null | components["schemas"]["Id"];
-				/** @description tags that are applied to this thread */
-				tags: components["schemas"]["Id"][];
-				/** @description only updates when the thread itself is updated, not the stuff in the thread */
-				version_id: components["schemas"]["Id"];
-			};
+		Thread: {
+			archived_at?: null | components["schemas"]["Time"];
+			/** Format: int64 */
+			bitrate?: number | null;
+			creator_id: components["schemas"]["Id"];
+			deleted_at?: null | components["schemas"]["Time"];
+			description?: string | null;
+			id: components["schemas"]["Id"];
+			is_unread?: boolean | null;
+			last_read_id?: null | components["schemas"]["Id"];
+			last_version_id?: null | components["schemas"]["Id"];
+			locked_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of people in this room
+			 *     does not not update with ThreadSync
+			 */
+			member_count: number;
+			/** Format: int64 */
+			mention_count?: number | null;
+			/** Format: int64 */
+			message_count?: number | null;
+			name: string;
+			notifications?: null | components["schemas"]["NotifsThread"];
+			/** @description not safe for work */
+			nsfw: boolean;
+			/**
+			 * Format: int64
+			 * @description number of people who are online in this room
+			 *     does not not update with ThreadSync
+			 */
+			online_count: number;
+			/** @description permission overwrites for this thread */
+			permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+			room_id?: null | components["schemas"]["Id"];
+			/** Format: int64 */
+			root_message_count?: number | null;
+			/** @description tags that are applied to this thread */
+			tags: components["schemas"]["Id"][];
+			/** @description type specific data for this thread */
+			type: components["schemas"]["ThreadType"];
+			/** Format: int64 */
+			user_limit?: number | null;
+			/** @description only updates when the thread itself is updated, not the stuff in the thread */
+			version_id: components["schemas"]["Id"];
+		};
 		ThreadCreate: {
 			description?: string | null;
 			name: string;
+			/** @description not safe for work */
+			nsfw?: boolean;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this thread */
@@ -3610,65 +3809,13 @@ export interface components {
 		ThreadPatch: {
 			description?: string | null;
 			name?: string | null;
+			/** @description not safe for work */
+			nsfw?: boolean | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 		};
-		/** @description user-specific data for threads */
-		ThreadPrivate:
-			| (components["schemas"]["ThreadTypeChatPrivate"] & {
-				/** @enum {string} */
-				type: "Chat";
-			})
-			| (components["schemas"]["ThreadTypeChatPrivate"] & {
-				/** @enum {string} */
-				type: "Forum";
-			})
-			| (components["schemas"]["ThreadTypeVoicePrivate"] & {
-				/** @enum {string} */
-				type: "Voice";
-			});
-		/** @description type-specific data for threads */
-		ThreadPublic:
-			| (components["schemas"]["ThreadTypeChatPublic"] & {
-				/** @enum {string} */
-				type: "Chat";
-			})
-			| (components["schemas"]["ThreadTypeForumTreePublic"] & {
-				/** @enum {string} */
-				type: "Forum";
-			})
-			| (components["schemas"]["ThreadTypeVoicePublic"] & {
-				/** @enum {string} */
-				type: "Voice";
-			});
 		/** @enum {string} */
-		ThreadType: "Chat" | "Forum" | "Voice";
-		ThreadTypeChatPrivate: {
-			is_unread: boolean;
-			last_read_id?: null | components["schemas"]["Id"];
-			/** Format: int64 */
-			mention_count: number;
-			notifications: components["schemas"]["NotifsThread"];
-		};
-		ThreadTypeChatPublic: {
-			last_version_id: components["schemas"]["Id"];
-			/** Format: int64 */
-			message_count: number;
-		};
-		ThreadTypeForumTreePublic: {
-			last_version_id: components["schemas"]["Id"];
-			/** Format: int64 */
-			message_count: number;
-			/** Format: int64 */
-			root_message_count: number;
-		};
-		ThreadTypeVoicePrivate: Record<string, never>;
-		ThreadTypeVoicePublic: {
-			/** Format: int64 */
-			bitrate: number;
-			/** Format: int64 */
-			user_limit: number;
-		};
+		ThreadType: "Chat" | "Dm" | "Gdm" | "Forum" | "Voice";
 		/**
 		 * Format: date-time
 		 * @description A date, time, and timezone. Serialized to rfc3339.
@@ -4053,27 +4200,6 @@ export interface operations {
 		responses: {
 			/** @description success */
 			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	auth_oauth_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description oauth provider */
-				provider: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -4907,7 +5033,7 @@ export interface operations {
 				};
 				content: {
 					"application/json":
-						components["schemas"]["PaginationResponse_AuditLog"];
+						components["schemas"]["PaginationResponse_AuditLogEntry"];
 				};
 			};
 		};
@@ -7038,31 +7164,6 @@ export interface operations {
 			};
 		};
 	};
-	message_delete_bulk: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessageBulkDelete"];
-			};
-		};
-		responses: {
-			/** @description bulk delete success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	message_migrate: {
 		parameters: {
 			query?: never;
@@ -7357,6 +7458,55 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	dm_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	dm_init: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description new dm created */
+			201: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -7762,6 +7912,34 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Report"];
+				};
+			};
+		};
+	};
+	mutual_room_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description user id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PaginationResponse_Room"];
 				};
 			};
 		};
