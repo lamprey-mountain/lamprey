@@ -67,6 +67,19 @@ async fn emoji_create(
         .await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
+
+    data.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::EmojiCreate {
+            changes: vec![], // TODO: Populate changes
+        },
+    })
+    .await?;
+
     s.broadcast_room(
         room_id,
         user_id,

@@ -52,10 +52,36 @@ async fn permission_thread_overwrite(
     }
     let srv = s.services();
     srv.perms
-        .permission_overwrite_upsert(thread_id, overwrite_id, json.ty, json.allow, json.deny)
+        .permission_overwrite_upsert(
+            thread_id,
+            overwrite_id,
+            json.ty.clone(),
+            json.allow.clone(),
+            json.deny.clone(),
+        )
         .await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+
+    if let Some(room_id) = thread.room_id {
+        s.data()
+            .audit_logs_room_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user_id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::ThreadOverwriteSet {
+                    thread_id,
+                    overwrite_id,
+                    ty: json.ty,
+                    allow: json.allow,
+                    deny: json.deny,
+                },
+            })
+            .await?;
+    }
+
     s.broadcast_thread(
         thread_id,
         auth_user_id,

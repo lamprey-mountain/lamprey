@@ -353,6 +353,7 @@ async fn message_version_delete(
     Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
     let data = s.data();
     let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
@@ -368,6 +369,24 @@ async fn message_version_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
     data.message_version_delete(thread_id, version_id).await?;
+
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessageVersionDelete {
+                thread_id,
+                message_id: message.id,
+                version_id,
+            },
+        })
+        .await?;
+    }
+
     s.services().threads.invalidate(thread_id).await; // last version id, message count
     Ok(Json(()))
 }

@@ -132,7 +132,8 @@ async fn room_member_add(
     }
 
     let d = s.data();
-    if let Ok(existing) = d.room_member_get(room_id, target_user_id).await {
+    let existing = d.room_member_get(room_id, target_user_id).await;
+    if let Ok(existing) = &existing {
         if let RoomMembership::Join {
             override_name: n,
             override_description: d,
@@ -163,6 +164,32 @@ async fn room_member_add(
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
+    let changes = vec![
+        AuditLogChange {
+            key: "membership".to_string(),
+            old: serde_json::to_value(&RoomMembership::Leave {}).unwrap(),
+            new: serde_json::to_value(&res.membership).unwrap(),
+        },
+        AuditLogChange {
+            key: "override_name".to_string(),
+            old: if let Ok(existing) = &existing {
+                serde_json::to_value(&existing.membership).unwrap()
+            } else {
+                serde_json::Value::Null
+            },
+            new: serde_json::to_value(&res.membership).unwrap(),
+        },
+        AuditLogChange {
+            key: "override_description".to_string(),
+            old: if let Ok(existing) = &existing {
+                serde_json::to_value(&existing.membership).unwrap()
+            } else {
+                serde_json::Value::Null
+            },
+            new: serde_json::to_value(&res.membership).unwrap(),
+        },
+    ];
+
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
@@ -172,7 +199,7 @@ async fn room_member_add(
         ty: AuditLogEntryType::MemberUpdate {
             room_id,
             user_id: target_user_id,
-            changes: vec![],
+            changes,
         },
     })
     .await?;

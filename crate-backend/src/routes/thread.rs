@@ -6,7 +6,10 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::{AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, MessageThreadUpdate, ThreadType};
+use common::v1::types::{
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
+    MessageThreadUpdate, ThreadType,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
