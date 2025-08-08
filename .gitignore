@@ -31,6 +31,7 @@ data.db-shm
 data.db-wal
 config.toml
 sfu.toml
+cdn.toml
 
 # Added by cargo
 
