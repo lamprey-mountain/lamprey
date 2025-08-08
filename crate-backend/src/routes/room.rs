@@ -198,7 +198,11 @@ async fn room_edit(
         }
     }
 
-    let room = s.services().rooms.update(room_id, user_id, json, reason.clone()).await?;
+    let room = s
+        .services()
+        .rooms
+        .update(room_id, user_id, json, reason.clone())
+        .await?;
     if let Some(Some(media_id)) = icon {
         let data = s.data();
         // TODO: cleanup old avatars
@@ -206,7 +210,7 @@ async fn room_edit(
             .await?;
     }
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, user_id, reason, msg).await?;
+    s.broadcast_room(room_id, user_id, msg).await?;
     Ok(Json(room))
 }
 

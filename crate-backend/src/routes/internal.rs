@@ -64,7 +64,6 @@ async fn internal_rpc(
                 s.broadcast_thread(
                     v.thread_id,
                     user_id,
-                    None,
                     MessageSync::VoiceState {
                         user_id,
                         state: state.clone(),
@@ -76,7 +75,6 @@ async fn internal_rpc(
                 s.broadcast_thread(
                     v.thread_id,
                     user_id,
-                    None,
                     MessageSync::VoiceState { user_id, state },
                 )
                 .await?;

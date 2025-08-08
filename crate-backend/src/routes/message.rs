@@ -262,7 +262,6 @@ async fn message_delete(
     s.broadcast_thread(
         thread.id,
         user_id,
-        reason,
         MessageSync::MessageDelete {
             room_id: thread.room_id,
             thread_id,
@@ -492,7 +491,6 @@ async fn message_moderate(
     s.broadcast_thread(
         thread.id,
         user_id,
-        reason,
         MessageSync::MessageDeleteBulk {
             thread_id,
             message_ids: json.delete,

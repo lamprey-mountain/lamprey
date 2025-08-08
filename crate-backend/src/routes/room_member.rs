@@ -204,7 +204,6 @@ async fn room_member_add(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        reason,
         MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
@@ -299,7 +298,6 @@ async fn room_member_update(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        reason,
         MessageSync::RoomMemberUpsert {
             member: res.clone(),
         },
@@ -378,7 +376,6 @@ async fn room_member_delete(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        reason,
         MessageSync::RoomMemberUpsert { member: res },
     )
     .await?;
@@ -437,7 +434,6 @@ async fn room_ban_create(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        reason,
         MessageSync::RoomMemberUpsert { member: res },
     )
     .await?;
@@ -496,7 +492,6 @@ async fn room_ban_remove(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        reason,
         MessageSync::RoomMemberUpsert { member: res },
     )
     .await?;

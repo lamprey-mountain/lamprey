@@ -67,7 +67,6 @@ impl ServerStateInner {
         &self,
         _room_id: RoomId,
         _user_id: UserId,
-        _reason: Option<String>,
         msg: MessageSync,
     ) -> Result<()> {
         let _ = self.sushi.send(msg);
@@ -78,7 +77,6 @@ impl ServerStateInner {
         &self,
         _thread_id: ThreadId,
         _user_id: UserId,
-        _reason: Option<String>,
         msg: MessageSync,
     ) -> Result<()> {
         let _ = self.sushi.send(msg);

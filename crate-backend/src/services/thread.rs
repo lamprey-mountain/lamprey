@@ -157,7 +157,6 @@ impl ServiceThreads {
             .broadcast_thread(
                 thread_new.id,
                 user_id,
-                None,
                 MessageSync::MessageCreate {
                     message: update_message,
                 },
@@ -167,9 +166,7 @@ impl ServiceThreads {
             thread: thread_new.clone(),
         };
         if let Some(room_id) = thread_new.room_id {
-            self.state
-                .broadcast_room(room_id, user_id, reason, msg)
-                .await?;
+            self.state.broadcast_room(room_id, user_id, msg).await?;
         }
 
         Ok(thread_new)

@@ -75,7 +75,7 @@ pub async fn role_create(
     .await?;
 
     let msg = MessageSync::RoleCreate { role: role.clone() };
-    s.broadcast_room(room_id, user_id, reason, msg).await?;
+    s.broadcast_room(room_id, user_id, msg).await?;
     Ok((StatusCode::CREATED, Json(role)))
 }
 
@@ -153,7 +153,7 @@ pub async fn role_update(
     if json.permissions.is_some_and(|p| p != end_role.permissions) {
         s.services().perms.invalidate_room_all(room_id);
     }
-    s.broadcast_room(room_id, user_id, reason, msg).await?;
+    s.broadcast_room(room_id, user_id, msg).await?;
     Ok(Json(end_role).into_response())
 }
 
@@ -197,7 +197,7 @@ pub async fn role_delete(
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
         s.services().perms.invalidate_room_all(room_id);
-        s.broadcast_room(room_id, user_id, reason, msg).await?;
+        s.broadcast_room(room_id, user_id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)
@@ -329,7 +329,7 @@ pub async fn role_member_add(
         .perms
         .invalidate_room(target_user_id, room_id)
         .await;
-    s.broadcast_room(room_id, auth_user_id, reason, msg).await?;
+    s.broadcast_room(room_id, auth_user_id, msg).await?;
     Ok(Json(member))
 }
 
@@ -383,7 +383,7 @@ pub async fn role_member_remove(
         .perms
         .invalidate_room(target_user_id, room_id)
         .await;
-    s.broadcast_room(room_id, auth_user_id, reason, msg).await?;
+    s.broadcast_room(room_id, auth_user_id, msg).await?;
     Ok(Json(member))
 }
 

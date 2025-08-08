@@ -85,7 +85,6 @@ async fn permission_thread_overwrite(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ThreadUpdate { thread },
     )
     .await?;
@@ -142,7 +141,6 @@ async fn permission_thread_delete(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ThreadUpdate { thread },
     )
     .await?;

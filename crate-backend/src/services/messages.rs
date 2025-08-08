@@ -63,7 +63,7 @@ impl ServiceMessages {
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-        reason: Option<String>,
+        _reason: Option<String>,
         nonce: Option<String>,
         json: MessageCreate,
     ) -> Result<Message> {
@@ -160,7 +160,7 @@ impl ServiceMessages {
             message: message.clone(),
         };
         srv.threads.invalidate(thread_id).await; // message count
-        s.broadcast_thread(thread_id, user_id, reason, msg).await?;
+        s.broadcast_thread(thread_id, user_id, msg).await?;
         Ok(message)
     }
 
@@ -169,7 +169,7 @@ impl ServiceMessages {
         thread_id: ThreadId,
         message_id: MessageId,
         user_id: UserId,
-        reason: Option<String>,
+        _reason: Option<String>,
         json: MessagePatch,
     ) -> Result<(StatusCode, Message)> {
         let s = &self.state;
@@ -330,7 +330,6 @@ impl ServiceMessages {
         s.broadcast_thread(
             thread_id,
             user_id,
-            reason,
             MessageSync::MessageUpdate {
                 message: message.clone(),
             },

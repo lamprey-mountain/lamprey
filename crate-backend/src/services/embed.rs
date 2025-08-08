@@ -569,7 +569,6 @@ impl ServiceEmbed {
             .broadcast_thread(
                 message_ref.thread_id,
                 user_id,
-                None,
                 common::v1::types::MessageSync::MessageUpdate { message },
             )
             .await?;

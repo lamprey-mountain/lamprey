@@ -35,7 +35,7 @@ use crate::ServerState;
 async fn reaction_add(
     Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
     Auth(auth_user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -48,7 +48,6 @@ async fn reaction_add(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ReactionCreate {
             thread_id,
             user_id: auth_user_id,
@@ -79,7 +78,6 @@ async fn reaction_add(
 async fn reaction_remove(
     Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
     Auth(auth_user_id): Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -92,7 +90,6 @@ async fn reaction_remove(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ReactionDelete {
             thread_id,
             user_id: auth_user_id,
@@ -151,7 +148,6 @@ async fn reaction_purge(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ReactionPurge {
             thread_id,
             message_id,

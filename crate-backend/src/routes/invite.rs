@@ -86,7 +86,6 @@ pub async fn invite_delete(
                 s.broadcast_room(
                     room_id,
                     user_id,
-                    reason,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -98,7 +97,6 @@ pub async fn invite_delete(
                 s.broadcast_thread(
                     thread_id,
                     user_id,
-                    reason,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -181,7 +179,6 @@ pub async fn invite_resolve(
 pub async fn invite_use(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -210,13 +207,8 @@ pub async fn invite_use(
             let member = d.room_member_get(room.id, user_id).await?;
             s.services.perms.invalidate_room(user_id, room.id).await;
             s.services.perms.invalidate_is_mutual(user_id);
-            s.broadcast_room(
-                room.id,
-                user_id,
-                reason,
-                MessageSync::RoomMemberUpsert { member },
-            )
-            .await?;
+            s.broadcast_room(room.id, user_id, MessageSync::RoomMemberUpsert { member })
+                .await?;
         }
         InviteTarget::Server => {
             let srv = s.services();
@@ -294,7 +286,6 @@ pub async fn invite_room_create(
     s.broadcast_room(
         room_id,
         user_id,
-        reason,
         MessageSync::InviteCreate {
             invite: invite.clone(),
         },

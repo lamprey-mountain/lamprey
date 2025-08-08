@@ -88,7 +88,6 @@ async fn emoji_create(
     s.broadcast_room(
         room_id,
         user_id,
-        reason,
         MessageSync::EmojiCreate {
             emoji: emoji.clone(),
         },
@@ -169,7 +168,6 @@ async fn emoji_delete(
         s.broadcast_room(
             room_id,
             user_id,
-            reason,
             MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,

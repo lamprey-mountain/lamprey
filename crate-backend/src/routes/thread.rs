@@ -119,7 +119,6 @@ async fn thread_create_room(
     s.broadcast_room(
         room_id,
         user_id,
-        reason.clone(),
         MessageSync::ThreadCreate {
             thread: thread.clone(),
         },
@@ -129,7 +128,6 @@ async fn thread_create_room(
     s.broadcast_thread(
         thread.id,
         user_id,
-        None,
         MessageSync::MessageCreate {
             message: starter_message,
         },
@@ -377,7 +375,6 @@ async fn thread_archive(
         s.broadcast_room(
             room_id,
             user_id,
-            reason,
             MessageSync::ThreadUpdate {
                 thread: thread.clone(),
             },
@@ -418,7 +415,6 @@ async fn thread_unarchive(
         s.broadcast_room(
             room_id,
             user_id,
-            reason,
             MessageSync::ThreadUpdate {
                 thread: thread.clone(),
             },
@@ -451,7 +447,6 @@ async fn thread_remove(
         s.broadcast_room(
             room_id,
             user_id,
-            reason,
             MessageSync::ThreadUpdate {
                 thread: thread.clone(),
             },
@@ -484,7 +479,6 @@ async fn thread_restore(
         s.broadcast_room(
             room_id,
             user_id,
-            reason,
             MessageSync::ThreadUpdate {
                 thread: thread.clone(),
             },
@@ -520,7 +514,6 @@ async fn thread_typing(
     s.broadcast_thread(
         thread_id,
         user_id,
-        reason,
         MessageSync::ThreadTyping {
             thread_id,
             user_id,

@@ -136,7 +136,6 @@ pub async fn thread_member_add(
         s.broadcast_thread(
             thread_id,
             auth_user_id,
-            reason,
             MessageSync::ThreadMemberUpsert {
                 member: res.clone(),
             },
@@ -196,7 +195,6 @@ pub async fn thread_member_update(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ThreadMemberUpsert {
             member: res.clone(),
         },
@@ -251,7 +249,6 @@ pub async fn thread_member_delete(
     s.broadcast_thread(
         thread_id,
         auth_user_id,
-        reason,
         MessageSync::ThreadMemberUpsert { member: res },
     )
     .await?;
