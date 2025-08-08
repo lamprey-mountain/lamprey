@@ -83,6 +83,7 @@ pub struct DbThread {
     pub ty: DbThreadType,
     pub last_version_id: Option<Uuid>,
     pub message_count: i64,
+    pub member_count: i64,
     pub permission_overwrites: serde_json::Value,
     pub nsfw: bool,
 }
@@ -136,8 +137,7 @@ impl From<DbThread> for Thread {
             description: row.description,
             nsfw: row.nsfw,
 
-            // FIXME: add field to db schema or calculate
-            member_count: 0,
+            member_count: row.member_count.try_into().expect("count is negative?"),
             // FIXME: calculate field
             online_count: 0,
             tags: Default::default(),
