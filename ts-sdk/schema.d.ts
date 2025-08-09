@@ -41,6 +41,26 @@ export interface paths {
 		patch: operations["app_patch"];
 		trace?: never;
 	};
+	"/api/v1/app/{app_id}/invite": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * App invite bot
+		 * @description Add a bot to a room
+		 */
+		post: operations["app_invite_bot"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/app/{app_id}/puppet/{puppet_id}": {
 		parameters: {
 			query?: never;
@@ -1944,6 +1964,9 @@ export interface components {
 			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
 			version_id: components["schemas"]["Id"];
 		};
+		AppInviteBot: {
+			room_id: components["schemas"]["Id"];
+		};
 		ApplicationCreate: {
 			/** @description enables managing Puppet users */
 			bridge: boolean;
@@ -2096,6 +2119,10 @@ export interface components {
 			/** @enum {string} */
 			type: "RoleUnapply";
 			user_id: components["schemas"]["Id"];
+		} | {
+			bot_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "BotAdd";
 		};
 		AuthStatus: {
 			/** @description if a password has been set */
@@ -3162,7 +3189,7 @@ export interface components {
 				is_unread?: boolean | null;
 				last_read_id?: null | components["schemas"]["Id"];
 				last_version_id?: null | components["schemas"]["Id"];
-				locked_at?: null | components["schemas"]["Time"];
+				locked: boolean;
 				/**
 				 * Format: int64
 				 * @description number of people in this room
@@ -3183,8 +3210,14 @@ export interface components {
 				 *     does not not update with ThreadSync
 				 */
 				online_count: number;
+				parent_id?: null | components["schemas"]["Id"];
 				/** @description permission overwrites for this thread */
 				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+				/**
+				 * Format: int32
+				 * @description tiebroken by id
+				 */
+				position?: number | null;
 				room_id?: null | components["schemas"]["Id"];
 				/** Format: int64 */
 				root_message_count?: number | null;
@@ -3735,7 +3768,7 @@ export interface components {
 			is_unread?: boolean | null;
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
-			locked_at?: null | components["schemas"]["Time"];
+			locked: boolean;
 			/**
 			 * Format: int64
 			 * @description number of people in this room
@@ -3756,8 +3789,14 @@ export interface components {
 			 *     does not not update with ThreadSync
 			 */
 			online_count: number;
+			parent_id?: null | components["schemas"]["Id"];
 			/** @description permission overwrites for this thread */
 			permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+			/**
+			 * Format: int32
+			 * @description tiebroken by id
+			 */
+			position?: number | null;
 			room_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			root_message_count?: number | null;
@@ -4019,6 +4058,30 @@ export interface operations {
 			cookie?: never;
 		};
 		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_invite_bot: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AppInviteBot"];
+			};
+		};
 		responses: {
 			/** @description success */
 			200: {

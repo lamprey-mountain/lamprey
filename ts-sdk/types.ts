@@ -14,7 +14,8 @@ export type MediaTrack = components["schemas"]["MediaTrack"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type PaginationResponseMessage =
 	components["schemas"]["PaginationResponse_Message"];
-export type AuditLogEntry = components["schemas"]["AuditLog"];
+export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
+export type AuditLogChange = components["schemas"]["AuditLogChange"];
 export type Permission = components["schemas"]["Permission"];
 export type Embed = components["schemas"]["Embed"];
 export type EmojiCustom = components["schemas"]["EmojiCustom"];
