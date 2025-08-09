@@ -13,6 +13,9 @@ pub struct Config {
 
     #[serde(default = "default_rust_log")]
     pub rust_log: String,
+
+    pub host_ipv4: Option<String>,
+    pub host_ipv6: Option<String>,
 }
 
 fn default_rust_log() -> String {

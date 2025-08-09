@@ -2,7 +2,12 @@ use std::net::IpAddr;
 
 use systemstat::{Platform, System};
 
-pub fn select_host_address_ipv4() -> IpAddr {
+pub fn select_host_address_ipv4(host_ip: Option<&str>) -> IpAddr {
+    if let Some(ip) = host_ip {
+        if let Ok(addr) = ip.parse() {
+            return addr;
+        }
+    }
     let system = System::new();
     let networks = system.networks().unwrap();
 
@@ -19,7 +24,12 @@ pub fn select_host_address_ipv4() -> IpAddr {
     panic!("Found no usable network interface");
 }
 
-pub fn select_host_address_ipv6() -> IpAddr {
+pub fn select_host_address_ipv6(host_ip: Option<&str>) -> IpAddr {
+    if let Some(ip) = host_ip {
+        if let Ok(addr) = ip.parse() {
+            return addr;
+        }
+    }
     let system = System::new();
     let networks = system.networks().unwrap();
 

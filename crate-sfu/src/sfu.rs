@@ -293,7 +293,8 @@ impl Sfu {
         match self.peers.entry(user_id) {
             dashmap::Entry::Occupied(entry) => Ok(entry.get().clone()),
             dashmap::Entry::Vacant(entry) => {
-                let peer_sender = Peer::spawn(peer_send, user_id, voice_state.clone()).await?;
+                let peer_sender =
+                    Peer::spawn(&self.config, peer_send, user_id, voice_state.clone()).await?;
                 entry.insert(peer_sender.clone());
                 Ok(peer_sender)
             }

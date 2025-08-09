@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
-use crate::{MediaData, PeerEvent, SfuTrack, SignallingMessage};
+use crate::{config::Config, MediaData, PeerEvent, SfuTrack, SignallingMessage};
 use anyhow::Result;
 use common::v1::types::{
     voice::{MediaKindSerde, SessionDescription, TrackMetadata, VoiceState},
@@ -44,6 +44,7 @@ pub struct Peer {
 
 impl Peer {
     pub async fn spawn(
+        config: &Config,
         sfu_send: UnboundedSender<PeerEventEnvelope>,
         user_id: UserId,
         voice_state: VoiceState,
@@ -55,13 +56,13 @@ impl Peer {
             // .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
-        let addr = crate::util::select_host_address_ipv4();
+        let addr = crate::util::select_host_address_ipv4(config.host_ipv4.as_deref());
         let socket_v4 = UdpSocket::bind(format!("{addr}:0")).await?;
         let candidate = Candidate::host(socket_v4.local_addr()?, "udp")?;
         debug!("listen on {}", socket_v4.local_addr().unwrap());
         rtc.add_local_candidate(candidate.clone());
 
-        let addr = crate::util::select_host_address_ipv6();
+        let addr = crate::util::select_host_address_ipv6(config.host_ipv6.as_deref());
         let socket_v6 = UdpSocket::bind(format!("[{addr}]:0")).await?;
         let candidate = Candidate::host(socket_v6.local_addr()?, "udp")?;
         debug!("listen on {}", socket_v6.local_addr().unwrap());
