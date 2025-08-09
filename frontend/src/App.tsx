@@ -59,8 +59,6 @@ import {
 	RouteThreadSettings,
 } from "./routes.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { generateNickname } from "./nick.ts";
 
@@ -245,34 +243,31 @@ export const Root: Component = (props: ParentProps) => {
 
 	let rootRef: HTMLDivElement | undefined;
 
-	const tanstackClient = new QueryClient();
 	return (
-		<QueryClientProvider client={tanstackClient}>
-			<api.Provider>
-				<chatctx.Provider value={ctx}>
-					<div
-						ref={rootRef}
-						id="root"
-						classList={{
-							"underline-links": ctx.settings.get("underline_links") === "yes",
-						}}
-						onClick={handleClick}
-						onKeyDown={handleKeypress}
-						onContextMenu={handleContextMenu}
-					>
-						{props.children}
-						<Portal mount={document.getElementById("overlay")!}>
-							<Overlay />
-						</Portal>
-						<Show when={state() !== "ready"}>
-							<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
-								{state()}
-							</div>
-						</Show>
-					</div>
-				</chatctx.Provider>
-			</api.Provider>
-		</QueryClientProvider>
+		<api.Provider>
+			<chatctx.Provider value={ctx}>
+				<div
+					ref={rootRef}
+					id="root"
+					classList={{
+						"underline-links": ctx.settings.get("underline_links") === "yes",
+					}}
+					onClick={handleClick}
+					onKeyDown={handleKeypress}
+					onContextMenu={handleContextMenu}
+				>
+					{props.children}
+					<Portal mount={document.getElementById("overlay")!}>
+						<Overlay />
+					</Portal>
+					<Show when={state() !== "ready"}>
+						<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
+							{state()}
+						</div>
+					</Show>
+				</div>
+			</chatctx.Provider>
+		</api.Provider>
 	);
 };
 
