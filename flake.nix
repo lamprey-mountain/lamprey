@@ -45,7 +45,7 @@
 
         backend = mkCrate "backend";
         bridge-discord = mkCrate "bridge-discord";
-        sfu = mkCrate "sfu";
+        sfu = mkCrate "voice";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
