@@ -45,6 +45,7 @@
 
         backend = mkCrate "backend";
         bridge-discord = mkCrate "bridge-discord";
+        sfu = mkCrate "sfu";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
@@ -70,7 +71,7 @@
         });
       in {
         packages = rec {
-          inherit backend bridge-discord frontend;
+          inherit backend bridge-discord sfu frontend;
 
           cargo-deps = cargoArtifacts;
 
@@ -94,6 +95,19 @@
                 "${pkgs.tini}/bin/tini"
                 "--"
                 "${bridge-discord}/bin/bridge-discord"
+              ];
+            };
+          };
+          
+          sfu-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "sfu";
+            tag = "latest";
+            contents = [ pkgs.dockerTools.caCertificates ];
+            config = {
+              Entrypoint = [
+                "${pkgs.tini}/bin/tini"
+                "--"
+                "${sfu}/bin/sfu"
               ];
             };
           };
