@@ -1,9 +1,17 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        State,
+    },
+    response::IntoResponse,
+};
 use common::v1::types::voice::{SignallingMessage, VoiceState};
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
+use tokio::select;
+use tracing::error;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
@@ -13,7 +21,7 @@ use crate::{Error, ServerState};
 
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
-enum Command {
+pub enum SfuCommand {
     #[cfg(feature = "voice")]
     VoiceDispatch {
         user_id: UserId,
@@ -30,17 +38,17 @@ enum Command {
 
 /// Internal rpc
 #[utoipa::path(
-    post,
+    get,
     path = "/internal/rpc",
     tags = ["internal"],
-    responses((status = ACCEPTED, description = "Accepted")),
+    responses((status = 101, description = "Switching Protocols")),
 )]
 #[allow(unused)]
 async fn internal_rpc(
+    ws: WebSocketUpgrade,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<Command>,
-) -> Result<StatusCode> {
+) -> Result<impl IntoResponse> {
     let auth = headers
         .get("authorization")
         .ok_or(Error::MissingAuth)?
@@ -48,40 +56,70 @@ async fn internal_rpc(
     if auth != format!("Server {}", s.config.sfu_token) {
         return Err(Error::MissingAuth);
     }
-    match json {
-        #[cfg(feature = "voice")]
-        Command::VoiceDispatch { user_id, payload } => {
-            s.broadcast(MessageSync::VoiceDispatch { user_id, payload })?;
-        }
-        #[cfg(feature = "voice")]
-        Command::VoiceState {
-            user_id,
-            old,
-            state,
-        } => {
-            // TODO: deduplicate
-            if let Some(v) = &old {
-                s.broadcast_thread(
-                    v.thread_id,
-                    user_id,
-                    MessageSync::VoiceState {
-                        user_id,
-                        state: state.clone(),
-                    },
-                )
-                .await?;
+
+    Ok(ws.on_upgrade(move |socket| sfu_worker(s, socket)))
+}
+
+async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
+    let mut outbox = s.sushi_sfu.subscribe();
+    loop {
+        select! {
+            msg = outbox.recv() => {
+                let stringified = serde_json::to_string(&msg.unwrap()).unwrap();
+                if let Err(e) = socket.send(Message::text(stringified)).await {
+                    error!("Failed to send message to websocket: {:?}", e);
+                    break;
+                }
             }
-            if let Some(v) = &state {
-                s.broadcast_thread(
-                    v.thread_id,
-                    user_id,
-                    MessageSync::VoiceState { user_id, state },
-                )
-                .await?;
+            msg = socket.recv() => {
+                if let Some(Ok(Message::Text(text))) = msg {
+                    if let Ok(json) = serde_json::from_str::<SfuCommand>(&text) {
+                        let s = s.clone();
+                        tokio::spawn(async move {
+                            let result = match json {
+                                #[cfg(feature = "voice")]
+                                SfuCommand::VoiceDispatch { user_id, payload } => {
+                                    s.broadcast(MessageSync::VoiceDispatch { user_id, payload })
+                                }
+                                #[cfg(feature = "voice")]
+                                SfuCommand::VoiceState {
+                                    user_id,
+                                    old,
+                                    state,
+                                } => {
+                                    if let Some(v) = &old {
+                                        let _ = s
+                                            .broadcast_thread(
+                                                v.thread_id,
+                                                user_id,
+                                                MessageSync::VoiceState {
+                                                    user_id,
+                                                    state: state.clone(),
+                                                },
+                                            )
+                                            .await;
+                                    }
+                                    if let Some(v) = &state {
+                                        let _ = s
+                                            .broadcast_thread(
+                                                v.thread_id,
+                                                user_id,
+                                                MessageSync::VoiceState { user_id, state },
+                                            )
+                                            .await;
+                                    }
+                                    Ok(())
+                                }
+                            };
+                            if let Err(e) = result {
+                                error!("Error processing SFU command: {:?}", e);
+                            }
+                        });
+                    }
+                }
             }
         }
-    };
-    Ok(StatusCode::ACCEPTED)
+    }
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

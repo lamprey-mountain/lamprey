@@ -5,15 +5,22 @@ use crate::{
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
 use dashmap::DashMap;
+use futures_util::{SinkExt, StreamExt};
 use std::fmt::Debug;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tracing::{debug, error, trace, warn};
+use std::time::Duration;
+use tokio::sync::mpsc::{self, UnboundedSender};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::{client::IntoClientRequest, protocol::Message},
+};
+use tracing::{debug, error, info, trace, warn};
 
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
     voice_states: DashMap<UserId, VoiceState>,
     tracks: Vec<SfuTrack>,
     config: Config,
+    backend_tx: Option<UnboundedSender<SfuEvent>>,
 }
 
 impl Debug for Sfu {
@@ -22,6 +29,7 @@ impl Debug for Sfu {
             .field("peers", &self.peers)
             .field("voice_states", &self.voice_states)
             .field("tracks", &self.tracks)
+            .field("backend_tx", &self.backend_tx.is_some())
             .finish()
     }
 }
@@ -33,30 +41,91 @@ impl Sfu {
             voice_states: DashMap::new(),
             tracks: Vec::new(),
             config,
+            backend_tx: None,
         }
     }
 
-    pub fn spawn(self) -> UnboundedSender<SfuCommand> {
-        let (send, recv) = mpsc::unbounded_channel();
-        tokio::spawn(self.run(recv));
-        send
-    }
-
-    async fn run(mut self, mut a: UnboundedReceiver<SfuCommand>) -> Result<()> {
+    pub async fn run(mut self) -> Result<()> {
         let (peer_send, mut peer_events) = tokio::sync::mpsc::unbounded_channel();
+        let (backend_tx, mut backend_rx) = mpsc::unbounded_channel();
+        self.backend_tx = Some(backend_tx);
+
         loop {
-            tokio::select! {
-                Some(req) = a.recv() => {
-                    if let Err(err) = self.handle_command(req, peer_send.clone()).await {
-                        error!("error handling peer command: {err}");
-                    }
+            // Reconnection loop
+            let url_str = format!("{}/api/v1/internal/rpc", self.config.api_url)
+                .replace("http", "ws")
+                .replace("https", "wss");
+
+            let mut request = match url_str.into_client_request() {
+                Ok(req) => req,
+                Err(e) => {
+                    error!("Failed to create client request: {}. Retrying in 5s.", e);
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    continue;
                 }
-                Some(envelope) = peer_events.recv() => {
-                    if let Err(err) = self.handle_event(envelope).await {
-                        error!("error handling peer event: {err}");
+            };
+            request.headers_mut().insert(
+                "Authorization",
+                format!("Server {}", self.config.token).try_into().unwrap(),
+            );
+
+            let ws_stream = match connect_async(request).await {
+                Ok((stream, _)) => {
+                    info!("Connected to backend websocket");
+                    stream
+                }
+                Err(e) => {
+                    warn!("Failed to connect to backend: {}. Retrying in 5s.", e);
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    continue;
+                }
+            };
+
+            let (mut ws_tx, mut ws_rx) = ws_stream.split();
+
+            'inner: loop {
+                tokio::select! {
+                    Some(envelope) = peer_events.recv() => {
+                        if let Err(err) = self.handle_event(envelope).await {
+                            error!("error handling peer event: {err}");
+                        }
+                    }
+                    Some(event) = backend_rx.recv() => {
+                        let json = match serde_json::to_string(&event) {
+                            Ok(j) => j,
+                            Err(e) => {
+                                error!("Failed to serialize event: {}", e);
+                                continue;
+                            }
+                        };
+                        if let Err(e) = ws_tx.send(Message::text(json)).await {
+                            error!("Failed to send message to backend: {}", e);
+                            break 'inner;
+                        }
+                    }
+                    Some(msg) = ws_rx.next() => {
+                        match msg {
+                            Ok(Message::Text(t)) => {
+                                let command: SfuCommand = serde_json::from_str(&t).unwrap();
+                                if let Err(err) = self.handle_command(command, peer_send.clone()).await {
+                                    error!("error handling peer command: {err}");
+                                }
+                            }
+                            Ok(Message::Close(_)) => {
+                                info!("Backend websocket closed");
+                                break 'inner;
+                            }
+                            Err(e) => {
+                                error!("Error receiving from backend: {}", e);
+                                break 'inner;
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }
+            warn!("Disconnected from backend. Reconnecting in 5 seconds...");
+            tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
 
@@ -87,14 +156,6 @@ impl Sfu {
                     return Ok(());
                 };
 
-                // user connected or moved
-                // let state = VoiceState {
-                //     user_id,
-                //     thread_id: state.thread_id,
-                //     joined_at: Time::now_utc(),
-                // };
-                // let old = self.voice_states.insert(user_id, state.clone());
-                // debug!("got voice state {state:?}");
                 let new_state = VoiceState {
                     user_id,
                     thread_id: state.thread_id,
@@ -239,13 +300,9 @@ impl Sfu {
     }
 
     async fn emit(&self, event: SfuEvent) -> Result<()> {
-        reqwest::Client::new()
-            .post(format!("{}/api/v1/internal/rpc", self.config.api_url))
-            .header("authorization", format!("Server {}", self.config.token))
-            .json(&event)
-            .send()
-            .await?
-            .error_for_status()?;
+        if let Some(tx) = &self.backend_tx {
+            tx.send(event).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        }
         Ok(())
     }
 }

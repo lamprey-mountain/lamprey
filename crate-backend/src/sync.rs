@@ -10,11 +10,11 @@ use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
 };
-use serde_json::Value;
 use tokio::time::Instant;
 use tracing::{debug, trace};
 
 use crate::error::{Error, Result};
+use crate::state::SfuRequest;
 use crate::ServerState;
 
 type WsMessage = axum::extract::ws::Message;
@@ -213,29 +213,11 @@ impl Connection {
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
             MessageClient::VoiceDispatch { user_id, payload } => {
-                #[derive(Debug, serde::Serialize)]
-                struct Request {
-                    user_id: UserId,
-
-                    #[serde(flatten)]
-                    inner: Value,
-                }
-
-                let req = reqwest::Client::new()
-                    .post(self.s.config.sfu_url.join("/rpc")?.as_str())
-                    .json(&Request {
-                        user_id,
-                        inner: payload,
-                    })
-                    .send()
-                    .await?;
-                if !req.status().is_success() {
-                    return Err(Error::GenericError(format!(
-                        "{} {}",
-                        req.status(),
-                        req.text().await?
-                    )));
-                }
+                // TODO: error handling
+                let _ = self.s.sushi_sfu.send(SfuRequest {
+                    user_id,
+                    inner: payload,
+                });
             }
         }
         Ok(())

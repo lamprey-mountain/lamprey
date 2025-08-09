@@ -7,6 +7,7 @@ use common::v1::types::{Media, Message, RoomId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
+use serde_json::Value;
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
 use url::Url;
@@ -19,6 +20,14 @@ use crate::{
     Result,
 };
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SfuRequest {
+    pub user_id: UserId,
+
+    #[serde(flatten)]
+    pub inner: Value,
+}
+
 pub struct ServerStateInner {
     pub config: Config,
     pub pool: PgPool,
@@ -27,6 +36,7 @@ pub struct ServerStateInner {
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
+    pub sushi_sfu: Sender<SfuRequest>,
 
     // TODO: write a wrapper around this
     pub blobs: opendal::Operator,
@@ -155,6 +165,7 @@ impl ServerState {
 
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
+                sushi_sfu: tokio::sync::broadcast::channel(100).0,
             });
             Services::new(inner.clone())
         });
