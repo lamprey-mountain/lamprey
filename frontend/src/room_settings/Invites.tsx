@@ -12,6 +12,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 			params: {
 				path: { room_id: props.room.id },
 			},
+			body: {},
 		});
 	};
 

@@ -15,6 +15,7 @@ export async function handleSubmit(
 		const [cmd, ...args] = text.slice(1).split(" ");
 		const { room_id } = api.threads.cache.get(thread_id)!;
 		if (cmd === "thread") {
+			if (!room_id) return;
 			const name = text.slice("/thread ".length);
 			await ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
 				params: { path: { room_id } },
@@ -25,7 +26,7 @@ export async function handleSubmit(
 				params: { path: { thread_id } },
 			});
 		} else if (cmd === "unarchive") {
-			await ctx.client.http.PUT("/api/v1/thread/{thread_id}/activate", {
+			await ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
 				params: { path: { thread_id } },
 			});
 		} else if (cmd === "desc") {
@@ -44,6 +45,7 @@ export async function handleSubmit(
 				body: { name },
 			});
 		} else if (cmd === "desc-room") {
+			if (!room_id) return;
 			const description = args.join(" ");
 			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {
 				params: { path: { room_id } },
@@ -52,6 +54,7 @@ export async function handleSubmit(
 				},
 			});
 		} else if (cmd === "name-room") {
+			if (!room_id) return;
 			const name = args.join(" ");
 			if (!name) return;
 			await ctx.client.http.PATCH("/api/v1/room/{room_id}", {

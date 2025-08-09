@@ -5,7 +5,7 @@ import {
 	useContext,
 } from "solid-js";
 import type { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
-import type { Action, Dispatcher } from "./dispatch/types";
+import type { Action } from "./dispatch/types";
 import type { EditorState } from "prosemirror-state";
 import type { MessageListAnchor } from "./api/messages.ts";
 import type { ReactiveMap } from "@solid-primitives/map";

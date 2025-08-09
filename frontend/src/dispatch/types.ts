@@ -1,6 +1,7 @@
 import { type Api } from "../api.tsx";
 import { type ChatCtx, type Data } from "../context.ts";
 import { type SetStoreFunction } from "solid-js/store";
+export { type Data } from "../context.ts";
 
 export type Middleware = (
 	ctx: ChatCtx,
@@ -31,6 +32,10 @@ export type Modal = {
 	type: "confirm";
 	text: string;
 	cont: (confirmed: boolean) => void;
+} | {
+	type: "message_edits";
+	thread_id: string;
+	message_id: string;
 };
 
 export type Action =
@@ -38,7 +43,8 @@ export type Action =
 	| ServerAction
 	| ThreadAction
 	| UploadAction
-	| WindowAction;
+	| WindowAction
+	| { do: "menu.preview"; id: string | null };
 
 export type ModalAction =
 	| { do: "modal.open"; modal: Modal }

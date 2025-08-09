@@ -115,33 +115,37 @@ export function createApi(
 		} else if (msg.type === "ThreadCreate") {
 			const { thread } = msg;
 			threads.cache.set(thread.id, thread);
-			const l = threads._cachedListings.get(thread.room_id);
-			if (l?.pagination) {
-				const p = l.pagination;
-				for (const mut of threads._listingMutators) {
-					if (mut.room_id === thread.room_id) {
-						mut.mutate({
-							...p,
-							items: [...p.items, thread],
-							total: p.total + 1,
-						});
+			if (thread.room_id) {
+				const l = threads._cachedListings.get(thread.room_id);
+				if (l?.pagination) {
+					const p = l.pagination;
+					for (const mut of threads._listingMutators) {
+						if (mut.room_id === thread.room_id) {
+							mut.mutate({
+								...p,
+								items: [...p.items, thread],
+								total: p.total + 1,
+							});
+						}
 					}
 				}
 			}
 		} else if (msg.type === "ThreadUpdate") {
 			const { thread } = msg;
 			threads.cache.set(thread.id, thread);
-			const l = threads._cachedListings.get(thread.room_id);
-			if (l?.pagination) {
-				const p = l.pagination;
-				const idx = p.items.findIndex((i) => i.id === thread.id);
-				if (idx !== -1) {
-					for (const mut of threads._listingMutators) {
-						if (mut.room_id === thread.room_id) {
-							mut.mutate({
-								...p,
-								items: p.items.toSpliced(idx, 1, thread),
-							});
+			if (thread.room_id) {
+				const l = threads._cachedListings.get(thread.room_id);
+				if (l?.pagination) {
+					const p = l.pagination;
+					const idx = p.items.findIndex((i) => i.id === thread.id);
+					if (idx !== -1) {
+						for (const mut of threads._listingMutators) {
+							if (mut.room_id === thread.room_id) {
+								mut.mutate({
+									...p,
+									items: p.items.toSpliced(idx, 1, thread),
+								});
+							}
 						}
 					}
 				}
@@ -201,7 +205,7 @@ export function createApi(
 			if (t) {
 				api.threads.cache.set(m.thread_id, {
 					...t,
-					message_count: t.message_count + (is_new ? 1 : 0),
+					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
 					last_version_id: m.version_id,
 					is_unread,
 				});
@@ -216,7 +220,9 @@ export function createApi(
 				}
 			}
 
-			for (const att of m.attachments ?? []) {
+			for (
+				const att of m.type === "DefaultMarkdown" ? m.attachments ?? [] : []
+			) {
 				media.cacheInfo.set(att.id, att);
 			}
 		} else if (msg.type === "MessageUpdate") {
@@ -255,14 +261,12 @@ export function createApi(
 					console.log({ last_version_id });
 					api.threads.cache.set(msg.thread_id, {
 						...t,
-						message_count: t.message_count - 1,
+						message_count: t.message_count! - 1,
 						last_version_id,
 						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
 					});
 				}
 			});
-		} else if (msg.type === "MessageDeleteBulk") {
-			// TODO
 		} else if (msg.type === "MessageVersionDelete") {
 			// TODO
 		} else if (msg.type === "RoomMemberUpsert") {

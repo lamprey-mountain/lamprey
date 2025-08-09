@@ -156,6 +156,7 @@ pub enum AuditLogEntryType {
         role_id: RoleId,
     },
     BotAdd {
+        // TODO: rename to application_id?
         bot_id: UserId,
     },
     // // cant be logged because this isn't yet implemented

@@ -6,6 +6,7 @@ export type User = components["schemas"]["User"];
 export type Message = components["schemas"]["Message"] & { is_local?: true };
 export type Role = components["schemas"]["Role"];
 export type Invite = components["schemas"]["Invite"];
+export type InviteWithMetadata = components["schemas"]["InviteWithMetadata"];
 export type Session = components["schemas"]["Session"];
 export type RoomMember = components["schemas"]["RoomMember"];
 export type ThreadMember = components["schemas"]["ThreadMember"];
@@ -50,28 +51,66 @@ export type MessageEnvelope =
 	| { op: "Reconnect"; can_resume: boolean };
 
 export type MessageSync =
-	| { type: "InviteCreate"; invite: Invite }
-	| { type: "InviteUpdate"; invite: Invite }
-	| { type: "InviteDelete"; code: string }
-	| { type: "MessageCreate"; message: Message }
-	| { type: "MessageUpdate"; message: Message }
-	| { type: "MessageDelete"; thread_id: string; message_id: string }
+	| { type: "RoomCreate"; room: Room }
+	| { type: "RoomUpdate"; room: Room }
+	| { type: "ThreadCreate"; thread: Thread }
+	| { type: "ThreadUpdate"; thread: Thread }
+	| { type: "ThreadTyping"; thread_id: string; user_id: string; until: string }
 	| {
-		type: "MessageVersionDelete";
+		type: "ThreadAck";
 		thread_id: string;
 		message_id: string;
 		version_id: string;
 	}
+	| { type: "MessageCreate"; message: Message }
+	| { type: "MessageUpdate"; message: Message }
+	| {
+		type: "MessageDelete";
+		room_id?: string; // deprecated
+		thread_id: string;
+		message_id: string;
+	}
+	| {
+		type: "MessageVersionDelete";
+		room_id?: string; // deprecated
+		thread_id: string;
+		message_id: string;
+		version_id: string;
+	}
+	| { type: "MessageDeleteBulk"; thread_id: string; message_ids: string[] }
+	| { type: "RoomMemberUpsert"; member: RoomMember }
+	| { type: "ThreadMemberUpsert"; member: ThreadMember }
 	| { type: "RoleCreate"; role: Role }
 	| { type: "RoleUpdate"; role: Role }
 	| { type: "RoleDelete"; room_id: string; role_id: string }
-	| { type: "RoomMemberUpsert"; member: RoomMember }
-	| { type: "RoomMemberDelete"; room_id: string; user_id: string }
-	| { type: "RoomCreate"; room: Room }
-	| { type: "RoomUpdate"; room: Room }
-	| { type: "SessionDelete"; id: string }
-	| { type: "Typing"; thread_id: string; user_id: string; until: string }
+	| { type: "InviteCreate"; invite: InviteWithMetadata }
+	| { type: "InviteUpdate"; invite: InviteWithMetadata }
+	| { type: "InviteDelete"; code: string; target: string }
+	| {
+		type: "ReactionCreate";
+		user_id: string;
+		thread_id: string;
+		message_id: string;
+		key: string;
+	}
+	| {
+		type: "ReactionDelete";
+		user_id: string;
+		thread_id: string;
+		message_id: string;
+		key: string;
+	}
+	| { type: "ReactionPurge"; thread_id: string; message_id: string }
+	| { type: "EmojiCreate"; emoji: EmojiCustom }
+	| { type: "EmojiDelete"; emoji_id: string; room_id: string }
+	| { type: "VoiceDispatch"; user_id: string; payload: any }
+	| { type: "VoiceState"; user_id: string; state: any }
+	| { type: "UserCreate"; user: User }
+	| { type: "UserUpdate"; user: User }
+	| { type: "UserConfig"; user_id: string; config: any }
+	| { type: "UserDelete"; id: string }
 	| { type: "SessionCreate"; session: Session }
 	| { type: "SessionUpdate"; session: Session }
-	| { type: "UserDelete"; id: string }
-	| { type: "VoiceDispatch"; user_id: string; payload: any };
+	| { type: "SessionDelete"; id: string; user_id?: string }
+	| { type: "RelationshipUpsert"; user_id: string; relationship: unknown }
+	| { type: "RelationshipDelete"; user_id: string };

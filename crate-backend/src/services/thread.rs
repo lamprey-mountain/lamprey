@@ -11,6 +11,9 @@ use crate::error::{Error, Result};
 use crate::types::{DbMessageCreate, DbThreadPrivate};
 use crate::ServerStateInner;
 
+// TODO: split caches more
+// have a cache for public data, per-user data, member counts, etc
+// then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
 
