@@ -45,7 +45,7 @@ async fn internal_rpc(
         .get("authorization")
         .ok_or(Error::MissingAuth)?
         .to_str()?;
-    if auth != "Server verysecrettoken" {
+    if auth != format!("Server {}", s.config.sfu_token) {
         return Err(Error::MissingAuth);
     }
     match json {

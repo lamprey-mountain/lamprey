@@ -222,7 +222,7 @@ impl Connection {
                 }
 
                 let req = reqwest::Client::new()
-                    .post("http://localhost:4001/rpc")
+                    .post(self.s.config.sfu_url.join("/rpc")?.as_str())
                     .json(&Request {
                         user_id,
                         inner: payload,

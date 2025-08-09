@@ -17,6 +17,7 @@ pub struct Config {
     pub smtp: ConfigSmtp,
     pub otel_trace_endpoint: Option<String>,
     pub sfu_token: String,
+    pub sfu_url: Url,
     #[serde(default = "default_max_user_emails")]
     pub max_user_emails: usize,
     #[serde(default = "default_email_queue_workers")]
