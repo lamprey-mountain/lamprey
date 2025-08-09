@@ -116,6 +116,8 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                             }
                         });
                     }
+                } else {
+                    break;
                 }
             }
         }

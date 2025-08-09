@@ -69,6 +69,7 @@ impl Sfu {
                 format!("Server {}", self.config.token).try_into().unwrap(),
             );
 
+            info!("Connecting to backend websocket...");
             let ws_stream = match connect_async(request).await {
                 Ok((stream, _)) => {
                     info!("Connected to backend websocket");
