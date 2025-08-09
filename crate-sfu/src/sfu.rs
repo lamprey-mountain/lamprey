@@ -194,14 +194,17 @@ impl Sfu {
                 };
                 for a in &self.peers {
                     if a.key() == &user_id {
+                        debug!("skip own user");
                         continue;
                     }
 
                     let Some(state) = self.voice_states.get(a.key()) else {
+                        debug!("missing voice state");
                         continue;
                     };
 
                     if state.thread_id != my_state.thread_id {
+                        debug!("wrong thread id");
                         continue;
                     }
 

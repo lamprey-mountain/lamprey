@@ -56,6 +56,7 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 	let transceiverCam: RTCRtpTransceiver | undefined;
 	let transceiverScreenVideo: RTCRtpTransceiver | undefined;
 	let transceiverScreenAudio: RTCRtpTransceiver | undefined;
+	let transceiverMusic: RTCRtpTransceiver | undefined;
 	let reconnectable = true;
 
 	// Helper to get track key from transceiver
@@ -64,6 +65,7 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 		if (tcr === transceiverCam) return "user";
 		if (tcr === transceiverScreenVideo) return "screen";
 		if (tcr === transceiverScreenAudio) return "screen";
+		if (tcr === transceiverMusic) return "music";
 		throw "unknown track key";
 	};
 
@@ -73,6 +75,7 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 			transceiverCam,
 			transceiverScreenVideo,
 			transceiverScreenAudio,
+			transceiverMusic,
 		]
 			.filter((tcr): tcr is RTCRtpTransceiver => !!tcr);
 
@@ -328,6 +331,7 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 			console.warn("audio has multiple tracks, using first one", tracks);
 		}
 		const tcr = conn().addTransceiver(tracks[0]);
+		transceiverMusic = tcr;
 		console.log("add transceiver", tcr);
 		audio.play();
 	}
@@ -420,6 +424,15 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 		// }
 	};
 
+	const getMediaStreamForMids = (mids: string[]) => {
+		const ms = new MediaStream();
+		for (const mid of mids) {
+			const t = tracks.get(mid);
+			if (t) ms.addTrack(t);
+		}
+		return ms;
+	};
+
 	return (
 		<div class="webrtc">
 			<div>webrtc (nothing to see here, move along...)</div>
@@ -442,25 +455,21 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 				voice state
 				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
 			</div>
-			<For each={[...streams.values()]}>
-				{(tcs) => (
-					<video
-						controls
-						autoplay
-						ref={(el) => {
-							const stream = new MediaStream();
-							console.log("add stream", tcs, tracks);
-							for (const mid of tcs) {
-								const t = tracks.get(mid);
-								if (t) {
-									console.log("add stream track", mid, t);
-									stream.addTrack(t);
-								}
-							}
-							el.srcObject = stream;
-						}}
-					/>
-				)}
+			<For each={[...tracks.entries()]}>
+				{([id, track]) => {
+					let videoRef!: HTMLVideoElement;
+					createEffect(() => {
+						if (videoRef) videoRef.srcObject = new MediaStream([track]);
+					});
+					return (
+						<video
+							controls
+							autoplay
+							playsinline
+							ref={videoRef!}
+						/>
+					);
+				}}
 			</For>
 			<br />
 			<br />

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Instant};
+use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 use crate::{MediaData, PeerEvent, SfuTrack, SignallingMessage};
 use anyhow::Result;
@@ -27,8 +27,13 @@ pub struct Peer {
     rtc: Rtc,
     socket_v4: UdpSocket,
     socket_v6: UdpSocket,
+
+    /// media data we are recieving from the user
     inbound: HashMap<Mid, TrackIn>,
+
+    /// media data we are sending to the user
     outbound: Vec<TrackOut>,
+
     // outbound: HashMap<Mid, TrackOut>,
     sdp_pending: Option<SdpPendingOffer>,
     user_id: UserId,
@@ -99,10 +104,10 @@ impl Peer {
                     trace!("transmit {} bytes to {}", v.contents.len(), v.destination);
 
                     match v.destination {
-                        std::net::SocketAddr::V4(_) => {
+                        SocketAddr::V4(_) => {
                             self.socket_v4.send_to(&v.contents, v.destination).await?;
                         }
-                        std::net::SocketAddr::V6(_) => {
+                        SocketAddr::V6(_) => {
                             self.socket_v6.send_to(&v.contents, v.destination).await?;
                         }
                     }
@@ -125,7 +130,7 @@ impl Peer {
                                     track.state = TrackState::Open(mid);
 
                                     events.push(PeerEvent::MediaAdded(SfuTrack {
-                                        mid,
+                                        source_mid: mid,
                                         kind: track.kind,
                                         peer_id: self.user_id,
                                         key: track.key.clone(),
@@ -145,6 +150,16 @@ impl Peer {
                                         }],
                                     }));
                                 }
+                            } else {
+                                // self.inbound.insert(
+                                //     mid,
+                                //     TrackIn {
+                                //         kind: m.kind,
+                                //         state: TrackState::Open(mid),
+                                //         thread_id: self.voice_state.thread_id,
+                                //         key: todo!(),
+                                //     },
+                                // );
                             }
 
                             for event in events {
@@ -238,7 +253,7 @@ impl Peer {
                     kind: t.kind,
                     state: TrackState::Pending,
                     peer_id: t.peer_id,
-                    source_mid: t.mid,
+                    source_mid: t.source_mid,
                     enabled: false,
                     needs_keyframe: false,
                     thread_id: t.thread_id,
@@ -253,11 +268,14 @@ impl Peer {
     }
 
     fn handle_remote_media_data(&mut self, d: MediaData) {
+        debug!("handle_remote_media_data");
+
         let Some(track) = self
             .outbound
             .iter_mut()
             .find(|t| t.peer_id == d.peer_id && t.source_mid == d.mid)
         else {
+            debug!("track has no outbound entry");
             return;
         };
 
@@ -266,14 +284,17 @@ impl Peer {
         // }
 
         let Some(mid) = track.state.mid() else {
+            debug!("track has no mid");
             return;
         };
 
         let Some(writer) = self.rtc.writer(mid) else {
+            debug!("track has no writer");
             return;
         };
 
         let Some(pt) = writer.match_params(d.params) else {
+            debug!("track has no payload type");
             return;
         };
 
@@ -293,6 +314,7 @@ impl Peer {
     }
 
     async fn handle_signalling(&mut self, command: SignallingMessage) -> Result<()> {
+        debug!("signalling {command:?}");
         match command {
             SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
@@ -432,13 +454,16 @@ impl Peer {
 
     fn handle_media_data(&self, data: str0m::media::MediaData) -> Result<()> {
         let Some(track) = self.inbound.get(&data.mid) else {
+            debug!("no inbound track");
             return Ok(());
         };
 
         if !matches!(track.state, TrackState::Open(_)) {
+            debug!("track not open");
             return Ok(());
         };
 
+        debug!("emit media data");
         self.emit(PeerEvent::MediaData(MediaData {
             mid: data.mid,
             peer_id: self.user_id,

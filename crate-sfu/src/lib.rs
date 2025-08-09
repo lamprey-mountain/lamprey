@@ -72,7 +72,7 @@ pub struct MediaData {
 
 #[derive(Debug, Clone)]
 pub struct SfuTrack {
-    pub mid: Mid,
+    pub source_mid: Mid,
     pub peer_id: UserId,
     pub thread_id: ThreadId,
     pub kind: MediaKind,
