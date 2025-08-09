@@ -107,4 +107,39 @@ export class Rooms {
 
 		return resource;
 	}
+
+	async markRead(room_id: string) {
+		let has_more = true;
+		let from: string | undefined = undefined;
+		while (has_more) {
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/room/{room_id}/thread",
+				{
+					params: {
+						path: { room_id },
+						query: {
+							dir: "f",
+							limit: 100,
+							from,
+						},
+					},
+				},
+			);
+			if (error) {
+				console.error("Failed to fetch threads for room", error);
+				break;
+			}
+			for (const thread of data.items) {
+				if (thread.last_version_id) {
+					await this.api.threads.ack(
+						thread.id,
+						undefined,
+						thread.last_version_id,
+					);
+				}
+			}
+			has_more = data.has_more;
+			from = data.items.at(-1)?.id;
+		}
+	}
 }

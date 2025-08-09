@@ -42,7 +42,9 @@ export function RoomMenu(props: { room_id: string }) {
 
 	return (
 		<Menu>
-			<Item>mark as read</Item>
+			<Item onClick={() => api.rooms.markRead(props.room_id)}>
+				mark as read
+			</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<RoomNotificationMenu />
 			<Separator />

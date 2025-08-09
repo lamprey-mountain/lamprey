@@ -47,8 +47,8 @@ export const Nav2 = () => {
 					</li>
 					<For each={rooms()?.items}>
 						{(room) => (
-							<li draggable="true">
-								<A draggable="false" href={`/room/${room.id}`}>
+							<li draggable="true" class="menu-room" data-room-id={room.id}>
+								<A draggable="false" href={`/room/${room.id}`} class="nav">
 									<Show
 										when={room.icon}
 										fallback={<div class="avatar">{room.name}</div>}

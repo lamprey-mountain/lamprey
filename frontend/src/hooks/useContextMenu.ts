@@ -6,14 +6,18 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const api = useApi();
 
 	const handleContextMenu = (e: MouseEvent) => {
+		console.log("ctx menu");
 		const targetEl = e.target as HTMLElement;
 
 		const menuEl = targetEl.closest(
 			".menu-room, .menu-thread, .menu-message, .menu-user",
 		) as HTMLElement | null;
-		const mediaEl = targetEl.closest("a, img, video, audio") as
+		const mediaEl = targetEl.closest(
+			"a:not(.nav), img:not(.avatar), video, audio",
+		) as
 			| HTMLElement
 			| null;
+		console.log({ menuEl, mediaEl, targetEl });
 		if (!menuEl) return;
 		if (mediaEl && targetEl !== menuEl) return;
 

@@ -548,6 +548,7 @@ export type Api = {
 		fetch: (room_id: () => string) => Resource<Room>;
 		list: () => Resource<Pagination<Room>>;
 		cache: ReactiveMap<string, Room>;
+		markRead: (room_id: string) => Promise<void>;
 	};
 	threads: {
 		fetch: (thread_id: () => string) => Resource<Thread>;
