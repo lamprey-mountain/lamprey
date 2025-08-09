@@ -170,7 +170,23 @@ impl Peer {
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
 
-                        Event::KeyframeRequest(_r) => todo!(),
+                        Event::KeyframeRequest(r) => {
+                            let track = self
+                                .outbound
+                                .iter()
+                                .find(|t| t.state == TrackState::Open(r.mid));
+                            if let Some(track) = track {
+                                self.emit(PeerEvent::NeedsKeyframe {
+                                    source_mid: track.source_mid,
+                                    source_peer: track.peer_id,
+                                    for_peer: self.user_id,
+                                    kind: r.kind,
+                                    rid: r.rid,
+                                })?;
+                            } else {
+                                warn!("track not found");
+                            }
+                        }
 
                         Event::PeerStats(_)
                         | Event::MediaIngressStats(_)
@@ -256,13 +272,27 @@ impl Peer {
                     peer_id: t.peer_id,
                     source_mid: t.source_mid,
                     enabled: false,
-                    needs_keyframe: false,
                     thread_id: t.thread_id,
                     key: t.key,
                 });
             }
             PeerCommand::MediaData(d) => self.handle_remote_media_data(d),
             PeerCommand::Kill => self.rtc.disconnect(),
+            PeerCommand::GenerateKeyframe {
+                mid,
+                kind,
+                for_peer: _, // do i need this? how do i use this?
+                rid,
+            } => {
+                let Some(mut writer) = self.rtc.writer(mid) else {
+                    debug!("track has no writer");
+                    return Ok(());
+                };
+
+                if let Err(err) = writer.request_keyframe(rid, kind) {
+                    warn!("failed to generate keyframe: {:?}", err);
+                }
+            }
         }
 
         Ok(())
@@ -298,15 +328,6 @@ impl Peer {
             debug!("track has no payload type");
             return;
         };
-
-        // FIXME: keyframe requests
-        // if track.needs_keyframe {
-        //     if let Err(err) = writer.request_keyframe(None, KeyframeRequestKind::Pli) {
-        //         warn!("failed to generate keyframe: {:?}", err);
-        //     } else {
-        //         track.needs_keyframe = false;
-        //     }
-        // }
 
         if let Err(err) = writer.write(pt, d.network_time, d.time, d.data.to_vec()) {
             warn!("client ({}) failed: {:?}", self.user_id, err);

@@ -7,7 +7,7 @@ use common::v1::types::{
 use serde::{Deserialize, Serialize};
 use str0m::{
     format::PayloadParams,
-    media::{MediaKind, MediaTime, Mid},
+    media::{KeyframeRequestKind, MediaKind, MediaTime, Mid, Rid},
 };
 
 pub mod config;
@@ -50,6 +50,13 @@ pub enum PeerEvent {
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
+    NeedsKeyframe {
+        source_mid: Mid,
+        source_peer: UserId,
+        rid: Option<Rid>,
+        for_peer: UserId,
+        kind: KeyframeRequestKind,
+    },
 }
 
 #[derive(Debug)]
@@ -58,6 +65,12 @@ pub enum PeerCommand {
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Kill,
+    GenerateKeyframe {
+        mid: Mid,
+        rid: Option<Rid>,
+        kind: KeyframeRequestKind,
+        for_peer: UserId,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -111,7 +124,6 @@ pub struct TrackOut {
     pub peer_id: UserId,
     pub source_mid: Mid,
     pub enabled: bool,
-    pub needs_keyframe: bool,
     pub thread_id: ThreadId,
     pub key: String,
 }

@@ -221,7 +221,6 @@ impl Sfu {
                 self.emit(SfuEvent::VoiceDispatch { user_id, payload })
                     .await?;
             }
-
             PeerEvent::MediaAdded(ref m) => {
                 debug!("media added event {event:?}");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
@@ -278,6 +277,26 @@ impl Sfu {
                 debug!("peerevent::dead");
                 self.peers.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
+            }
+
+            PeerEvent::NeedsKeyframe {
+                source_mid,
+                source_peer,
+                for_peer,
+                kind,
+                rid,
+            } => {
+                let Some(peer) = self.peers.get(&source_peer) else {
+                    warn!("peer not found");
+                    return Ok(());
+                };
+
+                peer.send(PeerCommand::GenerateKeyframe {
+                    mid: source_mid,
+                    kind,
+                    for_peer,
+                    rid,
+                })?;
             }
         }
 
