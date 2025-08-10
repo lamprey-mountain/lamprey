@@ -381,56 +381,50 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 	};
 
 	const toggleScreen = async () => {
-		// TODO
-		// if (trackScreenVideo) {
-		// 	trackScreenVideo.enabled = !trackScreenVideo.enabled;
-		// 	if (trackScreenAudio) {
-		// 		trackScreenAudio.enabled = !trackScreenAudio.enabled;
-		// 	}
-		// 	return;
-		// }
+		if (transceiverScreenVideo) {
+			const tv = transceiverScreenVideo.sender.track;
+			if (tv) tv.enabled = !tv.enabled;
 
-		// const stream = await navigator.mediaDevices.getDisplayMedia({
-		// 	video: true,
-		// 	audio: true,
-		// });
+			if (transceiverScreenAudio) {
+				const ta = transceiverScreenAudio.sender.track;
+				if (ta) ta.enabled = !ta.enabled;
+			}
 
-		// {
-		// 	const track = stream.getVideoTracks()[0];
-		// 	if (!track) {
-		// 		console.warn("no video track");
-		// 		return;
-		// 	}
-		// 	const tcr = conn().addTransceiver(track);
-		// 	console.log("add transceiver", tcr.mid, tcr);
-		// 	track.addEventListener("ended", () => {
-		// 		conn().removeTrack(tcr.sender);
-		// 	});
-		// 	trackScreenVideo = track;
-		// }
-
-		// {
-		// 	const track = stream.getAudioTracks()[0];
-		// 	if (!track) {
-		// 		console.warn("no audio track");
-		// 		return;
-		// 	}
-		// 	const tcr = conn().addTransceiver(track);
-		// 	console.log("add transceiver", tcr.mid, tcr);
-		// 	track.addEventListener("ended", () => {
-		// 		conn().removeTrack(tcr.sender);
-		// 	});
-		// 	trackScreenAudio = track;
-		// }
-	};
-
-	const getMediaStreamForMids = (mids: string[]) => {
-		const ms = new MediaStream();
-		for (const mid of mids) {
-			const t = tracks.get(mid);
-			if (t) ms.addTrack(t);
+			return;
 		}
-		return ms;
+
+		const stream = await navigator.mediaDevices.getDisplayMedia({
+			video: true,
+			audio: true,
+		});
+
+		{
+			const track = stream.getVideoTracks()[0];
+			if (!track) {
+				console.warn("no video track");
+				return;
+			}
+			const tcr = conn().addTransceiver(track);
+			console.log("add transceiver", tcr.mid, tcr);
+			track.addEventListener("ended", () => {
+				conn().removeTrack(tcr.sender);
+			});
+			transceiverScreenVideo = tcr;
+		}
+
+		{
+			const track = stream.getAudioTracks()[0];
+			if (!track) {
+				console.warn("no audio track");
+				return;
+			}
+			const tcr = conn().addTransceiver(track);
+			console.log("add transceiver", tcr.mid, tcr);
+			track.addEventListener("ended", () => {
+				conn().removeTrack(tcr.sender);
+			});
+			transceiverScreenAudio = tcr;
+		}
 	};
 
 	return (
