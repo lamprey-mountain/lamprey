@@ -100,7 +100,7 @@ pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -163,7 +163,7 @@ pub async fn thread_member_update(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     Json(json): Json<ThreadMemberPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -219,7 +219,7 @@ pub async fn thread_member_update(
 pub async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {

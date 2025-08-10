@@ -360,7 +360,7 @@ async fn thread_unpin(
 async fn thread_archive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -400,7 +400,7 @@ async fn thread_archive(
 async fn thread_unarchive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -435,7 +435,7 @@ async fn thread_unarchive(
 async fn thread_remove(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -467,7 +467,7 @@ async fn thread_remove(
 async fn thread_restore(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -505,7 +505,7 @@ async fn thread_restore(
 async fn thread_typing(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
