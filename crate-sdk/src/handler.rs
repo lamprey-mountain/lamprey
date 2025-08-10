@@ -459,7 +459,7 @@ where
                 MessageSync::VoiceDispatch { user_id, payload } => {
                     self.voice_dispatch(user_id, payload).await
                 }
-                MessageSync::VoiceState { user_id, state } => {
+                MessageSync::VoiceState { user_id, state, .. } => {
                     self.voice_state(user_id, state).await
                 }
                 MessageSync::RelationshipUpsert {

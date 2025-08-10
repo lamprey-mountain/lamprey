@@ -11,7 +11,7 @@ use common::v1::types::voice::{SignallingMessage, VoiceState};
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
 use tokio::select;
-use tracing::error;
+use tracing::{debug, error};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
@@ -87,6 +87,25 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                                     old,
                                     state,
                                 } => {
+                                    debug!("change voice state {user_id} {old:?} {state:?}");
+                                    match (&state, &old) {
+                                        (Some(new), Some(old)) if new.thread_id != old.thread_id => {
+                                            // TODO: only send this to people who can't see the new thread
+                                            // maybe edit the if let below?
+                                            let _ = s
+                                                .broadcast_thread(
+                                                    old.thread_id,
+                                                    user_id,
+                                                    MessageSync::VoiceState {
+                                                        user_id,
+                                                        state: None,
+                                                        old_state: Some(old.clone()),
+                                                    },
+                                                )
+                                                .await;
+                                        }
+                                        _ => {}
+                                    }
                                     if let Some(v) = &old {
                                         let _ = s
                                             .broadcast_thread(
@@ -95,6 +114,7 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                                                 MessageSync::VoiceState {
                                                     user_id,
                                                     state: state.clone(),
+                                                    old_state: old.clone(),
                                                 },
                                             )
                                             .await;
@@ -104,7 +124,11 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                                             .broadcast_thread(
                                                 v.thread_id,
                                                 user_id,
-                                                MessageSync::VoiceState { user_id, state },
+                                                MessageSync::VoiceState {
+                                                    user_id,
+                                                    state,
+                                                    old_state: old,
+                                                },
                                             )
                                             .await;
                                     }

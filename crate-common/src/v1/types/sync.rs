@@ -250,6 +250,10 @@ pub enum MessageSync {
     VoiceState {
         user_id: UserId,
         state: Option<VoiceState>,
+
+        // HACK: make it possible to use this for auth checks
+        #[serde(skip)]
+        old_state: Option<VoiceState>,
     },
 
     UserCreate {

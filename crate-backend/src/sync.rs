@@ -323,9 +323,15 @@ impl Connection {
                 SignallingMessage::Have { thread_id, .. } => AuthCheck::Thread(*thread_id),
                 _ => AuthCheck::User(*user_id),
             },
-            MessageSync::VoiceState { state, user_id, .. } => {
+            MessageSync::VoiceState {
+                state,
+                user_id,
+                old_state,
+            } => {
                 if let Some(state) = dbg!(state) {
                     AuthCheck::Thread(state.thread_id)
+                } else if let Some(old) = dbg!(old_state) {
+                    AuthCheck::Thread(old.thread_id)
                 } else {
                     AuthCheck::User(*user_id)
                 }
