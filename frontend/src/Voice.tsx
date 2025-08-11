@@ -230,30 +230,30 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 		}
 	});
 
+	function cleanupConnection() {
+		// Stop all tracks and clear transceivers
+		for (const tcr of getTransceivers()) {
+			tcr.sender.track?.stop();
+			tcr.stop();
+		}
+
+		conn().close();
+
+		// Reset transceiver references
+		transceiverMic = undefined;
+		transceiverCam = undefined;
+		transceiverScreenVideo = undefined;
+		transceiverScreenAudio = undefined;
+		transceiverMusic = undefined;
+
+		// Clear other resources
+		tracks.clear();
+		streams.clear();
+	}
+
 	onCleanup(() => {
 		reconnectable = false;
-		conn().close();
-		// // Stop all tracks and clear transceivers
-		// [transceiverMic, transceiverCam, transceiverScreenVideo, transceiverScreenAudio].forEach(tcr => {
-		//     if (tcr?.sender.track) {
-		//         tcr.sender.track.stop();
-		//     }
-		// });
-
-		// // Reset transceiver references
-		// transceiverMic = undefined;
-		// transceiverCam = undefined;
-		// transceiverScreenVideo = undefined;
-		// transceiverScreenAudio = undefined;
-
-		// // Clear other resources
-		// tracks.clear();
-		// streams.clear();
-
-		// const currentConn = conn();
-		// if (currentConn.connectionState !== 'closed') {
-		//     currentConn.close();
-		// }
+		cleanupConnection();
 	});
 
 	function connect() {
@@ -270,7 +270,7 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 			type: "VoiceState",
 			state: null,
 		});
-		conn().close();
+		cleanupConnection();
 		setup();
 	}
 
