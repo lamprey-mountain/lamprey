@@ -27,6 +27,8 @@ pub struct Peer {
     rtc: Rtc,
     socket_v4: UdpSocket,
     socket_v6: UdpSocket,
+    packet_v4: [u8; 2000],
+    packet_v6: [u8; 2000],
 
     /// media data we are recieving from the user
     inbound: HashMap<Mid, TrackIn>,
@@ -81,6 +83,8 @@ impl Peer {
             voice_state,
             commands: recv,
             events: sfu_send,
+            packet_v4: [0; 2000],
+            packet_v6: [0; 2000],
         };
 
         tokio::spawn(async move {
@@ -201,13 +205,11 @@ impl Peer {
                 }
             };
 
-            let mut packet_v4 = [0u8; 2000];
-            let mut packet_v6 = [0u8; 2000];
             let input = select! {
                 _ = sleep_until(timeout.into()) => {
                     Input::Timeout(Instant::now())
                 }
-                recv = self.socket_v4.recv_from(&mut packet_v4) => {
+                recv = self.socket_v4.recv_from(&mut self.packet_v4) => {
                     let (n, source) = recv?;
                     Input::Receive(
                         Instant::now(),
@@ -215,11 +217,11 @@ impl Peer {
                             proto: Protocol::Udp,
                             source,
                             destination: self.socket_v4.local_addr()?,
-                            contents: packet_v4[..n].try_into()?,
+                            contents: self.packet_v4[..n].try_into()?,
                         },
                     )
                 }
-                recv = self.socket_v6.recv_from(&mut packet_v6) => {
+                recv = self.socket_v6.recv_from(&mut self.packet_v6) => {
                     let (n, source) = recv?;
                     Input::Receive(
                         Instant::now(),
@@ -227,7 +229,7 @@ impl Peer {
                             proto: Protocol::Udp,
                             source,
                             destination: self.socket_v6.local_addr()?,
-                            contents: packet_v6[..n].try_into()?,
+                            contents: self.packet_v6[..n].try_into()?,
                         },
                     )
                 }
