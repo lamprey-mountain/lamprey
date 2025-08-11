@@ -331,7 +331,7 @@ impl Peer {
             return;
         };
 
-        if let Err(err) = writer.write(pt, d.network_time, d.time, d.data.to_vec()) {
+        if let Err(err) = writer.write(pt, d.network_time, d.time, d.data.as_ref()) {
             warn!("client ({}) failed: {:?}", self.user_id, err);
             self.rtc.disconnect();
         }

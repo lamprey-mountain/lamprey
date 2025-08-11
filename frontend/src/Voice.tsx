@@ -371,7 +371,13 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 			console.warn("no track");
 			return;
 		}
-		const tcr = conn().addTransceiver(track);
+		const tcr = conn().addTransceiver(track, {
+			sendEncodings: [
+				// { rid: "q", scaleResolutionDownBy: 4.0, maxBitrate: 150_000 },
+				// { rid: "h", scaleResolutionDownBy: 2.0, maxBitrate: 500_000 },
+				{ rid: "f" },
+			],
+		});
 		console.log("add transceiver", tcr.mid, tcr);
 		track.addEventListener("ended", () => {
 			conn().removeTrack(tcr.sender);
@@ -404,7 +410,12 @@ export const Voice = (p: { room: Room; thread: Thread }) => {
 				console.warn("no video track");
 				return;
 			}
-			const tcr = conn().addTransceiver(track);
+			const tcr = conn().addTransceiver(track, {
+				sendEncodings: [
+					// { rid: "h", scaleResolutionDownBy: 2.0, maxBitrate: 500_000 },
+					{ rid: "f" },
+				],
+			});
 			console.log("add transceiver", tcr.mid, tcr);
 			track.addEventListener("ended", () => {
 				conn().removeTrack(tcr.sender);
