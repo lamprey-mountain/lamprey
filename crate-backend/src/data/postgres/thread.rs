@@ -64,7 +64,33 @@ impl DataThread for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL"#,
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL"#,
+                room_id.into_inner()
+            ),
+            |i: &Thread| i.id.to_string()
+        )
+    }
+
+    async fn thread_list_archived(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbThread,
+                "sql/thread_paginate_archived.sql",
+                *room_id,
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL"#,
                 room_id.into_inner()
             ),
             |i: &Thread| i.id.to_string()
@@ -99,7 +125,7 @@ impl DataThread for Postgres {
             r#"
             UPDATE thread SET
                 version_id = $2,
-                name = $3, 
+                name = $3,
                 description = $4,
                 nsfw = $5
             WHERE id = $1

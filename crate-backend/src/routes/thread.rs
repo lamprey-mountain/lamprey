@@ -210,6 +210,35 @@ async fn thread_list(
     Ok(Json(res))
 }
 
+/// List archived threads in a room
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/thread/archived",
+    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = PaginationResponse<Thread>, description = "List archived room threads success"),
+    )
+)]
+async fn thread_list_archived(
+    Path((room_id,)): Path<(RoomId,)>,
+    Query(q): Query<PaginationQuery<ThreadId>>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    perms.ensure_view()?;
+    let mut res = data.thread_list_archived(room_id, q).await?;
+    let srv = s.services();
+    let mut threads = vec![];
+    for t in &res.items {
+        threads.push(srv.threads.get(t.id, Some(user_id)).await?);
+    }
+    res.items = threads;
+    Ok(Json(res))
+}
+
 /// Edit a thread
 #[utoipa::path(
     patch,
@@ -574,6 +603,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_create))
         .routes(routes!(thread_get))
         .routes(routes!(thread_list))
+        .routes(routes!(thread_list_archived))
         .routes(routes!(thread_update))
         .routes(routes!(thread_ack))
         .routes(routes!(thread_pin))
