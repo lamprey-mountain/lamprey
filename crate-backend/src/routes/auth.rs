@@ -134,8 +134,8 @@ async fn auth_oauth_redirect(
                     let user = data
                         .user_create(DbUserCreate {
                             parent_id: None,
-                            name: u.name,
-                            description: None,
+                            name: u.name.unwrap_or(u.login),
+                            description: u.bio,
                             bot: None,
                             puppet: None,
                             registered_at: None,

@@ -63,7 +63,13 @@ pub struct GithubUser {
     pub id: u64,
 
     /// the user's name
-    pub name: String,
+    pub name: Option<String>,
+
+    /// the user's username
+    pub login: String,
+
+    /// the user's bio
+    pub bio: Option<String>,
 }
 
 pub struct OauthState {
@@ -171,6 +177,8 @@ impl ServiceOauth {
         let res: OauthTokenResponse = client
             .post(&p.token_url)
             .basic_auth(&p.client_id, Some(&p.client_secret))
+            .header("Accept", "application/json")
+            .header("User-Agent", &self.state.config.url_preview.user_agent)
             .form(&body)
             .send()
             .await?
@@ -207,6 +215,7 @@ impl ServiceOauth {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
             .get("https://discord.com/api/v10/oauth2/@me")
+            .header("User-Agent", &self.state.config.url_preview.user_agent)
             .bearer_auth(token)
             .send()
             .await?
@@ -218,21 +227,11 @@ impl ServiceOauth {
 
     pub async fn github_get_user(&self, token: String) -> Result<GithubUser> {
         let client = reqwest::Client::new();
-        // let res: serde_json::Value = client
-        //     .get("https://api.github.com/user")
-        //     .header("accept", "application/vnd.github+json")
-        //     .header("X-GitHub-Api-Version", "2022-11-28")
-        //     .bearer_auth(token)
-        //     .send()
-        //     .await?
-        //     .error_for_status()?
-        //     .json()
-        //     .await?;
-        // res.get("");
         let res: GithubUser = client
             .get("https://api.github.com/user")
-            .header("accept", "application/vnd.github+json")
+            .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .header("User-Agent", &self.state.config.url_preview.user_agent)
             .bearer_auth(token)
             .send()
             .await?
