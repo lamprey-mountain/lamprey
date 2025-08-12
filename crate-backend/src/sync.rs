@@ -183,6 +183,39 @@ impl Connection {
                     .await?;
 
                 self.seq_server += 1;
+
+                if let Some(user_id) = session.user_id() {
+                    // Send typing states
+                    let typing_states = srv.threads.typing_list();
+                    for (thread_id, typing_user_id, until) in typing_states {
+                        if let Ok(perms) = srv.perms.for_thread(user_id, thread_id).await {
+                            if perms.has(Permission::View) {
+                                self.push_sync(MessageSync::ThreadTyping {
+                                    thread_id,
+                                    user_id: typing_user_id,
+                                    until: until.into(),
+                                });
+                            }
+                        }
+                    }
+
+                    // Send voice states
+                    let voice_states = srv.users.voice_states_list();
+                    for voice_state in voice_states {
+                        if let Ok(perms) =
+                            srv.perms.for_thread(user_id, voice_state.thread_id).await
+                        {
+                            if perms.has(Permission::View) {
+                                self.push_sync(MessageSync::VoiceState {
+                                    user_id: voice_state.user_id,
+                                    state: Some(voice_state),
+                                    old_state: None,
+                                });
+                            }
+                        }
+                    }
+                }
+
                 self.state = ConnectionState::Authenticated { session };
             }
             MessageClient::Status { status } => {

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
@@ -6,6 +7,7 @@ use common::v1::types::{
     MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
 };
 use moka::future::Cache;
+use time::OffsetDateTime;
 
 use crate::error::{Error, Result};
 use crate::types::{DbMessageCreate, DbThreadPrivate};
@@ -19,6 +21,7 @@ pub struct ServiceThreads {
 
     cache_thread: Cache<ThreadId, Thread>,
     cache_thread_private: Cache<(ThreadId, UserId), DbThreadPrivate>,
+    typing: Cache<(ThreadId, UserId), OffsetDateTime>,
 }
 
 impl ServiceThreads {
@@ -32,6 +35,10 @@ impl ServiceThreads {
             cache_thread_private: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
+                .build(),
+            typing: Cache::builder()
+                .max_capacity(100_000)
+                .time_to_live(Duration::from_secs(10))
                 .build(),
         }
     }
@@ -173,5 +180,16 @@ impl ServiceThreads {
         }
 
         Ok(thread_new)
+    }
+
+    pub async fn typing_set(&self, thread_id: ThreadId, user_id: UserId, until: OffsetDateTime) {
+        self.typing.insert((thread_id, user_id), until).await;
+    }
+
+    pub fn typing_list(&self) -> Vec<(ThreadId, UserId, OffsetDateTime)> {
+        self.typing
+            .iter()
+            .map(|(key, until)| (key.0, key.1, until))
+            .collect()
     }
 }

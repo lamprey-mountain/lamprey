@@ -511,6 +511,10 @@ async fn thread_typing(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
+    s.services()
+        .threads
+        .typing_set(thread_id, user_id, until)
+        .await;
     s.broadcast_thread(
         thread_id,
         user_id,

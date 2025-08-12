@@ -88,6 +88,12 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                                     state,
                                 } => {
                                     debug!("change voice state {user_id} {old:?} {state:?}");
+                                    let srv = s.services();
+                                    if let Some(state) = &state {
+                                        srv.users.voice_state_put(state.clone());
+                                    } else {
+                                        srv.users.voice_state_remove(&user_id);
+                                    }
                                     match (&state, &old) {
                                         (Some(new), Some(old)) if new.thread_id != old.thread_id => {
                                             // TODO: only send this to people who can't see the new thread

@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
+use common::v1::types::voice::VoiceState;
 use common::v1::types::{MessageSync, Thread, ThreadMembership};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
@@ -20,6 +21,7 @@ pub struct ServiceUsers {
     cache_users: Cache<UserId, User>,
     statuses: DashMap<UserId, OnlineState>,
     dm_lock: DashMap<(UserId, UserId), ()>,
+    voice_states: DashMap<UserId, VoiceState>,
 }
 
 struct OnlineState {
@@ -37,6 +39,7 @@ impl ServiceUsers {
                 .build(),
             statuses: DashMap::new(),
             dm_lock: DashMap::new(),
+            voice_states: DashMap::new(),
         }
     }
 
@@ -130,6 +133,21 @@ impl ServiceUsers {
         } else {
             Status::offline()
         }
+    }
+
+    pub fn voice_state_put(&self, state: VoiceState) {
+        self.voice_states.insert(state.user_id, state);
+    }
+
+    pub fn voice_state_remove(&self, user_id: &UserId) {
+        self.voice_states.remove(user_id);
+    }
+
+    pub fn voice_states_list(&self) -> Vec<VoiceState> {
+        self.voice_states
+            .iter()
+            .map(|r| r.value().clone())
+            .collect()
     }
 
     pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Thread, bool)> {
