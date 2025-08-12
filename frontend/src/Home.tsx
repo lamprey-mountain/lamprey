@@ -121,7 +121,7 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>work in progress. expect bugs and missing polish.</p>
 			<br />
-			<Show when={!api.session() || api.session()?.status === "Unauthorized"}>
+			<Show when={api.session()?.status === "Unauthorized"}>
 				<div class="auth border">
 					<section class="form-wrapper">
 						<form onSubmit={handleAuthSubmit}>
