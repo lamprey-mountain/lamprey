@@ -8,34 +8,6 @@ import { useApi } from "../api.tsx";
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 
-	const setName = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "name?",
-			cont(name) {
-				if (!name) return;
-				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-					params: { path: { room_id: props.room.id } },
-					body: { name },
-				});
-			},
-		});
-	};
-
-	const setDescription = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "description?",
-			cont(description) {
-				if (typeof description !== "string") return;
-				ctx.client.http.PATCH("/api/v1/room/{room_id}", {
-					params: { path: { room_id: props.room.id } },
-					body: { description },
-				});
-			},
-		});
-	};
-
 	let avatarInputEl!: HTMLInputElement;
 	const openAvatarPicker = () => {
 		avatarInputEl?.click();
