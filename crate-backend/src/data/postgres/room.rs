@@ -133,4 +133,58 @@ impl DataRoom for Postgres {
         tx.commit().await?;
         Ok(version_id)
     }
+
+    async fn room_list_mutual(
+        &self,
+        user_a_id: UserId,
+        user_b_id: UserId,
+        pagination: PaginationQuery<RoomId>,
+    ) -> Result<PaginationResponse<Room>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRoom,
+                r#"
+                SELECT
+                    r.id,
+                    r.version_id,
+                    r.name,
+                    r.description,
+                    r.icon,
+                    r.archived_at,
+                    r.public,
+                    NULL::uuid as dm_uid_a,
+                    NULL::uuid as dm_uid_b
+                FROM room_member rm1
+                JOIN room_member rm2 ON rm1.room_id = rm2.room_id
+                JOIN room r ON rm1.room_id = r.id
+                WHERE rm1.user_id = $1 AND rm2.user_id = $2
+                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'
+                  AND r.id > $3 AND r.id < $4
+                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC
+                LIMIT $6
+                "#,
+                user_a_id.into_inner(),
+                user_b_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"
+                SELECT count(*)
+                FROM room_member rm1
+                JOIN room_member rm2 ON rm1.room_id = rm2.room_id
+                WHERE rm1.user_id = $1 AND rm2.user_id = $2
+                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'
+                "#,
+                user_a_id.into_inner(),
+                user_b_id.into_inner()
+            ),
+            |i: &Room| i.id.to_string()
+        )
+    }
 }

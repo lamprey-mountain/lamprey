@@ -68,6 +68,12 @@ pub trait DataRoom {
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
+    async fn room_list_mutual(
+        &self,
+        user_a_id: UserId,
+        user_b_id: UserId,
+        pagination: PaginationQuery<RoomId>,
+    ) -> Result<PaginationResponse<Room>>;
     async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
 }
 
@@ -577,4 +583,9 @@ pub trait DataDm {
     async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, thread_id: ThreadId)
         -> Result<()>;
     async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ThreadId>>;
+    async fn dm_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageVerId>,
+    ) -> Result<PaginationResponse<Thread>>;
 }

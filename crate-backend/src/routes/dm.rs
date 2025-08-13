@@ -3,7 +3,9 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::{MessageSync, PaginationQuery, PaginationResponse, Room, UserId};
+use common::v1::types::{
+    MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Room, RoomId, Thread, UserId,
+};
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -71,7 +73,7 @@ async fn dm_get(
     Ok(Json(thread))
 }
 
-/// Mutual rooms list (TODO)
+/// Mutual rooms list
 ///
 /// List rooms both you and the target are in. Calling it on yourself lists
 /// rooms you're in.
@@ -88,12 +90,70 @@ async fn dm_get(
     )
 )]
 async fn mutual_room_list(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(_auth_user_id): Auth,
-    Query(_q): Query<PaginationQuery<UserId>>,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<RoomId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    let data = s.data();
+    if auth_user_id == target_user_id {
+        let rooms = data.room_list(auth_user_id, q).await?;
+        return Ok(Json(rooms));
+    }
+
+    let rooms = data
+        .room_list_mutual(auth_user_id, target_user_id, q)
+        .await?;
+    Ok(Json(rooms))
+}
+
+/// Dm list
+///
+/// List direct message threads. Ordered by the last message version id, so
+/// recently active dms come first.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/dm",
+    params(
+        PaginationQuery<MessageVerId>,
+        ("user_id", description = "user id"),
+    ),
+    tags = ["dm"],
+    responses(
+        (status = OK, body = PaginationResponse<Thread>, description = "success"),
+    )
+)]
+async fn dm_list(
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user_id): Auth,
+    Query(q): Query<PaginationQuery<MessageVerId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user_id != target_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let data = s.data();
+    let mut res = data.dm_list(auth_user_id, q).await?;
+
+    let srv = s.services();
+    let mut threads = vec![];
+    for t in &res.items {
+        threads.push(srv.threads.get(t.id, Some(auth_user_id)).await?);
+    }
+    res.items = threads;
+
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -101,4 +161,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(dm_init))
         .routes(routes!(dm_get))
         .routes(routes!(mutual_room_list))
+        .routes(routes!(dm_list))
 }
