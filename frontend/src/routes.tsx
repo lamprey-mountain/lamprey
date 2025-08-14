@@ -128,11 +128,16 @@ export const RouteThread = (p: RouteSectionProps) => {
 	// fetch threads to populate sidebar
 	api.threads.list(() => thread()?.room_id!);
 
+	const title = () => {
+		if (!thread()) return t("loading");
+		return room() && thread()?.room_id
+			? `${thread()!.name} - ${room()!.name}`
+			: thread()!.name;
+	};
+
 	return (
 		<>
-			<Show when={room() && thread()} fallback={<Title title={t("loading")} />}>
-				<Title title={`${thread()!.name} - ${room()!.name}`} />
-			</Show>
+			<Title title={title()} />
 			<Nav2 />
 			<ChatNav room_id={thread()?.room_id} />
 			<Show when={thread()}>
