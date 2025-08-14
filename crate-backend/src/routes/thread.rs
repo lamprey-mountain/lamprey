@@ -342,6 +342,7 @@ async fn thread_ack(
         (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
     )
 )]
+#[deprecated = "top level threads will use category/ordering, subthreads may be pinnable but the api would then need to be moved under threads"]
 async fn thread_pin(
     Path(_thread_id): Path<ThreadId>,
     Auth(_user_id): Auth,
@@ -352,6 +353,7 @@ async fn thread_pin(
 }
 
 /// Unpin thread
+#[deprecated = "top level threads will use category/ordering, subthreads may be pinnable but the api would then need to be moved under threads"]
 #[utoipa::path(
     delete,
     path = "/room/{room_id}/pin/{thread_id}",
