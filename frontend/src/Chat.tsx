@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
-import type { RoomT, ThreadT } from "./types.ts";
+import type { ThreadT } from "./types.ts";
 import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
@@ -23,7 +23,6 @@ import { Portal } from "solid-js/web";
 
 type ChatProps = {
 	thread: ThreadT;
-	room: RoomT;
 };
 
 export const ChatMain = (props: ChatProps) => {

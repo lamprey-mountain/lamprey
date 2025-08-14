@@ -48,6 +48,7 @@ import { AuditLogs } from "./api/audit_log.ts";
 import { ThreadMembers } from "./api/thread_members.ts";
 import { MediaInfo } from "./api/media.tsx";
 import { Emoji } from "./api/emoji.ts";
+import { Dms } from "./api/dms.ts";
 
 export type Json =
 	| number
@@ -84,6 +85,7 @@ export function createApi(
 	const typing_timeout = new Map<string, Map<string, NodeJS.Timeout>>();
 	const audit_logs = new AuditLogs();
 	const emoji = new Emoji();
+	const dms = new Dms();
 
 	temp_events.on("sync", (msg) => {
 		if (msg.type === "RoomCreate") {
@@ -511,6 +513,7 @@ export function createApi(
 		tempCreateSession,
 		client,
 		emoji,
+		dms,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -534,6 +537,7 @@ export function createApi(
 	audit_logs.api = api;
 	media.api = api;
 	emoji.api = api;
+	dms.api = api;
 
 	console.log("provider created", api);
 	return api;

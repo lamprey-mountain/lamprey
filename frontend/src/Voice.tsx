@@ -1,4 +1,4 @@
-import { Room, Thread } from "sdk";
+import { Thread } from "sdk";
 import { createEffect, createSignal, For, onCleanup } from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
@@ -16,7 +16,7 @@ const RTC_CONFIG: RTCConfiguration = {
 	],
 };
 
-export const Voice = (p: { room: Room; thread: Thread }) => {
+export const Voice = (p: { thread: Thread }) => {
 	const [muted, setMuted] = createSignal(false);
 	const [deafened, setDeafened] = createSignal(false);
 

@@ -432,10 +432,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
-		put?: never;
 		/** Internal rpc */
-		post: operations["internal_rpc"];
+		get: operations["internal_rpc"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -832,6 +832,26 @@ export interface paths {
 		patch: operations["room_member_update"];
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/metrics": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room metrics (TODO)
+		 * @description Get metrics for a room
+		 */
+		get: operations["room_metrics"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/pin/{thread_id}": {
 		parameters: {
 			query?: never;
@@ -1047,6 +1067,23 @@ export interface paths {
 		 * @description Create a thread in a room
 		 */
 		post: operations["thread_create_room"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/thread/archived": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** List archived threads in a room */
+		get: operations["thread_list_archived"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1770,6 +1807,27 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/dm": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Dm list
+		 * @description List direct message threads. Ordered by the last message version id, so
+		 *     recently active dms come first.
+		 */
+		get: operations["dm_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/email": {
 		parameters: {
 			query?: never;
@@ -1887,7 +1945,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Mutual rooms list (TODO)
+		 * Mutual rooms list
 		 * @description List rooms both you and the target are in. Calling it on yourself lists
 		 *     rooms you're in.
 		 */
@@ -2158,18 +2216,6 @@ export interface components {
 		};
 		/** @description a color */
 		Color: string;
-		Command: {
-			payload: components["schemas"]["SignallingMessage"];
-			/** @enum {string} */
-			type: "VoiceDispatch";
-			user_id: components["schemas"]["Id"];
-		} | {
-			old?: null | components["schemas"]["VoiceState"];
-			state?: null | components["schemas"]["VoiceState"];
-			/** @enum {string} */
-			type: "VoiceState";
-			user_id: components["schemas"]["Id"];
-		};
 		ContextResponse: {
 			has_after: boolean;
 			has_before: boolean;
@@ -3574,6 +3620,38 @@ export interface components {
 			/** @enum {string} */
 			membership: "Ban";
 		};
+		RoomMetrics: {
+			/**
+			 * Format: int64
+			 * @description Number of active threads in this room (excluding archived or removed ones).
+			 */
+			active_thread_count: number;
+			/**
+			 * Format: int64
+			 * @description Total number of attachments from messages in this room.
+			 */
+			media_count: number;
+			/**
+			 * Format: int64
+			 * @description Combined size (in bytes) of all attachments in this room.
+			 */
+			media_size: number;
+			/**
+			 * Format: int64
+			 * @description Total number of members in this room.
+			 */
+			member_count: number;
+			/**
+			 * Format: int64
+			 * @description Total number of messages across all active threads in this room (excluding removed messages).
+			 */
+			message_count: number;
+			/**
+			 * Format: int64
+			 * @description Total number of threads in this room (including archived or removed ones).
+			 */
+			thread_count: number;
+		};
 		/** @description An update to a room */
 		RoomPatch: {
 			description?: string | null;
@@ -4637,14 +4715,10 @@ export interface operations {
 			path?: never;
 			cookie?: never;
 		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["Command"];
-			};
-		};
+		requestBody?: never;
 		responses: {
-			/** @description Accepted */
-			202: {
+			/** @description Switching Protocols */
+			101: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -5537,6 +5611,29 @@ export interface operations {
 			};
 		};
 	};
+	room_metrics: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RoomMetrics"];
+				};
+			};
+		};
+	};
 	thread_pin: {
 		parameters: {
 			query?: never;
@@ -6158,6 +6255,35 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Thread"];
+				};
+			};
+		};
+	};
+	thread_list_archived: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List archived room threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Thread"];
 				};
 			};
 		};
@@ -7795,6 +7921,35 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["UserConfig"];
+				};
+			};
+		};
+	};
+	dm_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description user id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Thread"];
 				};
 			};
 		};

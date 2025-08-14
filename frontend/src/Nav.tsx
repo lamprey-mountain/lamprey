@@ -15,10 +15,17 @@ export const ChatNav = (props: { room_id?: string }) => {
 	// local list of threads for this room
 	const [list, setList] = createSignal<Thread[]>([]);
 
+	if (!props.room_id) {
+		api.dms.list();
+	}
+
 	// update list when room changes
 	createEffect(() => {
 		const threads = [...api.threads.cache.values()]
-			.filter((t) => t.room_id === props.room_id && !t.deleted_at);
+			.filter((t) =>
+				(props.room_id ? t.room_id === props.room_id : t.room_id === null) &&
+				!t.deleted_at
+			);
 		setList(threads);
 	});
 
@@ -65,9 +72,10 @@ export const ChatNav = (props: { room_id?: string }) => {
 			<ul>
 				<li>
 					<A
-						href={`/room/${props.room_id}`}
+						href={props.room_id ? `/room/${props.room_id}` : "/"}
 						class="menu-thread"
 						draggable={false}
+						end
 					>
 						home
 					</A>
