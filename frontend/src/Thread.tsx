@@ -16,7 +16,12 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 				{(member) => {
 					const user_id = () => member.user_id;
 					const user = api.users.fetch(user_id);
-					const room_member = api.room_members.fetch(room_id, user_id);
+					const room_member = props.thread?.room_id
+						? api.room_members.fetch(
+							room_id,
+							user_id,
+						)
+						: () => null;
 
 					function name() {
 						let name: string | undefined | null = null;

@@ -367,7 +367,9 @@ function RouteInvite(p: RouteSectionProps) {
 		<>
 			<Title title="invite" />
 			<div class="invite" style="padding:8px">
-				<RouteInviteInner code={p.params.code} />
+				<Show when={p.params.code}>
+					<RouteInviteInner code={p.params.code!} />
+				</Show>
 			</div>
 		</>
 	);

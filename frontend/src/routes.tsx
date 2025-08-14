@@ -136,7 +136,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 			<Nav2 />
 			<ChatNav room_id={thread()?.room_id} />
 			<Show when={thread()}>
-				<ChatHeader room={room()!} thread={thread()!} />
+				<ChatHeader thread={thread()!} />
 				<Show
 					when={thread().type === "Chat" || thread().type === "Dm" ||
 						thread().type === "Gdm"}

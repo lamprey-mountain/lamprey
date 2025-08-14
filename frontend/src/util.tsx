@@ -18,6 +18,22 @@ export const getMsgTs = createWeaklyMemoized((m: Message) =>
 	getTimestampFromUUID(m.id)
 );
 
+export function getMessageOverrideName(message: Message | undefined) {
+	if (!message) return undefined;
+	if (message.type === "DefaultMarkdown" || message.type === "DefaultTagged") {
+		return message.override_name;
+	}
+	return undefined;
+}
+
+export function getMessageContent(message: Message | undefined) {
+	if (!message) return undefined;
+	if (message.type === "DefaultMarkdown" || message.type === "DefaultTagged") {
+		return message.content;
+	}
+	return undefined;
+}
+
 export const Copyable = (props: { children: string }) => {
 	const ctx = useCtx();
 	const copy = () => {

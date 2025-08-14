@@ -7,6 +7,7 @@ import { AttachmentView } from "./Message.tsx";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { onCleanup } from "solid-js";
+import { getMessageContent, getMessageOverrideName } from "./util.tsx";
 
 type InputProps = {
 	thread: ThreadT;
@@ -77,8 +78,7 @@ export function Input(props: InputProps) {
 		);
 
 		const m = member();
-		return m?.membership === "Join" && m.override_name || user()?.name ||
-			undefined;
+		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {
@@ -86,7 +86,8 @@ export function Input(props: InputProps) {
 	};
 
 	const getTyping = () => {
-		const fmt = new Intl.ListFormat();
+		// TODO: fix types here
+		const fmt = new (Intl as any).ListFormat();
 		const user_id = api.users.cache.get("@self")?.id;
 		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
@@ -119,10 +120,8 @@ export function Input(props: InputProps) {
 						cancel
 					</button>
 					<div class="info">
-						replying to{" "}
-						{("override_name" in reply()! && reply()?.override_name) ??
-							getNameNullable(reply()?.author_id)}:{" "}
-						{("content" in reply()! && reply()?.content) ?? undefined}
+						replying to {getMessageOverrideName(reply()) ??
+							getNameNullable(reply()?.author_id)}: {getMessageContent(reply())}
 					</div>
 				</div>
 			</Show>

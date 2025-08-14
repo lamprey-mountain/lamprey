@@ -446,7 +446,7 @@ export function AttachmentView(props: MediaProps) {
 
 function Author(props: { message: Message; thread?: Thread }) {
 	const api = useApi();
-	const room_member = props.thread
+	const room_member = props.thread?.room_id
 		? api.room_members.fetch(
 			() => props.thread!.room_id,
 			() => props.message.author_id,

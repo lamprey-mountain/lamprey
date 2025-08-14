@@ -8,7 +8,7 @@ export const threadMarkRead: Middleware = (
 (next) =>
 async (action) => {
 	if (action.do === "thread.mark_read") {
-		const { thread_id, version_id, delay, also_local } = action as ThreadAction;
+		const { thread_id, version_id, delay, also_local } = action;
 		// NOTE: may need separate timeouts per thread
 		let ackGraceTimeout: number | undefined;
 		let ackDebounceTimeout: number | undefined;
