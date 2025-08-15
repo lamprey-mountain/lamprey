@@ -777,7 +777,7 @@ article.message {
 	z-index: 1;
 }
 
-.tooltip .user {
+.tooltip .user, .user-profile .user {
 	min-width: 200px;
 
 	display: grid;
@@ -1702,4 +1702,13 @@ textarea,
 input[type="text"] {
 	border: solid $sep-500 1px;
 	background: $bg-300;
+}
+
+.user-profile {
+	padding: 8px;
+
+	button {
+		border: solid $sep-500 1px;
+		margin-right: 4px;
+	}
 }
