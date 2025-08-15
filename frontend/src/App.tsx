@@ -48,11 +48,11 @@ import {
 	ThreadMenu,
 	UserMenu,
 } from "./menu/mod.ts";
-import { RouteInviteInner } from "./Invite.tsx";
 import {
 	Nav2,
 	RouteFeed,
 	RouteHome,
+	RouteInvite,
 	RouteRoom,
 	RouteRoomSettings,
 	RouteThread,
@@ -359,19 +359,6 @@ function RouteFriends() {
 				</ul>
 				<pre>{JSON.stringify(friends())}</pre>
 				<button onClick={sendRequest}>send request</button>
-			</div>
-		</>
-	);
-}
-
-function RouteInvite(p: RouteSectionProps) {
-	return (
-		<>
-			<Title title="invite" />
-			<div class="invite" style="padding:8px">
-				<Show when={p.params.code}>
-					<RouteInviteInner code={p.params.code!} />
-				</Show>
 			</div>
 		</>
 	);

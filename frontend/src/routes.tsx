@@ -13,6 +13,7 @@ import { Home } from "./Home.tsx";
 import { Voice } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
 import { getUrl } from "./media/util.tsx";
+import { RouteInviteInner } from "./Invite.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -177,6 +178,16 @@ export const RouteFeed = () => {
 			<Title title="feed" />
 			<Nav2 />
 			<Feed />
+		</>
+	);
+};
+
+export const RouteInvite = (p: RouteSectionProps) => {
+	return (
+		<>
+			<Show when={p.params.code}>
+				<RouteInviteInner code={p.params.code!} />
+			</Show>
 		</>
 	);
 };

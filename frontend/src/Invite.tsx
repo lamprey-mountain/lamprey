@@ -1,18 +1,34 @@
-import { Show } from "solid-js";
+import { createEffect, Show } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
+import { useNavigate } from "@solidjs/router";
+import { Nav2 } from "./routes.tsx";
+import { ChatNav } from "./Nav.tsx";
+
+const Title = (props: { title?: string }) => {
+	createEffect(() => document.title = props.title ?? "");
+	return undefined;
+};
 
 export const RouteInviteInner = (props: { code: string }) => {
 	const api = useApi();
 	const ctx = useCtx();
+	const nav = useNavigate();
 	const invite = api.invites.fetch(() => props.code);
 
 	const name = () => {
 		const i = invite();
-		if (i?.target.type === "Room") {
-			return i.target.room.name;
+		if (!i) return "unknown";
+		switch (i.target.type) {
+			case "Room":
+				return i.target.room.name;
+			case "Thread":
+				return i.target.thread.name;
+			case "Server":
+				return "the server";
+			default:
+				return "unknown";
 		}
-		return "unknown";
 	};
 
 	const join = () => {
@@ -23,18 +39,28 @@ export const RouteInviteInner = (props: { code: string }) => {
 		});
 	};
 
+	const reject = () => {
+		nav("/");
+	};
+
 	return (
 		<>
-			<Show when={invite.loading}>loading...</Show>
-			<Show when={invite()}>
-				<div class="box">
-					invited to {name()} ({invite()?.target.type})
-					<br />
-					<button onClick={join}>join</button>
+			<Title title={invite.loading ? "invite" : `invited to ${name()}`} />
+			<Show when={invite()} fallback="loading...">
+				<div class="invite" style="padding:8px">
+					<div class="box">
+						invited to {name()} ({invite()?.target.type})
+						<br />
+						<button onClick={join}>join</button>
+						<button onClick={reject}>reject</button>
+					</div>
+					<details>
+						<summary>json</summary>
+						<pre>
+							{JSON.stringify(invite(), null, 4)}
+						</pre>
+					</details>
 				</div>
-				<pre>
-					{JSON.stringify(invite(), null, 4)}
-				</pre>
 			</Show>
 		</>
 	);
