@@ -3,8 +3,8 @@ use std::sync::Arc;
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, Room, RoomCreate, RoomId,
-    RoomMembership, RoomPatch, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, RoleId, Room, RoomCreate,
+    RoomId, RoomMembership, RoomPatch, UserId,
 };
 use moka::future::Cache;
 
@@ -95,31 +95,31 @@ impl ServiceRooms {
         .await?;
 
         let role_admin = DbRoleCreate {
+            id: RoleId::new(),
             room_id,
             name: "admin".to_owned(),
             description: None,
             permissions: vec![Permission::Admin],
             is_self_applicable: false,
             is_mentionable: false,
-            is_default: false,
         };
         let role_moderator = DbRoleCreate {
+            id: RoleId::new(),
             room_id,
             name: "moderator".to_owned(),
             description: None,
             permissions: MODERATOR.to_vec(),
             is_self_applicable: false,
             is_mentionable: false,
-            is_default: false,
         };
         let role_everyone = DbRoleCreate {
+            id: RoleId::from(room.id.into_inner()),
             room_id,
             name: "everyone".to_owned(),
-            description: None,
+            description: Some("Default role".to_string()),
             permissions: EVERYONE_TRUSTED.to_vec(),
             is_self_applicable: false,
-            is_mentionable: false,
-            is_default: true,
+            is_mentionable: true,
         };
         let admin = data.role_create(role_admin).await?;
         data.role_create(role_moderator).await?;
@@ -135,7 +135,6 @@ impl ServiceRooms {
         )
         .await?;
         data.role_member_put(creator, admin.id).await?;
-        data.role_apply_default(room.id, creator).await?;
         Ok(room)
     }
 }

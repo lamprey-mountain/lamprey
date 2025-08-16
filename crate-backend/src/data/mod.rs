@@ -122,7 +122,6 @@ pub trait DataRole {
         role_id: RoleId,
         patch: RolePatch,
     ) -> Result<RoleVerId>;
-    async fn role_apply_default(&self, room_id: RoomId, user_id: UserId) -> Result<()>;
 }
 
 #[async_trait]

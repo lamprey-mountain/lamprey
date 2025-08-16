@@ -45,13 +45,13 @@ pub async fn role_create(
     perms.ensure(Permission::RoleManage)?;
     let role = d
         .role_create(DbRoleCreate {
+            id: RoleId::new(),
             room_id,
             name: json.name,
             description: json.description,
             permissions: json.permissions,
             is_self_applicable: json.is_self_applicable,
             is_mentionable: json.is_mentionable,
-            is_default: json.is_default,
         })
         .await?;
 
@@ -61,7 +61,6 @@ pub async fn role_create(
         .add("permissions", &role.permissions)
         .add("is_self_applicable", &role.is_self_applicable)
         .add("is_mentionable", &role.is_mentionable)
-        .add("is_default", &role.is_default)
         .build();
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -134,7 +133,6 @@ pub async fn role_update(
             &start_role.is_mentionable,
             &end_role.is_mentionable,
         )
-        .change("is_default", &start_role.is_default, &end_role.is_default)
         .build();
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -177,6 +175,9 @@ pub async fn role_delete(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    if room_id.into_inner() == role_id.into_inner() {
+        return Err(Error::BadStatic("cannot delete the default role"));
+    }
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;

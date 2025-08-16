@@ -216,8 +216,6 @@ async fn app_invite_bot(
     )
     .await?;
 
-    data.role_apply_default(json.room_id, bot_user_id).await?;
-
     let member = data.room_member_get(json.room_id, bot_user_id).await?;
 
     s.broadcast_room(

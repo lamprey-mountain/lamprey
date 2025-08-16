@@ -156,7 +156,6 @@ async fn room_member_add(
         },
     )
     .await?;
-    d.role_apply_default(room_id, target_user_id).await?;
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)

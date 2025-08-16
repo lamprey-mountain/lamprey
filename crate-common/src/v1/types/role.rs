@@ -31,7 +31,6 @@ pub struct Role {
 
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
-    pub is_default: bool,
     // FIXME(#114): at least some sort of hierarchy
     // pub priority: u64,
 
@@ -64,12 +63,6 @@ pub struct RoleCreate {
     /// if this role can be mentioned by members
     #[serde(default)]
     pub is_mentionable: bool,
-
-    // this might be better..?
-    // pub restrict_mentions: Option<Vec<RoleId | UserId>>,
-    /// if this role is applied by default to all new members
-    #[serde(default)]
-    pub is_default: bool,
     // the main reason this doesn't exist yet is because i've seen in
     // discord how the ui can become extremely unreadable, cluttered, and
     // in general color vomit. plus there's the whole "illegable contrast
@@ -106,7 +99,6 @@ pub struct RolePatch {
 
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
-    pub is_default: Option<bool>,
 }
 
 impl Diff<Role> for RolePatch {
@@ -115,7 +107,6 @@ impl Diff<Role> for RolePatch {
             || self.description.changes(&other.description)
             || self.is_self_applicable.changes(&other.is_self_applicable)
             || self.is_mentionable.changes(&other.is_mentionable)
-            || self.is_default.changes(&other.is_default)
             || self.permissions.changes(&other.permissions)
     }
 }

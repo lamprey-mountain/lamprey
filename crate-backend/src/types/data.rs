@@ -224,7 +224,6 @@ pub struct DbRole {
     pub permissions: Vec<DbPermission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
-    pub is_default: bool,
 }
 
 impl From<DbRole> for Role {
@@ -238,20 +237,19 @@ impl From<DbRole> for Role {
             permissions: row.permissions.into_iter().map(Into::into).collect(),
             is_self_applicable: row.is_self_applicable,
             is_mentionable: row.is_mentionable,
-            is_default: row.is_default,
             member_count: 0, // Placeholder, will be populated by the query
         }
     }
 }
 
 pub struct DbRoleCreate {
+    pub id: RoleId,
     pub room_id: RoomId,
     pub name: String,
     pub description: Option<String>,
     pub permissions: Vec<Permission>,
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
-    pub is_default: bool,
 }
 
 pub struct DbMessageCreate {

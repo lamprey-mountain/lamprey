@@ -24,6 +24,10 @@ impl DataPermission for Postgres {
                 JOIN role_member AS r ON r.user_id = m.user_id
                 JOIN role ON r.role_id = role.id AND role.room_id = m.room_id
                 UNION
+                SELECT m.room_id, m.user_id, unnest(role.permissions) as permission
+                FROM room_member AS m
+                JOIN role ON role.id = m.room_id
+                UNION
                 SELECT room_id, user_id, 'View' AS permission
                 FROM room_member
             )
