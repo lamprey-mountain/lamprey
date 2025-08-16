@@ -20,6 +20,8 @@ export type AuditLogChange = components["schemas"]["AuditLogChange"];
 export type Permission = components["schemas"]["Permission"];
 export type Embed = components["schemas"]["Embed"];
 export type EmojiCustom = components["schemas"]["EmojiCustom"];
+export type RelationshipWithUserId =
+	components["schemas"]["RelationshipWithUserId"];
 
 export type Pagination<T> = {
 	total: number;

@@ -3,6 +3,7 @@ import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
 	Applications,
+	Blocked,
 	Email,
 	Info,
 	Sessions,
@@ -15,7 +16,7 @@ const tabs = [
 	{ name: "sessions", path: "sessions", component: Sessions },
 	{ name: "audit log", path: "audit-log", component: Todo },
 	{ name: "notifications", path: "notifications", component: Todo },
-	{ name: "blocked users", path: "blocks", component: Todo },
+	{ name: "blocked users", path: "blocks", component: Blocked },
 	{ name: "email", path: "email", component: Email },
 	{ name: "applications", path: "applications", component: Applications },
 ];

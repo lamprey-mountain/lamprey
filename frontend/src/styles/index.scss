@@ -1712,3 +1712,35 @@ input[type="text"] {
 		margin-right: 4px;
 	}
 }
+
+.blocked-users-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	max-width: 500px;
+}
+
+.blocked-user-item {
+	display: flex;
+	align-items: center;
+	padding: 8px;
+
+	& + .blocked-user-item {
+		border-top: 1px solid $sep-500;
+	}
+
+	.avatar {
+		height: 40px;
+		width: 40px;
+		margin-right: 12px;
+	}
+
+	.name {
+		flex-grow: 1;
+	}
+
+	button {
+		margin-left: 12px;
+		border: solid $sep-500 1px;
+	}
+}
