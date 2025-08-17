@@ -246,6 +246,26 @@ impl Connection {
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
             MessageClient::VoiceDispatch { user_id, payload } => {
+                let srv = self.s.services();
+                let msg: SignallingMessage = serde_json::from_value(payload.clone())?;
+                match &msg {
+                    SignallingMessage::VoiceState { state: Some(state) } => {
+                        let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
+                        perms.ensure(Permission::VoiceConnect)?;
+                    }
+                    SignallingMessage::Offer { .. } => {
+                        // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
+                        // let perms = srv.perms.for_thread(user_id, voice_state.thread_id).await?;
+                        // if tracks.iter().any(|t| t.kind == MediaKindSerde::Audio) {
+                        //     perms.ensure(Permission::VoiceSpeak)?;
+                        // }
+                        // if tracks.iter().any(|t| t.kind == MediaKindSerde::Video) {
+                        //     perms.ensure(Permission::VoiceVideo)?;
+                        // }
+                    }
+                    _ => {}
+                }
+
                 // TODO: error handling
                 let _ = self.s.sushi_sfu.send(SfuRequest {
                     user_id,

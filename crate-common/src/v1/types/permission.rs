@@ -228,7 +228,7 @@ pub enum Permission {
     /// view audit log
     ViewAuditLog,
 
-    /// (unimplemented) connect and listen to voice threads
+    /// connect and listen to voice threads
     VoiceConnect,
 
     /// (unimplemented) stop someone from listening
