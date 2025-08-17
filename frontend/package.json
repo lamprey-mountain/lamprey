@@ -33,7 +33,9 @@
 		"solid-floating-ui": "^0.3.1",
 		"solid-js": "^1.9.9",
 		"typed-emitter": "^2.1.0",
-		"uuidv7": "^1.0.2"
+		"uuidv7": "^1.0.2",
+		"twemoji": "^14.0.2",
+		"emojibase-data": "^7.0.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.17.1",
