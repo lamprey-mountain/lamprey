@@ -50,9 +50,8 @@ export function Input(props: InputProps) {
 	}, 8000);
 
 	const editor_state = () => {
-		let state = ctx.thread_editor_state.get(props.thread.id)!;
-		// if (!state) {
-		if (true) {
+		let state = ctx.thread_editor_state.get(props.thread.id);
+		if (!state) {
 			state = createEditorState(
 				(text) => {
 					ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
