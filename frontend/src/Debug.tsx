@@ -7,11 +7,16 @@ import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
+import { SearchInput } from "./SearchInput.tsx";
 
 export const Debug = () => {
 	return (
 		<div class="debug">
 			<h3>area 51</h3>
+			<details>
+				<summary>search thing</summary>
+				<SearchInput />
+			</details>
 			<details>
 				<summary>invite json</summary>
 				<InviteView />
