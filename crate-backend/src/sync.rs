@@ -251,6 +251,7 @@ impl Connection {
                 match &msg {
                     SignallingMessage::VoiceState { state: Some(state) } => {
                         let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
+                        perms.ensure_view()?;
                         perms.ensure(Permission::VoiceConnect)?;
                     }
                     SignallingMessage::Offer { .. } => {
