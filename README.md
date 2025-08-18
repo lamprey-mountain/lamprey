@@ -1,6 +1,8 @@
 # lamprey mountain
 
-testing playground for interesting ideas
+the internet's finest asylum
+
+a testing playground for interesting ideas
 
 ## status
 
