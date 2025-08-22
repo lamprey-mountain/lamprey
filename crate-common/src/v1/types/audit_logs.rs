@@ -171,4 +171,16 @@ pub enum AuditLogEntryType {
     // FriendRemove,
     // BlockAdd,
     // BlockRemove,
+    // SessionLogin, // SessionCreate doesnt make sense because when sessions are created they aren't linked to any users
+    // SessionUpdate,
+    // SessionDelete,
+    // AuthUpdate,
+    // EmailUpdate,
+
+    // // for server audit log, which doesnt exist yet
+    // ServerUpdate,
+    // UserCreate,
+    // UserUpdate, // if changed by an admin?
+    // UserDelete,
+    // RoomDelete,
 }
