@@ -128,6 +128,23 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<div>(todo) visibility</div>
 			<div>(todo) order, layout</div>
 			<br />
+			<div class="danger">
+				<h3>danger zone</h3>
+				<label>
+					<button onClick={() => alert("todo")}>transfer ownership</button>
+					<span style="margin-left:8px">
+						makes this room someone else's problem
+					</span>
+				</label>
+				<br />
+				<label>
+					<button onClick={() => alert("todo")}>archive</button>
+					<span style="margin-left:8px">
+						makes this entirely read-only and hides it in the nav bar
+					</span>
+				</label>
+				<br />
+			</div>
 		</>
 	);
 }

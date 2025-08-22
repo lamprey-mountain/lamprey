@@ -46,6 +46,25 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 			<div>(todo) archived</div>
 			<div>(todo) visibility</div>
 			<br />
+			{/* TODO: add padding to all settings */}
+			<div class="danger" style="margin:0 2px">
+				<h3>danger zone</h3>
+				<label>
+					<button onClick={() => alert("todo")}>archive</button>
+					<span style="margin-left:8px">
+						makes this entirely read-only and hides it in the nav bar
+					</span>
+				</label>
+				<br />
+				<label>
+					<button onClick={() => alert("todo")}>remove</button>
+					<span style="margin-left:8px">
+						archives and locks this thread and hides it from all listings
+						(direct links still work)
+					</span>
+				</label>
+				<br />
+			</div>
 		</>
 	);
 }

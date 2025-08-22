@@ -14,6 +14,7 @@ import { Voice } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
 import { getUrl } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
+import { AdminSettings } from "./AdminSettings.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -100,6 +101,15 @@ export const RouteRoomSettings = (p: RouteSectionProps) => {
 			<Show when={room()}>
 				<RoomSettings room={room()!} page={p.params.page} />
 			</Show>
+		</>
+	);
+};
+
+export const RouteAdminSettings = (p: RouteSectionProps) => {
+	return (
+		<>
+			<Title title={"admin settings"} />
+			<AdminSettings page={p.params.page} />
 		</>
 	);
 };
