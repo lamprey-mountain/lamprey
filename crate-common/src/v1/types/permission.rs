@@ -40,12 +40,12 @@ pub enum Permission {
     Admin,
 
     /// can add bots, configure bots they have added, and kick bots they have added
-    // TODO: deprecate
+    // TODO: deprecate/merge with BotsManage
     BotsAdd,
 
     /// can configure all bots and kick all bots
     /// implies BotsAdd
-    // TODO: rename to IntegrationsManage?
+    // TODO: rename to IntegrationsManage? or Tinker
     BotsManage,
 
     /// can add emoji and remove emoji they have added
@@ -82,6 +82,8 @@ pub enum Permission {
     MemberKick,
 
     /// edit member name
+    // TODO: rename to MemberManageProfile
+    // TODO: add MemberChangeProfile for changing your own nickname/profile
     MemberManage,
 
     /// send attachments
@@ -98,6 +100,7 @@ pub enum Permission {
 
     /// (internal) can edit this message
     /// requires MessageCreate
+    // TODO: remove (for now?)
     MessageEdit,
 
     /// send embeds (link previews)
@@ -115,9 +118,11 @@ pub enum Permission {
     MessagePin,
 
     /// (unimplemented) use custom avatar (otherwise use default avatar)
+    // TODO: merge with MemberChangeProfile
     ProfileAvatar,
 
     /// (unimplemented) use a custom name (nickname), description, etc
+    // TODO: merge with MemberChangeProfile
     ProfileOverride,
 
     /// add new reactions
@@ -165,15 +170,19 @@ pub enum Permission {
     ThreadCreateChat,
 
     /// (unimplemented) can create document threads
+    // TODO: remove for now, will re-add when documents are implemented
     ThreadCreateDocument,
 
     /// (unimplemented) can create event threads
+    // TODO: remove for now, will re-add when events are implemented
     ThreadCreateEvent,
 
     /// (unimplemented) can create forum (linear) threads
+    // TODO: rename to ThreadCreateForum
     ThreadCreateForumLinear,
 
     /// (unimplemented) can create forum (tree) threads
+    // TODO: remove
     ThreadCreateForumTree,
 
     /// (unimplemented) can create private threads (what is "private"?)
@@ -183,11 +192,13 @@ pub enum Permission {
     ThreadCreatePublic,
 
     /// (unimplemented) can create table threads
+    // TODO: remove for now, will re-add when tables are implemented
     ThreadCreateTable,
 
     /// (unimplemented) can create voice threads
     ThreadCreateVoice,
 
+    // TODO:add permissions for category threads when they are implemented
     /// delete (and undelete) threads
     ThreadDelete,
 
@@ -210,6 +221,7 @@ pub enum Permission {
     // rename to ThreadCreateAnnouncement?
     ThreadPublish,
 
+    // TODO: remove user permissions for now
     /// (user) access dms
     UserDms,
 
@@ -223,6 +235,7 @@ pub enum Permission {
     UserStatus,
 
     /// (internal) can view this thing; see other ViewFoo permissions for things you can set
+    // TODO: make this not internal; ie let people restrict who can view what
     View,
 
     /// view audit log
@@ -232,18 +245,15 @@ pub enum Permission {
     VoiceConnect,
 
     /// (unimplemented) stop someone from listening
-    // remove?
     VoiceDeafen,
 
     /// (unimplemented) disconnect members from voice threads
-    // merge with VoiceMove?
     VoiceDisconnect,
 
     /// (unimplemented) move members between voice threads
     VoiceMove,
 
     /// (unimplemented) stop someone from talking
-    // remove?
     VoiceMute,
 
     /// (unimplemented) talk louder
