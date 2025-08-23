@@ -45,6 +45,7 @@ pub mod thread_member;
 pub mod user;
 pub mod user_config;
 pub mod user_status;
+pub mod visibility;
 
 #[cfg(feature = "feat_voice")]
 pub mod voice;
