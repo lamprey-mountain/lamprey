@@ -144,6 +144,7 @@ pub trait Data {
     async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>>;
     async fn get_portal_by_discord_channel(&self, id: DcChannelId) -> Result<Option<PortalConfig>>;
     async fn insert_portal(&self, portal: PortalConfig) -> Result<()>;
+    async fn delete_portal(&self, lamprey_thread_id: ThreadId) -> Result<()>;
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
     async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>>;
@@ -211,6 +212,14 @@ impl Data for Globals {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn delete_portal(&self, lamprey_thread_id: ThreadId) -> Result<()> {
+        let id = lamprey_thread_id.to_string();
+        query!("DELETE FROM portal WHERE lamprey_thread_id = ?", id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
