@@ -20,14 +20,14 @@ use crate::{
         DbMessageCreate, DbThreadCreate, DbThreadType, MessageSync, MessageType, MessageVerId,
         Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
-    ServerState,
+    Error, ServerState,
 };
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
-/// Thread create room
+/// Room thread create
 ///
 /// Create a thread in a room
 #[utoipa::path(
@@ -136,7 +136,7 @@ async fn thread_create_room(
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
-/// Thread create direct (TODO)
+/// Dm thread create (TODO)
 ///
 /// Create a thread outside of a room, for dms
 #[utoipa::path(
@@ -157,7 +157,7 @@ async fn thread_create(
     todo!()
 }
 
-/// Get a thread
+/// Thread get
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}",
@@ -179,7 +179,7 @@ async fn thread_get(
     Ok((StatusCode::OK, Json(thread)))
 }
 
-/// List threads in a room
+/// Room thread list
 // maybe in the future i'll replace this with a more flexible "thread query/search" api
 #[utoipa::path(
     get,
@@ -210,7 +210,7 @@ async fn thread_list(
     Ok(Json(res))
 }
 
-/// List archived threads in a room
+/// Room thread list archived
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread/archived",
@@ -239,7 +239,32 @@ async fn thread_list_archived(
     Ok(Json(res))
 }
 
-/// Edit a thread
+/// Room thread list removed
+///
+/// List removed threads in a room. Requires the `ThreadRemove` permission.
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/thread/removed",
+    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = PaginationResponse<Thread>, description = "List removed room threads success"),
+    )
+)]
+async fn thread_list_removed(
+    Path((_room_id,)): Path<(RoomId,)>,
+    Query(_q): Query<PaginationQuery<ThreadId>>,
+    Auth(_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    // let data = s.data();
+    // let perms = s.services().perms.for_room(user_id, room_id).await?;
+    // perms.ensure_view()?;
+    // let mut res = data.thread_list_removed(room_id, q).await?;
+    Err(Error::Unimplemented)
+}
+
+/// Thread edit
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}",
@@ -286,7 +311,7 @@ struct AckRes {
     version_id: MessageVerId,
 }
 
-/// Ack thread
+/// Thread ack
 ///
 /// Mark a thread as read (or unread).
 #[utoipa::path(
@@ -329,53 +354,7 @@ async fn thread_ack(
     }))
 }
 
-/// Pin thread
-#[utoipa::path(
-    put,
-    path = "/room/{room_id}/pin/{thread_id}",
-    params(
-        ("thread_id", description = "Thread id"),
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = Thread, description = "success"),
-        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
-    )
-)]
-#[deprecated = "top level threads will use category/ordering, subthreads may be pinnable but the api would then need to be moved under threads"]
-async fn thread_pin(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    Ok(StatusCode::NOT_IMPLEMENTED)
-}
-
-/// Unpin thread
-#[deprecated = "top level threads will use category/ordering, subthreads may be pinnable but the api would then need to be moved under threads"]
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/pin/{thread_id}",
-    params(
-        ("thread_id", description = "Thread id"),
-    ),
-    tags = ["thread"],
-    responses(
-        (status = OK, body = Thread, description = "success"),
-        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
-    )
-)]
-async fn thread_unpin(
-    Path(_thread_id): Path<ThreadId>,
-    Auth(_user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    Ok(StatusCode::NOT_IMPLEMENTED)
-}
-
-/// Archive thread
+/// Thread archive
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/archive",
@@ -415,7 +394,7 @@ async fn thread_archive(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Unarchive thread
+/// Thread unarchive
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/archive",
@@ -455,7 +434,10 @@ async fn thread_unarchive(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Remove thread
+/// Thread remove
+// NOTE: this isn't DELETE. in the future, i probably want to be able to add/remove threads in rooms instead of globally, eg.
+// PUT /room/{room_id}/thread/{thread_id}
+// DELETE /room/{room_id}/thread/{thread_id}
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/remove",
@@ -487,7 +469,7 @@ async fn thread_remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Restore thread
+/// Thread restore
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/remove",
@@ -519,7 +501,7 @@ async fn thread_restore(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Send typing
+/// Thread trigger typing indicator
 ///
 /// Send a typing notification to a thread
 #[utoipa::path(
@@ -559,7 +541,7 @@ async fn thread_typing(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Lock thread (TODO)
+/// Thread lock (TODO)
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/lock",
@@ -579,7 +561,7 @@ async fn thread_lock(
     todo!()
 }
 
-/// Unlock thread (TODO)
+/// Thread unlock (TODO)
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/lock",
@@ -606,10 +588,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_get))
         .routes(routes!(thread_list))
         .routes(routes!(thread_list_archived))
+        .routes(routes!(thread_list_removed))
         .routes(routes!(thread_update))
         .routes(routes!(thread_ack))
-        .routes(routes!(thread_pin))
-        .routes(routes!(thread_unpin))
         .routes(routes!(thread_archive))
         .routes(routes!(thread_unarchive))
         .routes(routes!(thread_remove))

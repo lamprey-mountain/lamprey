@@ -25,7 +25,7 @@ use crate::{
 
 use super::util::{Auth, HeaderReason};
 
-/// Create a room
+/// Room create
 #[utoipa::path(
     post,
     path = "/room",
@@ -71,7 +71,7 @@ async fn room_create(
     Ok((StatusCode::CREATED, Json(room)))
 }
 
-/// Get a room by its id
+/// Room get
 #[utoipa::path(
     get,
     path = "/room/{room_id}",
@@ -133,7 +133,7 @@ enum RoomListInclude {
     Archived,
 }
 
-/// List visible rooms
+/// Room list
 #[utoipa::path(
     get,
     path = "/room",
@@ -153,7 +153,7 @@ async fn room_list(
     Ok(Json(res))
 }
 
-/// Edit a room
+/// Room edit
 #[utoipa::path(
     patch,
     path = "/room/{room_id}",
@@ -214,7 +214,7 @@ async fn room_edit(
     Ok(Json(room))
 }
 
-/// Fetch audit logs
+/// Room audit logs
 #[utoipa::path(
     get,
     path = "/room/{room_id}/audit-logs",
@@ -241,7 +241,7 @@ async fn room_audit_logs(
     Ok(Json(logs))
 }
 
-/// Ack room (TODO)
+/// Room ack (TODO)
 ///
 /// Mark all threads in a room as read.
 #[utoipa::path(

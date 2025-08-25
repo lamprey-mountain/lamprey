@@ -24,7 +24,9 @@ use crate::{
 use super::util::{Auth, HeaderIdempotencyKey, HeaderReason};
 use crate::error::Result;
 
-/// Create a message
+/// Message create
+///
+/// Send a message to a thread
 #[utoipa::path(
     post,
     path = "/thread/{thread_id}/message",
@@ -65,7 +67,7 @@ struct ContextResponse {
     has_before: bool,
 }
 
-/// Get context for message
+/// Message get context
 ///
 /// More efficient than calling List messages twice
 #[utoipa::path(
@@ -126,7 +128,9 @@ async fn message_context(
     Ok(Json(res))
 }
 
-/// List messages in a thread
+/// Messages list
+///
+/// Paginate messages in a thread
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message",
@@ -152,7 +156,7 @@ async fn message_list(
     Ok(Json(res))
 }
 
-/// Get a message
+/// Message get
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message/{message_id}",
@@ -178,7 +182,7 @@ async fn message_get(
     Ok(Json(message))
 }
 
-/// edit a message
+/// Message edit
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}/message/{message_id}",
@@ -207,7 +211,7 @@ async fn message_edit(
     Ok((status, Json(message)))
 }
 
-/// Delete message
+/// Message delete (TEMP?)
 ///
 /// Note that this endpoint allows deleting your own messages, while message
 /// moderate always requires the full permission
@@ -273,7 +277,7 @@ async fn message_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// List message versions
+/// Message version list
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message/{message_id}/version",
@@ -305,7 +309,7 @@ async fn message_version_list(
     Ok(Json(res))
 }
 
-/// Get message version
+/// Message version get
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",
@@ -334,7 +338,7 @@ async fn message_version_get(
     Ok(Json(message))
 }
 
-/// Delete message version
+/// Message version delete
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",
@@ -428,6 +432,26 @@ struct MessageModerate {
 }
 
 /// Message moderate (WIP)
+///
+/// Bulk remove, restore, or delete messages.
+///
+/// Deleting a message:
+/// - Deleted messages remain visible to moderators (and sender, although there's no ui for this).
+/// - Deleted messages cannot be restored by moderators (ask your local server admin if needed).
+/// - Deleted messages are garbage collected after 7 days.
+///
+/// Removing a message:
+/// - Removing a message hides it from all non-moderators and the sender.
+/// - Removal is reversable via restoration, unlike deletion.
+/// - Removed messages are never garbage collected.
+/// - There is (will be) an endpoint for deleting all removed messages.
+/// - This is a "softer" form of deletion, intended for moderators you don't fully trust.
+///
+/// Permissions:
+/// - `MessageDelete` allows deleting messages and viewing deleted messages.
+/// - `MessageRemove` allows removing/restoring messages and viewing removed messages.
+/// - `Omnescience` allows viewing deleted and removed messages.
+/// - Users always have `MessageDelete` for their own messages.
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}/message",
@@ -502,6 +526,9 @@ async fn message_moderate(
 }
 
 /// Message move (TODO)
+///
+/// Move messages from one thread to another. Requires `MessageMove` in both the
+/// source and target thread.
 #[utoipa::path(
     post,
     path = "/thread/{thread_id}/migrate",

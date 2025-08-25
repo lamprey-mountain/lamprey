@@ -33,7 +33,7 @@ pub struct Batch {
 #[utoipa::path(
     post,
     path = "/batch",
-    tags = ["voice"],
+    tags = ["batch"],
     responses(
         (status = OK, body = (), description = "ok"),
     )
@@ -49,7 +49,7 @@ async fn batch_create(State(_s): State<Arc<ServerState>>) -> Result<Json<()>> {
     params(
         ("batch_id" = String, Path, description = "Batch ID to commit")
     ),
-    tags = ["voice"],
+    tags = ["batch"],
     responses(
         (status = 200, body = (), description = "Batch committed successfully"),
     )
@@ -68,7 +68,7 @@ async fn batch_commit(
     params(
         ("batch_id" = String, Path, description = "Batch ID to rollback/delete")
     ),
-    tags = ["voice"],
+    tags = ["batch"],
     responses(
         (status = 200, body = (), description = "Batch rolled back successfully"),
     )
