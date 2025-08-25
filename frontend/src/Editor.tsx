@@ -15,6 +15,9 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { marked, type Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
+import { initTurndownService } from "./turndown.ts";
+
+const turndown = initTurndownService();
 
 const md = marked.use({
 	breaks: true,
@@ -56,6 +59,23 @@ const schema = new Schema({
 			parseDOM: [{
 				tag: "span[data-mention]",
 				getAttrs: (el) => ({ user: el.dataset.mention }),
+			}],
+		},
+		emoji: {
+			group: "inline",
+			atom: true,
+			inline: true,
+			selectable: false,
+			attrs: {
+				id: {},
+				shortname: {},
+			},
+			toDOM: (
+				n,
+			) => ["span", { "data-emoji-id": n.attrs.id }, `:${n.attrs.name}:`],
+			parseDOM: [{
+				tag: "span[data-emoji]",
+				getAttrs: (el) => ({ id: el.dataset.id, shortname: el.dataset.emoji }),
 			}],
 		},
 		text: {
@@ -372,14 +392,14 @@ export const Editor = (props: EditorProps) => {
 
 				/*
 				some nice colors from an old project
-				  --background-1: #24262b;
-  --background-2: #1e2024;
-  --background-3: #191b1d;
-  --background-4: #17181a;
-  --foreground-1: #eae8efcc;
-  --foreground-2: #eae8ef9f;
-  --foreground-link: #b18cf3;
-  --foreground-danger: #fa6261;
+					--background-1: #24262b;
+	--background-2: #1e2024;
+	--background-3: #191b1d;
+	--background-4: #17181a;
+	--foreground-1: #eae8efcc;
+	--foreground-2: #eae8ef9f;
+	--foreground-link: #b18cf3;
+	--foreground-danger: #fa6261;
 				*/
 
 				const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
@@ -418,121 +438,15 @@ export const Editor = (props: EditorProps) => {
 				return true;
 			},
 			transformPastedHTML(html) {
-				const parser = new globalThis.DOMParser();
-				const tmp = parser.parseFromString(html, "text/html");
+				console.group("turndown");
+				console.log("html", html);
+				const md = turndown.turndown(html);
+				console.log("convert html -> md", { html, md });
+				console.groupEnd();
 
-				for (
-					const node of Array.from(tmp.querySelectorAll(
-						"script, form, svg, nav, footer, [hidden]:not([hidden=false]) [aria-hidden]:not([aria-hidden=false]) " +
-							["-ad-", "sponsor", "ad-break", "social", "sidebar", "comment"]
-								.map((i) => `[class*=${i}], [id*=${i}]`).join(", "),
-					))
-				) {
-					node.remove();
-				}
-
-				// FIXME: don't mangle whitespace
-				function walk(n: Node): string {
-					if (n.nodeType === Node.COMMENT_NODE) return "";
-					if (n.nodeType === Node.TEXT_NODE) return n.textContent ?? "";
-
-					// TODO: tables
-					const c = Array.from(n.childNodes);
-					switch (n.nodeName) {
-						case "#document":
-						case "HTML":
-						case "BODY":
-						case "MAIN":
-						case "ARTICLE":
-						case "HEADER":
-						case "SECTION":
-						case "DIV":
-						case "TABLE":
-						case "TBODY":
-						case "THEAD":
-						case "TR":
-						case "TURBO-FRAME":
-						case "TASK-LISTS": // github
-						case "X-HTML-IMPORT":
-							return c.map(walk).join("");
-						case "CENTER":
-						case "SPAN":
-						case "LI":
-						case "TD":
-						case "TH":
-							return c.map(walk).join("");
-						case "H1":
-							return "\n\n# " + (n.textContent ?? "").trim() + "\n\n";
-						case "H2":
-							return "\n\n## " + (n.textContent ?? "").trim() + "\n\n";
-						case "H3":
-							return "\n\n### " + (n.textContent ?? "").trim() + "\n\n";
-						case "H4":
-							return "\n\n#### " + (n.textContent ?? "").trim() + "\n\n";
-						case "H5":
-							return "\n\n##### " + (n.textContent ?? "").trim() + "\n\n";
-						case "H6":
-							return "\n\n###### " + (n.textContent ?? "").trim() + "\n\n";
-						case "P":
-							return "\n\n" + c.map(walk).join("") + "\n\n";
-						case "B":
-						case "BOLD":
-						case "STRONG":
-							return `**${c.map(walk).join("")}**`;
-						case "EM":
-						case "I":
-							return `*${c.map(walk).join("")}*`;
-						case "CODE":
-							return `\`${c.map(walk).join("")}\``;
-						case "UL":
-							return `\n${
-								c.filter((i) => i.nodeName === "LI").map(walk).map((i) =>
-									`- ${i}`
-								).join("\n")
-							}\n`;
-						case "OL":
-							return `\n${
-								c.filter((i) => i.nodeName === "LI").map(walk).map((i, x) =>
-									`${x + 1}. ${i}`
-								).join("\n")
-							}\n`;
-						case "A": {
-							const href = (n as Element).getAttribute("href");
-							const text = c.map(walk).join("");
-							if (!text) return "\n";
-							if (!href) return text;
-							return `[${text}](${href})`;
-						}
-						case "PRE": {
-							const el = n as Element;
-							const lang = el.getAttribute("lang") ??
-								el.getAttribute("language") ??
-								el.getAttribute("class")?.match(/\b(lang|language)-(.+)\b/)
-									?.[2] ??
-								"";
-							return `\n\n\`\`\`${lang}\n${n.textContent}\n\`\`\`\n\n`;
-						}
-						case "BLOCKQUOTE":
-							return `\n\n${
-								c.map(walk).join("").split("\n").map((i) => `> ${i}`).join("\n")
-							}\n\n`;
-						// case "CITE":
-						//   return n.textContent;
-						default: {
-							return n.textContent ?? "";
-							// return `(??? ${n.nodeName} ???)`;
-						}
-					}
-				}
-
-				const md = walk(tmp).replace(/\n{3,}/gm, "\n\n").replace(
-					/^\n|\n$/g,
-					"",
-				);
-				console.log({ from: html, to: md });
-				const p = document.createElement("pre");
-				p.innerText = md;
-				return p.outerHTML;
+				const container = document.createElement("div");
+				container.innerText = md;
+				return container.outerHTML;
 			},
 		});
 		view.focus();
