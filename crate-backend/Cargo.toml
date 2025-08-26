@@ -56,7 +56,3 @@ futures = "0.3.31"
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
-
-[features]
-default = ["voice"]
-voice = []

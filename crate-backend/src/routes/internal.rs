@@ -22,13 +22,11 @@ use crate::{Error, ServerState};
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
 pub enum SfuCommand {
-    #[cfg(feature = "voice")]
     VoiceDispatch {
         user_id: UserId,
         payload: SignallingMessage,
     },
 
-    #[cfg(feature = "voice")]
     VoiceState {
         user_id: UserId,
         old: Option<VoiceState>,
@@ -43,7 +41,6 @@ pub enum SfuCommand {
     tags = ["internal"],
     responses((status = 101, description = "Switching Protocols")),
 )]
-#[allow(unused)]
 async fn internal_rpc(
     ws: WebSocketUpgrade,
     headers: HeaderMap,
@@ -77,11 +74,9 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                         let s = s.clone();
                         tokio::spawn(async move {
                             let result = match json {
-                                #[cfg(feature = "voice")]
                                 SfuCommand::VoiceDispatch { user_id, payload } => {
                                     s.broadcast(MessageSync::VoiceDispatch { user_id, payload })
                                 }
-                                #[cfg(feature = "voice")]
                                 SfuCommand::VoiceState {
                                     user_id,
                                     old,
