@@ -1,15 +1,18 @@
 use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
-    routing::get,
-    Router,
 };
 use common::v1::types::{EmojiId, MediaId};
 use serde::Deserialize;
 use std::io::Cursor;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 use crate::{data::lookup_emoji, error::Error, AppState};
 
+#[utoipa::path(get, path = "/media/{media_id}")]
+/// Fetch media
+///
 /// download a piece of media
 async fn get_media(
     State(state): State<AppState>,
@@ -22,9 +25,13 @@ async fn get_media(
 
 #[derive(Deserialize)]
 struct ThumbQuery {
+    /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
     size: Option<u32>,
 }
 
+#[utoipa::path(get, path = "/thumb/{media_id}")]
+/// Fetch thumbnail
+///
 /// get a thumbnail for a piece of media
 async fn get_thumb(
     State(state): State<AppState>,
@@ -59,6 +66,9 @@ async fn get_thumb(
     Ok(axum::body::Bytes::from(buf.into_inner()))
 }
 
+#[utoipa::path(get, path = "/emoji/{emoji_id}")]
+/// Fetch emoji
+///
 /// directly get an emoji's thumbnail
 async fn get_emoji(
     State(state): State<AppState>,
@@ -69,9 +79,9 @@ async fn get_emoji(
     get_thumb(State(state), Path(media_id), Query(query)).await
 }
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
-        .route("/media/{media_id}", get(get_media))
-        .route("/thumb/{media_id}", get(get_thumb))
-        .route("/emoji/{emoji_id}", get(get_emoji))
+pub fn routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(get_media))
+        .routes(routes!(get_thumb))
+        .routes(routes!(get_emoji))
 }

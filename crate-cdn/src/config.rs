@@ -7,8 +7,7 @@ pub struct Config {
     pub database_url: String,
     pub s3: ConfigS3,
     pub thumb_sizes: Vec<u32>,
-    // // TODO: opentelemetry
-    // pub otel_trace_endpoint: Option<String>,
+    pub otel_trace_endpoint: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

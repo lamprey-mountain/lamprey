@@ -1,31 +1,23 @@
-use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::get,
-    Router,
-};
-use common::v1::types::{EmojiId, MediaId};
+use axum::{response::Html, routing::get, Json};
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
 use http::{header, HeaderName};
 use opendal::{layers::LoggingLayer, Operator};
-use serde::Deserialize;
-use sqlx::query_scalar;
+use opentelemetry_otlp::WithExportConfig;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{io::Cursor, net::SocketAddr, str::FromStr, sync::Arc, time::Duration};
-
-use tower_http::{catch_panic::CatchPanicLayer, cors::CorsLayer, propagate_header::PropagateHeaderLayer, trace::TraceLayer};
-use tracing::info;
-use tracing_subscriber::EnvFilter;
-use url::Url;
-
-use crate::{
-    config::Config,
-    error::{Error, Result},
+use std::{str::FromStr, sync::Arc, time::Duration};
+use tower_http::{
+    catch_panic::CatchPanicLayer, cors::CorsLayer, propagate_header::PropagateHeaderLayer,
+    trace::TraceLayer,
 };
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+
+use crate::config::Config;
 
 mod config;
 mod data;
@@ -38,6 +30,10 @@ struct AppState {
     s3: Operator,
     config: Arc<Config>,
 }
+
+#[derive(OpenApi)]
+#[openapi(info(title = "cdn docs", description = "documentation for the cdn",))]
+struct ApiDoc;
 
 fn cors() -> CorsLayer {
     use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
@@ -55,9 +51,23 @@ async fn main() -> anyhow::Result<()> {
         .merge(Env::raw())
         .extract()?;
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_str(&config.rust_log)?)
-        .init();
+    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
+    if let Some(endpoint) = &config.otel_trace_endpoint {
+        exporter = exporter.with_endpoint(endpoint);
+    }
+    let exporter = exporter.build()?;
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .build();
+    use opentelemetry::trace::TracerProvider;
+    let tracer = provider.tracer("cdn");
+    opentelemetry::global::set_tracer_provider(provider);
+    let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+    let subscriber = Registry::default()
+        .with(EnvFilter::from_str(&config.rust_log)?)
+        .with(tracing_subscriber::fmt::layer())
+        .with(telemetry_layer);
+    tracing::subscriber::set_global_default(subscriber)?;
 
     info!("starting cdn with config: {:#?}", config);
 
@@ -83,22 +93,16 @@ async fn main() -> anyhow::Result<()> {
         config: Arc::new(config),
     };
 
-    // let state = Arc::new(ServerState::new(config, pool, blobs));
-
-    // let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-    //     .nest("/api/v1", routes::routes())
-    //     .with_state(state)
-    //     .split_for_parts();
-    // let router = router
-    //     .route("/api/docs.json", get(|| async { Json(api) }))
-    //     .route(
-    //         "/api/docs",
-    //         get(|| async { Html(include_str!("scalar.html")) }),
-    //     )
-
-    let app = Router::new()
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(routes::routes())
         .with_state(state)
+        .split_for_parts();
+    let router = router
+        .route("/api/docs.json", get(|| async { Json(api) }))
+        .route(
+            "/api/docs",
+            get(|| async { Html(include_str!("scalar.html")) }),
+        )
         .route("/", get(|| async { "it works!" }))
         .layer(cors())
         .layer(TraceLayer::new_for_http())
@@ -107,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
             "x-trace-id",
         )));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:4001").await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, router).await?;
 
     Ok(())
 }
