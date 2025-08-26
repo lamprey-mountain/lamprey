@@ -178,6 +178,7 @@ async fn serve(config: Config) -> Result<()> {
             "/api/docs",
             get(|| async { Html(include_str!("scalar.html")) }),
         )
+        .route("/", get(|| async { "it works!" }))
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
