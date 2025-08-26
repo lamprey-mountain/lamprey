@@ -8,7 +8,10 @@ use validator::Validate;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::v1::types::util::{some_option, Diff, Time};
+use crate::v1::types::{
+    util::{some_option, Diff, Time},
+    InviteCode,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -39,9 +42,11 @@ pub struct RoomMember {
     // TODO: per-room avatars? override_avatar: z.string().url().or(z.literal("")),
     /// the roles that this member has
     pub roles: Vec<RoleId>,
-    // muted_until: Option<Time>, // timeouts
-    // /// how this member joined the room, moderator only
-    // pub origin: RoomMemberOrigin,
+
+    // timeouts/temporary mutes
+    // pub muted_until: Option<Time>,
+    /// how this member joined the room, moderator only. is None if the origin is unknown.
+    pub origin: Option<RoomMemberOrigin>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,33 +123,34 @@ pub struct RoomBanCreate {
     pub expires_at: Option<Time>,
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// #[serde(tag = "type")]
-// pub enum RoomMemberOrigin {
-//     /// joined via invite
-//     Invite {
-//         /// the invite code they joined with
-//         code: InviteCode,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum RoomMemberOrigin {
+    /// joined via invite
+    Invite {
+        /// the invite code they joined with
+        code: InviteCode,
 
-//         /// the user who created the invite
-//         inviter: UserId,
-//     },
+        /// the user who created the invite
+        inviter: UserId,
+    },
 
-//     /// this is a bot that was installed
-//     BotInstall {
-//         /// the user who installed this bot
-//         user_id: UserId,
-//     },
+    /// this is a bot that was installed
+    BotInstall {
+        /// the user who installed this bot
+        user_id: UserId,
+    },
 
-//     /// this is a puppet user and was added by a bridge
-//     Bridged {
-//         bridge_id: UserId,
-//     },
+    /// this is a puppet user and was added by a bridge
+    Bridged {
+        /// the bridge that owns this puppet
+        bridge_id: UserId,
+    },
 
-//     /// fallback
-//     Unknown,
-// }
+    /// this is the room creator
+    Creator,
+}
 
 // in the future, there will be multiple types of bans. right now there are just user bans.
 // BanId would be changed from UserId to another uuid newtype

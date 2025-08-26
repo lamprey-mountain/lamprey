@@ -9,9 +9,9 @@ use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoomBan, RoomMember, RoomMemberPatch, RoomMemberPut,
-    RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch,
-    ThreadMemberPut, ThreadMembership,
+    RelationshipWithUserId, Role, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch,
+    RoomMemberPut, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
+    ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -85,6 +85,7 @@ pub trait DataRoomMember {
         &self,
         room_id: RoomId,
         user_id: UserId,
+        origin: RoomMemberOrigin,
         put: RoomMemberPut,
     ) -> Result<()>;
     async fn room_member_patch(

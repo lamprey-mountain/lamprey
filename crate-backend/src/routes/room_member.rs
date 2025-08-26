@@ -4,12 +4,12 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
-use common::v1::types::RoomBanCreate;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
     RoomMembership, UserId,
 };
+use common::v1::types::{RoomBanCreate, RoomMemberOrigin};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -139,7 +139,10 @@ async fn room_member_add(
         }
     }
 
-    d.room_member_put(room_id, target_user_id, RoomMemberPut::default())
+    let origin = RoomMemberOrigin::Bridged {
+        bridge_id: auth_user_id,
+    };
+    d.room_member_put(room_id, target_user_id, origin, RoomMemberPut::default())
         .await?;
     s.services()
         .perms

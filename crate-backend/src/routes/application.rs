@@ -10,7 +10,8 @@ use common::v1::types::{
     util::Time,
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
-    RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionWithToken, UserId,
+    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionWithToken,
+    UserId,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -209,7 +210,10 @@ async fn app_invite_bot(
         return Err(Error::BadStatic("banned"));
     }
 
-    data.room_member_put(json.room_id, bot_user_id, RoomMemberPut::default())
+    let origin = RoomMemberOrigin::BotInstall {
+        user_id: auth_user_id,
+    };
+    data.room_member_put(json.room_id, bot_user_id, origin, RoomMemberPut::default())
         .await?;
 
     let member = data.room_member_get(json.room_id, bot_user_id).await?;

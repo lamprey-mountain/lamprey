@@ -7,7 +7,7 @@ use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMemberPut,
+    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut,
 };
 use futures::future::join_all;
 use http::StatusCode;
@@ -191,7 +191,11 @@ pub async fn invite_use(
             if d.room_ban_get(room.id, user_id).await.is_ok() {
                 return Err(Error::BadStatic("banned"));
             }
-            d.room_member_put(room.id, user_id, RoomMemberPut::default())
+            let origin = RoomMemberOrigin::Invite {
+                code: invite.invite.code,
+                inviter: invite.invite.creator_id,
+            };
+            d.room_member_put(room.id, user_id, origin, RoomMemberPut::default())
                 .await?;
             let member = d.room_member_get(room.id, user_id).await?;
             s.services.perms.invalidate_room(user_id, room.id).await;

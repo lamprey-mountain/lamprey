@@ -62,6 +62,7 @@ impl DataRoleMember for Postgres {
                 r.override_name,
                 r.override_description,
                 r.joined_at,
+                r.origin,
             	coalesce(ro.roles, '{}') as "roles!"
             FROM role_member AS m
             JOIN role ON role.id = m.role_id

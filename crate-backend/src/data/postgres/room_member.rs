@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember, RoomMemberPatch,
-    RoomMemberPut, RoomMembership,
+    PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
+    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
@@ -26,6 +26,7 @@ pub struct DbRoomMember {
     // override_avatar: z.string().url().or(z.literal("")),
     pub joined_at: time::PrimitiveDateTime,
     pub roles: Vec<Uuid>,
+    pub origin: Option<serde_json::Value>,
 }
 
 pub struct DbRoomBan {
@@ -61,6 +62,11 @@ impl From<DbRoomMember> for RoomMember {
             override_name: row.override_name,
             override_description: row.override_description,
             roles: row.roles.into_iter().map(Into::into).collect(),
+
+            // FIXME: only return for moderators
+            origin: row
+                .origin
+                .map(|o| serde_json::from_value(o).expect("invalid data in db")),
         }
     }
 }
@@ -71,12 +77,13 @@ impl DataRoomMember for Postgres {
         &self,
         room_id: RoomId,
         user_id: UserId,
+        origin: RoomMemberOrigin,
         put: RoomMemberPut,
     ) -> Result<()> {
         query!(
             r#"
-            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at)
-            VALUES ($1, $2, $3, $4, $5, now())
+            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin)
+            VALUES ($1, $2, $3, $4, $5, now(), $6)
 			ON CONFLICT ON CONSTRAINT room_member_pkey DO UPDATE SET
     			membership = excluded.membership,
                 joined_at = case
@@ -90,6 +97,7 @@ impl DataRoomMember for Postgres {
             DbMembership::Join as _,
             put.override_name,
             put.override_description,
+            &serde_json::to_value(origin)?,
         )
         .execute(&self.pool)
         .await?;
@@ -133,6 +141,7 @@ impl DataRoomMember for Postgres {
                 	override_name,
                     override_description,
                     joined_at,
+                	origin,
                 	coalesce(r.roles, '{}') as "roles!"
                 FROM room_member m
                 left join r on r.user_id = m.user_id
@@ -169,6 +178,7 @@ impl DataRoomMember for Postgres {
             	override_name,
             	override_description,
             	joined_at,
+            	origin,
             	coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             left join r on r.user_id = m.user_id
@@ -205,6 +215,7 @@ impl DataRoomMember for Postgres {
             	override_name,
             	override_description,
             	joined_at,
+            	origin,
             	coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             left join r on r.user_id = m.user_id
