@@ -205,6 +205,10 @@ async fn app_invite_bot(
 
     let bot_user_id: UserId = app.id.into_inner().into();
 
+    if data.room_ban_get(json.room_id, bot_user_id).await.is_ok() {
+        return Err(Error::BadStatic("banned"));
+    }
+
     data.room_member_put(json.room_id, bot_user_id, RoomMemberPut::default())
         .await?;
 

@@ -35,6 +35,8 @@ pub struct DbUserCreate {
 pub enum DbMembership {
     Join,
     Leave,
+
+    #[deprecated]
     Ban,
 }
 
