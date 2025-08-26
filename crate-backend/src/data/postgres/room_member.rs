@@ -1,9 +1,11 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, RoomMember, RoomMemberPatch,
+    PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember, RoomMemberPatch,
     RoomMemberPut, RoomMembership,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
+use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
 
@@ -24,6 +26,24 @@ pub struct DbRoomMember {
     // override_avatar: z.string().url().or(z.literal("")),
     pub joined_at: time::PrimitiveDateTime,
     pub roles: Vec<Uuid>,
+}
+
+pub struct DbRoomBan {
+    pub user_id: UserId,
+    pub reason: Option<String>,
+    pub created_at: time::PrimitiveDateTime,
+    pub expires_at: Option<time::PrimitiveDateTime>,
+}
+
+impl From<DbRoomBan> for RoomBan {
+    fn from(row: DbRoomBan) -> Self {
+        RoomBan {
+            user_id: row.user_id,
+            reason: row.reason,
+            created_at: row.created_at.assume_utc().into(),
+            expires_at: row.expires_at.map(|t| t.assume_utc().into()),
+        }
+    }
 }
 
 impl From<DbRoomMember> for RoomMember {
@@ -119,15 +139,15 @@ impl DataRoomMember for Postgres {
             	WHERE room_id = $1 AND m.user_id > $2 AND m.user_id < $3 AND membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN m.user_id END), m.user_id DESC LIMIT $5
                 "#,
-                room_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *room_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
             query_scalar!(
                 "SELECT count(*) FROM room_member WHERE room_id = $1 AND membership = 'Join'",
-                room_id.into_inner()
+                *room_id
             ),
             |i: &RoomMember| i.user_id.to_string()
         )
@@ -227,12 +247,94 @@ impl DataRoomMember for Postgres {
         	SET membership = $3, membership_updated_at = now()
             WHERE room_id = $1 AND user_id = $2
             "#,
-            room_id.into_inner(),
-            user_id.into_inner(),
+            *room_id,
+            *user_id,
             membership as _,
         )
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    async fn room_ban_create(
+        &self,
+        room_id: RoomId,
+        ban_id: UserId,
+        reason: Option<String>,
+        expires_at: Option<Time>,
+    ) -> Result<()> {
+        query!(
+            r#"
+            INSERT INTO room_ban (room_id, user_id, reason, created_at, expires_at)
+            VALUES ($1, $2, $3, now(), $4)
+            ON CONFLICT (room_id, user_id) DO UPDATE
+            SET expires_at = EXCLUDED.expires_at
+            "#,
+            *room_id,
+            *ban_id,
+            reason,
+            expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
+        )
+        .execute(&self.pool)
+        .await?;
+        info!("inserted room ban");
+        Ok(())
+    }
+
+    async fn room_ban_delete(&self, room_id: RoomId, ban_id: UserId) -> Result<()> {
+        query!(
+            "DELETE FROM room_ban WHERE room_id = $1 AND user_id = $2",
+            *room_id,
+            *ban_id
+        )
+        .execute(&self.pool)
+        .await?;
+        info!("deleted room ban");
+        Ok(())
+    }
+
+    async fn room_ban_get(&self, room_id: RoomId, ban_id: UserId) -> Result<RoomBan> {
+        let row = query_as!(
+            DbRoomBan,
+            r#"
+            SELECT user_id, reason, created_at, expires_at
+            FROM room_ban
+            WHERE room_id = $1 AND user_id = $2
+            "#,
+            *room_id,
+            *ban_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.into())
+    }
+
+    async fn room_ban_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomBan>> {
+        let p: Pagination<_> = paginate.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRoomBan,
+                r#"
+                SELECT user_id, reason, created_at, expires_at
+                FROM room_ban
+                WHERE room_id = $1 AND user_id > $2 AND user_id < $3
+                ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC
+                LIMIT $5
+                "#,
+                *room_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!("SELECT count(*) FROM room_ban WHERE room_id = $1", *room_id),
+            |i: &RoomBan| i.user_id.to_string()
+        )
     }
 }

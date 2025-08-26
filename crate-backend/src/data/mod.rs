@@ -5,12 +5,13 @@ use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch}
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
+use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMemberPut, RoomMembership,
-    SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMemberPut,
-    ThreadMembership,
+    RelationshipWithUserId, Role, RoomBan, RoomMember, RoomMemberPatch, RoomMemberPut,
+    RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch,
+    ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -105,6 +106,21 @@ pub trait DataRoomMember {
         room_id: RoomId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>>;
+
+    async fn room_ban_create(
+        &self,
+        room_id: RoomId,
+        ban_id: UserId,
+        reason: Option<String>,
+        expires_at: Option<Time>,
+    ) -> Result<()>;
+    async fn room_ban_delete(&self, room_id: RoomId, ban_id: UserId) -> Result<()>;
+    async fn room_ban_get(&self, room_id: RoomId, ban_id: UserId) -> Result<RoomBan>;
+    async fn room_ban_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomBan>>;
 }
 
 #[async_trait]

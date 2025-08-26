@@ -7,7 +7,7 @@ use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMemberPut, RoomMembership,
+    PaginationResponse, Permission, RoomId, RoomMemberPut,
 };
 use futures::future::join_all;
 use http::StatusCode;
@@ -188,11 +188,8 @@ pub async fn invite_use(
     }
     match invite.invite.target {
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
-            if let Ok(existing) = d.room_member_get(room.id, user_id).await {
-                // FIXME: bans
-                // if matches!(existing.membership, RoomMembership::Ban { .. }) {
-                //     return Err(Error::BadStatic("banned"));
-                // }
+            if d.room_ban_get(room.id, user_id).await.is_ok() {
+                return Err(Error::BadStatic("banned"));
             }
             d.room_member_put(room.id, user_id, RoomMemberPut::default())
                 .await?;

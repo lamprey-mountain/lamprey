@@ -4,7 +4,7 @@ use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, RoleId, Room, RoomCreate,
-    RoomId, RoomMemberPut, RoomMembership, RoomPatch, UserId,
+    RoomId, RoomMemberPut, RoomPatch, UserId,
 };
 use moka::future::Cache;
 

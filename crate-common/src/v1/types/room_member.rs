@@ -8,10 +8,7 @@ use validator::Validate;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::v1::types::{
-    util::{some_option, Diff, Time},
-    User,
-};
+use crate::v1::types::util::{some_option, Diff, Time};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -43,10 +40,8 @@ pub struct RoomMember {
     /// the roles that this member has
     pub roles: Vec<RoleId>,
     // muted_until: Option<Time>, // timeouts
-    // /// how this member joined the room
-    // // should be moderator only
-    // #[serde(flatten)]
-    // origin: RoomMemberOrigin,
+    // /// how this member joined the room, moderator only
+    // pub origin: RoomMemberOrigin,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -100,12 +95,20 @@ pub enum RoomMembership {
     Leave,
 }
 
+/// represents a restriction on who can join the room
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomBan {
-    pub user: User,
+    /// the user who is banned
+    pub user_id: UserId,
+
+    /// the supplied reason why this user should be banned
     pub reason: Option<String>,
-    pub created_at: Option<Time>,
+
+    /// when the ban was created
+    pub created_at: Time,
+
+    /// when the ban expires
     pub expires_at: Option<Time>,
 }
 
@@ -117,16 +120,50 @@ pub struct RoomBanCreate {
 
 // #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// #[serde(tag = "origin")]
+// #[serde(tag = "type")]
 // pub enum RoomMemberOrigin {
 //     /// joined via invite
-//     Invite { origin_code: InviteCode },
+//     Invite {
+//         /// the invite code they joined with
+//         code: InviteCode,
 
-//     /// joined via invite which is now expired
-//     InviteExpired { origin_code: InviteCode },
+//         /// the user who created the invite
+//         inviter: UserId,
+//     },
 
-//     /// added by another user (puppet)
-//     Added { origin_user_id: UserId },
+//     /// this is a bot that was installed
+//     BotInstall {
+//         /// the user who installed this bot
+//         user_id: UserId,
+//     },
+
+//     /// this is a puppet user and was added by a bridge
+//     Bridged {
+//         bridge_id: UserId,
+//     },
+
+//     /// fallback
+//     Unknown,
+// }
+
+// in the future, there will be multiple types of bans. right now there are just user bans.
+// BanId would be changed from UserId to another uuid newtype
+// pub enum RoomBanType {
+//     User {
+//         /// the user who is banned
+//         user_id: UserId,
+//     },
+
+//     Ip {
+//         /// the ip address(es) which are banned
+//         cidr: IpCidr,
+//     },
+
+//     // for when federation is implemented
+//     Server {
+//         /// the host who is banned
+//         host: String,
+//     },
 // }
 
 impl Diff<RoomMember> for RoomMemberPatch {

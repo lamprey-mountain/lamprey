@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
+use common::v1::types::RoomBanCreate;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
@@ -356,6 +357,7 @@ async fn room_ban_create(
     Auth(auth_user_id): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
+    Json(create): Json<RoomBanCreate>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user_id,
@@ -365,16 +367,16 @@ async fn room_ban_create(
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 
-    // FIXME: bans
-    // d.room_member_set_membership(room_id, target_user_id, RoomMembership::Ban {})
-    //     .await?;
-    todo!();
+    d.room_ban_create(room_id, target_user_id, reason.clone(), create.expires_at)
+        .await?;
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
         .await;
     s.services().perms.invalidate_is_mutual(target_user_id);
-    let res = d.room_member_get(room_id, target_user_id).await?;
+    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
+        .await?;
+    let member = d.room_member_get(room_id, target_user_id).await?;
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -392,7 +394,7 @@ async fn room_ban_create(
     s.broadcast_room(
         room_id,
         auth_user_id,
-        MessageSync::RoomMemberUpsert { member: res },
+        MessageSync::RoomMemberUpsert { member },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -425,8 +427,7 @@ async fn room_ban_remove(
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 
-    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
-        .await?;
+    d.room_ban_delete(room_id, target_user_id).await?;
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
@@ -481,12 +482,8 @@ async fn room_ban_get(
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
-    let res = d.room_member_get(room_id, target_user_id).await?;
-    if res.membership == RoomMembership::Join {
-        Ok(Json(res))
-    } else {
-        Err(Error::NotFound)
-    }
+    let res = d.room_ban_get(room_id, target_user_id).await?;
+    Ok(Json(res))
 }
 
 /// Room ban list
@@ -511,23 +508,15 @@ async fn room_ban_list(
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    // FIXME: bans
-    todo!();
-    Ok(())
-    // let res = d.room_member_list(room_id, paginate).await?;
-    // let items: Vec<_> = res
-    //     .items
-    //     .into_iter()
-    //     .filter(|m| matches!(m.membership, RoomMembership::Ban { .. }))
-    //     .collect();
-    // let cursor = items.last().map(|i| i.user_id.to_string());
-    // let res = PaginationResponse {
-    //     items,
-    //     has_more: res.has_more,
-    //     total: 0, // FIXME
-    //     cursor,
-    // };
-    // Ok(Json(res))
+    let res = d.room_ban_list(room_id, paginate).await?;
+    let cursor = res.items.last().map(|i| i.user_id.to_string());
+    let res = PaginationResponse {
+        items: res.items,
+        has_more: res.has_more,
+        total: res.total,
+        cursor,
+    };
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

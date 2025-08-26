@@ -56,7 +56,6 @@ pub struct ThreadMemberPut {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub override_description: Option<String>,
-    // pub override_avatar: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,8 +71,6 @@ pub struct ThreadMemberPatch {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[serde(default, deserialize_with = "some_option")]
     pub override_description: Option<Option<String>>,
-    // #[serde(default, deserialize_with = "some_option")]
-    // pub override_avatar: Option<Option<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

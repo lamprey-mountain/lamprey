@@ -7,7 +7,7 @@ use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Diff;
 use common::v1::types::{
     Embed, Interactions, Message, MessageCreate, MessageDefaultMarkdown, MessageDefaultTagged,
-    MessageId, MessagePatch, MessageSync, MessageType, Permission, ThreadId, ThreadMembership,
+    MessageId, MessagePatch, MessageSync, MessageType, Permission, ThreadId,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
