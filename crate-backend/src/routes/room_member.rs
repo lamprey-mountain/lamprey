@@ -482,6 +482,7 @@ async fn room_ban_get(
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
+    perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_get(room_id, target_user_id).await?;
     Ok(Json(res))
 }
@@ -508,6 +509,7 @@ async fn room_ban_list(
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
+    perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_list(room_id, paginate).await?;
     let cursor = res.items.last().map(|i| i.user_id.to_string());
     let res = PaginationResponse {
