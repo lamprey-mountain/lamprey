@@ -8,6 +8,8 @@ pub enum Error {
     BadRequest,
     Database(sqlx::Error),
     ImageError(image::ImageError),
+    BadRange,
+    NotModified,
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
@@ -19,6 +21,8 @@ impl IntoResponse for Error {
             Error::BadRequest => StatusCode::BAD_REQUEST.into_response(),
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE.into_response(),
+            Error::NotModified => StatusCode::NOT_MODIFIED.into_response(),
         }
     }
 }

@@ -1,5 +1,6 @@
-use common::v1::types::{EmojiId, MediaId};
-use sqlx::{query_scalar, Executor, Postgres};
+use common::v1::types::{EmojiId, Media, MediaId, MediaTrack};
+use serde::Deserialize;
+use sqlx::{query_scalar, types::JsonValue, Executor, Postgres};
 
 use crate::error::Result;
 
@@ -13,4 +14,70 @@ where
             .await?
             .into();
     Ok(media_id)
+}
+
+pub async fn lookup_media<'e, E>(exec: E, media_id: MediaId) -> Result<Media>
+where
+    E: Executor<'e, Database = Postgres>,
+{
+    // TODO: reuse code from crate-backend
+    #[derive(Debug, Deserialize)]
+    #[serde(tag = "v")]
+    pub enum DbMediaData {
+        V1(Media),
+
+        #[serde(untagged)]
+        Raw(DbMediaRaw),
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct DbMediaRaw {
+        id: MediaId,
+        filename: String,
+        alt: Option<String>,
+        tracks: Vec<MediaTrack>,
+    }
+
+    impl From<DbMediaData> for Media {
+        fn from(value: DbMediaData) -> Self {
+            match value {
+                DbMediaData::V1(media) => media,
+                DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
+            }
+        }
+    }
+
+    impl From<DbMediaRaw> for Media {
+        fn from(value: DbMediaRaw) -> Self {
+            let mut tracks = value.tracks;
+            let source = tracks
+                .get(0)
+                .cloned()
+                .expect("media should always have at least one track");
+
+            let remaining_tracks = if tracks.is_empty() {
+                vec![]
+            } else {
+                tracks.remove(0);
+                tracks
+            };
+
+            Media {
+                id: value.id,
+                filename: value.filename,
+                alt: value.alt,
+                source,
+                tracks: remaining_tracks,
+            }
+        }
+    }
+
+    let media: JsonValue = query_scalar!("SELECT data FROM media WHERE id = $1", *media_id)
+        .fetch_one(exec)
+        .await?;
+    let media: DbMediaData = serde_json::from_value(media).unwrap();
+    Ok(match media {
+        DbMediaData::V1(media) => media,
+        DbMediaData::Raw(m) => m.into(),
+    })
 }
