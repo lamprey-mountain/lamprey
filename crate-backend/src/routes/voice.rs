@@ -82,7 +82,7 @@ async fn voice_member_disconnect(
 /// Voice member move (TODO)
 #[utoipa::path(
     post,
-    path = "/voice/{thread_id}/member/{user_id}",
+    path = "/voice/{thread_id}/member/{user_id}/move",
     params(
         ("thread_id", description = "Thread id"),
         ("user_id", description = "User id"),

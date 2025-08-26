@@ -394,9 +394,8 @@ impl_perms!(
 impl From<RoomMembership> for DbMembership {
     fn from(value: RoomMembership) -> Self {
         match value {
-            RoomMembership::Join { .. } => DbMembership::Join,
-            RoomMembership::Ban {} => DbMembership::Ban,
-            RoomMembership::Leave {} => DbMembership::Leave,
+            RoomMembership::Join => DbMembership::Join,
+            RoomMembership::Leave => DbMembership::Leave,
         }
     }
 }
@@ -404,9 +403,8 @@ impl From<RoomMembership> for DbMembership {
 impl From<ThreadMembership> for DbMembership {
     fn from(value: ThreadMembership) -> Self {
         match value {
-            ThreadMembership::Join { .. } => DbMembership::Join,
-            ThreadMembership::Ban {} => DbMembership::Ban,
-            ThreadMembership::Leave {} => DbMembership::Leave,
+            ThreadMembership::Join => DbMembership::Join,
+            ThreadMembership::Leave => DbMembership::Leave,
         }
     }
 }

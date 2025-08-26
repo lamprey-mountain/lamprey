@@ -8,8 +8,9 @@ use common::v1::types::user_config::UserConfig;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMembership, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMembership,
+    RelationshipWithUserId, Role, RoomMember, RoomMemberPatch, RoomMemberPut, RoomMembership,
+    SessionPatch, SessionStatus, SessionToken, ThreadMember, ThreadMemberPatch, ThreadMemberPut,
+    ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -83,7 +84,7 @@ pub trait DataRoomMember {
         &self,
         room_id: RoomId,
         user_id: UserId,
-        membership: RoomMembership,
+        put: RoomMemberPut,
     ) -> Result<()>;
     async fn room_member_patch(
         &self,
@@ -402,7 +403,7 @@ pub trait DataThreadMember {
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-        membership: ThreadMembership,
+        put: ThreadMemberPut,
     ) -> Result<()>;
     async fn thread_member_patch(
         &self,

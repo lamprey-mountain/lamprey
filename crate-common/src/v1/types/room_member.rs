@@ -8,7 +8,10 @@ use validator::Validate;
 
 use super::{RoleId, RoomId, UserId};
 
-use crate::v1::types::util::{some_option, Diff, Time};
+use crate::v1::types::{
+    util::{some_option, Diff, Time},
+    User,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -19,19 +22,34 @@ pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
-    #[cfg_attr(feature = "validator", validate(nested))]
-    #[serde(flatten)]
     pub membership: RoomMembership,
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
+    #[deprecated]
     pub membership_updated_at: Time,
-    // pub joined_at: Time,
-    // pub parted_at: Time,
-    // pub kicked_at: Time,
-    // pub banned_at: Time,
+
+    /// When this member joined the room
+    pub joined_at: Time,
+    // TODO?: pub left_at: Option<Time>,
+    /// aka nickname
+    // TODO: rename to `nick`?
+    pub override_name: Option<String>,
+
+    /// like nickname, but for your description/bio/about
+    // TODO: remove. maybe replace with a room-specific "about me" without overriding your main bio/about me?
+    pub override_description: Option<String>,
+
+    // TODO: per-room avatars? override_avatar: z.string().url().or(z.literal("")),
+    /// the roles that this member has
+    pub roles: Vec<RoleId>,
+    // muted_until: Option<Time>, // timeouts
+    // /// how this member joined the room
+    // // should be moderator only
+    // #[serde(flatten)]
+    // origin: RoomMemberOrigin,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMemberPut {
@@ -74,43 +92,27 @@ pub struct RoomMemberPatch {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "membership")]
 pub enum RoomMembership {
     /// joined
-    Join {
-        override_name: Option<String>,
-        override_description: Option<String>,
-        // override_avatar: z.string().url().or(z.literal("")),
-        roles: Vec<RoleId>,
-        // muted_until: Option<Time>,
-        // /// how this member joined the room
-        // #[serde(flatten)]
-        // origin: RoomMemberOrigin,
-    },
+    Join,
 
-    // /// kicked, can rejoin with an invite. todo: can still view messages up until then
-    // Kick {
-    //     // TODO: copy kick/ban reason here
-    //     // /// user supplied reason why this user was banned
-    //     // reason: Option<String>,
-    //     // /// which user caused the kick, or None if the user left themselves
-    //     // user_id: Option<UserId>,
-    // },
     /// left, can rejoin with an invite. todo: can still view messages up until then
-    Leave {
-        // TODO: keep roles on leave?
-        // /// user supplied reason why they left
-        // reason: Option<String>,
-    },
+    Leave,
+}
 
-    /// banned. todo: can still view messages up until they were banned
-    Ban {
-        // /// user supplied reason why this user was banned
-        // reason: Option<String>,
-        // /// which user caused the ban
-        // user_id: Option<UserId>,
-        // banned_until: Option<Time>,
-    },
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomBan {
+    pub user: User,
+    pub reason: Option<String>,
+    pub created_at: Option<Time>,
+    pub expires_at: Option<Time>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomBanCreate {
+    pub expires_at: Option<Time>,
 }
 
 // #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,87 +131,9 @@ pub enum RoomMembership {
 
 impl Diff<RoomMember> for RoomMemberPatch {
     fn changes(&self, other: &RoomMember) -> bool {
-        match &other.membership {
-            RoomMembership::Join {
-                override_name,
-                override_description,
-                roles: _,
-            } => {
-                self.override_name.changes(override_name)
-                    || self.override_description.changes(override_description)
-            }
-            _ => false,
-        }
-    }
-}
-
-impl RoomMembership {
-    pub const JOIN_BLANK: RoomMembership = RoomMembership::Join {
-        override_name: None,
-        override_description: None,
-        roles: Vec::new(),
-    };
-
-    pub fn override_name(&self) -> Option<&str> {
-        match self {
-            RoomMembership::Join { override_name, .. } => override_name.as_deref(),
-            _ => None,
-        }
-    }
-
-    pub fn override_description(&self) -> Option<&str> {
-        match self {
-            RoomMembership::Join {
-                override_description,
-                ..
-            } => override_description.as_deref(),
-            _ => None,
-        }
-    }
-}
-
-#[cfg(feature = "validator")]
-mod val {
-    use super::RoomMembership;
-    use serde_json::json;
-    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
-
-    impl Validate for RoomMembership {
-        fn validate(&self) -> Result<(), ValidationErrors> {
-            let mut v = ValidationErrors::new();
-            match self {
-                RoomMembership::Join {
-                    override_name,
-                    override_description,
-                    roles: _,
-                } => {
-                    if override_name
-                        .as_ref()
-                        .is_some_and(|n| n.validate_length(Some(1), Some(64), None))
-                    {
-                        let mut err = ValidationError::new("length");
-                        err.add_param("max".into(), &json!(64));
-                        err.add_param("min".into(), &json!(1));
-                        v.add("override_name", err);
-                    }
-                    if override_description
-                        .as_ref()
-                        .is_some_and(|n| n.validate_length(Some(1), Some(8192), None))
-                    {
-                        let mut err = ValidationError::new("length");
-                        err.add_param("max".into(), &json!(8192));
-                        err.add_param("min".into(), &json!(1));
-                        v.add("override_description", err);
-                    }
-                }
-                RoomMembership::Leave {} => {}
-                RoomMembership::Ban {} => {}
-            }
-            if v.is_empty() {
-                Ok(())
-            } else {
-                Err(v)
-            }
-        }
+        self.override_name.changes(&other.override_name)
+            || self
+                .override_description
+                .changes(&other.override_description)
     }
 }

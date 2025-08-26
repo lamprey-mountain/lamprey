@@ -7,7 +7,7 @@ use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMembership,
+    PaginationResponse, Permission, RoomId, RoomMemberPut, RoomMembership,
 };
 use futures::future::join_all;
 use http::StatusCode;
@@ -189,20 +189,13 @@ pub async fn invite_use(
     match invite.invite.target {
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
             if let Ok(existing) = d.room_member_get(room.id, user_id).await {
-                if matches!(existing.membership, RoomMembership::Ban { .. }) {
-                    return Err(Error::BadStatic("banned"));
-                }
+                // FIXME: bans
+                // if matches!(existing.membership, RoomMembership::Ban { .. }) {
+                //     return Err(Error::BadStatic("banned"));
+                // }
             }
-            d.room_member_put(
-                room.id,
-                user_id,
-                RoomMembership::Join {
-                    override_name: None,
-                    override_description: None,
-                    roles: vec![],
-                },
-            )
-            .await?;
+            d.room_member_put(room.id, user_id, RoomMemberPut::default())
+                .await?;
             let member = d.room_member_get(room.id, user_id).await?;
             s.services.perms.invalidate_room(user_id, room.id).await;
             s.services.perms.invalidate_is_mutual(user_id);

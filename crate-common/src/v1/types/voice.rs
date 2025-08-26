@@ -42,14 +42,26 @@ impl Deref for IceCandidate {
     }
 }
 
+/// represents a user that is connected to a voice thread (older docs call this a "voice connection")
+///
+/// connection limits:
+/// - users can only have one active connection across all threads
+/// - bots can connect to multiple threads with any connection strategy
+/// - both users and bots can only have one connection per thread
+// TODO: enforce the constraints listed above
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceState {
+    /// the user this state belongs to
     pub user_id: UserId,
-    // pub room_id: RoomId,
+
+    /// the thread this user is connected to
     pub thread_id: ThreadId,
-    // pub session_id: (),
-    /// when this person joined the call
+
+    // /// the session that's being used to connect to this voice thread
+    // /// this will only be returned for the user this state belongs to
+    // pub session_id: Option<SessionId>,
+    /// when this user joined the call
     pub joined_at: Time,
 }
 

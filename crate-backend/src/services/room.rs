@@ -4,7 +4,7 @@ use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, RoleId, Room, RoomCreate,
-    RoomId, RoomMembership, RoomPatch, UserId,
+    RoomId, RoomMemberPut, RoomMembership, RoomPatch, UserId,
 };
 use moka::future::Cache;
 
@@ -124,16 +124,8 @@ impl ServiceRooms {
         let admin = data.role_create(role_admin).await?;
         data.role_create(role_moderator).await?;
         data.role_create(role_everyone).await?;
-        data.room_member_put(
-            room_id,
-            creator,
-            RoomMembership::Join {
-                override_name: None,
-                override_description: None,
-                roles: vec![],
-            },
-        )
-        .await?;
+        data.room_member_put(room_id, creator, RoomMemberPut::default())
+            .await?;
         data.role_member_put(creator, admin.id).await?;
         Ok(room)
     }

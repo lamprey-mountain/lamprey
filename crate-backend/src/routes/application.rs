@@ -10,7 +10,7 @@ use common::v1::types::{
     util::Time,
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
-    RoomMembership, SessionCreate, SessionStatus, SessionToken, SessionWithToken, UserId,
+    RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionWithToken, UserId,
 };
 use http::StatusCode;
 use serde::Deserialize;
@@ -205,16 +205,8 @@ async fn app_invite_bot(
 
     let bot_user_id: UserId = app.id.into_inner().into();
 
-    data.room_member_put(
-        json.room_id,
-        bot_user_id,
-        RoomMembership::Join {
-            override_name: None,
-            override_description: None,
-            roles: vec![],
-        },
-    )
-    .await?;
+    data.room_member_put(json.room_id, bot_user_id, RoomMemberPut::default())
+        .await?;
 
     let member = data.room_member_get(json.room_id, bot_user_id).await?;
 

@@ -3,7 +3,7 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
 use common::v1::types::voice::VoiceState;
-use common::v1::types::{MessageSync, Thread, ThreadMembership};
+use common::v1::types::{MessageSync, Thread, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -158,9 +158,9 @@ impl ServiceUsers {
         if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
             let thread = srv.threads.get(thread_id, Some(user_id)).await?;
-            data.thread_member_put(thread_id, user_id, ThreadMembership::JOIN_BLANK)
+            data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
-            data.thread_member_put(thread_id, other_id, ThreadMembership::JOIN_BLANK)
+            data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
                 .await?;
             return Ok((thread, false));
         }
@@ -175,9 +175,9 @@ impl ServiceUsers {
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;
-        data.thread_member_put(thread_id, user_id, ThreadMembership::JOIN_BLANK)
+        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
             .await?;
-        data.thread_member_put(thread_id, other_id, ThreadMembership::JOIN_BLANK)
+        data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
             .await?;
         let thread = srv.threads.get(thread_id, Some(user_id)).await?;
         Ok((thread, true))

@@ -137,6 +137,15 @@ impl FromRequestParts<Arc<ServerState>> for HeaderReason {
             .get("X-Reason")
             .and_then(|h| h.to_str().ok())
             .map(|h| h.to_string());
+
+        if let Some(ref reason) = header {
+            if reason.chars().count() > 1024 {
+                return Err(Error::BadRequest(
+                    "X-Audit-Reason must be 1024 characters or less".to_string(),
+                ));
+            }
+        }
+
         Ok(Self(header))
     }
 }

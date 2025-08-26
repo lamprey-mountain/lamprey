@@ -15,20 +15,31 @@ use super::ThreadId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ThreadMember {
     pub thread_id: ThreadId,
     pub user_id: UserId,
 
-    #[cfg_attr(feature = "validator", validate(nested))]
-    #[serde(flatten)]
     pub membership: ThreadMembership,
 
     /// When this member's membership last changed (joined, left, was kicked, or banned).
+    #[deprecated]
     pub membership_updated_at: Time,
+
+    /// When this member joined the thread
+    pub joined_at: Time,
+
+    /// aka nickname
+    // TODO: remove - not very useful, but can be very confusing
+    #[deprecated]
+    pub override_name: Option<String>,
+
+    /// like nickname but for description/bio/about
+    // TODO: remove - not very useful, but can be very confusing
+    #[deprecated]
+    pub override_description: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ThreadMemberPut {
@@ -67,98 +78,20 @@ pub struct ThreadMemberPatch {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "membership")]
 pub enum ThreadMembership {
-    /// joined
-    Join {
-        override_name: Option<String>,
-        override_description: Option<String>,
-        // override_avatar: z.string().url().or(z.literal("")),
-        // muted_until: Option<Time>,
-    },
+    /// joined. a member of this thread.
+    Join,
 
-    /// kicked or left, can rejoin with an invite. todo: can still view messages up until then
-    Leave {
-        // TODO: copy kick/ban reason here
-        // /// user supplied reason why this user was banned
-        // reason: Option<String>,
-        // /// which user caused the kick, or None if the user left themselves
-        // user_id: Option<UserId>,
-    },
-
-    /// banned. todo: can still view messages up until they were banned
-    Ban {
-        // /// user supplied reason why this user was banned
-        // reason: Option<String>,
-        // /// which user caused the ban
-        // user_id: Option<UserId>,
-        // banned_until: Option<Time>,
-    },
-}
-
-impl ThreadMembership {
-    pub const JOIN_BLANK: ThreadMembership = ThreadMembership::Join {
-        override_name: None,
-        override_description: None,
-    };
+    /// kicked or left, can rejoin with an invite
+    /// todo: can still view messages up until then
+    Leave,
 }
 
 impl Diff<ThreadMember> for ThreadMemberPatch {
     fn changes(&self, other: &ThreadMember) -> bool {
-        match &other.membership {
-            ThreadMembership::Join {
-                override_name,
-                override_description,
-            } => {
-                self.override_name.changes(override_name)
-                    || self.override_description.changes(override_description)
-            }
-            _ => false,
-        }
-    }
-}
-
-#[cfg(feature = "validator")]
-mod val {
-    use super::ThreadMembership;
-    use serde_json::json;
-    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
-
-    impl Validate for ThreadMembership {
-        fn validate(&self) -> Result<(), ValidationErrors> {
-            let mut v = ValidationErrors::new();
-            match self {
-                ThreadMembership::Join {
-                    override_name,
-                    override_description,
-                } => {
-                    if override_name
-                        .as_ref()
-                        .is_some_and(|n| n.validate_length(Some(1), Some(64), None))
-                    {
-                        let mut err = ValidationError::new("length");
-                        err.add_param("max".into(), &json!(64));
-                        err.add_param("min".into(), &json!(1));
-                        v.add("override_name", err);
-                    }
-                    if override_description
-                        .as_ref()
-                        .is_some_and(|n| n.validate_length(Some(1), Some(8192), None))
-                    {
-                        let mut err = ValidationError::new("length");
-                        err.add_param("max".into(), &json!(8192));
-                        err.add_param("min".into(), &json!(1));
-                        v.add("override_description", err);
-                    }
-                }
-                ThreadMembership::Leave {} => {}
-                ThreadMembership::Ban {} => {}
-            }
-            if v.is_empty() {
-                Ok(())
-            } else {
-                Err(v)
-            }
-        }
+        self.override_name.changes(&other.override_name)
+            || self
+                .override_description
+                .changes(&other.override_description)
     }
 }

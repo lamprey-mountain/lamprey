@@ -73,13 +73,10 @@ async fn room_member_get(
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(
-        res.membership,
-        RoomMembership::Join { .. } | RoomMembership::Ban { .. }
-    ) {
-        Err(Error::NotFound)
-    } else {
+    if res.membership == RoomMembership::Join {
         Ok(Json(res))
+    } else {
+        Err(Error::NotFound)
     }
 }
 
@@ -134,28 +131,15 @@ async fn room_member_add(
     let d = s.data();
     let existing = d.room_member_get(room_id, target_user_id).await;
     if let Ok(existing) = &existing {
-        if let RoomMembership::Join {
-            override_name: n,
-            override_description: d,
-            roles: _,
-        } = &existing.membership
+        if existing.override_name == json.override_name
+            && existing.override_description == json.override_description
         {
-            if n == &json.override_name && d == &json.override_description {
-                return Err(Error::NotModified);
-            }
+            return Err(Error::NotModified);
         }
     }
 
-    d.room_member_put(
-        room_id,
-        target_user_id,
-        RoomMembership::Join {
-            override_name: json.override_name,
-            override_description: json.override_description,
-            roles: vec![],
-        },
-    )
-    .await?;
+    d.room_member_put(room_id, target_user_id, RoomMemberPut::default())
+        .await?;
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
@@ -165,25 +149,16 @@ async fn room_member_add(
 
     let changes = if let Ok(existing) = existing {
         Changes::new()
-            .change("membership", &existing.membership, &res.membership)
-            .change(
-                "override_name",
-                &existing.membership.override_name(),
-                &res.membership.override_name(),
-            )
+            .change("override_name", &existing.override_name, &res.override_name)
             .change(
                 "override_description",
-                &existing.membership.override_description(),
-                &res.membership.override_description(),
+                &existing.override_description,
+                &res.override_description,
             )
     } else {
         Changes::new()
-            .add("membership", &res.membership)
-            .add("override_name", &res.membership.override_name())
-            .add(
-                "override_description",
-                &res.membership.override_description(),
-            )
+            .add("override_name", &res.override_name)
+            .add("override_description", &res.override_description)
     };
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -254,31 +229,13 @@ async fn room_member_update(
     d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    let changes = if let RoomMembership::Join {
-        override_name,
-        override_description,
-        ..
-    } = start.membership
-    {
-        Changes::new()
-            .change(
-                "override_name",
-                &override_name.as_deref(),
-                &res.membership.override_name(),
-            )
-            .change(
-                "override_description",
-                &override_description.as_deref(),
-                &res.membership.override_description(),
-            )
-    } else {
-        Changes::new()
-            .add("override_name", &res.membership.override_name())
-            .add(
-                "override_description",
-                &res.membership.override_description(),
-            )
-    };
+    let changes = Changes::new()
+        .change("override_name", &start.override_name, &res.override_name)
+        .change(
+            "override_description",
+            &start.override_description,
+            &res.override_description,
+        );
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -408,8 +365,10 @@ async fn room_ban_create(
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
 
-    d.room_member_set_membership(room_id, target_user_id, RoomMembership::Ban {})
-        .await?;
+    // FIXME: bans
+    // d.room_member_set_membership(room_id, target_user_id, RoomMembership::Ban {})
+    //     .await?;
+    todo!();
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
@@ -523,10 +482,10 @@ async fn room_ban_get(
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     let res = d.room_member_get(room_id, target_user_id).await?;
-    if !matches!(res.membership, RoomMembership::Ban { .. }) {
-        Err(Error::NotFound)
-    } else {
+    if res.membership == RoomMembership::Join {
         Ok(Json(res))
+    } else {
+        Err(Error::NotFound)
     }
 }
 
@@ -552,20 +511,23 @@ async fn room_ban_list(
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    let res = d.room_member_list(room_id, paginate).await?;
-    let items: Vec<_> = res
-        .items
-        .into_iter()
-        .filter(|m| matches!(m.membership, RoomMembership::Ban { .. }))
-        .collect();
-    let cursor = items.last().map(|i| i.user_id.to_string());
-    let res = PaginationResponse {
-        items,
-        has_more: res.has_more,
-        total: 0, // FIXME
-        cursor,
-    };
-    Ok(Json(res))
+    // FIXME: bans
+    todo!();
+    Ok(())
+    // let res = d.room_member_list(room_id, paginate).await?;
+    // let items: Vec<_> = res
+    //     .items
+    //     .into_iter()
+    //     .filter(|m| matches!(m.membership, RoomMembership::Ban { .. }))
+    //     .collect();
+    // let cursor = items.last().map(|i| i.user_id.to_string());
+    // let res = PaginationResponse {
+    //     items,
+    //     has_more: res.has_more,
+    //     total: 0, // FIXME
+    //     cursor,
+    // };
+    // Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

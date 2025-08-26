@@ -5,11 +5,11 @@ use tracing::error;
 use common::v1::types::misc::Color;
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Diff;
-use common::v1::types::UserId;
 use common::v1::types::{
     Embed, Interactions, Message, MessageCreate, MessageDefaultMarkdown, MessageDefaultTagged,
     MessageId, MessagePatch, MessageSync, MessageType, Permission, ThreadId, ThreadMembership,
 };
+use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
 use linkify::LinkFinder;
 use url::Url;
@@ -147,15 +147,8 @@ impl ServiceMessages {
         }
         s.presign_message(&mut message).await?;
         message.nonce = nonce.or(json.nonce);
-        data.thread_member_put(
-            thread_id,
-            user_id,
-            ThreadMembership::Join {
-                override_name: None,
-                override_description: None,
-            },
-        )
-        .await?;
+        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+            .await?;
         let msg = MessageSync::MessageCreate {
             message: message.clone(),
         };

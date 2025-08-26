@@ -123,7 +123,7 @@ pub async fn thread_member_add(
     d.thread_member_put(
         thread_id,
         target_user_id,
-        ThreadMembership::Join {
+        ThreadMemberPut {
             override_name: json.override_name,
             override_description: json.override_description,
         },
