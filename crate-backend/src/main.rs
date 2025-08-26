@@ -1,6 +1,3 @@
-// TEMP: will remove deprecated routes later
-#![allow(deprecated)]
-
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
