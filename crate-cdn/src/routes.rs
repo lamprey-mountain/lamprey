@@ -99,7 +99,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Header
     );
     headers.insert(
         "content-disposition",
-        content_disposition_attachment(&media.filename, false)
+        content_disposition_attachment(&media.filename, true)
             .parse()
             .unwrap(),
     );
@@ -207,9 +207,12 @@ async fn get_thumb(
 
     let thumb_path = format!("/thumb/{}/{}x{}.webp", media_id, size, size);
 
-    if state.s3.exists(&thumb_path).await.unwrap_or(false) {
-        let data = state.s3.read(&thumb_path).await?;
-        return Ok(data.to_bytes());
+    match state.s3.read(&thumb_path).await {
+        Ok(data) => {
+            return Ok(data.to_bytes());
+        }
+        Err(e) if e.kind() == opendal::ErrorKind::NotFound => {},
+        Err(e) => return Err(e.into()),
     }
 
     let media_path = format!("/media/{}", media_id);
