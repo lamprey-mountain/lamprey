@@ -3,16 +3,17 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use bytes::Bytes;
-use common::v1::types::{EmojiId, Media, MediaId};
+use common::v1::types::{EmojiId, Media, MediaId, MediaTrack, MediaTrackInfo};
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
+use image::codecs::avif::AvifEncoder;
 use serde::Deserialize;
 use std::{
     io::Cursor,
     ops::Bound,
     time::{Duration, SystemTime},
 };
+use tracing::{debug, error, span, Instrument, Level};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -173,6 +174,129 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Header
     })
 }
 
+// TODO: deduplicate this code
+struct HeaderInfo2 {
+    headers: HeaderMap,
+    range: Option<(Bound<u64>, Bound<u64>)>,
+    unmodified: bool,
+    thumb: Option<MediaTrack>,
+}
+
+fn build_common_headers2(req_headers: &HeaderMap, media: &Media, size: u64) -> Result<HeaderInfo2> {
+    let mut headers = HeaderMap::new();
+    headers.typed_insert(headers::AcceptRanges::bytes());
+    headers.typed_insert("image/avif".parse::<headers::ContentType>().unwrap());
+    headers.insert(
+        "content-disposition",
+        // currently ALL thumbnails are avif
+        // this will probably change in the future
+        content_disposition_attachment("thumbnail.avif", true)
+            .parse()
+            .unwrap(),
+    );
+
+    headers.typed_insert(
+        headers::CacheControl::new()
+            .with_public()
+            .with_immutable()
+            .with_max_age(Duration::from_secs(604800)),
+    );
+
+    let etag: headers::ETag = format!("W/\"{}\"", media.id).parse().unwrap();
+    headers.typed_insert(etag.clone());
+
+    let id_timestamp: SystemTime = media
+        .id
+        .into_inner()
+        .get_timestamp()
+        .expect("all uuids are uuidv7")
+        .into();
+    let lm = headers::LastModified::from(id_timestamp);
+    headers.typed_insert(lm);
+
+    let allow_range_requests = if let Some(if_range) = headers.typed_get::<headers::IfRange>() {
+        !if_range.is_modified(Some(&etag), Some(&lm))
+    } else {
+        if let Some(if_none_match) = req_headers.typed_get::<headers::IfNoneMatch>() {
+            if !if_none_match.precondition_passes(&etag) {
+                return Ok(HeaderInfo2 {
+                    headers,
+                    range: None,
+                    unmodified: true,
+                    thumb: None,
+                });
+            }
+        }
+
+        if let Some(if_modified_since) = req_headers.typed_get::<headers::IfModifiedSince>() {
+            if !if_modified_since.is_modified(id_timestamp) {
+                return Ok(HeaderInfo2 {
+                    headers,
+                    range: None,
+                    unmodified: true,
+                    thumb: None,
+                });
+            }
+        }
+
+        true
+    };
+
+    // TODO: remove the following thumb selection code - i don't need it with a cdn!
+    // i can always generate the right size thumbnail. i don't need to check tracks manually
+
+    // direct port of the frontend algorithm: "get the largest image that fits in a w by h rect"
+    // theres almost certainly a better way of doing this
+    let mut thumbs: Vec<_> = media
+        .all_tracks()
+        .filter_map(|t| match &t.info {
+            MediaTrackInfo::Thumbnail(i) => Some((t, i.width, i.height)),
+            MediaTrackInfo::Image(i) => Some((t, i.width, i.height)),
+            MediaTrackInfo::Mixed(i) => match (i.width, i.height) {
+                (Some(w), Some(h)) => Some((t, w, h)),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect();
+    thumbs.sort_by(|(_, a, _), (_, b, _)| b.cmp(a));
+    let thumb = thumbs
+        .iter()
+        .find_map(|(t, w, h)| {
+            if *w <= size && *h <= size {
+                Some(t)
+            } else {
+                None
+            }
+        })
+        .ok_or(Error::NotFound)?;
+
+    let content_length = thumb.size;
+    if allow_range_requests {
+        if let Some(ranges) = req_headers.typed_get::<headers::Range>() {
+            let ranges: Vec<_> = ranges.satisfiable_ranges(content_length).collect();
+            if ranges.len() != 1 {
+                return Err(Error::BadRange);
+            }
+            let range = ranges[0];
+            headers.typed_insert(headers::ContentRange::bytes(range, content_length).unwrap());
+            return Ok(HeaderInfo2 {
+                headers,
+                range: Some(range),
+                unmodified: false,
+                thumb: Some(thumb.to_owned().to_owned()),
+            });
+        }
+    }
+    headers.typed_insert(headers::ContentLength(content_length));
+    Ok(HeaderInfo2 {
+        headers,
+        unmodified: false,
+        range: None,
+        thumb: Some(thumb.to_owned().to_owned()),
+    })
+}
+
 #[derive(Deserialize)]
 struct ThumbQuery {
     /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
@@ -187,46 +311,82 @@ async fn get_thumb(
     State(state): State<AppState>,
     Path(media_id): Path<MediaId>,
     Query(query): Query<ThumbQuery>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
+    // TODO: save original thumbs (eg. from videos) to /thumb/{media-id}/original
+    // TODO: return original thumbs if size is None. fallback to original image?
+
     let size = query.size.unwrap_or(64);
     if !state.config.thumb_sizes.contains(&size) {
         return Err(Error::BadRequest);
     }
 
-    // AppState {
-    //     inflight: Arc<DashMap<String, Arc<Mutex<()>>>>,
-    // }
-    // let key_lock = state
-    //     .inflight
-    //     .entry(key.clone())
-    //     .or_insert_with(|| Arc::new(Mutex::new(())))
-    //     .clone();
-    // let _guard = key_lock.lock().await;
-    // // generate thumbnail...
-    // drop(_guard);
+    let media = data::lookup_media(&state.db, media_id).await?;
+    let header_info = build_common_headers2(&headers, &media, size as u64)?;
 
-    let thumb_path = format!("/thumb/{}/{}x{}.webp", media_id, size, size);
-
-    match state.s3.read(&thumb_path).await {
-        Ok(data) => {
-            return Ok(data.to_bytes());
-        }
-        Err(e) if e.kind() == opendal::ErrorKind::NotFound => {},
-        Err(e) => return Err(e.into()),
+    if header_info.unmodified {
+        return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let media_path = format!("/media/{}", media_id);
-    let media_data = state.s3.read(&media_path).await?.to_bytes();
+    let Some(thumb) = header_info.thumb else {
+        debug!("no valid thumbnail for this image");
+        // no valid thumbnail for this image
+        return Ok((StatusCode::NOT_FOUND, header_info.headers, Body::empty()));
+    };
 
-    let image = image::load_from_memory(&media_data)?;
-    let thumbnail = image.thumbnail(size, size);
+    let thumb_path = thumb.url.path();
+    if state.s3.exists(&thumb_path).await? {
+        let reader = state.s3.reader(&thumb_path).await?;
+        if let Some(r) = header_info.range {
+            let body = Body::from_stream(reader.into_bytes_stream(r).await?);
+            Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))
+        } else {
+            let body = Body::from_stream(reader.into_bytes_stream(..).await?);
+            Ok((StatusCode::OK, header_info.headers, body))
+        }
+    } else {
+        // TODO: prevent races when generating thumbs
+        // let thumb_lock = state
+        //     .inflight
+        //     .entry((media_id, size, size))
+        //     .or_insert_with(|| Arc::new(Mutex::new(())))
+        //     .clone();
+        // let _guard = thumb_lock.lock().await;
+        // // generate thumbnail...
+        // drop(_guard);
 
-    let mut buf = Cursor::new(Vec::new());
-    thumbnail.write_to(&mut buf, image::ImageFormat::WebP)?;
-    let buf = buf.into_inner();
-    state.s3.write(&thumb_path, buf.clone()).await?;
+        let image_data = state
+            .s3
+            .read(media.source.url.path())
+            .instrument(span!(Level::INFO, "read source media from s3"))
+            .await?
+            .to_bytes();
+        let thumb_data = async {
+            let image = image::load_from_memory(&image_data)?;
+            let mut out = Cursor::new(Vec::new());
+            let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
+            let thumb = image.thumbnail(size, size);
+            thumb.write_with_encoder(enc)?;
+            Result::Ok(out.into_inner())
+        }
+        .instrument(span!(Level::INFO, "generate thumbnail"))
+        .await?;
 
-    Ok(Bytes::from(buf))
+        let a = thumb_path.to_owned();
+        let b = thumb_data.clone();
+        let s = state.s3.clone();
+        tokio::spawn(async move {
+            if let Err(err) = s
+                .write(&a, b)
+                .instrument(span!(Level::INFO, "upload thumbnail to s3"))
+                .await
+            {
+                error!("error while uploading thumb: {err}")
+            }
+        });
+
+        Ok((StatusCode::OK, header_info.headers, Body::from(thumb_data)))
+    }
 }
 
 /// Fetch emoji
@@ -237,12 +397,14 @@ async fn get_emoji(
     State(state): State<AppState>,
     Path(emoji_id): Path<EmojiId>,
     Query(query): Query<ThumbQuery>,
+    headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
     // TODO: cache this lookup
     let media_id = lookup_emoji(&state.db, emoji_id).await?;
-    get_thumb(State(state), Path(media_id), Query(query)).await
+    get_thumb(State(state), Path(media_id), Query(query), headers).await
 }
 
+// TODO: return better error messages (eg. in json)
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         // TODO: http HEAD routes for media, thumb, emoji

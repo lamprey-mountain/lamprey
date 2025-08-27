@@ -29,6 +29,7 @@ struct AppState {
     db: PgPool,
     s3: Operator,
     config: Arc<Config>,
+    // pending_thumbnails: Arc<Mutex<HashMap<(MediaId, u64, u64), Arc<Mutex<()>>>>>,
 }
 
 #[derive(OpenApi)]

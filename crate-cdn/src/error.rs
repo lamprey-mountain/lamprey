@@ -1,5 +1,6 @@
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
+use tracing::error;
 
 #[derive(Debug, thiserror::Error)]
 #[allow(unused)] // TEMP
@@ -27,6 +28,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        error!("responding with error: {self}");
         match self {
             Error::NotFound => StatusCode::NOT_FOUND.into_response(),
             Error::BadRequest => StatusCode::BAD_REQUEST.into_response(),
