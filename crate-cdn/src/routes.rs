@@ -1,4 +1,5 @@
 use axum::{
+    body::Body,
     extract::{Path, Query, State},
     response::IntoResponse,
 };
@@ -33,32 +34,32 @@ async fn get_media(
     let path = format!("/media/{}", media_id);
 
     let media = data::lookup_media(&state.db, media_id).await?;
-    let asdf = build_common_headers(&headers, &media)?;
+    let header_info = build_common_headers(&headers, &media)?;
 
-    if asdf.unmodified {
-        return Ok((StatusCode::NOT_MODIFIED, asdf.headers, Bytes::new()));
+    if header_info.unmodified {
+        return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let reader = state.s3.read_with(&path);
-    if let Some(range) = asdf.range {
-        Ok((
-            StatusCode::PARTIAL_CONTENT,
-            asdf.headers,
-            reader.range(range).await?.to_bytes(),
-        ))
+    let reader = state.s3.reader(&path).await?;
+    if let Some(r) = header_info.range {
+        let body = Body::from_stream(reader.into_bytes_stream(r).await?);
+        Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))
     } else {
-        Ok((StatusCode::OK, asdf.headers, reader.await?.to_bytes()))
+        let body = Body::from_stream(reader.into_bytes_stream(..).await?);
+        Ok((StatusCode::OK, header_info.headers, body))
     }
 }
 
-fn content_disposition_attachment(filename: &str) -> String {
+fn content_disposition_attachment(filename: &str, inline: bool) -> String {
+    let a = if inline { "inline" } else { "attachment" };
+
     // For ASCII-only filenames, use simple format
-    if filename.is_ascii() && !filename.contains(['\\', '"']) {
-        return format!("attachment; filename=\"{}\"", filename);
+    if filename.is_ascii() && !filename.contains(['\\', '/', '"']) {
+        return format!("{a}; filename=\"{}\"", filename);
     }
 
     // For UTF-8 filenames, use RFC 6266 format with both parameters
-    let ascii_fallback = filename
+    let ascii_fallback: String = filename
         .chars()
         .map(|c| {
             if c.is_ascii_alphanumeric() || ".-_ ".contains(c) {
@@ -67,26 +68,25 @@ fn content_disposition_attachment(filename: &str) -> String {
                 '_'
             }
         })
-        .collect::<String>();
+        .collect();
 
     let encoded_filename =
         percent_encoding::utf8_percent_encode(filename, percent_encoding::NON_ALPHANUMERIC)
             .to_string();
 
     format!(
-        "attachment; filename=\"{}\"; filename*=UTF-8''{}",
+        "{a}; filename=\"{}\"; filename*=UTF-8''{}",
         ascii_fallback, encoded_filename
     )
 }
 
-// TODO: come up with a good name for this
-struct Asdf {
+struct HeaderInfo {
     headers: HeaderMap,
     range: Option<(Bound<u64>, Bound<u64>)>,
     unmodified: bool,
 }
 
-fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> {
+fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<HeaderInfo> {
     let mut headers = HeaderMap::new();
     headers.typed_insert(headers::AcceptRanges::bytes());
     headers.typed_insert(
@@ -99,7 +99,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
     );
     headers.insert(
         "content-disposition",
-        content_disposition_attachment(&media.filename)
+        content_disposition_attachment(&media.filename, false)
             .parse()
             .unwrap(),
     );
@@ -111,7 +111,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
             .with_max_age(Duration::from_secs(604800)),
     );
 
-    let etag = format!("W/\"{}\"", media.id).parse::<headers::ETag>().unwrap();
+    let etag: headers::ETag = format!("W/\"{}\"", media.id).parse().unwrap();
     headers.typed_insert(etag.clone());
 
     let id_timestamp: SystemTime = media
@@ -128,7 +128,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
     } else {
         if let Some(if_none_match) = req_headers.typed_get::<headers::IfNoneMatch>() {
             if !if_none_match.precondition_passes(&etag) {
-                return Ok(Asdf {
+                return Ok(HeaderInfo {
                     headers,
                     range: None,
                     unmodified: true,
@@ -138,7 +138,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
 
         if let Some(if_modified_since) = req_headers.typed_get::<headers::IfModifiedSince>() {
             if !if_modified_since.is_modified(id_timestamp) {
-                return Ok(Asdf {
+                return Ok(HeaderInfo {
                     headers,
                     range: None,
                     unmodified: true,
@@ -158,7 +158,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
             }
             let range = ranges[0];
             headers.typed_insert(headers::ContentRange::bytes(range, content_length).unwrap());
-            return Ok(Asdf {
+            return Ok(HeaderInfo {
                 headers,
                 range: Some(range),
                 unmodified: false,
@@ -166,7 +166,7 @@ fn build_common_headers(req_headers: &HeaderMap, media: &Media) -> Result<Asdf> 
         }
     }
     headers.typed_insert(headers::ContentLength(content_length));
-    Ok(Asdf {
+    Ok(HeaderInfo {
         headers,
         unmodified: false,
         range: None,
@@ -220,12 +220,10 @@ async fn get_thumb(
 
     let mut buf = Cursor::new(Vec::new());
     thumbnail.write_to(&mut buf, image::ImageFormat::WebP)?;
-    state
-        .s3
-        .write(&thumb_path, buf.clone().into_inner())
-        .await?;
+    let buf = buf.into_inner();
+    state.s3.write(&thumb_path, buf.clone()).await?;
 
-    Ok(Bytes::from(buf.into_inner()))
+    Ok(Bytes::from(buf))
 }
 
 /// Fetch emoji
@@ -237,13 +235,15 @@ async fn get_emoji(
     Path(emoji_id): Path<EmojiId>,
     Query(query): Query<ThumbQuery>,
 ) -> Result<impl IntoResponse> {
-    // TODO: cache
+    // TODO: cache this lookup
     let media_id = lookup_emoji(&state.db, emoji_id).await?;
     get_thumb(State(state), Path(media_id), Query(query)).await
 }
 
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
+        // TODO: http HEAD routes for media, thumb, emoji
+        // .routes(routes!(head_media))
         .routes(routes!(get_media))
         .routes(routes!(get_thumb))
         .routes(routes!(get_emoji))

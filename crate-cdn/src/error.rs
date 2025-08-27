@@ -1,14 +1,25 @@
 use axum::response::{IntoResponse, Response};
 use http::StatusCode;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 #[allow(unused)] // TEMP
 pub enum Error {
+    #[error("not found")]
     NotFound,
+
+    #[error("bad request")]
     BadRequest,
+
+    #[error("database error: {0}")]
     Database(sqlx::Error),
+
+    #[error("image error: {0}")]
     ImageError(image::ImageError),
+
+    #[error("invalid range")]
     BadRange,
+
+    #[error("not modified")]
     NotModified,
 }
 
