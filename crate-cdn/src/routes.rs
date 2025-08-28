@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
 };
-use common::v1::types::{EmojiId, Media, MediaId, MediaTrack, MediaTrackInfo};
+use common::v1::types::{EmojiId, Media, MediaId, MediaTrack, MediaTrackInfo, TrackSource};
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
 use image::codecs::avif::AvifEncoder;
@@ -297,6 +297,34 @@ fn build_common_headers2(req_headers: &HeaderMap, media: &Media, size: u64) -> R
     })
 }
 
+/// get the MediaTrack the thumbnail should be generated from
+fn get_thumb_source(media: &Media) -> Option<&MediaTrack> {
+    match &media.source.info {
+        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) => Some(&media.source),
+        MediaTrackInfo::Mixed(m) if media.source.mime.starts_with("image/") => {
+            match (m.width, m.height) {
+                (Some(_), Some(_)) => Some(&media.source),
+                _ => panic!("invalid data in db?"),
+            }
+        }
+        _ => {
+            if let Some(t) = media
+                .all_tracks()
+                .find(|t| t.source == TrackSource::Extracted && matches!(t.info, MediaTrackInfo::Thumbnail(_))) {
+                Some(t)
+            } else {
+            media.all_tracks().find(|t| match &t.info {
+                MediaTrackInfo::Thumbnail(_) => true,
+                MediaTrackInfo::Image(_) => true,
+                _ => false,
+            })
+
+            }
+
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct ThumbQuery {
     /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
@@ -403,6 +431,27 @@ async fn get_emoji(
     let media_id = lookup_emoji(&state.db, emoji_id).await?;
     get_thumb(State(state), Path(media_id), Query(query), headers).await
 }
+
+// fn get_thumb_pseudocode() {
+//     let thumb_path = "thumb/{media_id}/{size}";
+//     let media = get_media_from_db();
+
+//     if file_exists(&thumb_path) {
+//         // return the thumbnail
+//         let reader = create_s3_reader(thumb_path);
+//         return Ok(reader);
+//     } else {
+//         // generate a thumbnail
+//         let Some(t) = get_thumb_source(media) else {
+//             panic!("can't generate a thumbnail for this media");
+//         };
+
+//         let data = download(&t.url);
+//         let thumb = generate_thumbnail(data);
+//         upload_to_s3(thumb);
+//         return Ok(thumb);
+//     }
+// }
 
 // TODO: return better error messages (eg. in json)
 pub fn routes() -> OpenApiRouter<AppState> {
