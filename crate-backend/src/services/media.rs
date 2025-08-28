@@ -537,10 +537,15 @@ async fn upload_extracted_thumb(
 }
 
 async fn get_mime(file: &std::path::Path) -> Result<String> {
-    let out = Command::new("file").arg("-ib").arg(file).output().await?;
-    let mime = String::from_utf8(out.stdout)
-        .map_err(|_| Error::BadStatic("failed to get mime type"))?
-        .trim()
+    let mime = infer::get_from_path(file)?
+        .map(|t| t.mime_type())
+        .unwrap_or("application/octet-stream")
         .to_owned();
     Ok(mime)
+    // let out = Command::new("file").arg("-ib").arg(file).output().await?;
+    // let mime = String::from_utf8(out.stdout)
+    //     .map_err(|_| Error::BadStatic("failed to get mime type"))?
+    //     .trim()
+    //     .to_owned();
+    // Ok(mime)
 }
