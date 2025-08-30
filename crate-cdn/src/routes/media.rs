@@ -100,10 +100,9 @@ pub async fn get_media(
 /// download a piece of media
 #[utoipa::path(get, path = "/media/{media_id}/{filename}")]
 pub async fn get_media_filename(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path((media_id, filename)): Path<(MediaId, String)>,
     headers: HeaderMap,
-    State(s): State<AppState>,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     let path = format!("/media/{}", media_id);
 
@@ -118,7 +117,7 @@ pub async fn get_media_filename(
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let reader = state.s3.reader(&path).await?;
+    let reader = s.s3.reader(&path).await?;
     if let Some(r) = header_info.range {
         let body = Body::from_stream(reader.into_bytes_stream(r).await?);
         Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))

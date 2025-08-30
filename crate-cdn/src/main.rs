@@ -6,6 +6,7 @@ use figment::{
     Figment,
 };
 use http::{header, HeaderName};
+use moka::future::Cache;
 use opendal::{layers::LoggingLayer, Operator};
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -33,9 +34,9 @@ struct AppState {
     config: Arc<Config>,
 
     // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
-    cache_emoji: moka::future::Cache<EmojiId, MediaId>,
-    cache_media: moka::future::Cache<MediaId, Media>,
-    // pending_thumbnails: Arc<Mutex<HashMap<(MediaId, u64, u64), Arc<Mutex<()>>>>>,
+    cache_emoji: Cache<EmojiId, MediaId>,
+    cache_media: Cache<MediaId, Media>,
+    pending_thumbnails: Cache<(MediaId, u32, u32), Vec<u8>>,
 }
 
 impl AppState {
@@ -112,14 +113,15 @@ async fn main() -> anyhow::Result<()> {
         .layer(LoggingLayer::default())
         .finish();
 
-    let cache_media = moka::future::Cache::new(config.cache_media);
-    let cache_emoji = moka::future::Cache::new(config.cache_emoji);
+    let cache_media = Cache::new(config.cache_media);
+    let cache_emoji = Cache::new(config.cache_emoji);
     let state = AppState {
         db,
         s3,
         config: Arc::new(config),
         cache_media,
         cache_emoji,
+        pending_thumbnails: Cache::new(0),
     };
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())

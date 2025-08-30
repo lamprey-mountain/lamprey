@@ -22,6 +22,9 @@ pub enum Error {
     #[error("image error: {0}")]
     ImageError(Arc<image::ImageError>),
 
+    #[error("opendal error: {0}")]
+    Opendal(Arc<opendal::Error>),
+
     #[error("invalid range")]
     BadRange,
 }
@@ -32,6 +35,7 @@ pub enum ErrorCode {
     BadRequest,
     Database,
     ImageError,
+    Opendal,
     BadRange,
 }
 
@@ -50,6 +54,7 @@ impl Error {
             Error::BadRequest => StatusCode::BAD_REQUEST,
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Opendal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE,
         }
     }
@@ -60,6 +65,7 @@ impl Error {
             Error::BadRequest => ErrorCode::BadRequest,
             Error::Database(_) => ErrorCode::Database,
             Error::ImageError(_) => ErrorCode::ImageError,
+            Error::Opendal(_) => ErrorCode::Opendal,
             Error::BadRange => ErrorCode::BadRange,
         }
     }
@@ -80,8 +86,12 @@ impl IntoResponse for Error {
 }
 
 impl From<opendal::Error> for Error {
-    fn from(_value: opendal::Error) -> Self {
-        Error::NotFound
+    fn from(err: opendal::Error) -> Self {
+        if err.kind() == opendal::ErrorKind::NotFound {
+            Error::NotFound
+        } else {
+            Error::Opendal(Arc::new(err))
+        }
     }
 }
 
