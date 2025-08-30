@@ -13,7 +13,7 @@ use std::{
     ops::Bound,
     time::{Duration, SystemTime},
 };
-use tracing::{debug, error, span, Instrument, Level};
+use tracing::{error, span, Instrument, Level};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -35,6 +35,38 @@ async fn get_media(
     let path = format!("/media/{}", media_id);
 
     let media = data::lookup_media(&state.db, media_id).await?;
+    let header_info = build_common_headers(&headers, &media)?;
+
+    if header_info.unmodified {
+        return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
+    }
+
+    let reader = state.s3.reader(&path).await?;
+    if let Some(r) = header_info.range {
+        let body = Body::from_stream(reader.into_bytes_stream(r).await?);
+        Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))
+    } else {
+        let body = Body::from_stream(reader.into_bytes_stream(..).await?);
+        Ok((StatusCode::OK, header_info.headers, body))
+    }
+}
+
+/// Fetch media with filename
+///
+/// download a piece of media
+#[utoipa::path(get, path = "/media/{media_id}/{filename}")]
+async fn get_media_filename(
+    State(state): State<AppState>,
+    Path((media_id, filename)): Path<(MediaId, String)>,
+    headers: HeaderMap,
+) -> Result<(http::StatusCode, HeaderMap, Body)> {
+    let path = format!("/media/{}", media_id);
+
+    let media = data::lookup_media(&state.db, media_id).await?;
+    if media.filename != filename {
+        return Err(Error::NotFound);
+    }
+
     let header_info = build_common_headers(&headers, &media)?;
 
     if header_info.unmodified {
@@ -479,6 +511,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         // TODO: http HEAD routes for media, thumb, emoji
         // .routes(routes!(head_media))
+        .routes(routes!(get_media_filename))
         .routes(routes!(get_media))
         .routes(routes!(get_thumb))
         .routes(routes!(get_emoji))
