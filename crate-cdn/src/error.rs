@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     response::{IntoResponse, Response},
     Json,
@@ -6,7 +8,7 @@ use http::StatusCode;
 use serde::Serialize;
 use tracing::error;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone)]
 pub enum Error {
     #[error("not found")]
     NotFound,
@@ -15,10 +17,10 @@ pub enum Error {
     BadRequest,
 
     #[error("database error: {0}")]
-    Database(sqlx::Error),
+    Database(Arc<sqlx::Error>),
 
     #[error("image error: {0}")]
-    ImageError(image::ImageError),
+    ImageError(Arc<image::ImageError>),
 
     #[error("invalid range")]
     BadRange,
@@ -27,7 +29,7 @@ pub enum Error {
     NotModified,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum ErrorCode {
     NotFound,
     BadRequest,
@@ -37,7 +39,7 @@ pub enum ErrorCode {
     NotModified,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 struct ErrorJson {
     code: ErrorCode,
     message: String,
@@ -91,7 +93,7 @@ impl From<opendal::Error> for Error {
 
 impl From<image::ImageError> for Error {
     fn from(value: image::ImageError) -> Self {
-        Error::ImageError(value)
+        Error::ImageError(Arc::new(value))
     }
 }
 
@@ -99,7 +101,13 @@ impl From<sqlx::Error> for Error {
     fn from(err: sqlx::Error) -> Self {
         match err {
             sqlx::Error::RowNotFound => Error::NotFound,
-            _ => Error::Database(err),
+            _ => Error::Database(Arc::new(err)),
         }
+    }
+}
+
+impl From<Arc<Error>> for Error {
+    fn from(value: Arc<Error>) -> Self {
+        value.as_ref().clone()
     }
 }

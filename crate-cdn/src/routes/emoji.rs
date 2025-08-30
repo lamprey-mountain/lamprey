@@ -8,7 +8,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
-    data::lookup_emoji,
     error::Result,
     routes::thumb::{get_thumb, head_thumb, ThumbQuery},
     AppState,
@@ -19,14 +18,13 @@ use crate::{
 /// directly get an emoji's thumbnail
 #[utoipa::path(get, path = "/emoji/{emoji_id}")]
 pub async fn get_emoji(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(emoji_id): Path<EmojiId>,
     Query(query): Query<ThumbQuery>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
-    // TODO: cache this lookup
-    let media_id = lookup_emoji(&state.db, emoji_id).await?;
-    get_thumb(State(state), Path(media_id), Query(query), headers).await
+    let media_id = s.lookup_emoji(emoji_id).await?;
+    get_thumb(State(s), Path(media_id), Query(query), headers).await
 }
 
 /// Head emoji
@@ -34,14 +32,13 @@ pub async fn get_emoji(
 /// directly get an emoji's thumbnail headers
 #[utoipa::path(head, path = "/emoji/{emoji_id}")]
 pub async fn head_emoji(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(emoji_id): Path<EmojiId>,
     Query(query): Query<ThumbQuery>,
     headers: HeaderMap,
 ) -> Result<impl IntoResponse> {
-    // TODO: cache this lookup
-    let media_id = lookup_emoji(&state.db, emoji_id).await?;
-    head_thumb(State(state), Path(media_id), Query(query), headers).await
+    let media_id = s.lookup_emoji(emoji_id).await?;
+    head_thumb(State(s), Path(media_id), Query(query), headers).await
 }
 
 pub fn routes() -> OpenApiRouter<AppState> {

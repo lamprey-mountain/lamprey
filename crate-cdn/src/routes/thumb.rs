@@ -12,7 +12,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
-    data::{self},
     error::{Error, Result},
     routes::{
         media::{get_media, head_media},
@@ -32,18 +31,18 @@ pub struct ThumbQuery {
 /// get a thumbnail for a piece of media
 #[utoipa::path(get, path = "/thumb/{media_id}")]
 pub async fn get_thumb(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     Query(query): Query<ThumbQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     // NOTE: original thumbnails (eg. from videos) are already extracted and saved to /thumb/{media_id}/original
     if let Some(size) = query.size {
-        if !state.config.thumb_sizes.contains(&size) {
+        if !s.config.thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
         }
 
-        let media = data::lookup_media(&state.db, media_id).await?;
+        let media = s.lookup_media(media_id).await?;
         let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
 
         if pre_header_info.unmodified {
@@ -56,13 +55,13 @@ pub async fn get_thumb(
 
         let thumb_path = format!("/thumb/{media_id}/{size}x{size}");
 
-        if state.s3.exists(&thumb_path).await? {
-            let meta = state.s3.stat(&thumb_path).await?;
+        if s.s3.exists(&thumb_path).await? {
+            let meta = s.s3.stat(&thumb_path).await?;
             let content_length = meta.content_length();
             let (headers, range) =
                 complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
 
-            let reader = state.s3.reader(&thumb_path).await?;
+            let reader = s.s3.reader(&thumb_path).await?;
             if let Some(r) = range {
                 let body = Body::from_stream(reader.into_bytes_stream(r).await?);
                 return Ok((StatusCode::PARTIAL_CONTENT, headers, body));
@@ -86,12 +85,11 @@ pub async fn get_thumb(
             return Err(Error::NotFound);
         };
 
-        let image_data = state
-            .s3
-            .read(source_track.url.path())
-            .instrument(span!(Level::INFO, "read source media from s3"))
-            .await?
-            .to_bytes();
+        let image_data =
+            s.s3.read(source_track.url.path())
+                .instrument(span!(Level::INFO, "read source media from s3"))
+                .await?
+                .to_bytes();
         let thumb_data = async {
             let image = image::load_from_memory(&image_data)?;
             let mut out = Cursor::new(Vec::new());
@@ -103,7 +101,7 @@ pub async fn get_thumb(
         .instrument(span!(Level::INFO, "generate thumbnail"))
         .await?;
 
-        let s = state.s3.clone();
+        let s = s.s3.clone();
         let data_clone = thumb_data.clone();
         tokio::spawn(async move {
             if let Err(err) = s
@@ -124,10 +122,10 @@ pub async fn get_thumb(
 
         Ok((StatusCode::OK, headers, Body::from(thumb_data)))
     } else {
-        let media = data::lookup_media(&state.db, media_id).await?;
+        let media = s.lookup_media(media_id).await?;
         let original_thumb_path = format!("/thumb/{media_id}/original");
 
-        if state.s3.exists(&original_thumb_path).await? {
+        if s.s3.exists(&original_thumb_path).await? {
             let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
 
             if pre_header_info.unmodified {
@@ -138,12 +136,12 @@ pub async fn get_thumb(
                 ));
             }
 
-            let meta = state.s3.stat(&original_thumb_path).await?;
+            let meta = s.s3.stat(&original_thumb_path).await?;
             let content_length = meta.content_length();
             let (headers, range) =
                 complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
 
-            let reader = state.s3.reader(&original_thumb_path).await?;
+            let reader = s.s3.reader(&original_thumb_path).await?;
             if let Some(r) = range {
                 let body = Body::from_stream(reader.into_bytes_stream(r).await?);
                 return Ok((StatusCode::PARTIAL_CONTENT, headers, body));
@@ -154,7 +152,7 @@ pub async fn get_thumb(
         }
 
         if media.source.mime.starts_with("image/") {
-            return get_media(State(state), Path(media_id), headers).await;
+            return get_media(State(s), Path(media_id), headers).await;
         }
 
         Err(Error::NotFound)
@@ -166,18 +164,18 @@ pub async fn get_thumb(
 /// get headers for a thumbnail for a piece of media
 #[utoipa::path(head, path = "/thumb/{media_id}")]
 pub async fn head_thumb(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     Query(query): Query<ThumbQuery>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     // NOTE: original thumbnails (eg. from videos) are already extracted and saved to /thumb/{media_id}/original
     if let Some(size) = query.size {
-        if !state.config.thumb_sizes.contains(&size) {
+        if !s.config.thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
         }
 
-        let media = data::lookup_media(&state.db, media_id).await?;
+        let media = s.lookup_media(media_id).await?;
         let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
 
         if pre_header_info.unmodified {
@@ -190,8 +188,8 @@ pub async fn head_thumb(
 
         let thumb_path = format!("/thumb/{media_id}/{size}x{size}");
 
-        if state.s3.exists(&thumb_path).await? {
-            let meta = state.s3.stat(&thumb_path).await?;
+        if s.s3.exists(&thumb_path).await? {
+            let meta = s.s3.stat(&thumb_path).await?;
             let content_length = meta.content_length();
             let (headers, range) =
                 complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
@@ -218,12 +216,11 @@ pub async fn head_thumb(
             return Err(Error::NotFound);
         };
 
-        let image_data = state
-            .s3
-            .read(source_track.url.path())
-            .instrument(span!(Level::INFO, "read source media from s3"))
-            .await?
-            .to_bytes();
+        let image_data =
+            s.s3.read(source_track.url.path())
+                .instrument(span!(Level::INFO, "read source media from s3"))
+                .await?
+                .to_bytes();
         let thumb_data = async {
             let image = image::load_from_memory(&image_data)?;
             let mut out = Cursor::new(Vec::new());
@@ -235,7 +232,7 @@ pub async fn head_thumb(
         .instrument(span!(Level::INFO, "generate thumbnail"))
         .await?;
 
-        let s = state.s3.clone();
+        let s = s.s3.clone();
         let data_clone = thumb_data.clone();
         tokio::spawn(async move {
             if let Err(err) = s
@@ -262,10 +259,10 @@ pub async fn head_thumb(
 
         Ok((status, headers, Body::empty()))
     } else {
-        let media = data::lookup_media(&state.db, media_id).await?;
+        let media = s.lookup_media(media_id).await?;
         let original_thumb_path = format!("/thumb/{media_id}/original");
 
-        if state.s3.exists(&original_thumb_path).await? {
+        if s.s3.exists(&original_thumb_path).await? {
             let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
 
             if pre_header_info.unmodified {
@@ -276,7 +273,7 @@ pub async fn head_thumb(
                 ));
             }
 
-            let meta = state.s3.stat(&original_thumb_path).await?;
+            let meta = s.s3.stat(&original_thumb_path).await?;
             let content_length = meta.content_length();
             let (headers, range) =
                 complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
@@ -290,7 +287,7 @@ pub async fn head_thumb(
         }
 
         if media.source.mime.starts_with("image/") {
-            return head_media(State(state), Path(media_id), headers).await;
+            return head_media(State(s), Path(media_id), headers).await;
         }
 
         Err(Error::NotFound)

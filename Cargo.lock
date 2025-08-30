@@ -641,6 +641,7 @@ dependencies = [
  "headers",
  "http 1.3.1",
  "image",
+ "moka",
  "opendal",
  "opentelemetry",
  "opentelemetry-otlp",

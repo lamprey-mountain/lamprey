@@ -8,7 +8,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
-    data::{self},
     error::{Error, Result},
     routes::util::build_common_headers,
     AppState,
@@ -19,11 +18,11 @@ use crate::{
 /// get headers for a piece of media
 #[utoipa::path(head, path = "/media/{media_id}")]
 pub async fn head_media(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    let media = data::lookup_media(&state.db, media_id).await?;
+    let media = s.lookup_media(media_id).await?;
     let header_info = build_common_headers(&headers, &media)?;
 
     if header_info.unmodified {
@@ -44,11 +43,11 @@ pub async fn head_media(
 /// get headers for a piece of media
 #[utoipa::path(head, path = "/media/{media_id}/{filename}")]
 pub async fn head_media_filename(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path((media_id, filename)): Path<(MediaId, String)>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    let media = data::lookup_media(&state.db, media_id).await?;
+    let media = s.lookup_media(media_id).await?;
     if media.filename != filename {
         return Err(Error::NotFound);
     }
@@ -73,20 +72,20 @@ pub async fn head_media_filename(
 /// download a piece of media
 #[utoipa::path(get, path = "/media/{media_id}")]
 pub async fn get_media(
-    State(state): State<AppState>,
+    State(s): State<AppState>,
     Path(media_id): Path<MediaId>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     let path = format!("/media/{}", media_id);
 
-    let media = data::lookup_media(&state.db, media_id).await?;
+    let media = s.lookup_media(media_id).await?;
     let header_info = build_common_headers(&headers, &media)?;
 
     if header_info.unmodified {
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let reader = state.s3.reader(&path).await?;
+    let reader = s.s3.reader(&path).await?;
     if let Some(r) = header_info.range {
         let body = Body::from_stream(reader.into_bytes_stream(r).await?);
         Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))
@@ -104,10 +103,11 @@ pub async fn get_media_filename(
     State(state): State<AppState>,
     Path((media_id, filename)): Path<(MediaId, String)>,
     headers: HeaderMap,
+    State(s): State<AppState>,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     let path = format!("/media/{}", media_id);
 
-    let media = data::lookup_media(&state.db, media_id).await?;
+    let media = s.lookup_media(media_id).await?;
     if media.filename != filename {
         return Err(Error::NotFound);
     }

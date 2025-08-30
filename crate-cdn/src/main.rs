@@ -1,4 +1,6 @@
 use axum::{response::Html, routing::get, Json};
+use common::v1::types::{EmojiId, Media, MediaId};
+use error::Result;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
@@ -29,7 +31,29 @@ struct AppState {
     db: PgPool,
     s3: Operator,
     config: Arc<Config>,
+
+    // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
+    cache_emoji: moka::future::Cache<EmojiId, MediaId>,
+    cache_media: moka::future::Cache<MediaId, Media>,
     // pending_thumbnails: Arc<Mutex<HashMap<(MediaId, u64, u64), Arc<Mutex<()>>>>>,
+}
+
+impl AppState {
+    async fn lookup_media(&self, media_id: MediaId) -> Result<Media> {
+        let m = self
+            .cache_media
+            .try_get_with(media_id, data::lookup_media(&self.db, media_id))
+            .await?;
+        Ok(m)
+    }
+
+    async fn lookup_emoji(&self, emoji_id: EmojiId) -> Result<MediaId> {
+        let m = self
+            .cache_emoji
+            .try_get_with(emoji_id, data::lookup_emoji(&self.db, emoji_id))
+            .await?;
+        Ok(m)
+    }
 }
 
 #[derive(OpenApi)]
@@ -88,10 +112,14 @@ async fn main() -> anyhow::Result<()> {
         .layer(LoggingLayer::default())
         .finish();
 
+    let cache_media = moka::future::Cache::new(config.cache_media);
+    let cache_emoji = moka::future::Cache::new(config.cache_emoji);
     let state = AppState {
         db,
         s3,
         config: Arc::new(config),
+        cache_media,
+        cache_emoji,
     };
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
