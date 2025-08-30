@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
     RoomMembership, UserId,
 };
-use common::v1::types::{RoomBanCreate, RoomMemberOrigin};
+use common::v1::types::{RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -403,6 +403,25 @@ async fn room_ban_create(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Room ban create bulk (TODO)
+#[allow(unused)]
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/ban",
+    params(("room_id" = RoomId, description = "Room id")),
+    tags = ["room_member"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn room_ban_create_bulk(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+    Json(create): Json<RoomBanBulkCreate>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 /// Room ban remove
 #[utoipa::path(
     delete,
@@ -531,6 +550,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
+        .routes(routes!(room_ban_create_bulk))
         .routes(routes!(room_ban_create))
         .routes(routes!(room_ban_remove))
         .routes(routes!(room_ban_get))

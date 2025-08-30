@@ -6,7 +6,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option, Diff};
+use crate::v1::types::{
+    util::{deserialize_sorted, deserialize_sorted_option, some_option, Diff},
+    UserId,
+};
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
@@ -99,6 +102,41 @@ pub struct RolePatch {
 
     pub is_self_applicable: Option<bool>,
     pub is_mentionable: Option<bool>,
+}
+
+/// apply and remove a role to many members at once
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoleMemberBulkPatch {
+    /// add this role to these users
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
+    pub apply: Vec<UserId>,
+
+    /// remove this role from these users
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
+    pub remove: Vec<UserId>,
+}
+
+/// reorder some roles
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoleReorder {
+    /// the roles to reorder
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
+    pub roles: Vec<RoleReorderItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoleReorderItem {
+    pub role_id: RoleId,
+    pub position: u64,
 }
 
 impl Diff<Role> for RolePatch {

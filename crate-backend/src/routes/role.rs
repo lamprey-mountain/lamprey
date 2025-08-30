@@ -6,8 +6,8 @@ use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, Role, RoleCreate, RoleId, RolePatch, RoomId, RoomMember,
-    RoomMembership, UserId,
+    PaginationResponse, Permission, Role, RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch,
+    RoleReorder, RoomId, RoomMember, RoomMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -388,6 +388,51 @@ pub async fn role_member_remove(
     Ok(Json(member))
 }
 
+/// Role member bulk edit (TODO)
+#[allow(unused)]
+#[utoipa::path(
+    patch,
+    path = "/room/{room_id}/role/{role_id}/member",
+    params(
+        ("room_id", description = "Room id"),
+        ("role_id", description = "Role id"),
+    ),
+    tags = ["role"],
+    responses(
+        (status = NO_CONTENT, body = (), description = "success"),
+    )
+)]
+async fn role_member_bulk_edit(
+    Path((room_id, role_id)): Path<(RoomId, RoleId)>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+    Json(body): Json<RoleMemberBulkPatch>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Role reorder (TODO)
+#[allow(unused)]
+#[utoipa::path(
+    patch,
+    path = "/room/{room_id}/role",
+    params(("room_id", description = "Room id")),
+    tags = ["role"],
+    responses(
+        (status = NO_CONTENT, body = (), description = "success"),
+    )
+)]
+async fn role_reorder(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user_id): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+    Json(body): Json<RoleReorder>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(role_create))
@@ -395,7 +440,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(role_delete))
         .routes(routes!(role_get))
         .routes(routes!(role_list))
+        .routes(routes!(role_reorder))
         .routes(routes!(role_member_list))
         .routes(routes!(role_member_add))
         .routes(routes!(role_member_remove))
+        .routes(routes!(role_member_bulk_edit))
 }

@@ -172,6 +172,20 @@ pub enum RoomMemberOrigin {
 //     },
 // }
 
+/// create many bans at once
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoomBanBulkCreate {
+    /// who to ban
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
+    pub target_ids: Vec<UserId>,
+
+    /// when the ban expires
+    pub expires_at: Option<Time>,
+}
+
 impl Diff<RoomMember> for RoomMemberPatch {
     fn changes(&self, other: &RoomMember) -> bool {
         self.override_name.changes(&other.override_name)
