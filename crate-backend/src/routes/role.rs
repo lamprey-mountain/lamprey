@@ -31,7 +31,7 @@ use crate::error::{Error, Result};
         (status = CREATED, body = Role, description = "success"),
     )
 )]
-pub async fn role_create(
+async fn role_create(
     Path(room_id): Path<RoomId>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -92,7 +92,7 @@ pub async fn role_create(
         (status = NOT_MODIFIED, description = "success"),
     )
 )]
-pub async fn role_update(
+async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -168,7 +168,7 @@ pub async fn role_update(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn role_delete(
+async fn role_delete(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(query): Query<RoleDeleteQuery>,
     Auth(user_id): Auth,
@@ -218,7 +218,7 @@ pub async fn role_delete(
         (status = OK, body = Role, description = "success"),
     )
 )]
-pub async fn role_get(
+async fn role_get(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
@@ -243,7 +243,7 @@ pub async fn role_get(
         (status = OK, body = PaginationResponse<Role>, description = "success"),
     )
 )]
-pub async fn role_list(
+async fn role_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<RoleId>>,
     Auth(user_id): Auth,
@@ -269,7 +269,7 @@ pub async fn role_list(
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )
 )]
-pub async fn role_member_list(
+async fn role_member_list(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(paginate): Query<PaginationQuery<UserId>>,
     Auth(user_id): Auth,
@@ -296,7 +296,7 @@ pub async fn role_member_list(
         (status = OK, body = RoomMember, description = "success"),
     )
 )]
-pub async fn role_member_add(
+async fn role_member_add(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     Auth(auth_user_id): Auth,
     HeaderReason(reason): HeaderReason,
@@ -348,7 +348,7 @@ pub async fn role_member_add(
         (status = OK, body = RoomMember, description = "success"),
     )
 )]
-pub async fn role_member_remove(
+async fn role_member_remove(
     Path((room_id, role_id, target_user_id)): Path<(RoomId, RoleId, UserId)>,
     Auth(auth_user_id): Auth,
     HeaderReason(reason): HeaderReason,
