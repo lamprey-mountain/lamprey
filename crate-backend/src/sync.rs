@@ -469,14 +469,22 @@ impl Connection {
                     thread: srv.threads.get(thread.id, session.user_id()).await?,
                 },
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
-                    message: d
-                        .message_get(message.thread_id, message.id, session.user_id().unwrap())
-                        .await?,
+                    message: {
+                        let mut m = d
+                            .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                            .await?;
+                        self.s.presign_message(&mut m).await?;
+                        m
+                    },
                 },
                 MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
-                    message: d
-                        .message_get(message.thread_id, message.id, session.user_id().unwrap())
-                        .await?,
+                    message: {
+                        let mut m = d
+                            .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                            .await?;
+                        self.s.presign_message(&mut m).await?;
+                        m
+                    },
                 },
                 m => m,
             };
