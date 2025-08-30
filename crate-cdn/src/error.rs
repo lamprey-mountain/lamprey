@@ -1,9 +1,12 @@
-use axum::response::{IntoResponse, Response};
+use axum::{
+    response::{IntoResponse, Response},
+    Json,
+};
 use http::StatusCode;
+use serde::Serialize;
 use tracing::error;
 
 #[derive(Debug, thiserror::Error)]
-#[allow(unused)] // TEMP
 pub enum Error {
     #[error("not found")]
     NotFound,
@@ -24,19 +27,59 @@ pub enum Error {
     NotModified,
 }
 
+#[derive(Debug, Serialize)]
+pub enum ErrorCode {
+    NotFound,
+    BadRequest,
+    Database,
+    ImageError,
+    BadRange,
+    NotModified,
+}
+
+#[derive(Debug, Serialize)]
+struct ErrorJson {
+    code: ErrorCode,
+    message: String,
+}
+
 pub type Result<T> = core::result::Result<T, Error>;
+
+impl Error {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Error::NotFound => StatusCode::NOT_FOUND,
+            Error::BadRequest => StatusCode::BAD_REQUEST,
+            Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE,
+            Error::NotModified => StatusCode::NOT_MODIFIED,
+        }
+    }
+
+    fn code(&self) -> ErrorCode {
+        match self {
+            Error::NotFound => ErrorCode::NotFound,
+            Error::BadRequest => ErrorCode::BadRequest,
+            Error::Database(_) => ErrorCode::Database,
+            Error::ImageError(_) => ErrorCode::ImageError,
+            Error::BadRange => ErrorCode::BadRange,
+            Error::NotModified => ErrorCode::NotModified,
+        }
+    }
+
+    fn to_json(&self) -> ErrorJson {
+        ErrorJson {
+            code: self.code(),
+            message: self.to_string(),
+        }
+    }
+}
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         error!("responding with error: {self}");
-        match self {
-            Error::NotFound => StatusCode::NOT_FOUND.into_response(),
-            Error::BadRequest => StatusCode::BAD_REQUEST.into_response(),
-            Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE.into_response(),
-            Error::NotModified => StatusCode::NOT_MODIFIED.into_response(),
-        }
+        (self.status_code(), Json(self.to_json())).into_response()
     }
 }
 
