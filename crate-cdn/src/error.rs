@@ -24,9 +24,6 @@ pub enum Error {
 
     #[error("invalid range")]
     BadRange,
-
-    #[error("not modified")]
-    NotModified,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -36,7 +33,6 @@ pub enum ErrorCode {
     Database,
     ImageError,
     BadRange,
-    NotModified,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -55,7 +51,6 @@ impl Error {
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE,
-            Error::NotModified => StatusCode::NOT_MODIFIED,
         }
     }
 
@@ -66,7 +61,6 @@ impl Error {
             Error::Database(_) => ErrorCode::Database,
             Error::ImageError(_) => ErrorCode::ImageError,
             Error::BadRange => ErrorCode::BadRange,
-            Error::NotModified => ErrorCode::NotModified,
         }
     }
 

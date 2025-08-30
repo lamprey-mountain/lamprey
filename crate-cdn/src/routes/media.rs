@@ -9,7 +9,7 @@ use utoipa_axum::routes;
 
 use crate::{
     error::{Error, Result},
-    routes::util::build_common_headers,
+    routes::util::{build_headers, ContentInfo},
     AppState,
 };
 
@@ -23,7 +23,7 @@ pub async fn head_media(
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
     let media = s.lookup_media(media_id).await?;
-    let header_info = build_common_headers(&headers, &media)?;
+    let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
@@ -52,7 +52,7 @@ pub async fn head_media_filename(
         return Err(Error::NotFound);
     }
 
-    let header_info = build_common_headers(&headers, &media)?;
+    let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
@@ -79,7 +79,7 @@ pub async fn get_media(
     let path = format!("/media/{}", media_id);
 
     let media = s.lookup_media(media_id).await?;
-    let header_info = build_common_headers(&headers, &media)?;
+    let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
@@ -112,7 +112,7 @@ pub async fn get_media_filename(
         return Err(Error::NotFound);
     }
 
-    let header_info = build_common_headers(&headers, &media)?;
+    let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
 
     if header_info.unmodified {
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));

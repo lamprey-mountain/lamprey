@@ -15,7 +15,7 @@ use crate::{
     error::{Error, Result},
     routes::{
         media::{get_media, head_media},
-        util::{build_thumb_headers_pre, complete_thumb_headers, get_thumb_source},
+        util::{build_headers, get_thumb_source, ContentInfo},
     },
     AppState,
 };
@@ -43,7 +43,13 @@ pub async fn get_thumb(
         }
 
         let media = s.lookup_media(media_id).await?;
-        let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
+        let pre_header_info = build_headers(
+            &headers,
+            &ContentInfo::Thumb {
+                media: &media,
+                content_length: None,
+            },
+        )?;
 
         if pre_header_info.unmodified {
             return Ok((
@@ -58,16 +64,21 @@ pub async fn get_thumb(
         if s.s3.exists(&thumb_path).await? {
             let meta = s.s3.stat(&thumb_path).await?;
             let content_length = meta.content_length();
-            let (headers, range) =
-                complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
+            let final_headers = build_headers(
+                &headers,
+                &ContentInfo::Thumb {
+                    media: &media,
+                    content_length: Some(content_length),
+                },
+            )?;
 
             let reader = s.s3.reader(&thumb_path).await?;
-            if let Some(r) = range {
+            if let Some(r) = final_headers.range {
                 let body = Body::from_stream(reader.into_bytes_stream(r).await?);
-                return Ok((StatusCode::PARTIAL_CONTENT, headers, body));
+                return Ok((StatusCode::PARTIAL_CONTENT, final_headers.headers, body));
             } else {
                 let body = Body::from_stream(reader.into_bytes_stream(..).await?);
-                return Ok((StatusCode::OK, headers, body));
+                return Ok((StatusCode::OK, final_headers.headers, body));
             }
         }
 
@@ -101,10 +112,10 @@ pub async fn get_thumb(
         .instrument(span!(Level::INFO, "generate thumbnail"))
         .await?;
 
-        let s = s.s3.clone();
+        let s_clone = s.s3.clone();
         let data_clone = thumb_data.clone();
         tokio::spawn(async move {
-            if let Err(err) = s
+            if let Err(err) = s_clone
                 .write(&thumb_path, data_clone)
                 .instrument(span!(Level::INFO, "upload thumbnail to s3"))
                 .await
@@ -113,41 +124,61 @@ pub async fn get_thumb(
             }
         });
 
-        let (headers, _range) = complete_thumb_headers(
+        let final_headers = build_headers(
             &headers,
-            &media,
-            pre_header_info.headers,
-            thumb_data.len() as u64,
+            &ContentInfo::Thumb {
+                media: &media,
+                content_length: Some(thumb_data.len() as u64),
+            },
         )?;
 
-        Ok((StatusCode::OK, headers, Body::from(thumb_data)))
+        if let Some(range) = final_headers.range {
+            let start = match range.0 {
+                std::ops::Bound::Included(s) => s,
+                std::ops::Bound::Excluded(s) => s + 1,
+                std::ops::Bound::Unbounded => 0,
+            };
+            let end = match range.1 {
+                std::ops::Bound::Included(e) => e + 1,
+                std::ops::Bound::Excluded(e) => e,
+                std::ops::Bound::Unbounded => thumb_data.len() as u64,
+            };
+
+            let part = thumb_data[start as usize..end as usize].to_vec();
+            Ok((
+                StatusCode::PARTIAL_CONTENT,
+                final_headers.headers,
+                Body::from(part),
+            ))
+        } else {
+            Ok((
+                StatusCode::OK,
+                final_headers.headers,
+                Body::from(thumb_data),
+            ))
+        }
     } else {
         let media = s.lookup_media(media_id).await?;
         let original_thumb_path = format!("/thumb/{media_id}/original");
 
         if s.s3.exists(&original_thumb_path).await? {
-            let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
-
-            if pre_header_info.unmodified {
-                return Ok((
-                    StatusCode::NOT_MODIFIED,
-                    pre_header_info.headers,
-                    Body::empty(),
-                ));
-            }
-
             let meta = s.s3.stat(&original_thumb_path).await?;
             let content_length = meta.content_length();
-            let (headers, range) =
-                complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
+            let final_headers = build_headers(
+                &headers,
+                &ContentInfo::Thumb {
+                    media: &media,
+                    content_length: Some(content_length),
+                },
+            )?;
 
             let reader = s.s3.reader(&original_thumb_path).await?;
-            if let Some(r) = range {
+            if let Some(r) = final_headers.range {
                 let body = Body::from_stream(reader.into_bytes_stream(r).await?);
-                return Ok((StatusCode::PARTIAL_CONTENT, headers, body));
+                return Ok((StatusCode::PARTIAL_CONTENT, final_headers.headers, body));
             } else {
                 let body = Body::from_stream(reader.into_bytes_stream(..).await?);
-                return Ok((StatusCode::OK, headers, body));
+                return Ok((StatusCode::OK, final_headers.headers, body));
             }
         }
 
@@ -176,7 +207,13 @@ pub async fn head_thumb(
         }
 
         let media = s.lookup_media(media_id).await?;
-        let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
+        let pre_header_info = build_headers(
+            &headers,
+            &ContentInfo::Thumb {
+                media: &media,
+                content_length: None,
+            },
+        )?;
 
         if pre_header_info.unmodified {
             return Ok((
@@ -191,15 +228,20 @@ pub async fn head_thumb(
         if s.s3.exists(&thumb_path).await? {
             let meta = s.s3.stat(&thumb_path).await?;
             let content_length = meta.content_length();
-            let (headers, range) =
-                complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
+            let final_headers = build_headers(
+                &headers,
+                &ContentInfo::Thumb {
+                    media: &media,
+                    content_length: Some(content_length),
+                },
+            )?;
 
-            let status = if range.is_some() {
+            let status = if final_headers.range.is_some() {
                 StatusCode::PARTIAL_CONTENT
             } else {
                 StatusCode::OK
             };
-            return Ok((status, headers, Body::empty()));
+            return Ok((status, final_headers.headers, Body::empty()));
         }
 
         // TODO: prevent races when generating thumbs
@@ -232,10 +274,10 @@ pub async fn head_thumb(
         .instrument(span!(Level::INFO, "generate thumbnail"))
         .await?;
 
-        let s = s.s3.clone();
+        let s_clone = s.s3.clone();
         let data_clone = thumb_data.clone();
         tokio::spawn(async move {
-            if let Err(err) = s
+            if let Err(err) = s_clone
                 .write(&thumb_path, data_clone)
                 .instrument(span!(Level::INFO, "upload thumbnail to s3"))
                 .await
@@ -244,46 +286,42 @@ pub async fn head_thumb(
             }
         });
 
-        let (headers, range) = complete_thumb_headers(
+        let final_headers = build_headers(
             &headers,
-            &media,
-            pre_header_info.headers,
-            thumb_data.len() as u64,
+            &ContentInfo::Thumb {
+                media: &media,
+                content_length: Some(thumb_data.len() as u64),
+            },
         )?;
 
-        let status = if range.is_some() {
+        let status = if final_headers.range.is_some() {
             StatusCode::PARTIAL_CONTENT
         } else {
             StatusCode::OK
         };
 
-        Ok((status, headers, Body::empty()))
+        Ok((status, final_headers.headers, Body::empty()))
     } else {
         let media = s.lookup_media(media_id).await?;
         let original_thumb_path = format!("/thumb/{media_id}/original");
 
         if s.s3.exists(&original_thumb_path).await? {
-            let pre_header_info = build_thumb_headers_pre(&headers, &media)?;
-
-            if pre_header_info.unmodified {
-                return Ok((
-                    StatusCode::NOT_MODIFIED,
-                    pre_header_info.headers,
-                    Body::empty(),
-                ));
-            }
-
             let meta = s.s3.stat(&original_thumb_path).await?;
             let content_length = meta.content_length();
-            let (headers, range) =
-                complete_thumb_headers(&headers, &media, pre_header_info.headers, content_length)?;
+            let final_headers = build_headers(
+                &headers,
+                &ContentInfo::Thumb {
+                    media: &media,
+                    content_length: Some(content_length),
+                },
+            )?;
 
-            let status = if range.is_some() {
+            let status = if final_headers.range.is_some() {
                 StatusCode::PARTIAL_CONTENT
             } else {
                 StatusCode::OK
             };
-            return Ok((status, headers, Body::empty()));
+            return Ok((status, final_headers.headers, Body::empty()));
         }
 
         if media.source.mime.starts_with("image/") {
