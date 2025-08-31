@@ -234,7 +234,7 @@ export const VideoView = (props: MediaProps) => {
 			artwork: [{
 				sizes: "640x640",
 				src: getThumb(props.media, 640),
-				type: "image/avif"
+				type: "image/avif",
 			}],
 		});
 	};

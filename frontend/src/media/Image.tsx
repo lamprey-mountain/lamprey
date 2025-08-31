@@ -20,8 +20,7 @@ export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
 	console.log(props.media);
 	const [loaded, setLoaded] = createSignal(false);
-	const thumbUrl = () =>
-		getThumb(props.media, props.thumb_width ?? 320)!;
+	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
 	const height = () => {
 		if (props.media.source.type === "Image") {

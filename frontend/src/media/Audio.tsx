@@ -175,7 +175,7 @@ export const AudioView = (props: MediaProps) => {
 			artwork: [{
 				sizes: "640x640",
 				src: getThumb(props.media, 640),
-				type: "image/avif"
+				type: "image/avif",
 			}],
 		});
 	};
@@ -229,12 +229,15 @@ export const AudioView = (props: MediaProps) => {
 				<rect class="current" width={progressWidth()} />
 				<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
 			</svg>
-			<a class="thumb" href={getThumb(props.media)} >
-				<img src={getThumb(props.media, 64)}
+			<a class="thumb" href={getThumb(props.media)}>
+				<img
+					src={getThumb(props.media, 64)}
 					onError={(e) => {
 						console.error("failed to load image");
-						e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
-					}} />
+						e.currentTarget.src =
+							"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+					}}
+				/>
 			</a>
 			<div class="info">
 				<a
