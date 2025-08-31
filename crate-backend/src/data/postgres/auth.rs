@@ -29,6 +29,13 @@ impl DataAuth for Postgres {
         Ok(())
     }
 
+    async fn auth_oauth_get_all(&self, user_id: UserId) -> Result<Vec<String>> {
+        let providers = query_scalar!("SELECT provider FROM oauth WHERE user_id = $1", *user_id,)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(providers)
+    }
+
     async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId> {
         let remote_id = query_scalar!(
             "SELECT user_id FROM oauth WHERE remote_id = $1 AND provider = $2",

@@ -5,7 +5,7 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
-use common::v1::types::auth::AuthStatus;
+use common::v1::types::auth::AuthState;
 use common::v1::types::auth::CaptchaChallenge;
 use common::v1::types::auth::CaptchaResponse;
 use common::v1::types::auth::PasswordExec;
@@ -158,23 +158,10 @@ async fn auth_oauth_redirect(
     }
 }
 
-/// Auth oauth logout (TODO)
-#[utoipa::path(
-    post,
-    path = "/auth/oauth/{provider}/logout",
-    params(("provider", description = "oauth provider")),
-    tags = ["auth"],
-    responses((status = NO_CONTENT, description = "success"))
-)]
-async fn auth_oauth_logout(
-    Path(_provider): Path<String>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
-/// Auth oauth delete (TODO)
+/// Auth oauth delete
+///
+/// Remove an oauth provider. You will no longer be able to authenticate via
+/// this provider after this endpoint is called.
 #[utoipa::path(
     delete,
     path = "/auth/oauth/{provider}",
@@ -183,11 +170,13 @@ async fn auth_oauth_logout(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn auth_oauth_delete(
-    Path(_provider): Path<String>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(provider): Path<String>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    data.auth_oauth_delete(provider, auth_user_id).await?;
+    Ok(())
 }
 
 /// Auth email exec (TODO)
@@ -373,18 +362,30 @@ async fn auth_password_exec(
     }
 }
 
-/// Auth status (TODO)
+/// Auth state
+///
+/// Get the available auth methods for this user
 #[utoipa::path(
     get,
     path = "/auth",
     tags = ["auth"],
-    responses((status = OK, body = AuthStatus, description = "success")),
+    responses((status = OK, body = AuthState, description = "success")),
 )]
-async fn auth_status(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+async fn auth_state(
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let oauth_providers = data.auth_oauth_get_all(auth_user_id).await?;
+    let email = data.user_email_list(auth_user_id).await?;
+    let password = data.auth_password_get(auth_user_id).await?;
+    let auth_state = AuthState {
+        has_email: email.iter().any(|e| e.is_verified && e.is_primary),
+        has_totp: false, // TODO
+        has_password: password.is_some(),
+        oauth_providers,
+    };
+    Ok(Json(auth_state))
 }
 
 /// Auth captcha init (TODO)
@@ -449,7 +450,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(auth_oauth_init))
         .routes(routes!(auth_oauth_redirect))
-        .routes(routes!(auth_oauth_logout))
         .routes(routes!(auth_oauth_delete))
         .routes(routes!(auth_email_exec))
         .routes(routes!(auth_email_reset))
@@ -463,6 +463,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_password_exec))
         .routes(routes!(auth_captcha_init))
         .routes(routes!(auth_captcha_submit))
-        .routes(routes!(auth_status))
+        .routes(routes!(auth_state))
         .routes(routes!(auth_sudo))
 }

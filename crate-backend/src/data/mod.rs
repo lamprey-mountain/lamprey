@@ -386,7 +386,7 @@ pub trait DataAuth {
         remote_id: String,
         can_auth: bool,
     ) -> Result<()>;
-    // async fn auth_oauth_get(&self, provider: String, user_id: UserId) -> Result<String>;
+    async fn auth_oauth_get_all(&self, user_id: UserId) -> Result<Vec<String>>;
     async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId>;
     async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()>;
     async fn auth_password_set(&self, user_id: UserId, hash: &[u8], salt: &[u8]) -> Result<()>;

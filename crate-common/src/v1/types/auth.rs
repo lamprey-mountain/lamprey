@@ -92,9 +92,11 @@ pub struct CaptchaResponse {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AuthStatus {
-    /// if there is at least one verified email address
-    pub has_verified_email: bool,
+pub struct AuthState {
+    /// if there is at least one verified and primary email address
+    ///
+    /// (this is used for magic links and password resets)
+    pub has_email: bool,
 
     /// if local totp state is_valid
     pub has_totp: bool,
