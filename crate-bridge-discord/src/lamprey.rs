@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use common::v1::types::{
     self, misc::UserIdReq, pagination::PaginationQuery, ApplicationId, Media, MediaCreate,
-    MediaCreateSource, MediaId, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId,
-    ThreadType, User, UserId,
+    MediaCreateSource, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, ThreadType,
+    User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -179,11 +179,6 @@ impl LampreyHandle {
             .media_upload(&upload, bytes)
             .await?;
         media.ok_or(anyhow::anyhow!("failed to upload"))
-    }
-
-    pub async fn media_info(&self, media_id: MediaId) -> Result<Media> {
-        let media = self.http.media_info_get(media_id).await?;
-        Ok(media)
     }
 
     pub async fn message_get(

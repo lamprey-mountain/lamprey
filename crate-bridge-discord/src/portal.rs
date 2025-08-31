@@ -12,7 +12,7 @@ use anyhow::Result;
 use common::v1::types::media::MediaRef;
 use common::v1::types::EmbedCreate;
 use common::v1::types::RoomId;
-use common::v1::types::{self, MediaTrackInfo, Message, MessageId, ThreadId};
+use common::v1::types::{self, Message, MessageId, ThreadId};
 use reqwest::Url;
 use serenity::all::CreateAllowedMentions;
 use serenity::all::CreateAttachment;
@@ -190,11 +190,17 @@ impl Portal {
                         if let Some(existing) = existing {
                             files = files.keep(existing.discord_id);
                         } else {
-                            let bytes = reqwest::get(media.source.url.to_owned())
-                                .await?
-                                .error_for_status()?
-                                .bytes()
-                                .await?;
+                            let url = format!(
+                                "{}/media/{}",
+                                self.globals
+                                    .config
+                                    .lamprey_cdn_url
+                                    .as_deref()
+                                    .unwrap_or("https://chat-cdn.celery.eu.org"),
+                                media.id
+                            );
+                            let bytes =
+                                reqwest::get(url).await?.error_for_status()?.bytes().await?;
                             files = files
                                 .add(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                         }
@@ -225,11 +231,16 @@ impl Portal {
                 } else {
                     let mut files = vec![];
                     for media in &msg_inner.attachments {
-                        let bytes = reqwest::get(media.source.url.to_owned())
-                            .await?
-                            .error_for_status()?
-                            .bytes()
-                            .await?;
+                        let url = format!(
+                            "{}/media/{}",
+                            self.globals
+                                .config
+                                .lamprey_cdn_url
+                                .as_deref()
+                                .unwrap_or("https://chat-cdn.celery.eu.org"),
+                            media.id
+                        );
+                        let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
                         files.push(CreateAttachment::bytes(bytes, media.filename.to_owned()));
                     }
                     let user = ly.user_fetch(message.author_id).await?;
@@ -249,13 +260,16 @@ impl Portal {
                         payload = payload.in_thread(dc_tid);
                     }
                     if let Some(media_id) = user.avatar {
-                        let avatar = ly.media_info(media_id).await?;
-                        let valid_track = avatar
-                            .all_tracks()
-                            .find(|a| matches!(a.info, MediaTrackInfo::Image(_)));
-                        if let Some(valid_track) = valid_track {
-                            payload = payload.avatar_url(valid_track.url.as_str());
-                        }
+                        let url = format!(
+                            "{}/thumb/{}",
+                            self.globals
+                                .config
+                                .lamprey_cdn_url
+                                .as_deref()
+                                .unwrap_or("https://chat-cdn.celery.eu.org"),
+                            media_id
+                        );
+                        payload = payload.avatar_url(url);
                     };
                     self.globals
                         .dc_chan

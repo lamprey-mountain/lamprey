@@ -36,6 +36,7 @@ pub struct Config {
     pub lamprey_token: String,
     pub lamprey_base_url: Option<String>,
     pub lamprey_ws_url: Option<String>,
+    pub lamprey_cdn_url: Option<String>,
     pub discord_token: String,
     #[serde(default)]
     pub autobridge: Vec<AutoBridgeConfig>,
