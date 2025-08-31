@@ -1,24 +1,31 @@
 > [!warning]
->
-> this isn't implemented yet!
+> this is a work in progress!
 
-| auth method              | identify | register | 2fa | sudo    |
-| ------------------------ | -------- | -------- | --- | ------- |
-| oauth                    | yes      | yes      | yes | yes[^1] |
-| email magic link         | yes      | yes      | no  | no      |
-| email password reset[^2] | yes      | yes      | no  | yes     |
-| totp                     | no       | no       | yes | yes     |
-| password                 | yes      | yes      | no  | yes[^1] |
-| captcha                  | no       | no       | no  | no      |
-| webauthn                 | yes      | yes      | yes | yes     |
+| auth method             | identify | 2fa | sudo |
+| ----------------------- | -------- | --- | ---- |
+| oauth                   | yes      | yes | yes  |
+| email magic link        | yes      | no  | no   |
+| email password reset    | yes      | no  | yes  |
+| totp [^1]               | no       | yes | yes  |
+| totp recovery code [^1] | no       | yes | no   |
+| email & password        | yes      | no  | yes  |
+| captcha [^1]            | no       | no  | no   |
+| webauthn [^1]           | yes      | yes | yes  |
 
-- **register**: if a new user can be registered via this auth method
 - **identify**: if this can be used as the first factor, to get the user id
 - **mfa**: if this can be used as the second factor
 - **sudo**: if this can be used to enter sudo mode
 
-[^1]: appears as "sign up with email"
+[^1]: not yet implemented
 
-[^2]: only if there is no other option. password is preferred over oauth.
+## registering
 
-oauth or email or password or webauthn
+1. create a session
+2. create a guest account
+3. add an auth method, like oauth or email/password
+4. use a server invite.
+
+## logging in
+
+1. create a session
+2. use an auth method, like oauth or email/password

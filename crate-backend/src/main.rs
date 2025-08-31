@@ -27,6 +27,7 @@ use backend::{
 use config::Config;
 use error::Result;
 
+// NOTE: the `sync` tag doesn't seem to show up, so i moved its docs to index.md
 #[derive(OpenApi)]
 #[openapi(
     components(schemas(
@@ -45,7 +46,7 @@ use error::Result;
     )),
     info(
         title = "api doccery",
-        description = "thems the docs",
+        description = include_str!("../docs/index.md"),
     ),
     tags(
         (name = "sync", description = include_str!("../docs/sync.md")),
