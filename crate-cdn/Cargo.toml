@@ -8,7 +8,7 @@ license.workspace = true
 
 [dependencies]
 axum = "0.8.4"
-image = "0.25.6"
+image = { version = "0.25.6", features = ["avif"] }
 tokio = { version = "1.47.1", features = ["full"] }
 serde = { version = "1.0.217", features = ["derive"] }
 figment = { version = "0.10.19", features = ["env", "toml"] }
