@@ -121,7 +121,7 @@
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
                 "--"
-                "${sfu}/bin/cdn"
+                "${cdn}/bin/cdn"
               ];
             };
           };
