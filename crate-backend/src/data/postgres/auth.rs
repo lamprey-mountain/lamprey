@@ -1,8 +1,10 @@
 use async_trait::async_trait;
+use common::v1::types::email::EmailAddr;
+use common::v1::types::SessionId;
 use sqlx::{query, query_scalar};
 
 use crate::error::Result;
-use crate::types::UserId;
+use crate::types::{EmailPurpose, UserId};
 
 use crate::data::DataAuth;
 
@@ -92,5 +94,47 @@ impl DataAuth for Postgres {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+
+    async fn auth_email_create(
+        &self,
+        code: String,
+        addr: EmailAddr,
+        session_id: SessionId,
+        purpose: EmailPurpose,
+    ) -> Result<()> {
+        let purpose = match purpose {
+            EmailPurpose::Authn => "Authn",
+            EmailPurpose::Reset => "Reset",
+        };
+        sqlx::query!(
+            "insert into email_auth_code (code, addr, session_id, expires_at, purpose) values ($1, $2, $3, now() + '10 minutes', $4)",
+            code,
+            addr.into_inner(),
+            *session_id,
+            purpose,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn auth_email_use(&self, code: String) -> Result<(EmailAddr, SessionId, EmailPurpose)> {
+        let asdf = sqlx::query!(
+            "delete from email_auth_code where code = $1 returning *",
+            code,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        let purpose = match asdf.purpose.as_str() {
+            "Authn" => EmailPurpose::Authn,
+            "Reset" => EmailPurpose::Reset,
+            purpose => panic!("invalid data in db: unknown email purpose {purpose}"),
+        };
+        Ok((
+            asdf.addr.try_into().expect("invalid data in db"),
+            asdf.session_id.into(),
+            purpose,
+        ))
     }
 }

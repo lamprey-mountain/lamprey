@@ -2,8 +2,9 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::email::EmailAddr;
 use lettre::{
-    message::Mailbox, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
-    AsyncTransport, Message, Tokio1Executor,
+    message::{Mailbox, MultiPart},
+    transport::smtp::authentication::Credentials,
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use tokio::time::sleep;
 use tracing::{error, info};
@@ -81,6 +82,11 @@ impl ServiceEmail {
 
         if let Some(item) = email_item {
             info!("Claimed email with ID: {}", item.id);
+            let body = MultiPart::alternative_plain_html(
+                item.plain_text_body.clone(),
+                item.html_body
+                    .unwrap_or_else(|| html_escape(item.plain_text_body)),
+            );
             let email = Message::builder()
                 .from(Mailbox::new(
                     Some("system".to_owned()),
@@ -92,7 +98,7 @@ impl ServiceEmail {
                 ))
                 .date_now()
                 .subject(item.subject)
-                .body(item.plain_text_body)
+                .multipart(body)
                 .map_err(|e| Error::Internal(e.to_string()))?;
 
             match self.mailer.send(email).await {
@@ -115,4 +121,11 @@ impl ServiceEmail {
         self.mailer.test_connection().await.unwrap();
         Ok(())
     }
+}
+
+fn html_escape(s: String) -> String {
+    s.replace("&", "&amp;")
+        .replace(">", "&lt;")
+        .replace("<", "&gt;")
+        .replace("\"", "&quot;")
 }

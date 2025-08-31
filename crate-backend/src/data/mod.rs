@@ -19,10 +19,10 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::types::{
     DbEmailQueue, DbMessageCreate, DbRoleCreate, DbThreadCreate, DbThreadPrivate, DbUserCreate,
-    InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageId, MessageRef,
-    MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId,
-    Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId,
-    ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    EmailPurpose, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageId,
+    MessageRef, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch,
+    RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread,
+    ThreadId, ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -392,6 +392,14 @@ pub trait DataAuth {
     async fn auth_password_set(&self, user_id: UserId, hash: &[u8], salt: &[u8]) -> Result<()>;
     async fn auth_password_get(&self, user_id: UserId) -> Result<Option<(Vec<u8>, Vec<u8>)>>;
     async fn auth_password_delete(&self, user_id: UserId) -> Result<()>;
+    async fn auth_email_create(
+        &self,
+        code: String,
+        addr: EmailAddr,
+        session_id: SessionId,
+        purpose: EmailPurpose,
+    ) -> Result<()>;
+    async fn auth_email_use(&self, code: String) -> Result<(EmailAddr, SessionId, EmailPurpose)>;
 }
 
 #[async_trait]

@@ -484,3 +484,11 @@ pub struct DbEmailQueue {
     pub plain_text_body: String,
     pub html_body: Option<String>,
 }
+
+pub enum EmailPurpose {
+    /// log in ("magic link")
+    Authn,
+
+    /// reset password
+    Reset,
+}

@@ -31,6 +31,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 use crate::types::DbUserCreate;
+use crate::types::EmailPurpose;
 use crate::ServerState;
 
 use crate::error::{Error, Result};
@@ -171,7 +172,7 @@ async fn auth_oauth_redirect(
 )]
 async fn auth_oauth_delete(
     Path(provider): Path<String>,
-    Auth(auth_user_id): Auth,
+    AuthSudo(auth_user_id): AuthSudo,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -179,7 +180,7 @@ async fn auth_oauth_delete(
     Ok(())
 }
 
-/// Auth email exec (TODO)
+/// Auth email exec
 ///
 /// Send a "magic link" email to login
 #[utoipa::path(
@@ -190,14 +191,28 @@ async fn auth_oauth_delete(
     responses((status = ACCEPTED, description = "success")),
 )]
 async fn auth_email_exec(
-    Path(_email): Path<EmailAddr>,
-    AuthRelaxed(_session): AuthRelaxed,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(email): Path<EmailAddr>,
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let code = Uuid::new_v4().to_string();
+    d.auth_email_create(code.clone(), email.clone(), session.id, EmailPurpose::Authn)
+        .await?;
+    let mut url = s.config.html_url.join("email-auth")?;
+    url.set_query(Some(&format!("code={code}")));
+    dbg!(&url);
+    let message = format!(
+        "click this link to login: {url}\n\nif you didn't request this, ignore this email."
+    );
+    srv.email
+        .send(email, "Login to lamprey".to_string(), message, None)
+        .await?;
+    Ok(())
 }
 
-/// Auth email reset (TODO)
+/// Auth email reset
 ///
 /// Like exec, but the link also resets the password
 #[utoipa::path(
@@ -208,11 +223,81 @@ async fn auth_email_exec(
     responses((status = ACCEPTED, description = "success")),
 )]
 async fn auth_email_reset(
-    Path(_email): Path<EmailAddr>,
-    AuthRelaxed(_session): AuthRelaxed,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(email): Path<EmailAddr>,
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let code = Uuid::new_v4().to_string();
+    d.auth_email_create(code.clone(), email.clone(), session.id, EmailPurpose::Reset)
+        .await?;
+    let mut url = s.config.html_url.join("email-auth")?;
+    url.set_query(Some(&format!("code={code}")));
+    let message = format!("click this link to reset password: {url}\n\nif you didn't request this, ignore this email.");
+    srv.email
+        .send(email, "Lamprey password reset".to_string(), message, None)
+        .await?;
+    Ok(())
+}
+
+/// Auth email complete
+///
+/// Consume an email auth code to log in
+#[utoipa::path(
+    post,
+    path = "/auth/email/{addr}/complete",
+    params(("addr", description = "Email address")),
+    tags = ["auth"],
+    responses((status = ACCEPTED, description = "success")),
+)]
+async fn auth_email_complete(
+    Path(email): Path<EmailAddr>,
+    AuthRelaxed(session): AuthRelaxed,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<AuthEmailComplete>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let (req_addr, req_session, purpose) = d.auth_email_use(json.code).await?;
+
+    if req_addr != email {
+        debug!("wrong email");
+        return Err(Error::BadStatic("invalid or expired code"));
+    }
+
+    if req_session != session.id {
+        debug!("wrong session");
+        return Err(Error::BadStatic("invalid or expired code"));
+    }
+
+    if session.status != SessionStatus::Unauthorized {
+        debug!("already authenticated");
+        return Err(Error::BadStatic("invalid or expired code"));
+    }
+
+    let user_id = d.user_email_lookup(&email).await?;
+    let status = match purpose {
+        EmailPurpose::Authn => SessionStatus::Authorized { user_id },
+
+        // TODO: there's probably a better way of implementing password resets than directly entering sudo mode
+        // maybe some "semi sudo mode" that only allows changing password?
+        // this isn't *that* bad though and chances are if someone reset their password they may want to do other stuff too
+        EmailPurpose::Reset => SessionStatus::Sudo {
+            user_id,
+            expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+        },
+    };
+    d.session_set_status(session.id, status).await?;
+    srv.sessions.invalidate(session.id).await;
+    let session = srv.sessions.get(session.id).await?;
+    s.broadcast(MessageSync::SessionCreate { session })?;
+    Ok(())
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+struct AuthEmailComplete {
+    code: String,
 }
 
 /// Auth totp init (TODO)
@@ -453,6 +538,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_oauth_delete))
         .routes(routes!(auth_email_exec))
         .routes(routes!(auth_email_reset))
+        .routes(routes!(auth_email_complete))
         .routes(routes!(auth_totp_init))
         .routes(routes!(auth_totp_exec))
         .routes(routes!(auth_totp_delete))
