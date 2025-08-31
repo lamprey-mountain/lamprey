@@ -22,7 +22,7 @@ jobs:
           attic use actions
       - name: build
         run: |
-          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}} -L |& cat
+          nix build git+https://git.celery.eu.org/lamprey/lamprey#${{matrix.derivation}} -L |& cat
       - name: push
         run: |
           attic push actions result --ignore-upstream-cache-filter
@@ -41,6 +41,10 @@ jobs:
           - backend-oci
           - bridge-discord
           - bridge-discord-oci
+          - sfu
+          - sfu-oci
+          - cdn
+          - cdn-oci
     steps:
       - name: setup
         run: |
@@ -48,7 +52,7 @@ jobs:
           attic use actions
       - name: build
         run: |
-          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}} -L |& cat
+          nix build git+https://git.celery.eu.org/lamprey/lamprey#${{matrix.derivation}} -L |& cat
       - name: push
         run: |
           attic push actions result --ignore-upstream-cache-filter
@@ -65,6 +69,8 @@ jobs:
         derivation:
           - backend
           - bridge-discord
+          - sfu
+          - cdn
     steps:
       - name: setup
         run: |
@@ -73,9 +79,9 @@ jobs:
           attic use actions
       - name: build
         run: |
-          nix build git+https://git.celery.eu.org/cetahe/cetahe#${{matrix.derivation}}-oci -L |& cat
+          nix build git+https://git.celery.eu.org/lamprey/lamprey#${{matrix.derivation}}-oci -L |& cat
       - name: push
         run: |
           ./result | nix run -- nixpkgs#podman load
-          nix run nixpkgs#podman -- tag ${{matrix.derivation}}:latest git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
-          nix run nixpkgs#podman -- push git.celery.eu.org/cetahe/cetahe-${{matrix.derivation}}:latest
+          nix run nixpkgs#podman -- tag ${{matrix.derivation}}:latest git.celery.eu.org/lamprey/lamprey-${{matrix.derivation}}:latest
+          nix run nixpkgs#podman -- push git.celery.eu.org/lamprey/lamprey-${{matrix.derivation}}:latest
