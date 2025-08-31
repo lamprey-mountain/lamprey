@@ -250,6 +250,10 @@ impl Connection {
                 let msg: SignallingMessage = serde_json::from_value(payload.clone())?;
                 match &msg {
                     SignallingMessage::VoiceState { state: Some(state) } => {
+                        let thread = srv.threads.get(state.thread_id, Some(user_id)).await?;
+                        if thread.archived_at.is_some() {
+                            return Err(Error::BadStatic("thread is archived"));
+                        }
                         let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
                         perms.ensure_view()?;
                         perms.ensure(Permission::VoiceConnect)?;

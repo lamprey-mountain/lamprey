@@ -38,16 +38,22 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     let message = srv
         .messages
-        .create(thread_id, user_id, reason, nonce, json)
+        .create(thread_id, auth_user_id, reason, nonce, json)
         .await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
@@ -198,15 +204,20 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
-    let (status, message) = s
-        .services()
+    let srv = s.services();
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
+    let (status, message) = srv
         .messages
-        .edit(thread_id, message_id, user_id, reason, json)
+        .edit(thread_id, message_id, auth_user_id, reason, json)
         .await?;
     Ok((status, Json(message)))
 }
@@ -245,6 +256,10 @@ async fn message_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     data.message_delete(thread_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
 
@@ -371,6 +386,12 @@ async fn message_version_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
+
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     data.message_version_delete(thread_id, version_id).await?;
 
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
@@ -484,6 +505,12 @@ async fn message_moderate(
     perms.ensure_view()?;
     perms.ensure(Permission::MessageDelete)?;
 
+    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
+    // TODO: fix n+1 query
     for id in &json.delete {
         let message = data.message_get(thread_id, *id, user_id).await?;
         if !message.message_type.is_deletable() {
@@ -543,9 +570,10 @@ async fn message_migrate(
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MessageMigrate>,
 ) -> Result<()> {
-    todo!()
+    Err(Error::Unimplemented)
 }
 
+// TODO: move these structs to common
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
 struct RepliesQuery {
     #[serde(flatten)]

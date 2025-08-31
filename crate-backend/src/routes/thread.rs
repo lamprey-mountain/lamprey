@@ -521,13 +521,17 @@ async fn thread_typing(
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
+
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
-    s.services()
-        .threads
-        .typing_set(thread_id, user_id, until)
-        .await;
+    srv.threads.typing_set(thread_id, user_id, until).await;
     s.broadcast_thread(
         thread_id,
         user_id,

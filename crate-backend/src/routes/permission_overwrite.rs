@@ -35,11 +35,8 @@ async fn permission_thread_overwrite(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
-    let perms = s
-        .services()
-        .perms
-        .for_thread(auth_user_id, thread_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     // FIXME: allow editing permissions you can edit as long as you don't edit ones you can't
@@ -50,7 +47,12 @@ async fn permission_thread_overwrite(
     for p in &json.deny {
         perms.ensure(*p)?;
     }
-    let srv = s.services();
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     srv.perms
         .permission_overwrite_upsert(
             thread_id,
@@ -108,14 +110,16 @@ async fn permission_thread_delete(
     Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
-    let perms = s
-        .services()
-        .perms
-        .for_thread(auth_user_id, thread_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    let srv = s.services();
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     srv.perms
         .permission_overwrite_delete(thread_id, overwrite_id)
         .await?;

@@ -109,14 +109,16 @@ pub async fn thread_member_add(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_thread(auth_user_id, thread_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberManage)?;
+    }
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
     }
 
     let start = d.thread_member_get(thread_id, target_user_id).await.ok();
@@ -172,14 +174,16 @@ pub async fn thread_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_thread(auth_user_id, thread_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberManage)?;
+    }
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
     }
 
     let start = d.thread_member_get(thread_id, target_user_id).await?;
@@ -227,15 +231,18 @@ pub async fn thread_member_delete(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_thread(auth_user_id, thread_id)
-        .await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberKick)?;
     }
+
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
     let start = d.thread_member_get(thread_id, target_user_id).await?;
     if !matches!(start.membership, ThreadMembership::Join { .. }) {
         return Err(Error::NotFound);

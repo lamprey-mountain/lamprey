@@ -13,7 +13,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
-use crate::ServerState;
+use crate::{Error, ServerState};
 
 /// Reaction add
 ///
@@ -43,6 +43,10 @@ async fn reaction_add(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionAdd)?;
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
     data.reaction_put(auth_user_id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
@@ -85,6 +89,10 @@ async fn reaction_remove(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionAdd)?;
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
     data.reaction_delete(auth_user_id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
@@ -127,6 +135,10 @@ async fn reaction_purge(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionClear)?;
+    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
     data.reaction_purge(thread_id, message_id).await?;
 
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
