@@ -19,6 +19,7 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::util::Time;
 use common::v1::types::MessageSync;
 use common::v1::types::SessionStatus;
+use common::v1::types::UserId;
 use http::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
@@ -460,17 +461,22 @@ async fn auth_state(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let auth_state = fetch_auth_state(&s, auth_user_id).await?;
+    Ok(Json(auth_state))
+}
+
+pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthState> {
     let data = s.data();
-    let oauth_providers = data.auth_oauth_get_all(auth_user_id).await?;
-    let email = data.user_email_list(auth_user_id).await?;
-    let password = data.auth_password_get(auth_user_id).await?;
+    let oauth_providers = data.auth_oauth_get_all(user_id).await?;
+    let email = data.user_email_list(user_id).await?;
+    let password = data.auth_password_get(user_id).await?;
     let auth_state = AuthState {
         has_email: email.iter().any(|e| e.is_verified && e.is_primary),
         has_totp: false, // TODO
         has_password: password.is_some(),
         oauth_providers,
     };
-    Ok(Json(auth_state))
+    Ok(auth_state)
 }
 
 /// Auth captcha init (TODO)

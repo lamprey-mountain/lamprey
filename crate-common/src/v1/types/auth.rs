@@ -107,3 +107,13 @@ pub struct AuthState {
     /// the oauth providers this user has authenticated with
     pub oauth_providers: Vec<String>,
 }
+
+impl AuthState {
+    /// if its technically possible for this user to login after logging out
+    pub fn can_login(&self) -> bool {
+        // totp ignored, it only does 2fa
+        // has_password ignored, it only is effective if an email is set
+        // (technically, you *can* login with user id + password, but people probably won't remember their user id)
+        !self.oauth_providers.is_empty() || self.has_email
+    }
+}

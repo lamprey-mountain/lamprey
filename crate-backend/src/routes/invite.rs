@@ -16,6 +16,7 @@ use serde::Serialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
+use crate::routes::auth::fetch_auth_state;
 use crate::{Error, ServerState};
 
 use super::util::{Auth, HeaderReason};
@@ -208,6 +209,11 @@ pub async fn invite_use(
             let user = srv.users.get(user_id).await?;
             if user.registered_at.is_some() {
                 return Err(Error::BadStatic("User is not a guest account"));
+            }
+            let auth_state = fetch_auth_state(&s, user_id).await?;
+            if !auth_state.can_login() {
+                // make sure to prevent people from creating accounts they can't log into
+                return Err(Error::BadStatic("add an auth method first"));
             }
             s.data()
                 .user_set_registered(user_id, Some(Time::now_utc()), invite.invite.code.0)
