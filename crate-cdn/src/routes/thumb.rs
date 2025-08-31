@@ -26,6 +26,9 @@ pub struct ThumbQuery {
     pub size: Option<u32>,
 }
 
+// TODO: maybe allow generating png, jpeg, or webp thumbnails?
+// NOTE: caniuse says avif has ~93% support
+// NOTE: this may take up some extra space, should i impl thumbnail garbage collection? nah, probably not worth it
 async fn thumb_response(
     s: AppState,
     media_id: MediaId,
@@ -33,7 +36,6 @@ async fn thumb_response(
     headers: HeaderMap,
     with_body: bool,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    // NOTE: original thumbnails (eg. from videos) are already extracted and saved to /thumb/{media_id}/original
     if let Some(size) = query.size {
         if !s.config.thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
@@ -56,7 +58,7 @@ async fn thumb_response(
             ));
         }
 
-        let thumb_path = format!("/thumb/{media_id}/{size}x{size}");
+        let thumb_path = format!("/media/{media_id}/thumb/{size}x{size}.avif");
 
         if s.s3.exists(&thumb_path).await? {
             let meta = s.s3.stat(&thumb_path).await?;
@@ -166,10 +168,10 @@ async fn thumb_response(
         Ok((status, final_headers.headers, body))
     } else {
         let media = s.lookup_media(media_id).await?;
-        let original_thumb_path = format!("/thumb/{media_id}/original");
+        let poster_path = format!("/media/{media_id}/poster");
 
-        if s.s3.exists(&original_thumb_path).await? {
-            let meta = s.s3.stat(&original_thumb_path).await?;
+        if s.s3.exists(&poster_path).await? {
+            let meta = s.s3.stat(&poster_path).await?;
             let content_length = meta.content_length();
             let final_headers = build_headers(
                 &headers,
@@ -186,7 +188,7 @@ async fn thumb_response(
             };
 
             let body = if with_body {
-                let reader = s.s3.reader(&original_thumb_path).await?;
+                let reader = s.s3.reader(&poster_path).await?;
                 if let Some(r) = final_headers.range {
                     Body::from_stream(reader.into_bytes_stream(r).await?)
                 } else {

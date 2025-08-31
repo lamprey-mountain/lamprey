@@ -76,7 +76,7 @@ pub async fn get_media(
     Path(media_id): Path<MediaId>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    let path = format!("/media/{}", media_id);
+    let path = format!("/media/{}/file", media_id);
 
     let media = s.lookup_media(media_id).await?;
     let header_info = build_headers(&headers, &ContentInfo::Media(&media))?;
@@ -104,7 +104,7 @@ pub async fn get_media_filename(
     Path((media_id, filename)): Path<(MediaId, String)>,
     headers: HeaderMap,
 ) -> Result<(http::StatusCode, HeaderMap, Body)> {
-    let path = format!("/media/{}", media_id);
+    let path = format!("/media/{}/file", media_id);
 
     let media = s.lookup_media(media_id).await?;
     if media.filename != filename {

@@ -38,7 +38,7 @@ pub struct ServerStateInner {
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
     pub sushi_sfu: Sender<SfuRequest>,
 
-    // TODO: write a wrapper around this
+    // TODO: write a wrapper around this (media is kind of like this?)
     pub blobs: opendal::Operator,
 }
 

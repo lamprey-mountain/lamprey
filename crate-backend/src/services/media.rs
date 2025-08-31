@@ -13,11 +13,7 @@ use common::v1::types::{
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
 use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
-use image::{codecs::avif::AvifEncoder, DynamicImage, ImageDecoder};
-use tokio::{
-    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter},
-    process::Command,
-};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufWriter};
 use tracing::{debug, error, info, span, trace, Instrument, Level};
 
 use crate::{
@@ -154,10 +150,7 @@ impl ServiceMedia {
         let media_id = media.id;
         let mime = get_mime(path).await?;
         let mut fut = FuturesUnordered::new();
-        let bytes = if mime.starts_with("image/") {
-            debug!("extract thumb from image");
-            BigData::from(tokio::fs::read(path).await?)
-        } else if let Some(thumb) = meta.get_thumb_stream() {
+        if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
                 debug!("extract thumb attachment from container");
                 let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
@@ -165,7 +158,6 @@ impl ServiceMedia {
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
-                bytes
             } else if thumb.disposition.attached_pic == 1 {
                 debug!("extract thumb stream from container");
                 let bytes = ffmpeg::extract_stream(path, thumb.index).await?;
@@ -173,31 +165,31 @@ impl ServiceMedia {
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
-                bytes
             } else if thumb.codec_type == MediaType::Video {
                 debug!("generate thumb from video");
-                BigData::from(ffmpeg::generate_thumb(path).await?)
+                let bytes = ffmpeg::generate_thumb(path).await?;
+                let url = self.state.get_s3_url(&format!("media/{media_id}/poster"))?;
+                let span_upload = span!(Level::DEBUG, "upload thumb");
+                async {
+                    let mut w = self
+                        .state
+                        .blobs
+                        .writer_with(url.path())
+                        .cache_control(
+                            "public, max-age=604800, immutable, stale-while-revalidate=86400",
+                        )
+                        .content_type(mime.as_str())
+                        .await?;
+                    w.write(bytes).await?;
+                    w.close().await?;
+                    Result::Ok(())
+                }
+                .instrument(span_upload)
+                .await?;
             } else {
                 error!("no suitable thumbnail codec");
                 return Ok(());
             }
-        } else {
-            error!("no suitable thumbnail stream");
-            return Ok(());
-        };
-        let img = {
-            let cursor = Cursor::new(bytes);
-            let mut img_decoder = image::ImageReader::new(cursor)
-                .with_guessed_format()?
-                .into_decoder()?;
-            let orientation = img_decoder.orientation()?;
-            let mut img = DynamicImage::from_decoder(img_decoder)?;
-            img.apply_orientation(orientation);
-            Arc::new(img)
-        };
-        for size in [64, 320, 640] {
-            let state = self.state.clone();
-            fut.push(generate_and_upload_thumb(state, img.clone(), media_id, size, size).boxed());
         }
         while let Some(track) = fut.next().await {
             if let Some(track) = track? {
@@ -430,61 +422,6 @@ impl ServiceMedia {
     }
 }
 
-#[tracing::instrument(skip(state, img, width, height))]
-async fn generate_and_upload_thumb(
-    state: Arc<ServerStateInner>,
-    img: Arc<DynamicImage>,
-    media_id: MediaId,
-    width: u32,
-    height: u32,
-) -> Result<Option<MediaTrack>> {
-    if img.width() < width && img.height() < height {
-        return Ok(None);
-    }
-    let mut out = Cursor::new(Vec::new());
-    // currently using the default
-    let span_gen_thumb = span!(Level::INFO, "generate thumb");
-    let thumb = async {
-        let enc = AvifEncoder::new_with_speed_quality(&mut out, 4, 80);
-        let thumb = img.thumbnail(width, height);
-        thumb.write_with_encoder(enc)?;
-        Result::Ok(thumb)
-    }
-    .instrument(span_gen_thumb)
-    .await?;
-    let url = state.get_s3_url(&format!("thumb/{media_id}/{width}x{height}"))?;
-    let len = out.get_ref().len();
-    let span_upload_thumb = span!(Level::INFO, "upload thumb");
-    async {
-        let mut w = state
-            .blobs
-            .writer_with(url.path())
-            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-            .content_type("image/avif")
-            .await?;
-        debug!("opened");
-        w.write(out.into_inner()).await?;
-        debug!("wrote all");
-        w.close().await?;
-        debug!("closed");
-        Result::Ok(())
-    }
-    .instrument(span_upload_thumb)
-    .await?;
-    let track = MediaTrack {
-        info: MediaTrackInfo::Thumbnail(types::Image {
-            height: thumb.height() as u64,
-            width: thumb.width() as u64,
-            language: None,
-        }),
-        url,
-        size: len as u64,
-        mime: "image/avif".parse().expect("image/avif is always valid"),
-        source: TrackSource::Generated,
-    };
-    Ok(Some(track))
-}
-
 #[tracing::instrument(skip(state, bytes))]
 async fn upload_extracted_thumb(
     state: Arc<ServerStateInner>,
@@ -506,7 +443,7 @@ async fn upload_extracted_thumb(
     }
     .instrument(span_probe)
     .await?;
-    let url = state.get_s3_url(&format!("thumb/{media_id}/original"))?;
+    let url = state.get_s3_url(&format!("media/{media_id}/poster"))?;
     let span_upload = span!(Level::DEBUG, "upload thumb");
     async {
         let mut w = state
@@ -542,10 +479,4 @@ async fn get_mime(file: &std::path::Path) -> Result<String> {
         .unwrap_or("application/octet-stream")
         .to_owned();
     Ok(mime)
-    // let out = Command::new("file").arg("-ib").arg(file).output().await?;
-    // let mime = String::from_utf8(out.stdout)
-    //     .map_err(|_| Error::BadStatic("failed to get mime type"))?
-    //     .trim()
-    //     .to_owned();
-    // Ok(mime)
 }
