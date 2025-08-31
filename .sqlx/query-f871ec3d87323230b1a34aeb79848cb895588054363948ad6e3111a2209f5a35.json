@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            with ranked_roles as (\n                select\n                    id,\n                    row_number() over (partition by room_id order by position, id) - 1 as rn\n                from role\n                where room_id = $1\n            )\n            update role\n            set position = ranked_roles.rn\n            from ranked_roles\n            where role.id = ranked_roles.id;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f871ec3d87323230b1a34aeb79848cb895588054363948ad6e3111a2209f5a35"
+}

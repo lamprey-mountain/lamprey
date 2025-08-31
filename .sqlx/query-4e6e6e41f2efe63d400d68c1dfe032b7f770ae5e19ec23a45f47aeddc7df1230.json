@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as \"permissions: _\",\n                r.is_mentionable, r.is_self_applicable,\n                coalesce(rm.count, 0) as \"member_count!\"\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = $2\n        ",
+  "query": "\n            SELECT\n                id, version_id, room_id, name, description, permissions as \"permissions: _\",\n                is_mentionable, is_self_applicable, 0 as \"member_count!\", position\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -125,7 +125,12 @@
       {
         "ordinal": 8,
         "name": "member_count!",
-        "type_info": "Int8"
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "position",
+        "type_info": "Int4"
       }
     ],
     "parameters": {
@@ -143,8 +148,9 @@
       false,
       false,
       false,
-      null
+      null,
+      false
     ]
   },
-  "hash": "bb298805f31728bb188060c02494711d7c066b63ffba47ed6fa95dd934dad7ef"
+  "hash": "4e6e6e41f2efe63d400d68c1dfe032b7f770ae5e19ec23a45f47aeddc7df1230"
 }
