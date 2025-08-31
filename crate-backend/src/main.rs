@@ -20,7 +20,7 @@ use utoipa_axum::router::OpenApiRouter;
 use backend::{
     cli, config, error,
     routes::{self},
-    types::{self, MessageId, MessageSync, PaginationQuery},
+    types::{self, Media, MessageId, MessageSync, PaginationQuery},
     ServerState,
 };
 
@@ -138,6 +138,7 @@ async fn main() -> Result<()> {
     match &args.command {
         cli::Command::Serve {} => serve(config).await?,
         cli::Command::Check {} => check(config).await?,
+        cli::Command::MigrateMedia {} => migrate_media(config).await?,
     }
 
     Ok(())
@@ -211,5 +212,47 @@ async fn check(config: Config) -> Result<()> {
         .layer(LoggingLayer::default())
         .finish();
     blobs.check().await?;
+    Ok(())
+}
+
+/// temporary command to migrate media from raw -> v1
+async fn migrate_media(config: Config) -> Result<()> {
+    info!("Starting media migration with config: {:#?}", config);
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect(&config.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    use backend::data::postgres::{DbMedia, DbMediaData};
+
+    loop {
+        let rows = sqlx::query_as!(
+            DbMedia,
+            "select user_id, data from media where data->>'v' is null limit 50"
+        )
+        .fetch_all(&pool)
+        .await?;
+        let mut tx = pool.begin().await?;
+        if rows.is_empty() {
+            break;
+        }
+        for row in rows {
+            let media: DbMediaData = serde_json::from_value(row.data)?;
+            let media: Media = media.into();
+            let media_id = media.id;
+            let data =
+                serde_json::to_value(&DbMediaData::V1(media)).expect("failed to serialize media");
+            sqlx::query!("update media set data = $1 where id = $2", data, *media_id)
+                .execute(&mut *tx)
+                .await?;
+            info!("migrate {}", media_id);
+        }
+        tx.commit().await?;
+    }
+
     Ok(())
 }

@@ -38,4 +38,7 @@ mod util;
 
 pub use util::Pagination;
 
+// TEMP: for media migration
+pub use media::{DbMedia, DbMediaData};
+
 use crate::data::Data;

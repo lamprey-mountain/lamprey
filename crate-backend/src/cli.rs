@@ -21,6 +21,9 @@ pub enum Command {
 
     /// check config
     Check {},
+
+    /// migrate media from raw to v1
+    MigrateMedia {},
     // TODO
     // /// admin server management
     // Admin {},

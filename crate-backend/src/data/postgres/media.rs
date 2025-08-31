@@ -14,8 +14,8 @@ use super::Postgres;
 
 #[derive(Debug, Deserialize)]
 pub struct DbMedia {
-    user_id: Uuid,
-    data: serde_json::Value,
+    pub user_id: Uuid,
+    pub data: serde_json::Value,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
