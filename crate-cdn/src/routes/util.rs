@@ -1,4 +1,4 @@
-use common::v1::types::{Media, MediaTrack, MediaTrackInfo, TrackSource};
+use common::v1::types::{Media, MediaTrackInfo};
 use headers::HeaderMapExt;
 use http::HeaderMap;
 use std::{
@@ -87,7 +87,7 @@ pub fn build_headers<'a>(
     req_headers: &HeaderMap,
     content_info: &ContentInfo<'a>,
 ) -> Result<BuiltHeaders> {
-    let media = dbg!(content_info.media());
+    let media = content_info.media();
     let mut headers = HeaderMap::new();
 
     // step 1. generate and insert base headers
@@ -110,7 +110,7 @@ pub fn build_headers<'a>(
     headers.typed_insert(lm);
 
     headers.typed_insert(headers::AcceptRanges::bytes());
-    headers.typed_insert(dbg!(content_info.content_type()));
+    headers.typed_insert(content_info.content_type());
     headers.insert(
         "content-disposition",
         content_disposition_attachment(&content_info.filename(), true)
@@ -183,29 +183,17 @@ pub fn build_headers<'a>(
     }
 }
 
-/// get the MediaTrack the thumbnail should be generated from
-pub fn get_thumb_source(media: &Media) -> Option<&MediaTrack> {
+pub fn probably_can_thumbnail(media: &Media) -> bool {
     match &media.source.info {
-        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) => Some(&media.source),
+        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) => true,
         MediaTrackInfo::Mixed(m) if media.source.mime.starts_with("image/") => {
             match (m.width, m.height) {
-                (Some(_), Some(_)) => Some(&media.source),
-                _ => panic!("invalid data in db?"),
+                (Some(_), Some(_)) => true,
+                _ => false,
             }
         }
-        _ => {
-            if let Some(t) = media.all_tracks().find(|t| {
-                t.source == TrackSource::Extracted && matches!(t.info, MediaTrackInfo::Thumbnail(_))
-            }) {
-                Some(t)
-            } else {
-                media.all_tracks().find(|t| {
-                    matches!(
-                        t.info,
-                        MediaTrackInfo::Thumbnail(_) | MediaTrackInfo::Image(_)
-                    )
-                })
-            }
-        }
+        // if we don't have a poster, we probably could generate one...
+        // ...but that's a future problem
+        _ => false,
     }
 }

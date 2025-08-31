@@ -15,7 +15,7 @@ use crate::{
     error::{Error, Result},
     routes::{
         media::{get_media, head_media},
-        util::{build_headers, get_thumb_source, ContentInfo},
+        util::{build_headers, probably_can_thumbnail, ContentInfo},
     },
     AppState,
 };
@@ -91,15 +91,21 @@ async fn thumb_response(
             return Ok((status, final_headers.headers, body));
         }
 
-        let Some(source_track) = get_thumb_source(&media) else {
-            return Err(Error::NotFound);
-        };
-
+        let m = media.clone();
         let thumb_data = s
             .pending_thumbnails
             .try_get_with((media_id, size, size), async move {
+                let poster_path = format!("/media/{media_id}/poster");
+                let source_path = if s.s3.exists(&poster_path).await? {
+                    poster_path
+                } else if probably_can_thumbnail(&m) {
+                    format!("/media/{media_id}/file")
+                } else {
+                    return Err(Error::NotFound);
+                };
+
                 let image_data =
-                    s.s3.read(source_track.url.path())
+                    s.s3.read(&source_path)
                         .instrument(span!(Level::INFO, "read source media from s3"))
                         .await?
                         .to_bytes();
