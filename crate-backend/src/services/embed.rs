@@ -392,6 +392,7 @@ impl ServiceEmbed {
                 .properties
                 .get("theme-color")
                 .or_else(|| parsed.meta.get("theme-color"))
+                .or_else(|| parsed.meta.get("msapplication-TileColor"))
                 .and_then(|s| csscolorparser::parse(s).ok());
             // let author = parsed.meta.get("author")
             //     .map(ToOwned::to_owned);
