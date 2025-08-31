@@ -381,18 +381,18 @@ async fn thread_ack(
 async fn thread_archive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
-    if user_id != thread.creator_id {
+    if user_id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
 
-    if thread.archived_at.is_some() {
+    if thread_before.archived_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
 
@@ -401,6 +401,24 @@ async fn thread_archive(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change(
+                        "archived_at",
+                        &thread_before.archived_at,
+                        &thread.archived_at,
+                    )
+                    .build(),
+            },
+        })
+        .await?;
         s.broadcast_room(
             room_id,
             user_id,
@@ -429,23 +447,41 @@ async fn thread_archive(
 async fn thread_unarchive(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
-    if user_id != thread.creator_id {
+    if user_id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
-    if thread.archived_at.is_none() {
+    if thread_before.archived_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.thread_unarchive(thread_id, user_id).await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change(
+                        "archived_at",
+                        &thread_before.archived_at,
+                        &thread.archived_at,
+                    )
+                    .build(),
+            },
+        })
+        .await?;
         s.broadcast_room(
             room_id,
             user_id,
@@ -472,15 +508,15 @@ async fn thread_unarchive(
 async fn thread_remove(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
-    if thread.deleted_at.is_some() {
+    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
+    if thread_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.thread_delete(thread_id, user_id).await?;
@@ -488,6 +524,20 @@ async fn thread_remove(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
+                    .build(),
+            },
+        })
+        .await?;
         s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
@@ -505,21 +555,35 @@ async fn thread_remove(
 async fn thread_restore(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
-    if thread.deleted_at.is_none() {
+    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
+    if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.thread_undelete(thread_id, user_id).await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
+                    .build(),
+            },
+        })
+        .await?;
         s.broadcast_room(
             room_id,
             user_id,
@@ -549,7 +613,6 @@ async fn thread_restore(
 async fn thread_typing(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
