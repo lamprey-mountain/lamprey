@@ -10,8 +10,8 @@ use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch,
-    RoomMemberPut, RoomMembership, SessionPatch, SessionStatus, SessionToken, ThreadMember,
-    ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
+    RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken,
+    ThreadMember, ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -77,6 +77,7 @@ pub trait DataRoom {
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
     async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
+    async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics>;
 }
 
 #[async_trait]

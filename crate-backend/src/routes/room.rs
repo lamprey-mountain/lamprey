@@ -274,11 +274,16 @@ async fn room_ack(
     responses((status = OK, description = "success", body = RoomMetrics))
 )]
 async fn room_metrics(
-    Path(_room_id): Path<RoomId>,
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path(room_id): Path<RoomId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ViewAuditLog)?;
+    let metrics = data.room_metrics(room_id).await?;
+    Ok(Json(metrics))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
