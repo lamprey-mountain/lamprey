@@ -21,7 +21,7 @@ import {
 	VideoView,
 } from "./media/mod.tsx";
 import { flags } from "./flags.ts";
-import { byteFmt, getUrl, type MediaProps } from "./media/util.tsx";
+import { getUrl, type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";

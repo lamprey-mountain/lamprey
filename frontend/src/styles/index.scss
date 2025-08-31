@@ -1744,3 +1744,12 @@ input[type="text"] {
 		border: solid $sep-500 1px;
 	}
 }
+
+details > summary {
+	list-style-type: disclosure-closed;
+	list-style-position: inside;
+}
+
+details[open] > summary {
+	list-style-type: disclosure-open;
+}

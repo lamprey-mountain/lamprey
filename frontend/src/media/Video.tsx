@@ -8,7 +8,7 @@ import {
 	ValidComponent,
 } from "solid-js";
 import {
-	byteFmt,
+	formatBytes,
 	formatTime,
 	getDuration,
 	getHeight,
@@ -315,7 +315,7 @@ export const VideoView = (props: MediaProps) => {
 							{props.media.filename}
 						</a>
 						<div class="dim">
-							{ty()} - {byteFmt.format(props.media.source.size)}
+							{ty()} - {formatBytes(props.media.source.size)}
 							<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
 						</div>
 					</div>

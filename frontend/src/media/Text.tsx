@@ -6,7 +6,7 @@ import {
 	on,
 	Show,
 } from "solid-js";
-import { byteFmt, getUrl, type MediaProps } from "./util.tsx";
+import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 import { useCtx } from "../context.ts";
 import { debounce } from "@solid-primitives/scheduled";
 
@@ -87,7 +87,7 @@ export const TextView = (props: MediaProps) => {
 					download {props.media.filename}
 				</a>
 				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
+					{ty()} - {formatBytes(props.media.source.size)}
 				</div>
 			</footer>
 		</div>

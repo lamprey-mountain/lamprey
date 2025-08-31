@@ -65,12 +65,18 @@ export const getThumbFromId = (media_id: string, size?: number) => {
 	}
 };
 
-export const byteFmt = Intl.NumberFormat("en", {
-	notation: "compact",
-	style: "unit",
-	unit: "byte",
-	unitDisplay: "narrow",
-});
+export function formatBytes(bytes: number): string {
+	const units = [" bytes", "KiB", "MiB", "GiB", "TiB"];
+	let size = bytes;
+	let unitIndex = 0;
+
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
+
+	return size.toFixed(2) + units[unitIndex];
+}
 
 export type MediaLoadingState =
 	| "stalled" // data isn't loading

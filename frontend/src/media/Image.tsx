@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { useCtx } from "../context.ts";
 import {
-	byteFmt,
+	formatBytes,
 	getThumb,
 	getUrl,
 	Loader,
@@ -75,7 +75,7 @@ export const ImageView = (props: ImageViewProps) => {
 					</button>
 				</a>
 				<footer class="info dim">
-					{props.media.filename} - {byteFmt.format(props.media.source.size)}
+					{props.media.filename} - {formatBytes(props.media.source.size)}
 				</footer>
 			</article>
 		</Resize>

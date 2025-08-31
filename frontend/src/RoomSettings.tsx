@@ -2,15 +2,14 @@ import { For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import {
-	AuditLog,
-	Emoji,
-	Info,
-	Invites,
-	Members,
-	Roles,
-	Todo,
-} from "./room_settings/mod.tsx";
+import { AuditLog } from "./room_settings/AuditLog.tsx";
+import { Emoji } from "./room_settings/Emoji.tsx";
+import { Info } from "./room_settings/Info.tsx";
+import { Invites } from "./room_settings/Invites.tsx";
+import { Members } from "./room_settings/Members.tsx";
+import { Metrics } from "./room_settings/Metrics.tsx";
+import { Roles } from "./room_settings/Roles.tsx";
+import { Todo } from "./room_settings/Todo.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
@@ -20,6 +19,7 @@ const tabs = [
 	{ name: "tags", path: "tags", component: Todo },
 	{ name: "emoji", path: "emoji", component: Emoji },
 	{ name: "audit log", path: "logs", component: AuditLog },
+	{ name: "metrics", path: "metrics", component: Metrics },
 ];
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {

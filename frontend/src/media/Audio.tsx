@@ -15,7 +15,7 @@ import iconVolumeHigh from "../assets/volume-high.png";
 import iconVolumeMute from "../assets/volume-mute.png";
 import iconVolumeMax from "../assets/volume-max.png";
 import {
-	byteFmt,
+	formatBytes,
 	formatTime,
 	getDuration,
 	getThumb,
@@ -248,7 +248,7 @@ export const AudioView = (props: MediaProps) => {
 					{props.media.filename}
 				</a>
 				<div class="dim">
-					{ty()} - {byteFmt.format(props.media.source.size)}
+					{ty()} - {formatBytes(props.media.source.size)}
 					<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
 				</div>
 			</div>

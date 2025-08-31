@@ -1,4 +1,4 @@
-import { byteFmt, getUrl, type MediaProps } from "./util.tsx";
+import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 
 export const FileView = (props: MediaProps) => {
 	const ty = () => props.media.source.mime.split(";")[0];
@@ -8,7 +8,7 @@ export const FileView = (props: MediaProps) => {
 			<a download={props.media.filename} href={getUrl(props.media)}>
 				download {props.media.filename}
 			</a>
-			<div class="dim">{ty()} - {byteFmt.format(props.media.source.size)}</div>
+			<div class="dim">{ty()} - {formatBytes(props.media.source.size)}</div>
 		</div>
 	);
 };

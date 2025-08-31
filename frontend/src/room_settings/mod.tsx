@@ -5,3 +5,4 @@ export * from "./Members.tsx";
 export * from "./AuditLog.tsx";
 export * from "./Todo.tsx";
 export * from "./Emoji.tsx";
+export * from "./Metrics.tsx";
