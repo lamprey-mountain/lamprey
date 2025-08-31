@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM portal WHERE lamprey_thread_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "6bfe0758ac11b96e5aa71af61011e0bb643fe548a5c53aacd649cb378b1cb16e"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE role SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                permissions = $5,\n                is_mentionable = $6,\n                is_self_applicable = $7,\n                is_default = $8\n            WHERE id = $1\n        ",
+  "query": "\n            UPDATE role SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                permissions = $5,\n                is_mentionable = $6,\n                is_self_applicable = $7\n            WHERE id = $1\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -90,11 +90,10 @@
           }
         },
         "Bool",
-        "Bool",
         "Bool"
       ]
     },
     "nullable": []
   },
-  "hash": "18c108dc8722fe92ab40c2cb805504ee6a9157b410a627cc96b8d84b39385506"
+  "hash": "21eb2660db09a836a8955a6d51c65a9e6c28a08498c035c9008c648c2ccfd393"
 }

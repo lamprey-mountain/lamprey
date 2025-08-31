@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            \tSELECT\n                \tr.id,\n                \tr.description,\n                \tr.is_default,\n                \tr.is_mentionable,\n                \tr.permissions as \"permissions: _\",\n                \tr.version_id,\n                \tr.room_id,\n                \tr.is_self_applicable,\n                \tr.name,\n                    coalesce(rm.count, 0) as \"member_count!\"\n                FROM role r\n                LEFT JOIN (\n                    SELECT role_id, count(*) as count\n                    FROM role_member\n                    GROUP BY role_id\n                ) rm ON rm.role_id = r.id\n            \tWHERE r.room_id = $1 AND r.id > $2 AND r.id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN r.id END), r.id DESC LIMIT $5\n                ",
+  "query": "\n            SELECT\n                id, version_id, room_id, name, description, permissions as \"permissions: _\",\n                is_mentionable, is_self_applicable, 0 as \"member_count!\"\n            FROM role\n            WHERE room_id = $1 AND id = $2\n            FOR UPDATE\n        ",
   "describe": {
     "columns": [
       {
@@ -10,21 +10,26 @@
       },
       {
         "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 2,
-        "name": "is_default",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 3,
-        "name": "is_mentionable",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "permissions: _",
         "type_info": {
           "Custom": {
@@ -108,14 +113,9 @@
         }
       },
       {
-        "ordinal": 5,
-        "name": "version_id",
-        "type_info": "Uuid"
-      },
-      {
         "ordinal": 6,
-        "name": "room_id",
-        "type_info": "Uuid"
+        "name": "is_mentionable",
+        "type_info": "Bool"
       },
       {
         "ordinal": 7,
@@ -124,36 +124,27 @@
       },
       {
         "ordinal": 8,
-        "name": "name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 9,
         "name": "member_count!",
-        "type_info": "Int8"
+        "type_info": "Int4"
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
+      false,
+      false,
+      false,
       true,
-      false,
-      false,
-      false,
-      false,
       false,
       false,
       false,
       null
     ]
   },
-  "hash": "66505cab44e8691487628b5f378cfe7d17bd4624325091adb83bae425872d2b9"
+  "hash": "10979cd0f47e37a8f72f1ae9624ce8d7df4604c18a05bbcc7fe5eb5051b622d7"
 }

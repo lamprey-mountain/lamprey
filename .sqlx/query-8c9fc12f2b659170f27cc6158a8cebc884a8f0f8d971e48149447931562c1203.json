@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as \"permissions: _\",\n                r.is_mentionable, r.is_self_applicable, r.is_default,\n                coalesce(rm.count, 0) as \"member_count!\"\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = $2\n        ",
+  "query": "\n            \tSELECT\n                \tr.id,\n                \tr.description,\n                \tr.is_mentionable,\n                \tr.permissions as \"permissions: _\",\n                \tr.version_id,\n                \tr.room_id,\n                \tr.is_self_applicable,\n                \tr.name,\n                    coalesce(rm.count, 0) as \"member_count!\"\n                FROM role r\n                LEFT JOIN (\n                    SELECT role_id, count(*) as count\n                    FROM role_member\n                    GROUP BY role_id\n                ) rm ON rm.role_id = r.id\n            \tWHERE r.room_id = $1 AND r.id > $2 AND r.id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN r.id END), r.id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -10,26 +10,16 @@
       },
       {
         "ordinal": 1,
-        "name": "version_id",
-        "type_info": "Uuid"
-      },
-      {
-        "ordinal": 2,
-        "name": "room_id",
-        "type_info": "Uuid"
-      },
-      {
-        "ordinal": 3,
-        "name": "name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 4,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 2,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
         "name": "permissions: _",
         "type_info": {
           "Custom": {
@@ -113,22 +103,27 @@
         }
       },
       {
-        "ordinal": 6,
-        "name": "is_mentionable",
-        "type_info": "Bool"
+        "ordinal": 4,
+        "name": "version_id",
+        "type_info": "Uuid"
       },
       {
-        "ordinal": 7,
+        "ordinal": 5,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
         "name": "is_self_applicable",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
-        "name": "is_default",
-        "type_info": "Bool"
+        "ordinal": 7,
+        "name": "name",
+        "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "member_count!",
         "type_info": "Int8"
       }
@@ -136,15 +131,17 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
       false,
-      false,
-      false,
-      false,
       true,
+      false,
+      false,
       false,
       false,
       false,
@@ -152,5 +149,5 @@
       null
     ]
   },
-  "hash": "0a3056f5ce6509e4d25e8e170320c3376a942c852648ff9c1dcda147fe33cd32"
+  "hash": "8c9fc12f2b659170f27cc6158a8cebc884a8f0f8d971e48149447931562c1203"
 }

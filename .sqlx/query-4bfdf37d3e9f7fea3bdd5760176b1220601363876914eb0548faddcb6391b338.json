@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT\n            \tthread_id,\n            \tuser_id,\n            \tmembership as \"membership: _\",\n            \tmembership_updated_at,\n            \toverride_name,\n            \toverride_description \n            FROM thread_member\n            WHERE thread_id = $1 AND user_id = $2\n        ",
+  "query": "\n            \tSELECT\n                \tthread_id,\n                \tuser_id,\n                \tmembership as \"membership: _\",\n                \tjoined_at,\n                \toverride_name,\n                    override_description\n                FROM thread_member\n            \tWHERE thread_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -31,7 +31,7 @@
       },
       {
         "ordinal": 3,
-        "name": "membership_updated_at",
+        "name": "joined_at",
         "type_info": "Timestamp"
       },
       {
@@ -48,7 +48,10 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
@@ -60,5 +63,5 @@
       true
     ]
   },
-  "hash": "815652ebf838ce03163f4cfe885f3aefba6f885e9a8b04a221328cf58fb9bd31"
+  "hash": "4bfdf37d3e9f7fea3bdd5760176b1220601363876914eb0548faddcb6391b338"
 }
