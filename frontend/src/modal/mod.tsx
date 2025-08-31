@@ -156,7 +156,7 @@ const ModalMedia = (props: { media: Media }) => {
 								loading
 							</div>
 							<img
-								src={getUrl(props.media.source)}
+								src={getUrl(props.media)}
 								alt={props.media.alt ?? undefined}
 								height={height()!}
 								width={width()!}

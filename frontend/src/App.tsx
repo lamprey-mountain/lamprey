@@ -67,7 +67,7 @@ import { generateNickname } from "./nick.ts";
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
 export const CDN_URL = localStorage.getItem("cdn_url") ??
-	"https://chat-files.celery.eu.org";
+	"https://chat-cdn.celery.eu.org";
 
 const App: Component = () => {
 	return (
@@ -343,8 +343,10 @@ function RouteFriends() {
 	});
 
 	const sendRequest = () => {
+		const target_id = prompt("target_id");
+		if (!target_id) return;
 		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id: prompt("target_id") } },
+			params: { path: { target_id } },
 		});
 	};
 

@@ -5,7 +5,7 @@ export const FileView = (props: MediaProps) => {
 
 	return (
 		<div>
-			<a download={props.media.filename} href={getUrl(props.media.source)}>
+			<a download={props.media.filename} href={getUrl(props.media)}>
 				download {props.media.filename}
 			</a>
 			<div class="dim">{ty()} - {byteFmt.format(props.media.source.size)}</div>

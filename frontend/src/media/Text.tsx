@@ -22,7 +22,7 @@ export const TextView = (props: MediaProps) => {
 	const [copied, setCopied] = createSignal(false);
 
 	const [text] = createResource(() => props.media, async (media) => {
-		const req = await fetch(getUrl(media.source), {
+		const req = await fetch(getUrl(media), {
 			headers: {
 				"Range": `bytes=0-${MAX_PREVIEW_SIZE}`,
 			},
@@ -83,7 +83,7 @@ export const TextView = (props: MediaProps) => {
 				</Show>
 			</div>
 			<footer>
-				<a download={props.media.filename} href={getUrl(props.media.source)}>
+				<a download={props.media.filename} href={getUrl(props.media)}>
 					download {props.media.filename}
 				</a>
 				<div class="dim">

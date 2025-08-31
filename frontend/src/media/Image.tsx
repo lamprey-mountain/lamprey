@@ -20,9 +20,8 @@ export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
 	console.log(props.media);
 	const [loaded, setLoaded] = createSignal(false);
-	const thumb = () =>
-		getThumb(props.media, props.thumb_width ?? 320, props.thumb_height ?? 320)!;
-	const url = () => getUrl(thumb());
+	const thumbUrl = () =>
+		getThumb(props.media, props.thumb_width ?? 320)!;
 
 	const height = () => {
 		if (props.media.source.type === "Image") {
@@ -48,7 +47,7 @@ export const ImageView = (props: ImageViewProps) => {
 				class="image"
 				onMouseOver={() => {
 					// prefetch image
-					fetch(getUrl(props.media.source), { priority: "low" });
+					fetch(getUrl(props.media), { priority: "low" });
 				}}
 				onClick={() => {
 					ctx.dispatch({
@@ -59,7 +58,7 @@ export const ImageView = (props: ImageViewProps) => {
 			>
 				<Loader loaded={loaded()} />
 				<img
-					src={url()}
+					src={thumbUrl()}
 					alt={props.media.alt ?? undefined}
 					height={height()!}
 					width={width()!}
@@ -69,7 +68,7 @@ export const ImageView = (props: ImageViewProps) => {
 				<a
 					class="download"
 					download={props.media.filename}
-					href={getUrl(props.media.source)}
+					href={getUrl(props.media)}
 					onClick={(e) => e.stopPropagation()}
 				>
 					<button>

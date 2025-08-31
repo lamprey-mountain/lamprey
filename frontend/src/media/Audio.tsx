@@ -18,6 +18,7 @@ import {
 	byteFmt,
 	formatTime,
 	getDuration,
+	getThumb,
 	getUrl,
 	type MediaLoadingState,
 	type MediaProps,
@@ -38,7 +39,7 @@ export const AudioView = (props: MediaProps) => {
 
 	audio.preload = "metadata";
 	audio.crossOrigin = "anonymous";
-	createEffect(() => audio.src = getUrl(props.media.source));
+	createEffect(() => audio.src = getUrl(props.media));
 	onCleanup(() => audio.pause());
 
 	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
@@ -171,13 +172,11 @@ export const AudioView = (props: MediaProps) => {
 			title: props.media.filename,
 			// artist: "artist",
 			// album: "album",
-			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
-				(i) => ({
-					src: getUrl(i),
-					sizes: `${i.width}x${i.height}`,
-					type: i.mime,
-				}),
-			),
+			artwork: [{
+				sizes: "640x640",
+				src: getThumb(props.media, 640),
+				type: "image/avif"
+			}],
 		});
 	};
 
@@ -199,19 +198,6 @@ export const AudioView = (props: MediaProps) => {
 			});
 		}
 	});
-
-	const thumbnail = (fullSize = false) => {
-		const t = props.media.tracks;
-		const mini = fullSize
-			? null
-			: t.find((i) =>
-				i.type === "Thumbnail" && i.width === 64 && i.height === 64
-			);
-		const stream = mini ??
-			t.find((i) => i.type === "Thumbnail") ??
-			t.find((i) => i.type === "Image");
-		return stream;
-	};
 
 	return (
 		<article class="audio">
@@ -243,16 +229,18 @@ export const AudioView = (props: MediaProps) => {
 				<rect class="current" width={progressWidth()} />
 				<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
 			</svg>
-			<Show when={thumbnail()}>
-				<a class="thumb" href={thumbnail(true)!.url}>
-					<img src={getUrl(thumbnail()!)} />
-				</a>
-			</Show>
+			<a class="thumb" href={getThumb(props.media)} >
+				<img src={getThumb(props.media, 64)}
+					onError={(e) => {
+						console.error("failed to load image");
+						e.currentTarget.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
+					}} />
+			</a>
 			<div class="info">
 				<a
 					download={props.media.filename}
 					title={props.media.filename}
-					href={getUrl(props.media.source)}
+					href={getUrl(props.media)}
 				>
 					{props.media.filename}
 				</a>

@@ -2,7 +2,7 @@ import type { RoomMember, ThreadMember, User } from "sdk";
 import { useApi } from "./api";
 import { For, Show, type VoidProps } from "solid-js";
 import { Copyable } from "./util";
-import { getThumb, getUrl } from "./media/util";
+import { getThumb } from "./media/util";
 
 type UserProps = {
 	room_member?: RoomMember;
@@ -23,21 +23,6 @@ export function UserView(props: UserProps) {
 
 		name ??= props.user.name;
 		return name;
-	}
-
-	function getThumb(media_id: string) {
-		const media = api.media.fetchInfo(() => media_id);
-		const m = media();
-		if (!m) return;
-		const tracks = [m.source, ...m.tracks];
-		const source =
-			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
-				tracks.find((s) => s.type === "Image");
-		if (source) {
-			return getUrl(source);
-		} else {
-			console.error("no valid avatar source?", m);
-		}
 	}
 
 	return (
@@ -116,7 +101,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 		const media = api.media.fetchInfo(() => media_id);
 		const m = media();
 		if (!m) return;
-		return getUrl(getThumb(m, 64, 64));
+		return getThumb(m, 64);
 	}
 
 	const size = 64;
@@ -170,7 +155,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 		const media = api.media.fetchInfo(() => media_id);
 		const m = media();
 		if (!m) return;
-		return getUrl(getThumb(m, 64, 64));
+		return getThumb(m, 64);
 	}
 
 	const size = 64;

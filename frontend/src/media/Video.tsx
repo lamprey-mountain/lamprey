@@ -12,6 +12,7 @@ import {
 	formatTime,
 	getDuration,
 	getHeight,
+	getThumb,
 	getUrl,
 	getWidth,
 	Loader,
@@ -230,13 +231,11 @@ export const VideoView = (props: MediaProps) => {
 			title: props.media.filename,
 			// artist: "artist",
 			// album: "album",
-			artwork: props.media.tracks.filter((i) => i.type === "Thumbnail").map(
-				(i) => ({
-					src: getUrl(i),
-					sizes: `${i.width}x${i.height}`,
-					type: i.mime,
-				}),
-			),
+			artwork: [{
+				sizes: "640x640",
+				src: getThumb(props.media, 640),
+				type: "image/avif"
+			}],
 		});
 	};
 
@@ -273,7 +272,7 @@ export const VideoView = (props: MediaProps) => {
 				<Loader loaded={loadingState() !== "empty"} />
 				<video
 					ref={video!}
-					src={getUrl(props.media.source)}
+					src={getUrl(props.media)}
 					preload="metadata"
 					onClick={togglePlayPause}
 					onDblClick={fullScreenDblClick}
@@ -311,7 +310,7 @@ export const VideoView = (props: MediaProps) => {
 						<a
 							download={props.media.filename}
 							title={props.media.filename}
-							href={getUrl(props.media.source)}
+							href={getUrl(props.media)}
 						>
 							{props.media.filename}
 						</a>
