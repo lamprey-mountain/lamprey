@@ -52,7 +52,10 @@ pub struct Media {
     /// The source (Uploaded, Downloaded)
     pub source: MediaTrack,
 
-    /// The source (Extracted, Generated)
+    /// The source (Extracted, Generated) (DEPRECATED)
+    ///
+    /// This was only used for thumbnails, and there's a more robust system now
+    #[deprecated]
     pub tracks: Vec<MediaTrack>,
     // /// extra metadata relevant to the media itself and not a track
     // // NOTE: maybe derived could be its own MediaTrackInfo type. not sure how it would be to use though?
