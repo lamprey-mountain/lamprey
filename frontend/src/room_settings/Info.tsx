@@ -1,7 +1,7 @@
 import { createEffect, createSignal, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
-import { getUrl } from "../media/util.tsx";
+import { getThumbFromId, getUrl } from "../media/util.tsx";
 import { createUpload } from "sdk";
 import { useApi } from "../api.tsx";
 
@@ -12,21 +12,6 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const openAvatarPicker = () => {
 		avatarInputEl?.click();
 	};
-
-	function getThumb(media_id: string) {
-		const media = api.media.fetchInfo(() => media_id);
-		const m = media();
-		if (!m) return;
-		const tracks = [m.source, ...m.tracks];
-		const source =
-			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
-				tracks.find((s) => s.type === "Image");
-		if (source) {
-			return getUrl(source);
-		} else {
-			console.error("no valid avatar source?", m);
-		}
-	}
 
 	const api = useApi();
 	const setAvatar = async (f: File) => {
@@ -107,7 +92,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				>
 					<img
 						onClick={openAvatarPicker}
-						src={getThumb(props.room.icon!)}
+						src={getThumbFromId(props.room.icon!, 64)}
 						class="avatar"
 					/>
 				</Show>

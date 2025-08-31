@@ -1,6 +1,5 @@
-import type { Media, MediaTrack } from "sdk";
+import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
-import { flags } from "../flags";
 import { CDN_URL } from "../App.tsx";
 
 export type MediaProps = VoidProps<{ media: Media }>;
@@ -53,10 +52,15 @@ export const getUrl = (t: Media) => {
 
 /** get the cdn url for the thumbnail for a piece of media */
 export const getThumb = (media: Media, size?: number) => {
+	return getThumbFromId(media.id, size);
+};
+
+/** get the cdn url for the thumbnail for a piece of media from its id */
+export const getThumbFromId = (media_id: string, size?: number) => {
 	if (size) {
-		return `${CDN_URL}/thumb/${media.id}?size=${size}`
+		return `${CDN_URL}/thumb/${media_id}?size=${size}`
 	} else {
-		return `${CDN_URL}/thumb/${media.id}`
+		return `${CDN_URL}/thumb/${media_id}`
 	}
 };
 

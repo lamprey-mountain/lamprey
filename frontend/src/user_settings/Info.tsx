@@ -2,7 +2,7 @@ import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
-import { getUrl } from "../media/util.tsx";
+import { getThumbFromId, getUrl } from "../media/util.tsx";
 import { Modal } from "../modal/mod.tsx";
 
 export function Info(props: VoidProps<{ user: User }>) {
@@ -74,21 +74,6 @@ export function Info(props: VoidProps<{ user: User }>) {
 		avatarInputEl?.click();
 	};
 
-	function getThumb(media_id: string) {
-		const media = api.media.fetchInfo(() => media_id);
-		const m = media();
-		if (!m) return;
-		const tracks = [m.source, ...m.tracks];
-		const source =
-			tracks.find((s) => s.type === "Thumbnail" && s.height === 64) ??
-				tracks.find((s) => s.type === "Image");
-		if (source) {
-			return getUrl(source);
-		} else {
-			console.error("no valid avatar source?", m);
-		}
-	}
-
 	const toggle = (setting: string) => () => {
 		ctx.settings.set(
 			setting,
@@ -126,7 +111,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 				>
 					<img
 						onClick={openAvatarPicker}
-						src={getThumb(props.user.avatar!)}
+						src={getThumbFromId(props.user.avatar!, 64)}
 						class="avatar"
 					/>
 				</Show>
