@@ -198,11 +198,13 @@ pub enum Permission {
     /// (unimplemented) can create voice threads
     ThreadCreateVoice,
 
-    // TODO:add permissions for category threads when they are implemented
+    // TODO: add permissions for category threads when they are implemented
+    // TODO: rename to ThreadRemove
     /// delete (and undelete) threads
     ThreadDelete,
 
     /// change name/description of threads
+    // TODO: possibly rename to ThreadManage
     ThreadEdit,
 
     /// (unimplemented) move threads across rooms
@@ -221,7 +223,7 @@ pub enum Permission {
     // rename to ThreadCreateAnnouncement?
     ThreadPublish,
 
-    // TODO: remove user permissions for now
+    // TODO: remove user permissions for now, they aren't used anywhere
     /// (user) access dms
     UserDms,
 

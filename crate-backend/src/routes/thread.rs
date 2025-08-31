@@ -11,6 +11,7 @@ use common::v1::types::{
     MessageThreadUpdate, ThreadType,
 };
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -60,7 +61,11 @@ async fn thread_create_room(
         ThreadType::Voice => {
             perms.ensure(Permission::ThreadCreateVoice)?;
         }
-        _ => todo!(),
+        ThreadType::Dm | ThreadType::Gdm => {
+            return Err(Error::BadStatic(
+                "can't create a direct message thread in a room",
+            ))
+        }
     };
     let thread_id = data
         .thread_create(DbThreadCreate {
@@ -72,7 +77,13 @@ async fn thread_create_room(
                 ThreadType::Chat => DbThreadType::Chat,
                 ThreadType::Forum => DbThreadType::Forum,
                 ThreadType::Voice => DbThreadType::Voice,
-                _ => todo!(),
+                ThreadType::Dm | ThreadType::Gdm => {
+                    // this should be unreachable due to the check above
+                    warn!("unreachable: dm/gdm thread creation in room");
+                    return Err(Error::BadStatic(
+                        "can't create a direct message thread in a room",
+                    ));
+                }
             },
             nsfw: json.nsfw,
         })
@@ -374,13 +385,21 @@ async fn thread_archive(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     if user_id != thread.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
+
+    if thread.archived_at.is_some() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
     data.thread_archive(thread_id, user_id).await?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    srv.threads.invalidate(thread_id).await;
+    srv.users.disconnect_everyone_from_thread(thread_id)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
         s.broadcast_room(
             room_id,
@@ -413,14 +432,19 @@ async fn thread_unarchive(
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let srv = s.services();
     let data = s.data();
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     if user_id != thread.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
+    if thread.archived_at.is_none() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
     data.thread_unarchive(thread_id, user_id).await?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    srv.threads.invalidate(thread_id).await;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
         s.broadcast_room(
             room_id,
@@ -452,19 +476,20 @@ async fn thread_remove(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    if thread.deleted_at.is_some() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
     data.thread_delete(thread_id, user_id).await?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    srv.threads.invalidate(thread_id).await;
+    srv.users.disconnect_everyone_from_thread(thread_id)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
-        s.broadcast_room(
-            room_id,
-            user_id,
-            MessageSync::ThreadUpdate {
-                thread: thread.clone(),
-            },
-        )
-        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -483,11 +508,17 @@ async fn thread_restore(
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let srv = s.services();
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    if thread.deleted_at.is_none() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
     data.thread_undelete(thread_id, user_id).await?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    srv.threads.invalidate(thread_id).await;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
         s.broadcast_room(
             room_id,
@@ -524,12 +555,10 @@ async fn thread_typing(
     let srv = s.services();
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
-
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
-
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.threads.typing_set(thread_id, user_id, until).await;
     s.broadcast_thread(

@@ -121,7 +121,6 @@ pub struct Thread {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[non_exhaustive]
 pub enum ThreadType {
     /// instant messaging
     #[default]

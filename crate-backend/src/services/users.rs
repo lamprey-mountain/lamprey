@@ -2,14 +2,15 @@ use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::voice::VoiceState;
-use common::v1::types::{MessageSync, Thread, ThreadMemberPut};
+use common::v1::types::voice::{SignallingMessage, VoiceState};
+use common::v1::types::{MessageSync, Thread, ThreadId, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
-use tracing::debug;
+use tracing::{debug, error};
 
+use crate::state::SfuRequest;
 use crate::types::{DbThreadCreate, DbThreadType};
 use crate::{Error, Result, ServerStateInner};
 
@@ -181,6 +182,22 @@ impl ServiceUsers {
             .await?;
         let thread = srv.threads.get(thread_id, Some(user_id)).await?;
         Ok((thread, true))
+    }
+
+    pub fn disconnect_everyone_from_thread(&self, thread_id: ThreadId) -> Result<()> {
+        for s in &self.voice_states {
+            if s.thread_id == thread_id {
+                let r = self.state.sushi_sfu.send(SfuRequest {
+                    user_id: s.user_id,
+                    inner: serde_json::to_value(SignallingMessage::VoiceState { state: None })?,
+                });
+                if let Err(err) = r {
+                    error!("failed to disconnect user from thread: {err}");
+                }
+            }
+        }
+        self.voice_states.retain(|_, s| s.thread_id != thread_id);
+        Ok(())
     }
 }
 
