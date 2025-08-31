@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select user_id, data from media where data->>'v' is null limit 50",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "data",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d8d5545d669ec0b697ae9c835798515792c999d698216de540be3dffe70b41c6"
+}
