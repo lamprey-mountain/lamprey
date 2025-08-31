@@ -1,5 +1,5 @@
 import { RouteSectionProps, useNavigate } from "@solidjs/router";
-import { createResource, Match, Show, Switch } from "solid-js";
+import { createResource, For, Match, Show, Switch } from "solid-js";
 import { useApi } from "./api";
 import { UserView } from "./User";
 import { type UserWithRelationship } from "sdk";
@@ -62,6 +62,13 @@ export function UserProfile(props: RouteSectionProps) {
 		refetch();
 	};
 
+	const [mutualRooms] = createResource(() => props.params.user_id, async (user_id) => {
+		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/room", {
+			params: { path: { user_id } },
+		});
+		return data
+	});
+
 	return (
 		<Show when={user()}>
 			<div class="user-profile">
@@ -94,6 +101,14 @@ export function UserProfile(props: RouteSectionProps) {
 						</Match>
 					</Switch>
 				</div>
+				<b>mutual rooms</b>
+				<ul style="list-style: disc inside">
+					{/* TODO: use actual store/live update */}
+					<For each={mutualRooms()?.items ?? []} fallback="no mutual rooms :(">{room => (
+						<li><a href={`/room/${room.id}`}>{room.name}</a></li>
+					)}
+					</For>
+				</ul>
 			</div>
 		</Show>
 	);
