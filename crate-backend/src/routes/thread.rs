@@ -555,6 +555,7 @@ async fn thread_typing(
     let srv = s.services();
     let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
+    perms.ensure(Permission::MessageCreate)?;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
