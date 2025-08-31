@@ -10,10 +10,12 @@ pub struct Config {
     pub database_url: String,
     pub api_url: Url,
     pub cdn_url: Url,
+    pub html_url: Url,
     /// for media/file uploads
     pub s3: ConfigS3,
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
     pub url_preview: ConfigUrlPreview,
+    pub media_max_size: u64,
     pub smtp: ConfigSmtp,
     pub otel_trace_endpoint: Option<String>,
     pub sfu_token: String,

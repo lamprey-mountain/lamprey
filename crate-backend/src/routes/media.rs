@@ -16,7 +16,6 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
-    services::media::MAX_SIZE,
     types::{Media, MediaCreate, MediaCreated, MediaId},
     ServerState,
 };
@@ -42,7 +41,7 @@ async fn media_create(
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
-            if *size > MAX_SIZE {
+            if *size > s.config.media_max_size {
                 return Err(Error::TooBig);
             }
 
@@ -66,7 +65,7 @@ async fn media_create(
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
         MediaCreateSource::Download { size, .. } => {
-            if size.is_some_and(|s| s > MAX_SIZE) {
+            if size.is_some_and(|sz| sz > s.config.media_max_size) {
                 return Err(Error::TooBig);
             }
 

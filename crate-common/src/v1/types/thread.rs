@@ -190,6 +190,9 @@ pub struct ThreadCreate {
     /// not safe for work
     #[serde(default)]
     pub nsfw: bool,
+
+    // /// the initial message for this thread
+    // pub starter_message: MessageCreate,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

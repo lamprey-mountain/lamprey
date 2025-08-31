@@ -24,9 +24,6 @@ use crate::{
 mod ffmpeg;
 mod ffprobe;
 
-const MEGABYTE: usize = 1024 * 1024;
-pub const MAX_SIZE: u64 = 1024 * 1024 * 16;
-
 pub struct ServiceMedia {
     pub state: Arc<ServerStateInner>,
     pub uploads: DashMap<MediaId, MediaUpload>,
@@ -44,7 +41,7 @@ pub struct MediaUpload {
 impl MediaUpload {
     pub async fn write(&mut self, bytes: &[u8]) -> Result<()> {
         let len = bytes.len() as u64;
-        if self.current_size + len > MAX_SIZE {
+        if self.current_size + len > self.max_size {
             return Err(Error::TooBig);
         }
 
@@ -103,7 +100,7 @@ impl ServiceMedia {
                 temp_file,
                 temp_writer,
                 current_size: 0,
-                max_size: MAX_SIZE,
+                max_size: self.state.config.media_max_size,
             },
         );
         Ok(())
@@ -264,7 +261,7 @@ impl ServiceMedia {
         debug!("finish generating thumbnails for {}", media_id);
         let upload_s3 = async {
             let mut f = tokio::fs::OpenOptions::new().read(true).open(&p).await?;
-            let mut buf = vec![0u8; MEGABYTE];
+            let mut buf = vec![0u8; 1024 * 1024];
             let mut w = self
                 .state
                 .blobs
@@ -289,7 +286,7 @@ impl ServiceMedia {
     }
 
     pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
-        self.import_from_url_with_max_size(user_id, json, MAX_SIZE)
+        self.import_from_url_with_max_size(user_id, json, self.state.config.media_max_size)
             .await
     }
 

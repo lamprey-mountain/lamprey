@@ -48,10 +48,6 @@ impl From<DbMediaData> for Media {
 impl From<DbMediaRaw> for Media {
     fn from(value: DbMediaRaw) -> Self {
         let mut tracks = value.tracks;
-        let source = tracks
-            .get(0)
-            .cloned()
-            .expect("media should always have at least one track");
 
         let source = tracks
             .iter()
