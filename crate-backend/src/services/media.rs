@@ -205,7 +205,7 @@ impl ServiceMedia {
     ) -> Result<Media> {
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
-        let url = self.state.get_s3_url(&format!("media/{media_id}"))?;
+        let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
         let services = self.state.services();
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mime: Mime = mime.parse()?;
