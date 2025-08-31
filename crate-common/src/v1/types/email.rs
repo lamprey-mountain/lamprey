@@ -10,11 +10,49 @@ use validator::{Validate, ValidationErrors};
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(as = String))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct EmailAddr {
-    #[cfg_attr(feature = "validator", validate(email))]
-    inner: String,
+pub struct EmailAddr(String);
+
+#[cfg(feature = "utoipa")]
+mod u {
+    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+
+    use crate::v1::types::email::EmailAddr;
+
+    impl ToSchema for EmailAddr {}
+
+    impl PartialSchema for EmailAddr {
+        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            ObjectBuilder::new()
+                .schema_type(utoipa::openapi::schema::Type::String)
+                .format(Some(utoipa::openapi::SchemaFormat::Custom(
+                    "email".to_string(),
+                )))
+                .description(Some("an email address"))
+                .build()
+                .into()
+        }
+    }
+}
+
+#[cfg(feature = "validator")]
+mod v {
+    use validator::{Validate, ValidationError, ValidationErrors};
+
+    use crate::v1::types::email::EmailAddr;
+
+    impl Validate for EmailAddr {
+        fn validate(&self) -> Result<(), validator::ValidationErrors> {
+            if self.0.contains("@") {
+                Ok(())
+            } else {
+                let mut v = ValidationErrors::new();
+                let mut err = ValidationError::new("email");
+                err.add_param("email".into(), &"must be an email address");
+                v.add("email", err);
+                Err(v)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +107,7 @@ pub enum EmailTrust {
 
 impl EmailAddr {
     pub fn into_inner(self) -> String {
-        self.inner
+        self.0
     }
 }
 
@@ -77,7 +115,7 @@ impl TryFrom<String> for EmailAddr {
     type Error = ValidationErrors;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        let e = EmailAddr { inner: s };
+        let e = EmailAddr(s);
         e.validate()?;
         Ok(e)
     }
@@ -85,6 +123,6 @@ impl TryFrom<String> for EmailAddr {
 
 impl AsRef<str> for EmailAddr {
     fn as_ref(&self) -> &str {
-        &self.inner
+        &self.0
     }
 }
