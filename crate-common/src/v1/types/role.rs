@@ -34,10 +34,10 @@ pub struct Role {
 
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
-    // FIXME(#114): at least some sort of hierarchy
-    // pub priority: u64,
 
-    // pub includes: Vec<Role>,
+    /// tiebroken by id
+    pub position: u64,
+
     pub member_count: u64,
 }
 
@@ -127,7 +127,7 @@ pub struct RoleMemberBulkPatch {
 pub struct RoleReorder {
     /// the roles to reorder
     #[serde(default)]
-    #[validate(length(min = 1, max = 256))]
+    #[validate(length(min = 1, max = 1024))]
     pub roles: Vec<RoleReorderItem>,
 }
 

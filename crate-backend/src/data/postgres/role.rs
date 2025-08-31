@@ -1,15 +1,15 @@
 use async_trait::async_trait;
-use common::v1::types::PaginationDirection;
+use common::v1::types::{PaginationDirection, RoleReorder};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::data::postgres::Pagination;
 use crate::error::Result;
-use crate::gen_paginate;
 use crate::types::{
     DbPermission, DbRoleCreate, PaginationQuery, PaginationResponse, Role, RoleId, RolePatch,
     RoleVerId, RoomId,
 };
+use crate::{gen_paginate, Error};
 
 use crate::data::DataRole;
 
@@ -25,6 +25,7 @@ pub struct DbRole {
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
     pub member_count: i64,
+    pub position: i64,
 }
 
 impl From<DbRole> for Role {
@@ -39,22 +40,60 @@ impl From<DbRole> for Role {
             is_self_applicable: row.is_self_applicable,
             is_mentionable: row.is_mentionable,
             member_count: row.member_count as u64,
+            position: row.position as u64,
         }
     }
 }
 
+const MAX_ROLE_COUNT: u32 = 1024;
+
 #[async_trait]
 impl DataRole for Postgres {
-    async fn role_create(&self, create: DbRoleCreate) -> Result<Role> {
+    async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role> {
         let role_id = *create.id;
         let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
+        let mut tx = self.pool.begin().await?;
+
+        query!(
+            "select from role where room_id = $1 for update",
+            *create.room_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        let count = query_scalar!(
+            r#"select count(*) from role where room_id = $1"#,
+            *create.room_id
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .unwrap_or_default() as u32;
+        if count >= MAX_ROLE_COUNT {
+            return Err(Error::BadStatic("too many roles (max 1000)"));
+        }
+        query!(
+            r#"update role set position = position + 1 where id != room_id and room_id = $1"#,
+            *create.room_id
+        )
+        .execute(&mut *tx)
+        .await?;
         let role = query_as!(DbRole, r#"
-            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable)
-            VALUES ($1, $1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, 0 as "member_count!"
-        "#, role_id, create.room_id.into_inner(), create.name, create.description, perms as _, create.is_mentionable, create.is_self_applicable)
-    	    .fetch_one(&self.pool)
+            INSERT INTO role (id, version_id, room_id, name, description, permissions, is_mentionable, is_self_applicable, position)
+            VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, version_id, room_id, name, description, permissions as "permissions: _", is_mentionable, is_self_applicable, 0 as "member_count!", position
+        "#,
+            role_id,
+            *create.room_id,
+            create.name,
+            create.description,
+            perms as _,
+            create.is_mentionable,
+            create.is_self_applicable,
+            position as i64,
+        )
+            .fetch_one(&mut *tx)
         	.await?;
+        tx.commit().await?;
         info!("inserted role");
         Ok(role.into())
     }
@@ -80,7 +119,8 @@ impl DataRole for Postgres {
                 	r.room_id,
                 	r.is_self_applicable,
                 	r.name,
-                    coalesce(rm.count, 0) as "member_count!"
+                    coalesce(rm.count, 0) as "member_count!",
+                    r.position
                 FROM role r
                 LEFT JOIN (
                     SELECT role_id, count(*) as count
@@ -127,7 +167,8 @@ impl DataRole for Postgres {
             SELECT
                 r.id, r.version_id, r.room_id, r.name, r.description, r.permissions as "permissions: _",
                 r.is_mentionable, r.is_self_applicable,
-                coalesce(rm.count, 0) as "member_count!"
+                coalesce(rm.count, 0) as "member_count!",
+                r.position
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count
@@ -136,8 +177,8 @@ impl DataRole for Postgres {
             ) rm ON rm.role_id = r.id
             WHERE r.room_id = $1 AND r.id = $2
         "#,
-            room_id.into_inner(),
-            role_id.into_inner()
+            *room_id,
+            *role_id,
         )
         .fetch_one(&self.pool)
         .await?;
@@ -160,13 +201,13 @@ impl DataRole for Postgres {
             r#"
             SELECT
                 id, version_id, room_id, name, description, permissions as "permissions: _",
-                is_mentionable, is_self_applicable, 0 as "member_count!"
+                is_mentionable, is_self_applicable, 0 as "member_count!", position
             FROM role
             WHERE room_id = $1 AND id = $2
             FOR UPDATE
         "#,
-            room_id.into_inner(),
-            role_id.into_inner()
+            *room_id,
+            *role_id,
         )
         .fetch_one(&mut *tx)
         .await?;
@@ -182,8 +223,8 @@ impl DataRole for Postgres {
                 is_self_applicable = $7
             WHERE id = $1
         "#,
-            role_id.into_inner(),
-            version_id.into_inner(),
+            *role_id,
+            *version_id,
             patch.name.unwrap_or(role.name),
             patch.description.unwrap_or(role.description),
             perms.unwrap_or(role.permissions.into_iter().map(|p| p.into()).collect()) as _,
@@ -195,4 +236,53 @@ impl DataRole for Postgres {
         tx.commit().await?;
         Ok(version_id)
     }
+
+    async fn role_reorder(&self, room_id: RoomId, reorder: RoleReorder) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        query!("select from role where room_id = $1 for update", *room_id)
+            .execute(&mut *tx)
+            .await?;
+        for r in reorder.roles {
+            if *r.role_id == *room_id {
+                tx.rollback().await?;
+                return Err(Error::BadStatic(
+                    "can't change base/@everyone role's position",
+                ));
+            }
+            let pos: i32 = r
+                .position
+                .try_into()
+                .map_err(|_| Error::BadStatic("invalid position"))?;
+            query!(
+                "update role set position = $3 where id = $1 and room_id = $2",
+                *r.role_id,
+                *room_id,
+                pos,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+        query!(
+            r#"
+            with ranked_roles as (
+                select
+                    id,
+                    row_number() over (partition by room_id order by position, id) - 1 as rn
+                from role
+                where room_id = $1
+            )
+            update role
+            set position = ranked_roles.rn
+            from ranked_roles
+            where role.id = ranked_roles.id;
+        "#,
+            *room_id
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    // async fn role_user_max_pos(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {}
 }

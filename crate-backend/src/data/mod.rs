@@ -9,9 +9,9 @@ use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch,
-    RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken,
-    ThreadMember, ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
+    RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
+    RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch, SessionStatus,
+    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -127,7 +127,7 @@ pub trait DataRoomMember {
 
 #[async_trait]
 pub trait DataRole {
-    async fn role_create(&self, create: DbRoleCreate) -> Result<Role>;
+    async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
     async fn role_list(
         &self,
         room_id: RoomId,
@@ -141,6 +141,7 @@ pub trait DataRole {
         role_id: RoleId,
         patch: RolePatch,
     ) -> Result<RoleVerId>;
+    async fn role_reorder(&self, room_id: RoomId, reorder: RoleReorder) -> Result<()>;
 }
 
 #[async_trait]

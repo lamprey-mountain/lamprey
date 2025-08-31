@@ -121,9 +121,9 @@ impl ServiceRooms {
             is_self_applicable: false,
             is_mentionable: true,
         };
-        let admin = data.role_create(role_admin).await?;
-        data.role_create(role_moderator).await?;
-        data.role_create(role_everyone).await?;
+        let admin = data.role_create(role_admin, 1).await?;
+        data.role_create(role_moderator, 1).await?;
+        data.role_create(role_everyone, 0).await?;
         data.room_member_put(
             room_id,
             creator,

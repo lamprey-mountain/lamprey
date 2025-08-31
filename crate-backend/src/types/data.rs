@@ -1,7 +1,7 @@
 use common::v1::types::{
     util::Time, Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet,
-    Role, RoleId, RoleVerId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus,
-    SessionToken, Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
+    RoleId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, Thread,
+    ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
@@ -213,33 +213,6 @@ impl From<SessionStatus> for DbSessionStatus {
             SessionStatus::Unauthorized => DbSessionStatus::Unauthorized,
             SessionStatus::Authorized { .. } => DbSessionStatus::Authorized,
             SessionStatus::Sudo { .. } => DbSessionStatus::Sudo,
-        }
-    }
-}
-
-pub struct DbRole {
-    pub id: RoleId,
-    pub version_id: RoleVerId,
-    pub room_id: RoomId,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: Vec<DbPermission>,
-    pub is_self_applicable: bool,
-    pub is_mentionable: bool,
-}
-
-impl From<DbRole> for Role {
-    fn from(row: DbRole) -> Self {
-        Role {
-            id: row.id,
-            version_id: row.version_id,
-            room_id: row.room_id,
-            name: row.name,
-            description: row.description,
-            permissions: row.permissions.into_iter().map(Into::into).collect(),
-            is_self_applicable: row.is_self_applicable,
-            is_mentionable: row.is_mentionable,
-            member_count: 0, // Placeholder, will be populated by the query
         }
     }
 }

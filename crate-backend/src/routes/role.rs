@@ -44,15 +44,18 @@ async fn role_create(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d
-        .role_create(DbRoleCreate {
-            id: RoleId::new(),
-            room_id,
-            name: json.name,
-            description: json.description,
-            permissions: json.permissions,
-            is_self_applicable: json.is_self_applicable,
-            is_mentionable: json.is_mentionable,
-        })
+        .role_create(
+            DbRoleCreate {
+                id: RoleId::new(),
+                room_id,
+                name: json.name,
+                description: json.description,
+                permissions: json.permissions,
+                is_self_applicable: json.is_self_applicable,
+                is_mentionable: json.is_mentionable,
+            },
+            1,
+        )
         .await?;
 
     let changes = Changes::new()
@@ -412,8 +415,7 @@ async fn role_member_bulk_edit(
     Err(Error::Unimplemented)
 }
 
-/// Role reorder (TODO)
-#[allow(unused)]
+/// Role reorder
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/role",
@@ -426,11 +428,52 @@ async fn role_member_bulk_edit(
 async fn role_reorder(
     Path(room_id): Path<RoomId>,
     Auth(auth_user_id): Auth,
-    HeaderReason(reason): HeaderReason,
+    HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleReorder>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+) -> Result<impl IntoResponse> {
+    body.validate()?;
+
+    let d = s.data();
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleManage)?;
+
+    // FIXME: enforce users can only reorder roles below their highest role
+
+    // TODO: enforce highest-role-position for
+    // - role editing
+    // - role granting/revoking
+    // - banning
+    // - kicking
+    // - permission overwrite setting/deleting
+    // - also: only allow granting/denying permissions the user has
+
+    d.role_reorder(room_id, body).await?;
+
+    // maybe add a new MessageSync/AuditLogEvent event: RoleReorder?
+    // { room_id: RoomId, roles: Vec<{ id: RoleId, position: u64 }> }
+    // i could emit an event for every role whos position changed, which could be a *lot*
+
+    // FIXME: emit events for role reorderings
+    // let msg = MessageSync::RoleUpdate {
+    //     role: end_role.clone(),
+    // };
+    s.services().perms.invalidate_room_all(room_id);
+    // s.broadcast_room(room_id, user_id, msg).await?;
+
+    // FIXME: log reorderings in audit log
+    // prior art: discord doesn't seem to log audit log events for role reorderings(!?)
+    // d.audit_logs_room_append(AuditLogEntry {
+    //     id: AuditLogEntryId::new(),
+    //     room_id,
+    //     user_id,
+    //     session_id: None,
+    //     reason: reason.clone(),
+    //     ty: AuditLogEntryType::RoleUpdate { changes },
+    // })
+    // .await?;
+    Ok(())
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
