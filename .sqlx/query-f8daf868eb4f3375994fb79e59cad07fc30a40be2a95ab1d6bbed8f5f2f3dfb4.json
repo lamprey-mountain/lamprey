@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            with primary_tracks as (\n                select m.id as media_id,\n                       coalesce(\n                           (select t\n                            from jsonb_array_elements(m.data->'tracks') t\n                            where t->'source'->>'type' IN ('Uploaded', 'Downloaded')\n                            limit 1),\n                           (select t\n                            from jsonb_array_elements(m.data->'tracks') t\n                            limit 1)\n                       ) as track\n                from media m\n            )\n            select sum((track->>'size')::int) as total_size\n            from room r\n            join thread t on t.room_id = r.id\n            join message s on s.thread_id = t.id\n            join media_link l on l.target_id = s.id and l.link_type = 'Message'\n            join primary_tracks pt on pt.media_id = l.media_id\n            where r.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total_size",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f8daf868eb4f3375994fb79e59cad07fc30a40be2a95ab1d6bbed8f5f2f3dfb4"
+}
