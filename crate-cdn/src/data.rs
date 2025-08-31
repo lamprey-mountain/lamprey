@@ -51,23 +51,26 @@ where
         fn from(value: DbMediaRaw) -> Self {
             let mut tracks = value.tracks;
             let source = tracks
-                .get(0)
-                .cloned()
-                .expect("media should always have at least one track");
+                .iter()
+                .find(|i| {
+                    matches!(
+                        i.source,
+                        common::v1::types::TrackSource::Uploaded
+                            | common::v1::types::TrackSource::Downloaded { .. }
+                    )
+                })
+                .or_else(|| tracks.get(0))
+                .expect("media should always have at least one track")
+                .clone();
 
-            let remaining_tracks = if tracks.is_empty() {
-                vec![]
-            } else {
-                tracks.remove(0);
-                tracks
-            };
+            tracks.retain(|t| t != &source);
 
             Media {
                 id: value.id,
                 filename: value.filename,
                 alt: value.alt,
                 source,
-                tracks: remaining_tracks,
+                tracks,
             }
         }
     }

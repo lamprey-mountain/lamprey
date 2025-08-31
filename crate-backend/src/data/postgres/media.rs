@@ -53,19 +53,27 @@ impl From<DbMediaRaw> for Media {
             .cloned()
             .expect("media should always have at least one track");
 
-        let remaining_tracks = if tracks.is_empty() {
-            vec![]
-        } else {
-            tracks.remove(0);
-            tracks
-        };
+        let source = tracks
+            .iter()
+            .find(|i| {
+                matches!(
+                    i.source,
+                    common::v1::types::TrackSource::Uploaded
+                        | common::v1::types::TrackSource::Downloaded { .. }
+                )
+            })
+            .or_else(|| tracks.get(0))
+            .expect("media should always have at least one track")
+            .clone();
+
+        tracks.retain(|t| t != &source);
 
         Media {
             id: value.id,
             filename: value.filename,
             alt: value.alt,
             source,
-            tracks: remaining_tracks,
+            tracks,
         }
     }
 }

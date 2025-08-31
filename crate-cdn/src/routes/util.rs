@@ -87,7 +87,7 @@ pub fn build_headers<'a>(
     req_headers: &HeaderMap,
     content_info: &ContentInfo<'a>,
 ) -> Result<BuiltHeaders> {
-    let media = content_info.media();
+    let media = dbg!(content_info.media());
     let mut headers = HeaderMap::new();
 
     // step 1. generate and insert base headers
@@ -110,7 +110,7 @@ pub fn build_headers<'a>(
     headers.typed_insert(lm);
 
     headers.typed_insert(headers::AcceptRanges::bytes());
-    headers.typed_insert(content_info.content_type());
+    headers.typed_insert(dbg!(content_info.content_type()));
     headers.insert(
         "content-disposition",
         content_disposition_attachment(&content_info.filename(), true)
