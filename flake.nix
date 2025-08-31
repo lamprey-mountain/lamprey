@@ -15,7 +15,7 @@
           inherit src;
           strictDeps = true;
           doCheck = false;
-          
+
           buildInputs = with pkgs; [
             openssl
             pkg-config
@@ -46,6 +46,7 @@
         backend = mkCrate "backend";
         bridge-discord = mkCrate "bridge-discord";
         sfu = mkCrate "voice";
+        cdn = mkCrate "cdn";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
@@ -71,7 +72,7 @@
         });
       in {
         packages = rec {
-          inherit backend bridge-discord sfu frontend;
+          inherit backend bridge-discord sfu cdn frontend;
 
           cargo-deps = cargoArtifacts;
 
@@ -98,7 +99,7 @@
               ];
             };
           };
-          
+
           sfu-oci = pkgs.dockerTools.streamLayeredImage {
             name = "sfu";
             tag = "latest";
@@ -111,8 +112,21 @@
               ];
             };
           };
+
+          cdn-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "cdn";
+            tag = "latest";
+            contents = [ pkgs.dockerTools.caCertificates ];
+            config = {
+              Entrypoint = [
+                "${pkgs.tini}/bin/tini"
+                "--"
+                "${sfu}/bin/cdn"
+              ];
+            };
+          };
         };
-        
+
         devShells.default = craneLib.devShell {
           # Inherit inputs from checks.
           # checks = self.checks.${system};
