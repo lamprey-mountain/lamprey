@@ -7,9 +7,10 @@ use utoipa::ToSchema;
 
 use serde::{Deserialize, Serialize};
 
+/// who can view this room or thread
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum Discoverability {
+pub enum Visibility {
     /// nobody can read except members
     Private,
 
@@ -20,6 +21,7 @@ pub enum Discoverability {
     Public,
 }
 
+/// who can join this room
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Joinability {
@@ -27,22 +29,22 @@ pub enum Joinability {
     Invite,
 
     /// anyone can join
-    FreeForAll,
+    Public,
 }
 
 /// stricter visibility takes precedence over weaker visibility
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Visibility {
+pub struct Access {
     /// who can see this room/thread
-    pub discoverability: Discoverability,
+    pub visibility: Visibility,
 
     /// who can join this room
     pub joinability: Joinability,
 }
 
-impl Discoverability {
-    pub fn inherit_from(&self, parent: &Discoverability) -> Discoverability {
+impl Visibility {
+    pub fn inherit_from(&self, parent: &Visibility) -> Visibility {
         *self.max(parent)
     }
 }
@@ -53,10 +55,10 @@ impl Joinability {
     }
 }
 
-impl Visibility {
-    pub fn inherit_from(&self, parent: &Visibility) -> Visibility {
-        Visibility {
-            discoverability: self.discoverability.inherit_from(&parent.discoverability),
+impl Access {
+    pub fn inherit_from(&self, parent: &Access) -> Access {
+        Access {
+            visibility: self.visibility.inherit_from(&parent.visibility),
             joinability: self.joinability.inherit_from(&parent.joinability),
         }
     }

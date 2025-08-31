@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use serde_json::Value;
+
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     user_status::StatusPatch, util::Time, InviteTargetId, InviteWithMetadata, Relationship,
@@ -17,10 +18,6 @@ use super::{
     EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
     Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
 };
-
-mod sync2;
-
-pub use sync2::{SyncCompression, SyncFormat, SyncParams, SyncVersion};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -108,8 +105,6 @@ pub enum MessagePayload {
     Reconnect { can_resume: bool },
 }
 
-// TODO(#259): rename to NounVerb
-// maybe replace *Delete with *Upsert with state = deleted (but don't send actual full item content)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -203,6 +198,7 @@ pub enum MessageSync {
     InviteUpdate {
         invite: InviteWithMetadata,
     },
+
     InviteDelete {
         code: InviteCode,
         target: InviteTargetId,
@@ -300,4 +296,60 @@ pub enum MessageSync {
     //     action: String,
     //     payload: Option<serde_json::Value>,
     // },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct SyncParams {
+    pub version: SyncVersion,
+    pub compression: Option<SyncCompression>,
+    #[serde(default)]
+    pub format: SyncFormat,
+}
+
+// i thought that putting the api version in the path would be better, but
+// apparently websockets are hard to load balance. being able to use arbitrary
+// urls/paths in the future could be helpful.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[repr(u8)]
+pub enum SyncVersion {
+    V1 = 1,
+}
+
+impl Serialize for SyncVersion {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_u8(*self as u8)
+    }
+}
+
+impl<'de> Deserialize<'de> for SyncVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match u8::deserialize(deserializer)? {
+            1 => Ok(SyncVersion::V1),
+            n => Err(serde::de::Error::unknown_variant(&n.to_string(), &["1"])),
+        }
+    }
+}
+
+// TODO(#249): websocket msgpack
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SyncFormat {
+    #[default]
+    Json,
+    // Msgpack,
+}
+
+// TODO(#209): implement websocket compression
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SyncCompression {
+    // Zlib, // new DecompressionStream("deflate")
 }

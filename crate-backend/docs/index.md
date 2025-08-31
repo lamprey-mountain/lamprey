@@ -2,9 +2,9 @@ You've found the API docs!
 
 ## Resources
 
-* https://git.celery.eu.org/lamprey/lamprey – source code
-* https://github.com/tezlm/lamprey – readonly mirror
-* https://chat.celery.eu.org – current "production" instance
+- https://git.celery.eu.org/lamprey/lamprey – source code
+- https://github.com/tezlm/lamprey – readonly mirror
+- https://chat.celery.eu.org – current "production" instance
 
 ## reference
 
@@ -50,10 +50,13 @@ Query params `version=1`, `format=json` (only supported format currently),
 ## media
 
 1. `POST /api/v1/media` – create a new media/upload item. get
-2. `PATCH /api/v1/media/{media_id}` – upload. use the headers specified below when uploading
-3. ignore media_done for now, currently backend automatically starts processing once a file is fully received
+2. `PATCH /api/v1/media/{media_id}` – upload. use the headers specified below
+   when uploading
+3. ignore media_done for now, currently backend automatically starts processing
+   once a file is fully received
 
 headers:
+
 - `Upload-Offset` – resuming uploads
 - `Upload-Length` – the total size of the file
 - `Content-Length` – the size of this chunk

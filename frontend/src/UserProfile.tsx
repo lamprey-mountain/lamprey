@@ -62,12 +62,18 @@ export function UserProfile(props: RouteSectionProps) {
 		refetch();
 	};
 
-	const [mutualRooms] = createResource(() => props.params.user_id, async (user_id) => {
-		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/room", {
-			params: { path: { user_id } },
-		});
-		return data
-	});
+	const [mutualRooms] = createResource(
+		() => props.params.user_id,
+		async (user_id) => {
+			const { data } = await api.client.http.GET(
+				"/api/v1/user/{user_id}/room",
+				{
+					params: { path: { user_id } },
+				},
+			);
+			return data;
+		},
+	);
 
 	return (
 		<Show when={user()}>
@@ -104,9 +110,12 @@ export function UserProfile(props: RouteSectionProps) {
 				<b>mutual rooms</b>
 				<ul style="list-style: disc inside">
 					{/* TODO: use actual store/live update */}
-					<For each={mutualRooms()?.items ?? []} fallback="no mutual rooms :(">{room => (
-						<li><a href={`/room/${room.id}`}>{room.name}</a></li>
-					)}
+					<For each={mutualRooms()?.items ?? []} fallback="no mutual rooms :(">
+						{(room) => (
+							<li>
+								<a href={`/room/${room.id}`}>{room.name}</a>
+							</li>
+						)}
 					</For>
 				</ul>
 			</div>

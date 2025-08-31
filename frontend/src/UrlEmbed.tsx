@@ -38,12 +38,12 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 				<div class="info">
 					<header>
 						<Show when={props.embed.url} fallback={<b>{props.embed.title}</b>}>
-							<a class="title" href={props.embed.url}>{props.embed.title}</a>
+							<a class="title" href={props.embed.url!}>{props.embed.title}</a>
 						</Show>
 						<Show when={props.embed.site_name || props.embed.url}>
 							<span class="site">
 								{" - "}
-								{props.embed.site_name || URL.parse(props.embed.url)?.host}
+								{props.embed.site_name || URL.parse(props.embed.url!)?.host}
 							</span>
 						</Show>
 					</header>

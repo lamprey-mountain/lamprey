@@ -1,5 +1,4 @@
-> [!warning]
-> this is a work in progress!
+> [!warning] this is a work in progress!
 
 | auth method             | identify | 2fa | sudo |
 | ----------------------- | -------- | --- | ---- |
