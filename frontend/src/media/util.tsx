@@ -48,7 +48,7 @@ export const getHeight = (m: Media) => {
 
 /** get the cdn url for a piece of media */
 export const getUrl = (t: Media) => {
-	return `${CDN_URL}/media/${t}`;
+	return `${CDN_URL}/media/${t.id}`;
 };
 
 /** get the cdn url for the thumbnail for a piece of media */
