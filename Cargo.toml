@@ -19,3 +19,6 @@ miniz_oxide.opt-level = 3
 sqlx-macros.opt-level = 3
 async-trait.opt-level = 3
 image.opt-level = 3
+
+[workspace.metadata.crane]
+name = "lamprey"
