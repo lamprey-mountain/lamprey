@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::routes::util::HeaderReason;
 use axum::{
@@ -39,13 +39,35 @@ async fn permission_thread_overwrite(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    // FIXME: allow editing permissions you can edit as long as you don't edit ones you can't
-    // word salad sandwich
-    for p in &json.allow {
-        perms.ensure(*p)?;
-    }
-    for p in &json.deny {
-        perms.ensure(*p)?;
+    let thread = srv.threads.get(thread_id, None).await?;
+
+    // you can't grant/unset/deny permissions you do not have, and if someone else already set them you can't edit them
+    let existing = thread
+        .permission_overwrites
+        .iter()
+        .find(|o| o.ty == json.ty && o.id == overwrite_id);
+    if let Some(existing) = existing {
+        let ea: HashSet<Permission> = existing.allow.iter().cloned().collect();
+        let ed: HashSet<Permission> = existing.deny.iter().cloned().collect();
+        let ja: HashSet<Permission> = json.allow.iter().cloned().collect();
+        let jd: HashSet<Permission> = json.deny.iter().cloned().collect();
+
+        // must have permission to add/remove allows
+        for p in ea.symmetric_difference(&ja) {
+            perms.ensure(*p)?;
+        }
+
+        // must have permission to add/remove denies
+        for p in ed.symmetric_difference(&jd) {
+            perms.ensure(*p)?;
+        }
+    } else {
+        for p in &json.allow {
+            perms.ensure(*p)?;
+        }
+        for p in &json.deny {
+            perms.ensure(*p)?;
+        }
     }
 
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
@@ -115,9 +137,22 @@ async fn permission_thread_delete(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, None).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+
+    if let Some(existing) = thread
+        .permission_overwrites
+        .iter()
+        .find(|o| o.id == overwrite_id)
+    {
+        for p in &existing.allow {
+            perms.ensure(*p)?;
+        }
+        for p in &existing.deny {
+            perms.ensure(*p)?;
+        }
     }
 
     srv.perms

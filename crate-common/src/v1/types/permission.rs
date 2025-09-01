@@ -136,7 +136,7 @@ pub enum Permission {
     /// add and remove roles from members
     RoleApply,
 
-    /// create, edit, and delete roles
+    /// create, edit, and delete roles. also managing permissions in general.
     RoleManage,
 
     /// edit name, description, really anything else
