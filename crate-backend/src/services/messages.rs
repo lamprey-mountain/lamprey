@@ -266,8 +266,8 @@ impl ServiceMessages {
                         .map(embed_from_create)
                         .collect(),
                     message_type: payload,
-                    edited_at: None,
-                    created_at: None,
+                    edited_at: json.edited_at.map(|t| t.into()),
+                    created_at: message.created_at.map(|t| t.into()),
                 },
             )
             .await?;

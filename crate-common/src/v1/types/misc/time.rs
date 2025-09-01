@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 
 // TODO: swap all date/time types to this
 /// A date, time, and timezone. Serialized to rfc3339.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Time(
     #[serde(
