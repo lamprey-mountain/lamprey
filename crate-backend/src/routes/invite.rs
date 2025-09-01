@@ -267,6 +267,7 @@ pub async fn invite_room_create(
     let invite = d.invite_select(code).await?;
 
     let changes = Changes::new()
+        .add("code", &invite.invite.code)
         .add("description", &invite.invite.description)
         .add("expires_at", &invite.invite.expires_at)
         .add("max_uses", &invite.max_uses)
