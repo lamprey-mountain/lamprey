@@ -70,15 +70,7 @@ pub async fn generate_thumb(path: &Path) -> Result<Vec<u8>> {
         // .args(["-v", "quiet", "-i"])
         .args(["-i"])
         .arg(path)
-        .args([
-            "-vf",
-            "thumbnail,scale=300:300",
-            "-frames:v",
-            "1",
-            "-f",
-            "webp",
-            "-",
-        ])
+        .args(["-vf", "thumbnail", "-frames:v", "1", "-f", "webp", "-"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

@@ -133,11 +133,11 @@ impl ServiceMedia {
         media: &mut Media,
         meta: &Metadata,
         path: &std::path::Path,
+        mime: &Mime,
     ) -> Result<()> {
         trace!("media = {:?}", media);
         trace!("meta = {:?}", meta);
         let media_id = media.id;
-        let mime = get_mime(path).await?;
         let mut fut = FuturesUnordered::new();
         if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
@@ -241,7 +241,10 @@ impl ServiceMedia {
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
-            self.generate_thumbnails(&mut media, meta, &p).await?;
+            if !mime.starts_with("image/") {
+                self.generate_thumbnails(&mut media, meta, &p, &mime)
+                    .await?;
+            }
         }
         debug!("finish generating thumbnails for {}", media_id);
         let upload_s3 = async {
