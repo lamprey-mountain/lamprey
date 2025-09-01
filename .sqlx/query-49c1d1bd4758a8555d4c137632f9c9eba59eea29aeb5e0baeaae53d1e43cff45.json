@@ -19,7 +19,8 @@
               "Enum": [
                 "DefaultMarkdown",
                 "ThreadUpdate",
-                "DefaultTagged"
+                "DefaultTagged",
+                "ThreadRename"
               ]
             }
           }

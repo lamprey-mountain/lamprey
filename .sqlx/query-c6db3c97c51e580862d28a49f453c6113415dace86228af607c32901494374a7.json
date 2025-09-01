@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT\n            \tthread_id,\n            \tuser_id,\n            \tmembership as \"membership: _\",\n            \tjoined_at,\n            \toverride_name,\n            \toverride_description\n            FROM thread_member\n            WHERE thread_id = $1 AND user_id = $2\n        ",
+  "query": "\n        \tSELECT\n            \tthread_id,\n            \tuser_id,\n            \tmembership as \"membership: _\",\n            \tjoined_at\n            FROM thread_member\n            WHERE thread_id = $1 AND user_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -33,16 +33,6 @@
         "ordinal": 3,
         "name": "joined_at",
         "type_info": "Timestamp"
-      },
-      {
-        "ordinal": 4,
-        "name": "override_name",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 5,
-        "name": "override_description",
-        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -55,10 +45,8 @@
       false,
       false,
       false,
-      false,
-      true,
-      true
+      false
     ]
   },
-  "hash": "95759b37a64b06b1da844bfc26c40294820e401b39aa219e739ed39659a09320"
+  "hash": "c6db3c97c51e580862d28a49f453c6113415dace86228af607c32901494374a7"
 }

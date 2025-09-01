@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE thread_member\n        \tSET membership = $3, membership_updated_at = now()\n            WHERE thread_id = $1 AND user_id = $2\n            ",
+  "query": "\n            UPDATE thread_member\n        \tSET membership = $3\n            WHERE thread_id = $1 AND user_id = $2\n            ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -23,5 +23,5 @@
     },
     "nullable": []
   },
-  "hash": "553606d1595072ba6ff29415cb540a48b33364a79d39455a67c09676a09b2a55"
+  "hash": "4f4dc5a8c9088fa8ff7b031da3c1f520c5745e519da827aa696cd04be4a8eb59"
 }
