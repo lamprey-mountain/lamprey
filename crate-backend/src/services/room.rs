@@ -89,7 +89,7 @@ impl ServiceRooms {
 
     pub async fn create(&self, create: RoomCreate, creator: UserId) -> Result<Room> {
         let data = self.state.data();
-        let room = data.room_create(create, creator).await?;
+        let mut room = data.room_create(create).await?;
         let room_id = room.id;
 
         let changes = Changes::new()
@@ -146,6 +146,8 @@ impl ServiceRooms {
             RoomMemberPut::default(),
         )
         .await?;
+        data.room_set_owner(room_id, creator).await?;
+        room.owner_id = Some(creator);
         Ok(room)
     }
 }

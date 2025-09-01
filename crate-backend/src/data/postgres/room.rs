@@ -17,13 +17,13 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoom for Postgres {
-    async fn room_create(&self, create: RoomCreate, owner_id: UserId) -> Result<Room> {
+    async fn room_create(&self, create: RoomCreate) -> Result<Room> {
         let mut conn = self.pool.acquire().await?;
         let room_id = Uuid::now_v7();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public, owner_id)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    	    INSERT INTO room (id, version_id, name, description, icon, public)
+    	    VALUES ($1, $2, $3, $4, $5, $6)
         ",
             room_id,
             room_id,
@@ -31,7 +31,6 @@ impl DataRoom for Postgres {
             create.description,
             create.icon.map(|i| *i),
             create.public.unwrap_or(false),
-            *owner_id,
         )
         .execute(&mut *conn)
         .await?;

@@ -32,7 +32,6 @@ use super::util::{Auth, HeaderReason};
     path = "/room",
     tags = ["room"],
 )]
-#[axum::debug_handler]
 async fn room_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
