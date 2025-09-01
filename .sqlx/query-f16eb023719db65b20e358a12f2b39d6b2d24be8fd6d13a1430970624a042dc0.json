@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    NULL::uuid as dm_uid_a,\n                    NULL::uuid as dm_uid_b\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "query": "\n            SELECT\n                room.id,\n                room.version_id,\n                room.name,\n                room.description,\n                room.icon,\n                room.archived_at,\n                room.public,\n                room.owner_id,\n                NULL::uuid as dm_uid_a,\n                NULL::uuid as dm_uid_b\n            FROM room\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -40,23 +40,23 @@
       },
       {
         "ordinal": 7,
-        "name": "dm_uid_a",
+        "name": "owner_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 8,
+        "name": "dm_uid_a",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
         "name": "dm_uid_b",
         "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -67,9 +67,10 @@
       true,
       true,
       false,
+      true,
       null,
       null
     ]
   },
-  "hash": "e913e9989e16df55ea6600a7decfb8fe9c6005b2b6d8700b49122fac2d37be3c"
+  "hash": "f16eb023719db65b20e358a12f2b39d6b2d24be8fd6d13a1430970624a042dc0"
 }
