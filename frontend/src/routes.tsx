@@ -2,7 +2,7 @@ import { A, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
-import { ChatNav as ThreadNav } from "./Nav.tsx";
+import { ThreadNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
 import { Accessor, createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";

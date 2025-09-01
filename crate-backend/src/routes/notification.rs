@@ -10,7 +10,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 use crate::error::Result;
-use crate::ServerState;
+use crate::{Error, ServerState};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, IntoParams)]
 struct InboxListParams {
@@ -45,8 +45,11 @@ async fn inbox_get(
     State(_s): State<Arc<ServerState>>,
     // ) -> Result<impl IntoResponse> {
 ) -> Result<Json<PaginationResponse<Notification>>> {
-    todo!()
+    Err(Error::Unimplemented)
 }
+
+// POST /inbox -- create a reminder
+// DELETE /inbox/{notif_id} -- close notification
 
 /// Notification room configure (TODO)
 ///

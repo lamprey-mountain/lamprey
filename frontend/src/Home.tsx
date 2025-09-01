@@ -189,10 +189,6 @@ export const Home = () => {
 				<A href="/debug">debug</A>
 				<br />
 			</Show>
-			<Show when={flags.has("inbox")}>
-				<A href="/inbox">inbox</A>
-				<br />
-			</Show>
 			<Show when={flags.has("friends")}>
 				<A href="/friends">friends</A>
 				<br />

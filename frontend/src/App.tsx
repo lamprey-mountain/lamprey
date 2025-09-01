@@ -63,6 +63,8 @@ import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { generateNickname } from "./nick.ts";
+import { Inbox } from "./Inbox.tsx";
+import { ThreadNav } from "./Nav.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
@@ -307,31 +309,8 @@ function RouteInbox() {
 		<>
 			<Title title="inbox" />
 			<RoomNav />
-			<div class="inbox" style="padding:8px">
-				todo!
-				<table>
-					<thead>
-						<tr>
-							<th>item</th>
-							<th>room</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<th>foo</th>
-							<th>foo</th>
-						</tr>
-						<tr>
-							<th>bar</th>
-							<th>bar</th>
-						</tr>
-						<tr>
-							<th>baz</th>
-							<th>baz</th>
-						</tr>
-					</tbody>
-				</table>
-			</div>
+			<ThreadNav />
+			<Inbox />
 		</>
 	);
 }

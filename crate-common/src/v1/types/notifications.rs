@@ -84,14 +84,26 @@ pub struct Notification {
     /// why this was created
     pub reason: NotificationReason,
 
-    /// when this was created
-    pub created_at: Time,
+    /// when this was added to the inbox
+    pub added_at: Time,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotificationCreate {
+    pub thread_id: ThreadId,
+    pub message_id: MessageId,
+    pub added_at: Option<Time>, // set in the future to create a reminder
 }
 
 // in order of precedence
+/// what caused this notification to be created
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum NotificationReason {
+    /// user manually added this notification
+    Reminder,
+
     /// this message mentioned you. overrides MentionBulk
     Mention,
 
@@ -100,9 +112,12 @@ pub enum NotificationReason {
 
     /// this message replied to one of your own messages
     Reply,
+    // /// this is a new thread
+    // ThreadNew,
 
-    /// a new message with nothing special in particular
-    New,
+    // /// this thread is unread
+    // /// message_id wont have any meaning, client should fetch context instead
+    // ThreadUnread,
 }
 
 impl Default for NotifsGlobal {

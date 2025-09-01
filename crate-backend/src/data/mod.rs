@@ -2,16 +2,17 @@ use async_trait::async_trait;
 use common::v1::types::application::Application;
 use common::v1::types::email::{EmailAddr, EmailInfo};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
+use common::v1::types::notifications::Notification;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
-    MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
-    RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
-    RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
+    MediaPatch, NotificationId, Permission, PermissionOverwriteType, Relationship,
+    RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
+    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -54,6 +55,7 @@ pub trait Data:
     + DataUserEmail
     + DataEmailQueue
     + DataDm
+    + DataNotification
     + Send
     + Sync
 {
@@ -611,4 +613,15 @@ pub trait DataDm {
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Thread>>;
+}
+
+#[async_trait]
+pub trait DataNotification {
+    async fn notification_add(&self, user_id: UserId, notif: Notification) -> Result<()>;
+    async fn notification_delete(&self, user_id: UserId, notif: NotificationId) -> Result<()>;
+    async fn notification_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<NotificationId>,
+    ) -> Result<PaginationResponse<Notification>>;
 }

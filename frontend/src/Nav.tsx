@@ -5,7 +5,7 @@ import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
 
-export const ChatNav = (props: { room_id?: string }) => {
+export const ThreadNav = (props: { room_id?: string }) => {
 	const api = useApi();
 
 	// track drag indices
@@ -80,6 +80,19 @@ export const ChatNav = (props: { room_id?: string }) => {
 						home
 					</A>
 				</li>
+
+				<Show when={!props.room_id}>
+					<Show when={flags.has("inbox")}>
+						<A
+							href="/inbox"
+							class="menu-thread"
+							draggable={false}
+							end
+						>
+							inbox
+						</A>
+					</Show>
+				</Show>
 
 				<For each={list()}>
 					{(thread, idx) => (
