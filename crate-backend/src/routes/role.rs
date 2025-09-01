@@ -104,12 +104,17 @@ async fn role_update(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let d = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
     if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
+    }
+    let rank = srv.perms.get_user_rank(room_id, user_id).await?;
+    if rank <= start_role.position {
+        return Err(Error::BadStatic("your rank is too low"));
     }
     d.role_update(room_id, role_id, json.clone()).await?;
     let end_role = d.role_select(room_id, role_id).await?;
@@ -306,9 +311,16 @@ async fn role_member_add(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
+    let role = d.role_select(room_id, role_id).await?;
+    let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+    if rank <= role.position {
+        return Err(Error::BadStatic("your rank is too low"));
+    }
+
     d.role_member_put(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
@@ -329,10 +341,7 @@ async fn role_member_add(
         },
     })
     .await?;
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, room_id)
-        .await;
+    srv.perms.invalidate_room(target_user_id, room_id).await;
     s.broadcast_room(room_id, auth_user_id, msg).await?;
     Ok(Json(member))
 }
@@ -358,9 +367,16 @@ async fn role_member_remove(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
+    let role = d.role_select(room_id, role_id).await?;
+    let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+    if rank <= role.position {
+        return Err(Error::BadStatic("your rank is too low"));
+    }
+
     d.role_member_delete(target_user_id, role_id).await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(member.membership, RoomMembership::Join { .. }) {
@@ -383,10 +399,7 @@ async fn role_member_remove(
     })
     .await?;
 
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, room_id)
-        .await;
+    srv.perms.invalidate_room(target_user_id, room_id).await;
     s.broadcast_room(room_id, auth_user_id, msg).await?;
     Ok(Json(member))
 }
@@ -440,14 +453,7 @@ async fn role_reorder(
     perms.ensure(Permission::RoleManage)?;
 
     // FIXME: enforce users can only reorder roles below their highest role
-
-    // TODO: enforce highest-role-position for
-    // - role editing
-    // - role granting/revoking
-    // - banning
-    // - kicking
-    // - permission overwrite setting/deleting
-    // - also: only allow granting/denying permissions the user has
+    // FIXME: only allow granting/denying permissions the user has
 
     d.role_reorder(room_id, body).await?;
 

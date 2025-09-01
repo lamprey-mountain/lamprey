@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::{Diff, Time};
+use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
@@ -302,7 +302,8 @@ async fn room_member_delete(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberKick)?;
@@ -311,13 +312,15 @@ async fn room_member_delete(
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
+    let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+    let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+    if rank <= other_rank {
+        return Err(Error::BadStatic("your rank is too low"));
+    }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
         .await?;
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, room_id)
-        .await;
-    s.services().perms.invalidate_is_mutual(target_user_id);
+    srv.perms.invalidate_room(target_user_id, room_id).await;
+    srv.perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -366,17 +369,26 @@ async fn room_ban_create(
         UserIdReq::UserSelf => auth_user_id,
         UserIdReq::UserId(id) => id,
     };
+    let srv = s.services();
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
+
+    // enforce ranking if you're banning a member
+    if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
+        if member.membership == RoomMembership::Join {
+            let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+            let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+            if rank <= other_rank {
+                return Err(Error::BadStatic("your rank is too low"));
+            }
+        }
+    }
 
     d.room_ban_create(room_id, target_user_id, reason.clone(), create.expires_at)
         .await?;
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, room_id)
-        .await;
-    s.services().perms.invalidate_is_mutual(target_user_id);
+    srv.perms.invalidate_room(target_user_id, room_id).await;
+    srv.perms.invalidate_is_mutual(target_user_id);
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
         .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;

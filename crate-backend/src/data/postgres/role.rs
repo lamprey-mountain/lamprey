@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::{PaginationDirection, RoleReorder};
+use common::v1::types::{PaginationDirection, RoleReorder, UserId};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
 
@@ -284,5 +284,19 @@ impl DataRole for Postgres {
         Ok(())
     }
 
-    // async fn role_user_max_pos(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {}
+    async fn role_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {
+        let rank = query_scalar!(
+            r#"
+            select max(role.position) from room_member
+            join role_member on role_member.user_id = room_member.user_id
+            join role on role_member.role_id = role.id and role.room_id = room_member.room_id
+            where room_member.room_id = $1 and room_member.user_id = $2
+            "#,
+            *room_id,
+            *user_id,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(rank.unwrap_or_default() as u64)
+    }
 }

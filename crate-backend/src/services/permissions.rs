@@ -13,6 +13,7 @@ pub struct ServicePermissions {
     cache_perm_room: Cache<(UserId, RoomId), Permissions>,
     cache_perm_thread: Cache<(UserId, RoomId, ThreadId), Permissions>,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
+    cache_user_rank: Cache<(RoomId, UserId), u64>,
 }
 
 impl ServicePermissions {
@@ -30,6 +31,10 @@ impl ServicePermissions {
                 .support_invalidation_closures()
                 .build(),
             cache_is_mutual: Cache::builder()
+                .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
+            cache_user_rank: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
@@ -77,15 +82,19 @@ impl ServicePermissions {
         self.cache_perm_thread
             .invalidate_entries_if(move |(uid, rid, _), _| room_id == *rid && user_id == *uid)
             .expect("failed to invalidate");
+        self.cache_user_rank.invalidate(&(room_id, user_id)).await;
     }
 
-    // might be a good idea to be able to invalidate per role
+    // NOTE: might be a good idea to be able to invalidate per role
     pub fn invalidate_room_all(&self, room_id: RoomId) {
         self.cache_perm_room
             .invalidate_entries_if(move |(_, rid), _| room_id == *rid)
             .expect("failed to invalidate");
         self.cache_perm_thread
             .invalidate_entries_if(move |(_, rid, _), _| room_id == *rid)
+            .expect("failed to invalidate");
+        self.cache_user_rank
+            .invalidate_entries_if(move |(rid, _), _| room_id == *rid)
             .expect("failed to invalidate");
     }
 
@@ -165,5 +174,16 @@ impl ServicePermissions {
                 self.invalidate_room_all(room_id);
             }
         }
+    }
+
+    pub async fn get_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {
+        self.cache_user_rank
+            .try_get_with((room_id, user_id), async {
+                let d = self.state.data();
+                let rank = d.role_user_rank(room_id, user_id).await?;
+                Result::Ok(rank)
+            })
+            .await
+            .map_err(|err| err.fake_clone())
     }
 }

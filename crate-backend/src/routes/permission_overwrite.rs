@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
-    PermissionOverwrite, PermissionOverwriteSet, ThreadId,
+    PermissionOverwrite, PermissionOverwriteSet, PermissionOverwriteType, ThreadId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -40,6 +40,31 @@ async fn permission_thread_overwrite(
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let thread = srv.threads.get(thread_id, None).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+
+    if let Some(room_id) = thread.room_id {
+        let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+        let other_rank = match json.ty {
+            PermissionOverwriteType::Role => {
+                let role = s.data().role_select(room_id, overwrite_id.into()).await?;
+                role.position
+            }
+            PermissionOverwriteType::User => {
+                srv.perms
+                    .get_user_rank(room_id, overwrite_id.into())
+                    .await?
+            }
+        };
+        if rank <= other_rank {
+            return Err(Error::BadStatic("your rank is too low"));
+        }
+    } else {
+        return Err(Error::BadStatic(
+            "cannot set overwrites for threads outside of rooms (eg. direct messages)",
+        ));
+    }
 
     // you can't grant/unset/deny permissions you do not have, and if someone else already set them you can't edit them
     let existing = thread
@@ -68,11 +93,6 @@ async fn permission_thread_overwrite(
         for p in &json.deny {
             perms.ensure(*p)?;
         }
-    }
-
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
     }
 
     srv.perms
@@ -131,7 +151,7 @@ async fn permission_thread_delete(
     State(s): State<Arc<ServerState>>,
     Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
     HeaderReason(reason): HeaderReason,
-) -> Result<Json<()>> {
+) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
@@ -147,12 +167,36 @@ async fn permission_thread_delete(
         .iter()
         .find(|o| o.id == overwrite_id)
     {
+        if let Some(room_id) = thread.room_id {
+            let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+            let other_rank = match existing.ty {
+                PermissionOverwriteType::Role => {
+                    let role = s.data().role_select(room_id, overwrite_id.into()).await?;
+                    role.position
+                }
+                PermissionOverwriteType::User => {
+                    srv.perms
+                        .get_user_rank(room_id, overwrite_id.into())
+                        .await?
+                }
+            };
+            if rank <= other_rank {
+                return Err(Error::BadStatic("your rank is too low"));
+            }
+        } else {
+            return Err(Error::BadStatic(
+                "cannot set overwrites for threads outside of rooms (eg. direct messages)",
+            ));
+        }
+
         for p in &existing.allow {
             perms.ensure(*p)?;
         }
         for p in &existing.deny {
             perms.ensure(*p)?;
         }
+    } else {
+        return Ok(());
     }
 
     srv.perms
@@ -183,7 +227,7 @@ async fn permission_thread_delete(
         MessageSync::ThreadUpdate { thread },
     )
     .await?;
-    Ok(Json(()))
+    Ok(())
 }
 
 /// Tag permission override upsert (TODO)

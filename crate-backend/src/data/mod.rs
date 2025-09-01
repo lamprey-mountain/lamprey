@@ -142,6 +142,7 @@ pub trait DataRole {
         patch: RolePatch,
     ) -> Result<RoleVerId>;
     async fn role_reorder(&self, room_id: RoomId, reorder: RoleReorder) -> Result<()>;
+    async fn role_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64>;
 }
 
 #[async_trait]
