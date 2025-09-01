@@ -49,7 +49,7 @@ import {
 	UserMenu,
 } from "./menu/mod.ts";
 import {
-	Nav2,
+	RoomNav,
 	RouteAdminSettings,
 	RouteFeed,
 	RouteHome,
@@ -306,7 +306,7 @@ function RouteInbox() {
 	return (
 		<>
 			<Title title="inbox" />
-			<Nav2 />
+			<RoomNav />
 			<div class="inbox" style="padding:8px">
 				todo!
 				<table>
@@ -358,7 +358,7 @@ function RouteFriends() {
 	return (
 		<>
 			<Title title="friends" />
-			<Nav2 />
+			<RoomNav />
 			<div class="friends" style="padding:8px">
 				todo!
 				<ul>

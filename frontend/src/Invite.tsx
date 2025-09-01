@@ -2,8 +2,6 @@ import { createEffect, Show } from "solid-js";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { useNavigate } from "@solidjs/router";
-import { Nav2 } from "./routes.tsx";
-import { ChatNav } from "./Nav.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");

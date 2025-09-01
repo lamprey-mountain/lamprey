@@ -5,7 +5,6 @@ import type { Api } from "../api.tsx";
 import type { ChatCtx } from "../context.ts";
 import type { SetStoreFunction } from "solid-js/store";
 import { Action, Data, Middleware, Modal } from "./types";
-import { log } from "./middleware/log";
 import { threadMarkRead } from "./middleware/threadMarkRead";
 import { serverInitSession } from "./middleware/serverInitSession";
 import { uploadCancel } from "./middleware/uploadCancel";
@@ -23,7 +22,6 @@ function combine(
 ) {
 	let _dispatch = (_action: Action) => {};
 	const dispatch = (action: Action) => {
-		console.log("dispatch", state, action);
 		switch (action.do) {
 			case "modal.close": {
 				update("modals", (modals) => modals.slice(1));
@@ -86,7 +84,6 @@ export function createDispatcher(
 		ctx.data,
 		update,
 		[
-			log,
 			threadMarkRead,
 			serverInitSession,
 			uploadCancel,

@@ -2,7 +2,7 @@ import { A, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
-import { ChatNav } from "./Nav.tsx";
+import { ChatNav as ThreadNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
 import { Accessor, createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
@@ -21,7 +21,7 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
-export const Nav2 = () => {
+export const RoomNav = () => {
 	const api = useApi();
 	const rooms = api.rooms.list();
 
@@ -62,8 +62,8 @@ export const RouteRoom = (p: RouteSectionProps) => {
 	return (
 		<>
 			<Title title={room() ? room()!.name : t("loading")} />
-			<Nav2 />
-			<ChatNav room_id={p.params.room_id} />
+			<RoomNav />
+			<ThreadNav room_id={p.params.room_id} />
 			<Show when={room()}>
 				<RoomHome room={room()!} />
 				<Show when={flags.has("room_member_list")}>
@@ -134,8 +134,8 @@ export const RouteThread = (p: RouteSectionProps) => {
 	return (
 		<>
 			<Title title={title()} />
-			<Nav2 />
-			<ChatNav room_id={thread()?.room_id} />
+			<RoomNav />
+			<ThreadNav room_id={thread()?.room_id} />
 			<Show when={thread()}>
 				<ChatHeader thread={thread()!} />
 				<Show
@@ -160,8 +160,8 @@ export const RouteHome = () => {
 	return (
 		<>
 			<Title title={t("page.home")} />
-			<Nav2 />
-			<ChatNav />
+			<RoomNav />
+			<ThreadNav />
 			<Home />
 		</>
 	);
@@ -171,7 +171,7 @@ export const RouteFeed = () => {
 	return (
 		<>
 			<Title title="feed" />
-			<Nav2 />
+			<RoomNav />
 			<Feed />
 		</>
 	);
