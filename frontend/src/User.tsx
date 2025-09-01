@@ -15,8 +15,6 @@ export function UserView(props: UserProps) {
 
 	function name() {
 		let name = null;
-		const tm = props.thread_member;
-		if (tm?.membership === "Join") name ??= tm.override_name;
 
 		const rm = props.room_member;
 		if (rm?.membership === "Join") name ??= rm.override_name;

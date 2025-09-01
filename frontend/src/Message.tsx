@@ -462,9 +462,6 @@ function Author(props: { message: Message; thread?: Thread }) {
 		let name = ("override_name" in props.message)
 			? props.message.override_name
 			: undefined;
-		const tm = thread_member();
-		if (tm?.membership === "Join") name ??= tm.override_name;
-
 		const rm = room_member?.();
 		if (rm?.membership === "Join") name ??= rm.override_name;
 

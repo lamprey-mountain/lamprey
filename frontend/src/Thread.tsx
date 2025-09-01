@@ -25,7 +25,6 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 
 					function name() {
 						let name: string | undefined | null = null;
-						if (member?.membership === "Join") name ??= member.override_name;
 
 						const rm = room_member();
 						if (rm?.membership === "Join") name ??= rm.override_name;
