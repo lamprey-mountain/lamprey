@@ -500,6 +500,9 @@ dependencies = [
  "dashmap 6.1.0",
  "dotenvy",
  "figment",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
  "reqwest 0.12.22",
  "sdk",
  "serde",
@@ -508,6 +511,7 @@ dependencies = [
  "time",
  "tokio",
  "tracing",
+ "tracing-opentelemetry",
  "tracing-subscriber",
  "uuid",
 ]

@@ -5,12 +5,13 @@ use data::{Data, PortalConfig};
 use discord::Discord;
 use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
+use opentelemetry_otlp::WithExportConfig;
 use portal::Portal;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use tokio::sync::mpsc;
 use tracing::{error, info};
 mod discord;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 mod common;
 mod data;
@@ -21,15 +22,33 @@ mod portal;
 async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
-    let sub = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .finish();
-    tracing::subscriber::set_global_default(sub)?;
-
     let config: Config = figment::Figment::new()
         .merge(Toml::file("config.toml"))
         .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
+
+    info!("config {config:#?}");
+
+    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
+    if let Some(endpoint) = &config.otel_trace_endpoint {
+        exporter = exporter.with_endpoint(endpoint);
+    }
+    let exporter = exporter.build()?;
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .build();
+    use opentelemetry::trace::TracerProvider;
+    let tracer = provider.tracer("bridge-discord");
+    opentelemetry::global::set_tracer_provider(provider);
+
+    let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    let subscriber = Registry::default()
+        .with(EnvFilter::from_str(&config.rust_log)?)
+        .with(tracing_subscriber::fmt::layer())
+        .with(telemetry_layer);
+
+    tracing::subscriber::set_global_default(subscriber)?;
 
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect(&config.database_url)

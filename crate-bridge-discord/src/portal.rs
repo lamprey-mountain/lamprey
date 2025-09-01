@@ -25,12 +25,10 @@ use serenity::all::{
     MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
 use serenity::all::{ExecuteWebhook, MessageReferenceKind};
+use std::fmt::Debug;
 use time::OffsetDateTime;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
-use tracing::debug;
-use tracing::error;
-use tracing::info;
+use tokio::sync::{mpsc, oneshot};
+use tracing::{debug, error, info};
 
 pub struct Portal {
     globals: Arc<Globals>,
@@ -38,7 +36,14 @@ pub struct Portal {
     config: PortalConfig,
 }
 
+impl Debug for Portal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Portal ({:?})", self.config)
+    }
+}
+
 /// portal actor message
+#[derive(Debug)]
 pub enum PortalMessage {
     LampreyMessageCreate {
         message: Message,
@@ -98,10 +103,9 @@ impl Portal {
 
     async fn activate(mut self) {
         while let Some(msg) = self.recv.recv().await {
-            match self.handle(msg).await {
-                Ok(_) => {}
-                Err(err) => error!("{err}"),
-            };
+            if let Err(err) = self.handle(msg).await {
+                error!("{err}")
+            }
         }
     }
 
@@ -143,13 +147,17 @@ impl Portal {
         let ly = self.globals.lamprey_handle().await?;
         let user = ly.user_fetch(message.author_id).await?;
         if user.puppet.is_some() {
+            debug!("not bridging message from puppet");
             return Ok(());
         }
 
         let existing = self.globals.get_message(message.id).await?;
         let msg_inner = match message.message_type {
             types::MessageType::DefaultMarkdown(m) => m,
-            _ => return Ok(()),
+            _ => {
+                debug!("unknown lamprey message type");
+                return Ok(());
+            }
         };
 
         let reply_ids = if let Some(reply_id) = msg_inner.reply_id {
@@ -332,8 +340,10 @@ impl Portal {
 
     async fn handle_lamprey_message_delete(&mut self, message_id: MessageId) -> Result<()> {
         let Some(existing) = self.globals.get_message(message_id).await? else {
+            debug!("message doesnt exist or is already deleted");
             return Ok(());
         };
+
         self.globals.delete_message(message_id).await?;
         let (send, recv) = oneshot::channel();
         self.globals
@@ -353,6 +363,7 @@ impl Portal {
         let ly = self.globals.lamprey_handle().await?;
         let existing = self.globals.get_message_dc(message.id).await?;
         if existing.is_some() {
+            debug!("message already bridged");
             return Ok(());
         }
 
@@ -600,6 +611,7 @@ impl Portal {
         let ly = self.globals.lamprey_handle().await?;
         let existing = self.globals.get_message_dc(update.id).await?;
         let Some(existing) = existing else {
+            debug!("message already bridged");
             return Ok(());
         };
 
@@ -670,6 +682,7 @@ impl Portal {
     async fn handle_discord_message_delete(&mut self, message_id: DcMessageId) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
         let Some(existing) = self.globals.get_message_dc(message_id).await? else {
+            debug!("message doesnt exist or is already deleted");
             return Ok(());
         };
 
@@ -688,9 +701,12 @@ impl Portal {
     async fn handle_discord_reaction_add(&mut self, add_reaction: DcReaction) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
         let Some(user_id) = add_reaction.user_id else {
+            debug!("missing user_id");
             return Ok(());
         };
+
         let Some(message) = self.globals.get_message_dc(add_reaction.message_id).await? else {
+            debug!("missing message");
             return Ok(());
         };
 
@@ -725,13 +741,16 @@ impl Portal {
     async fn handle_discord_reaction_remove(&mut self, removed_reaction: DcReaction) -> Result<()> {
         let ly = self.globals.lamprey_handle().await?;
         let Some(user_id) = removed_reaction.user_id else {
+            debug!("missing user_id");
             return Ok(());
         };
+
         let Some(message) = self
             .globals
             .get_message_dc(removed_reaction.message_id)
             .await?
         else {
+            debug!("missing message");
             return Ok(());
         };
 
@@ -773,6 +792,7 @@ impl Portal {
             .get_puppet("discord", &user_id.to_string())
             .await?
         else {
+            debug!("missing puppet");
             return Ok(());
         };
 

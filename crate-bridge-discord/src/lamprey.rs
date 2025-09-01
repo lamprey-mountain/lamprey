@@ -314,7 +314,8 @@ impl LampreyHandle {
         let mut query = PaginationQuery::default();
         loop {
             info!("get room threads");
-            let res = dbg!(self.http.thread_list(room_id, &query).await)?;
+            let res = self.http.thread_list(room_id, &query).await?;
+            debug!("threads: {res:?}");
             all_threads.extend(res.items);
             if let Some(cursor) = res.cursor {
                 query.from = Some(cursor.parse().unwrap());

@@ -40,6 +40,8 @@ pub struct Config {
     pub discord_token: String,
     #[serde(default)]
     pub autobridge: Vec<AutoBridgeConfig>,
+    pub otel_trace_endpoint: Option<String>,
+    pub rust_log: String,
 }
 
 #[async_trait]
