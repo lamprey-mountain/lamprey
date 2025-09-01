@@ -44,8 +44,9 @@ async fn role_create(
     let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
+    let room = srv.rooms.get(room_id, None).await?;
     let rank = srv.perms.get_user_rank(room_id, user_id).await?;
-    if rank == 0 {
+    if rank == 0 && room.owner_id != Some(user_id) {
         // special case: we don't want people with only the base role to be able
         // to create roles, as that role will always be position 1 and won't be
         // able to be edited or applied
@@ -122,7 +123,8 @@ async fn role_update(
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
     let rank = srv.perms.get_user_rank(room_id, user_id).await?;
-    if rank <= start_role.position {
+    let room = srv.rooms.get(room_id, None).await?;
+    if rank <= start_role.position && room.owner_id != Some(user_id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
     d.role_update(room_id, role_id, json.clone()).await?;
@@ -202,7 +204,8 @@ async fn role_delete(
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, user_id).await?;
-    if rank <= role.position {
+    let room = srv.rooms.get(room_id, None).await?;
+    if rank <= role.position && room.owner_id != Some(user_id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
     if role.member_count == 0 || query.force {
@@ -331,7 +334,8 @@ async fn role_member_add(
     perms.ensure(Permission::RoleApply)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
-    if rank <= role.position {
+    let room = srv.rooms.get(room_id, None).await?;
+    if rank <= role.position && room.owner_id != Some(auth_user_id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
 
@@ -387,7 +391,8 @@ async fn role_member_remove(
     perms.ensure(Permission::RoleApply)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
-    if rank <= role.position {
+    let room = srv.rooms.get(room_id, None).await?;
+    if rank <= role.position && room.owner_id != Some(auth_user_id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
 
@@ -442,7 +447,7 @@ async fn role_member_bulk_edit(
     Err(Error::Unimplemented)
 }
 
-/// Role reorder
+/// Role reorder (WIP)
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/role",

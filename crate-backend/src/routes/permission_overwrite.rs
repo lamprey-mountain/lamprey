@@ -63,7 +63,8 @@ async fn permission_thread_overwrite(
                     .await?
             }
         };
-        if rank <= other_rank {
+        let room = srv.rooms.get(room_id, None).await?;
+        if rank <= other_rank && room.owner_id != Some(auth_user_id) {
             return Err(Error::BadStatic("your rank is too low"));
         }
     } else {
@@ -192,7 +193,8 @@ async fn permission_thread_delete(
                         .await?
                 }
             };
-            if rank <= other_rank {
+            let room = srv.rooms.get(room_id, None).await?;
+            if rank <= other_rank && room.owner_id != Some(auth_user_id) {
                 return Err(Error::BadStatic("your rank is too low"));
             }
         } else {

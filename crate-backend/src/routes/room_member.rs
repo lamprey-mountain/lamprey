@@ -313,10 +313,13 @@ async fn room_member_delete(
         return Err(Error::NotFound);
     }
     if auth_user_id != target_user_id {
-        let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
-        let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
-        if rank <= other_rank {
-            return Err(Error::BadStatic("your rank is too low"));
+        let room = srv.rooms.get(room_id, None).await?;
+        if room.owner_id != Some(auth_user_id) {
+            let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+            let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+            if rank <= other_rank {
+                return Err(Error::BadStatic("your rank is too low"));
+            }
         }
     }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
@@ -378,7 +381,8 @@ async fn room_ban_create(
 
     // enforce ranking if you're banning a member
     if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
-        if member.membership == RoomMembership::Join {
+        let room = srv.rooms.get(room_id, None).await?;
+        if room.owner_id != Some(auth_user_id) && member.membership == RoomMembership::Join {
             let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
             if rank <= other_rank {
