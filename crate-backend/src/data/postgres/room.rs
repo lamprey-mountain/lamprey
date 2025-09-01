@@ -53,9 +53,7 @@ impl DataRoom for Postgres {
                 room.icon,
                 room.archived_at,
                 room.public,
-                room.owner_id,
-                NULL::uuid as dm_uid_a,
-                NULL::uuid as dm_uid_b
+                room.owner_id
             FROM room
             WHERE id = $1
             "#,
@@ -86,9 +84,7 @@ impl DataRoom for Postgres {
                     room.icon,
                     room.archived_at,
                     room.public,
-                    room.owner_id,
-                    NULL::uuid as dm_uid_a,
-                    NULL::uuid as dm_uid_b
+                    room.owner_id
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
@@ -159,9 +155,7 @@ impl DataRoom for Postgres {
                     r.icon,
                     r.archived_at,
                     r.public,
-                    r.owner_id,
-                    NULL::uuid as dm_uid_a,
-                    NULL::uuid as dm_uid_b
+                    r.owner_id
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
                 JOIN room r ON rm1.room_id = r.id

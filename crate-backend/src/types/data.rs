@@ -15,8 +15,6 @@ pub struct DbRoom {
     pub owner_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
-    pub dm_uid_a: Option<Uuid>,
-    pub dm_uid_b: Option<Uuid>,
     pub icon: Option<Uuid>,
     pub archived_at: Option<PrimitiveDateTime>,
     pub public: bool,
@@ -36,16 +34,14 @@ pub struct DbUserCreate {
 pub enum DbMembership {
     Join,
     Leave,
-
-    #[deprecated]
-    Ban,
+    Ban, // unused
 }
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "room_type")]
 pub enum DbRoomType {
     Default,
-    Dm,
+    Dm, // unused
 }
 
 impl From<DbRoom> for Room {
@@ -58,13 +54,7 @@ impl From<DbRoom> for Room {
             name: row.name,
             description: row.description,
             icon: row.icon.map(|i| i.into()),
-            room_type: if row.dm_uid_a.is_some() {
-                RoomType::Dm {
-                    participants: (row.dm_uid_a.unwrap().into(), row.dm_uid_b.unwrap().into()),
-                }
-            } else {
-                RoomType::Default
-            },
+            room_type: RoomType::Default,
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
 
@@ -402,16 +392,6 @@ pub struct DbInvite {
 pub struct RoleDeleteQuery {
     #[serde(default)]
     pub force: bool,
-}
-
-#[derive(Deserialize, sqlx::Type)]
-#[sqlx(type_name = "thread_state")]
-pub enum DbThreadState {
-    Pinned,
-    Active,
-    Temporary,
-    Archived,
-    Deleted,
 }
 
 #[derive(sqlx::Type, PartialEq, Eq)]
