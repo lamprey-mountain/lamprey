@@ -49,7 +49,7 @@ where
 
     impl From<DbMediaRaw> for Media {
         fn from(value: DbMediaRaw) -> Self {
-            let mut tracks = value.tracks;
+            let tracks = value.tracks;
             let source = tracks
                 .iter()
                 .find(|i| {
@@ -63,14 +63,11 @@ where
                 .expect("media should always have at least one track")
                 .clone();
 
-            tracks.retain(|t| t != &source);
-
             Media {
                 id: value.id,
                 filename: value.filename,
                 alt: value.alt,
                 source,
-                tracks,
             }
         }
     }

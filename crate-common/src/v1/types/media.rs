@@ -51,12 +51,6 @@ pub struct Media {
 
     /// The source (Uploaded, Downloaded)
     pub source: MediaTrack,
-
-    /// The source (Extracted, Generated) (DEPRECATED)
-    ///
-    /// This was only used for thumbnails, and there's a more robust system now
-    #[deprecated]
-    pub tracks: Vec<MediaTrack>,
     // /// extra metadata relevant to the media itself and not a track
     // // NOTE: maybe derived could be its own MediaTrackInfo type. not sure how it would be to use though?
     // pub derived: Option<MediaDerived>,
@@ -194,16 +188,6 @@ pub struct MediaDerived {
 impl Diff<Media> for MediaPatch {
     fn changes(&self, other: &Media) -> bool {
         self.alt.changes(&other.alt)
-    }
-}
-
-impl Media {
-    pub fn all_tracks(&self) -> impl Iterator<Item = &MediaTrack> {
-        self.tracks.iter().chain([&self.source])
-    }
-
-    pub fn all_tracks_mut(&mut self) -> impl Iterator<Item = &mut MediaTrack> {
-        self.tracks.iter_mut().chain([&mut self.source])
     }
 }
 

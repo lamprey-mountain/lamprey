@@ -133,17 +133,9 @@ impl ServiceMedia {
         media: &mut Media,
         meta: &Metadata,
         path: &std::path::Path,
-        force: bool,
     ) -> Result<()> {
         trace!("media = {:?}", media);
         trace!("meta = {:?}", meta);
-        if media
-            .all_tracks()
-            .any(|i| matches!(i.info, MediaTrackInfo::Thumbnail(_)))
-            && !force
-        {
-            return Ok(());
-        }
         let media_id = media.id;
         let mime = get_mime(path).await?;
         let mut fut = FuturesUnordered::new();
@@ -188,11 +180,7 @@ impl ServiceMedia {
                 return Ok(());
             }
         }
-        while let Some(track) = fut.next().await {
-            if let Some(track) = track? {
-                media.tracks.push(track);
-            }
-        }
+        while let Some(_track) = fut.next().await {}
         Ok(())
     }
 
@@ -214,7 +202,6 @@ impl ServiceMedia {
             id: media_id,
             filename: filename.to_owned(),
             source: MediaTrack {
-                url: url.clone(),
                 mime: mime.clone(),
                 info: match mime.parse() {
                     Ok(m) => match m.ty().as_str() {
@@ -250,13 +237,11 @@ impl ServiceMedia {
                     }
                 },
             },
-            tracks: vec![],
         };
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
-            self.generate_thumbnails(&mut media, meta, &p, false)
-                .await?;
+            self.generate_thumbnails(&mut media, meta, &p).await?;
         }
         debug!("finish generating thumbnails for {}", media_id);
         let upload_s3 = async {
@@ -462,7 +447,6 @@ async fn upload_extracted_thumb(
             width: width.into(),
             language: None,
         }),
-        url,
         size: len as u64,
         mime,
         source: TrackSource::Extracted,

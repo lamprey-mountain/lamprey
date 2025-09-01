@@ -17,12 +17,6 @@ pub struct MediaTrack {
     #[serde(flatten)]
     pub info: MediaTrackInfo,
 
-    /// The url where this track may be downloaded from (DEPRECATED)
-    ///
-    /// Use cdn formatting instead now
-    #[deprecated]
-    pub url: Url,
-
     /// The blob's length in bytes
     pub size: u64,
 
