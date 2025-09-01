@@ -35,6 +35,10 @@ impl ServiceRooms {
             .map_err(|err| err.fake_clone())
     }
 
+    pub async fn invalidate(&self, room_id: RoomId) {
+        self.cache_room.invalidate(&room_id).await;
+    }
+
     pub async fn update(
         &self,
         room_id: RoomId,
@@ -74,7 +78,7 @@ impl ServiceRooms {
 
     pub async fn create(&self, create: RoomCreate, creator: UserId) -> Result<Room> {
         let data = self.state.data();
-        let room = data.room_create(create).await?;
+        let room = data.room_create(create, creator).await?;
         let room_id = room.id;
 
         let changes = Changes::new()
@@ -121,7 +125,7 @@ impl ServiceRooms {
             is_self_applicable: false,
             is_mentionable: true,
         };
-        let admin = data.role_create(role_admin, 1).await?;
+        data.role_create(role_admin, 1).await?;
         data.role_create(role_moderator, 1).await?;
         data.role_create(role_everyone, 0).await?;
         data.room_member_put(
@@ -131,7 +135,6 @@ impl ServiceRooms {
             RoomMemberPut::default(),
         )
         .await?;
-        data.role_member_put(creator, admin.id).await?;
         Ok(room)
     }
 }

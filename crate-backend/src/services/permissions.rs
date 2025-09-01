@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use common::v1::types::{PermissionOverwriteType, RoomId, ThreadId, UserId};
+use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
 use moka::future::Cache;
+use tracing::trace;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -42,9 +43,19 @@ impl ServicePermissions {
     }
 
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
+        let srv = self.state.services();
+        let data = self.state.data();
+
         self.cache_perm_room
             .try_get_with((user_id, room_id), async {
-                let data = self.state.data();
+                let room = srv.rooms.get(room_id, None).await?;
+                if room.owner_id == Some(user_id) {
+                    let mut p = Permissions::empty();
+                    p.add(Permission::View);
+                    p.add(Permission::Admin);
+                    return Result::Ok(p);
+                }
+
                 let perms = data.permission_room_get(user_id, room_id).await?;
                 Result::Ok(perms)
             })
@@ -53,12 +64,9 @@ impl ServicePermissions {
     }
 
     pub async fn for_thread(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
-        let t = self
-            .state
-            .services()
-            .threads
-            .get(thread_id, Some(user_id))
-            .await?;
+        let srv = self.state.services();
+        let data = self.state.data();
+        let t = srv.threads.get(thread_id, Some(user_id)).await?;
 
         self.cache_perm_thread
             .try_get_with(
@@ -68,7 +76,16 @@ impl ServicePermissions {
                     thread_id,
                 ),
                 async {
-                    let data = self.state.data();
+                    if let Some(room_id) = t.room_id {
+                        let room = srv.rooms.get(room_id, None).await?;
+                        if room.owner_id == Some(user_id) {
+                            let mut p = Permissions::empty();
+                            p.add(Permission::View);
+                            p.add(Permission::Admin);
+                            return Result::Ok(p);
+                        }
+                    }
+
                     let perms = data.permission_thread_get(user_id, thread_id).await?;
                     Result::Ok(perms)
                 },

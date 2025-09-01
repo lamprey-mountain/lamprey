@@ -106,9 +106,14 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					}}
 				/>
 			</div>
-			<div>
-				room id: <code class="select-all">{props.room.id}</code>
-			</div>
+			<ul style="list-style: disc inside">
+				<li>
+					room id: <code class="select-all">{props.room.id}</code>
+				</li>
+				<li>
+					owner id: <code class="select-all">{props.room.owner_id}</code>
+				</li>
+			</ul>
 			<br />
 			<div>(todo) visibility</div>
 			<div>(todo) order, layout</div>

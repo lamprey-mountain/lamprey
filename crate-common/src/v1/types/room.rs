@@ -27,6 +27,11 @@ pub struct Room {
     /// A monotonically increasing id that is updated every time this room is modified.
     pub version_id: Uuid,
 
+    /// The owner of this room. Owners have full admin permissions which cannot be revoked.
+    ///
+    /// This almost always exists, but for legacy rooms may be null
+    pub owner_id: Option<UserId>,
+
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,

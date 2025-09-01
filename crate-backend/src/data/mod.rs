@@ -63,7 +63,7 @@ pub trait Data:
 
 #[async_trait]
 pub trait DataRoom {
-    async fn room_create(&self, create: RoomCreate) -> Result<Room>;
+    async fn room_create(&self, create: RoomCreate, owner_id: UserId) -> Result<Room>;
     async fn room_get(&self, room_id: RoomId) -> Result<Room>;
     async fn room_list(
         &self,
@@ -78,6 +78,7 @@ pub trait DataRoom {
     ) -> Result<PaginationResponse<Room>>;
     async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
     async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics>;
+    async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
 }
 
 #[async_trait]

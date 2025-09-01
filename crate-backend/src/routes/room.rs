@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
-use common::v1::types::{AuditLogEntry, AuditLogEntryId, RoomMetrics};
+use common::v1::types::{AuditLogEntry, AuditLogEntryId, RoomMetrics, UserId};
 use headers::ETag;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -16,6 +16,7 @@ use validator::Validate;
 
 use crate::{
     error::Result,
+    routes::util::AuthSudo,
     types::{
         MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission, Room,
         RoomCreate, RoomId, RoomPatch,
@@ -263,7 +264,7 @@ async fn room_ack(
     Err(Error::Unimplemented)
 }
 
-/// Room metrics (TODO)
+/// Room metrics
 ///
 /// Get metrics for a room
 #[utoipa::path(
@@ -286,6 +287,46 @@ async fn room_metrics(
     Ok(Json(metrics))
 }
 
+/// Room transfer ownership
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/transfer-ownership",
+    params(("room_id", description = "Room id")),
+    tags = ["room"],
+    responses((status = OK, description = "success"))
+)]
+async fn room_transfer_ownership(
+    Path(room_id): Path<RoomId>,
+    AuthSudo(auth_user_id): AuthSudo,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<TransferOwnership>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let data = s.data();
+    let target_user_id = json.owner_id;
+
+    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    perms.ensure_view()?;
+    let room_start = srv.rooms.get(room_id, Some(auth_user_id)).await?;
+    if room_start.owner_id != Some(auth_user_id) {
+        return Err(Error::BadStatic("you aren't the room owner"));
+    }
+
+    data.room_set_owner(room_id, target_user_id).await?;
+    srv.perms.invalidate_room(auth_user_id, room_id).await;
+    srv.perms.invalidate_room(target_user_id, room_id).await;
+    srv.rooms.invalidate(room_id).await;
+    let room = srv.rooms.get(room_id, Some(auth_user_id)).await?;
+    let msg = MessageSync::RoomUpdate { room: room.clone() };
+    s.broadcast_room(room_id, auth_user_id, msg).await?;
+    Ok(Json(room))
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
+struct TransferOwnership {
+    owner_id: UserId,
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
@@ -295,4 +336,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_audit_logs))
         .routes(routes!(room_ack))
         .routes(routes!(room_metrics))
+        .routes(routes!(room_transfer_ownership))
 }

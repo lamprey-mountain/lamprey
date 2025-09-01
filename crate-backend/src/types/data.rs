@@ -12,6 +12,7 @@ pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 pub struct DbRoom {
     pub id: Uuid,
     pub version_id: Uuid,
+    pub owner_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub dm_uid_a: Option<Uuid>,
@@ -53,6 +54,7 @@ impl From<DbRoom> for Room {
         Room {
             id: row.id.into(),
             version_id: row.version_id,
+            owner_id: row.owner_id.map(Into::into),
             name: row.name,
             description: row.description,
             icon: row.icon.map(|i| i.into()),

@@ -17,13 +17,13 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoom for Postgres {
-    async fn room_create(&self, create: RoomCreate) -> Result<Room> {
+    async fn room_create(&self, create: RoomCreate, owner_id: UserId) -> Result<Room> {
         let mut conn = self.pool.acquire().await?;
         let room_id = Uuid::now_v7();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public)
-    	    VALUES ($1, $2, $3, $4, $5, $6)
+    	    INSERT INTO room (id, version_id, name, description, icon, public, owner_id)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
             room_id,
             room_id,
@@ -31,6 +31,7 @@ impl DataRoom for Postgres {
             create.description,
             create.icon.map(|i| *i),
             create.public.unwrap_or(false),
+            *owner_id,
         )
         .execute(&mut *conn)
         .await?;
@@ -52,6 +53,7 @@ impl DataRoom for Postgres {
                 room.icon,
                 room.archived_at,
                 room.public,
+                room.owner_id,
                 NULL::uuid as dm_uid_a,
                 NULL::uuid as dm_uid_b
             FROM room
@@ -84,6 +86,7 @@ impl DataRoom for Postgres {
                     room.icon,
                     room.archived_at,
                     room.public,
+                    room.owner_id,
                     NULL::uuid as dm_uid_a,
                     NULL::uuid as dm_uid_b
                 FROM room_member
@@ -156,6 +159,7 @@ impl DataRoom for Postgres {
                     r.icon,
                     r.archived_at,
                     r.public,
+                    r.owner_id,
                     NULL::uuid as dm_uid_a,
                     NULL::uuid as dm_uid_b
                 FROM room_member rm1
@@ -262,5 +266,18 @@ impl DataRoom for Postgres {
             media_count: message_media_counts.total_media.unwrap_or_default() as u64,
             media_size: media_size as u64,
         })
+    }
+
+    async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId> {
+        let version_id = RoomVerId::new();
+        query!(
+            r#"update room set owner_id = $2, version_id = $3 where id = $1"#,
+            *id,
+            *owner_id,
+            *version_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(version_id)
     }
 }

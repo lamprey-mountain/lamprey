@@ -76,7 +76,7 @@ impl ServerStateInner {
     pub async fn broadcast_room(
         &self,
         _room_id: RoomId,
-        _user_id: UserId,
+        _user_id: UserId, // TODO: remove
         msg: MessageSync,
     ) -> Result<()> {
         let _ = self.sushi.send(msg);
