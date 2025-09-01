@@ -124,7 +124,6 @@ export const Root: Component = (props: ParentProps) => {
 			preview: null,
 		},
 	});
-	const [menu, setMenu] = createSignal<Menu | null>(null);
 
 	type Lang = "en";
 	const [lang, _setLang] = createSignal<Lang>("en");
@@ -134,6 +133,7 @@ export const Root: Component = (props: ParentProps) => {
 	});
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
+	const [menu, setMenu] = createSignal<Menu | null>(null);
 
 	const ctx: ChatCtx = {
 		client,
@@ -197,8 +197,39 @@ export const Root: Component = (props: ParentProps) => {
 	// 	})
 	// })
 
+	// TEMP: debugging
+	(globalThis as any).ctx = ctx;
+	(globalThis as any).client = client;
+	(globalThis as any).api = api;
+	(globalThis as any).flags = flags;
+
+	const TOKEN = localStorage.getItem("token")!;
+	if (TOKEN) {
+		client.start(TOKEN);
+	} else {
+		queueMicrotask(() => {
+			ctx.dispatch({ do: "server.init_session" });
+		});
+	}
+
+	return (
+		<api.Provider>
+			<chatctx.Provider value={ctx}>
+				<Root2 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root2>
+			</chatctx.Provider>
+		</api.Provider>
+	);
+};
+
+export const Root2: Component = (props: any) => {
+	const ctx = useCtx();
+
+	const state = from(ctx.client.state);
+
+	const { handleContextMenu } = useContextMenu(props.setMenu);
+
 	const handleClick = (e: MouseEvent) => {
-		setMenu(null);
+		props.setMenu(null);
 		if (!e.isTrusted) return;
 		const target = e.target as HTMLElement;
 		// if (target.matches("a[download]")) {
@@ -221,57 +252,31 @@ export const Root: Component = (props: ParentProps) => {
 	const handleKeypress = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
 			if (ctx.data.modals.length) {
-				dispatch({ do: "modal.close" });
+				props.dispatch({ do: "modal.close" });
 			}
 		}
 	};
 
-	const { handleContextMenu } = useContextMenu(setMenu);
-
-	// TEMP: debugging
-	(globalThis as any).ctx = ctx;
-	(globalThis as any).client = client;
-	(globalThis as any).api = api;
-	(globalThis as any).flags = flags;
-
-	const TOKEN = localStorage.getItem("token")!;
-	if (TOKEN) {
-		client.start(TOKEN);
-	} else {
-		queueMicrotask(() => {
-			ctx.dispatch({ do: "server.init_session" });
-		});
-	}
-
-	const state = from(ctx.client.state);
-
-	let rootRef: HTMLDivElement | undefined;
-
 	return (
-		<api.Provider>
-			<chatctx.Provider value={ctx}>
-				<div
-					ref={rootRef}
-					id="root"
-					classList={{
-						"underline-links": ctx.settings.get("underline_links") === "yes",
-					}}
-					onClick={handleClick}
-					onKeyDown={handleKeypress}
-					onContextMenu={handleContextMenu}
-				>
-					{props.children}
-					<Portal mount={document.getElementById("overlay")!}>
-						<Overlay />
-					</Portal>
-					<Show when={state() !== "ready"}>
-						<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
-							{state()}
-						</div>
-					</Show>
+		<div
+			id="root"
+			classList={{
+				"underline-links": ctx.settings.get("underline_links") === "yes",
+			}}
+			onClick={handleClick}
+			onKeyDown={handleKeypress}
+			onContextMenu={handleContextMenu}
+		>
+			{props.children}
+			<Portal mount={document.getElementById("overlay")!}>
+				<Overlay />
+			</Portal>
+			<Show when={state() !== "ready"}>
+				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
+					{state()}
 				</div>
-			</chatctx.Provider>
-		</api.Provider>
+			</Show>
+		</div>
 	);
 };
 
