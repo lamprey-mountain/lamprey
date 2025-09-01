@@ -77,23 +77,29 @@ async fn main() -> anyhow::Result<()> {
         .merge(Env::raw())
         .extract()?;
 
-    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
     if let Some(endpoint) = &config.otel_trace_endpoint {
-        exporter = exporter.with_endpoint(endpoint);
+        let exporter = opentelemetry_otlp::SpanExporter::builder()
+            .with_tonic()
+            .with_endpoint(endpoint)
+            .build()?;
+        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+            .with_batch_exporter(exporter)
+            .build();
+        use opentelemetry::trace::TracerProvider;
+        let tracer = provider.tracer("bridge-discord");
+        opentelemetry::global::set_tracer_provider(provider);
+        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+        let subscriber = Registry::default()
+            .with(EnvFilter::from_str(&config.rust_log)?)
+            .with(tracing_subscriber::fmt::layer())
+            .with(telemetry_layer);
+        tracing::subscriber::set_global_default(subscriber)?;
+    } else {
+        let subscriber = Registry::default()
+            .with(EnvFilter::from_str(&config.rust_log)?)
+            .with(tracing_subscriber::fmt::layer());
+        tracing::subscriber::set_global_default(subscriber)?;
     }
-    let exporter = exporter.build()?;
-    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
-        .build();
-    use opentelemetry::trace::TracerProvider;
-    let tracer = provider.tracer("cdn");
-    opentelemetry::global::set_tracer_provider(provider);
-    let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-    let subscriber = Registry::default()
-        .with(EnvFilter::from_str(&config.rust_log)?)
-        .with(tracing_subscriber::fmt::layer())
-        .with(telemetry_layer);
-    tracing::subscriber::set_global_default(subscriber)?;
 
     info!("starting cdn with config: {:#?}", config);
 
