@@ -11,7 +11,7 @@ use common::v1::types::{
     MediaPatch, Permission, PermissionOverwriteType, Relationship, RelationshipPatch,
     RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin,
     RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch, SessionStatus,
-    SessionToken, ThreadMember, ThreadMemberPatch, ThreadMemberPut, ThreadMembership,
+    SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -433,12 +433,6 @@ pub trait DataThreadMember {
         thread_id: ThreadId,
         user_id: UserId,
         put: ThreadMemberPut,
-    ) -> Result<()>;
-    async fn thread_member_patch(
-        &self,
-        thread_id: ThreadId,
-        user_id: UserId,
-        patch: ThreadMemberPatch,
     ) -> Result<()>;
     async fn thread_member_set_membership(
         &self,

@@ -57,7 +57,6 @@ impl From<DbRoomMember> for RoomMember {
                 DbMembership::Leave => RoomMembership::Leave,
                 DbMembership::Ban => RoomMembership::Leave,
             },
-            membership_updated_at: row.joined_at.assume_utc().into(),
             joined_at: row.joined_at.assume_utc().into(),
             override_name: row.override_name,
             override_description: row.override_description,
@@ -255,7 +254,7 @@ impl DataRoomMember for Postgres {
         query!(
             r#"
             UPDATE room_member
-        	SET membership = $3, membership_updated_at = now()
+        	SET membership = $3
             WHERE room_id = $1 AND user_id = $2
             "#,
             *room_id,

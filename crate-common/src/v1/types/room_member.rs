@@ -24,10 +24,6 @@ pub struct RoomMember {
 
     pub membership: RoomMembership,
 
-    /// When this member's membership last changed (joined, left, was kicked, or banned).
-    #[deprecated]
-    pub membership_updated_at: Time,
-
     /// When this member joined the room
     pub joined_at: Time,
     // TODO?: pub left_at: Option<Time>,

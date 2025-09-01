@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
     PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember,
-    ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId,
+    ThreadMemberPut, ThreadMembership, UserId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::info;
@@ -19,9 +19,6 @@ pub struct DbThreadMember {
     pub user_id: Uuid,
     pub thread_id: Uuid,
     pub membership: DbMembership,
-    pub override_name: Option<String>,
-    pub override_description: Option<String>,
-    // override_avatar: z.string().url().or(z.literal("")),
     pub joined_at: time::PrimitiveDateTime,
 }
 
@@ -35,10 +32,7 @@ impl From<DbThreadMember> for ThreadMember {
                 DbMembership::Leave => ThreadMembership::Leave,
                 DbMembership::Ban => ThreadMembership::Leave,
             },
-            membership_updated_at: row.joined_at.assume_utc().into(),
             joined_at: row.joined_at.assume_utc().into(),
-            override_name: row.override_name,
-            override_description: row.override_description,
         }
     }
 }
@@ -49,12 +43,12 @@ impl DataThreadMember for Postgres {
         &self,
         thread_id: ThreadId,
         user_id: UserId,
-        put: ThreadMemberPut,
+        _put: ThreadMemberPut,
     ) -> Result<()> {
         query!(
             r#"
-            INSERT INTO thread_member (user_id, thread_id, membership, override_name, override_description, joined_at)
-            VALUES ($1, $2, $3, $4, $5, now())
+            INSERT INTO thread_member (user_id, thread_id, membership, joined_at)
+            VALUES ($1, $2, $3, now())
 			ON CONFLICT ON CONSTRAINT thread_member_pkey DO UPDATE SET
     			membership = excluded.membership,
                 joined_at = case
@@ -66,57 +60,10 @@ impl DataThreadMember for Postgres {
             *user_id,
             *thread_id,
             DbMembership::Join as _,
-            put.override_name,
-            put.override_description,
         )
         .execute(&self.pool)
         .await?;
         info!("inserted thread member");
-        Ok(())
-    }
-
-    async fn thread_member_patch(
-        &self,
-        thread_id: ThreadId,
-        user_id: UserId,
-        patch: ThreadMemberPatch,
-    ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let item = query_as!(
-            DbThreadMember,
-            r#"
-        	SELECT
-            	thread_id,
-            	user_id,
-            	membership as "membership: _",
-            	joined_at,
-            	override_name,
-            	override_description
-            FROM thread_member
-            WHERE thread_id = $1 AND user_id = $2
-        "#,
-            *thread_id,
-            *user_id,
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-        query!(
-            r#"
-            UPDATE thread_member
-        	SET override_name = $3, override_description = $4
-            WHERE thread_id = $1 AND user_id = $2 AND membership = 'Join'
-        "#,
-            *thread_id,
-            *user_id,
-            patch.override_name.unwrap_or(item.override_name),
-            patch
-                .override_description
-                .unwrap_or(item.override_description),
-        )
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
         Ok(())
     }
 
@@ -130,7 +77,7 @@ impl DataThreadMember for Postgres {
         query!(
             r#"
             UPDATE thread_member
-        	SET membership = $3, membership_updated_at = now()
+        	SET membership = $3
             WHERE thread_id = $1 AND user_id = $2
             "#,
             *thread_id,
@@ -166,9 +113,7 @@ impl DataThreadMember for Postgres {
             	thread_id,
             	user_id,
             	membership as "membership: _",
-            	joined_at,
-            	override_name,
-            	override_description
+            	joined_at
             FROM thread_member
             WHERE thread_id = $1 AND user_id = $2
         "#,
@@ -196,9 +141,7 @@ impl DataThreadMember for Postgres {
                 	thread_id,
                 	user_id,
                 	membership as "membership: _",
-                	joined_at,
-                	override_name,
-                    override_description
+                	joined_at
                 FROM thread_member
             	WHERE thread_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5

@@ -3,10 +3,9 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
-    ThreadMemberPatch, ThreadMemberPut, ThreadMembership, UserId,
+    ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -122,15 +121,8 @@ pub async fn thread_member_add(
     }
 
     let start = d.thread_member_get(thread_id, target_user_id).await.ok();
-    d.thread_member_put(
-        thread_id,
-        target_user_id,
-        ThreadMemberPut {
-            override_name: json.override_name,
-            override_description: json.override_description,
-        },
-    )
-    .await?;
+    d.thread_member_put(thread_id, target_user_id, ThreadMemberPut {})
+        .await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     if start.is_some_and(|s| s == res) {
         Ok(StatusCode::NOT_MODIFIED.into_response())
@@ -145,66 +137,6 @@ pub async fn thread_member_add(
         .await?;
         Ok(Json(res).into_response())
     }
-}
-
-/// Thread member update
-#[utoipa::path(
-    patch,
-    path = "/thread/{thread_id}/member/{user_id}",
-    params(
-        ("thread_id" = ThreadId, description = "Thread id"),
-        ("user_id" = String, description = "User id"),
-    ),
-    tags = ["thread_member"],
-    responses(
-        (status = OK, body = ThreadMember, description = "success"),
-        (status = NOT_MODIFIED, description = "not modified"),
-    )
-)]
-pub async fn thread_member_update(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
-    Auth(auth_user_id): Auth,
-    State(s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(json): Json<ThreadMemberPatch>,
-) -> Result<impl IntoResponse> {
-    json.validate()?;
-    let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
-        UserIdReq::UserId(id) => id,
-    };
-    let d = s.data();
-    let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
-    perms.ensure_view()?;
-    if target_user_id != auth_user_id {
-        perms.ensure(Permission::MemberManage)?;
-    }
-
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
-    }
-
-    let start = d.thread_member_get(thread_id, target_user_id).await?;
-    if !matches!(start.membership, ThreadMembership::Join { .. }) {
-        return Err(Error::NotFound);
-    }
-    if !json.changes(&start) {
-        return Err(Error::NotModified);
-    }
-    d.thread_member_patch(thread_id, target_user_id, json)
-        .await?;
-    let res = d.thread_member_get(thread_id, target_user_id).await?;
-    s.broadcast_thread(
-        thread_id,
-        auth_user_id,
-        MessageSync::ThreadMemberUpsert {
-            member: res.clone(),
-        },
-    )
-    .await?;
-    Ok(Json(res).into_response())
 }
 
 /// Thread member delete (kick/leave)
@@ -267,6 +199,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_member_list))
         .routes(routes!(thread_member_get))
         .routes(routes!(thread_member_add))
-        .routes(routes!(thread_member_update))
         .routes(routes!(thread_member_delete))
 }
