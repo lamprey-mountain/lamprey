@@ -81,6 +81,8 @@ pub struct DbThread {
     pub permission_overwrites: serde_json::Value,
     pub nsfw: bool,
     pub locked: bool,
+    pub archived_at: Option<PrimitiveDateTime>,
+    pub deleted_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -138,8 +140,8 @@ impl From<DbThread> for Thread {
             online_count: 0,
             tags: Default::default(),
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
-            archived_at: None,
-            deleted_at: None,
+            archived_at: row.archived_at.map(|t| t.into()),
+            deleted_at: row.deleted_at.map(|t| t.into()),
             parent_id: None,
             position: None,
 
