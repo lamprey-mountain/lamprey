@@ -80,6 +80,7 @@ pub struct DbThread {
     pub member_count: i64,
     pub permission_overwrites: serde_json::Value,
     pub nsfw: bool,
+    pub locked: bool,
 }
 
 #[derive(Deserialize, Clone)]
@@ -130,15 +131,15 @@ impl From<DbThread> for Thread {
             name: row.name,
             description: row.description,
             nsfw: row.nsfw,
+            locked: row.locked,
 
             member_count: row.member_count.try_into().expect("count is negative?"),
-            // FIXME: calculate field
+            // FIXME: calculate fields
             online_count: 0,
             tags: Default::default(),
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: None,
             deleted_at: None,
-            locked: false,
             parent_id: None,
             position: None,
 

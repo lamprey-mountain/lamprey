@@ -101,6 +101,15 @@ impl ServiceThreads {
         perms.ensure_view()?;
         let data = self.state.data();
         let thread_old = data.thread_get(thread_id).await?;
+        if thread_old.archived_at.is_some() {
+            return Err(Error::BadStatic("thread is archived"));
+        }
+        if thread_old.deleted_at.is_some() {
+            return Err(Error::BadStatic("thread is removed"));
+        }
+        if thread_old.locked {
+            perms.ensure(Permission::ThreadLock)?;
+        }
         if thread_old.creator_id == user_id {
             perms.add(Permission::ThreadEdit);
         }

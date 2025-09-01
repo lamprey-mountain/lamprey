@@ -50,6 +50,13 @@ async fn message_create(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+        perms.ensure(Permission::ThreadLock)?;
+    }
 
     let message = srv
         .messages
@@ -214,6 +221,13 @@ async fn message_edit(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+        perms.ensure(Permission::ThreadLock)?;
+    }
 
     let (status, message) = srv
         .messages
@@ -245,7 +259,8 @@ async fn message_delete(
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
-    let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let mut perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data.message_get(thread_id, message_id, user_id).await?;
     if !message.message_type.is_deletable() {
@@ -255,9 +270,15 @@ async fn message_delete(
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
 
     data.message_delete(thread_id, message_id).await?;
@@ -374,7 +395,8 @@ async fn message_version_delete(
     HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
     let data = s.data();
-    let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let mut perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let message = data
         .message_version_get(thread_id, version_id, user_id)
@@ -387,9 +409,15 @@ async fn message_version_delete(
     }
     perms.ensure(Permission::MessageDelete)?;
 
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
 
     data.message_version_delete(thread_id, version_id).await?;
@@ -501,13 +529,20 @@ async fn message_moderate(
     }
 
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageDelete)?;
 
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
 
     // TODO: fix n+1 query
@@ -518,7 +553,7 @@ async fn message_moderate(
         }
     }
 
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     data.message_delete_bulk(thread_id, &json.delete).await?;
     for id in &json.delete {
         data.media_link_delete_all(id.into_inner()).await?;
@@ -548,7 +583,7 @@ async fn message_moderate(
         },
     )
     .await?;
-    s.services().threads.invalidate(thread_id).await; // last version id, message count
+    srv.threads.invalidate(thread_id).await; // last version id, message count
     Ok(StatusCode::OK)
 }
 

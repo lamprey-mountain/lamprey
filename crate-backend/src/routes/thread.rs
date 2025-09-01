@@ -183,7 +183,6 @@ async fn thread_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
-    dbg!(&perms);
     perms.ensure_view()?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     Ok((StatusCode::OK, Json(thread)))
@@ -209,7 +208,7 @@ async fn thread_list(
     let data = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
-    let mut res = dbg!(data.thread_list(room_id, q).await?);
+    let mut res = data.thread_list(room_id, q).await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
@@ -390,12 +389,17 @@ async fn thread_archive(
     if user_id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
-
+    if thread_before.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread_before.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
     if thread_before.archived_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
 
-    data.thread_archive(thread_id, user_id).await?;
+    data.thread_archive(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
@@ -418,14 +422,8 @@ async fn thread_archive(
             },
         })
         .await?;
-        s.broadcast_room(
-            room_id,
-            user_id,
-            MessageSync::ThreadUpdate {
-                thread: thread.clone(),
-            },
-        )
-        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -456,10 +454,16 @@ async fn thread_unarchive(
     if user_id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
+    if thread_before.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread_before.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
     if thread_before.archived_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_unarchive(thread_id, user_id).await?;
+    data.thread_unarchive(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
@@ -481,14 +485,8 @@ async fn thread_unarchive(
             },
         })
         .await?;
-        s.broadcast_room(
-            room_id,
-            user_id,
-            MessageSync::ThreadUpdate {
-                thread: thread.clone(),
-            },
-        )
-        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -518,7 +516,7 @@ async fn thread_remove(
     if thread_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_delete(thread_id, user_id).await?;
+    data.thread_delete(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
@@ -565,7 +563,7 @@ async fn thread_restore(
     if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_undelete(thread_id, user_id).await?;
+    data.thread_undelete(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     if let Some(room_id) = thread.room_id {
@@ -583,14 +581,8 @@ async fn thread_restore(
             },
         })
         .await?;
-        s.broadcast_room(
-            room_id,
-            user_id,
-            MessageSync::ThreadUpdate {
-                thread: thread.clone(),
-            },
-        )
-        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -622,6 +614,12 @@ async fn thread_typing(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.threads.typing_set(thread_id, user_id, until).await;
     s.broadcast_thread(
@@ -637,7 +635,7 @@ async fn thread_typing(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread lock (TODO)
+/// Thread lock
 #[utoipa::path(
     put,
     path = "/thread/{thread_id}/lock",
@@ -648,16 +646,47 @@ async fn thread_typing(
 async fn thread_lock(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
-) -> Result<()> {
-    let _data = s.data();
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let thread_before = srv.threads.get(thread_id, None).await?;
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
     perms.ensure(Permission::ThreadLock)?;
-    todo!()
+    if thread_before.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread_before.locked {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    data.thread_lock(thread_id).await?;
+    srv.threads.invalidate(thread_id).await;
+    srv.users.disconnect_everyone_from_thread(thread_id)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change("locked", &thread_before.locked, &thread.locked)
+                    .build(),
+            },
+        })
+        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread unlock (TODO)
+/// Thread unlock
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/lock",
@@ -668,13 +697,44 @@ async fn thread_lock(
 async fn thread_unlock(
     Path(thread_id): Path<ThreadId>,
     Auth(user_id): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
-) -> Result<()> {
-    let _data = s.data();
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let thread_before = srv.threads.get(thread_id, None).await?;
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    perms.ensure_view()?;
     perms.ensure(Permission::ThreadLock)?;
-    todo!()
+    if thread_before.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if !thread_before.locked {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    data.thread_unlock(thread_id).await?;
+    srv.threads.invalidate(thread_id).await;
+    srv.users.disconnect_everyone_from_thread(thread_id)?;
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    if let Some(room_id) = thread.room_id {
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::ThreadUpdate {
+                thread_id,
+                changes: Changes::new()
+                    .change("locked", &thread_before.locked, &thread.locked)
+                    .build(),
+            },
+        })
+        .await?;
+        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+            .await?;
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

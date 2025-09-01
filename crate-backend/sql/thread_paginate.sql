@@ -30,6 +30,7 @@ select
     thread.version_id,
     thread.description,
     thread.nsfw,
+    thread.locked,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     last_version_id as "last_version_id",

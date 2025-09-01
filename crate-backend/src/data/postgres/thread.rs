@@ -19,8 +19,8 @@ impl DataThread for Postgres {
         let thread_id = ThreadId::new();
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -142,7 +142,7 @@ impl DataThread for Postgres {
         Ok(version_id)
     }
 
-    async fn thread_delete(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+    async fn thread_delete(&self, thread_id: ThreadId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let version_id = ThreadVerId::new();
@@ -162,7 +162,7 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_undelete(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+    async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let version_id = ThreadVerId::new();
@@ -182,7 +182,7 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_archive(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+    async fn thread_archive(&self, thread_id: ThreadId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let version_id = ThreadVerId::new();
@@ -202,7 +202,7 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_unarchive(&self, thread_id: ThreadId, _user_id: UserId) -> Result<()> {
+    async fn thread_unarchive(&self, thread_id: ThreadId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
         let version_id = ThreadVerId::new();
@@ -211,6 +211,46 @@ impl DataThread for Postgres {
             UPDATE thread SET
                 version_id = $2,
                 archived_at = NULL
+            WHERE id = $1
+            "#,
+            thread_id.into_inner(),
+            version_id.into_inner(),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn thread_lock(&self, thread_id: ThreadId) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let version_id = ThreadVerId::new();
+        query!(
+            r#"
+            UPDATE thread SET
+                version_id = $2,
+                locked = true
+            WHERE id = $1
+            "#,
+            thread_id.into_inner(),
+            version_id.into_inner(),
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let version_id = ThreadVerId::new();
+        query!(
+            r#"
+            UPDATE thread SET
+                version_id = $2,
+                locked = false
             WHERE id = $1
             "#,
             thread_id.into_inner(),

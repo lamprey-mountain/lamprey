@@ -87,6 +87,7 @@ pub struct Thread {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Vec<TagId>,
 
+    // TODO: rename to removed_at
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
 

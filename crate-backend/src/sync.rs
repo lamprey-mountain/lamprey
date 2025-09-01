@@ -254,7 +254,13 @@ impl Connection {
                         if thread.archived_at.is_some() {
                             return Err(Error::BadStatic("thread is archived"));
                         }
+                        if thread.deleted_at.is_some() {
+                            return Err(Error::BadStatic("thread is removed"));
+                        }
                         let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
+                        if thread.locked {
+                            perms.ensure(Permission::ThreadLock)?;
+                        }
                         perms.ensure_view()?;
                         perms.ensure(Permission::VoiceConnect)?;
                     }

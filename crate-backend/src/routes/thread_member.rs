@@ -119,6 +119,12 @@ pub async fn thread_member_add(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
 
     let start = d.thread_member_get(thread_id, target_user_id).await.ok();
     d.thread_member_put(thread_id, target_user_id, ThreadMemberPut {})
@@ -173,6 +179,12 @@ pub async fn thread_member_delete(
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
 
     let start = d.thread_member_get(thread_id, target_user_id).await?;

@@ -212,7 +212,7 @@ pub enum Permission {
     /// this isnt the same as email forwarding
     ThreadForward,
 
-    /// (unimplemented) lock (and unlock) threads
+    /// lock (and unlock) threads
     ThreadLock,
 
     /// (unimplemented) pin (and unpin) threads

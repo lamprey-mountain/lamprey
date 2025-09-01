@@ -346,10 +346,12 @@ pub trait DataThread {
         pagination: PaginationQuery<ThreadId>,
     ) -> Result<PaginationResponse<Thread>>;
     async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId>;
-    async fn thread_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
-    async fn thread_archive(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
-    async fn thread_unarchive(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
-    async fn thread_undelete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
+    async fn thread_delete(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_archive(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_unarchive(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_lock(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()>;
 }
 
 #[async_trait]

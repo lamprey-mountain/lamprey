@@ -16,6 +16,30 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 		});
 	};
 
+	const toggleArchived = () => {
+		if (props.thread.archived_at) {
+			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
+				params: { path: { thread_id: props.thread.id } },
+			});
+		} else {
+			ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
+				params: { path: { thread_id: props.thread.id } },
+			});
+		}
+	};
+
+	const toggleLocked = () => {
+		if (props.thread.locked) {
+			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/lock", {
+				params: { path: { thread_id: props.thread.id } },
+			});
+		} else {
+			ctx.client.http.PUT("/api/v1/thread/{thread_id}/lock", {
+				params: { path: { thread_id: props.thread.id } },
+			});
+		}
+	};
+
 	return (
 		<>
 			<h2>info</h2>
@@ -42,7 +66,6 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 			</div>
 			<br />
 			<div>(todo) tags</div>
-			<div>(todo) locked</div>
 			<div>(todo) archived</div>
 			<div>(todo) visibility</div>
 			<br />
@@ -50,9 +73,25 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 			<div class="danger" style="margin:0 2px">
 				<h3>danger zone</h3>
 				<label>
-					<button onClick={() => alert("todo")}>archive</button>
+					{/* should this really be in the "danger zone"? archiving doesnt do much */}
+					<button onClick={toggleArchived}>
+						{props.thread.archived_at ? "unarchive" : "archive"}
+					</button>
 					<span style="margin-left:8px">
-						makes this entirely read-only and hides it in the nav bar
+						{props.thread.archived_at
+							? "shows this thread in the nav bar"
+							: "hides this thread in the nav bar"}
+					</span>
+				</label>
+				<br />
+				<label>
+					<button onClick={toggleLocked}>
+						{props.thread.locked ? "unlock" : "lock"}
+					</button>
+					<span style="margin-left:8px">
+						{props.thread.locked
+							? "anyone will be able to chat in this thread"
+							: "only moderators can chat in this thread"}
 					</span>
 				</label>
 				<br />

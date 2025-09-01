@@ -43,6 +43,12 @@ async fn permission_thread_overwrite(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
 
     if let Some(room_id) = thread.room_id {
         let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
@@ -160,6 +166,12 @@ async fn permission_thread_delete(
     let thread = srv.threads.get(thread_id, None).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
 
     if let Some(existing) = thread

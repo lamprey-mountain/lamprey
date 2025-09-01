@@ -47,6 +47,12 @@ async fn reaction_add(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
     data.reaction_put(auth_user_id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
@@ -93,6 +99,12 @@ async fn reaction_remove(
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
+    }
     data.reaction_delete(auth_user_id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
@@ -138,6 +150,12 @@ async fn reaction_purge(
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+    if thread.locked {
+        perms.ensure(Permission::ThreadLock)?;
     }
     data.reaction_purge(thread_id, message_id).await?;
 
