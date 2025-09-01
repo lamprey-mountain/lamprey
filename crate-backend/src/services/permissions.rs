@@ -120,6 +120,12 @@ impl ServicePermissions {
             .expect("failed to invalidate");
     }
 
+    pub fn invalidate_user_ranks(&self, room_id: RoomId) {
+        self.cache_user_rank
+            .invalidate_entries_if(move |(rid, _), _| room_id == *rid)
+            .expect("failed to invalidate");
+    }
+
     /// check if two users share a common room
     pub async fn is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
         if a == b {

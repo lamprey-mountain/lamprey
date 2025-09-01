@@ -40,9 +40,17 @@ async fn role_create(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let d = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
+    let rank = srv.perms.get_user_rank(room_id, user_id).await?;
+    if rank == 0 {
+        // special case: we don't want people with only the base role to be able
+        // to create roles, as that role will always be position 1 and won't be
+        // able to be edited or applied
+        return Err(Error::BadStatic("your rank is too low"));
+    }
     let role = d
         .role_create(
             DbRoleCreate {
@@ -78,6 +86,7 @@ async fn role_create(
 
     let msg = MessageSync::RoleCreate { role: role.clone() };
     s.broadcast_room(room_id, user_id, msg).await?;
+    srv.perms.invalidate_user_ranks(room_id);
     Ok((StatusCode::CREATED, Json(role)))
 }
 
@@ -187,11 +196,16 @@ async fn role_delete(
         return Err(Error::BadStatic("cannot delete the default role"));
     }
     let d = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
-    let existing = d.role_member_count(role_id).await?;
-    if existing == 0 || query.force {
+    let role = d.role_select(room_id, role_id).await?;
+    let rank = srv.perms.get_user_rank(room_id, user_id).await?;
+    if rank <= role.position {
+        return Err(Error::BadStatic("your rank is too low"));
+    }
+    if role.member_count == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
 
         d.audit_logs_room_append(AuditLogEntry {
@@ -205,7 +219,7 @@ async fn role_delete(
         .await?;
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
-        s.services().perms.invalidate_room_all(room_id);
+        srv.perms.invalidate_room_all(room_id);
         s.broadcast_room(room_id, user_id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {

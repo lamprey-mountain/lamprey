@@ -54,6 +54,7 @@ impl DataRole for Postgres {
         let perms: Vec<DbPermission> = create.permissions.into_iter().map(Into::into).collect();
         let mut tx = self.pool.begin().await?;
 
+        // lock all roles to prevent race conditions
         query!(
             "select from role where room_id = $1 for update",
             *create.room_id
