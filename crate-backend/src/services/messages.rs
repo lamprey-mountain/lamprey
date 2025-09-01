@@ -6,8 +6,8 @@ use common::v1::types::misc::Color;
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    Embed, Interactions, Message, MessageCreate, MessageDefaultMarkdown, MessageDefaultTagged,
-    MessageId, MessagePatch, MessageSync, MessageType, Permission, ThreadId,
+    Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync,
+    MessageType, Permission, ThreadId,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -248,27 +248,6 @@ impl ServiceMessages {
                     }),
                 ))
             }
-            MessageType::DefaultTagged(msg) => {
-                let content = json.content.unwrap_or(msg.content);
-                Result::Ok((
-                    content.clone(),
-                    MessageType::DefaultTagged(MessageDefaultTagged {
-                        content,
-                        attachments: vec![],
-                        embeds: json
-                            .embeds
-                            .clone()
-                            .unwrap_or_default()
-                            .into_iter()
-                            .map(embed_from_create)
-                            .collect(),
-                        metadata: json.metadata.unwrap_or(msg.metadata),
-                        reply_id: json.reply_id.unwrap_or(msg.reply_id),
-                        reactions: ReactionCounts(vec![]),
-                        interactions: Interactions::default(),
-                    }),
-                ))
-            }
             _ => return Err(Error::Unimplemented),
         }?;
         let version_id = data
@@ -310,9 +289,6 @@ impl ServiceMessages {
         if let Some(embeds) = json.embeds {
             match &mut message.message_type {
                 MessageType::DefaultMarkdown(m) => {
-                    m.embeds = embeds.into_iter().map(embed_from_create).collect()
-                }
-                MessageType::DefaultTagged(m) => {
                     m.embeds = embeds.into_iter().map(embed_from_create).collect()
                 }
                 _ => {}

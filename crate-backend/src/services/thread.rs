@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageThreadUpdate,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageThreadRename,
     MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
 };
 use moka::future::Cache;
@@ -139,39 +139,36 @@ impl ServiceThreads {
             .await?;
         }
 
-        // send update message to thread
-        let update_message_id = data
-            .message_create(DbMessageCreate {
-                thread_id,
-                attachment_ids: vec![],
-                author_id: user_id,
-                embeds: vec![],
-                message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
-                    patch: ThreadPatch {
-                        name: patch.name,
-                        description: patch.description,
-                        // tags: patch.tags,
-                        tags: None,
-                        nsfw: patch.nsfw,
+        if thread_old.name != thread_new.name {
+            // send thread renamed message to thread
+            let rename_message_id = data
+                .message_create(DbMessageCreate {
+                    thread_id,
+                    attachment_ids: vec![],
+                    author_id: user_id,
+                    embeds: vec![],
+                    message_type: MessageType::ThreadRename(MessageThreadRename {
+                        new: thread_new.name.clone(),
+                        old: thread_old.name,
+                    }),
+                    edited_at: None,
+                    created_at: None,
+                })
+                .await?;
+            let rename_message = data
+                .message_get(thread_id, rename_message_id, user_id)
+                .await?;
+            self.state
+                .broadcast_thread(
+                    thread_id,
+                    user_id,
+                    MessageSync::MessageCreate {
+                        message: rename_message,
                     },
-                }),
-                edited_at: None,
-                created_at: None,
-            })
-            .await?;
-        let update_message = data
-            .message_get(thread_id, update_message_id, user_id)
-            .await?;
+                )
+                .await?;
+        }
 
-        self.state
-            .broadcast_thread(
-                thread_new.id,
-                user_id,
-                MessageSync::MessageCreate {
-                    message: update_message,
-                },
-            )
-            .await?;
         let msg = MessageSync::ThreadUpdate {
             thread: thread_new.clone(),
         };

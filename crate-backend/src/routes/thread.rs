@@ -7,8 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
-    MessageThreadUpdate, ThreadType,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -18,8 +17,8 @@ use validator::Validate;
 
 use crate::{
     types::{
-        DbMessageCreate, DbThreadCreate, DbThreadType, MessageSync, MessageType, MessageVerId,
-        Permission, RoomId, Thread, ThreadCreate, ThreadId, ThreadPatch,
+        DbThreadCreate, DbThreadType, MessageSync, MessageVerId, Permission, RoomId, Thread,
+        ThreadCreate, ThreadId, ThreadPatch,
     },
     Error, ServerState,
 };
@@ -88,24 +87,24 @@ async fn thread_create_room(
             nsfw: json.nsfw,
         })
         .await?;
-    let starter_message_id = data
-        .message_create(DbMessageCreate {
-            thread_id,
-            attachment_ids: vec![],
-            author_id: user_id,
-            embeds: vec![],
-            message_type: MessageType::ThreadUpdate(MessageThreadUpdate {
-                patch: ThreadPatch {
-                    name: Some(json.name),
-                    description: Some(json.description),
-                    tags: None,
-                    nsfw: Some(json.nsfw),
-                },
-            }),
-            edited_at: None,
-            created_at: None,
-        })
-        .await?;
+    // let starter_message_id = data
+    //     .message_create(DbMessageCreate {
+    //         thread_id,
+    //         attachment_ids: vec![],
+    //         author_id: user_id,
+    //         embeds: vec![],
+    //         message_type: MessageType::ThreadRename(MessageThreadRename {
+    //             patch: ThreadPatch {
+    //                 name: Some(json.name),
+    //                 description: Some(json.description),
+    //                 tags: None,
+    //                 nsfw: Some(json.nsfw),
+    //             },
+    //         }),
+    //         edited_at: None,
+    //         created_at: None,
+    //     })
+    //     .await?;
     let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
@@ -124,9 +123,9 @@ async fn thread_create_room(
     })
     .await?;
 
-    let starter_message = data
-        .message_get(thread_id, starter_message_id, user_id)
-        .await?;
+    // let starter_message = data
+    //     .message_get(thread_id, starter_message_id, user_id)
+    //     .await?;
     s.broadcast_room(
         room_id,
         user_id,
@@ -136,14 +135,14 @@ async fn thread_create_room(
     )
     .await?;
 
-    s.broadcast_thread(
-        thread.id,
-        user_id,
-        MessageSync::MessageCreate {
-            message: starter_message,
-        },
-    )
-    .await?;
+    // s.broadcast_thread(
+    //     thread.id,
+    //     user_id,
+    //     MessageSync::MessageCreate {
+    //         message: starter_message,
+    //     },
+    // )
+    // .await?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 

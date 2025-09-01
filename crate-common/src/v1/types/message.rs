@@ -23,7 +23,7 @@ use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
 use crate::v1::types::RoomId;
 use crate::v1::types::{
-    AuditLogEntry, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, ThreadPatch, UserId,
+    AuditLogEntry, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, UserId,
 };
 
 use super::EmbedCreate;
@@ -193,23 +193,13 @@ pub struct MessagePatch {
     pub edited_at: Option<Time>,
 }
 
-// FIXME: utoipa doesnt seem to like #[deprecated] here
+// NOTE: utoipa doesnt seem to like #[deprecated] here
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum MessageType {
-    /// a basic message, using the legacy markdown syntax
-    /// previously called "Default"!
-    // NOTE: i don't know how soon i want to commit to the new format - there
-    // might be some rough edges, we'll see. i'll support markdown for at least
-    // a while.
-    // #[deprecated = "use the new text format"]
+    /// a basic message, using markdown
     DefaultMarkdown(MessageDefaultMarkdown),
-
-    #[cfg(feature = "feat_message_new_text")]
-    // #[deprecated = "didn't work how i thought it would"]
-    /// a basic message, using the new tagged text format
-    DefaultTagged(MessageDefaultTagged),
 
     #[cfg(feature = "feat_message_forwarding")]
     /// (TODO) a message copied from somewhere else
@@ -225,49 +215,40 @@ pub enum MessageType {
     /// (TODO) one or more messages were moved
     MessagesMoved(MessagesMoved),
 
-    /// (TODO) a member was added to the thread (what about room?)
+    /// (TODO) a member was added to the thread or group dm
     MemberAdd(MessageMember),
 
-    /// (TODO) a member was removed from the thread (what about room?)
+    /// (TODO) a member was removed from the thread or group dm
     MemberRemove(MessageMember),
 
-    // /// call ended (duration, participants)
-    // CallEnd(MessagesCallEnd),
-    /// a message logging an update to the thread
-    ThreadUpdate(MessageThreadUpdate),
+    /// (TODO) a member joined the room
+    MemberJoin(MessageMember),
 
-    // why have a separate event instead of ThreadUpdate? semantics i guess
-    /// (TODO) a message at the beginning of a thread
-    ThreadCreate(MessageThreadUpdate),
+    /// (TODO) call ended in a dm/gdm
+    Call(MessageCall),
 
-    /// someone mentioned this thread
+    /// (TODO) this thread was renamed
+    ThreadRename(MessageThreadRename),
+
+    /// (TODO) someone mentioned this thread
     // needs some sort of antispam system. again, see github.
     // doesnt necessarily reference a thread in the same room, but usually should
     ThreadPingback(MessageThreadPingback),
+    // /// (TODO) receive announcement threads from this room
+    // // but where does this get sent to???
+    // RoomFollowed(MessageRoomFollowed),
 
-    /// (TODO) receive announcement threads from this room
-    // but where does this get sent to???
-    RoomFollowed(MessageRoomFollowed),
+    // /// (TODO) interact with a bot, uncertain if i'll go this route
+    // BotCommand(MessageBotCommand),
 
-    /// (TODO) interact with a bot, uncertain if i'll go this route
-    BotCommand(MessageBotCommand),
+    // /// (TODO) implement some sort of automoderator? uncertain
+    // #[cfg(feature = "feat_automod")]
+    // ModerationAuto(MessageModerationAuto),
 
-    /// (TODO) repost audit log to a thread? uncertain
-    // ...or display the audit log as a thread
-    // #[deprecated = "use audit log"]
-    ModerationLog(MessageModerationLog),
+    // /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
+    // // #[deprecated = "reports will be impl'd as threads"]
+    // ModerationReport(MessageModerationReport),
 
-    /// (TODO) implement some sort of automoderator? uncertain
-    #[cfg(feature = "feat_automod")]
-    ModerationAuto(MessageModerationAuto),
-
-    /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
-    // #[deprecated = "reports will be impl'd as threads"]
-    ModerationReport(MessageModerationReport),
-
-    /// (TODO) important message from the system/server
-    // #[deprecated = "check if user.type is System"]
-    SystemMessage(MessageSystemMessage),
     // Nudge,
 }
 
@@ -280,11 +261,12 @@ pub struct MessagePin {
     pub reason: Option<String>,
 }
 
-/// Information about a thread being updated
+/// Information about a thread being renamed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageThreadUpdate {
-    pub patch: ThreadPatch,
+pub struct MessageThreadRename {
+    pub new: String,
+    pub old: String,
 }
 
 /// Information about the pingback
@@ -317,7 +299,7 @@ pub struct MessagesMoved {
 pub struct MessageMember {
     pub target_user_id: UserId,
     pub actor_user_id: UserId,
-    pub reason: Option<String>,
+    pub reason: Option<String>, // remove
 }
 
 /// Following a room and will receive announcement posts from it
@@ -372,25 +354,7 @@ pub struct MessageBotCommand {
     pub command_id: String,
 }
 
-/// a message (announcement? motd?) from the system
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MessageSystemMessage {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub content: Option<String>,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub attachments: Vec<Media>,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<Embed>,
-}
-
-/// a basic message, using the legacy markdown syntax
+/// a basic message, written using markdown
 ///
 /// NOTE: new message features won't be backported here!
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -429,45 +393,22 @@ pub struct MessageDefaultMarkdown {
     #[cfg(feature = "feat_reactions")]
     #[serde(default)]
     pub reactions: ReactionCounts,
+    // // experimental! don't touch yet.
+    // #[cfg(feature = "feat_interaction")]
+    // #[cfg_attr(feature = "utoipa", schema(ignore))]
+    // #[serde(default)]
+    // pub interactions: Interactions,
 }
 
-/// a basic message, using the shiny new and very experimental tagged text format
-#[cfg(feature = "feat_message_new_text")]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MessageDefaultTagged {
-    /// the message's content in the new format
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub content: Option<String>,
+pub struct MessageCall {
+    /// when the call ended. is None if the call is still going.
+    pub ended_at: Option<Time>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub attachments: Vec<Media>,
-
-    /// arbitrary metadata associated with a message
-    ///
-    /// deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub metadata: Option<serde_json::Value>,
-
-    /// the message this message is replying to
-    pub reply_id: Option<MessageId>,
-
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
-    pub embeds: Vec<Embed>,
-
-    #[cfg(feature = "feat_reactions")]
-    #[serde(default)]
-    pub reactions: ReactionCounts,
-
-    // experimental! don't touch yet.
-    #[cfg(feature = "feat_interaction")]
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
-    #[serde(default)]
-    pub interactions: Interactions,
+    /// the people who joined the call
+    pub participants: Vec<UserId>,
 }
 
 /// ways to interact with a message
@@ -531,17 +472,6 @@ impl Diff<Message> for MessagePatch {
                             || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
                     })
             }
-            #[cfg(feature = "feat_message_new_text")]
-            MessageType::DefaultTagged(m) => {
-                self.content.changes(&m.content)
-                    || self.metadata.changes(&m.metadata)
-                    || self.reply_id.changes(&m.reply_id)
-                    || self.embeds.is_some()
-                    || self.attachments.as_ref().is_some_and(|a| {
-                        a.len() != m.attachments.len()
-                            || a.iter().zip(&m.attachments).any(|(a, b)| a.id != b.id)
-                    })
-            }
             // this edit is invalid!
             _ => false,
         }
@@ -552,29 +482,20 @@ impl MessageType {
     pub fn is_deletable(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => true,
-            #[cfg(feature = "feat_message_new_text")]
-            MessageType::DefaultTagged(_) => true,
             #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => true,
             MessageType::MessagePinned(_) => true,
             MessageType::MessageUnpinned(_) => true,
             MessageType::MemberAdd(_) => false,
             MessageType::MemberRemove(_) => false,
-            MessageType::ThreadUpdate(_) => false,
-            MessageType::ThreadCreate(_) => false,
-            MessageType::RoomFollowed(_) => true,
-            MessageType::BotCommand(_) => true,
-
-            // these ones probably need special permission checks
+            MessageType::MemberJoin(_) => true,
+            MessageType::ThreadRename(_) => false,
             MessageType::ThreadPingback(_) => true,
-            MessageType::ModerationLog(_) => true,
             #[cfg(feature = "feat_automod")]
             MessageType::ModerationAuto(_) => true,
-            MessageType::ModerationReport(_) => true,
-            MessageType::SystemMessage(_) => true,
-
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
+            MessageType::Call(_) => false,
         }
     }
 

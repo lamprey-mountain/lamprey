@@ -1,9 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{
-    Embed, Interactions, Mentions, MessageDefaultMarkdown, MessageDefaultTagged,
-    MessageThreadUpdate, MessageType, UserId,
-};
+use common::v1::types::{Embed, Mentions, MessageDefaultMarkdown, MessageType, UserId};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -45,16 +42,16 @@ pub struct DbMessage {
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {
     DefaultMarkdown,
-    DefaultTagged,
-    ThreadUpdate,
+    DefaultTagged, // unused
+    ThreadUpdate,  // unused
+    ThreadRename,
 }
 
 impl From<MessageType> for DbMessageType {
     fn from(value: MessageType) -> Self {
         match value {
             MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
-            MessageType::DefaultTagged(_) => DbMessageType::DefaultTagged,
-            MessageType::ThreadUpdate(_) => DbMessageType::ThreadUpdate,
+            MessageType::ThreadRename(_) => DbMessageType::ThreadRename,
             _ => todo!(),
         }
     }
@@ -65,7 +62,7 @@ impl From<DbMessage> for Message {
         Message {
             id: row.id,
             message_type: match row.message_type {
-                DbMessageType::DefaultMarkdown => {
+                DbMessageType::DefaultMarkdown | DbMessageType::DefaultTagged => {
                     let attachments: Vec<serde_json::Value> =
                         serde_json::from_value(row.attachments).unwrap_or_default();
                     let embeds: Vec<Embed> = row
@@ -85,32 +82,14 @@ impl From<DbMessage> for Message {
                             .unwrap_or_default(),
                     })
                 }
-                DbMessageType::DefaultTagged => {
-                    let attachments: Vec<serde_json::Value> =
-                        serde_json::from_value(row.attachments).unwrap_or_default();
-                    let embeds: Vec<Embed> = row
-                        .embeds
-                        .and_then(|e| serde_json::from_value(e).ok())
-                        .unwrap_or_default();
-                    MessageType::DefaultTagged(MessageDefaultTagged {
-                        content: row.content,
-                        attachments: attachments.into_iter().map(media_from_db).collect(),
-                        metadata: row.metadata,
-                        reply_id: row.reply_id.map(Into::into),
-                        embeds,
-                        reactions: row
-                            .reactions
-                            .map(|a| serde_json::from_value(a).unwrap())
-                            .unwrap_or_default(),
-                        interactions: Interactions::default(),
-                    })
-                }
-                DbMessageType::ThreadUpdate => MessageType::ThreadUpdate(MessageThreadUpdate {
-                    patch: row
-                        .metadata
+                DbMessageType::ThreadRename => MessageType::ThreadRename(
+                    row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())
-                        .unwrap_or_default(),
-                }),
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::ThreadUpdate => {
+                    panic!("this is deprecated; no ThreadUpdate messages should exist anymore")
+                }
             },
             thread_id: row.thread_id,
             version_id: row.version_id,

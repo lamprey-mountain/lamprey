@@ -531,19 +531,6 @@ impl ServiceEmbed {
                     m.attachments.iter().map(|a| a.id).collect(),
                 )
             }
-            common::v1::types::MessageType::DefaultTagged(m) => {
-                if m.embeds
-                    .iter()
-                    .any(|e| e.url.as_ref() == embed.url.as_ref())
-                {
-                    return Ok(());
-                }
-                m.embeds.push(embed);
-                (
-                    m.embeds.clone(),
-                    m.attachments.iter().map(|a| a.id).collect(),
-                )
-            }
             _ => return Ok(()),
         };
 

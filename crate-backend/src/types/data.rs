@@ -229,13 +229,12 @@ pub struct DbMessageCreate {
     pub created_at: Option<time::PrimitiveDateTime>,
 }
 
-// TODO: move to types
+// TODO: move to types?
 impl DbMessageCreate {
     pub fn content(&self) -> Option<String> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.content.clone(),
-            MessageType::DefaultTagged(msg) => msg.content.clone(),
-            MessageType::ThreadUpdate(_patch) => Some("(thread update)".to_owned()),
+            MessageType::ThreadRename(_patch) => Some("(thread rename)".to_owned()),
             _ => None,
         }
     }
@@ -243,7 +242,7 @@ impl DbMessageCreate {
     pub fn metadata(&self) -> Option<serde_json::Value> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
-            MessageType::ThreadUpdate(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::ThreadRename(patch) => Some(serde_json::to_value(patch).ok()?),
             _ => None,
         }
     }
@@ -251,7 +250,6 @@ impl DbMessageCreate {
     pub fn reply_id(&self) -> Option<MessageId> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.reply_id,
-            MessageType::DefaultTagged(msg) => msg.reply_id,
             _ => None,
         }
     }
