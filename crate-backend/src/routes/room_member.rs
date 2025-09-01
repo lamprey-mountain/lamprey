@@ -312,10 +312,12 @@ async fn room_member_delete(
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
-    let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
-    let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
-    if rank <= other_rank {
-        return Err(Error::BadStatic("your rank is too low"));
+    if auth_user_id != target_user_id {
+        let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+        let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+        if rank <= other_rank {
+            return Err(Error::BadStatic("your rank is too low"));
+        }
     }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
         .await?;
