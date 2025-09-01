@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c141fe4219a665a466d0436604a6851277baf504d4313bdabca1936867ae5360"
+}

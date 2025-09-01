@@ -293,7 +293,7 @@ impl Data for Globals {
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()> {
         let row: MessageMetadataRow = meta.into();
         query!(
-            "INSERT OR IGNORE INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES ($1, $2, $3, $4)",
+            "INSERT OR IGNORE INTO message (chat_id, chat_thread_id, discord_id, discord_channel_id) VALUES (?, ?, ?, ?)",
             row.chat_id,
             row.chat_thread_id,
             row.discord_id,
