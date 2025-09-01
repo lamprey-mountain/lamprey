@@ -9,7 +9,7 @@ use common::v1::types::{
 use moka::future::Cache;
 
 use crate::error::{Error, Result};
-use crate::types::DbRoleCreate;
+use crate::types::{DbRoleCreate, MediaLinkType};
 use crate::ServerStateInner;
 
 pub struct ServiceRooms {
@@ -52,7 +52,18 @@ impl ServiceRooms {
             return Err(Error::NotModified);
         }
 
+        if let Some(icon) = &patch.icon {
+            if start.icon.is_some() {
+                data.media_link_delete_all(*room_id).await?;
+            }
+            if let Some(media_id) = icon {
+                data.media_link_insert(*media_id, *room_id, MediaLinkType::AvatarRoom)
+                    .await?;
+            }
+        }
+
         data.room_update(room_id, patch).await?;
+
         self.cache_room.invalidate(&room_id).await;
         let end = self.get(room_id, Some(user_id)).await?;
 

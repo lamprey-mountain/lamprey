@@ -11,7 +11,7 @@ use common::v1::types::{
     MessageThreadUpdate, ThreadType,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{trace, warn};
+use tracing::warn;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;

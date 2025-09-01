@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
 use moka::future::Cache;
-use tracing::trace;
 use uuid::Uuid;
 
 use crate::error::Result;
