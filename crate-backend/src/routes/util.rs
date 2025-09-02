@@ -66,8 +66,34 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
         let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
         match session.status {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
-            SessionStatus::Authorized { user_id } => Ok(Self(session, user_id)),
-            SessionStatus::Sudo { user_id, .. } => Ok(Self(session, user_id)),
+            SessionStatus::Authorized { user_id } | SessionStatus::Sudo { user_id, .. } => {
+                let HeaderPuppetId(puppet_id) =
+                    HeaderPuppetId::from_request_parts(parts, s).await?;
+                if let Some(puppet_id) = puppet_id {
+                    let user = s.services().users.get(user_id).await?;
+                    let puppet = s.services().users.get(puppet_id).await?;
+
+                    let Some(bot) = user.bot else {
+                        return Err(Error::BadStatic("user is not a bot"));
+                    };
+
+                    if !bot.is_bridge {
+                        return Err(Error::BadStatic("bot is not a bridge"));
+                    }
+
+                    let Some(p) = puppet.puppet else {
+                        return Err(Error::BadStatic("can only puppet users of type Puppet"));
+                    };
+
+                    if p.owner_id != user.id {
+                        return Err(Error::BadStatic("can only puppet your own puppets"));
+                    }
+
+                    Ok(Self(session, puppet_id))
+                } else {
+                    Ok(Self(session, user_id))
+                }
+            }
         }
     }
 }
@@ -81,31 +107,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
     ) -> Result<Self, Self::Rejection> {
         let AuthWithSession(_session, user_id) =
             AuthWithSession::from_request_parts(parts, s).await?;
-        let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
-        if let Some(puppet_id) = puppet_id {
-            let user = s.services().users.get(user_id).await?;
-            let puppet = s.services().users.get(puppet_id).await?;
-
-            let Some(bot) = user.bot else {
-                return Err(Error::BadStatic("user is not a bot"));
-            };
-
-            if !bot.is_bridge {
-                return Err(Error::BadStatic("bot is not a bridge"));
-            }
-
-            let Some(p) = puppet.puppet else {
-                return Err(Error::BadStatic("can only puppet users of type Puppet"));
-            };
-
-            if p.owner_id != user.id {
-                return Err(Error::BadStatic("can only puppet your own puppets"));
-            }
-
-            Ok(Self(puppet_id))
-        } else {
-            Ok(Self(user_id))
-        }
+        Ok(Self(user_id))
     }
 }
 
