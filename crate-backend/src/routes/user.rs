@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    MediaTrackInfo, MessageSync, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
+    PaginationQuery, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::routes::util::{AuthWithSession, HeaderReason};
 use crate::types::{DbUserCreate, MediaLinkType, UserIdReq};
 use crate::ServerState;
 
@@ -31,8 +33,9 @@ use crate::error::{Error, Result};
 )]
 async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    AuthWithSession(session, auth_user_id): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
@@ -74,6 +77,21 @@ async fn user_update(
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id).await?;
+    data.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user_id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::UserUpdate {
+            changes: Changes::new()
+                .change("name", &start.name, &user.name)
+                .change("description", &start.description, &user.description)
+                .change("avatar", &start.avatar, &user.avatar)
+                .build(),
+        },
+    })
+    .await?;
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -161,11 +179,25 @@ async fn user_get(
     )
 )]
 async fn user_audit_logs(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserIdReq>,
+    Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+
+    if auth_user_id != target_user_id {
+        return Err(Error::NotFound);
+    }
+
+    let data = s.data();
+    let logs = data
+        .audit_logs_room_fetch(target_user_id.into_inner().into(), paginate)
+        .await?;
+    Ok(Json(logs))
 }
 
 /// Guest create

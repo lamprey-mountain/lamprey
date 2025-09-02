@@ -1,11 +1,20 @@
-import { For, Show, type VoidProps } from "solid-js";
+import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
-import { getTimestampFromUUID, type Room } from "sdk";
+import { getTimestampFromUUID, type User } from "sdk";
+import { getNotableChanges } from "../audit-log-util.ts";
 
-export function AuditLog(props: VoidProps<{ room: Room }>) {
+export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 
-	const log = api.audit_logs.fetch(() => props.room.id);
+	const [log] = createResource(async () => {
+		const { data } = await api.client.http.GET(
+			"/api/v1/user/{user_id}/audit-logs",
+			{
+				params: { path: { user_id: "@self" } },
+			},
+		);
+		return data;
+	});
 
 	const dateFmt = new Intl.DateTimeFormat("en-US", {
 		dateStyle: "short",
@@ -21,15 +30,6 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				<ul class="room-settings-audit-log">
 					<For each={log()!.items}>
 						{(entry) => {
-							const member = api.room_members.fetch(() => props.room.id, () =>
-								entry.user_id);
-							const user = api.users.fetch(() =>
-								entry.user_id
-							);
-							const m = member.error ? { membership: null } : member();
-							const name =
-								(m?.membership === "Join" ? m.override_name : null) ||
-								user()?.name;
 							const ts = () => getTimestampFromUUID(entry.id);
 							return (
 								<li data-id={entry.id}>
@@ -38,7 +38,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 									</div>
 									<ul>
 										<li>
-											<em class="light">caused by:</em> {name}
+											<em class="light">caused by:</em> you
 										</li>
 										<li>
 											<em class="light">caused at:</em>{" "}

@@ -8,20 +8,22 @@ use crate::v1::types::{
     PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
 };
 
+// pub const SERVER_ROOM_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuditLogEntry {
     /// Unique id idenfitying this entry
     pub id: AuditLogEntryId,
 
-    /// Room this happened in
+    /// Room this happened in. Is user_id for user audit logs.
     pub room_id: RoomId,
 
     /// User who caused this entry to be created
     pub user_id: UserId,
 
-    /// Session of the user who caused this
-    // will be for user audit logs
+    /// Session of the user who caused this, for user audit logs
+    // TODO: set and save this field
     pub session_id: Option<SessionId>,
 
     /// User supplied reason why this happened
@@ -164,9 +166,10 @@ pub enum AuditLogEntryType {
     // MessageUnpin,
     // MessageRemove,
     // MessageRestore,
-
-    // // for user audit log, which doesn't exist yet
-    // UserUpdate,
+    UserUpdate {
+        changes: Vec<AuditLogChange>,
+    },
+    // TODO: impl these events
     // FriendAdd,
     // FriendRemove,
     // BlockAdd,

@@ -4,3 +4,4 @@ export * from "./Todo.tsx";
 export * from "./Email.tsx";
 export * from "./Applications.tsx";
 export * from "./Blocked.tsx";
+export * from "./AuditLog.tsx";
