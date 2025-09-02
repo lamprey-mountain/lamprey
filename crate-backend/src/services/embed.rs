@@ -17,6 +17,7 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
+use crate::types::MediaLinkType;
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -525,6 +526,40 @@ impl ServiceEmbed {
                 {
                     return Ok(());
                 }
+
+                if let Some(media) = &embed.media {
+                    data.media_link_insert(
+                        media.id,
+                        *message.version_id,
+                        MediaLinkType::Embed,
+                    )
+                    .await?;
+                }
+                if let Some(media) = &embed.thumbnail {
+                    data.media_link_insert(
+                        media.id,
+                        *message.version_id,
+                        MediaLinkType::Embed,
+                    )
+                    .await?;
+                }
+                if let Some(media) = &embed.author_avatar {
+                    data.media_link_insert(
+                        media.id,
+                        *message.version_id,
+                        MediaLinkType::Embed,
+                    )
+                    .await?;
+                }
+                if let Some(media) = &embed.site_avatar {
+                    data.media_link_insert(
+                        media.id,
+                        *message.version_id,
+                        MediaLinkType::Embed,
+                    )
+                    .await?;
+                }
+
                 m.embeds.push(embed);
                 (
                     m.embeds.clone(),
