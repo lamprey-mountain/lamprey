@@ -201,7 +201,11 @@ pub async fn invite_use(
             let member = d.room_member_get(room.id, user_id).await?;
             s.services.perms.invalidate_room(user_id, room.id).await;
             s.services.perms.invalidate_is_mutual(user_id);
-            s.broadcast_room(room.id, user_id, MessageSync::RoomMemberUpsert { member })
+            let room_id = room.id;
+            // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
+            s.broadcast_room(room_id, user_id, MessageSync::RoomCreate { room })
+                .await?;
+            s.broadcast_room(room_id, user_id, MessageSync::RoomMemberUpsert { member })
                 .await?;
         }
         InviteTarget::Server => {

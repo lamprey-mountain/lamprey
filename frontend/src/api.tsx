@@ -88,26 +88,20 @@ export function createApi(
 	const dms = new Dms();
 
 	temp_events.on("sync", (msg) => {
-		if (msg.type === "RoomCreate") {
-			const { room } = msg;
-			rooms.cache.set(room.id, room);
-			if (rooms._cachedListing?.pagination) {
-				const l = rooms._cachedListing;
-				const p = l.pagination!;
-				l.mutate({
-					...p,
-					items: [...p.items, room],
-					total: p.total + 1,
-				});
-			}
-		} else if (msg.type === "RoomUpdate") {
+		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
 			if (rooms._cachedListing?.pagination) {
 				const l = rooms._cachedListing;
 				const p = l.pagination!;
 				const idx = p.items.findIndex((i) => i.id === room.id);
-				if (idx !== -1) {
+				if (idx === -1) {
+					l.mutate({
+						...p,
+						items: [...p.items, room],
+						total: p.total + 1,
+					});
+				} else {
 					l.mutate({
 						...p,
 						items: p.items.toSpliced(idx, 1, room),
