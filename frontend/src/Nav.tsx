@@ -19,6 +19,8 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		api.dms.list();
 	}
 
+	const room = api.rooms.fetch(() => props.room_id);
+
 	// update list when room changes
 	createEffect(() => {
 		const threads = [...api.threads.cache.values()]
@@ -66,7 +68,9 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	return (
 		<nav id="nav">
 			<Show when={flags.has("nav_header")}>
-				<header style="background: #eef1;padding:8px">header</header>
+				<header style="background: #eef1;padding:8px">
+					{props.room_id ? (room()?.name ?? "loading...") : "home"}
+				</header>
 			</Show>
 
 			<ul>
