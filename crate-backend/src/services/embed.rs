@@ -528,36 +528,20 @@ impl ServiceEmbed {
                 }
 
                 if let Some(media) = &embed.media {
-                    data.media_link_insert(
-                        media.id,
-                        *message.version_id,
-                        MediaLinkType::Embed,
-                    )
-                    .await?;
+                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                        .await?;
                 }
                 if let Some(media) = &embed.thumbnail {
-                    data.media_link_insert(
-                        media.id,
-                        *message.version_id,
-                        MediaLinkType::Embed,
-                    )
-                    .await?;
+                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                        .await?;
                 }
                 if let Some(media) = &embed.author_avatar {
-                    data.media_link_insert(
-                        media.id,
-                        *message.version_id,
-                        MediaLinkType::Embed,
-                    )
-                    .await?;
+                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                        .await?;
                 }
                 if let Some(media) = &embed.site_avatar {
-                    data.media_link_insert(
-                        media.id,
-                        *message.version_id,
-                        MediaLinkType::Embed,
-                    )
-                    .await?;
+                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                        .await?;
                 }
 
                 m.embeds.push(embed);
