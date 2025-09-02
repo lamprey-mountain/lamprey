@@ -1,12 +1,13 @@
 import { For, Match, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
 import type { ThreadT } from "./types.ts";
-import Editor, { createEditorState } from "./Editor.tsx";
+import Editor, { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { getMessageContent, getMessageOverrideName } from "./util.tsx";
+import { EditorState } from "prosemirror-state";
 
 type InputProps = {
 	thread: ThreadT;
@@ -72,28 +73,27 @@ export function Input(props: InputProps) {
 		return fmt.format(user_ids.map((i) => getName(i) ?? "someone"));
 	};
 
-	const [editorState, setEditorState] = createSignal();
+	const onSubmit = (text: string) => {
+		ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+	};
 
-	createEffect(on(() => props.thread.id, (tid) => {
-		let state = ctx.thread_editor_state.get(tid);
-		if (!state) {
-			state = createEditorState(
-				(text) => {
-					ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
-				},
-				(has_content) => {
-					if (has_content) {
-						sendTyping();
-					} else {
-						sendTyping.clear();
-					}
-				},
-			);
-			ctx.thread_editor_state.set(props.thread.id, state);
+	const onChange = (state: EditorState) => {
+		ctx.thread_editor_state.set(props.thread.id, state);
+		const hasContent = state.doc.textContent.trim().length > 0;
+		if (hasContent) {
+			sendTyping();
+		} else {
+			sendTyping.clear();
 		}
-		console.log("editor: set state");
-		setEditorState(state);
-	}));
+	};
+
+	const editor = createEditor({});
+
+	createEffect(() => {
+		const state = ctx.thread_editor_state.get(props.thread.id);
+		editor.setState(state);
+		editor.focus();
+	});
 
 	return (
 		<div class="input" style="position:relative">
@@ -136,9 +136,9 @@ export function Input(props: InputProps) {
 						value="upload file"
 					/>
 				</label>
-				<Editor
-					thread_id={props.thread.id}
-					state={editorState()}
+				<editor.View
+					onSubmit={onSubmit}
+					onChange={onChange}
 					onUpload={handleUpload}
 					placeholder="send a message..."
 				/>

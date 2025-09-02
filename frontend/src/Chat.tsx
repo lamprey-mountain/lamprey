@@ -229,7 +229,7 @@ export const ChatMain = (props: ChatProps) => {
 			data-thread-id={props.thread.id}
 			role="log"
 			onKeyDown={(e) => {
-				console.log(e);
+				// console.log(e);
 				if (e.key === "Escape") {
 					const thread_id = props.thread.id;
 
