@@ -3,10 +3,9 @@ import { type Attachment, useCtx } from "./context.ts";
 import type { ThreadT } from "./types.ts";
 import Editor, { createEditorState } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { AttachmentView } from "./Message.tsx";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
-import { onCleanup } from "solid-js";
+import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { getMessageContent, getMessageOverrideName } from "./util.tsx";
 
 type InputProps = {
@@ -49,26 +48,6 @@ export function Input(props: InputProps) {
 		});
 	}, 8000);
 
-	const editor_state = () => {
-		let state = ctx.thread_editor_state.get(props.thread.id);
-		if (!state) {
-			state = createEditorState(
-				(text) => {
-					ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
-				},
-				(has_content) => {
-					if (has_content) {
-						sendTyping();
-					} else {
-						sendTyping.clear();
-					}
-				},
-			);
-			ctx.thread_editor_state.set(props.thread.id, state);
-		}
-		return state;
-	};
-
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
 		const member = api.room_members.fetch(
@@ -92,6 +71,29 @@ export function Input(props: InputProps) {
 			.filter((i) => i !== user_id);
 		return fmt.format(user_ids.map((i) => getName(i) ?? "someone"));
 	};
+
+	const [editorState, setEditorState] = createSignal();
+
+	createEffect(on(() => props.thread.id, (tid) => {
+		let state = ctx.thread_editor_state.get(tid);
+		if (!state) {
+			state = createEditorState(
+				(text) => {
+					ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+				},
+				(has_content) => {
+					if (has_content) {
+						sendTyping();
+					} else {
+						sendTyping.clear();
+					}
+				},
+			);
+			ctx.thread_editor_state.set(props.thread.id, state);
+		}
+		console.log("editor: set state");
+		setEditorState(state);
+	}));
 
 	return (
 		<div class="input" style="position:relative">
@@ -136,7 +138,7 @@ export function Input(props: InputProps) {
 				</label>
 				<Editor
 					thread_id={props.thread.id}
-					state={editor_state()}
+					state={editorState()}
 					onUpload={handleUpload}
 					placeholder="send a message..."
 				/>
