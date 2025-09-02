@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::misc::Color;
-use common::v1::types::{self};
+use common::v1::types::{self, MessageSync};
 use common::v1::types::{Embed, EmbedId};
 use common::v1::types::{Media, UserId};
 use mediatype::{MediaType, MediaTypeBuf};
@@ -17,7 +17,7 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
-use crate::types::MediaLinkType;
+use crate::types::{DbMessageCreate, MediaLinkType};
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -556,14 +556,14 @@ impl ServiceEmbed {
         data.message_update(
             message_ref.thread_id,
             message_ref.message_id,
-            crate::types::DbMessageCreate {
+            DbMessageCreate {
                 thread_id: message_ref.thread_id,
                 attachment_ids: attachments,
                 author_id: message.author_id,
                 embeds,
                 message_type: new_message_type,
-                edited_at: None,
-                created_at: None,
+                edited_at: message.edited_at.map(|t| t.into()),
+                created_at: message.created_at.map(|t| t.into()),
             },
         )
         .await?;
@@ -576,7 +576,7 @@ impl ServiceEmbed {
             .broadcast_thread(
                 message_ref.thread_id,
                 user_id,
-                common::v1::types::MessageSync::MessageUpdate { message },
+                MessageSync::MessageUpdate { message },
             )
             .await?;
         Ok(())
