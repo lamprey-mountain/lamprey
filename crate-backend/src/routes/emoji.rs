@@ -150,6 +150,7 @@ async fn emoji_delete(
         perms.ensure(Permission::EmojiManage)?;
     }
     data.emoji_delete(emoji_id).await?;
+    data.media_link_delete_all(*emoji.id).await?;
 
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
