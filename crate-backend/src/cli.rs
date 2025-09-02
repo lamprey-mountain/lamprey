@@ -25,6 +25,9 @@ pub enum Command {
     /// (TEMP) migrate media from raw to v1
     MigrateMedia {},
 
-    /// garbage collect media
+    /// garbage collect media deleted over a week ago
     GcMedia {},
+
+    /// garbage collect messages deleted over a week ago
+    GcMessages {},
 }
