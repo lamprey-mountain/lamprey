@@ -143,6 +143,7 @@ async fn main() -> Result<()> {
         cli::Command::Serve {} => serve(config).await?,
         cli::Command::Check {} => check(config).await?,
         cli::Command::MigrateMedia {} => migrate_media(config).await?,
+        cli::Command::GcMedia {} => gc_media(config).await?,
     }
 
     Ok(())
@@ -254,6 +255,64 @@ async fn migrate_media(config: Config) -> Result<()> {
                 .execute(&mut *tx)
                 .await?;
             info!("migrate {}", media_id);
+        }
+        tx.commit().await?;
+    }
+
+    Ok(())
+}
+
+async fn gc_media(config: Config) -> Result<()> {
+    info!(
+        "Starting media garbage collection job with config: {:#?}",
+        config
+    );
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect(&config.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let blobs_builder = opendal::services::S3::default()
+        .bucket(&config.s3.bucket)
+        .endpoint(config.s3.endpoint.as_str())
+        .region(&config.s3.region)
+        .access_key_id(&config.s3.access_key_id)
+        .secret_access_key(&config.s3.secret_access_key);
+    let blobs = opendal::Operator::new(blobs_builder)?
+        .layer(LoggingLayer::default())
+        .finish();
+    blobs.check().await?;
+
+    info!("finding items...");
+    let result = sqlx::query_file!("sql/gc_media.sql").execute(&pool).await?;
+    info!("found {} items to delete", result.rows_affected());
+
+    loop {
+        let rows = sqlx::query!("select id from media where deleted_at is not null limit 50")
+            .fetch_all(&pool)
+            .await?;
+        let mut tx = pool.begin().await?;
+        if rows.is_empty() {
+            break;
+        }
+        for row in rows {
+            let items = blobs
+                .list_with(&format!("media/{}/", row.id))
+                .recursive(true)
+                .await?;
+            for item in items {
+                if item.metadata().is_file() {
+                    blobs.delete(item.path()).await?;
+                }
+            }
+            sqlx::query!("delete from media where id = $1", row.id)
+                .execute(&mut *tx)
+                .await?;
+            info!("delete {}", row.id);
         }
         tx.commit().await?;
     }

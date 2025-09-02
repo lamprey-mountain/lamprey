@@ -1,3 +1,3 @@
--- FIXME: don't delete media unless it's sufficiently old
--- select id from media where not exists (select 1 from media_link where media_id = media.id);
-delete from media where id not in (select media_id from media_link);
+update media set deleted_at = now()
+where id not in (select media_id from media_link)
+and extract_timestamp_from_uuid_v7(id) < now() - interval '7 day';

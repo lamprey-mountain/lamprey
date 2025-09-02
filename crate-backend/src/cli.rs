@@ -22,18 +22,9 @@ pub enum Command {
     /// check config
     Check {},
 
-    /// migrate media from raw to v1
+    /// (TEMP) migrate media from raw to v1
     MigrateMedia {},
-    // TODO
-    // /// admin server management
-    // Admin {},
 
-    // /// start a syncing node
-    // ServeSyncer {},
-
-    // /// start a voip node
-    // ServeVoip {},
-
-    // /// start a media processing node
-    // ServeMedia {},
+    /// garbage collect media
+    GcMedia {},
 }
