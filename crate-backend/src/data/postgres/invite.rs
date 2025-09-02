@@ -140,7 +140,7 @@ impl DataInvite for Postgres {
         	WHERE target_id = $1 AND code > $2 AND code < $3 and deleted_at is null
         	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
         ",
-            room_id.into_inner(),
+            *room_id,
             p.after.to_string(),
             p.before.to_string(),
             p.dir.to_string(),
@@ -150,7 +150,7 @@ impl DataInvite for Postgres {
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM invite WHERE target_id = $1 and deleted_at is null",
-            room_id.into_inner()
+            *room_id
         )
         .fetch_one(&mut *tx)
         .await?;

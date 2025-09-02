@@ -162,7 +162,7 @@ impl DataUser for Postgres {
         .await?;
         let user: User = user.into();
         let version_id = UserVerId::new();
-        let avatar = patch.avatar.unwrap_or(user.avatar).map(|i| i.into_inner());
+        let avatar = patch.avatar.unwrap_or(user.avatar).map(|i| *i);
         query!(
             "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",
             *user_id,
@@ -197,7 +197,7 @@ impl DataUser for Postgres {
             SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
         "#,
-            id.into_inner()
+            *id
         )
         .fetch_one(&self.pool)
         .await?;
@@ -214,7 +214,7 @@ impl DataUser for Postgres {
             SELECT id FROM usr
             WHERE parent_id = $1 AND puppet->>'external_id' = $2
             "#,
-            owner_id.into_inner(),
+            *owner_id,
             external_id,
         )
         .fetch_optional(&self.pool)

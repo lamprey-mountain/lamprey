@@ -27,7 +27,7 @@ impl DataReaction for Postgres {
     ) -> Result<()> {
         debug!("reaction put user_id={user_id} message_id={message_id} key={key:?}");
         let emoji_id = match &key.0 {
-            Emoji::Custom(e) => Some(e.id.into_inner()),
+            Emoji::Custom(e) => Some(*e.id),
             Emoji::Unicode(_) => None,
         };
         let key = match &key.0 {
@@ -46,43 +46,13 @@ impl DataReaction for Postgres {
             SELECT $1, $2, $3, $4, pos FROM pos
             ON CONFLICT DO NOTHING
             "#,
-            message_id.into_inner(),
-            user_id.into_inner(),
+            *message_id,
+            *user_id,
             key,
             emoji_id,
         )
         .execute(&self.pool)
         .await?;
-        // let mut tx = self.pool.begin().await?;
-        // let pos_new  = query_scalar!(
-        //     r#"SELECT coalesce(max(position) + 1, 0) as "pos!" FROM reaction WHERE message_id = $1"#,
-        //     message_id.into_inner()
-        //     )
-        //     .fetch_one(&mut *tx)
-        //     .await?;
-        // let pos_existing = query_scalar!(
-        //     r#"SELECT position FROM reaction WHERE message_id = $1 AND key = $2"#,
-        //     message_id.into_inner(),
-        //     key
-        // )
-        // .fetch_optional(&mut *tx)
-        // .await?;
-        // let pos = pos_existing.unwrap_or(pos_new);
-        // query!(
-        //     r#"
-        //     INSERT INTO reaction (message_id, user_id, key, emoji_id, position)
-        //     VALUES ($1, $2, $3, $4, $5)
-        //     ON CONFLICT DO NOTHING
-        //     "#,
-        //     message_id.into_inner(),
-        //     user_id.into_inner(),
-        //     key,
-        //     emoji_id,
-        //     pos,
-        // )
-        // .execute(&mut *tx)
-        // .await?;
-        // tx.commit().await?;
         Ok(())
     }
 
@@ -103,8 +73,8 @@ impl DataReaction for Postgres {
             DELETE FROM reaction
             WHERE message_id = $1 AND user_id = $2 AND key = $3
             "#,
-            message_id.into_inner(),
-            user_id.into_inner(),
+            *message_id,
+            *user_id,
             key,
         )
         .execute(&self.pool)
@@ -135,16 +105,16 @@ impl DataReaction for Postgres {
                 WHERE message_id = $1 AND key = $2 AND user_id > $3 AND user_id < $4
             	ORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6
                 "#,
-                message_id.into_inner(),
+                *message_id,
                 key,
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2"#,
-                message_id.into_inner(),
+                *message_id,
                 key,
             ),
             |i: &ReactionListItem| i.user_id.to_string()
@@ -152,12 +122,9 @@ impl DataReaction for Postgres {
     }
 
     async fn reaction_purge(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
-        query!(
-            r#"DELETE FROM reaction WHERE message_id = $1"#,
-            message_id.into_inner(),
-        )
-        .execute(&self.pool)
-        .await?;
+        query!(r#"DELETE FROM reaction WHERE message_id = $1"#, *message_id,)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
@@ -173,7 +140,7 @@ impl DataReaction for Postgres {
         };
         query!(
             r#"DELETE FROM reaction WHERE message_id = $1 AND key = $2"#,
-            message_id.into_inner(),
+            *message_id,
             key,
         )
         .execute(&self.pool)

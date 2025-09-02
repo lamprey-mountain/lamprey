@@ -22,7 +22,7 @@ impl DataEmbed for Postgres {
             "INSERT INTO url_embed_queue (id, message_ref, user_id, url) VALUES ($1, $2, $3, $4)",
             id,
             message_ref.map(|m| serde_json::to_value(m).unwrap()),
-            user_id.into_inner(),
+            *user_id,
             url
         )
         .execute(&self.pool)

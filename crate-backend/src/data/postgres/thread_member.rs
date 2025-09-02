@@ -147,8 +147,8 @@ impl DataThreadMember for Postgres {
             	ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5
                 "#,
                 *thread_id,
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),

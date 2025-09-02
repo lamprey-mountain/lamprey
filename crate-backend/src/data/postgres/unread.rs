@@ -26,10 +26,10 @@ impl DataUnread for Postgres {
     			message_id = excluded.message_id,
     			version_id = excluded.version_id;
         "#,
-            thread_id.into_inner(),
-            user_id.into_inner(),
-            message_id.into_inner(),
-            version_id.into_inner()
+            *thread_id,
+            *user_id,
+            *message_id,
+            *version_id
         )
         .execute(&self.pool)
         .await?;

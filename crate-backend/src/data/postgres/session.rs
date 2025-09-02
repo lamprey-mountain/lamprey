@@ -56,7 +56,7 @@ impl DataSession for Postgres {
     }
 
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
-        let user_id = status.user_id().map(|i| i.into_inner());
+        let user_id = status.user_id().map(|i| *i);
         let status_db: DbSessionStatus = status.into();
         query!(
             r#"UPDATE session SET status = $2, user_id = $3 WHERE id = $1"#,

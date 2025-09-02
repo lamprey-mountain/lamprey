@@ -72,7 +72,7 @@ impl DataDm for Postgres {
                 DbThread,
                 "sql/dm_paginate.sql",
                 user_id.into_inner(),
-                p.after.into_inner(),
+                *p.after,
                 p.before.into_inner(),
                 p.dir.to_string(),
                 (p.limit + 1) as i32

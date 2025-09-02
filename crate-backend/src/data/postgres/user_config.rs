@@ -14,7 +14,7 @@ impl DataUserConfig for Postgres {
     async fn user_config_set(&self, user_id: UserId, config: &UserConfig) -> Result<()> {
         query!(
             "update usr set config = $2 where id = $1",
-            user_id.into_inner(),
+            *user_id,
             serde_json::to_value(config)?,
         )
         .execute(&self.pool)
@@ -23,7 +23,7 @@ impl DataUserConfig for Postgres {
     }
 
     async fn user_config_get(&self, user_id: UserId) -> Result<UserConfig> {
-        let conf = query_scalar!("select config from usr where id = $1", user_id.into_inner(),)
+        let conf = query_scalar!("select config from usr where id = $1", *user_id)
             .fetch_one(&self.pool)
             .await?;
         let conf = conf

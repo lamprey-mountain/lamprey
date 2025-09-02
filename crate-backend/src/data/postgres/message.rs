@@ -116,7 +116,7 @@ impl DataMessage for Postgres {
     	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()))
         "#,
             message_id,
-            create.thread_id.into_inner(),
+            *create.thread_id,
             message_id,
             create.content(),
             create.metadata(),

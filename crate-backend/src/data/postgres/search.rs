@@ -30,18 +30,14 @@ impl DataSearch for Postgres {
             query_file_as!(
                 DbMessage,
                 "sql/search_message.sql",
-                user_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *user_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
                 query.query,
             ),
-            query_file_scalar!(
-                "sql/search_message_count.sql",
-                user_id.into_inner(),
-                query.query,
-            ),
+            query_file_scalar!("sql/search_message_count.sql", *user_id, query.query,),
             |i: &Message| i.id.to_string()
         )
     }

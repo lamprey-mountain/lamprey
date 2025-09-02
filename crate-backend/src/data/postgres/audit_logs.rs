@@ -46,7 +46,7 @@ impl DataAuditLogs for Postgres {
             ),
             query_scalar!(
                 "SELECT count(*) FROM audit_log WHERE room_id = $1",
-                room_id.into_inner()
+                *room_id
             ),
             |row: DbAuditLogEntry| {
                 AuditLogEntry {
