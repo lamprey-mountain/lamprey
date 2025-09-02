@@ -1,0 +1,123 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n),\nmessage_count as (\n    select thread_id, count(*) as count\n    from message\n    where is_latest\n    group by thread_id\n),\nmember_count as (\n    select thread_id, count(*) as count\n    from thread_member\n    where membership = 'Join'\n    group by thread_id\n),\npermission_overwrites as (\n    select target_id, json_agg(jsonb_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) as overwrites\n    from permission_overwrite\n    group by target_id\n)\nselect\n    thread.id,\n    thread.type as \"ty: DbThreadType\",\n    thread.room_id,\n    thread.creator_id,\n    thread.name,\n    thread.version_id,\n    thread.description,\n    thread.nsfw,\n    thread.locked,\n    thread.archived_at,\n    thread.deleted_at,\n    coalesce(message_count.count, 0) as \"message_count!\",\n    coalesce(member_count.count, 0) as \"member_count!\",\n    last_id.last_version_id as \"last_version_id\",\n    coalesce(permission_overwrites.overwrites, '[]') as \"permission_overwrites!\"\nfrom dm\njoin thread on dm.thread_id = thread.id\nleft join message_count on message_count.thread_id = thread.id\nleft join member_count on member_count.thread_id = thread.id\njoin last_id on last_id.thread_id = thread.id\nleft join permission_overwrites on permission_overwrites.target_id = thread.id\nwhere (dm.user_a_id = $1 or dm.user_b_id = $1)\n  AND last_id.last_version_id > $2 AND last_id.last_version_id < $3\norder by (CASE WHEN $4 = 'f' THEN last_id.last_version_id END), last_id.last_version_id DESC\nLIMIT $5\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ty: DbThreadType",
+        "type_info": {
+          "Custom": {
+            "name": "thread_type",
+            "kind": {
+              "Enum": [
+                "Chat",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "nsfw",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "locked",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "message_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "member_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "last_version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "permission_overwrites!",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "cc22f0cd5779ffebcea96438450d8942673ceec5d72bbdd28e00b6ab1c9a8ed1"
+}

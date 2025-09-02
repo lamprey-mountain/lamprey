@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE thread SET\n                version_id = $2,\n                locked = true\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "024af5a3b22315bd405cabf8114b485594d0708beb7c951cfb1ec70dc9767bf1"
+}
