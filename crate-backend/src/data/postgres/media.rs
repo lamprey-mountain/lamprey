@@ -145,6 +145,16 @@ impl DataMedia for Postgres {
         Ok(())
     }
 
+    async fn media_delete(&self, media_id: MediaId) -> Result<()> {
+        query!(
+            "UPDATE media SET deleted_at = now() WHERE id = $1",
+            *media_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     async fn media_link_insert(
         &self,
         media_id: MediaId,

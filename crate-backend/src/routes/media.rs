@@ -377,7 +377,7 @@ async fn media_check(
 
 /// Media delete
 ///
-/// Delete unlinked media. If its linked to a message, delete that message instead.
+/// Delete unlinked media. Does not work if its linked to some other resource.
 #[utoipa::path(
     delete,
     path = "/media/{media_id}",
@@ -401,6 +401,7 @@ async fn media_delete(
     } else {
         let links = s.data().media_link_select(media_id).await?;
         if links.is_empty() {
+            s.data().media_delete(media_id).await?;
             Ok(StatusCode::NO_CONTENT)
         } else {
             Ok(StatusCode::CONFLICT)

@@ -236,22 +236,17 @@ pub trait DataInvite {
 #[async_trait]
 pub trait DataMedia {
     async fn media_insert(&self, user_id: UserId, media: Media) -> Result<()>;
-
     async fn media_select(&self, media_id: MediaId) -> Result<(Media, UserId)>;
-
     async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
-
+    async fn media_delete(&self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
         &self,
         media_id: MediaId,
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
-
     async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
-
     async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
-
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
 }
 
