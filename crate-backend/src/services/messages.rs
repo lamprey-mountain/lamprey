@@ -272,9 +272,10 @@ impl ServiceMessages {
             )
             .await?;
 
-        let version_uuid = version_id.into_inner();
         for id in &attachment_ids {
-            data.media_link_insert(*id, version_uuid, MediaLinkType::MessageVersion)
+            data.media_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
+                .await?;
+            data.media_link_insert(*id, *message_id, MediaLinkType::Message)
                 .await?;
         }
 

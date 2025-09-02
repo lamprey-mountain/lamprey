@@ -165,6 +165,7 @@ impl DataMedia for Postgres {
             r#"
     	    INSERT INTO media_link (media_id, target_id, link_type)
     	    VALUES ($1, $2, $3)
+    	    ON CONFLICT DO NOTHING
         "#,
             media_id.into_inner(),
             target_id,
