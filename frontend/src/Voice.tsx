@@ -219,7 +219,6 @@ export const Voice = (p: { thread: Thread }) => {
 					});
 					return (
 						<div class="stream">
-							stream
 							<video
 								controls
 								autoplay

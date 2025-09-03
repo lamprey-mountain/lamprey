@@ -213,7 +213,9 @@ export const createVoiceClient = () => {
 	async function send(payload: SignallingMessage) {
 		const ws = api.client.getWebsocket();
 		const user_id = api.users.cache.get("@self")!.id;
-		console.info("[rtc:signal] send", payload);
+		console.group("[rtc:signal] send", payload.type);
+		console.info(payload);
+		console.groupEnd();
 		ws.send(JSON.stringify({
 			type: "VoiceDispatch",
 			user_id,
@@ -225,7 +227,7 @@ export const createVoiceClient = () => {
 		if (e.type === "VoiceState") {
 			// voice states are mostly unused in rtc, should probably move this to api
 			const state = e.state as VoiceState | null;
-			console.log("[rtc:signal] recv voice state", state);
+			// console.log("[rtc:signal] recv voice state", state);
 		} else if (e.type === "VoiceDispatch") {
 			// if (!voiceState()) return;
 
@@ -240,12 +242,21 @@ export const createVoiceClient = () => {
 				}
 
 				console.log("[rtc:sdp] accept answer");
-				settingRemoteAnswer = true;
-				await conn.setRemoteDescription({
-					type: "answer",
-					sdp: msg.sdp,
-				});
-				settingRemoteAnswer = false;
+				try {
+					settingRemoteAnswer = true;
+					await conn.setRemoteDescription({
+						type: "answer",
+						sdp: msg.sdp,
+					});
+				} catch (err) {
+					console.error("[rtc:sdp] error while accepting answer", err);
+					console.log("COPY PASTE THIS", {
+						answer: msg.sdp,
+						localDescription: conn.localDescription,
+					});
+				} finally {
+					settingRemoteAnswer = false;
+				}
 			} else if (msg.type === "Offer") {
 				const readyForOffer = !makingOffer &&
 					(conn.signalingState === "stable" || settingRemoteAnswer);
@@ -255,12 +266,21 @@ export const createVoiceClient = () => {
 				}
 
 				console.log("[rtc:sdp] accept offer; create answer");
-				await conn.setRemoteDescription({
-					type: "offer",
-					sdp: msg.sdp,
-				});
-				await conn.setLocalDescription(await conn.createAnswer());
-				send({ type: "Answer", sdp: conn.localDescription!.sdp });
+				try {
+					await conn.setRemoteDescription({
+						type: "offer",
+						sdp: msg.sdp,
+					});
+					await conn.setLocalDescription(await conn.createAnswer());
+					send({ type: "Answer", sdp: conn.localDescription!.sdp });
+				} catch (err) {
+					console.error("[rtc:sdp] error while accepting offer", err);
+					console.log("COPY PASTE THIS", {
+						localDescription: conn.localDescription,
+						answer: msg.sdp,
+					});
+					// TODO: what do i do here? try to reset the connection?
+				}
 
 				// // TODO: copy Have logic here?
 				// for (const t of msg.tracks) {
