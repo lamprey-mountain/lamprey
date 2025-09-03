@@ -65,7 +65,8 @@ import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { generateNickname } from "./nick.ts";
 import { Inbox } from "./Inbox.tsx";
 import { ThreadNav } from "./Nav.tsx";
-import { VoiceProvider as VoiceProvider } from "./voice.tsx";
+import { useVoice, VoiceProvider } from "./voice.tsx";
+import { VoiceTray } from "./Voice.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
@@ -228,6 +229,10 @@ export const Root: Component = (props: ParentProps) => {
 
 export const Root2: Component = (props: any) => {
 	const ctx = useCtx();
+	const [voice] = useVoice();
+	const api = useApi();
+	const thread = () =>
+		voice.threadId ? api.threads.fetch(() => voice.threadId!)() : null;
 
 	const state = from(ctx.client.state);
 
@@ -272,10 +277,15 @@ export const Root2: Component = (props: any) => {
 			onKeyDown={handleKeypress}
 			onContextMenu={handleContextMenu}
 		>
-			{props.children}
+			<Show when={api.users.cache.get("@self")}>
+				{props.children}
+			</Show>
 			<Portal mount={document.getElementById("overlay")!}>
 				<Overlay />
 			</Portal>
+			<Show when={thread() && thread()!.type === "Voice"}>
+				<VoiceTray thread={thread()!} />
+			</Show>
 			<Show when={state() !== "ready"}>
 				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
 					{state()}

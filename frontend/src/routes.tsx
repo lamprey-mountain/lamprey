@@ -10,7 +10,7 @@ import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
-import { Voice } from "./Voice.tsx";
+import { Voice, VoiceTray } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
 import { getThumb, getThumbFromId, getUrl } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
@@ -151,6 +151,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 					when={thread().type !== "Voice" && flags.has("thread_member_list")}
 				>
 					<ThreadMembers thread={thread()!} />
+				</Show>
+				<Show when={thread().type === "Voice"}>
+					<VoiceTray thread={thread()!} />
 				</Show>
 			</Show>
 		</>

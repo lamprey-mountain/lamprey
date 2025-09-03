@@ -25,8 +25,8 @@
 #root {
 	display: grid;
 	grid-template-areas:
-		"nav2 nav header header" "nav2 nav main sidebar" "footer footer footer footer";
-	grid-template-rows: auto 1fr auto;
+		"nav2 nav header header" "nav2 nav main sidebar" "tray tray main sidebar" "footer footer footer footer";
+	grid-template-rows: auto 1fr auto auto;
 	grid-template-columns: auto auto 1fr auto;
 	height: 100vh;
 	background-color: $bg-200;
@@ -1456,13 +1456,6 @@ table {
 		}
 	}
 
-	.tray {
-		/* HACK: position ui where it should be in the end */
-		position: absolute;
-		bottom: 0;
-		translate: -100% 0;
-	}
-
 	.streams {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(max(320px, 30%), 1fr));
@@ -1492,11 +1485,12 @@ table {
 	}
 }
 
-.webrtc .tray {
+.voice-tray {
 	padding: 4px;
 	border: solid $sep-500 1px;
 	background: $bg-100;
 	display: inline-block;
+	grid-area: tray;
 
 	/* 64 (room nav) + 256 (thread nav) */
 	/* this will be responsive (maybe with grid) when actually impl'd in ui */
@@ -1531,6 +1525,19 @@ table {
 
 	button {
 		/* height: .5rem; */
+	}
+
+	.status {
+		font-weight: bold;
+		color: $color-yellow;
+
+		&.disconnected {
+			color: $fg-500;
+		}
+
+		&.connected {
+			color: $color-green;
+		}
 	}
 }
 
