@@ -212,6 +212,7 @@ impl Sfu {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     async fn handle_event(&mut self, envelope: PeerEventEnvelope) -> Result<()> {
         let user_id = envelope.user_id;
         let event = envelope.payload;
@@ -240,6 +241,14 @@ impl Sfu {
                     warn!("user has no voice state");
                     return Ok(());
                 };
+                if self
+                    .tracks
+                    .iter()
+                    .any(|t| t.source_mid == m.source_mid && t.peer_id == user_id)
+                {
+                    debug!("skipping this track, we already have it");
+                    return Ok(());
+                }
                 for a in &self.peers {
                     if a.key() == &user_id {
                         debug!("drop: no echo");
@@ -310,6 +319,34 @@ impl Sfu {
                     for_peer,
                     rid,
                 })?;
+            }
+
+            PeerEvent::Have { tracks } => {
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
+                for a in &self.peers {
+                    if a.key() == &user_id {
+                        debug!("skip own user");
+                        continue;
+                    }
+
+                    let Some(state) = self.voice_states.get(a.key()) else {
+                        debug!("missing voice state");
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        debug!("wrong thread id");
+                        continue;
+                    }
+
+                    a.value().send(PeerCommand::Have {
+                        user_id,
+                        tracks: tracks.clone(),
+                    })?;
+                }
             }
         }
 

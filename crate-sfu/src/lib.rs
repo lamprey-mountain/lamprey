@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{SignallingMessage, VoiceState},
+    voice::{MediaKindSerde, SignallingMessage, VoiceState},
     ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
@@ -62,6 +62,9 @@ pub enum PeerEvent {
         for_peer: UserId,
         kind: KeyframeRequestKind,
     },
+    Have {
+        tracks: Vec<TrackMetadataServer>,
+    },
 }
 
 #[derive(Debug)]
@@ -76,6 +79,17 @@ pub enum PeerCommand {
         kind: KeyframeRequestKind,
         for_peer: UserId,
     },
+    Have {
+        user_id: UserId,
+        tracks: Vec<TrackMetadataServer>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct TrackMetadataServer {
+    pub source_mid: Mid,
+    pub kind: MediaKindSerde,
+    pub key: String,
 }
 
 #[derive(Debug, Clone)]
