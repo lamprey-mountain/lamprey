@@ -35,6 +35,7 @@ pub struct Peer {
     socket_v6: UdpSocket,
     packet_v4: [u8; 2000],
     packet_v6: [u8; 2000],
+    signalling_state: SignallingState,
 
     /// media data we are receiving from the user
     inbound: HashMap<Mid, TrackIn>,
@@ -42,15 +43,20 @@ pub struct Peer {
     /// media data we are sending to the user
     outbound: Vec<TrackOut>,
 
-    // outbound: HashMap<Mid, TrackOut>,
-    sdp_pending: Option<SdpPendingOffer>,
+    /// metadata for each track we are receiving from the user
+    tracks_metadata: Vec<TrackMetadataServer>,
+    have_queue: Vec<UserId>,
+
     user_id: UserId,
     voice_state: VoiceState,
     commands: UnboundedReceiver<PeerCommand>,
     events: UnboundedSender<PeerEventEnvelope>,
+}
 
-    tracks_metadata: Vec<TrackMetadataServer>,
-    signalling_state: SignallingState,
+#[derive(Debug)]
+enum SignallingState {
+    Stable,
+    HaveLocalOffer(SdpPendingOffer),
 }
 
 impl Peer {
@@ -87,7 +93,6 @@ impl Peer {
             socket_v6,
             inbound: HashMap::new(),
             outbound: vec![],
-            sdp_pending: None,
             user_id,
             voice_state,
             commands: recv,
@@ -95,6 +100,7 @@ impl Peer {
             packet_v4: [0; 2000],
             packet_v6: [0; 2000],
             tracks_metadata: vec![],
+            have_queue: vec![],
             signalling_state: SignallingState::Stable,
         };
 
@@ -134,132 +140,13 @@ impl Peer {
                         Event::Connected => debug!("connected!"),
 
                         Event::MediaAdded(m) => {
-                            // TODO: enforce max bitrate, resolution
                             debug!("media added {m:?}");
-
-                            let mid = m.mid;
-
-                            let mut events = vec![];
-                            let mut tracks_metadata = vec![];
-                            if let Some(track) = self.inbound.get_mut(&mid) {
-                                if let TrackState::Negotiating(_) = track.state {
-                                    track.state = TrackState::Open(mid);
-
-                                    events.push(PeerEvent::MediaAdded(SfuTrack {
-                                        source_mid: mid,
-                                        kind: track.kind,
-                                        peer_id: self.user_id,
-                                        key: track.key.clone(),
-                                        thread_id: track.thread_id,
-                                    }));
-
-                                    tracks_metadata.push(TrackMetadataServer {
-                                        source_mid: mid,
-                                        kind: match track.kind {
-                                            MediaKind::Audio => MediaKindSerde::Audio,
-                                            MediaKind::Video => MediaKindSerde::Video,
-                                        },
-                                        key: track.key.clone(),
-                                    });
-                                } else {
-                                    warn!(
-                                        "MediaAdded event for mid {mid} track state is {:?}",
-                                        track.state
-                                    );
-                                }
-                            } else {
-                                warn!("MediaAdded event for mid {mid} we don't have the track metadata");
-                            }
-
-                            if !tracks_metadata.is_empty() {
-                                self.tracks_metadata.append(&mut tracks_metadata);
-
-                                events.push(PeerEvent::Have {
-                                    tracks: self.tracks_metadata.clone(),
-                                });
-
-                                events.push(PeerEvent::Signalling(SignallingMessage::Have {
-                                    user_id: self.user_id,
-                                    thread_id: self.voice_state.thread_id,
-                                    tracks: self
-                                        .tracks_metadata
-                                        .iter()
-                                        .map(|t| TrackMetadata {
-                                            mid: t.source_mid.to_string(),
-                                            kind: t.kind,
-                                            key: t.key.clone(),
-                                        })
-                                        .collect(),
-                                }));
-                            }
-
-                            for event in events {
-                                self.emit(event)?;
-                            }
+                            self.register_media(m.mid)?;
                         }
 
                         Event::MediaChanged(m) => {
                             debug!("media changed {m:?}");
-
-                            let mid = m.mid;
-
-                            let mut events = vec![];
-                            let mut tracks_metadata = vec![];
-                            if let Some(track) = self.inbound.get_mut(&mid) {
-                                if let TrackState::Negotiating(_) = track.state {
-                                    track.state = TrackState::Open(mid);
-
-                                    events.push(PeerEvent::MediaAdded(SfuTrack {
-                                        source_mid: mid,
-                                        kind: track.kind,
-                                        peer_id: self.user_id,
-                                        key: track.key.clone(),
-                                        thread_id: track.thread_id,
-                                    }));
-
-                                    tracks_metadata.push(TrackMetadataServer {
-                                        source_mid: mid,
-                                        kind: match track.kind {
-                                            MediaKind::Audio => MediaKindSerde::Audio,
-                                            MediaKind::Video => MediaKindSerde::Video,
-                                        },
-                                        key: track.key.clone(),
-                                    });
-                                } else {
-                                    warn!(
-                                        "MediaChanged event for mid {mid} track state is {:?}",
-                                        track.state
-                                    );
-                                }
-                            } else {
-                                warn!("MediaChanged event for mid {mid} we don't have the track metadata");
-                            }
-
-                            if !tracks_metadata.is_empty() {
-                                self.tracks_metadata.append(&mut tracks_metadata);
-
-                                events.push(PeerEvent::Have {
-                                    tracks: self.tracks_metadata.clone(),
-                                });
-
-                                events.push(PeerEvent::Signalling(SignallingMessage::Have {
-                                    user_id: self.user_id,
-                                    thread_id: self.voice_state.thread_id,
-                                    tracks: self
-                                        .tracks_metadata
-                                        .iter()
-                                        .map(|t| TrackMetadata {
-                                            mid: t.source_mid.to_string(),
-                                            kind: t.kind,
-                                            key: t.key.clone(),
-                                        })
-                                        .collect(),
-                                }));
-                            }
-
-                            for event in events {
-                                self.emit(event)?;
-                            }
+                            self.register_media(m.mid)?;
                         }
 
                         Event::MediaData(m) => self.handle_media_data(m)?,
@@ -355,11 +242,10 @@ impl Peer {
     async fn handle_sfu_command(&mut self, command: PeerCommand) -> Result<()> {
         match command {
             PeerCommand::Signalling(cmd) => {
-                debug!("handle peer command {cmd:?}");
                 self.handle_signalling(cmd).await?;
             }
             PeerCommand::MediaAdded(t) => {
-                debug!("handle peer command {t:?}");
+                debug!("handle media added {t:?}");
 
                 self.outbound.push(TrackOut {
                     kind: t.kind,
@@ -389,41 +275,44 @@ impl Peer {
                 }
             }
             PeerCommand::Have { user_id, tracks } => {
-                let mut out = vec![];
-                for t in tracks {
-                    let our_track = self
-                        .outbound
-                        .iter()
-                        .find(|a| a.peer_id == user_id && a.source_mid == t.source_mid);
-                    if let Some(a) = our_track {
-                        if let Some(mid) = a.state.mid() {
-                            out.push(TrackMetadata {
-                                mid: mid.to_string(),
-                                kind: t.kind,
-                                key: t.key,
-                            });
-                        } else {
-                            warn!(
-                                "missing mid for track (peer_id={}, source_mid={})",
-                                user_id, t.source_mid
-                            );
-                        }
-                    } else {
-                        warn!(
-                            "missing track (peer_id={}, source_mid={})",
-                            user_id, t.source_mid
-                        );
-                    }
+                if !self.process_haves(user_id, tracks)? {
+                    self.have_queue.push(user_id);
                 }
-                self.emit(PeerEvent::Signalling(SignallingMessage::Have {
-                    thread_id: self.voice_state.thread_id,
-                    user_id,
-                    tracks: out,
-                }))?;
             }
         }
 
         Ok(())
+    }
+
+    fn process_haves(&mut self, user_id: UserId, tracks: Vec<TrackMetadataServer>) -> Result<bool> {
+        let mut out = vec![];
+        for t in tracks {
+            let our_track = self
+                .outbound
+                .iter()
+                .find(|a| a.peer_id == user_id && a.source_mid == t.source_mid);
+            if let Some(a) = our_track {
+                if let TrackState::Open(mid) = a.state {
+                    out.push(TrackMetadata {
+                        mid: mid.to_string(),
+                        kind: t.kind,
+                        key: t.key,
+                    });
+                } else {
+                    warn!("track not open (peer_id={}, track={:?})", user_id, t);
+                    return Ok(false);
+                }
+            } else {
+                warn!("missing track (peer_id={}, track={:?})", user_id, t);
+                return Ok(false);
+            }
+        }
+        self.emit(PeerEvent::Signalling(SignallingMessage::Have {
+            thread_id: self.voice_state.thread_id,
+            user_id,
+            tracks: out,
+        }))?;
+        Ok(true)
     }
 
     fn handle_remote_media_data(&mut self, d: MediaData) {
@@ -485,15 +374,9 @@ impl Peer {
     }
 
     fn handle_answer(&mut self, sdp: SessionDescription) -> Result<()> {
-        if self.signalling_state != SignallingState::HaveLocalOffer {
-            warn!(
-                "ignoring unexpected answer, state {:?}",
-                self.signalling_state
-            );
-            return Ok(());
-        }
-
-        if let Some(pending) = self.sdp_pending.take() {
+        if let SignallingState::HaveLocalOffer(pending) =
+            std::mem::replace(&mut self.signalling_state, SignallingState::Stable)
+        {
             let answer = SdpAnswer::from_sdp_string(&sdp)?;
             self.rtc.sdp_api().accept_answer(pending, answer)?;
             info!("accept answer");
@@ -504,16 +387,17 @@ impl Peer {
                 }
             }
         } else {
-            warn!("received answer without sdp_pending set");
+            warn!("received answer but we don't have a local offer");
         }
 
-        self.signalling_state = SignallingState::Stable;
+        let user_ids = std::mem::take(&mut self.have_queue);
+        self.emit(PeerEvent::WantHave { user_ids })?;
 
         Ok(())
     }
 
     fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
-        let ready_for_offer = self.signalling_state == SignallingState::Stable;
+        let ready_for_offer = matches!(self.signalling_state, SignallingState::Stable);
         if !ready_for_offer {
             warn!("offer collision, but we are polite offer so allow it");
         }
@@ -549,18 +433,21 @@ impl Peer {
             );
         }
 
-        self.sdp_pending = None;
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
             sdp: SessionDescription(answer.to_sdp_string()),
         }))?;
         self.signalling_state = SignallingState::Stable;
 
+        let user_ids = std::mem::take(&mut self.have_queue);
+        self.emit(PeerEvent::WantHave { user_ids })?;
+
         Ok(())
     }
 
     fn negotiate_if_needed(&mut self) -> Result<bool> {
-        if self.sdp_pending.is_some() {
-            warn!("trying to negotiate, but sdp_pending is already set");
+        if matches!(self.signalling_state, SignallingState::HaveLocalOffer(_)) {
+            // NOTE: do i overwrite the pending offer here?
+            warn!("trying to negotiate, but we already have a local offer");
             return Ok(false);
         }
 
@@ -588,12 +475,11 @@ impl Peer {
             return Ok(false);
         };
 
-        self.sdp_pending = Some(pending);
         self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
             sdp: SessionDescription(offer.to_sdp_string()),
             tracks: vec![],
         }))?;
-        self.signalling_state = SignallingState::HaveLocalOffer;
+        self.signalling_state = SignallingState::HaveLocalOffer(pending);
 
         Ok(true)
     }
@@ -629,11 +515,67 @@ impl Peer {
         })?;
         Ok(())
     }
-}
 
-#[derive(Debug, PartialEq, Eq)]
-enum SignallingState {
-    Stable,
-    HaveLocalOffer,
-    HaveRemoteOffer,
+    fn register_media(&mut self, mid: Mid) -> Result<()> {
+        let mut events = vec![];
+        let mut tracks_metadata = vec![];
+
+        if let Some(track) = self.inbound.get_mut(&mid) {
+            if let TrackState::Negotiating(_) = track.state {
+                track.state = TrackState::Open(mid);
+
+                events.push(PeerEvent::MediaAdded(SfuTrack {
+                    source_mid: mid,
+                    kind: track.kind,
+                    peer_id: self.user_id,
+                    key: track.key.clone(),
+                    thread_id: track.thread_id,
+                }));
+
+                tracks_metadata.push(TrackMetadataServer {
+                    source_mid: mid,
+                    kind: match track.kind {
+                        MediaKind::Audio => MediaKindSerde::Audio,
+                        MediaKind::Video => MediaKindSerde::Video,
+                    },
+                    key: track.key.clone(),
+                });
+            } else {
+                warn!(
+                    "MediaAdded event for mid {mid} track state is {:?}",
+                    track.state
+                );
+            }
+        } else {
+            warn!("MediaAdded event for mid {mid} we don't have the track metadata");
+        }
+
+        if !tracks_metadata.is_empty() {
+            self.tracks_metadata.append(&mut tracks_metadata);
+
+            events.push(PeerEvent::Have {
+                tracks: self.tracks_metadata.clone(),
+            });
+
+            events.push(PeerEvent::Signalling(SignallingMessage::Have {
+                user_id: self.user_id,
+                thread_id: self.voice_state.thread_id,
+                tracks: self
+                    .tracks_metadata
+                    .iter()
+                    .map(|t| TrackMetadata {
+                        mid: t.source_mid.to_string(),
+                        kind: t.kind,
+                        key: t.key.clone(),
+                    })
+                    .collect(),
+            }));
+        }
+
+        for event in events {
+            self.emit(event)?;
+        }
+
+        Ok(())
+    }
 }

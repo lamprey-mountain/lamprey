@@ -13,7 +13,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, protocol::Message},
 };
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, warn};
 
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
@@ -137,7 +137,7 @@ impl Sfu {
         req: SfuCommand,
         peer_send: UnboundedSender<PeerEventEnvelope>,
     ) -> Result<()> {
-        trace!("new rpc message {req:?}");
+        // trace!("new rpc message {req:?}");
 
         let user_id = req.user_id.unwrap();
 
@@ -185,6 +185,7 @@ impl Sfu {
                         continue;
                     }
 
+                    debug!("sending track {track:?}");
                     if let Err(e) = peer.send(PeerCommand::MediaAdded(track.clone())) {
                         warn!("failed to send MediaAdded to peer {}: {}", user_id, e);
                     }
@@ -206,8 +207,9 @@ impl Sfu {
                         continue;
                     }
 
+                    debug!("sending track_metadata {} {:?}", peer_id, meta.value());
                     if let Err(e) = peer.send(PeerCommand::Have {
-                        user_id,
+                        user_id: *peer_id,
                         tracks: meta.value().clone(),
                     }) {
                         warn!("failed to send Have to peer {}: {}", user_id, e);
@@ -376,6 +378,43 @@ impl Sfu {
                     })?;
                 }
                 self.track_metadata.insert(user_id, tracks);
+            }
+
+            PeerEvent::WantHave { user_ids } => {
+                let (Some(state), Some(peer)) =
+                    (self.voice_states.get(&user_id), self.peers.get(&user_id))
+                else {
+                    warn!("received peer event from dead peer?");
+                    return Ok(());
+                };
+
+                for peer_id in user_ids {
+                    if peer_id == user_id {
+                        continue;
+                    }
+
+                    let Some(other) = self.voice_states.get(&peer_id) else {
+                        warn!("dead track not cleaned up for peer {}", peer_id);
+                        continue;
+                    };
+
+                    if state.thread_id != other.thread_id {
+                        continue;
+                    }
+
+                    let Some(meta) = self.track_metadata.get(&peer_id) else {
+                        warn!("missing metadata for peer {}", peer_id);
+                        continue;
+                    };
+
+                    debug!("sending requested track_metadata {} {:?}", peer_id, meta);
+                    if let Err(e) = peer.send(PeerCommand::Have {
+                        user_id: peer_id,
+                        tracks: meta.to_owned(),
+                    }) {
+                        warn!("failed to send Have to peer {}: {}", user_id, e);
+                    }
+                }
             }
         }
 

@@ -65,6 +65,9 @@ pub enum PeerEvent {
     Have {
         tracks: Vec<TrackMetadataServer>,
     },
+    WantHave {
+        user_ids: Vec<UserId>,
+    },
 }
 
 #[derive(Debug)]
