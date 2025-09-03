@@ -158,15 +158,41 @@ impl Peer {
                                     ));
                                 }
                             } else {
-                                // self.inbound.insert(
-                                //     mid,
-                                //     TrackIn {
-                                //         kind: m.kind,
-                                //         state: TrackState::Open(mid),
-                                //         thread_id: self.voice_state.thread_id,
-                                //         key: todo!(),
-                                //     },
-                                // );
+                                warn!("MediaAdded event for mid {mid} we don't have the track metadata");
+                            }
+
+                            for event in events {
+                                self.emit(event)?;
+                            }
+                        }
+
+                        Event::MediaChanged(m) => {
+                            debug!("media changed {m:?}");
+
+                            let mid = m.mid;
+
+                            let mut events = vec![];
+                            if let Some(track) = self.inbound.get_mut(&mid) {
+                                if let TrackState::Negotiating(_) = track.state {
+                                    track.state = TrackState::Open(mid);
+
+                                    events.push(PeerEvent::SignallingBroadcast(
+                                        SignallingMessage::Have {
+                                            user_id: self.user_id,
+                                            thread_id: track.thread_id,
+                                            tracks: vec![TrackMetadata {
+                                                mid: mid.to_string(),
+                                                kind: match track.kind {
+                                                    MediaKind::Audio => MediaKindSerde::Audio,
+                                                    MediaKind::Video => MediaKindSerde::Video,
+                                                },
+                                                key: track.key.clone(),
+                                            }],
+                                        },
+                                    ));
+                                }
+                            } else {
+                                warn!("MediaAdded event for mid {mid} we don't have the track metadata");
                             }
 
                             for event in events {
