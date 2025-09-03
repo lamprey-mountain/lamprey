@@ -65,6 +65,7 @@ import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { generateNickname } from "./nick.ts";
 import { Inbox } from "./Inbox.tsx";
 import { ThreadNav } from "./Nav.tsx";
+import { VoiceProvider as VoiceProvider } from "./voice.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??
 	"https://chat.celery.eu.org";
@@ -217,7 +218,9 @@ export const Root: Component = (props: ParentProps) => {
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
-				<Root2 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root2>
+				<VoiceProvider>
+					<Root2 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root2>
+				</VoiceProvider>
 			</chatctx.Provider>
 		</api.Provider>
 	);

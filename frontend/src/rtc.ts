@@ -1,8 +1,7 @@
 import { createSignal, onCleanup } from "solid-js";
 import { useApi } from "./api";
 import { SignallingMessage, TrackMetadata } from "sdk";
-
-// frontend-specific types
+import { ReactiveMap } from "@solid-primitives/map";
 
 type RemoteStream = {
 	id: string;
@@ -34,7 +33,7 @@ export const createVoiceClient = () => {
 	const remoteStreams: Array<RemoteStream> = [];
 	const localStreams: Array<LocalStream> = [];
 	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
-	const [streams, setStreams] = createSignal<Array<RemoteStream>>([]);
+	const streams = new ReactiveMap<string, RemoteStream>();
 
 	function setup() {
 		conn.addEventListener("connectionstatechange", () => {
@@ -51,6 +50,7 @@ export const createVoiceClient = () => {
 			);
 
 			if (conn.iceConnectionState === "failed") {
+				console.warn("[rtc:core] connection failed, restarting ice!");
 				conn.restartIce();
 			}
 		});
@@ -89,7 +89,6 @@ export const createVoiceClient = () => {
 				const tr = t.receiver.track;
 				s.media.addTrack(tr);
 				console.log("[rtc:stream] added track", tr.kind, "to stream", s.id);
-				setStreams([...remoteStreams]);
 			} else {
 				console.warn("[rtc:stream] missing stream, will wait for Have");
 			}
@@ -178,15 +177,15 @@ export const createVoiceClient = () => {
 
 	api.events.on("sync", async (e) => {
 		if (e.type === "VoiceState") {
-			let dirty = false;
 			if (!e.state) {
+				console.log("[rtc:stream] clean up tracks from", e.user_id);
 				const filtered = remoteStreams.filter((s) => s.user_id !== e.user_id);
 				remoteStreams.splice(0, remoteStreams.length, ...filtered);
-				dirty = !!filtered.length;
+				for (const [key, s] of streams) {
+					if (s.user_id === e.user_id) streams.delete(key);
+				}
 			}
-			if (dirty) setStreams([...remoteStreams]);
-		}
-		if (e.type === "VoiceDispatch") {
+		} else if (e.type === "VoiceDispatch") {
 			if (!api.voiceState()) return;
 
 			const msg = e.payload as SignallingMessage;
@@ -283,17 +282,15 @@ export const createVoiceClient = () => {
 							media,
 						};
 						remoteStreams.push(s);
-						setStreams([...remoteStreams]);
+						streams.set(streamId, s);
 					}
 
 					// create a stream from mids
-					let dirty = false;
 					for (const mid of s.mids) {
 						const tn = transceivers.get(mid);
 						if (tn) {
 							const tr = tn.receiver.track;
 							s.media.addTrack(tr);
-							dirty = true;
 							console.log(
 								"[rtc:stream] (re)added track",
 								tr.kind,
@@ -306,7 +303,6 @@ export const createVoiceClient = () => {
 							);
 						}
 					}
-					if (dirty) setStreams([...remoteStreams]);
 				}
 			} else if (msg.type === "Want") {
 				// TODO: only subscribe to the tracks we want

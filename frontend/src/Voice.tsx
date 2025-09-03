@@ -9,6 +9,7 @@ import {
 	Show,
 	Switch,
 	useContext,
+	createMemo,
 } from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
@@ -206,9 +207,26 @@ export const Voice = (p: { thread: Thread }) => {
 
 	const room = api.rooms.fetch(() => p.thread.room_id);
 
-	createEffect(() => {
-		console.log(rtc.streams());
-	});
+	const getName = (uid: string) => {
+		const user = api.users.fetch(() => uid);
+		const room_member = p.thread.room_id ? api.room_members.fetch(() => p.thread.room_id!, () => uid) : null;
+		const rm = room_member?.();
+		return (rm?.membership === "Join" && rm.override_name) || user()?.name || uid;
+	}
+
+	const getUsersWithoutStreams = () => {
+		const hasStream = new Set();
+		for (const s of rtc.streams.values()) {
+			hasStream.add(s.user_id)
+		}
+		const users = [];
+		for (const state of api.voiceStates.values()) {
+			if (state.thread_id === p.thread.id && !hasStream.has(state.user_id)) {
+				users.push(state.user_id)
+			}
+		}
+		return users
+	};
 
 	return (
 		<VoiceControls.Provider value={[voiceSettings, updateVoiceSettings]}>
@@ -223,51 +241,33 @@ export const Voice = (p: { thread: Thread }) => {
 					</div>
 				</div>
 				<div class="streams">
-					<For
-						each={rtc.streams()}
-						fallback={<div class="stream">no streams!</div>}
-					>
-						{(s) => {
+					<For each={[...rtc.streams.values()]}>
+						{(stream) => {
 							let videoRef!: HTMLVideoElement;
 
 							createEffect(() => {
-								if (videoRef) videoRef.srcObject = s.media;
-							});
-
-							const [emptyMedia, setEmptyMedia] = createSignal(!!s.mids.length);
-							const checkMedia = () => {
-								console.log("UPDATE", s.mids.length);
-								console.log("UPDATE", emptyMedia);
-								setEmptyMedia(!!s.mids.length);
-							};
-
-							s.media.addEventListener("addtrack", () => alert(1));
-
-							s.media.addEventListener("addtrack", checkMedia);
-							s.media.addEventListener("removetrack", checkMedia);
-							onCleanup(() => {
-								s.media.removeEventListener("addtrack", checkMedia);
-								s.media.removeEventListener("removetrack", checkMedia);
+								if (videoRef) videoRef.srcObject = stream.media;
 							});
 
 							return (
 								<div class="stream">
-									<Switch>
-										<Match when={false}>
-											[no media]
-										</Match>
-										<Match when={true}>
-											<video
-												autoplay
-												playsinline
-												ref={videoRef!}
-												muted={deafened()}
-											/>
-										</Match>
-									</Switch>
+									<video
+										autoplay
+										playsinline
+										ref={videoRef!}
+										muted={deafened()}
+									/>
 								</div>
-							);
+							)
 						}}
+					</For>
+					<For each={getUsersWithoutStreams()}>{(uid) => {
+						return (
+							<div class="stream">
+								{getName(uid)}
+							</div>
+						)
+					}}
 					</For>
 				</div>
 				<div class="tray">
@@ -330,3 +330,64 @@ export const Voice = (p: { thread: Thread }) => {
 		</VoiceControls.Provider>
 	);
 };
+
+export const VoiceTray = (p: { thread: Thread }) => {
+	return (
+		<div class="voice-tray">
+			<div class="row">
+				<div style="flex:1">
+					<div
+						style={rtc.state() === "connected"
+							? "color:green"
+							: "color:yellow"}
+					>
+						{rtc.state()}
+					</div>
+				</div>
+				<Show when={false}>
+					{/* TODO: stay connected when navigating away from voice channels */}
+					{/* TODO: allow being disconnected while focused on a voice channel */}
+					<div>
+						<button>
+							{/* disconnect */}
+							<img class="icon" src={iconX} />
+						</button>
+					</div>
+				</Show>
+			</div>
+			<div class="row">
+				<div>
+					<Show when={room()} fallback={p.thread.name}>
+						{room()?.name} / {p.thread.name}
+					</Show>
+				</div>
+				<div style="flex:1"></div>
+				<div>
+					<button data-tooltip="toggle camera" onClick={toggleCam}>
+						{/* camera */}
+						<ToggleIcon checked={cameraHidden()} src={iconCamera} />
+					</button>
+					<button data-tooltip="toggle screenshare" onClick={toggleScreen}>
+						{/* screenshare */}
+						<img class="icon" src={iconScreenshare} />
+					</button>
+				</div>
+			</div>
+			<div class="row toolbar">
+				<div style="flex:1">{api.users.cache.get("@self")?.name}</div>
+				<button onClick={toggleMic}>
+					{/* mute */}
+					<ToggleIcon checked={muted()} src={iconMic} />
+				</button>
+				<button onClick={() => setDeafened((d) => !d)}>
+					{/* deafen */}
+					<ToggleIcon checked={deafened()} src={iconHeadphones} />
+				</button>
+				<button onClick={() => alert("todo")}>
+					{/* settings */}
+					<img class="icon" src={iconSettings} />
+				</button>
+			</div>
+		</div>
+	);
+}
