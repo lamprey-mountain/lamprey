@@ -1,3 +1,4 @@
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::str::FromStr;
@@ -29,15 +30,23 @@ mod private {
     pub trait Sealed {}
 }
 
-pub trait Marker: private::Sealed {}
+pub trait Marker: private::Sealed {
+    fn name() -> &'static str;
+}
 
-#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Id<M: Marker> {
     inner: Uuid,
 
     #[serde(skip)]
     phantom: PhantomData<M>,
+}
+
+impl<M: Marker> fmt::Debug for Id<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}Id({})", M::name(), self.inner)
+    }
 }
 
 #[cfg(feature = "utoipa")]
@@ -142,7 +151,12 @@ macro_rules! genid {
             #[non_exhaustive]
             pub enum [<Marker $name>] {}
 
-            impl Marker for [<Marker $name>] {}
+            impl Marker for [<Marker $name>] {
+                fn name() -> &'static str {
+                    stringify!($name)
+                }
+            }
+
             impl private::Sealed for [<Marker $name>] {}
 
             pub type [<$name Id>] = Id<[<Marker $name>]>;
@@ -154,7 +168,12 @@ macro_rules! genid {
             #[non_exhaustive]
             pub enum [<Marker $name>] {}
 
-            impl Marker for [<Marker $name>] {}
+            impl Marker for [<Marker $name>] {
+                fn name() -> &'static str {
+                    stringify!($name)
+                }
+            }
+
             impl private::Sealed for [<Marker $name>] {}
 
             pub type [<$name Id>] = Id<[<Marker $name>]>;
