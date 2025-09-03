@@ -193,6 +193,8 @@ notification types
 notification behavior
 
 - merge (new_thread, mention, reply, unread) -> unread if messages are near each other
+	- how does this interact with unread marker/mark as read? i dont want to mark as unread then have stuff show up in the inbox
+	- maybe separate unreads/inbox tabs
 - show all of a thread's unread messages in inbox if unread count < ~30
 - try to show full message group if possible
 - automatically mark notifications as read as you scroll through them (in inbox or thread)

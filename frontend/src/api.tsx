@@ -517,7 +517,7 @@ export function createApi(
 		},
 
 		// HACK
-		temp_events,
+		events: temp_events,
 	};
 
 	messages.api = api;
@@ -625,7 +625,7 @@ export type Api = {
 	client: Client;
 	Provider: Component<ParentProps>;
 
-	temp_events: Emitter<{
+	events: Emitter<{
 		sync: MessageSync;
 		ready: MessageReady;
 	}>;

@@ -29,6 +29,8 @@ export type Client = {
 	stop: () => void;
 
 	state: Observer<ClientState>;
+
+	getWebsocket: () => WebSocket;
 };
 
 type Resume = {
@@ -123,8 +125,8 @@ export function createClient(opts: ClientOptions): Client {
 		http,
 		start,
 		stop,
-		_debugGetWebsocket: () => ws,
-	} as any;
+		getWebsocket: () => ws,
+	};
 }
 
 export const UUID_MIN = "00000000-0000-0000-0000-000000000000";

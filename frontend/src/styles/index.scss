@@ -1470,6 +1470,12 @@ table {
 	}
 }
 
+.webrtc {
+	.stream {
+		border: solid red 1px;
+	}
+}
+
 .box {
 	background: $bg-150;
 	border: solid $sep-500 1px;

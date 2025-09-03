@@ -319,3 +319,18 @@ export function createTooltip(props: CreateTooltipProps) {
 		setContentEl,
 	};
 }
+
+// const handleMouseOver = (e: MouseEvent) => {
+// 	// const tipEl = ((e.target as HTMLElement).closest("[data-tooltip]") as HTMLElement);
+// 	// if (!tipEl) return;
+// 	// const tipText = tipEl.dataset.tooltip;
+// 	// setTip(tipText as string);
+// 	// tooltip.setContentEl(tipEl)
+// 	// tooltip.showTip();
+// };
+
+// const handleMouseOut = (e: MouseEvent) => {
+// 	// const tipEl = ((e.target as HTMLElement).closest("[data-tooltip]") as HTMLElement);
+// 	// if (tipEl) return;
+// 	// tooltip.considerHidingTip()
+// };
