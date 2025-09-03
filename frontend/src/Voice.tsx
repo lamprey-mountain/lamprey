@@ -83,16 +83,6 @@ export const Voice = (p: { thread: Thread }) => {
 			if (!stream) return;
 
 			{
-				const tr = stream.getAudioTracks()[0];
-				if (!tr) {
-					console.warn("no audio track");
-					return;
-				}
-				await screenAudTn.sender.replaceTrack(tr);
-				screenAudTn.direction = "sendonly";
-			}
-
-			{
 				const tr = stream.getVideoTracks()[0];
 				if (!tr) {
 					console.warn("no video track");
@@ -102,17 +92,15 @@ export const Voice = (p: { thread: Thread }) => {
 				screenVidTn.direction = "sendonly";
 			}
 
-			// const user_id = api.users.cache.get("@self")!.id;
-			// send({
-			// 	type: "Have",
-			// 	tracks: [{
-			// 		key: "screen",
-			// 		kind: "Audio",
-			// 		mid: screenTn.mid!,
-			// 	}],
-			// 	thread_id: p.thread.id,
-			// 	user_id,
-			// });
+			{
+				const tr = stream.getAudioTracks()[0];
+				if (tr) {
+					console.warn("no audio track");
+				} else {
+					await screenAudTn.sender.replaceTrack(tr);
+					screenAudTn.direction = "sendonly";
+				}
+			}
 		}
 	};
 
