@@ -192,7 +192,7 @@ impl Peer {
                                     ));
                                 }
                             } else {
-                                warn!("MediaAdded event for mid {mid} we don't have the track metadata");
+                                warn!("MediaChanged event for mid {mid} we don't have the track metadata");
                             }
 
                             for event in events {
