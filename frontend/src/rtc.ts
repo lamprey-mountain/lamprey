@@ -59,7 +59,7 @@ type RemoteStream = {
 type LocalStream = {
 	id: string;
 	user_id: string;
-	transcievers: RTCRtpTransceiver[];
+	transceivers: RTCRtpTransceiver[];
 	key: string;
 };
 
@@ -157,8 +157,6 @@ export const createVoiceClient = () => {
 		// const chanStuff = conn.createDataChannel("arbitrary", {
 		// 	protocol: "broadcast",
 		// });
-
-		console.log(conn);
 	}
 
 	function close() {
@@ -169,8 +167,12 @@ export const createVoiceClient = () => {
 	function getTrackMetadata(): TrackMetadata[] {
 		const tracks: TrackMetadata[] = [];
 		for (const s of localStreams) {
-			for (const t of s.transcievers) {
-				if (t.direction === "inactive") continue;
+			console.log("[rtc:metadata] local stream %s", s.key)
+			for (const t of s.transceivers) {
+				if (t.direction === "inactive") {
+					console.log("[rtc:metadata] stream is inactive");
+					continue;
+				}
 
 				const kind = t.sender.track?.kind;
 				if (kind) {
@@ -212,9 +214,12 @@ export const createVoiceClient = () => {
 
 	api.events.on("sync", async (e) => {
 		if (e.type === "VoiceState") {
-			const state = e.state as VoiceState;
+			// voice states are mostly unused in rtc, should probably move this to api
+			const state = e.state as VoiceState | null;
 			console.log("[rtc:signal] recv voice state", state);
 		} else if (e.type === "VoiceDispatch") {
+			// if (!voiceState()) return;
+
 			const msg = e.payload as SignallingMessage;
 			if (msg.type === "Answer") {
 				console.log("[rtc:signal] accept answer");
@@ -235,6 +240,13 @@ export const createVoiceClient = () => {
 				});
 				await conn.setLocalDescription(await conn.createAnswer());
 				send({ type: "Answer", sdp: conn.localDescription!.sdp });
+
+				// // TODO: copy Have logic here?
+				// for (const t of msg.tracks) {
+				// 	t.kind;
+				// 	t.key;
+				// 	t.mid;
+				// }
 			} else if (msg.type === "Candidate") {
 				// TODO: handle ice negotiation
 				console.log("[rtc:signal] remote ICE candidate");
@@ -293,6 +305,7 @@ export const createVoiceClient = () => {
 					}
 				}
 			} else if (msg.type === "Want") {
+				// TODO: only subscribe to the tracks we want
 				// NOTE: `Want` is also called `Subscribe` in some older design notes
 				console.log("[rtc:signal] want");
 				// const { mid } = msg.payload;
@@ -330,11 +343,11 @@ export const createVoiceClient = () => {
 			localStreams.push({
 				id: `${user_id}:${key}`,
 				user_id,
-				transcievers: [],
+				transceivers: [],
 				key,
 			});
 		},
-		createTransciever(
+		createTransceiver(
 			stream: string,
 			kind: "video" | "audio",
 			encodings?: RTCRtpEncodingParameters[],
@@ -345,8 +358,8 @@ export const createVoiceClient = () => {
 				direction: "inactive",
 				sendEncodings: encodings,
 			});
-			console.log("[rtc:local] create transciever", tr);
-			s.transcievers.push(tr);
+			console.log("[rtc:local] create transceiver", tr);
+			s.transceivers.push(tr);
 			return tr;
 		},
 		streams,

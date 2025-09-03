@@ -1438,6 +1438,10 @@ table {
 	background: $bg-100;
 	display: inline-block;
 
+	/* 64 (room nav) + 256 (thread nav) */
+	/* this will be responsive (maybe with grid) when actually impl'd in ui */
+	width: 320px;
+
 	.row {
 		display: flex;
 	}

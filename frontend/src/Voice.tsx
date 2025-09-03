@@ -9,29 +9,12 @@ import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { ToggleIcon } from "./ToggleIcon.tsx";
-import { createVoiceClient, SignallingMessage } from "./rtc.ts";
+import { createVoiceClient, SignallingMessage, VoiceState } from "./rtc.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const rtc = createVoiceClient();
 	globalThis.rtc = rtc.conn;
-
-	async function playMusic() {
-		const audio = document.createElement("audio");
-		audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
-		audio.crossOrigin = "anonymous";
-		await new Promise((res) =>
-			audio.addEventListener("loadedmetadata", res, { once: true })
-		);
-
-		const stream: MediaStream = "captureStream" in audio
-			? (audio as any).captureStream()
-			: (audio as any).mozCaptureStream();
-		const track = stream.getAudioTracks()[0];
-		const tcr = rtc.conn.addTransceiver(track);
-		console.log("playing music with transceiver", tcr);
-		audio.play();
-	}
 
 	async function send(payload: SignallingMessage) {
 		const ws = api.client.getWebsocket();
@@ -44,22 +27,73 @@ export const Voice = (p: { thread: Thread }) => {
 		}));
 	}
 
-	let screenTn: RTCRtpTransceiver;
+	let screenVidTn: RTCRtpTransceiver;
+	let screenAudTn: RTCRtpTransceiver;
+	let micTn: RTCRtpTransceiver;
+	let camTn: RTCRtpTransceiver;
+	let musicTn: RTCRtpTransceiver;
+
+	// TODO: move voice state stuff to main api
+	const [voiceState, setVoiceState] = createSignal();
+	const voiceStates = new ReactiveMap();
 
 	api.events.on("sync", (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
+		if (e.type === "VoiceState") {
+			const state = e.state as VoiceState | null;
+			console.log("[rtc:signal] recv voice state", state);
+			if (state) {
+				voiceStates.set(e.user_id, state);
+			} else {
+				voiceStates.delete(e.user_id);
+			}
+			if (e.user_id === user_id) {
+				setVoiceState(state);
+			}
+		}
 		if (
-			e.type === "VoiceState" && e.user_id === user_id && e.state && !screenTn
+			e.type === "VoiceState" && e.user_id === user_id && e.state && !screenVidTn
 		) {
+			rtc.createStream("user");
 			rtc.createStream("screen");
-			screenTn = rtc.createTransciever("screen", "video");
+			rtc.createStream("music");
+			micTn = rtc.createTransceiver("user", "audio");
+			camTn = rtc.createTransceiver("user", "video");
+			screenAudTn = rtc.createTransceiver("screen", "audio");
+			screenVidTn = rtc.createTransceiver("screen", "video");
+			musicTn = rtc.createTransceiver("music", "audio");
 		}
 	});
 
-	const toggleScreen = async () => {
-		const tr = screenTn.sender.track;
+	const playMusic = async () => {
+		const tr = musicTn.sender.track;
 		if (tr) {
 			tr.enabled = !tr.enabled;
+		} else {
+			const audio = document.createElement("audio");
+			audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
+			audio.crossOrigin = "anonymous";
+			await new Promise((res) =>
+				audio.addEventListener("loadedmetadata", res, { once: true })
+			);
+
+			const stream: MediaStream = "captureStream" in audio
+				? (audio as any).captureStream()
+				: (audio as any).mozCaptureStream();
+			const track = stream.getAudioTracks()[0];
+			await musicTn.sender.replaceTrack(track);
+			musicTn.direction = "sendonly";
+			console.log("playing music with transceiver", musicTn);
+			audio.play();
+		}
+	};
+
+	const toggleScreen = async () => {
+		const tr = screenVidTn.sender.track;
+		if (tr) {
+			tr.enabled = !tr.enabled;
+			const t = screenAudTn.sender.track;
+			if (t) t.enabled = !tr.enabled;
 			// this version of disabling a track is more aggressive and will re-prompt when toggling
 			// tr.stop();
 			// await screenTn.sender.replaceTrack(null);
@@ -71,14 +105,26 @@ export const Voice = (p: { thread: Thread }) => {
 			}).catch(handleGetMediaError);
 			if (!stream) return;
 
-			// TODO: screen sharing audio
-			const tr = stream.getVideoTracks()[0];
-			if (!tr) {
-				console.warn("no video track");
-				return;
+			{
+				const tr = stream.getAudioTracks()[0];
+				if (!tr) {
+					console.warn("no audio track");
+					return;
+				}
+				await screenAudTn.sender.replaceTrack(tr);
+				screenAudTn.direction = "sendonly";
 			}
-			await screenTn.sender.replaceTrack(tr);
-			screenTn.direction = "sendonly";
+
+			{
+				const tr = stream.getVideoTracks()[0];
+				if (!tr) {
+					console.warn("no video track");
+					return;
+				}
+				await screenVidTn.sender.replaceTrack(tr);
+				screenVidTn.direction = "sendonly";
+			}
+
 			// const user_id = api.users.cache.get("@self")!.id;
 			// send({
 			// 	type: "Have",
@@ -92,6 +138,44 @@ export const Voice = (p: { thread: Thread }) => {
 			// });
 		}
 	};
+
+	const toggleMic = async () => {
+		const tr = micTn.sender.track;
+		if (tr) {
+			tr.enabled = !tr.enabled;
+		} else {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(handleGetMediaError);
+			if (!stream) return;
+
+			const track = stream.getAudioTracks()[0];
+			if (!track) {
+				console.warn("no track");
+				return;
+			}
+
+			await micTn.sender.replaceTrack(tr);
+			micTn.direction = "sendonly";
+		}
+	}
+
+	const toggleCam = async () => {
+		const tr = camTn.sender.track;
+		if (tr) {
+			tr.enabled = !tr.enabled;
+		} else {
+			const stream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(handleGetMediaError);
+			if (!stream) return;
+
+			const track = stream.getVideoTracks()[0];
+			if (!track) {
+				console.warn("no track");
+				return;
+			}
+
+			await camTn.sender.replaceTrack(tr);
+			camTn.direction = "sendonly";
+		}
+	}
 
 	function handleGetMediaError(e: Error) {
 		switch (e.name) {
@@ -108,20 +192,29 @@ export const Voice = (p: { thread: Thread }) => {
 		}
 	}
 
+	const [muted, setMuted] = createSignal(false);
+	const [deafened, setDeafened] = createSignal(false);
+
 	return (
-		<div>
-			<div>see console. rtc state {rtc.state()}</div>
+		<div class="webrtc">
+			<div>coming soon... see console for debug. rtc state: {rtc.state()}</div>
 			<div>
 				<button onClick={() => rtc.connect(p.thread.id)}>connect</button>
-			</div>
-			<div>
 				<button onClick={rtc.disconnect}>disconnect</button>
 			</div>
 			<div>
 				<button onClick={playMusic}>music</button>
 			</div>
 			<div>
+				<button onClick={toggleCam}>toggle cam</button>
+				<button onClick={toggleMic}>toggle mic</button>
 				<button onClick={toggleScreen}>toggle screen</button>
+			</div>
+			<div>participants: {voiceStates.size}</div>
+			<div>streams: {rtc.streams().length}</div>
+			<div>
+				voice state
+				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
 			</div>
 			<For each={rtc.streams()}>
 				{(s) => {
@@ -129,253 +222,6 @@ export const Voice = (p: { thread: Thread }) => {
 					createEffect(() => {
 						console.log("now viewing", s.media);
 						if (videoRef) videoRef.srcObject = s.media;
-					});
-					return (
-						<div class="stream">
-							stream
-							<video
-								controls
-								autoplay
-								playsinline
-								ref={videoRef!}
-							/>
-						</div>
-					);
-				}}
-			</For>
-		</div>
-	);
-};
-
-export const Voice_ = (p: { thread: Thread }) => {
-	const rtc = createVoiceClient();
-
-	const [muted, setMuted] = createSignal(false);
-	const [deafened, setDeafened] = createSignal(false);
-
-	const api = useApi();
-	const [conn, setConn] = createSignal<RTCPeerConnection>(
-		new RTCPeerConnection(RTC_CONFIG),
-	);
-	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
-	const [voiceState, setVoiceState] = createSignal();
-
-	const tracks = new ReactiveMap<string, MediaStreamTrack>();
-	const streams = new ReactiveMap<string, Array<string>>();
-	const voiceStates = new ReactiveMap();
-
-	let transceiverMic: RTCRtpTransceiver;
-	let transceiverCam: RTCRtpTransceiver;
-	let transceiverScreenVideo: RTCRtpTransceiver;
-	let transceiverScreenAudio: RTCRtpTransceiver;
-	let transceiverMusic: RTCRtpTransceiver;
-	let reconnectable = true;
-
-	// Helper to get track key from transceiver
-	const getTrackKey = (tcr: RTCRtpTransceiver): string => {
-		if (tcr === transceiverMic) return "user";
-		if (tcr === transceiverCam) return "user";
-		if (tcr === transceiverScreenVideo) return "screen";
-		if (tcr === transceiverScreenAudio) return "screen";
-		if (tcr === transceiverMusic) return "music";
-		throw "unknown track key";
-	};
-
-	const getTransceivers = () =>
-		[
-			transceiverMic,
-			transceiverCam,
-			transceiverScreenVideo,
-			transceiverScreenAudio,
-			transceiverMusic,
-		]
-			.filter((tcr): tcr is RTCRtpTransceiver => !!tcr);
-
-	// Complete track metadata using our transceiver references
-	const getTrackMetadata = () => {
-		return getTransceivers()
-			.map((tcr) => ({
-				mid: tcr.mid!,
-				kind: tcr.sender.track!.kind === "video" ? "Video" : "Audio" as const,
-				key: getTrackKey(tcr),
-			}));
-	};
-
-	setup();
-
-	function setup() {
-		const conn = new RTCPeerConnection(RTC_CONFIG);
-		tracks.clear();
-		streams.clear();
-
-		console.log(conn);
-
-		setRtcState("new");
-		setConn(conn);
-
-		transceiverMic = conn.addTransceiver("video", {
-			direction: "inactive",
-			sendEncodings: [
-				// { rid: "q", scaleResolutionDownBy: 4.0, maxBitrate: 150_000 },
-				// { rid: "h", scaleResolutionDownBy: 2.0, maxBitrate: 500_000 },
-				{ rid: "f" },
-			],
-		});
-		transceiverCam = conn.addTransceiver("audio", { direction: "inactive" });
-		transceiverScreenVideo = conn.addTransceiver("video", {
-			direction: "inactive",
-			sendEncodings: [
-				// { rid: "q", scaleResolutionDownBy: 4.0, maxBitrate: 150_000 },
-				// { rid: "h", scaleResolutionDownBy: 2.0, maxBitrate: 500_000 },
-				{ rid: "f" },
-			],
-		});
-		transceiverScreenAudio = conn.addTransceiver("audio", {
-			direction: "inactive",
-		});
-	}
-
-	async function playAudioEl() {
-		const audio = document.createElement("audio");
-		// audio.src =
-		// 	"https://chat-files.celery.eu.org/media/01969c94-0ac1-7741-a64f-16221a1aa4bf";
-		audio.src = "https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
-		audio.crossOrigin = "anonymous";
-		await new Promise((res) =>
-			audio.addEventListener("loadedmetadata", res, { once: true })
-		);
-
-		const stream: MediaStream = "captureStream" in audio
-			? (audio as any).captureStream()
-			: (audio as any).mozCaptureStream();
-		const tracks = stream.getAudioTracks();
-		console.log(audio, stream, tracks);
-		if (tracks.length > 1) {
-			console.warn("audio has multiple tracks, using first one", tracks);
-		}
-		const tcr = conn().addTransceiver(tracks[0]);
-		transceiverMusic = tcr;
-		console.log("add transceiver", tcr);
-		audio.play();
-	}
-
-	const toggleMic = async () => {
-		const track = transceiverMic.sender.track;
-		if (track) {
-			track.stop();
-			await transceiverMic.sender.replaceTrack(null);
-			transceiverMic.direction = "inactive";
-		} else {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const newTrack = stream.getAudioTracks()[0];
-			if (!track) {
-				console.warn("no track");
-				return;
-			}
-
-			await transceiverMic.sender.replaceTrack(newTrack);
-			transceiverMic.direction = "sendonly";
-		}
-	};
-
-	const toggleCam = async () => {
-		const track = transceiverCam.sender.track;
-		if (track) {
-			track.stop();
-			await transceiverCam.sender.replaceTrack(null);
-			transceiverCam.direction = "inactive";
-		} else {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			const newTrack = stream.getAudioTracks()[0];
-			if (!track) {
-				console.warn("no track");
-				return;
-			}
-
-			await transceiverCam.sender.replaceTrack(newTrack);
-			transceiverCam.direction = "sendonly";
-		}
-	};
-
-	const toggleScreen = async () => {
-		if (transceiverScreenVideo) {
-			const tv = transceiverScreenVideo.sender.track;
-			if (tv) tv.enabled = !tv.enabled;
-
-			if (transceiverScreenAudio) {
-				const ta = transceiverScreenAudio.sender.track;
-				if (ta) ta.enabled = !ta.enabled;
-			}
-
-			return;
-		}
-
-		const stream = await navigator.mediaDevices.getDisplayMedia({
-			video: true,
-			audio: true,
-		});
-
-		{
-			const track = stream.getVideoTracks()[0];
-			if (!track) {
-				console.warn("no video track");
-				return;
-			}
-			const tcr = conn().addTransceiver(track, {
-				sendEncodings: [
-					// { rid: "h", scaleResolutionDownBy: 2.0, maxBitrate: 500_000 },
-					{ rid: "f" },
-				],
-			});
-			console.log("add transceiver", tcr.mid, tcr);
-			track.addEventListener("ended", () => {
-				conn().removeTrack(tcr.sender);
-			});
-			transceiverScreenVideo = tcr;
-		}
-
-		{
-			const track = stream.getAudioTracks()[0];
-			if (!track) {
-				console.warn("no audio track");
-				return;
-			}
-			const tcr = conn().addTransceiver(track);
-			console.log("add transceiver", tcr.mid, tcr);
-			track.addEventListener("ended", () => {
-				conn().removeTrack(tcr.sender);
-			});
-			transceiverScreenAudio = tcr;
-		}
-	};
-
-	return (
-		<div class="webrtc">
-			<div>webrtc (nothing to see here, move along...)</div>
-			<div>
-				<button onClick={connect}>connect</button>
-				<button onClick={reset}>reset/disconnect</button>
-			</div>
-			<div>
-				<button onClick={playAudioEl}>play audio</button>
-			</div>
-			<div>
-				<button onClick={toggleMic}>start mic</button>
-				<button onClick={toggleCam}>start cam</button>
-				<button onClick={toggleScreen}>start screen</button>
-			</div>
-			<div>rtc state {rtcState()}</div>
-			<div>participants: {voiceStates.size}</div>
-			<div>streams: {streams.size}</div>
-			<div>
-				voice state
-				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
-			</div>
-			<For each={[...tracks.entries()]}>
-				{([id, track]) => {
-					let videoRef!: HTMLVideoElement;
-					createEffect(() => {
-						if (videoRef) videoRef.srcObject = new MediaStream([track]);
 					});
 					return (
 						<div class="stream">
@@ -404,6 +250,15 @@ export const Voice_ = (p: { thread: Thread }) => {
 						</div>
 					</div>
 					<div>
+						<button>
+							{/* disconnect */}
+							<img class="icon" src={iconX} />
+						</button>
+					</div>
+				</div>
+				<div class="row">
+					<div style="flex:1"> </div>
+					<div>
 						<button data-tooltip="arst">
 							{/* camera */}
 							<img class="icon" src={iconCamera} />
@@ -411,10 +266,6 @@ export const Voice_ = (p: { thread: Thread }) => {
 						<button>
 							{/* camera */}
 							<img class="icon" src={iconScreenshare} />
-						</button>
-						<button>
-							{/* disconnect */}
-							<img class="icon" src={iconX} />
 						</button>
 					</div>
 				</div>
