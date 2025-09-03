@@ -1,5 +1,5 @@
 import { Thread } from "sdk";
-import { createEffect, createSignal, For, onCleanup } from "solid-js";
+import { createEffect, createSignal, For } from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
@@ -9,23 +9,14 @@ import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
 import { ReactiveMap } from "@solid-primitives/map";
 import { ToggleIcon } from "./ToggleIcon.tsx";
-import { createVoiceClient, SignallingMessage, VoiceState } from "./rtc.ts";
+import { createVoiceClient, VoiceState } from "./rtc.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const rtc = createVoiceClient();
-	globalThis.rtc = rtc.conn;
 
-	async function send(payload: SignallingMessage) {
-		const ws = api.client.getWebsocket();
-		const user_id = api.users.cache.get("@self")!.id;
-		console.info("[rtc:signal] send", payload);
-		ws.send(JSON.stringify({
-			type: "VoiceDispatch",
-			user_id,
-			payload,
-		}));
-	}
+	// TEMP: debugging
+	(globalThis as any).rtc = rtc.conn;
 
 	let screenVidTn: RTCRtpTransceiver;
 	let screenAudTn: RTCRtpTransceiver;
@@ -52,7 +43,8 @@ export const Voice = (p: { thread: Thread }) => {
 			}
 		}
 		if (
-			e.type === "VoiceState" && e.user_id === user_id && e.state && !screenVidTn
+			e.type === "VoiceState" && e.user_id === user_id && e.state &&
+			!screenVidTn
 		) {
 			rtc.createStream("user");
 			rtc.createStream("screen");
@@ -144,7 +136,8 @@ export const Voice = (p: { thread: Thread }) => {
 		if (tr) {
 			tr.enabled = !tr.enabled;
 		} else {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(handleGetMediaError);
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+				.catch(handleGetMediaError);
 			if (!stream) return;
 
 			const track = stream.getAudioTracks()[0];
@@ -153,17 +146,18 @@ export const Voice = (p: { thread: Thread }) => {
 				return;
 			}
 
-			await micTn.sender.replaceTrack(tr);
+			await micTn.sender.replaceTrack(track);
 			micTn.direction = "sendonly";
 		}
-	}
+	};
 
 	const toggleCam = async () => {
 		const tr = camTn.sender.track;
 		if (tr) {
 			tr.enabled = !tr.enabled;
 		} else {
-			const stream = await navigator.mediaDevices.getUserMedia({ video: true }).catch(handleGetMediaError);
+			const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+				.catch(handleGetMediaError);
 			if (!stream) return;
 
 			const track = stream.getVideoTracks()[0];
@@ -172,10 +166,10 @@ export const Voice = (p: { thread: Thread }) => {
 				return;
 			}
 
-			await camTn.sender.replaceTrack(tr);
+			await camTn.sender.replaceTrack(track);
 			camTn.direction = "sendonly";
 		}
-	}
+	};
 
 	function handleGetMediaError(e: Error) {
 		switch (e.name) {
@@ -257,7 +251,7 @@ export const Voice = (p: { thread: Thread }) => {
 					</div>
 				</div>
 				<div class="row">
-					<div style="flex:1"> </div>
+					<div style="flex:1"></div>
 					<div>
 						<button data-tooltip="arst">
 							{/* camera */}

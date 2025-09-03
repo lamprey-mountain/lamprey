@@ -61,6 +61,7 @@ type LocalStream = {
 	user_id: string;
 	transceivers: RTCRtpTransceiver[];
 	key: string;
+	media: MediaStream;
 };
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -167,7 +168,7 @@ export const createVoiceClient = () => {
 	function getTrackMetadata(): TrackMetadata[] {
 		const tracks: TrackMetadata[] = [];
 		for (const s of localStreams) {
-			console.log("[rtc:metadata] local stream %s", s.key)
+			console.log("[rtc:metadata] local stream %s", s.key);
 			for (const t of s.transceivers) {
 				if (t.direction === "inactive") {
 					console.log("[rtc:metadata] stream is inactive");
@@ -189,16 +190,24 @@ export const createVoiceClient = () => {
 		return tracks;
 	}
 
+	let makingOffer = false;
+	let settingRemoteAnswer = false;
+
 	async function negotiate() {
-		const offer = await conn.createOffer();
-		await conn.setLocalDescription(offer);
-		const tracks = getTrackMetadata();
-		console.info("[rtc:sdp] create offer", tracks);
-		send({
-			type: "Offer",
-			sdp: conn.localDescription!.sdp,
-			tracks,
-		});
+		try {
+			makingOffer = true;
+			const offer = await conn.createOffer();
+			await conn.setLocalDescription(offer);
+			const tracks = getTrackMetadata();
+			console.info("[rtc:sdp] create offer", tracks);
+			send({
+				type: "Offer",
+				sdp: conn.localDescription!.sdp,
+				tracks,
+			});
+		} finally {
+			makingOffer = false;
+		}
 	}
 
 	async function send(payload: SignallingMessage) {
@@ -222,18 +231,30 @@ export const createVoiceClient = () => {
 
 			const msg = e.payload as SignallingMessage;
 			if (msg.type === "Answer") {
-				console.log("[rtc:signal] accept answer");
+				if (conn.signalingState !== "have-local-offer") {
+					console.log(
+						"[rtc:sdp] ignoring unexpected answer, state:",
+						conn.signalingState,
+					);
+					return;
+				}
+
+				console.log("[rtc:sdp] accept answer");
+				settingRemoteAnswer = true;
 				await conn.setRemoteDescription({
 					type: "answer",
 					sdp: msg.sdp,
 				});
+				settingRemoteAnswer = false;
 			} else if (msg.type === "Offer") {
-				if (conn.signalingState !== "stable") {
-					console.log("[rtc:signal] ignore server offer");
+				const readyForOffer = !makingOffer &&
+					(conn.signalingState === "stable" || settingRemoteAnswer);
+				if (!readyForOffer) {
+					console.log("[rtc:sdp] ignore server offer");
 					return;
 				}
 
-				console.log("[rtc:signal] accept offer; create answer");
+				console.log("[rtc:sdp] accept offer; create answer");
 				await conn.setRemoteDescription({
 					type: "offer",
 					sdp: msg.sdp,
@@ -254,8 +275,14 @@ export const createVoiceClient = () => {
 				// console.log("[rtc:signal] remote ICE candidate", candidate);
 				// await c.addIceCandidate(candidate);
 			} else if (msg.type === "Have") {
+				const user_id = api.users.cache.get("@self")!.id;
 				const ruid = msg.user_id;
-				console.log("[rtc:signal] have from %s", ruid, msg.tracks);
+				if (ruid === user_id) {
+					console.log("[rtc:signal] ignoring Have from self");
+					return;
+				}
+
+				console.log("[rtc:signal] got Have from %s", ruid, msg.tracks);
 				console.log(
 					"[rtc:signal] current transceivers",
 					conn.getTransceivers().map((t) => [t.mid, t.direction]),
@@ -340,11 +367,13 @@ export const createVoiceClient = () => {
 		createStream(key: string) {
 			const user_id = api.users.cache.get("@self")!.id;
 			console.log("[rtc:local] create local stream", key);
+			const media = new MediaStream();
 			localStreams.push({
 				id: `${user_id}:${key}`,
 				user_id,
 				transceivers: [],
 				key,
+				media,
 			});
 		},
 		createTransceiver(
