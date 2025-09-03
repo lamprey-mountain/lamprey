@@ -147,7 +147,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 				<Show when={thread().type === "Voice"}>
 					<Voice thread={thread()!} />
 				</Show>
-				<Show when={flags.has("thread_member_list")}>
+				<Show
+					when={thread().type !== "Voice" && flags.has("thread_member_list")}
+				>
 					<ThreadMembers thread={thread()!} />
 				</Show>
 			</Show>
