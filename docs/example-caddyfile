@@ -1,0 +1,24 @@
+http://example.com {
+	@ws {
+		method GET
+		header Upgrade websocket
+	}
+
+	handle @ws {
+		reverse_proxy backend:4000
+	}
+
+	handle /api/* {
+		reverse_proxy backend:4000
+	}
+
+	handle {
+		root /static
+		try_files {path} /
+		file_server
+	}
+}
+
+http://example-cdn.com {
+	reverse_proxy cdn:4001
+}

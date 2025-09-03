@@ -1,8 +1,12 @@
-# stripped down version of my config
+# example config for backend
 
 rust_log = "debug,sqlx=debug"
 database_url = "postgres://user:pass@localhost:5432/chat"
-base_url = "https://example.com/"
+api_url = "https://example.com"
+html_url = "https://example.com"
+cdn_url = "https://example-cdn.com"
+sfu_token = "a1b2c3"
+media_max_size = 16777216 # 16 MiB
 
 [s3]
 bucket = "chat-files"
@@ -17,3 +21,31 @@ client_secret = "67890"
 authorization_url = "https://discord.com/oauth2/authorize?scope=identify&response_type=code"
 token_url = "https://discord.com/api/v10/oauth2/token"
 revoke_url = "https://discord.com/api/v10/oauth2/token/revoke"
+
+[oauth_provider.github]
+client_id = "12345"
+client_secret = "67890"
+authorization_url = "https://github.com/login/oauth/authorize"
+token_url = "https://github.com/login/oauth/access_token"
+revocation_url = "https://github.com/login/oauth/access_token"
+
+[url_preview]
+user_agent = "Lamprey/v0.1.0 (admin@example.com)"
+deny = [
+  "127.0.0.1/8",
+  "10.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "100.64.0.0/10",
+  "169.254.0.0/16",
+  "::1/128",
+  "fe80::/64",
+  "fc00::/7",
+]
+max_parallel_jobs = 5
+
+[smtp]
+username = "system@example.com"
+password = "a1b2c3"
+host = "mail.example.com"
+from = '"system" <system@example.com>'

@@ -1,0 +1,7 @@
+# example config for the sfu
+
+host = "0.0.0.0:4001"
+api_url = "https://example.com"
+token = "a1b2c3"
+host_ipv4 = "192.168.12.34" # must be public
+host_ipv6 = "2001:db8:0a0b:12f0:0000:0000" # must be public

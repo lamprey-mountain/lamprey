@@ -1,0 +1,12 @@
+# example config for the cdn
+
+rust_log = "info"
+thumb_sizes = [64, 320, 640]
+database_url = "postgres://user:pass@localhost:5432/chat"
+
+[s3]
+bucket = "chat-files"
+endpoint = "https://s4.celery.eu.org"
+region = "garage"
+access_key_id = "GK12345"
+secret_access_key = "12345"

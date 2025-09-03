@@ -1,6 +1,9 @@
-[[portal]]
-# example portal
-my_thread_id = "00000000-0000-0000-0000-000000000000"
-discord_guild_id = "12345"
-discord_channel_id = "67890"
-discord_webhook = "https://discord.com/api/webhooks/1234567890/token"
+# example config for the discord bridge
+
+rust_log = "debug"
+lamprey_base_url = "https://example.com"
+lamprey_ws_url = "wss://example.com"
+lamprey_cdn_url = "https://example-cdn.com"
+lamprey_token = "secret"
+discord_token = "secret"
+database_url = "sqlite:///data/data.db"

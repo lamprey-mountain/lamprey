@@ -1,0 +1,56 @@
+services:
+  postgres:
+    container_name: lamprey-postgres
+    image: postgres:17
+    user: "1000"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      start_period: 30s
+    environment:
+      POSTGRES_PASSWORD: changeme
+  backend:
+    container_name: lamprey-backend
+    image: git.celery.eu.org/lamprey/lamprey-backend:latest
+    restart: unless-stopped
+    command: serve
+    depends_on:
+      - postgres
+    volumes:
+      - ./config-backend.toml:/config.toml:ro
+  cdn:
+    container_name: lamprey-cdn
+    image: git.celery.eu.org/lamprey/lamprey-cdn:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    volumes:
+      - ./config-cdn.toml:/cdn.toml:ro
+  bridge-discord:
+    container_name: lamprey-bridge-discord
+    image: git.celery.eu.org/lamprey/lamprey-bridge-discord:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    volumes:
+      - bridge_discord:/data
+      - ./config-bridge-discord.toml:/config.toml:ro
+  proxy:
+    container_name: lamprey-proxy
+    build:
+      context: caddy
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./caddy:/etc/caddy:ro # copy Caddyfile here
+      - ./static:/static:ro # copy static files here
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  postgres:
+  bridge_discord:
+  caddy_data:
+  caddy_config:
