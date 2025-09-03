@@ -2,9 +2,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    /// The address to bind the SFU http server to
-    pub host: String,
-
     /// The url of the backend api
     pub api_url: String,
 
