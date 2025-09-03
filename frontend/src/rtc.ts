@@ -77,10 +77,6 @@ export const createVoiceClient = () => {
 			const t = e.transceiver;
 			console.info("[rtc:track] track", e.track, e.streams, t);
 			if (!t.mid) {
-				// This field is null if neither a local or remote description has been applied,
-				// or if its associated m-line is rejected by either a remote offer or any
-				// answer.
-				// from mdn
 				console.warn("transceiver is missing mid");
 				return;
 			}
@@ -93,6 +89,7 @@ export const createVoiceClient = () => {
 				const tr = t.receiver.track;
 				s.media.addTrack(tr);
 				console.log("[rtc:stream] added track", tr.kind, "to stream", s.id);
+				setStreams([...remoteStreams]);
 			} else {
 				console.warn("[rtc:stream] missing stream, will wait for Have");
 			}
@@ -180,6 +177,15 @@ export const createVoiceClient = () => {
 	}
 
 	api.events.on("sync", async (e) => {
+		if (e.type === "VoiceState") {
+			let dirty = false;
+			if (!e.state) {
+				const filtered = remoteStreams.filter((s) => s.user_id !== e.user_id);
+				remoteStreams.splice(0, remoteStreams.length, ...filtered);
+				dirty = !!filtered.length;
+			}
+			if (dirty) setStreams([...remoteStreams]);
+		}
 		if (e.type === "VoiceDispatch") {
 			if (!api.voiceState()) return;
 
@@ -269,12 +275,6 @@ export const createVoiceClient = () => {
 					} else {
 						const media = new MediaStream();
 						console.log("[rtc:stream] initialized new stream", streamId, media);
-						media.addEventListener("addtrack", (e) => {
-							console.log("[media] add track", e.track);
-						});
-						media.addEventListener("removetrack", (e) => {
-							console.log("[media] remove track", e.track);
-						});
 						s = {
 							id: streamId,
 							user_id: ruid,
@@ -287,11 +287,13 @@ export const createVoiceClient = () => {
 					}
 
 					// create a stream from mids
+					let dirty = false;
 					for (const mid of s.mids) {
 						const tn = transceivers.get(mid);
 						if (tn) {
 							const tr = tn.receiver.track;
 							s.media.addTrack(tr);
+							dirty = true;
 							console.log(
 								"[rtc:stream] (re)added track",
 								tr.kind,
@@ -304,6 +306,7 @@ export const createVoiceClient = () => {
 							);
 						}
 					}
+					if (dirty) setStreams([...remoteStreams]);
 				}
 			} else if (msg.type === "Want") {
 				// TODO: only subscribe to the tracks we want

@@ -778,7 +778,8 @@ article.message {
 	z-index: 1;
 }
 
-.tooltip .user, .user-profile .user {
+.tooltip .user,
+.user-profile .user {
 	min-width: 200px;
 
 	display: grid;
@@ -1432,7 +1433,66 @@ table {
 	font-size: 0.9rem;
 }
 
-.webrtc > .ui {
+.webrtc {
+	position: relative;
+	grid-area: main;
+	min-height: 0;
+
+	.bottom {
+		position: absolute;
+		bottom: 0;
+		background: linear-gradient(to top, black 50%, transparent);
+		width: 100%;
+		height: 64px;
+		display: flex;
+		padding: 8px;
+		align-items: center;
+		justify-content: center;
+
+		.controls {
+			background: $bg-200;
+			border: solid $sep-500 1px;
+			padding: 4px;
+		}
+	}
+
+	.tray {
+		/* HACK: position ui where it should be in the end */
+		position: absolute;
+		bottom: 0;
+		translate: -100% 0;
+	}
+
+	.streams {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(max(320px, 30%), 1fr));
+		background: black;
+		height: 100%;
+		padding: 8px;
+		gap: 8px;
+		overflow-y: auto;
+		padding-bottom: 64px;
+	}
+
+	.stream {
+		aspect-ratio: 16 / 9;
+		border: solid $sep-500 1px;
+		background: $bg-100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 8px;
+
+		video {
+			display: block;
+			/* border: solid red 1px; */
+			max-height: 100%;
+			max-width: 100%;
+		}
+	}
+}
+
+.webrtc .tray {
 	padding: 4px;
 	border: solid $sep-500 1px;
 	background: $bg-100;
@@ -1469,14 +1529,8 @@ table {
 		}
 	}
 
-	video {
-		border: solid red 1px;
-	}
-}
-
-.webrtc {
-	.stream {
-		border: solid red 1px;
+	button {
+		/* height: .5rem; */
 	}
 }
 

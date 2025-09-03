@@ -1,5 +1,15 @@
 import { Thread } from "sdk";
-import { createEffect, createSignal, For } from "solid-js";
+import {
+	createContext,
+	createEffect,
+	createSignal,
+	For,
+	Match,
+	onCleanup,
+	Show,
+	Switch,
+	useContext,
+} from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
@@ -9,10 +19,28 @@ import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { createVoiceClient } from "./rtc.ts";
+import { createStore, SetStoreFunction } from "solid-js/store";
+
+type VoiceSettings = {
+	muted: boolean;
+	deafened: boolean;
+	cameraHidden: boolean;
+};
+const VoiceControls = createContext<
+	[VoiceSettings, SetStoreFunction<VoiceSettings>]
+>();
+
+const useVoiceControls = () => useContext(VoiceControls)!;
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const rtc = createVoiceClient();
+
+	const [voiceSettings, updateVoiceSettings] = createStore({
+		muted: true,
+		deafened: false,
+		cameraHidden: true,
+	});
 
 	// TEMP: debugging
 	(globalThis as any).rtc = rtc.conn;
@@ -23,7 +51,9 @@ export const Voice = (p: { thread: Thread }) => {
 	let camTn: RTCRtpTransceiver;
 	let musicTn: RTCRtpTransceiver;
 
-	// TODO: move voice state stuff to main api
+	const [muted, setMuted] = createSignal(true);
+	const [deafened, setDeafened] = createSignal(false);
+	const [cameraHidden, setCameraHidden] = createSignal(true);
 
 	api.events.on("sync", (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
@@ -108,6 +138,7 @@ export const Voice = (p: { thread: Thread }) => {
 		const tr = micTn.sender.track;
 		if (tr) {
 			tr.enabled = !tr.enabled;
+			setMuted(!tr.enabled);
 		} else {
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 				.catch(handleGetMediaError);
@@ -121,6 +152,7 @@ export const Voice = (p: { thread: Thread }) => {
 
 			await micTn.sender.replaceTrack(track);
 			micTn.direction = "sendonly";
+			setMuted(false);
 		}
 	};
 
@@ -128,6 +160,7 @@ export const Voice = (p: { thread: Thread }) => {
 		const tr = camTn.sender.track;
 		if (tr) {
 			tr.enabled = !tr.enabled;
+			setCameraHidden(!tr.enabled);
 		} else {
 			const stream = await navigator.mediaDevices.getUserMedia({ video: true })
 				.catch(handleGetMediaError);
@@ -141,6 +174,7 @@ export const Voice = (p: { thread: Thread }) => {
 
 			await camTn.sender.replaceTrack(track);
 			camTn.direction = "sendonly";
+			setCameraHidden(false);
 		}
 	};
 
@@ -168,101 +202,131 @@ export const Voice = (p: { thread: Thread }) => {
 		console.groupEnd();
 	}
 
-	const [muted, setMuted] = createSignal(false);
-	const [deafened, setDeafened] = createSignal(false);
+	rtc.connect(p.thread.id);
+
+	const room = api.rooms.fetch(() => p.thread.room_id);
+
+	createEffect(() => {
+		console.log(rtc.streams());
+	});
 
 	return (
-		<div class="webrtc">
-			<div>coming soon... see console for debug. rtc state: {rtc.state()}</div>
-			<div>
-				<button onClick={() => rtc.connect(p.thread.id)}>connect</button>
-				<button onClick={rtc.disconnect}>disconnect</button>
-				<button onClick={debug}>debug</button>
-			</div>
-			<div>
-				<button onClick={playMusic}>music</button>
-			</div>
-			<div>
-				<button onClick={toggleCam}>toggle cam</button>
-				<button onClick={toggleMic}>toggle mic</button>
-				<button onClick={toggleScreen}>toggle screen</button>
-			</div>
-			<div>participants: {api.voiceStates.size}</div>
-			<div>streams: {rtc.streams().length}</div>
-			<div>
-				voice state
-				<pre><code>{JSON.stringify(api.voiceState(), null, 2)}</code></pre>
-			</div>
-			<div>
-				<For each={rtc.streams()}>
-					{(s) => {
-						let videoRef!: HTMLVideoElement;
-						createEffect(() => {
-							console.log("now viewing", s.media);
-							if (videoRef) videoRef.srcObject = s.media;
-						});
-						return (
-							<div class="stream">
-								<video
-									controls
-									autoplay
-									playsinline
-									ref={videoRef!}
-								/>
+		<VoiceControls.Provider value={[voiceSettings, updateVoiceSettings]}>
+			<div class="webrtc">
+				<div class="bottom">
+					<div class="controls">
+						<button onClick={toggleCam}>toggle cam</button>
+						<button onClick={toggleMic}>toggle mic</button>
+						<button onClick={toggleScreen}>toggle screen</button>
+						<button onClick={playMusic}>music</button>
+						<div>participants: {api.voiceStates.size}</div>
+					</div>
+				</div>
+				<div class="streams">
+					<For
+						each={rtc.streams()}
+						fallback={<div class="stream">no streams!</div>}
+					>
+						{(s) => {
+							let videoRef!: HTMLVideoElement;
+
+							createEffect(() => {
+								if (videoRef) videoRef.srcObject = s.media;
+							});
+
+							const [emptyMedia, setEmptyMedia] = createSignal(!!s.mids.length);
+							const checkMedia = () => {
+								console.log("UPDATE", s.mids.length);
+								console.log("UPDATE", emptyMedia);
+								setEmptyMedia(!!s.mids.length);
+							};
+
+							s.media.addEventListener("addtrack", () => alert(1));
+
+							s.media.addEventListener("addtrack", checkMedia);
+							s.media.addEventListener("removetrack", checkMedia);
+							onCleanup(() => {
+								s.media.removeEventListener("addtrack", checkMedia);
+								s.media.removeEventListener("removetrack", checkMedia);
+							});
+
+							return (
+								<div class="stream">
+									<Switch>
+										<Match when={false}>
+											[no media]
+										</Match>
+										<Match when={true}>
+											<video
+												autoplay
+												playsinline
+												ref={videoRef!}
+												muted={deafened()}
+											/>
+										</Match>
+									</Switch>
+								</div>
+							);
+						}}
+					</For>
+				</div>
+				<div class="tray">
+					<div class="row">
+						<div style="flex:1">
+							<div
+								style={rtc.state() === "connected"
+									? "color:green"
+									: "color:yellow"}
+							>
+								{rtc.state()}
 							</div>
-						);
-					}}
-				</For>
-			</div>
-			<br />
-			<br />
-			<br />
-			<div class="ui">
-				<div class="row">
-					<div style="flex:1">
-						<div style="color:green">
-							connected
 						</div>
+						<Show when={false}>
+							{/* TODO: stay connected when navigating away from voice channels */}
+							{/* TODO: allow being disconnected while focused on a voice channel */}
+							<div>
+								<button>
+									{/* disconnect */}
+									<img class="icon" src={iconX} />
+								</button>
+							</div>
+						</Show>
+					</div>
+					<div class="row">
 						<div>
-							room / thread
+							<Show when={room()} fallback={p.thread.name}>
+								{room()?.name} / {p.thread.name}
+							</Show>
+						</div>
+						<div style="flex:1"></div>
+						<div>
+							<button data-tooltip="toggle camera" onClick={toggleCam}>
+								{/* camera */}
+								<ToggleIcon checked={cameraHidden()} src={iconCamera} />
+							</button>
+							<button data-tooltip="toggle screenshare" onClick={toggleScreen}>
+								{/* screenshare */}
+								<img class="icon" src={iconScreenshare} />
+							</button>
 						</div>
 					</div>
-					<div>
-						<button>
-							{/* disconnect */}
-							<img class="icon" src={iconX} />
+					<div class="row toolbar">
+						<div style="flex:1">{api.users.cache.get("@self")?.name}</div>
+						<button onClick={toggleMic}>
+							{/* mute */}
+							<ToggleIcon checked={muted()} src={iconMic} />
+						</button>
+						<button onClick={() => setDeafened((d) => !d)}>
+							{/* deafen */}
+							<ToggleIcon checked={deafened()} src={iconHeadphones} />
+						</button>
+						<button onClick={() => alert("todo")}>
+							{/* settings */}
+							<img class="icon" src={iconSettings} />
 						</button>
 					</div>
-				</div>
-				<div class="row">
-					<div style="flex:1"></div>
-					<div>
-						<button data-tooltip="arst">
-							{/* camera */}
-							<img class="icon" src={iconCamera} />
-						</button>
-						<button>
-							{/* camera */}
-							<img class="icon" src={iconScreenshare} />
-						</button>
-					</div>
-				</div>
-				<div class="row toolbar">
-					<div style="flex:1">user</div>
-					<button onClick={() => setMuted((m) => !m)}>
-						{/* mute */}
-						<ToggleIcon checked={muted()} src={iconMic} />
-					</button>
-					<button onClick={() => setDeafened((d) => !d)}>
-						{/* deafen */}
-						<ToggleIcon checked={deafened()} src={iconHeadphones} />
-					</button>
-					<button onClick={() => alert("todo")}>
-						{/* settings */}
-						<img class="icon" src={iconSettings} />
-					</button>
 				</div>
 			</div>
-		</div>
+		</VoiceControls.Provider>
 	);
 };
