@@ -212,7 +212,6 @@ impl Sfu {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self))]
     async fn handle_event(&mut self, envelope: PeerEventEnvelope) -> Result<()> {
         let user_id = envelope.user_id;
         let event = envelope.payload;
@@ -271,13 +270,14 @@ impl Sfu {
             }
 
             PeerEvent::MediaData(m) => {
+                // debug!("media data event");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
                     warn!("user has no voice state");
                     return Ok(());
                 };
                 for a in &self.peers {
                     if a.key() == &user_id {
-                        debug!("skip own user");
+                        // debug!("skip own user");
                         continue;
                     }
 
@@ -287,7 +287,7 @@ impl Sfu {
                     };
 
                     if state.thread_id != my_state.thread_id {
-                        debug!("wrong thread id");
+                        // debug!("wrong thread id");
                         continue;
                     }
 
@@ -308,6 +308,7 @@ impl Sfu {
                 kind,
                 rid,
             } => {
+                debug!("needs keyframe event {event:?}");
                 let Some(peer) = self.peers.get(&source_peer) else {
                     warn!("peer not found");
                     return Ok(());
@@ -322,6 +323,7 @@ impl Sfu {
             }
 
             PeerEvent::Have { tracks } => {
+                debug!("have event {tracks:?}");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
                     warn!("user has no voice state");
                     return Ok(());

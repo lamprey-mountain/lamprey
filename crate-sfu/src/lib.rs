@@ -111,7 +111,7 @@ pub struct SfuTrack {
     pub key: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackState {
     Pending,
     Negotiating(Mid),
