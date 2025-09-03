@@ -1,6 +1,6 @@
 use crate::{
     config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent,
-    SfuTrack, SignallingMessage,
+    SfuTrack, SignallingMessage, TrackMetadataServer,
 };
 use anyhow::Result;
 use common::v1::types::{util::Time, voice::VoiceState, UserId};
@@ -19,6 +19,7 @@ pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
     voice_states: DashMap<UserId, VoiceState>,
     tracks: Vec<SfuTrack>,
+    track_metadata: DashMap<UserId, Vec<TrackMetadataServer>>,
     config: Config,
     backend_tx: Option<UnboundedSender<SfuEvent>>,
 }
@@ -42,6 +43,7 @@ impl Sfu {
             tracks: Vec::new(),
             config,
             backend_tx: None,
+            track_metadata: DashMap::new(),
         }
     }
 
@@ -185,6 +187,30 @@ impl Sfu {
 
                     if let Err(e) = peer.send(PeerCommand::MediaAdded(track.clone())) {
                         warn!("failed to send MediaAdded to peer {}: {}", user_id, e);
+                    }
+                }
+
+                for meta in &self.track_metadata {
+                    let peer_id = meta.key();
+
+                    if *peer_id == user_id {
+                        continue;
+                    }
+
+                    let Some(other) = self.voice_states.get(&peer_id) else {
+                        warn!("dead track not cleaned up for peer {}", peer_id);
+                        continue;
+                    };
+
+                    if state.thread_id != other.thread_id {
+                        continue;
+                    }
+
+                    if let Err(e) = peer.send(PeerCommand::Have {
+                        user_id,
+                        tracks: meta.value().clone(),
+                    }) {
+                        warn!("failed to send Have to peer {}: {}", user_id, e);
                     }
                 }
 
@@ -349,6 +375,7 @@ impl Sfu {
                         tracks: tracks.clone(),
                     })?;
                 }
+                self.track_metadata.insert(user_id, tracks);
             }
         }
 

@@ -1,4 +1,8 @@
-use std::{collections::HashMap, net::SocketAddr, time::Instant};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    time::{Duration, Instant},
+};
 
 use crate::{
     config::Config, MediaData, PeerEvent, SfuTrack, SignallingMessage, TrackMetadataServer,
@@ -46,6 +50,7 @@ pub struct Peer {
     events: UnboundedSender<PeerEventEnvelope>,
 
     tracks_metadata: Vec<TrackMetadataServer>,
+    signalling_state: SignallingState,
 }
 
 impl Peer {
@@ -59,7 +64,7 @@ impl Peer {
 
         let mut rtc = RtcConfig::new()
             .set_ice_lite(true)
-            // .set_stats_interval(Some(Duration::from_secs(5)))
+            .set_stats_interval(Some(Duration::from_secs(5)))
             .build();
 
         let addr = crate::util::select_host_address_ipv4(config.host_ipv4.as_deref());
@@ -90,6 +95,7 @@ impl Peer {
             packet_v4: [0; 2000],
             packet_v6: [0; 2000],
             tracks_metadata: vec![],
+            signalling_state: SignallingState::Stable,
         };
 
         tokio::spawn(async move {
@@ -479,51 +485,39 @@ impl Peer {
     }
 
     fn handle_answer(&mut self, sdp: SessionDescription) -> Result<()> {
+        if self.signalling_state != SignallingState::HaveLocalOffer {
+            warn!(
+                "ignoring unexpected answer, state {:?}",
+                self.signalling_state
+            );
+            return Ok(());
+        }
+
         if let Some(pending) = self.sdp_pending.take() {
             let answer = SdpAnswer::from_sdp_string(&sdp)?;
             self.rtc.sdp_api().accept_answer(pending, answer)?;
+            info!("accept answer");
 
             for track in &mut self.outbound {
                 if let TrackState::Negotiating(m) = track.state {
                     track.state = TrackState::Open(m);
                 }
             }
-
-            // warn!("i need to send Have here now?");
-            // no i don't? it will be handled in MediaAdd/Change
-
-            // let meta = self.inbound.iter().map(|(mid, a)| TrackMetadata {
-            //     mid: mid.to_string(),
-            //     kind: match a.kind {
-            //         str0m::media::MediaKind::Audio => MediaKindSerde::Audio,
-            //         str0m::media::MediaKind::Video => MediaKindSerde::Video,
-            //     },
-            //     key: a.key.clone(),
-            // }).collect();
-
-            // for track in self.inbound.values_mut() {
-            //     if let TrackState::Negotiating(m) = track.state {
-            //         track.state = TrackState::Open(m);
-            //         events.push(PeerEvent::Signalling(SignallingMessage::Have {
-            //             user_id: self.user_id,
-            //             thread_id: self.voice_state.thread_id,
-            //             tracks: vec![TrackMetadata {
-            //                 mid: m.to_string(),
-            //                 kind: match track.kind {
-            //                     str0m::media::MediaKind::Audio => MediaKindSerde::Audio,
-            //                     str0m::media::MediaKind::Video => MediaKindSerde::Video,
-            //                 },
-            //                 key: track.key.to_owned(),
-            //             }],
-            //         }));
-            //     }
-            // }
+        } else {
+            warn!("received answer without sdp_pending set");
         }
+
+        self.signalling_state = SignallingState::Stable;
 
         Ok(())
     }
 
     fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
+        let ready_for_offer = self.signalling_state == SignallingState::Stable;
+        if !ready_for_offer {
+            warn!("offer collision, but we are polite offer so allow it");
+        }
+
         let offer = SdpOffer::from_sdp_string(&sdp)?;
         let answer = self.rtc.sdp_api().accept_offer(offer)?;
 
@@ -559,12 +553,14 @@ impl Peer {
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
             sdp: SessionDescription(answer.to_sdp_string()),
         }))?;
+        self.signalling_state = SignallingState::Stable;
 
         Ok(())
     }
 
     fn negotiate_if_needed(&mut self) -> Result<bool> {
         if self.sdp_pending.is_some() {
+            warn!("trying to negotiate, but sdp_pending is already set");
             return Ok(false);
         }
 
@@ -596,19 +592,8 @@ impl Peer {
         self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
             sdp: SessionDescription(offer.to_sdp_string()),
             tracks: vec![],
-            // TODO: return media tracks in Offer?
-            // the code below might work, but i'm not entirely sure
-            // it also might be redundant, since Have exists already and Offer + Have can be sent in quick succession
-            // tracks: self
-            //     .tracks_metadata
-            //     .iter()
-            //     .map(|t| TrackMetadata {
-            //         mid: t.source_mid.to_string(),
-            //         kind: t.kind,
-            //         key: t.key.clone(),
-            //     })
-            //     .collect(),
         }))?;
+        self.signalling_state = SignallingState::HaveLocalOffer;
 
         Ok(true)
     }
@@ -644,4 +629,11 @@ impl Peer {
         })?;
         Ok(())
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum SignallingState {
+    Stable,
+    HaveLocalOffer,
+    HaveRemoteOffer,
 }
