@@ -210,25 +210,27 @@ export const Voice = (p: { thread: Thread }) => {
 				voice state
 				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
 			</div>
-			<For each={rtc.streams()}>
-				{(s) => {
-					let videoRef!: HTMLVideoElement;
-					createEffect(() => {
-						console.log("now viewing", s.media);
-						if (videoRef) videoRef.srcObject = s.media;
-					});
-					return (
-						<div class="stream">
-							<video
-								controls
-								autoplay
-								playsinline
-								ref={videoRef!}
-							/>
-						</div>
-					);
-				}}
-			</For>
+			<div>
+				<For each={rtc.streams()}>
+					{(s) => {
+						let videoRef!: HTMLVideoElement;
+						createEffect(() => {
+							console.log("now viewing", s.media);
+							if (videoRef) videoRef.srcObject = s.media;
+						});
+						return (
+							<div class="stream">
+								<video
+									controls
+									autoplay
+									playsinline
+									ref={videoRef!}
+								/>
+							</div>
+						);
+					}}
+				</For>
+			</div>
 			<br />
 			<br />
 			<br />

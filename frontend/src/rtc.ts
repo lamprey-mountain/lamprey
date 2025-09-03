@@ -261,7 +261,10 @@ export const createVoiceClient = () => {
 				const readyForOffer = !makingOffer &&
 					(conn.signalingState === "stable" || settingRemoteAnswer);
 				if (!readyForOffer) {
-					console.log("[rtc:sdp] ignore server offer");
+					console.log(
+						"[rtc:sdp] ignore server offer; signallingState=",
+						conn.signalingState,
+					);
 					return;
 				}
 
@@ -279,7 +282,6 @@ export const createVoiceClient = () => {
 						localDescription: conn.localDescription,
 						answer: msg.sdp,
 					});
-					// TODO: what do i do here? try to reset the connection?
 				}
 
 				// // TODO: copy Have logic here?

@@ -433,8 +433,25 @@ impl Peer {
             );
         }
 
+        // HACK: manually disable set port to 0 to disable media when the answer has no codecs
+        let sdp_str = answer
+            .to_sdp_string()
+            .lines()
+            .map(|line| {
+                if line.starts_with("m=") {
+                    let mut parts: Vec<&str> = line.split_whitespace().collect();
+                    if parts.len() == 3 {
+                        parts[1] = "0";
+                        return parts.join(" ");
+                    }
+                }
+                line.to_string()
+            })
+            .collect::<Vec<String>>()
+            .join("\r\n");
+
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
-            sdp: SessionDescription(answer.to_sdp_string()),
+            sdp: SessionDescription(sdp_str + "\r\n"),
         }))?;
         self.signalling_state = SignallingState::Stable;
 
