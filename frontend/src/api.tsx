@@ -30,6 +30,7 @@ import type {
 	Thread,
 	ThreadMember,
 	User,
+	VoiceState,
 } from "sdk";
 import type { Emitter } from "@solid-primitives/event-bus";
 import {
@@ -65,7 +66,7 @@ export function useApi() {
 
 export function createApi(
 	client: Client,
-	temp_events: Emitter<{
+	events: Emitter<{
 		sync: MessageSync;
 		ready: MessageReady;
 	}>,
@@ -86,8 +87,10 @@ export function createApi(
 	const audit_logs = new AuditLogs();
 	const emoji = new Emoji();
 	const dms = new Dms();
+	const voiceStates = new ReactiveMap();
+	const [voiceState, setVoiceState] = createSignal();
 
-	temp_events.on("sync", (msg) => {
+	events.on("sync", (msg) => {
 		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			const { room } = msg;
 			rooms.cache.set(room.id, room);
@@ -464,12 +467,22 @@ export function createApi(
 			// TODO
 		} else if (msg.type === "RelationshipDelete") {
 			// TODO
+		} else if (msg.type === "VoiceState") {
+			const state = msg.state as VoiceState | null;
+			if (state) {
+				voiceStates.set(msg.user_id, state);
+			} else {
+				voiceStates.delete(msg.user_id);
+			}
+			if (msg.user_id === users.cache.get("@self")?.id) {
+				setVoiceState(state);
+			}
 		} else {
 			// console.warn(`unknown event ${msg.type}`, msg);
 		}
 	});
 
-	temp_events.on("ready", (msg) => {
+	events.on("ready", (msg) => {
 		if (msg.user) {
 			users.cache.set("@self", msg.user);
 			users.cache.set(msg.user.id, msg.user);
@@ -508,6 +521,8 @@ export function createApi(
 		client,
 		emoji,
 		dms,
+		voiceStates,
+		voiceState,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -515,9 +530,7 @@ export function createApi(
 				</ApiContext.Provider>
 			);
 		},
-
-		// HACK
-		events: temp_events,
+		events,
 	};
 
 	messages.api = api;
@@ -621,6 +634,8 @@ export type Api = {
 	};
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;
+	voiceState: Accessor<VoiceState | null>;
+	voiceStates: ReactiveMap<string, VoiceState>;
 	tempCreateSession: () => void;
 	client: Client;
 	Provider: Component<ParentProps>;

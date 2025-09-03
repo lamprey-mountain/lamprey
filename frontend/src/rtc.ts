@@ -1,50 +1,6 @@
 import { createSignal, onCleanup } from "solid-js";
 import { useApi } from "./api";
-
-// TODO: move these types to sdk
-export type TrackMetadata = {
-	mid: string;
-	kind: "Audio" | "Video";
-	key: string;
-};
-
-export type SignallingMessage =
-	| {
-		type: "Offer";
-		sdp: string;
-		tracks: TrackMetadata[];
-	}
-	| {
-		type: "Answer";
-		sdp: string;
-	}
-	| {
-		type: "Candidate";
-		candidate: string;
-	}
-	| {
-		// only sent by the server
-		type: "Have";
-		thread_id: string;
-		user_id: string;
-		tracks: TrackMetadata[];
-	}
-	| {
-		type: "Want";
-		tracks: string[];
-	}
-	| {
-		// only sent from client
-		// TODO: move this to a top level event
-		type: "VoiceState";
-		state: { thread_id: string } | null;
-	};
-
-export type VoiceState = {
-	user_id: string;
-	thread_id: string;
-	joined_at: string;
-};
+import { SignallingMessage, TrackMetadata } from "sdk";
 
 // frontend-specific types
 
@@ -224,12 +180,8 @@ export const createVoiceClient = () => {
 	}
 
 	api.events.on("sync", async (e) => {
-		if (e.type === "VoiceState") {
-			// voice states are mostly unused in rtc, should probably move this to api
-			const state = e.state as VoiceState | null;
-			// console.log("[rtc:signal] recv voice state", state);
-		} else if (e.type === "VoiceDispatch") {
-			// if (!voiceState()) return;
+		if (e.type === "VoiceDispatch") {
+			if (!api.voiceState()) return;
 
 			const msg = e.payload as SignallingMessage;
 			if (msg.type === "Answer") {

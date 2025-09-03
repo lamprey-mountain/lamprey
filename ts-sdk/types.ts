@@ -116,3 +116,47 @@ export type MessageSync =
 	| { type: "SessionDelete"; id: string; user_id?: string }
 	| { type: "RelationshipUpsert"; user_id: string; relationship: unknown }
 	| { type: "RelationshipDelete"; user_id: string };
+
+export type TrackMetadata = {
+	mid: string;
+	kind: "Audio" | "Video";
+	key: string;
+};
+
+export type SignallingMessage =
+	| {
+		type: "Offer";
+		sdp: string;
+		tracks: TrackMetadata[];
+	}
+	| {
+		type: "Answer";
+		sdp: string;
+	}
+	| {
+		type: "Candidate";
+		candidate: string;
+	}
+	| {
+		// only sent by the server
+		type: "Have";
+		thread_id: string;
+		user_id: string;
+		tracks: TrackMetadata[];
+	}
+	| {
+		type: "Want";
+		tracks: string[];
+	}
+	| {
+		// only sent from client
+		// TODO: move this to a top level event
+		type: "VoiceState";
+		state: { thread_id: string } | null;
+	};
+
+export type VoiceState = {
+	user_id: string;
+	thread_id: string;
+	joined_at: string;
+};

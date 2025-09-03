@@ -7,9 +7,8 @@ import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
-import { ReactiveMap } from "@solid-primitives/map";
 import { ToggleIcon } from "./ToggleIcon.tsx";
-import { createVoiceClient, VoiceState } from "./rtc.ts";
+import { createVoiceClient } from "./rtc.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
@@ -25,23 +24,9 @@ export const Voice = (p: { thread: Thread }) => {
 	let musicTn: RTCRtpTransceiver;
 
 	// TODO: move voice state stuff to main api
-	const [voiceState, setVoiceState] = createSignal();
-	const voiceStates = new ReactiveMap();
 
 	api.events.on("sync", (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
-		if (e.type === "VoiceState") {
-			const state = e.state as VoiceState | null;
-			console.log("[rtc:signal] recv voice state", state);
-			if (state) {
-				voiceStates.set(e.user_id, state);
-			} else {
-				voiceStates.delete(e.user_id);
-			}
-			if (e.user_id === user_id) {
-				setVoiceState(state);
-			}
-		}
 		if (
 			e.type === "VoiceState" && e.user_id === user_id && e.state &&
 			!screenVidTn
@@ -186,6 +171,15 @@ export const Voice = (p: { thread: Thread }) => {
 		}
 	}
 
+	async function debug() {
+		console.group("[rtc:debug] debug stats");
+		const stats = await rtc.conn.getStats();
+		for (const [_, stat] of [...stats]) {
+			console.log(stat);
+		}
+		console.groupEnd();
+	}
+
 	const [muted, setMuted] = createSignal(false);
 	const [deafened, setDeafened] = createSignal(false);
 
@@ -195,6 +189,7 @@ export const Voice = (p: { thread: Thread }) => {
 			<div>
 				<button onClick={() => rtc.connect(p.thread.id)}>connect</button>
 				<button onClick={rtc.disconnect}>disconnect</button>
+				<button onClick={debug}>debug</button>
 			</div>
 			<div>
 				<button onClick={playMusic}>music</button>
@@ -204,11 +199,11 @@ export const Voice = (p: { thread: Thread }) => {
 				<button onClick={toggleMic}>toggle mic</button>
 				<button onClick={toggleScreen}>toggle screen</button>
 			</div>
-			<div>participants: {voiceStates.size}</div>
+			<div>participants: {api.voiceStates.size}</div>
 			<div>streams: {rtc.streams().length}</div>
 			<div>
 				voice state
-				<pre><code>{JSON.stringify(voiceState(), null, 2)}</code></pre>
+				<pre><code>{JSON.stringify(api.voiceState(), null, 2)}</code></pre>
 			</div>
 			<div>
 				<For each={rtc.streams()}>
