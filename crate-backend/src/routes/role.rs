@@ -167,7 +167,7 @@ async fn role_update(
     let msg = MessageSync::RoleUpdate {
         role: end_role.clone(),
     };
-    if json.permissions.is_some_and(|p| p != end_role.permissions) {
+    if end_role.permissions != start_role.permissions {
         s.services().perms.invalidate_room_all(room_id);
     }
     s.broadcast_room(room_id, user_id, msg).await?;
