@@ -142,18 +142,20 @@ impl Peer {
                                         thread_id: track.thread_id,
                                     }));
 
-                                    events.push(PeerEvent::Signalling(SignallingMessage::Have {
-                                        user_id: self.user_id,
-                                        thread_id: track.thread_id,
-                                        tracks: vec![TrackMetadata {
-                                            mid: mid.to_string(),
-                                            kind: match track.kind {
-                                                MediaKind::Audio => MediaKindSerde::Audio,
-                                                MediaKind::Video => MediaKindSerde::Video,
-                                            },
-                                            key: track.key.clone(),
-                                        }],
-                                    }));
+                                    events.push(PeerEvent::SignallingBroadcast(
+                                        SignallingMessage::Have {
+                                            user_id: self.user_id,
+                                            thread_id: track.thread_id,
+                                            tracks: vec![TrackMetadata {
+                                                mid: mid.to_string(),
+                                                kind: match track.kind {
+                                                    MediaKind::Audio => MediaKindSerde::Audio,
+                                                    MediaKind::Video => MediaKindSerde::Video,
+                                                },
+                                                key: track.key.clone(),
+                                            }],
+                                        },
+                                    ));
                                 }
                             } else {
                                 // self.inbound.insert(

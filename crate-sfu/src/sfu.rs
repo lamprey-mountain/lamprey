@@ -221,6 +221,19 @@ impl Sfu {
                 self.emit(SfuEvent::VoiceDispatch { user_id, payload })
                     .await?;
             }
+            PeerEvent::SignallingBroadcast(payload) => {
+                debug!("signalling event broadcast {payload:?}");
+                let Some(voice_state) = self.voice_states.get(&user_id) else {
+                    warn!("no voice state for {user_id}");
+                    return Ok(());
+                };
+
+                self.emit(SfuEvent::VoiceDispatchBroadcast {
+                    thread_id: voice_state.thread_id,
+                    payload,
+                })
+                .await?;
+            }
             PeerEvent::MediaAdded(ref m) => {
                 debug!("media added event {event:?}");
                 let Some(my_state) = self.voice_states.get(&user_id) else {

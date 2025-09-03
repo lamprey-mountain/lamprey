@@ -129,6 +129,7 @@ pub enum SignallingMessage {
     // sent by server only
     Have {
         thread_id: ThreadId,
+
         user_id: UserId,
         tracks: Vec<TrackMetadata>,
     },

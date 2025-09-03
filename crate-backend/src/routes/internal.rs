@@ -7,7 +7,10 @@ use axum::{
     },
     response::IntoResponse,
 };
-use common::v1::types::voice::{SignallingMessage, VoiceState};
+use common::v1::types::{
+    voice::{SignallingMessage, VoiceState},
+    ThreadId,
+};
 use common::v1::types::{MessageSync, UserId};
 use http::HeaderMap;
 use tokio::select;
@@ -24,6 +27,11 @@ use crate::{Error, ServerState};
 pub enum SfuCommand {
     VoiceDispatch {
         user_id: UserId,
+        payload: SignallingMessage,
+    },
+
+    VoiceDispatchBroadcast {
+        thread_id: ThreadId,
         payload: SignallingMessage,
     },
 
@@ -76,6 +84,17 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
                             let result = match json {
                                 SfuCommand::VoiceDispatch { user_id, payload } => {
                                     s.broadcast(MessageSync::VoiceDispatch { user_id, payload })
+                                }
+                                SfuCommand::VoiceDispatchBroadcast { thread_id, payload } => {
+                                    for state in s.services.users.voice_states_list() {
+                                        if state.thread_id == thread_id {
+                                            let _ = s.broadcast(MessageSync::VoiceDispatch {
+                                                user_id: state.user_id,
+                                                payload: payload.clone(),
+                                            });
+                                        }
+                                    }
+                                    Ok(())
                                 }
                                 SfuCommand::VoiceState {
                                     user_id,

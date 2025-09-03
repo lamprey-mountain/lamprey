@@ -31,6 +31,10 @@ pub enum SfuEvent {
         user_id: UserId,
         payload: SignallingMessage,
     },
+    VoiceDispatchBroadcast {
+        thread_id: ThreadId,
+        payload: SignallingMessage,
+    },
     VoiceState {
         user_id: UserId,
         old: Option<VoiceState>,
@@ -47,6 +51,7 @@ pub struct PeerEventEnvelope {
 #[derive(Debug)]
 pub enum PeerEvent {
     Signalling(SignallingMessage),
+    SignallingBroadcast(SignallingMessage),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
