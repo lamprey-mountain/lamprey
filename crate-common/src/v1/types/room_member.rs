@@ -35,7 +35,6 @@ pub struct RoomMember {
     // TODO: remove. maybe replace with a room-specific "about me" without overriding your main bio/about me?
     pub override_description: Option<String>,
 
-    // TODO: per-room avatars? override_avatar: z.string().url().or(z.literal("")),
     /// the roles that this member has
     pub roles: Vec<RoleId>,
 
@@ -43,6 +42,9 @@ pub struct RoomMember {
     // pub muted_until: Option<Time>,
     /// how this member joined the room, moderator only. is None if the origin is unknown.
     pub origin: Option<RoomMemberOrigin>,
+    // move stuff from voice state here?
+    // pub deaf: bool,
+    // pub mute: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

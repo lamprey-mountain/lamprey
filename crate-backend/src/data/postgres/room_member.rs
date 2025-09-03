@@ -23,7 +23,6 @@ pub struct DbRoomMember {
     pub membership: DbMembership,
     pub override_name: Option<String>,
     pub override_description: Option<String>,
-    // override_avatar: z.string().url().or(z.literal("")),
     pub joined_at: time::PrimitiveDateTime,
     pub roles: Vec<Uuid>,
     pub origin: Option<serde_json::Value>,

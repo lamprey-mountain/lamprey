@@ -150,3 +150,11 @@ pub enum MediaKindSerde {
     Video,
     Audio,
 }
+
+// /// config the local user sets on someone else
+// struct VoiceConfig {
+//     mute: bool,
+//
+//     /// between 0 and 1.5, defaults to 1
+//     volume: f64,
+// }
