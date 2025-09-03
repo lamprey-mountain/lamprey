@@ -39,7 +39,7 @@
             pname = name;
             cargoExtraArgs = "-p ${name}";
             env = {
-              VERGEN_GIT_SHA = self.rev;
+              VERGEN_GIT_SHA = self.dirtyRev;
             };
           });
 
