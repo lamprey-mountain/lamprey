@@ -149,6 +149,10 @@ pub enum AuditLogEntryType {
         user_id: UserId,
         changes: Vec<AuditLogChange>,
     },
+    MemberDisconnect {
+        thread_id: ThreadId,
+        user_id: UserId,
+    },
     RoleApply {
         user_id: UserId,
         role_id: RoleId,

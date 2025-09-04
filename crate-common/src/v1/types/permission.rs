@@ -249,7 +249,7 @@ pub enum Permission {
     /// (unimplemented) stop someone from listening
     VoiceDeafen,
 
-    /// (unimplemented) disconnect members from voice threads
+    /// disconnect members from voice threads
     VoiceDisconnect,
 
     /// (unimplemented) move members between voice threads

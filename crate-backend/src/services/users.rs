@@ -144,6 +144,10 @@ impl ServiceUsers {
         self.voice_states.remove(user_id);
     }
 
+    pub fn voice_state_get(&self, _thread_id: ThreadId, user_id: UserId) -> Option<VoiceState> {
+        self.voice_states.get(&user_id).map(|s| s.to_owned())
+    }
+
     pub fn voice_states_list(&self) -> Vec<VoiceState> {
         self.voice_states
             .iter()
