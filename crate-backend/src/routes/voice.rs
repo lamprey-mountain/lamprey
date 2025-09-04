@@ -12,7 +12,7 @@ use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
-/// Voice member get (TODO)
+/// Voice state get (TODO)
 #[utoipa::path(
     get,
     path = "/voice/{thread_id}/member/{user_id}",
@@ -25,7 +25,7 @@ use crate::{Error, ServerState};
         (status = OK, body = (), description = "ok"),
     )
 )]
-async fn voice_member_get(
+async fn voice_state_get(
     Path((_room_id, _user_id)): Path<(ThreadId, UserId)>,
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -33,7 +33,7 @@ async fn voice_member_get(
     Err(Error::Unimplemented)
 }
 
-/// Voice member disconnect (TODO)
+/// Voice state disconnect (TODO)
 #[utoipa::path(
     delete,
     path = "/voice/{thread_id}/member/{user_id}",
@@ -46,7 +46,7 @@ async fn voice_member_get(
         (status = NO_CONTENT, description = "ok"),
     )
 )]
-async fn voice_member_disconnect(
+async fn voice_state_disconnect(
     Path((_room_id, _user_id)): Path<(ThreadId, UserId)>,
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -56,7 +56,7 @@ async fn voice_member_disconnect(
     Err(Error::Unimplemented)
 }
 
-/// Voice member move (TODO)
+/// Voice state move (TODO)
 #[utoipa::path(
     post,
     path = "/voice/{thread_id}/member/{user_id}/move",
@@ -69,7 +69,7 @@ async fn voice_member_disconnect(
         (status = OK, body = (), description = "ok"),
     )
 )]
-async fn voice_member_move(
+async fn voice_state_move(
     Path((_room_id, _user_id)): Path<(ThreadId, UserId)>,
     Auth(_auth_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -94,8 +94,8 @@ async fn voice_region_list(State(_s): State<Arc<ServerState>>) -> Result<Json<()
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(voice_member_get))
-        .routes(routes!(voice_member_disconnect))
-        .routes(routes!(voice_member_move))
+        .routes(routes!(voice_state_get))
+        .routes(routes!(voice_state_disconnect))
+        .routes(routes!(voice_state_move))
         .routes(routes!(voice_region_list))
 }
