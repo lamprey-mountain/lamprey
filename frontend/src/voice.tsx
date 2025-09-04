@@ -47,6 +47,7 @@ export const VoiceProvider = (props: ParentProps) => {
 	});
 
 	let streamMic: MediaStream | undefined;
+	let streamCam: MediaStream | undefined;
 
 	let screenVidTn: RTCRtpTransceiver | undefined;
 	let screenAudTn: RTCRtpTransceiver | undefined;
@@ -77,6 +78,16 @@ export const VoiceProvider = (props: ParentProps) => {
 				if (track) {
 					await micTn.sender.replaceTrack(track);
 					micTn.direction = "sendonly";
+				}
+			}
+
+			// if we have an existing camera stream, use it
+			if (streamCam && !state.cameraHidden) {
+				console.log("[voice] restore camera stream");
+				const track = streamCam.getVideoTracks()[0];
+				if (track) {
+					await camTn.sender.replaceTrack(track);
+					camTn.direction = "sendonly";
 				}
 			}
 		}
@@ -150,22 +161,52 @@ export const VoiceProvider = (props: ParentProps) => {
 			}
 		},
 		toggleCam: async () => {
-			if (!state.rtc || !camTn) return;
-			const tr = camTn.sender.track;
-			if (tr) {
-				tr.enabled = !tr.enabled;
-				update("cameraHidden", !tr.enabled);
-			} else {
+			if (!streamCam) {
+				// if we don't have a camera, try to get it
 				const stream = await navigator.mediaDevices.getUserMedia({
 					video: true,
 				})
 					.catch(handleGetMediaError);
-				if (!stream) return;
-				const track = stream.getVideoTracks()[0];
-				if (!track) return;
-				await camTn.sender.replaceTrack(track);
-				camTn.direction = "sendonly";
-				update("cameraHidden", false);
+				if (stream) {
+					console.log("[voice] got camera stream", stream);
+					streamCam = stream;
+					update("cameraHidden", false);
+					if (state.rtc && camTn) {
+						console.log("[voice] got camera stream", stream);
+						const track = streamCam.getVideoTracks()[0];
+						if (track) {
+							await camTn.sender.replaceTrack(track);
+							camTn.direction = "sendonly";
+						}
+					}
+				} else {
+					console.warn("[voice] couldn't get camera stream");
+				}
+			} else {
+				if (state.rtc && camTn) {
+					const tr = camTn.sender.track;
+					if (tr) {
+						console.log("[voice] toggle camera track enabled");
+						tr.enabled = state.cameraHidden;
+						update("cameraHidden", !state.cameraHidden);
+					} else if (streamCam && state.cameraHidden) {
+						console.log("[voice] restore camera track");
+						const track = streamCam.getVideoTracks()[0];
+						if (!track) {
+							throw new Error("camera doesn't have any video tracks?");
+						}
+						await camTn.sender.replaceTrack(track);
+						camTn.direction = "sendonly";
+						track.enabled = true;
+						update("cameraHidden", false);
+					} else {
+						console.log("[voice] toggle camera hidden");
+						update("cameraHidden", !state.cameraHidden);
+					}
+				} else {
+					console.log("[voice] toggle camera hidden, not connected to rtc");
+					update("cameraHidden", !state.cameraHidden);
+				}
 			}
 		},
 		toggleScreen: async () => {
