@@ -33,29 +33,6 @@ async fn voice_member_get(
     Err(Error::Unimplemented)
 }
 
-/// Voice member update (TODO)
-#[utoipa::path(
-    patch,
-    path = "/voice/{thread_id}/member/{user_id}",
-    params(
-        ("thread_id", description = "Thread id"),
-        ("user_id", description = "User id"),
-    ),
-    tags = ["voice"],
-    responses(
-        (status = OK, body = (), description = "ok"),
-    )
-)]
-async fn voice_member_patch(
-    Path((_room_id, _user_id)): Path<(ThreadId, UserId)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<()>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 /// Voice member disconnect (TODO)
 #[utoipa::path(
     delete,
@@ -118,7 +95,6 @@ async fn voice_region_list(State(_s): State<Arc<ServerState>>) -> Result<Json<()
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(voice_member_get))
-        .routes(routes!(voice_member_patch))
         .routes(routes!(voice_member_disconnect))
         .routes(routes!(voice_member_move))
         .routes(routes!(voice_region_list))
