@@ -1,6 +1,7 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type Room } from "sdk";
+import { getNotableChanges } from "../audit-log-util.ts";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api = useApi();
