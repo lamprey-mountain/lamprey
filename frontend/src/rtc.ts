@@ -67,7 +67,7 @@ export const createVoiceClient = () => {
 		});
 
 		conn.addEventListener("icecandidate", (e) => {
-			console.debug("[rtc:core] icecandidate", e.candidate);
+			// console.debug("[rtc:core] icecandidate", e.candidate);
 			// sendWebsocket({ type: "Candidate", ...e.candidate?.toJSON() });
 		});
 
@@ -146,6 +146,7 @@ export const createVoiceClient = () => {
 	let settingRemoteAnswer = false;
 
 	async function negotiate() {
+		console.info("[rtc:sdp] negotiation needed");
 		try {
 			makingOffer = true;
 			const offer = await conn.createOffer();

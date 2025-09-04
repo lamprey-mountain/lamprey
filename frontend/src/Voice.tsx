@@ -1,16 +1,5 @@
 import { Thread } from "sdk";
-import {
-	createContext,
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Match,
-	onCleanup,
-	Show,
-	Switch,
-	useContext,
-} from "solid-js";
+import { createEffect, For, Match, onCleanup, Show, Switch } from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
@@ -20,25 +9,14 @@ import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { createVoiceClient } from "./rtc.ts";
-import { createStore, SetStoreFunction } from "solid-js/store";
 import { useVoice } from "./voice.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
-	const rtc = createVoiceClient();
 
-	// TEMP: debugging
-	(globalThis as any).rtc = rtc.conn;
-
-	console.log("set rtc");
-	actions.setVoiceClient(rtc);
-	console.log("connect");
-	rtc.connect(p.thread.id);
-	onCleanup(() => {
-		rtc.disconnect();
-		actions.setVoiceClient(null);
-	});
+	actions.connect(p.thread.id);
+	onCleanup(() => actions.disconnect());
 
 	const getName = (uid: string) => {
 		const user = api.users.fetch(() => uid);
@@ -52,7 +30,7 @@ export const Voice = (p: { thread: Thread }) => {
 
 	const getUsersWithoutStreams = () => {
 		const hasStream = new Set();
-		for (const s of rtc.streams.values()) {
+		for (const s of voice.rtc?.streams.values() ?? []) {
 			hasStream.add(s.user_id);
 		}
 		const users = [];
@@ -128,13 +106,6 @@ export const VoiceTray = (p: { thread: Thread }) => {
 						</Match>
 					</Switch>
 				</div>
-				<Show when={false}>
-					<div>
-						<button>
-							<img class="icon" src={iconX} />
-						</button>
-					</div>
-				</Show>
 			</div>
 			<div class="row">
 				<div>

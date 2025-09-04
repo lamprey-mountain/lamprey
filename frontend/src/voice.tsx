@@ -21,7 +21,8 @@ export type VoiceState = {
 };
 
 export type VoiceActions = {
-	setVoiceClient: (rtc: VoiceClient | null) => void;
+	connect: (threadId: string) => void;
+	disconnect: () => void;
 	toggleMic: () => Promise<void>;
 	toggleCam: () => Promise<void>;
 	toggleScreen: () => Promise<void>;
@@ -35,7 +36,7 @@ export const useVoice = () => useContext(VoiceCtx)!;
 
 export const VoiceProvider = (props: ParentProps) => {
 	const api = useApi();
-	const [state, setState] = createStore<VoiceState>({
+	const [state, update] = createStore<VoiceState>({
 		muted: true,
 		deafened: false,
 		cameraHidden: true,
@@ -45,18 +46,19 @@ export const VoiceProvider = (props: ParentProps) => {
 		threadId: null,
 	});
 
+	let streamMic: MediaStream | undefined;
+
 	let screenVidTn: RTCRtpTransceiver | undefined;
 	let screenAudTn: RTCRtpTransceiver | undefined;
 	let micTn: RTCRtpTransceiver | undefined;
 	let camTn: RTCRtpTransceiver | undefined;
 	let musicTn: RTCRtpTransceiver | undefined;
 
-	api.events.on("sync", (e) => {
+	api.events.on("sync", async (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
 		if (
 			e.type === "VoiceState" && e.user_id === user_id && e.state
 		) {
-			console.log("attempt to sync");
 			const rtc = state.rtc;
 			if (!rtc) return;
 			rtc.createStream("user");
@@ -67,6 +69,16 @@ export const VoiceProvider = (props: ParentProps) => {
 			screenAudTn = rtc.createTransceiver("screen", "audio");
 			screenVidTn = rtc.createTransceiver("screen", "video");
 			musicTn = rtc.createTransceiver("music", "audio");
+
+			// if we have an existing microphone stream, use it
+			if (streamMic && !state.muted) {
+				console.log("[voice] restore microphone stream");
+				const track = streamMic.getAudioTracks()[0];
+				if (track) {
+					await micTn.sender.replaceTrack(track);
+					micTn.direction = "sendonly";
+				}
+			}
 		}
 	});
 
@@ -77,26 +89,64 @@ export const VoiceProvider = (props: ParentProps) => {
 	});
 
 	const actions: VoiceActions = {
-		setVoiceClient(rtc) {
-			setState("rtc", rtc);
+		connect(threadId) {
+			if (!state.rtc) {
+				update("rtc", createVoiceClient());
+			}
+			state.rtc?.connect(threadId);
+		},
+		disconnect() {
+			state.rtc?.disconnect();
+			state.rtc?.conn.close();
+			update("rtc", null);
 		},
 		toggleMic: async () => {
-			if (!state.rtc || !micTn) return;
-			const tr = micTn.sender.track;
-			if (tr) {
-				tr.enabled = !tr.enabled;
-				setState("muted", !tr.enabled);
-			} else {
+			if (!streamMic) {
+				// if we don't have a microphone, try to get it
 				const stream = await navigator.mediaDevices.getUserMedia({
 					audio: true,
 				})
 					.catch(handleGetMediaError);
-				if (!stream) return;
-				const track = stream.getAudioTracks()[0];
-				if (!track) return;
-				await micTn.sender.replaceTrack(track);
-				micTn.direction = "sendonly";
-				setState("muted", false);
+				if (stream) {
+					console.log("[voice] got microphone stream", stream);
+					streamMic = stream;
+					update("muted", false);
+					if (state.rtc && micTn) {
+						console.log("[voice] got microphone stream", stream);
+						const track = streamMic.getAudioTracks()[0];
+						if (track) {
+							await micTn.sender.replaceTrack(track);
+							micTn.direction = "sendonly";
+						}
+					}
+				} else {
+					console.warn("[voice] couldn't get microphone stream");
+				}
+			} else {
+				if (state.rtc && micTn) {
+					const tr = micTn.sender.track;
+					if (tr) {
+						console.log("[voice] toggle microphone track enabled");
+						tr.enabled = state.muted;
+						update("muted", !state.muted);
+					} else if (streamMic && state.muted) {
+						console.log("[voice] restore microphone track");
+						const track = streamMic.getAudioTracks()[0];
+						if (!track) {
+							throw new Error("microphone doesn't have any audio tracks?");
+						}
+						await micTn.sender.replaceTrack(track);
+						micTn.direction = "sendonly";
+						track.enabled = true;
+						update("muted", false);
+					} else {
+						console.log("[voice] toggle microphone muted");
+						update("muted", !state.muted);
+					}
+				} else {
+					console.log("[voice] toggle microphone muted, not connected to rtc");
+					update("muted", !state.muted);
+				}
 			}
 		},
 		toggleCam: async () => {
@@ -104,7 +154,7 @@ export const VoiceProvider = (props: ParentProps) => {
 			const tr = camTn.sender.track;
 			if (tr) {
 				tr.enabled = !tr.enabled;
-				setState("cameraHidden", !tr.enabled);
+				update("cameraHidden", !tr.enabled);
 			} else {
 				const stream = await navigator.mediaDevices.getUserMedia({
 					video: true,
@@ -115,7 +165,7 @@ export const VoiceProvider = (props: ParentProps) => {
 				if (!track) return;
 				await camTn.sender.replaceTrack(track);
 				camTn.direction = "sendonly";
-				setState("cameraHidden", false);
+				update("cameraHidden", false);
 			}
 		},
 		toggleScreen: async () => {
@@ -125,7 +175,7 @@ export const VoiceProvider = (props: ParentProps) => {
 				tr.enabled = !tr.enabled;
 				const t = screenAudTn.sender.track;
 				if (t) t.enabled = !tr.enabled;
-				setState("screenshareEnabled", tr.enabled);
+				update("screenshareEnabled", tr.enabled);
 			} else {
 				const stream = await navigator.mediaDevices.getDisplayMedia({
 					video: true,
@@ -142,7 +192,7 @@ export const VoiceProvider = (props: ParentProps) => {
 					await screenAudTn.sender.replaceTrack(audioTrack);
 					screenAudTn.direction = "sendonly";
 				}
-				setState("screenshareEnabled", true);
+				update("screenshareEnabled", true);
 			}
 		},
 		playMusic: async () => {
@@ -150,7 +200,7 @@ export const VoiceProvider = (props: ParentProps) => {
 			const tr = musicTn.sender.track;
 			if (tr) {
 				tr.enabled = !tr.enabled;
-				setState("musicPlaying", tr.enabled);
+				update("musicPlaying", tr.enabled);
 			} else {
 				const audio = document.createElement("audio");
 				audio.src =
@@ -166,11 +216,11 @@ export const VoiceProvider = (props: ParentProps) => {
 				await musicTn.sender.replaceTrack(track);
 				musicTn.direction = "sendonly";
 				audio.play();
-				setState("musicPlaying", true);
+				update("musicPlaying", true);
 			}
 		},
 		toggleDeafened: () => {
-			setState("deafened", (d) => !d);
+			update("deafened", (d) => !d);
 		},
 	};
 
