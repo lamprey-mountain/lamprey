@@ -7,7 +7,7 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@floating-ui/dom": "^1.7.3",
+		"@floating-ui/dom": "^1.7.4",
 		"@solid-primitives/autofocus": "^0.1.3",
 		"@solid-primitives/event-bus": "^1.1.2",
 		"@solid-primitives/i18n": "^2.2.1",
@@ -19,7 +19,7 @@
 		"@solid-primitives/websocket": "^1.3.1",
 		"@solidjs/router": "^0.15.3",
 		"diff": "^8.0.2",
-		"emojibase-data": "^7.0.0",
+		"emojibase-data": "^7.0.1",
 		"event-emitter": "^0.3.5",
 		"fuzzysort": "^3.1.0",
 		"highlight.js": "^11.11.1",
@@ -28,7 +28,7 @@
 		"prosemirror-keymap": "^1.2.3",
 		"prosemirror-model": "^1.25.3",
 		"prosemirror-state": "^1.4.3",
-		"prosemirror-view": "^1.40.1",
+		"prosemirror-view": "^1.41.0",
 		"sanitize-html": "^2.17.0",
 		"sdk": "workspace:^",
 		"solid-floating-ui": "^0.3.1",
@@ -39,10 +39,10 @@
 		"uuidv7": "^1.0.2"
 	},
 	"devDependencies": {
-		"@types/node": "^22.17.1",
+		"@types/node": "^22.18.1",
 		"@types/sanitize-html": "^2.16.0",
 		"@types/turndown": "^5.0.5",
-		"sass": "^1.90.0",
+		"sass": "^1.92.1",
 		"typescript": "^5.9.2",
 		"vite": "^6.3.5",
 		"vite-plugin-node-polyfills": "^0.23.0",
