@@ -109,7 +109,7 @@ impl<T: MediaType> MediaType for File<T> {
 
 macro_rules! impl_media_type {
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             pub type [<Media $name>] = Media<$name>;
         }
 

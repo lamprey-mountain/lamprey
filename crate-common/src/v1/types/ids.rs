@@ -146,7 +146,7 @@ impl<M: Marker + Ord + Eq> Identifier for Id<M> {}
 
 macro_rules! genid {
     ($name:ident, $example:expr) => {
-        paste::paste! {
+        pastey::paste! {
             #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
             #[non_exhaustive]
             pub enum [<Marker $name>] {}
@@ -163,7 +163,7 @@ macro_rules! genid {
         }
     };
     ($name:ident) => {
-        paste::paste! {
+        pastey::paste! {
             #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
             #[non_exhaustive]
             pub enum [<Marker $name>] {}

@@ -23,7 +23,7 @@ base64 = { version = "0.22" }
 byteorder = { version = "1" }
 chrono = { version = "0.4", features = ["serde"] }
 crossbeam-utils = { version = "0.8" }
-deranged = { version = "0.4", default-features = false, features = ["powerfmt", "serde", "std"] }
+deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 either = { version = "1", features = ["serde", "use_std"] }
 fastrand = { version = "2" }
@@ -51,7 +51,7 @@ percent-encoding = { version = "2" }
 rand-274715c4dabd11b0 = { package = "rand", version = "0.9" }
 rand-c38e5c1d305a1b54 = { package = "rand", version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "dfa-search", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = ["dfa-build", "dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "std", "unicode"] }
 regex-syntax = { version = "0.8" }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-native-roots", "stream"] }
 rustls = { version = "0.23", default-features = false, features = ["logging", "ring", "std", "tls12"] }
@@ -69,13 +69,10 @@ sqlx-sqlite = { version = "0.8", default-features = false, features = ["any", "b
 time = { version = "0.3", features = ["local-offset", "macros", "serde-human-readable", "serde-well-known"] }
 tokio = { version = "1", features = ["full"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12"] }
-tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 tower = { version = "0.5", default-features = false, features = ["balance", "buffer", "limit", "log"] }
 tower-http = { version = "0.6", features = ["catch-panic", "cors", "propagate-header", "sensitive-headers", "trace"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
-tungstenite = { version = "0.26", default-features = false, features = ["__rustls-tls", "handshake"] }
-url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4", "v7"] }
 winnow = { version = "0.7", features = ["simd"] }
 
@@ -83,7 +80,7 @@ winnow = { version = "0.7", features = ["simd"] }
 base64 = { version = "0.22" }
 byteorder = { version = "1" }
 crossbeam-utils = { version = "0.8" }
-deranged = { version = "0.4", default-features = false, features = ["powerfmt", "serde", "std"] }
+deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 either = { version = "1", features = ["serde", "use_std"] }
 fastrand = { version = "2" }
@@ -107,7 +104,7 @@ percent-encoding = { version = "2" }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 rand-c38e5c1d305a1b54 = { package = "rand", version = "0.8", features = ["small_rng"] }
 regex = { version = "1" }
-regex-automata = { version = "0.4", default-features = false, features = ["dfa-onepass", "dfa-search", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "unicode"] }
+regex-automata = { version = "0.4", default-features = false, features = ["dfa-build", "dfa-onepass", "hybrid", "meta", "nfa-backtrack", "perf-inline", "perf-literal", "std", "unicode"] }
 regex-syntax = { version = "0.8" }
 semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["alloc", "derive", "rc"] }
@@ -126,7 +123,6 @@ time = { version = "0.3", features = ["local-offset", "macros", "serde-human-rea
 tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-core = { version = "0.1" }
-url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4", "v7"] }
 winnow = { version = "0.7", features = ["simd"] }
 

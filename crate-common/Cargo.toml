@@ -14,11 +14,10 @@ url = { version = "2.5.4", features = ["serde"] }
 utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
 uuid = { version = "1.12.0", features = ["serde"] }
 crate-hakari = { version = "0.1", path = "../crate-hakari" }
-mediatype = { version = "0.19.18", features = ["serde"] }
+mediatype = { version = "0.20.0", features = ["serde"] }
 validator = { version = "0.20.0", features = ["derive"], optional = true }
-logos = "0.15.0"
 strum = { version = "0.27.1", features = ["derive"] }
-paste = "1.0.15"
+pastey = "0.1.1"
 
 [features]
 # serde = []
