@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{Media, Message, RoomId, ThreadId, UserId};
+use common::v1::types::{Media, Message, RoomId, SessionId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
@@ -23,6 +23,7 @@ use crate::{
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct SfuRequest {
     pub user_id: UserId,
+    pub session_id: SessionId,
 
     #[serde(flatten)]
     pub inner: Value,

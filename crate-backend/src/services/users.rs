@@ -193,6 +193,7 @@ impl ServiceUsers {
             if s.thread_id == thread_id {
                 let r = self.state.sushi_sfu.send(SfuRequest {
                     user_id: s.user_id,
+                    session_id: s.session_id.expect("we always have session id"),
                     inner: serde_json::to_value(SignallingMessage::VoiceState { state: None })?,
                 });
                 if let Err(err) = r {

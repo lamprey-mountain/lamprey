@@ -161,6 +161,7 @@ impl Sfu {
 
                 let new_state = VoiceState {
                     user_id,
+                    session_id: req.session_id,
                     thread_id: state.thread_id,
                     joined_at: Time::now_utc(),
                 };

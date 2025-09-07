@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
     voice::{MediaKindSerde, SignallingMessage, VoiceState},
-    ThreadId, UserId,
+    SessionId, ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
@@ -19,6 +19,8 @@ pub mod util;
 pub struct SfuCommand {
     /// the user who sent this, or None if this is from the server
     pub user_id: Option<UserId>,
+
+    pub session_id: Option<SessionId>,
 
     #[serde(flatten)]
     pub inner: SignallingMessage,

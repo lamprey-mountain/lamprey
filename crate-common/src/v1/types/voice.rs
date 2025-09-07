@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Time, UserId};
+use crate::v1::types::{util::Time, SessionId, UserId};
 
 use super::ThreadId;
 
@@ -58,9 +58,10 @@ pub struct VoiceState {
     /// the thread this user is connected to
     pub thread_id: ThreadId,
 
-    // /// the session that's being used to connect to this voice thread
-    // /// this will only be returned for the user this state belongs to
-    // pub session_id: Option<SessionId>,
+    /// the session that's being used to connect to this voice thread
+    /// this is only be returned for the user this state belongs to
+    pub session_id: Option<SessionId>,
+
     /// when this user joined the call
     pub joined_at: Time,
 }

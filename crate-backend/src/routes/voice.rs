@@ -6,14 +6,14 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    misc::UserIdReq, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationResponse,
-    Permission, ThreadId, UserId,
+    misc::UserIdReq, voice::SignallingMessage, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
+    PaginationResponse, Permission, ThreadId, UserId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
 
-use crate::error::Result;
+use crate::{error::Result, state::SfuRequest};
 use crate::{Error, ServerState};
 
 /// Voice state get
@@ -72,6 +72,14 @@ async fn voice_state_disconnect(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::VoiceDisconnect)?;
+    let Some(state) = srv.users.voice_state_get(thread_id, target_user_id) else {
+        return Ok(());
+    };
+    let _ = s.sushi_sfu.send(SfuRequest {
+        user_id: target_user_id,
+        session_id: state.session_id.expect("we always have session_id"),
+        inner: serde_json::to_value(SignallingMessage::VoiceState { state: None })?,
+    });
     srv.users.voice_state_remove(&target_user_id);
     let thread = srv.threads.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {

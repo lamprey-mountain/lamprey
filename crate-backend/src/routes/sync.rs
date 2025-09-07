@@ -55,6 +55,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                                     payload: MessagePayload::Reconnect { can_resume: false },
                                 }).expect("can always serialize message")))
                                 .await;
+                            // TODO: don't close ws on *every* error - most are recoverable
                             let _ = ws.close().await;
                             break;
                         }

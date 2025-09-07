@@ -245,7 +245,17 @@ impl Connection {
                 srv.users.status_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
             }
-            MessageClient::VoiceDispatch { user_id, payload } => {
+            MessageClient::VoiceDispatch {
+                user_id: _,
+                payload,
+            } => {
+                let Some(session) = self.state.session() else {
+                    return Err(Error::BadStatic("no session"));
+                };
+                let Some(user_id) = session.user_id() else {
+                    return Err(Error::BadStatic("no user"));
+                };
+
                 let srv = self.s.services();
                 let msg: SignallingMessage = serde_json::from_value(payload.clone())?;
                 match &msg {
@@ -280,6 +290,7 @@ impl Connection {
                 // TODO: error handling
                 let _ = self.s.sushi_sfu.send(SfuRequest {
                     user_id,
+                    session_id: session.id,
                     inner: payload,
                 });
             }
@@ -496,6 +507,27 @@ impl Connection {
                         m
                     },
                 },
+                MessageSync::VoiceState {
+                    user_id,
+                    mut state,
+                    mut old_state,
+                } => {
+                    let is_ours = self.state.session().and_then(|s| s.user_id()) == Some(user_id);
+                    if !is_ours {
+                        if let Some(s) = &mut state {
+                            s.session_id = None;
+                        }
+
+                        if let Some(s) = &mut old_state {
+                            s.session_id = None;
+                        }
+                    }
+                    MessageSync::VoiceState {
+                        user_id,
+                        state,
+                        old_state,
+                    }
+                }
                 m => m,
             };
             self.push_sync(msg);
