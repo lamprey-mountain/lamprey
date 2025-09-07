@@ -69,7 +69,7 @@ pub enum Command {
     Ping,
 
     /// commands for voice/music management
-    #[command(subcommand)]
+    #[command(subcommand, alias = "vc")]
     Voice(VoiceCommand),
 }
 
