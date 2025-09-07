@@ -1,7 +1,7 @@
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type User } from "sdk";
-import { getNotableChanges } from "../audit-log-util.ts";
+import { formatChanges } from "../audit-log-util.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -53,20 +53,10 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 										</Show>
 									</ul>
 									<br />
+									<h3>info</h3>
+									<ul>{formatChanges(props.user.id, entry)}</ul>
 									<h3>changes</h3>
 									<ul>
-										<For each={getNotableChanges(entry as any)}>
-											{(c) => {
-												return (
-													<li>
-														<em class="light">{c.key}:</em>{" "}
-														{JSON.stringify(c.old) ?? "[null]"}{" "}
-														<em class="light">-&gt;</em>{" "}
-														{JSON.stringify(c.new) ?? "[null]"}
-													</li>
-												);
-											}}
-										</For>
 									</ul>
 									<br />
 									<details>
