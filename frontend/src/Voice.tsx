@@ -13,10 +13,9 @@ import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
 import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
-import iconX from "./assets/x.png";
+import iconMusic from "./assets/music.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
-import { createVoiceClient } from "./rtc.ts";
 import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
@@ -50,9 +49,17 @@ export const Voice = (p: { thread: Thread }) => {
 	};
 
 	const [focused, setFocused] = createSignal<null | string>(null);
+	const [controls, setControls] = createSignal(true);
+
+	let controlsTimeout: NodeJS.Timeout;
+	const showControls = () => {
+		setControls(true);
+		clearTimeout(controlsTimeout);
+		controlsTimeout = setTimeout(() => setControls(false), 3000);
+	};
 
 	return (
-		<div class="webrtc">
+		<div class="webrtc" onMouseMove={showControls}>
 			<div class="streams">
 				<Show when={voice.rtc}>
 					<For each={[...voice.rtc!.streams.values()]}>
@@ -88,11 +95,27 @@ export const Voice = (p: { thread: Thread }) => {
 			</div>
 			<div class="bottom">
 				<div class="controls">
-					<button onClick={actions.toggleCam}>toggle cam</button>
-					<button onClick={actions.toggleMic}>toggle mic</button>
-					<button onClick={actions.toggleScreen}>toggle screen</button>
-					<button onClick={actions.playMusic}>music</button>
-					<div>participants: {api.voiceStates.size}</div>
+					<button onClick={actions.toggleDeafened}>
+						<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
+					</button>
+					<button onClick={actions.toggleCam}>
+						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+					</button>
+					<button onClick={actions.toggleMic}>
+						<ToggleIcon checked={!voice.muted} src={iconMic} />
+					</button>
+					<button onClick={actions.toggleScreen}>
+						<ToggleIcon
+							checked={voice.screenshareEnabled}
+							src={iconScreenshare}
+						/>
+					</button>
+					<button onClick={actions.playMusic}>
+						<ToggleIcon
+							checked={voice.musicPlaying}
+							src={iconMusic}
+						/>
+					</button>
 				</div>
 			</div>
 		</div>
@@ -106,14 +129,35 @@ export const VoiceTray = () => {
 		? api.threads.fetch(() => voice.threadId!)
 		: () => null;
 	const room = thread()?.room_id
-		? api.rooms.fetch(() => thread().room_id)
+		? api.rooms.fetch(() => thread()?.room_id!)
 		: () => null;
+
+	const calcConnectedDuration = () => {
+		const joinedAt = api.voiceState()?.joined_at;
+		if (joinedAt) {
+			return (Date.now() - Date.parse(joinedAt));
+		} else {
+			return (0);
+		}
+	};
+
+	const [connectedDuration, setConnectedDuration] = createSignal(
+		calcConnectedDuration(),
+	);
+
+	const interval = setInterval(() => {
+		setConnectedDuration(calcConnectedDuration());
+	}, 100);
+
+	onCleanup(() => {
+		clearInterval(interval);
+	});
 
 	return (
 		<div class="voice-tray">
 			<Show when={voice.rtc}>
 				<div class="row">
-					<div style="flex:1">
+					<div style="flex:1;display:flex;align-items:center">
 						<Switch>
 							<Match when={!voice.rtc}>
 								<div class="status disconnected">disconnected</div>
@@ -125,6 +169,8 @@ export const VoiceTray = () => {
 								<div class="status">{voice.rtc?.state()}</div>
 							</Match>
 						</Switch>
+						<div style="width:8px"></div>
+						<Duration ms={connectedDuration()} />
 					</div>
 					<button onClick={actions.disconnect}>disconnect</button>
 				</div>
@@ -137,7 +183,7 @@ export const VoiceTray = () => {
 					<div style="flex:1"></div>
 					<div>
 						<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
-							<ToggleIcon checked={voice.cameraHidden} src={iconCamera} />
+							<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
 						</button>
 						<button
 							data-tooltip="toggle screenshare"
@@ -154,15 +200,35 @@ export const VoiceTray = () => {
 			<div class="row toolbar">
 				<div style="flex:1">{api.users.cache.get("@self")?.name}</div>
 				<button onClick={actions.toggleMic}>
-					<ToggleIcon checked={voice.muted} src={iconMic} />
+					<ToggleIcon checked={!voice.muted} src={iconMic} />
 				</button>
 				<button onClick={actions.toggleDeafened}>
-					<ToggleIcon checked={voice.deafened} src={iconHeadphones} />
+					<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 				</button>
 				<button onClick={() => alert("todo")}>
 					<img class="icon" src={iconSettings} />
 				</button>
 			</div>
 		</div>
+	);
+};
+
+const Duration = (props: { ms: number }) => {
+	const hours = () => Math.floor(props.ms / (1000 * 60 * 60));
+	const mins = () =>
+		(Math.floor(props.ms / (1000 * 60)) % 60).toString().padStart(2, "0");
+	const secs = () =>
+		(Math.floor(props.ms / 1000) % 60).toString().padStart(2, "0");
+
+	return (
+		<span class="dim">
+			<Show when={hours()}>
+				{hours()}
+				<span class="">:</span>
+			</Show>
+			{mins()}
+			<span class="">:</span>
+			{secs()}
+		</span>
 	);
 };

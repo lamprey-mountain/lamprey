@@ -1450,9 +1450,44 @@ table {
 		justify-content: center;
 
 		.controls {
-			background: $bg-200;
-			border: solid $sep-500 1px;
-			padding: 4px;
+			/* background: $bg-200; */
+			/* border: solid $sep-500 1px; */
+			/* padding: 4px; */
+
+			button {
+				background: none;
+			}
+
+			button .icon {
+				height: 24px;
+				width: 24px;
+				padding: 8px;
+				border-radius: 50%;
+				background: $fg-300;
+				/* background: $fg-200; */
+				overflow: hidden;
+				transition: background 0.2s;
+
+				image {
+					filter: invert(0);
+				}
+
+				&:hover {
+					background: $fg-100;
+				}
+
+				&[aria-checked="false"] {
+					background: $bg-200;
+
+					image {
+						filter: invert(0.9);
+					}
+
+					&:hover {
+						background: $bg-300;
+					}
+				}
+			}
 		}
 	}
 
@@ -1522,29 +1557,6 @@ table {
 		display: flex;
 	}
 
-	.strike {
-		filter: none;
-
-		image {
-			filter: invert(0.9);
-		}
-	}
-
-	.strike > line {
-		visibility: hidden;
-		stroke: $color-red;
-	}
-
-	.strike[aria-checked="true"] {
-		image {
-			mask: url(#strike);
-		}
-
-		line {
-			visibility: visible;
-		}
-	}
-
 	button {
 		/* height: .5rem; */
 	}
@@ -1559,6 +1571,29 @@ table {
 
 		&.connected {
 			color: $color-green;
+		}
+	}
+}
+
+.icon.strike {
+	filter: none;
+
+	image {
+		filter: invert(0.9);
+	}
+
+	line {
+		visibility: hidden;
+		stroke: $color-red;
+	}
+
+	&[aria-checked="false"] {
+		image {
+			mask: url(#strike);
+		}
+
+		line {
+			visibility: visible;
 		}
 	}
 }
