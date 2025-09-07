@@ -4,6 +4,7 @@ import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
+import { CDN_URL } from "./App.tsx";
 
 export const ThreadNav = (props: { room_id?: string }) => {
 	const api = useApi();
@@ -118,6 +119,46 @@ export const ThreadNav = (props: { room_id?: string }) => {
 							}}
 						>
 							<ItemThread thread={thread} />
+							<For
+								each={[...api.voiceStates.values()].filter((i) =>
+									i.thread_id === thread.id
+								).sort((a, b) =>
+									Date.parse(a.joined_at) - Date.parse(b.joined_at)
+								)}
+							>
+								{(s) => {
+									const user = api.users.fetch(() => s.user_id);
+									const room_member = props.room_id
+										? api.room_members.fetch(() => props.room_id!, () =>
+											s.user_id)
+										: () =>
+											null;
+									const name = () =>
+										room_member()?.override_name || user()?.name ||
+										"unknown user";
+									// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
+									// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
+									// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
+									// </svg>
+									return (
+										<div
+											class="voice-participant menu-user"
+											data-thread-id={s.thread_id}
+											data-user-id={s.user_id}
+										>
+											<Show
+												when={user()?.avatar}
+												fallback={<div class="fallback-avatar"></div>}
+											>
+												<img
+													src={`${CDN_URL}/thumb/${user()?.avatar}?size=64`}
+												/>
+											</Show>{" "}
+											{name()}
+										</div>
+									);
+								}}
+							</For>
 						</li>
 					)}
 				</For>
