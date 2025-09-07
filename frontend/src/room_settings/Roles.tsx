@@ -18,7 +18,6 @@ function isDirty(a: Role, b: Role): boolean {
 	);
 	return a.name !== b.name ||
 		a.description !== b.description ||
-		a.is_default !== b.is_default ||
 		a.is_self_applicable !== b.is_self_applicable ||
 		a.is_mentionable !== b.is_mentionable ||
 		new Set(a.permissions).symmetricDifference(new Set(b.permissions)).size !==
@@ -129,7 +128,6 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 				name: r.name,
 				description: r.description,
 				permissions: r.permissions,
-				is_default: r.is_default,
 				is_mentionable: r.is_mentionable,
 				is_self_applicable: r.is_self_applicable,
 			},
@@ -225,7 +223,6 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						<For
 							each={[
 								"is_mentionable",
-								"is_default",
 								"is_self_applicable",
 							] as const}
 						>

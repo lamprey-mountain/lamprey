@@ -30,6 +30,7 @@ import type {
 	Thread,
 	ThreadMember,
 	User,
+	UserWithRelationship,
 	VoiceState,
 } from "sdk";
 import type { Emitter } from "@solid-primitives/event-bus";
@@ -601,8 +602,8 @@ export type Api = {
 		cache: ReactiveMap<string, ReactiveMap<string, ThreadMember>>;
 	};
 	users: {
-		fetch: (user_id: () => string) => Resource<User>;
-		cache: ReactiveMap<string, User>;
+		fetch: (user_id: () => string) => Resource<UserWithRelationship>;
+		cache: ReactiveMap<string, UserWithRelationship>;
 	};
 	messages: {
 		send: (

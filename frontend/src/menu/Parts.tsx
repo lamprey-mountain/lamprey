@@ -107,7 +107,7 @@ export function Submenu(
 }
 
 export function Item(
-	props: ParentProps<{ onClick?: (e: MouseEvent) => void }>,
+	props: ParentProps<{ onClick?: (e: MouseEvent) => void; disabled?: boolean }>,
 ) {
 	const ctx = useContext(chatctx)!;
 
@@ -141,6 +141,7 @@ export function Item(
 				}}
 				onMouseEnter={handleMouseEnter}
 				onMouseLeave={handleMouseLeave}
+				disabled={props.disabled ?? false}
 			>
 				{props.children}
 			</button>

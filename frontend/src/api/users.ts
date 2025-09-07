@@ -1,12 +1,12 @@
-import type { User } from "sdk";
+import type { User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEffect, createResource, type Resource } from "solid-js";
 import type { Api } from "../api.tsx";
 
 export class Users {
 	api: Api = null as unknown as Api;
-	cache = new ReactiveMap<string, User>();
-	requests = new Map<string, Promise<User>>();
+	cache = new ReactiveMap<string, UserWithRelationship>();
+	requests = new Map<string, Promise<UserWithRelationship>>();
 
 	fetch(user_id: () => string): Resource<User> {
 		const [resource, { mutate }] = createResource(user_id, (user_id) => {

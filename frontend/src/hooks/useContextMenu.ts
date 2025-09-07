@@ -6,7 +6,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 	const api = useApi();
 
 	const handleContextMenu = (e: MouseEvent) => {
-		console.log("ctx menu");
+		console.log("[menu] open context menu");
 		const targetEl = e.target as HTMLElement;
 
 		const menuEl = targetEl.closest(
@@ -17,7 +17,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		) as
 			| HTMLElement
 			| null;
-		console.log({ menuEl, mediaEl, targetEl });
+		console.log("[menu] target elements", { menuEl, mediaEl, targetEl });
 		if (!menuEl) return;
 		if (mediaEl && targetEl !== menuEl) return;
 
@@ -37,6 +37,12 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		const thread_id = getData("data-thread-id");
 		const message_id = getData("data-message-id");
 		const user_id = getData("data-user-id");
+		console.log("[menu] menu id data", {
+			room_id,
+			thread_id,
+			message_id,
+			user_id,
+		});
 
 		if (menuEl.classList.contains("menu-room")) {
 			if (!room_id) return;
@@ -63,37 +69,30 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 			};
 		} else if (menuEl.classList.contains("menu-user")) {
 			if (!user_id) return;
-			if (thread_id) {
-				const thread = api.threads.cache.get(thread_id);
-				if (!thread) return;
-				menu = {
-					type: "member_thread",
-					thread_id: thread.id,
-					user_id,
-				};
-			} else if (room_id) {
-				const room = api.rooms.cache.get(room_id);
-				if (!room) return;
-				menu = {
-					type: "member_room",
-					room_id: room.id,
-					user_id,
-				};
-			} else {
-				menu = {
-					type: "user",
-					user_id,
-				};
+			const thread = api.threads.cache.get(thread_id!);
+			const room = api.rooms.cache.get(room_id!);
+			if (thread?.room_id && room?.id && thread.room_id !== room.id) {
+				console.warn("mismatched thread/room ids!");
 			}
+
+			menu = {
+				type: "user",
+				thread_id: thread?.id,
+				room_id: thread?.room_id ?? room?.id ?? undefined,
+				user_id,
+			};
 		}
 
 		if (menu) {
+			console.log("[menu] resolved menu", menu);
 			e.preventDefault();
 			setMenu({
 				x: e.clientX,
 				y: e.clientY,
 				...menu,
 			} as Menu);
+		} else {
+			console.log("[menu] no resolved menu");
 		}
 	};
 

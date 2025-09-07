@@ -40,14 +40,7 @@ import { Debug } from "./Debug.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
-import {
-	MessageMenu,
-	RoomMemberMenu,
-	RoomMenu,
-	ThreadMemberMenu,
-	ThreadMenu,
-	UserMenu,
-} from "./menu/mod.ts";
+import { MessageMenu, RoomMenu, ThreadMenu, UserMenu } from "./menu/mod.ts";
 import {
 	RoomNav,
 	RouteAdminSettings,
@@ -438,16 +431,14 @@ function Overlay() {
 					/>
 				);
 			}
-			case "member_room": {
-				return <RoomMemberMenu room_id={menu.room_id} user_id={menu.user_id} />;
-			}
-			case "member_thread": {
-				return (
-					<ThreadMemberMenu thread_id={menu.thread_id} user_id={menu.user_id} />
-				);
-			}
 			case "user": {
-				return <UserMenu user_id={menu.user_id} />;
+				return (
+					<UserMenu
+						user_id={menu.user_id}
+						room_id={menu.room_id}
+						thread_id={menu.thread_id}
+					/>
+				);
 			}
 		}
 	}
