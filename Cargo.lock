@@ -899,6 +899,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "crate-bot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "common",
+ "crate-hakari",
+ "dotenvy",
+ "figment",
+ "sdk",
+ "serde",
+ "str0m",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "crate-hakari"
 version = "0.1.0"
 dependencies = [

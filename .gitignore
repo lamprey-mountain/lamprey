@@ -24,7 +24,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Secrets and local data
+# Secrets and local data/config
 .env
 data.db
 data.db-shm
@@ -32,6 +32,7 @@ data.db-wal
 config.toml
 sfu.toml
 cdn.toml
+bot.toml
 
 # Added by cargo
 
