@@ -154,12 +154,10 @@ export function MessageView(props: MessageProps) {
 	}
 
 	function getComponent() {
-		const date =
-			/^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$/.test(
-					props.message.id,
-				)
-				? getTimestampFromUUID(props.message.id)
-				: new Date();
+		const date = new Date(
+			props.message.edited_at ?? props.message.created_at ??
+				new Date().toString(),
+		);
 		if (props.message.type === MessageType.ThreadUpdate && false) {
 			const updates = [];
 			const listFormatter = new Intl.ListFormat();
