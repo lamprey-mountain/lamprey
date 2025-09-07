@@ -51,15 +51,33 @@ export const Voice = (p: { thread: Thread }) => {
 	const [focused, setFocused] = createSignal<null | string>(null);
 	const [controls, setControls] = createSignal(true);
 
-	let controlsTimeout: NodeJS.Timeout;
+	let controlsTimeout: NodeJS.Timeout = setTimeout(
+		() => setControls(false),
+		2000,
+	);
+
 	const showControls = () => {
 		setControls(true);
 		clearTimeout(controlsTimeout);
-		controlsTimeout = setTimeout(() => setControls(false), 3000);
+		controlsTimeout = setTimeout(() => setControls(false), 2000);
 	};
 
+	const hideControls = () => {
+		setControls(false);
+		clearTimeout(controlsTimeout);
+	};
+
+	onCleanup(() => {
+		clearTimeout(controlsTimeout);
+	});
+
 	return (
-		<div class="webrtc" onMouseMove={showControls}>
+		<div
+			class="webrtc"
+			classList={{ controls: controls() }}
+			onMouseMove={showControls}
+			onMouseOut={hideControls}
+		>
 			<div class="streams">
 				<Show when={voice.rtc}>
 					<For each={[...voice.rtc!.streams.values()]}>
@@ -93,6 +111,19 @@ export const Voice = (p: { thread: Thread }) => {
 					</For>
 				</Show>
 			</div>
+			<header class="top">
+				<b>{p.thread.name}</b>
+				<Show when={p.thread.description}>
+					<span class="dim" style="white-space:pre;font-size:1em">
+						{"  -  "}
+					</span>
+					{p.thread.description}
+				</Show>
+				<Switch>
+					<Match when={p.thread.deleted_at}>{" (removed)"}</Match>
+					<Match when={p.thread.archived_at}>{" (archived)"}</Match>
+				</Switch>
+			</header>
 			<div class="bottom">
 				<div class="controls">
 					<button onClick={actions.toggleDeafened}>

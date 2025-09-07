@@ -1438,6 +1438,34 @@ table {
 	grid-area: main;
 	min-height: 0;
 
+	&.controls .bottom {
+		opacity: 1;
+		/* translate: 0 0; */
+	}
+
+	&.controls .top {
+		opacity: 1;
+	}
+
+	& .bottom:hover {
+		opacity: 1;
+	}
+
+	& .top:hover {
+		opacity: 1;
+	}
+
+	.top {
+		position: absolute;
+		top: 0;
+		background: linear-gradient(to bottom, #000d 50%, transparent);
+		width: 100%;
+		padding: 8px;
+		opacity: 0;
+		text-shadow: #000000 1px 1px 3px;
+		transition: all 0.2s;
+	}
+
 	.bottom {
 		position: absolute;
 		bottom: 0;
@@ -1448,11 +1476,12 @@ table {
 		padding: 8px;
 		align-items: center;
 		justify-content: center;
+		/* translate: 0 100%; */
+		opacity: 0;
+		transition: all 0.2s;
 
 		.controls {
-			/* background: $bg-200; */
-			/* border: solid $sep-500 1px; */
-			/* padding: 4px; */
+			display: flex;
 
 			button {
 				background: none;
@@ -1464,7 +1493,6 @@ table {
 				padding: 8px;
 				border-radius: 50%;
 				background: $fg-300;
-				/* background: $fg-200; */
 				overflow: hidden;
 				transition: background 0.2s;
 

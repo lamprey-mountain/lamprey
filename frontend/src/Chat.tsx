@@ -316,11 +316,13 @@ export const ChatHeader = (props: ChatProps) => {
 	return (
 		<header class="chat-header">
 			<b>{props.thread.name}</b>
-			<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
-			{props.thread.description ?? "(no description)"}
+			<Show when={props.thread.description}>
+				<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
+				{props.thread.description}
+			</Show>
 			<Switch>
+				<Match when={props.thread.deleted_at}>{" (removed)"}</Match>
 				<Match when={props.thread.archived_at}>{" (archived)"}</Match>
-				<Match when={props.thread.deleted_at}>{" (deleted)"}</Match>
 			</Switch>
 		</header>
 	);

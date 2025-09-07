@@ -4,7 +4,7 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ThreadNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { Accessor, createEffect, For, Show } from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
@@ -12,7 +12,7 @@ import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice, VoiceTray } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
-import { getThumb, getThumbFromId, getUrl } from "./media/util.tsx";
+import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { AdminSettings } from "./AdminSettings.tsx";
 
@@ -136,20 +136,22 @@ export const RouteThread = (p: RouteSectionProps) => {
 		<>
 			<Title title={title()} />
 			<RoomNav />
-			<ThreadNav room_id={thread()?.room_id} />
+			<ThreadNav room_id={thread()?.room_id ?? undefined} />
 			<Show when={thread()}>
-				<ChatHeader thread={thread()!} />
+				<Show when={thread()!.type !== "Voice"}>
+					<ChatHeader thread={thread()!} />
+				</Show>
 				<Show
-					when={thread().type === "Chat" || thread().type === "Dm" ||
-						thread().type === "Gdm"}
+					when={thread()!.type === "Chat" || thread()!.type === "Dm" ||
+						thread()!.type === "Gdm"}
 				>
 					<ChatMain thread={thread()!} />
 				</Show>
-				<Show when={thread().type === "Voice"}>
+				<Show when={thread()!.type === "Voice"}>
 					<Voice thread={thread()!} />
 				</Show>
 				<Show
-					when={thread().type !== "Voice" && flags.has("thread_member_list")}
+					when={thread()!.type !== "Voice" && flags.has("thread_member_list")}
 				>
 					<ThreadMembers thread={thread()!} />
 				</Show>

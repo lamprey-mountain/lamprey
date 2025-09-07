@@ -29,6 +29,14 @@ export async function handleSubmit(
 			await ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
 				params: { path: { thread_id } },
 			});
+		} else if (cmd === "remove") {
+			await ctx.client.http.PUT("/api/v1/thread/{thread_id}/remove", {
+				params: { path: { thread_id } },
+			});
+		} else if (cmd === "unremove") {
+			await ctx.client.http.DELETE("/api/v1/thread/{thread_id}/remove", {
+				params: { path: { thread_id } },
+			});
 		} else if (cmd === "desc") {
 			const description = args.join(" ");
 			await ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
