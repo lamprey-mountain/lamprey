@@ -37,7 +37,6 @@ nanoid = "0.4.0"
 utoipa-axum = "0.2.0"
 image = { version = "0.25.6", features = ["avif"] }
 mediatype = { version = "0.20.0", features = ["serde"] }
-bytes = "1.10.0"
 validator = "0.20.0"
 webpage = { version = "2.0.1", default-features = false, features = ["serde"] }
 moka = { version = "0.12.10", features = ["future"] }

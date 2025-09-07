@@ -21,7 +21,6 @@ common = { path = "../crate-common" }
 http = "1.2.0"
 tower-http = { version = "0.6.2", features = ["trace"] }
 anyhow = "1.0.86"
-bytes = "1.10.1"
 crate-hakari = { version = "0.1", path = "../crate-hakari" }
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio", "tokio"] }
 opentelemetry = "0.30.0"
@@ -31,9 +30,6 @@ headers = "0.4.1"
 utoipa-axum = "0.2.0"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 serde_json = "1.0.143"
-futures-util = "0.3.31"
 percent-encoding = "2.3.2"
-uuid = { version = "1.18.0", features = ["v7"] }
-tokio-util = "0.7.16"
 thiserror = "2.0.16"
 moka = { version = "0.12.10", features = ["future"] }

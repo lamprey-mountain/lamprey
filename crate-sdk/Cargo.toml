@@ -14,9 +14,7 @@ tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread"] }
 tokio-tungstenite = { version = "0.27.0", features = ["rustls-tls-webpki-roots"] }
 tracing = "0.1.41"
 common = { version = "0.1.0", path = "../crate-common" }
-uuid = "1.12.0"
 crate-hakari = { version = "0.1", path = "../crate-hakari" }
 anyhow = "1.0.95"
 futures-util = "0.3.31"
-time = "0.3.37"
 headers = "0.4.0"

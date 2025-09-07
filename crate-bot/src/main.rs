@@ -124,5 +124,4 @@ impl EventHandler for Handle {
 #[derive(Debug, clap::Parser)]
 enum Command {
     Ping,
-    // Voice,
 }
