@@ -283,7 +283,6 @@ export const Root2: Component = (props: any) => {
 			<Portal mount={document.getElementById("overlay")!}>
 				<Overlay />
 			</Portal>
-			<VoiceTray />
 			<div style="visibility:hidden">
 				<For each={[...voice.rtc?.streams.values() ?? []]}>
 					{(stream) => {

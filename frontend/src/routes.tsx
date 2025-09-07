@@ -70,6 +70,7 @@ export const RouteRoom = (p: RouteSectionProps) => {
 					<RoomMembers room={room()!} />
 				</Show>
 			</Show>
+			<VoiceTray />
 		</>
 	);
 };
@@ -152,9 +153,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 				>
 					<ThreadMembers thread={thread()!} />
 				</Show>
-				<Show when={thread().type === "Voice"}>
-					<VoiceTray thread={thread()!} />
-				</Show>
+				<VoiceTray />
 			</Show>
 		</>
 	);
