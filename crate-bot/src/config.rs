@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -6,4 +8,5 @@ pub struct Config {
     pub token: String,
     pub base_url: Option<String>,
     pub ws_url: Option<String>,
+    pub music_path: PathBuf,
 }
