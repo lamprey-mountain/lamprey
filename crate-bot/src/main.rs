@@ -166,24 +166,46 @@ impl Handle {
         let (commands_send, commands_recv) = tokio::sync::mpsc::channel(100);
         let (events_send, mut events_recv) = tokio::sync::mpsc::channel(100);
 
-        let self_control = self.control.clone();
-        let user_id = user.id;
-        tokio::spawn(async move {
-            while let Some(ev) = events_recv.recv().await {
-                match ev {
-                    rtc::PlayerEvent::Signalling(msg) => {
-                        info!("sending signalling mesage: {msg:?}");
-                        self_control
-                            .send(MessageClient::VoiceDispatch {
-                                user_id,
-                                payload: serde_json::to_value(msg).unwrap(),
-                            })
-                            .await
-                            .expect("controller is dead!");
+        {
+            let self_control = self.control.clone();
+            let user_id = user.id;
+            let thread_id = message.thread_id;
+            let http = self.http.clone();
+            tokio::spawn(async move {
+                while let Some(ev) = events_recv.recv().await {
+                    match ev {
+                        rtc::PlayerEvent::Signalling(msg) => {
+                            info!("sending signalling mesage: {msg:?}");
+                            self_control
+                                .send(MessageClient::VoiceDispatch {
+                                    user_id,
+                                    payload: serde_json::to_value(msg).unwrap(),
+                                })
+                                .await
+                                .expect("controller is dead!");
+                        }
+                        rtc::PlayerEvent::Dead => {
+                            // TODO: clean up player
+                        }
+                        rtc::PlayerEvent::Finished => {
+                            let msg = MessageCreate {
+                                content: Some("song finished".to_string()),
+                                attachments: vec![],
+                                metadata: None,
+                                reply_id: None,
+                                override_name: None,
+                                nonce: None,
+                                embeds: vec![],
+                                created_at: None,
+                            };
+                            if let Err(err) = http.message_create(thread_id, &msg).await {
+                                error!("couldn't send message: {err}");
+                            }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         match Player::new(commands_recv, events_send).await {
             Ok(player) => {

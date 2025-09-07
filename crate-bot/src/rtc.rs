@@ -50,6 +50,8 @@ pub enum PlayerCommand {
 #[derive(Debug)]
 pub enum PlayerEvent {
     Signalling(SignallingMessage),
+    Finished,
+    Dead,
 }
 
 impl Player {
@@ -150,16 +152,13 @@ impl Player {
         debug!("start run loop");
         let mut play_interval = time::interval(std::time::Duration::from_millis(20));
         play_interval.set_missed_tick_behavior(time::MissedTickBehavior::Delay);
-        let mut media_ready = false;
 
         loop {
             if !self.rtc.is_alive() {
                 info!("rtc dead");
-                // return Ok(());
-                todo!("cleanup this!");
+                self.emitter.send(PlayerEvent::Dead).await?;
+                return Ok(());
             }
-
-            // self.negotiate_if_needed()?;
 
             let timeout = match self.rtc.poll_output() {
                 Ok(o) => o,
@@ -180,10 +179,7 @@ impl Player {
                 str0m::Output::Event(event) => {
                     debug!("{event:?}");
                     match event {
-                        str0m::Event::Connected => {
-                            info!("player connected!");
-                            media_ready = true;
-                        }
+                        str0m::Event::Connected => info!("player connected!"),
                         _ => {}
                     }
                     continue;
@@ -217,8 +213,8 @@ impl Player {
                     }
                 }
 
-                _ = play_interval.tick(), if media_ready => {
-                    self.play_audio()
+                _ = play_interval.tick() => {
+                    self.play_audio().await
                 }
 
                 _ = sleep => {
@@ -230,7 +226,7 @@ impl Player {
         }
     }
 
-    fn play_audio(&mut self) {
+    async fn play_audio(&mut self) {
         let Some(audio) = &mut self.audio else {
             return;
         };
@@ -242,6 +238,7 @@ impl Player {
                 if e.kind() == std::io::ErrorKind::UnexpectedEof =>
             {
                 info!("song finished");
+                let _ = self.emitter.send(PlayerEvent::Finished).await;
                 self.audio = None;
                 return;
             }
@@ -280,48 +277,6 @@ impl Player {
         if let Err(e) = writer.write(pt, Instant::now(), time, packet.data) {
             error!("failed to write rtp packet: {e}");
         }
-    }
-
-    fn negotiate_if_needed(&mut self) -> Result<bool> {
-        todo!()
-
-        // if matches!(self.signalling_state, SignallingState::HaveLocalOffer(_)) {
-        //     // NOTE: do i overwrite the pending offer here?
-        //     warn!("trying to negotiate, but we already have a local offer");
-        //     return Ok(false);
-        // }
-
-        // let mut change = self.rtc.sdp_api();
-
-        // for track in &mut self.outbound {
-        //     if track.state == TrackState::Pending {
-        //         let mid = change.add_media(
-        //             track.kind,
-        //             Direction::SendOnly,
-        //             // Some(track.ssrc.clone()),
-        //             None,
-        //             None,
-        //             None,
-        //         );
-        //         track.state = TrackState::Negotiating(mid);
-        //     }
-        // }
-
-        // if !change.has_changes() {
-        //     return Ok(false);
-        // }
-
-        // let Some((offer, pending)) = change.apply() else {
-        //     return Ok(false);
-        // };
-
-        // self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
-        //     sdp: SessionDescription(offer.to_sdp_string()),
-        //     tracks: vec![],
-        // }))?;
-        // self.signalling_state = SignallingState::HaveLocalOffer(pending);
-
-        // Ok(true)
     }
 }
 
