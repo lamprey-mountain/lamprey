@@ -102,8 +102,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Auth status (TODO) */
-		get: operations["auth_status"];
+		/**
+		 * Auth state
+		 * @description Get the available auth methods for this user
+		 */
+		get: operations["auth_state"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -176,10 +179,30 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth email exec (TODO)
+		 * Auth email exec
 		 * @description Send a "magic link" email to login
 		 */
 		post: operations["auth_email_exec"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/auth/email/{addr}/complete": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Auth email complete
+		 * @description Consume an email auth code to log in
+		 */
+		post: operations["auth_email_complete"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -196,7 +219,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth email reset (TODO)
+		 * Auth email reset
 		 * @description Like exec, but the link also resets the password
 		 */
 		post: operations["auth_email_reset"];
@@ -217,25 +240,12 @@ export interface paths {
 		put?: never;
 		/** Auth oauth init */
 		post: operations["auth_oauth_init"];
-		/** Auth oauth delete (TODO) */
+		/**
+		 * Auth oauth delete
+		 * @description Remove an oauth provider. You will no longer be able to authenticate via
+		 *     this provider after this endpoint is called.
+		 */
 		delete: operations["auth_oauth_delete"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/oauth/{provider}/logout": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth oauth logout (TODO) */
-		post: operations["auth_oauth_logout"];
-		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -341,6 +351,26 @@ export interface paths {
 		put?: never;
 		/** Embed a url */
 		post: operations["debug_embed_url"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/debug/info": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Get server info
+		 * @description in the future, this will become a stable route
+		 */
+		get: operations["debug_info"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -508,7 +538,7 @@ export interface paths {
 		post?: never;
 		/**
 		 * Media delete
-		 * @description Delete unlinked media. If its linked to a message, delete that message instead.
+		 * @description Delete unlinked media. Does not work if its linked to some other resource.
 		 */
 		delete: operations["media_delete"];
 		options?: never;
@@ -598,10 +628,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List visible rooms */
+		/** Room list */
 		get: operations["room_list"];
 		put?: never;
-		/** Create a room */
+		/** Room create */
 		post: operations["room_create"];
 		delete?: never;
 		options?: never;
@@ -616,14 +646,14 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get a room by its id */
+		/** Room get */
 		get: operations["room_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Edit a room */
+		/** Room edit */
 		patch: operations["room_edit"];
 		trace?: never;
 	};
@@ -636,7 +666,7 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Ack room (TODO)
+		 * Room ack (TODO)
 		 * @description Mark all threads in a room as read.
 		 */
 		put: operations["room_ack"];
@@ -654,7 +684,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Fetch audit logs */
+		/** Room audit logs */
 		get: operations["room_audit_logs"];
 		put?: never;
 		post?: never;
@@ -674,7 +704,8 @@ export interface paths {
 		/** Room ban list */
 		get: operations["room_ban_list"];
 		put?: never;
-		post?: never;
+		/** Room ban create bulk (TODO) */
+		post: operations["room_ban_create_bulk"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -840,31 +871,13 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room metrics (TODO)
+		 * Room metrics
 		 * @description Get metrics for a room
 		 */
 		get: operations["room_metrics"];
 		put?: never;
 		post?: never;
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/pin/{thread_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/** Pin thread */
-		put: operations["thread_pin"];
-		post?: never;
-		/** Unpin thread */
-		delete: operations["thread_unpin"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -905,7 +918,8 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Role reorder (WIP) */
+		patch: operations["role_reorder"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/role/{role_id}": {
@@ -941,7 +955,8 @@ export interface paths {
 		delete?: never;
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Role member bulk edit (TODO) */
+		patch: operations["role_member_bulk_edit"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}": {
@@ -1059,11 +1074,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List threads in a room */
+		/** Room thread list */
 		get: operations["thread_list"];
 		put?: never;
 		/**
-		 * Thread create room
+		 * Room thread create
 		 * @description Create a thread in a room
 		 */
 		post: operations["thread_create_room"];
@@ -1080,10 +1095,47 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List archived threads in a room */
+		/** Room thread list archived */
 		get: operations["thread_list_archived"];
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/thread/removed": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room thread list removed
+		 * @description List removed threads in a room. Requires the `ThreadRemove` permission.
+		 */
+		get: operations["thread_list_removed"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/transfer-ownership": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Room transfer ownership */
+		post: operations["room_transfer_ownership"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1212,7 +1264,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Thread create direct (TODO)
+		 * Dm thread create (TODO)
 		 * @description Create a thread outside of a room, for dms
 		 */
 		post: operations["thread_create"];
@@ -1229,14 +1281,14 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get a thread */
+		/** Thread get */
 		get: operations["thread_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Edit a thread */
+		/** Thread edit */
 		patch: operations["thread_update"];
 		trace?: never;
 	};
@@ -1249,7 +1301,7 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Ack thread
+		 * Thread ack
 		 * @description Mark a thread as read (or unread).
 		 */
 		put: operations["thread_ack"];
@@ -1268,10 +1320,10 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Archive thread */
+		/** Thread archive */
 		put: operations["thread_archive"];
 		post?: never;
-		/** Unarchive thread */
+		/** Thread unarchive */
 		delete: operations["thread_unarchive"];
 		options?: never;
 		head?: never;
@@ -1306,7 +1358,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Get context for message
+		 * Message get context
 		 * @description More efficient than calling List messages twice
 		 */
 		get: operations["message_context"];
@@ -1326,10 +1378,10 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Lock thread (TODO) */
+		/** Thread lock */
 		put: operations["thread_lock"];
 		post?: never;
-		/** Unlock thread (TODO) */
+		/** Thread unlock */
 		delete: operations["thread_unlock"];
 		options?: never;
 		head?: never;
@@ -1369,8 +1421,7 @@ export interface paths {
 		delete: operations["thread_member_delete"];
 		options?: never;
 		head?: never;
-		/** Thread member update */
-		patch: operations["thread_member_update"];
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/message": {
@@ -1380,15 +1431,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List messages in a thread */
+		/**
+		 * Messages list
+		 * @description Paginate messages in a thread
+		 */
 		get: operations["message_list"];
 		put?: never;
-		/** Create a message */
+		/**
+		 * Message create
+		 * @description Send a message to a thread
+		 */
 		post: operations["message_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
-		/** Message moderate (WIP) */
+		/**
+		 * Message moderate (WIP)
+		 * @description Bulk remove, restore, or delete messages.
+		 *
+		 *     Deleting a message:
+		 *     - Deleted messages remain visible to moderators (and sender, although there's no ui for this).
+		 *     - Deleted messages cannot be restored by moderators (ask your local server admin if needed).
+		 *     - Deleted messages are garbage collected after 7 days.
+		 *
+		 *     Removing a message:
+		 *     - Removing a message hides it from all non-moderators and the sender.
+		 *     - Removal is reversable via restoration, unlike deletion.
+		 *     - Removed messages are never garbage collected.
+		 *     - There is (will be) an endpoint for deleting all removed messages.
+		 *     - This is a "softer" form of deletion, intended for moderators you don't fully trust.
+		 *
+		 *     Permissions:
+		 *     - `MessageDelete` allows deleting messages and viewing deleted messages.
+		 *     - `MessageRemove` allows removing/restoring messages and viewing removed messages.
+		 *     - `Omnescience` allows viewing deleted and removed messages.
+		 *     - Users always have `MessageDelete` for their own messages.
+		 */
 		patch: operations["message_moderate"];
 		trace?: never;
 	};
@@ -1399,19 +1477,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get a message */
+		/** Message get */
 		get: operations["message_get"];
 		put?: never;
 		post?: never;
 		/**
-		 * Delete message
+		 * Message delete (TEMP?)
 		 * @description Note that this endpoint allows deleting your own messages, while message
 		 *     moderate always requires the full permission
 		 */
 		delete: operations["message_delete"];
 		options?: never;
 		head?: never;
-		/** edit a message */
+		/** Message edit */
 		patch: operations["message_edit"];
 		trace?: never;
 	};
@@ -1490,7 +1568,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** List message versions */
+		/** Message version list */
 		get: operations["message_version_list"];
 		put?: never;
 		post?: never;
@@ -1507,11 +1585,11 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Get message version */
+		/** Message version get */
 		get: operations["message_version_get"];
 		put?: never;
 		post?: never;
-		/** Delete message version */
+		/** Message version delete */
 		delete: operations["message_version_delete"];
 		options?: never;
 		head?: never;
@@ -1527,7 +1605,11 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Message move (TODO) */
+		/**
+		 * Message move (TODO)
+		 * @description Move messages from one thread to another. Requires `MessageMove` in both the
+		 *     source and target thread.
+		 */
 		post: operations["message_migrate"];
 		delete?: never;
 		options?: never;
@@ -1561,10 +1643,10 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/** Remove thread */
+		/** Thread remove */
 		put: operations["thread_remove"];
 		post?: never;
-		/** Restore thread */
+		/** Thread restore */
 		delete: operations["thread_restore"];
 		options?: never;
 		head?: never;
@@ -1642,7 +1724,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Send typing
+		 * Thread trigger typing indicator
 		 * @description Send a typing notification to a thread
 		 */
 		post: operations["thread_typing"];
@@ -1983,8 +2065,25 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Voice region list (TODO) */
+		/** Voice region list */
 		get: operations["voice_region_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{thread_id}/member": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Voice state list */
+		get: operations["voice_state_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2000,17 +2099,32 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Voice member get (TODO) */
-		get: operations["voice_member_get"];
+		/** Voice state get */
+		get: operations["voice_state_get"];
 		put?: never;
-		/** Voice member move (TODO) */
-		post: operations["voice_member_move"];
-		/** Voice member disconnect (TODO) */
-		delete: operations["voice_member_disconnect"];
+		post?: never;
+		/** Voice state disconnect (TODO) */
+		delete: operations["voice_state_disconnect"];
 		options?: never;
 		head?: never;
-		/** Voice member update (TODO) */
-		patch: operations["voice_member_patch"];
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{thread_id}/member/{user_id}/move": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Voice state move (TODO) */
+		post: operations["voice_state_move"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 }
@@ -2050,7 +2164,7 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description User supplied reason why this happened */
 			reason?: string | null;
-			/** @description Room this happened in */
+			/** @description Room this happened in. Is user_id for user audit logs. */
 			room_id: components["schemas"]["Id"];
 			session_id?: null | components["schemas"]["Id"];
 			/** @description User who caused this entry to be created */
@@ -2168,6 +2282,11 @@ export interface components {
 			type: "MemberUpdate";
 			user_id: components["schemas"]["Id"];
 		} | {
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "MemberDisconnect";
+			user_id: components["schemas"]["Id"];
+		} | {
 			role_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "RoleApply";
@@ -2181,14 +2300,23 @@ export interface components {
 			bot_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "BotAdd";
+		} | {
+			changes: components["schemas"]["AuditLogChange"][];
+			/** @enum {string} */
+			type: "UserUpdate";
 		};
-		AuthStatus: {
+		AuthEmailComplete: {
+			code: string;
+		};
+		AuthState: {
+			/** @description if there is at least one verified and primary email address
+			 *
+			 *     (this is used for magic links and password resets) */
+			has_email: boolean;
 			/** @description if a password has been set */
 			has_password: boolean;
 			/** @description if local totp state is_valid */
 			has_totp: boolean;
-			/** @description if there is at least one verified email address */
-			has_verified_email: boolean;
 			/** @description the oauth providers this user has authenticated with */
 			oauth_providers: string[];
 		};
@@ -2223,9 +2351,14 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		/**
+		 * Format: email
+		 * @description an email address
+		 */
+		EmailAddr: string;
 		EmailInfo: {
 			/** @description the email address itself */
-			email: components["schemas"]["String"];
+			email: components["schemas"]["EmailAddr"];
 			/** @description whether this is the user's primary email address */
 			is_primary: boolean;
 			/** @description user verified they have access to the email address */
@@ -2333,11 +2466,6 @@ export interface components {
 			/** Format: int64 */
 			width: number;
 		};
-		/** @description ways to interact with a message */
-		Interactions: {
-			/** @description show placeholder reactions (they appear with zero total reactions) for these emoji */
-			reactions_default?: components["schemas"]["Emoji"][] | null;
-		};
 		Invite: {
 			/** @description the invite code for this invite */
 			code: components["schemas"]["InviteCode"];
@@ -2430,8 +2558,6 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description The source (Uploaded, Downloaded) */
 			source: components["schemas"]["MediaTrack"];
-			/** @description The source (Extracted, Generated) */
-			tracks: components["schemas"]["MediaTrack"][];
 		};
 		MediaCreate: components["schemas"]["MediaCreateSource"] & {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -2489,11 +2615,6 @@ export interface components {
 				 * @description The blob's length in bytes
 				 */
 				size: number;
-				/**
-				 * Format: uri
-				 * @description The url where this track may be downloaded from
-				 */
-				url: string;
 			};
 		/** @description metadata about a particular track */
 		MediaTrackInfo:
@@ -2555,9 +2676,10 @@ export interface components {
 			thread_id: components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
-		/** @description a bot command */
-		MessageBotCommand: {
-			command_id: string;
+		MessageCall: {
+			ended_at?: null | components["schemas"]["Time"];
+			/** @description the people who joined the call */
+			participants: components["schemas"]["Id"][];
 		};
 		MessageCreate: {
 			attachments?: components["schemas"]["MediaRef"][];
@@ -2588,7 +2710,7 @@ export interface components {
 			override_name?: string | null;
 			reply_id?: null | components["schemas"]["Id"];
 		};
-		/** @description a basic message, using the legacy markdown syntax
+		/** @description a basic message, written using markdown
 		 *
 		 *     NOTE: new message features won't be backported here! */
 		MessageDefaultMarkdown: {
@@ -2613,22 +2735,6 @@ export interface components {
 			reactions?: components["schemas"]["ReactionCounts"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
-		/** @description a basic message, using the shiny new and very experimental tagged text format */
-		MessageDefaultTagged: {
-			attachments: components["schemas"]["Media"][];
-			/** @description the message's content in the new format */
-			content?: string | null;
-			embeds: components["schemas"]["Embed"][];
-			/**
-			 * @deprecated
-			 * @description arbitrary metadata associated with a message
-			 *
-			 *     deprecated: arbitrary metadata is too dubious, sorry. will come up with a better solution later
-			 */
-			metadata?: unknown;
-			reactions?: components["schemas"]["ReactionCounts"];
-			reply_id?: null | components["schemas"]["Id"];
-		};
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
 			actor_user_id: components["schemas"]["Id"];
@@ -2648,14 +2754,6 @@ export interface components {
 			remove?: components["schemas"]["Id"][];
 			/** @description which messages to restore */
 			restore?: components["schemas"]["Id"][];
-		};
-		/** @description audit log entries as a message (builtin moderation logging?) */
-		MessageModerationLog: {
-			audit_log_entry: components["schemas"]["AuditLogEntry"];
-		};
-		/** @description a report that moderators should look at */
-		MessageModerationReport: {
-			report: components["schemas"]["Report"];
 		};
 		MessagePatch: {
 			attachments?: components["schemas"]["MediaRef"][] | null;
@@ -2683,12 +2781,6 @@ export interface components {
 		MessagePin: {
 			message_id: components["schemas"]["Id"];
 			reason?: string | null;
-			user_id: components["schemas"]["Id"];
-		};
-		/** @description Following a room and will receive announcement posts from it */
-		MessageRoomFollowed: {
-			reason?: string | null;
-			thread_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
 		};
 		MessageSync: {
@@ -2857,30 +2949,21 @@ export interface components {
 			type: "RelationshipDelete";
 			user_id: components["schemas"]["Id"];
 		};
-		/** @description a message (announcement? motd?) from the system */
-		MessageSystemMessage: {
-			attachments: components["schemas"]["Media"][];
-			content?: string | null;
-			embeds: components["schemas"]["Embed"][];
-		};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
 			source_room_id: components["schemas"]["Id"];
 			source_thread_id: components["schemas"]["Id"];
 			source_user_id: components["schemas"]["Id"];
 		};
-		/** @description Information about a thread being updated */
-		MessageThreadUpdate: {
-			patch: components["schemas"]["ThreadPatch"];
+		/** @description Information about a thread being renamed */
+		MessageThreadRename: {
+			new: string;
+			old: string;
 		};
 		MessageType:
 			| (components["schemas"]["MessageDefaultMarkdown"] & {
 				/** @enum {string} */
 				type: "DefaultMarkdown";
-			})
-			| (components["schemas"]["MessageDefaultTagged"] & {
-				/** @enum {string} */
-				type: "DefaultTagged";
 			})
 			| (components["schemas"]["MessagePin"] & {
 				/** @enum {string} */
@@ -2898,37 +2981,21 @@ export interface components {
 				/** @enum {string} */
 				type: "MemberRemove";
 			})
-			| (components["schemas"]["MessageThreadUpdate"] & {
+			| (components["schemas"]["MessageMember"] & {
 				/** @enum {string} */
-				type: "ThreadUpdate";
+				type: "MemberJoin";
 			})
-			| (components["schemas"]["MessageThreadUpdate"] & {
+			| (components["schemas"]["MessageCall"] & {
 				/** @enum {string} */
-				type: "ThreadCreate";
+				type: "Call";
+			})
+			| (components["schemas"]["MessageThreadRename"] & {
+				/** @enum {string} */
+				type: "ThreadRename";
 			})
 			| (components["schemas"]["MessageThreadPingback"] & {
 				/** @enum {string} */
 				type: "ThreadPingback";
-			})
-			| (components["schemas"]["MessageRoomFollowed"] & {
-				/** @enum {string} */
-				type: "RoomFollowed";
-			})
-			| (components["schemas"]["MessageBotCommand"] & {
-				/** @enum {string} */
-				type: "BotCommand";
-			})
-			| (components["schemas"]["MessageModerationLog"] & {
-				/** @enum {string} */
-				type: "ModerationLog";
-			})
-			| (components["schemas"]["MessageModerationReport"] & {
-				/** @enum {string} */
-				type: "ModerationReport";
-			})
-			| (components["schemas"]["MessageSystemMessage"] & {
-				/** @enum {string} */
-				type: "SystemMessage";
 			});
 		/**
 		 * Mime
@@ -2957,8 +3024,8 @@ export interface components {
 		NotifAction: "Notify" | "Watching" | "Ignore";
 		/** @description a notification; a unit of stuff that may show up in your inbox or be pushed to you */
 		Notification: {
-			/** @description when this was created */
-			created_at: components["schemas"]["Time"];
+			/** @description when this was added to the inbox */
+			added_at: components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
 			/** @description the id of the message that was sent */
 			message_id: components["schemas"]["Id"];
@@ -2967,8 +3034,11 @@ export interface components {
 			/** @description the thread this message was sent in */
 			thread_id: components["schemas"]["Id"];
 		};
-		/** @enum {string} */
-		NotificationReason: "Mention" | "MentionBulk" | "Reply" | "New";
+		/**
+		 * @description what caused this notification to be created
+		 * @enum {string}
+		 */
+		NotificationReason: "Reminder" | "Mention" | "MentionBulk" | "Reply";
 		/** @description notification config for a user (works globally) */
 		NotifsGlobal: {
 			mentions: components["schemas"]["NotifAction"];
@@ -3026,7 +3096,7 @@ export interface components {
 				id: components["schemas"]["Id"];
 				/** @description User supplied reason why this happened */
 				reason?: string | null;
-				/** @description Room this happened in */
+				/** @description Room this happened in. Is user_id for user audit logs. */
 				room_id: components["schemas"]["Id"];
 				session_id?: null | components["schemas"]["Id"];
 				/** @description User who caused this entry to be created */
@@ -3097,8 +3167,8 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: {
-				/** @description when this was created */
-				created_at: components["schemas"]["Time"];
+				/** @description when this was added to the inbox */
+				added_at: components["schemas"]["Time"];
 				id: components["schemas"]["Id"];
 				/** @description the id of the message that was sent */
 				message_id: components["schemas"]["Id"];
@@ -3134,13 +3204,17 @@ export interface components {
 			items: {
 				description?: string | null;
 				id: components["schemas"]["Id"];
-				is_default: boolean;
 				is_mentionable: boolean;
 				is_self_applicable: boolean;
 				/** Format: int64 */
 				member_count: number;
 				name: string;
 				permissions: components["schemas"]["Permission"][];
+				/**
+				 * Format: int64
+				 * @description tiebroken by id
+				 */
+				position: number;
 				room_id: components["schemas"]["Id"];
 				version_id: components["schemas"]["Id"];
 			}[];
@@ -3167,6 +3241,7 @@ export interface components {
 				 * @description number of people who are online in this room
 				 */
 				online_count: number;
+				owner_id?: null | components["schemas"]["Id"];
 				/** @description anyone can view and join */
 				public: boolean;
 				/**
@@ -3186,12 +3261,20 @@ export interface components {
 		PaginationResponse_RoomMember: {
 			cursor?: string | null;
 			has_more: boolean;
-			items: (components["schemas"]["RoomMembership"] & {
-				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
-				membership_updated_at: components["schemas"]["Time"];
+			items: {
+				/** @description When this member joined the room */
+				joined_at: components["schemas"]["Time"];
+				membership: components["schemas"]["RoomMembership"];
+				origin?: null | components["schemas"]["RoomMemberOrigin"];
+				/** @description like nickname, but for your description/bio/about */
+				override_description?: string | null;
+				/** @description aka nickname */
+				override_name?: string | null;
+				/** @description the roles that this member has */
+				roles: components["schemas"]["Id"][];
 				room_id: components["schemas"]["Id"];
 				user_id: components["schemas"]["Id"];
-			})[];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -3282,12 +3365,13 @@ export interface components {
 		PaginationResponse_ThreadMember: {
 			cursor?: string | null;
 			has_more: boolean;
-			items: (components["schemas"]["ThreadMembership"] & {
-				/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
-				membership_updated_at: components["schemas"]["Time"];
+			items: {
+				/** @description When this member joined the thread */
+				joined_at: components["schemas"]["Time"];
+				membership: components["schemas"]["ThreadMembership"];
 				thread_id: components["schemas"]["Id"];
 				user_id: components["schemas"]["Id"];
-			})[];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -3300,7 +3384,7 @@ export interface components {
 			type: "UserId";
 			user_id: components["schemas"]["Id"];
 		} | {
-			email: components["schemas"]["String"];
+			email: components["schemas"]["EmailAddr"];
 			/** @enum {string} */
 			type: "Email";
 		};
@@ -3527,33 +3611,51 @@ export interface components {
 		Role: {
 			description?: string | null;
 			id: components["schemas"]["Id"];
-			is_default: boolean;
 			is_mentionable: boolean;
 			is_self_applicable: boolean;
 			/** Format: int64 */
 			member_count: number;
 			name: string;
 			permissions: components["schemas"]["Permission"][];
+			/**
+			 * Format: int64
+			 * @description tiebroken by id
+			 */
+			position: number;
 			room_id: components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
 		RoleCreate: {
 			description?: string | null;
-			/** @description if this role is applied by default to all new members */
-			is_default?: boolean;
 			/** @description if this role can be mentioned by members */
 			is_mentionable?: boolean;
 			is_self_applicable?: boolean;
 			name: string;
 			permissions?: components["schemas"]["Permission"][];
 		};
+		/** @description apply and remove a role to many members at once */
+		RoleMemberBulkPatch: {
+			/** @description add this role to these users */
+			apply?: components["schemas"]["Id"][];
+			/** @description remove this role from these users */
+			remove?: components["schemas"]["Id"][];
+		};
 		RolePatch: {
 			description?: string | null;
-			is_default?: boolean | null;
 			is_mentionable?: boolean | null;
 			is_self_applicable?: boolean | null;
 			name?: string | null;
 			permissions?: components["schemas"]["Permission"][] | null;
+		};
+		/** @description reorder some roles */
+		RoleReorder: {
+			/** @description the roles to reorder */
+			roles?: components["schemas"]["RoleReorderItem"][];
+		};
+		RoleReorderItem: {
+			/** Format: int64 */
+			position: number;
+			role_id: components["schemas"]["Id"];
 		};
 		/** @description A room */
 		Room: components["schemas"]["RoomType"] & {
@@ -3573,6 +3675,7 @@ export interface components {
 			 * @description number of people who are online in this room
 			 */
 			online_count: number;
+			owner_id?: null | components["schemas"]["Id"];
 			/** @description anyone can view and join */
 			public: boolean;
 			/**
@@ -3586,6 +3689,15 @@ export interface components {
 			 */
 			version_id: string;
 		};
+		/** @description create many bans at once */
+		RoomBanBulkCreate: {
+			expires_at?: null | components["schemas"]["Time"];
+			/** @description who to ban */
+			target_ids?: components["schemas"]["Id"][];
+		};
+		RoomBanCreate: {
+			expires_at?: null | components["schemas"]["Time"];
+		};
 		/** @description Data required to create a room */
 		RoomCreate: {
 			description?: string | null;
@@ -3593,11 +3705,40 @@ export interface components {
 			name: string;
 			public?: boolean | null;
 		};
-		RoomMember: components["schemas"]["RoomMembership"] & {
-			/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
-			membership_updated_at: components["schemas"]["Time"];
+		RoomMember: {
+			/** @description When this member joined the room */
+			joined_at: components["schemas"]["Time"];
+			membership: components["schemas"]["RoomMembership"];
+			origin?: null | components["schemas"]["RoomMemberOrigin"];
+			/** @description like nickname, but for your description/bio/about */
+			override_description?: string | null;
+			/** @description aka nickname */
+			override_name?: string | null;
+			/** @description the roles that this member has */
+			roles: components["schemas"]["Id"][];
 			room_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
+		};
+		RoomMemberOrigin: {
+			/** @description the invite code they joined with */
+			code: components["schemas"]["InviteCode"];
+			/** @description the user who created the invite */
+			inviter: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "Invite";
+		} | {
+			/** @enum {string} */
+			type: "BotInstall";
+			/** @description the user who installed this bot */
+			user_id: components["schemas"]["Id"];
+		} | {
+			/** @description the bridge that owns this puppet */
+			bridge_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "Bridged";
+		} | {
+			/** @enum {string} */
+			type: "Creator";
 		};
 		RoomMemberPatch: {
 			override_description?: string | null;
@@ -3607,19 +3748,8 @@ export interface components {
 			override_description?: string | null;
 			override_name?: string | null;
 		};
-		RoomMembership: {
-			/** @enum {string} */
-			membership: "Join";
-			override_description?: string | null;
-			override_name?: string | null;
-			roles: components["schemas"]["Id"][];
-		} | {
-			/** @enum {string} */
-			membership: "Leave";
-		} | {
-			/** @enum {string} */
-			membership: "Ban";
-		};
+		/** @enum {string} */
+		RoomMembership: "Join" | "Leave";
 		RoomMetrics: {
 			/**
 			 * Format: int64
@@ -3797,10 +3927,6 @@ export interface components {
 			/** @enum {string} */
 			type: "Available";
 		};
-		/** @description An email address */
-		String: {
-			inner: string;
-		};
 		Suspended: {
 			at: components["schemas"]["Time"];
 			reason: string;
@@ -3897,32 +4023,16 @@ export interface components {
 			/** @description The type of this thread */
 			type?: components["schemas"]["ThreadType"];
 		};
-		ThreadMember: components["schemas"]["ThreadMembership"] & {
-			/** @description When this member's membership last changed (joined, left, was kicked, or banned). */
-			membership_updated_at: components["schemas"]["Time"];
+		ThreadMember: {
+			/** @description When this member joined the thread */
+			joined_at: components["schemas"]["Time"];
+			membership: components["schemas"]["ThreadMembership"];
 			thread_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
 		};
-		ThreadMemberPatch: {
-			override_description?: string | null;
-			override_name?: string | null;
-		};
-		ThreadMemberPut: {
-			override_description?: string | null;
-			override_name?: string | null;
-		};
-		ThreadMembership: {
-			/** @enum {string} */
-			membership: "Join";
-			override_description?: string | null;
-			override_name?: string | null;
-		} | {
-			/** @enum {string} */
-			membership: "Leave";
-		} | {
-			/** @enum {string} */
-			membership: "Ban";
-		};
+		ThreadMemberPut: Record<string, never>;
+		/** @enum {string} */
+		ThreadMembership: "Join" | "Leave";
 		ThreadPatch: {
 			description?: string | null;
 			name?: string | null;
@@ -3986,6 +4096,9 @@ export interface components {
 			/** @enum {string} */
 			source: "Generated";
 		};
+		TransferOwnership: {
+			owner_id: components["schemas"]["Id"];
+		};
 		User: {
 			avatar?: null | components["schemas"]["Id"];
 			bot?: null | components["schemas"]["Bot"];
@@ -4030,10 +4143,18 @@ export interface components {
 			/** Format: int64 */
 			width: number;
 		};
+		/** @description represents a user that is connected to a voice thread (older docs call this a "voice connection")
+		 *
+		 *     connection limits:
+		 *     - users can only have one active connection across all threads
+		 *     - bots can connect to multiple threads with any connection strategy
+		 *     - both users and bots can only have one connection per thread */
 		VoiceState: {
-			/** @description when this person joined the call */
+			/** @description when this user joined the call */
 			joined_at: components["schemas"]["Time"];
+			/** @description the thread this user is connected to */
 			thread_id: components["schemas"]["Id"];
+			/** @description the user this state belongs to */
 			user_id: components["schemas"]["Id"];
 		};
 		VoiceStateUpdate: {
@@ -4219,7 +4340,7 @@ export interface operations {
 			};
 		};
 	};
-	auth_status: {
+	auth_state: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4234,7 +4355,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["AuthStatus"];
+					"application/json": components["schemas"]["AuthState"];
 				};
 			};
 		};
@@ -4327,6 +4448,31 @@ export interface operations {
 			};
 		};
 	};
+	auth_email_complete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Email address */
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AuthEmailComplete"];
+			};
+		};
+		responses: {
+			/** @description success */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	auth_email_reset: {
 		parameters: {
 			query?: never;
@@ -4372,27 +4518,6 @@ export interface operations {
 		};
 	};
 	auth_oauth_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description oauth provider */
-				provider: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	auth_oauth_logout: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4617,6 +4742,26 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	debug_info: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ServerVersion"];
+				};
 			};
 		};
 	};
@@ -5204,6 +5349,31 @@ export interface operations {
 			};
 		};
 	};
+	room_ban_create_bulk: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomBanBulkCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	room_ban_get: {
 		parameters: {
 			query?: never;
@@ -5241,7 +5411,11 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoomBanCreate"];
+			};
+		};
 		responses: {
 			/** @description success */
 			204: {
@@ -5634,70 +5808,6 @@ export interface operations {
 			};
 		};
 	};
-	thread_pin: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_unpin: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
 	report_room: {
 		parameters: {
 			query?: never;
@@ -5776,6 +5886,33 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Role"];
+				};
+			};
+		};
+	};
+	role_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoleReorder"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
 				};
 			};
 		};
@@ -5886,6 +6023,35 @@ export interface operations {
 				content: {
 					"application/json":
 						components["schemas"]["PaginationResponse_RoomMember"];
+				};
+			};
+		};
+	};
+	role_member_bulk_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description Role id */
+				role_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["RoleMemberBulkPatch"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
 				};
 			};
 		};
@@ -6285,6 +6451,60 @@ export interface operations {
 					"application/json":
 						components["schemas"]["PaginationResponse_Thread"];
 				};
+			};
+		};
+	};
+	thread_list_removed: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List removed room threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Thread"];
+				};
+			};
+		};
+	};
+	room_transfer_ownership: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TransferOwnership"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -6918,42 +7138,6 @@ export interface operations {
 		responses: {
 			/** @description success */
 			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_member_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ThreadMemberPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["ThreadMember"];
-				};
-			};
-			/** @description not modified */
-			304: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -8228,7 +8412,30 @@ export interface operations {
 			};
 		};
 	};
-	voice_member_get: {
+	voice_state_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: string;
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_state_get: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -8236,7 +8443,7 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["UserIdReq"];
 			};
 			cookie?: never;
 		};
@@ -8253,7 +8460,7 @@ export interface operations {
 			};
 		};
 	};
-	voice_member_move: {
+	voice_state_disconnect: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -8261,44 +8468,11 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["UserIdReq"];
 			};
 			cookie?: never;
 		};
-		requestBody: {
-			content: {
-				"application/json": unknown;
-			};
-		};
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": unknown;
-				};
-			};
-		};
-	};
-	voice_member_disconnect: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description User id */
-				user_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": unknown;
-			};
-		};
+		requestBody?: never;
 		responses: {
 			/** @description ok */
 			204: {
@@ -8309,7 +8483,7 @@ export interface operations {
 			};
 		};
 	};
-	voice_member_patch: {
+	voice_state_move: {
 		parameters: {
 			query?: never;
 			header?: never;
