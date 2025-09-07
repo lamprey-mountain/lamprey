@@ -78,11 +78,20 @@ pub enum VoiceCommand {
     /// join the voice thread you're in
     Join,
 
-    /// leave the voice thread it's in
+    /// leave the voice thread the bot is in
     Leave,
 
-    /// play some music
+    /// play or resume music
     Play,
+
+    /// toggle pause state
+    Pause {
+        #[arg(short)]
+        paused: Option<bool>,
+    },
+
+    /// stop current music
+    Stop,
 }
 
 struct Handle {
@@ -129,6 +138,22 @@ impl Handle {
                         p.send(PlayerCommand::Play(self.config.music_path.clone()))
                             .await?;
                         "playing".to_string()
+                    } else {
+                        "no player".to_string()
+                    }
+                }
+                VoiceCommand::Pause { paused } => {
+                    if let Some(p) = &self.player {
+                        p.send(PlayerCommand::Pause(paused)).await?;
+                        "(un)paused".to_string()
+                    } else {
+                        "no player".to_string()
+                    }
+                }
+                VoiceCommand::Stop => {
+                    if let Some(p) = &self.player {
+                        p.send(PlayerCommand::Stop).await?;
+                        "stopped".to_string()
                     } else {
                         "no player".to_string()
                     }

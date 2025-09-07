@@ -7,7 +7,7 @@ use common::v1::types::voice::{
     MediaKindSerde, SessionDescription, SignallingMessage, TrackMetadata,
 };
 use str0m::{
-    change::{SdpAnswer, SdpPendingOffer},
+    change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     format::Codec,
     media::{Frequency, MediaTime, Mid},
     net::Protocol,
@@ -34,6 +34,7 @@ pub struct Player {
     controller: Receiver<PlayerCommand>,
     emitter: Sender<PlayerEvent>,
     audio: Option<PlayerAudio>,
+    paused: bool,
 }
 
 struct PlayerAudio {
@@ -45,6 +46,10 @@ struct PlayerAudio {
 pub enum PlayerCommand {
     Signalling(SignallingMessage),
     Play(PathBuf),
+    Stop,
+
+    /// None = toggle
+    Pause(Option<bool>),
 }
 
 #[derive(Debug)]
@@ -98,28 +103,40 @@ impl Player {
             mid,
             pending: Some(pending),
             audio: None,
+            paused: false,
         })
     }
 
-    pub fn handle_command(&mut self, cmd: PlayerCommand) -> anyhow::Result<()> {
+    pub async fn handle_command(&mut self, cmd: PlayerCommand) -> anyhow::Result<()> {
         debug!("handle command {cmd:?}");
         match cmd {
             PlayerCommand::Signalling(msg) => {
                 match msg {
-                    SignallingMessage::Offer { .. } => {
+                    SignallingMessage::Offer { sdp, .. } => {
+                        let sdp = SdpOffer::from_sdp_string(&sdp)?;
+                        let answer = self.rtc.sdp_api().accept_offer(sdp)?;
+                        self.emitter
+                            .send(PlayerEvent::Signalling(SignallingMessage::Answer {
+                                sdp: SessionDescription(answer.to_sdp_string()),
+                            }))
+                            .await?;
                         warn!("received offer, should impl renegotiation");
                     }
                     SignallingMessage::Answer { sdp } => {
-                        let sdp = SdpAnswer::from_sdp_string(&sdp).unwrap();
+                        let sdp = SdpAnswer::from_sdp_string(&sdp)?;
                         self.rtc
                             .sdp_api()
-                            .accept_answer(self.pending.take().unwrap(), sdp)
-                            .unwrap();
+                            .accept_answer(self.pending.take().unwrap(), sdp)?;
                     }
                     _ => {} // TODO: handle other messages
                 }
             }
             PlayerCommand::Play(path_buf) => {
+                if self.audio.is_some() && self.paused {
+                    self.paused = false;
+                    return Ok(());
+                }
+
                 debug!("init audio");
 
                 let mut hint = Hint::new();
@@ -143,6 +160,12 @@ impl Player {
                     .clone();
 
                 self.audio = Some(PlayerAudio { track, format });
+            }
+            PlayerCommand::Stop => {
+                self.audio = None;
+            }
+            PlayerCommand::Pause(p) => {
+                self.paused = p.unwrap_or(!self.paused);
             }
         }
         Ok(())
@@ -193,7 +216,7 @@ impl Player {
                 biased;
 
                 Some(cmd) = self.controller.recv() => {
-                    if let Err(e) = self.handle_command(cmd) {
+                    if let Err(e) = self.handle_command(cmd).await {
                         error!("handle_command error: {e}");
                     }
                 },
@@ -227,6 +250,10 @@ impl Player {
     }
 
     async fn play_audio(&mut self) {
+        if self.paused {
+            return;
+        }
+
         let Some(audio) = &mut self.audio else {
             return;
         };
