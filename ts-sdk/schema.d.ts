@@ -2171,137 +2171,193 @@ export interface components {
 			user_id: components["schemas"]["Id"];
 		};
 		AuditLogEntryType: {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "RoomCreate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "RoomUpdate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "ThreadCreate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "ThreadUpdate";
 		} | {
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				message_id: components["schemas"]["Id"];
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MessageDelete";
 		} | {
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				message_id: components["schemas"]["Id"];
+				thread_id: components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MessageVersionDelete";
-			version_id: components["schemas"]["Id"];
 		} | {
-			message_ids: components["schemas"]["Id"][];
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				message_ids: components["schemas"]["Id"][];
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MessageDeleteBulk";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "RoleCreate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "RoleUpdate";
 		} | {
-			role_id: components["schemas"]["Id"];
+			metadata: {
+				role_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "RoleDelete";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "InviteCreate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "InviteUpdate";
 		} | {
-			code: components["schemas"]["InviteCode"];
+			metadata: {
+				code: components["schemas"]["InviteCode"];
+			};
 			/** @enum {string} */
 			type: "InviteDelete";
 		} | {
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
+			/** @description remove all reactions */
+			metadata: {
+				message_id: components["schemas"]["Id"];
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "ReactionPurge";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "EmojiCreate";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "EmojiUpdate";
 		} | {
-			emoji_id: components["schemas"]["Id"];
+			metadata: {
+				emoji_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "EmojiDelete";
 		} | {
-			allow: components["schemas"]["Permission"][];
-			deny: components["schemas"]["Permission"][];
-			/** Format: uuid */
-			overwrite_id: string;
-			thread_id: components["schemas"]["Id"];
-			ty: components["schemas"]["PermissionOverwriteType"];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				/** Format: uuid */
+				overwrite_id: string;
+				thread_id: components["schemas"]["Id"];
+				type: components["schemas"]["PermissionOverwriteType"];
+			};
 			/** @enum {string} */
 			type: "ThreadOverwriteSet";
 		} | {
-			/** Format: uuid */
-			overwrite_id: string;
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				/** Format: uuid */
+				overwrite_id: string;
+				thread_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "ThreadOverwriteDelete";
 		} | {
-			room_id: components["schemas"]["Id"];
+			metadata: {
+				room_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MemberKick";
-			user_id: components["schemas"]["Id"];
 		} | {
-			room_id: components["schemas"]["Id"];
+			metadata: {
+				room_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MemberBan";
-			user_id: components["schemas"]["Id"];
 		} | {
-			room_id: components["schemas"]["Id"];
+			metadata: {
+				room_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MemberUnban";
-			user_id: components["schemas"]["Id"];
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
-			room_id: components["schemas"]["Id"];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				room_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MemberUpdate";
-			user_id: components["schemas"]["Id"];
 		} | {
-			thread_id: components["schemas"]["Id"];
+			metadata: {
+				thread_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "MemberDisconnect";
-			user_id: components["schemas"]["Id"];
 		} | {
-			role_id: components["schemas"]["Id"];
+			metadata: {
+				role_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "RoleApply";
-			user_id: components["schemas"]["Id"];
 		} | {
-			role_id: components["schemas"]["Id"];
+			metadata: {
+				role_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "RoleUnapply";
-			user_id: components["schemas"]["Id"];
 		} | {
-			bot_id: components["schemas"]["Id"];
+			metadata: {
+				bot_id: components["schemas"]["Id"];
+			};
 			/** @enum {string} */
 			type: "BotAdd";
 		} | {
-			changes: components["schemas"]["AuditLogChange"][];
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
 			/** @enum {string} */
 			type: "UserUpdate";
 		};
