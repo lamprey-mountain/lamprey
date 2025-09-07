@@ -78,6 +78,16 @@ async fn permission_thread_overwrite(
         .permission_overwrites
         .iter()
         .find(|o| o.ty == json.ty && o.id == overwrite_id);
+
+    if existing.is_none()
+        && thread.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
+    {
+        return Err(Error::BadRequest(format!(
+            "too many permission overwrites (max {})",
+            crate::consts::MAX_PERMISSION_OVERWRITES
+        )));
+    }
+
     if let Some(existing) = &existing {
         let ea: HashSet<Permission> = existing.allow.iter().cloned().collect();
         let ed: HashSet<Permission> = existing.deny.iter().cloned().collect();

@@ -106,7 +106,7 @@ async fn message_context(
     let perms = s.services().perms.for_thread(user_id, thread_id).await?;
     perms.ensure_view()?;
     let limit = q.limit.unwrap_or(10);
-    if limit > 100 {
+    if limit > 1024 {
         return Err(Error::BadStatic("limit too big"));
     }
     let before_q = PaginationQuery {

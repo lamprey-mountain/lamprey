@@ -26,14 +26,45 @@ impl DataReaction for Postgres {
         key: ReactionKey,
     ) -> Result<()> {
         debug!("reaction put user_id={user_id} message_id={message_id} key={key:?}");
+        let mut tx = self.pool.begin().await?;
+
         let emoji_id = match &key.0 {
             Emoji::Custom(e) => Some(*e.id),
             Emoji::Unicode(_) => None,
         };
-        let key = match &key.0 {
+        let key_str = match &key.0 {
             Emoji::Custom(e) => e.id.to_string(),
             Emoji::Unicode(e) => e.0.to_owned(),
         };
+
+        // Check if the key already exists for this message by any user
+        let key_exists: bool = query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $2)",
+            *message_id,
+            &key_str
+        )
+        .fetch_one(&mut *tx)
+        .await?
+        .unwrap_or(false);
+
+        if !key_exists {
+            // It's a new unique reaction, check the limit
+            let unique_reaction_count: i64 = query_scalar!(
+                "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1",
+                *message_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0);
+
+            if unique_reaction_count as u32 >= crate::consts::MAX_UNIQUE_REACTIONS {
+                return Err(crate::Error::BadRequest(format!(
+                    "too many unique reactions (max {})",
+                    crate::consts::MAX_UNIQUE_REACTIONS
+                )));
+            }
+        }
+
         query!(
             r#"
             WITH pos AS (
@@ -48,11 +79,13 @@ impl DataReaction for Postgres {
             "#,
             *message_id,
             *user_id,
-            key,
+            &key_str,
             emoji_id,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 

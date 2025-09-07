@@ -3,11 +3,11 @@ use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
-use crate::gen_paginate;
 use crate::types::{
     DbThread, DbThreadCreate, DbThreadPrivate, DbThreadType, PaginationDirection, PaginationQuery,
     PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
 };
+use crate::{gen_paginate, Error};
 
 use crate::data::DataThread;
 
@@ -17,6 +17,25 @@ use super::{Pagination, Postgres};
 impl DataThread for Postgres {
     async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId> {
         let thread_id = ThreadId::new();
+        let mut tx = self.pool.begin().await?;
+
+        if let Some(room_id) = create.room_id {
+            let count: i64 = query_scalar!(
+                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                room_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0);
+
+            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+                return Err(Error::BadRequest(format!(
+                    "too many active threads (max {})",
+                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                )));
+            }
+        }
+
         query!(
             "
 			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked)
@@ -31,8 +50,9 @@ impl DataThread for Postgres {
             create.ty as _,
             create.nsfw,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
         info!("inserted thread");
         Ok(thread_id)
     }
@@ -163,8 +183,28 @@ impl DataThread for Postgres {
     }
 
     async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.pool.begin().await?;
+
+        if let Some(room_id) = query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
+            .fetch_one(&mut *tx)
+            .await?
+        {
+            let count: i64 = query_scalar!(
+                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                room_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0);
+
+            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+                return Err(Error::BadRequest(format!(
+                    "too many active threads (max {})",
+                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                )));
+            }
+        }
+
         let version_id = ThreadVerId::new();
         query!(
             r#"
@@ -203,8 +243,28 @@ impl DataThread for Postgres {
     }
 
     async fn thread_unarchive(&self, thread_id: ThreadId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.pool.begin().await?;
+
+        if let Some(room_id) = query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
+            .fetch_one(&mut *tx)
+            .await?
+        {
+            let count: i64 = query_scalar!(
+                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                room_id
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(0);
+
+            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+                return Err(Error::BadRequest(format!(
+                    "too many active threads (max {})",
+                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                )));
+            }
+        }
+
         let version_id = ThreadVerId::new();
         query!(
             r#"

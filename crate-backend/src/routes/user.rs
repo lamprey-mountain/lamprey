@@ -141,7 +141,7 @@ async fn user_delete(
     ),
     tags = ["user"],
     responses(
-        (status = OK, body = User, description = "success"),
+        (status = OK, body = UserWithRelationship, description = "success"),
     )
 )]
 async fn user_get(

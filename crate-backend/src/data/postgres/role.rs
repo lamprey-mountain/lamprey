@@ -45,8 +45,6 @@ impl From<DbRole> for Role {
     }
 }
 
-const MAX_ROLE_COUNT: u32 = 1024;
-
 #[async_trait]
 impl DataRole for Postgres {
     async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role> {
@@ -69,8 +67,11 @@ impl DataRole for Postgres {
         .fetch_one(&mut *tx)
         .await?
         .unwrap_or_default() as u32;
-        if count >= MAX_ROLE_COUNT {
-            return Err(Error::BadStatic("too many roles (max 1000)"));
+        if count >= crate::consts::MAX_ROLE_COUNT {
+            return Err(Error::BadRequest(format!(
+                "too many roles (max {})",
+                crate::consts::MAX_ROLE_COUNT
+            )));
         }
         query!(
             r#"update role set position = position + 1 where id != room_id and room_id = $1"#,

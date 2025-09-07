@@ -23,7 +23,7 @@ impl<K: PaginationKey> TryInto<Pagination<K>> for PaginationQuery<K> {
 
     fn try_into(self) -> Result<Pagination<K>, Self::Error> {
         let limit = self.limit.unwrap_or(10);
-        if limit > 100 {
+        if limit > 1024 {
             return Err(Error::TooBig);
         }
         let dir = self.dir.unwrap_or_default();

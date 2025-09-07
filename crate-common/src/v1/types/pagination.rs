@@ -40,7 +40,7 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
         let limit = ObjectBuilder::new()
             .schema_type(utoipa::openapi::schema::Type::Integer)
             .minimum(Some(0))
-            .maximum(Some(100))
+            .maximum(Some(1024))
             .default(Some(10.into()))
             .build();
         let dir = ObjectBuilder::new()
@@ -77,9 +77,7 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
 #[serde(rename_all = "lowercase")]
 pub enum PaginationDirection {
     #[default]
-    // #[serde(rename="f")]
     F,
-    // #[serde(rename="b")]
     B,
 }
 
