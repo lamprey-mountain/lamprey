@@ -22,6 +22,8 @@ export type Embed = components["schemas"]["Embed"];
 export type EmojiCustom = components["schemas"]["EmojiCustom"];
 export type RelationshipWithUserId =
 	components["schemas"]["RelationshipWithUserId"];
+export type UserWithRelationship =
+	components["schemas"]["UserWithRelationship"];
 
 export type Pagination<T> = {
 	total: number;

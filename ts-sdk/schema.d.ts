@@ -4188,6 +4188,9 @@ export interface components {
 			description?: string | null;
 			name?: string | null;
 		};
+		UserWithRelationship: components["schemas"]["User"] & {
+			relationship: components["schemas"]["Relationship"];
+		};
 		/** @description metadata for videos */
 		Video: {
 			codec: string;
@@ -8003,7 +8006,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["User"];
+					"application/json": components["schemas"]["UserWithRelationship"];
 				};
 			};
 		};
