@@ -159,7 +159,7 @@ impl Player {
                 todo!("cleanup this!");
             }
 
-            self.negotiate_if_needed()?;
+            // self.negotiate_if_needed()?;
 
             let timeout = match self.rtc.poll_output() {
                 Ok(o) => o,

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
@@ -107,6 +108,97 @@ impl Handle {
         }
         Ok(())
     }
+
+    async fn handle_command(&mut self, message: &Message, cmd: Command) -> anyhow::Result<String> {
+        let resp = match cmd {
+            Command::Ping => "pong!".to_string(),
+            Command::Voice(v) => match v {
+                VoiceCommand::Join => {
+                    self.join_voice(message).await?;
+                    "joined".to_string()
+                }
+                VoiceCommand::Leave => {
+                    self.send_signalling(SignallingMessage::VoiceState { state: None })
+                        .await?;
+                    self.player = None;
+                    "left".to_string()
+                }
+                VoiceCommand::Play => {
+                    let _ = self.join_voice(message).await;
+                    if let Some(p) = &self.player {
+                        p.send(PlayerCommand::Play(self.config.music_path.clone()))
+                            .await?;
+                        "playing".to_string()
+                    } else {
+                        "no player".to_string()
+                    }
+                }
+            },
+        };
+
+        Ok(resp)
+    }
+
+    async fn join_voice(&mut self, message: &Message) -> anyhow::Result<()> {
+        let Some(user) = &self.user else {
+            return Err(anyhow!("no user for this connection!?"));
+        };
+
+        let author_voice_state = self
+            .voice_states
+            .iter()
+            .find(|s| s.user_id == message.author_id);
+        let Some(author_voice_state) = author_voice_state else {
+            return Err(anyhow!("you aren't in a voice thread"));
+        };
+
+        if self.player.is_some() {
+            return Err(anyhow!("already playing music"));
+        }
+
+        self.send_signalling(SignallingMessage::VoiceState {
+            state: Some(VoiceStateUpdate {
+                thread_id: author_voice_state.thread_id,
+            }),
+        })
+        .await?;
+
+        let (commands_send, commands_recv) = tokio::sync::mpsc::channel(100);
+        let (events_send, mut events_recv) = tokio::sync::mpsc::channel(100);
+
+        let self_control = self.control.clone();
+        let user_id = user.id;
+        tokio::spawn(async move {
+            while let Some(ev) = events_recv.recv().await {
+                match ev {
+                    rtc::PlayerEvent::Signalling(msg) => {
+                        info!("sending signalling mesage: {msg:?}");
+                        self_control
+                            .send(MessageClient::VoiceDispatch {
+                                user_id,
+                                payload: serde_json::to_value(msg).unwrap(),
+                            })
+                            .await
+                            .expect("controller is dead!");
+                    }
+                }
+            }
+        });
+
+        match Player::new(commands_recv, events_send).await {
+            Ok(player) => {
+                debug!("created player");
+                tokio::spawn(player.run());
+                debug!("spawned player");
+                self.player = Some(commands_send);
+                Ok(())
+            }
+            Err(err) => {
+                error!("failed to create player: {err}");
+                Err(anyhow!("failed to create player: {err}"))
+            }
+        }
+    }
 }
 
 impl EventHandler for Handle {
@@ -147,84 +239,16 @@ impl EventHandler for Handle {
         if let Some(command) = content.and_then(|c| c.strip_prefix("!")) {
             debug!("got raw command {command:?}");
             let command =
-                Command::try_parse_from(std::iter::once("bot").chain(command.split_whitespace()))?;
-            debug!("got command {command:?}");
+                Command::try_parse_from(std::iter::once("bot").chain(command.split_whitespace()));
             let resp = match command {
-                Command::Ping => "pong!",
-                Command::Voice(v) => match v {
-                    VoiceCommand::Join => {
-                        if let Some(user) = &self.user {
-                            let author_voice_state = self
-                                .voice_states
-                                .iter()
-                                .find(|s| s.user_id == message.author_id);
-                            if let Some(author_voice_state) = author_voice_state {
-                                self.send_signalling(SignallingMessage::VoiceState {
-                                    state: Some(VoiceStateUpdate {
-                                        thread_id: author_voice_state.thread_id,
-                                    }),
-                                })
-                                .await?;
-
-                                let (commands_send, commands_recv) =
-                                    tokio::sync::mpsc::channel(100);
-                                let (events_send, mut events_recv) =
-                                    tokio::sync::mpsc::channel(100);
-
-                                let self_control = self.control.clone();
-                                let user_id = user.id;
-                                tokio::spawn(async move {
-                                    while let Some(ev) = events_recv.recv().await {
-                                        match ev {
-                                            rtc::PlayerEvent::Signalling(msg) => {
-                                                info!("sending signalling mesage: {msg:?}");
-                                                self_control
-                                                    .send(MessageClient::VoiceDispatch {
-                                                        user_id,
-                                                        payload: serde_json::to_value(msg).unwrap(),
-                                                    })
-                                                    .await
-                                                    .expect("controller is dead!");
-                                            }
-                                        }
-                                    }
-                                });
-
-                                match Player::new(commands_recv, events_send).await {
-                                    Ok(player) => {
-                                        debug!("created player");
-                                        tokio::spawn(player.run());
-                                        debug!("spawned player");
-                                        self.player = Some(commands_send);
-                                        "joined"
-                                    }
-                                    Err(err) => {
-                                        error!("failed to create player: {err}");
-                                        "failed!"
-                                    }
-                                }
-                            } else {
-                                "you aren't in a voice thread"
-                            }
-                        } else {
-                            "no user for this connection!?"
-                        }
+                Ok(command) => {
+                    debug!("got command {command:?}");
+                    match self.handle_command(&message, command).await {
+                        Ok(s) => s,
+                        Err(e) => e.to_string(),
                     }
-                    VoiceCommand::Leave => {
-                        self.send_signalling(SignallingMessage::VoiceState { state: None })
-                            .await?;
-                        "left"
-                    }
-                    VoiceCommand::Play => {
-                        if let Some(p) = &self.player {
-                            p.send(PlayerCommand::Play(self.config.music_path.clone()))
-                                .await?;
-                            "ok"
-                        } else {
-                            "no player"
-                        }
-                    }
-                },
+                }
+                Err(err) => err.to_string(),
             };
             let resp = MessageCreate {
                 content: Some(resp.into()),
