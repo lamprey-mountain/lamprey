@@ -65,7 +65,7 @@ import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { generateNickname } from "./nick.ts";
 import { Inbox } from "./Inbox.tsx";
 import { ThreadNav } from "./Nav.tsx";
-import { useVoice, VoiceProvider } from "./voice.tsx";
+import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { VoiceTray } from "./Voice.tsx";
 
 export const BASE_URL = localStorage.getItem("api_url") ??

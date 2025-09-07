@@ -1,5 +1,13 @@
 import { Thread } from "sdk";
-import { createEffect, For, Match, onCleanup, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Match,
+	onCleanup,
+	Show,
+	Switch,
+} from "solid-js";
 import iconCamera from "./assets/camera.png";
 import iconHeadphones from "./assets/headphones.png";
 import iconMic from "./assets/mic.png";
@@ -9,7 +17,7 @@ import iconX from "./assets/x.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { createVoiceClient } from "./rtc.ts";
-import { useVoice } from "./voice.tsx";
+import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
@@ -41,6 +49,8 @@ export const Voice = (p: { thread: Thread }) => {
 		return users;
 	};
 
+	const [focused, setFocused] = createSignal<null | string>(null);
+
 	return (
 		<div class="webrtc">
 			<div class="streams">
@@ -52,7 +62,13 @@ export const Voice = (p: { thread: Thread }) => {
 								if (videoRef) videoRef.srcObject = stream.media;
 							});
 							return (
-								<div class="stream">
+								<div
+									class="stream"
+									classList={{ fullscreen: focused() === stream.id }}
+									onClick={() =>
+										setFocused((s) => s === stream.id ? null : stream.id)}
+								>
+									<div class="live">live</div>
 									<video
 										autoplay
 										playsinline
@@ -63,12 +79,12 @@ export const Voice = (p: { thread: Thread }) => {
 							);
 						}}
 					</For>
+					<For each={getUsersWithoutStreams()}>
+						{(uid) => {
+							return <div class="stream">{getName(uid)}</div>;
+						}}
+					</For>
 				</Show>
-				<For each={getUsersWithoutStreams()}>
-					{(uid) => {
-						return <div class="stream">{getName(uid)}</div>;
-					}}
-				</For>
 			</div>
 			<div class="bottom">
 				<div class="controls">
