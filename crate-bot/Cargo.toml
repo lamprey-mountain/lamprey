@@ -16,6 +16,6 @@ figment = { version = "0.10.19", features = ["env", "toml"] }
 sdk = { version = "0.1.0", path = "../crate-sdk" }
 serde = { version = "1.0.219", features = ["derive"] }
 str0m = "0.10.0"
-tokio = { version = "1.47.1", features = ["full"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }

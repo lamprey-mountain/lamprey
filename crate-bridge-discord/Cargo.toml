@@ -14,7 +14,7 @@ reqwest = { version = "0.12.12", default-features = false, features = ["rustls-t
 serde = "1.0.217"
 serenity = "0.12.4"
 sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
-tokio = { version = "1.43.0", features = ["fs", "rt-multi-thread"] }
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 common = { version = "0.1.0", path = "../crate-common" }
