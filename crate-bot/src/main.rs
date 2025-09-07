@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::{
@@ -6,7 +8,7 @@ use common::v1::types::{
 };
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc::Sender, Mutex};
 use tracing::{debug, error, info, warn};
 
 use crate::{
@@ -50,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         voice_states: vec![],
         control,
         user: None,
-        player: None,
+        player: Arc::new(Mutex::new(None)),
         config,
     };
     client
@@ -99,7 +101,7 @@ struct Handle {
     voice_states: Vec<VoiceState>,
     control: Sender<MessageClient>,
     user: Option<User>,
-    player: Option<Sender<PlayerCommand>>,
+    player: Arc<Mutex<Option<Sender<PlayerCommand>>>>,
     config: Config,
 }
 
@@ -129,12 +131,12 @@ impl Handle {
                 VoiceCommand::Leave => {
                     self.send_signalling(SignallingMessage::VoiceState { state: None })
                         .await?;
-                    self.player = None;
+                    *self.player.lock().await = None;
                     "left".to_string()
                 }
                 VoiceCommand::Play => {
                     let _ = self.join_voice(message).await;
-                    if let Some(p) = &self.player {
+                    if let Some(p) = &*self.player.lock().await {
                         p.send(PlayerCommand::Play(self.config.music_path.clone()))
                             .await?;
                         "playing".to_string()
@@ -143,7 +145,7 @@ impl Handle {
                     }
                 }
                 VoiceCommand::Pause { paused } => {
-                    if let Some(p) = &self.player {
+                    if let Some(p) = &*self.player.lock().await {
                         p.send(PlayerCommand::Pause(paused)).await?;
                         "(un)paused".to_string()
                     } else {
@@ -151,7 +153,7 @@ impl Handle {
                     }
                 }
                 VoiceCommand::Stop => {
-                    if let Some(p) = &self.player {
+                    if let Some(p) = &*self.player.lock().await {
                         p.send(PlayerCommand::Stop).await?;
                         "stopped".to_string()
                     } else {
@@ -177,7 +179,7 @@ impl Handle {
             return Err(anyhow!("you aren't in a voice thread"));
         };
 
-        if self.player.is_some() {
+        if self.player.lock().await.is_some() {
             return Err(anyhow!("already playing music"));
         }
 
@@ -196,6 +198,7 @@ impl Handle {
             let user_id = user.id;
             let thread_id = message.thread_id;
             let http = self.http.clone();
+            let player = self.player.clone();
             tokio::spawn(async move {
                 while let Some(ev) = events_recv.recv().await {
                     match ev {
@@ -210,7 +213,8 @@ impl Handle {
                                 .expect("controller is dead!");
                         }
                         rtc::PlayerEvent::Dead => {
-                            // TODO: clean up player
+                            *player.lock().await = None;
+                            info!("cleaned up dead player");
                         }
                         rtc::PlayerEvent::Finished => {
                             let msg = MessageCreate {
@@ -237,7 +241,7 @@ impl Handle {
                 debug!("created player");
                 tokio::spawn(player.run());
                 debug!("spawned player");
-                self.player = Some(commands_send);
+                *self.player.lock().await = Some(commands_send);
                 Ok(())
             }
             Err(err) => {
@@ -319,6 +323,14 @@ impl EventHandler for Handle {
         state: Option<VoiceState>,
     ) -> Result<(), Self::Error> {
         debug!("got voice state for {user_id}: {state:?}");
+        if let Some(user) = &self.user {
+            if user.id == user_id && state == None {
+                if let Some(p) = &*self.player.lock().await {
+                    p.send(PlayerCommand::Stop).await?;
+                }
+            }
+        };
+
         self.voice_states.retain(|s| s.user_id != user_id);
         if let Some(state) = state {
             self.voice_states.push(state);
@@ -332,7 +344,7 @@ impl EventHandler for Handle {
         payload: SignallingMessage,
     ) -> Result<(), Self::Error> {
         debug!("got voice dispatch for {user_id}: {payload:?}");
-        if let Some(p) = &mut self.player {
+        if let Some(p) = &*self.player.lock().await {
             p.send(PlayerCommand::Signalling(payload)).await?;
         }
         Ok(())
