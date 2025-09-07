@@ -59,7 +59,12 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const nav = useNavigate();
 	const room_id = () => props.room.id;
 
-	const threads = api.threads.list(room_id);
+	function getThreads() {
+		const threads = [...api.threads.cache.values()]
+			.filter((t) => t.room_id === props.room.id && !t.deleted_at);
+		threads.sort((a, b) => a.id < b.id ? 1 : -1);
+		return threads;
+	}
 
 	function createThread(room_id: string) {
 		ctx.dispatch({
@@ -139,12 +144,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<br />
 			<ul>
 				<For
-					each={[
-						...threads()?.items.filter((i) =>
-							i.room_id === props.room.id && i.state !== "Deleted"
-						) ??
-							[],
-					]}
+					each={getThreads()}
 				>
 					{(thread) => (
 						<li>

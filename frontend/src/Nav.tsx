@@ -15,9 +15,13 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	// local list of threads for this room
 	const [list, setList] = createSignal<Thread[]>([]);
 
-	if (!props.room_id) {
-		api.dms.list();
-	}
+	createEffect(() => {
+		if (props.room_id) {
+			api.threads.list(() => props.room_id!);
+		} else {
+			api.dms.list();
+		}
+	});
 
 	const room = api.rooms.fetch(() => props.room_id);
 
@@ -28,6 +32,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				(props.room_id ? t.room_id === props.room_id : t.room_id === null) &&
 				!t.deleted_at
 			);
+		threads.sort((a, b) => a.id < b.id ? 1 : -1);
 		setList(threads);
 	});
 
