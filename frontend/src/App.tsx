@@ -283,9 +283,25 @@ export const Root2: Component = (props: any) => {
 			<Portal mount={document.getElementById("overlay")!}>
 				<Overlay />
 			</Portal>
-			<Show when={thread() && thread()!.type === "Voice"}>
-				<VoiceTray thread={thread()!} />
-			</Show>
+			<VoiceTray />
+			<div style="visibility:hidden">
+				<For each={[...voice.rtc?.streams.values() ?? []]}>
+					{(stream) => {
+						let audioRef!: HTMLAudioElement;
+						createEffect(() => {
+							console.log("listening to stream", stream);
+							if (audioRef) audioRef.srcObject = stream.media;
+						});
+						return (
+							<audio
+								autoplay
+								ref={audioRef!}
+								muted={voice.deafened}
+							/>
+						);
+					}}
+				</For>
+			</div>
 			<Show when={state() !== "ready"}>
 				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
 					{state()}

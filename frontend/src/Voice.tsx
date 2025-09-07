@@ -15,8 +15,7 @@ export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
 
-	actions.connect(p.thread.id);
-	onCleanup(() => actions.disconnect());
+	if (!voice.threadId) actions.connect(p.thread.id);
 
 	const getName = (uid: string) => {
 		const user = api.users.fetch(() => uid);
@@ -58,7 +57,7 @@ export const Voice = (p: { thread: Thread }) => {
 										autoplay
 										playsinline
 										ref={videoRef!}
-										muted={voice.deafened}
+										muted
 									/>
 								</div>
 							);
@@ -84,51 +83,58 @@ export const Voice = (p: { thread: Thread }) => {
 	);
 };
 
-export const VoiceTray = (p: { thread: Thread }) => {
+export const VoiceTray = () => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
-
-	const room = api.rooms.fetch(() => p.thread.room_id!);
+	const thread = voice.threadId
+		? api.threads.fetch(() => voice.threadId!)
+		: () => null;
+	const room = thread()?.room_id
+		? api.rooms.fetch(() => thread().room_id)
+		: () => null;
 
 	return (
 		<div class="voice-tray">
-			<div class="row">
-				<div style="flex:1">
-					<Switch>
-						<Match when={!voice.rtc}>
-							<div class="status disconnected">disconnected</div>
-						</Match>
-						<Match when={voice.rtc?.state() === "connected"}>
-							<div class="status connected">connected</div>
-						</Match>
-						<Match when={true}>
-							<div class="status">{voice.rtc?.state()}</div>
-						</Match>
-					</Switch>
+			<Show when={voice.rtc}>
+				<div class="row">
+					<div style="flex:1">
+						<Switch>
+							<Match when={!voice.rtc}>
+								<div class="status disconnected">disconnected</div>
+							</Match>
+							<Match when={voice.rtc?.state() === "connected"}>
+								<div class="status connected">connected</div>
+							</Match>
+							<Match when={true}>
+								<div class="status">{voice.rtc?.state()}</div>
+							</Match>
+						</Switch>
+					</div>
+					<button onClick={actions.disconnect}>disconnect</button>
 				</div>
-			</div>
-			<div class="row">
-				<div>
-					<Show when={room()} fallback={p.thread.name}>
-						{room()?.name} / {p.thread.name}
-					</Show>
+				<div class="row">
+					<div>
+						<Show when={room()} fallback={thread()?.name}>
+							{room()?.name} / {thread()?.name}
+						</Show>
+					</div>
+					<div style="flex:1"></div>
+					<div>
+						<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
+							<ToggleIcon checked={voice.cameraHidden} src={iconCamera} />
+						</button>
+						<button
+							data-tooltip="toggle screenshare"
+							onClick={actions.toggleScreen}
+						>
+							<ToggleIcon
+								checked={voice.screenshareEnabled}
+								src={iconScreenshare}
+							/>
+						</button>
+					</div>
 				</div>
-				<div style="flex:1"></div>
-				<div>
-					<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
-						<ToggleIcon checked={voice.cameraHidden} src={iconCamera} />
-					</button>
-					<button
-						data-tooltip="toggle screenshare"
-						onClick={actions.toggleScreen}
-					>
-						<ToggleIcon
-							checked={voice.screenshareEnabled}
-							src={iconScreenshare}
-						/>
-					</button>
-				</div>
-			</div>
+			</Show>
 			<div class="row toolbar">
 				<div style="flex:1">{api.users.cache.get("@self")?.name}</div>
 				<button onClick={actions.toggleMic}>

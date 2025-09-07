@@ -167,7 +167,7 @@ export const createVoiceClient = () => {
 		const ws = api.client.getWebsocket();
 		const user_id = api.users.cache.get("@self")!.id;
 		console.group("[rtc:signal] send", payload.type);
-		console.info(payload);
+		console.trace(payload);
 		console.groupEnd();
 		ws.send(JSON.stringify({
 			type: "VoiceDispatch",
@@ -321,7 +321,6 @@ export const createVoiceClient = () => {
 	});
 
 	setup();
-	onCleanup(close);
 
 	return {
 		conn,

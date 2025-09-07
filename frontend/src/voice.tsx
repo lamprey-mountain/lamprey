@@ -104,12 +104,14 @@ export const VoiceProvider = (props: ParentProps) => {
 			if (!state.rtc) {
 				update("rtc", createVoiceClient());
 			}
+			update("threadId", threadId);
 			state.rtc?.connect(threadId);
 		},
 		disconnect() {
 			state.rtc?.disconnect();
 			state.rtc?.conn.close();
 			update("rtc", null);
+			update("threadId", null);
 		},
 		toggleMic: async () => {
 			if (!streamMic) {
