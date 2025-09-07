@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    config::Config, MediaData, PeerEvent, SfuTrack, SignallingMessage, TrackMetadataServer,
+    config::Config, MediaData, PeerEvent, SfuTrack, SignallingMessage, Speaking,
+    SpeakingWithoutUserId, TrackMetadataServer,
 };
 use anyhow::Result;
 use common::v1::types::{
@@ -14,6 +15,7 @@ use common::v1::types::{
 };
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
+    channel::ChannelId,
     media::{Direction, MediaKind, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
@@ -51,6 +53,9 @@ pub struct Peer {
     voice_state: VoiceState,
     commands: UnboundedReceiver<PeerCommand>,
     events: UnboundedSender<PeerEventEnvelope>,
+
+    /// the datachannel where speaking data is sent
+    speaking_chan: Option<ChannelId>,
 }
 
 #[derive(Debug)]
@@ -102,6 +107,7 @@ impl Peer {
             tracks_metadata: vec![],
             have_queue: vec![],
             signalling_state: SignallingState::Stable,
+            speaking_chan: None,
         };
 
         tokio::spawn(async move {
@@ -167,6 +173,29 @@ impl Peer {
                                 })?;
                             } else {
                                 warn!("track not found");
+                            }
+                        }
+
+                        Event::ChannelOpen(chan, label) => {
+                            if label == "speaking" {
+                                debug!("open speaking channel {chan:?}");
+                                self.speaking_chan = Some(chan);
+                            }
+                        }
+                        Event::ChannelData(data) => {
+                            if self.speaking_chan == Some(data.id) {
+                                dbg!(&data.data);
+                                if let Ok(data) =
+                                    serde_json::from_slice::<SpeakingWithoutUserId>(&data.data)
+                                {
+                                    debug!("recv speaking {data:?}");
+                                    self.emit(PeerEvent::Speaking(Speaking {
+                                        user_id: self.user_id,
+                                        flags: data.flags,
+                                    }))?;
+                                } else {
+                                    debug!("recv speaking invalid data");
+                                }
                             }
                         }
 
@@ -277,6 +306,12 @@ impl Peer {
             PeerCommand::Have { user_id, tracks } => {
                 if !self.process_haves(user_id, tracks)? {
                     self.have_queue.push(user_id);
+                }
+            }
+            PeerCommand::Speaking(speaking) => {
+                let chan = self.speaking_chan.and_then(|ch| self.rtc.channel(ch));
+                if let Some(mut chan) = chan {
+                    chan.write(false, &serde_json::to_vec(&speaking)?)?;
                 }
             }
         }

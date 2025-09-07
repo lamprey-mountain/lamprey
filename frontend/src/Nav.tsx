@@ -5,9 +5,11 @@ import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
 import { CDN_URL } from "./App.tsx";
+import { useVoice } from "./voice-provider.tsx";
 
 export const ThreadNav = (props: { room_id?: string }) => {
 	const api = useApi();
+	const [voice] = useVoice();
 
 	// track drag indices
 	const [dragging, setDragging] = createSignal<number | null>(null);
@@ -140,9 +142,15 @@ export const ThreadNav = (props: { room_id?: string }) => {
 									// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
 									// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
 									// </svg>
+
 									return (
 										<div
 											class="voice-participant menu-user"
+											classList={{
+												speaking:
+													((voice.rtc?.speaking.get(s.user_id)?.flags ?? 0) &
+														1) === 1,
+											}}
 											data-thread-id={s.thread_id}
 											data-user-id={s.user_id}
 										>

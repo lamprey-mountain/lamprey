@@ -70,7 +70,27 @@ pub enum PeerEvent {
     WantHave {
         user_ids: Vec<UserId>,
     },
+    Speaking(Speaking),
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Speaking {
+    user_id: UserId,
+    flags: SpeakingFlags,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpeakingWithoutUserId {
+    flags: SpeakingFlags,
+}
+
+/// Flags for speaking
+///
+/// Audio = 1 << 0
+/// Indicator = 1 << 1
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(transparent)]
+pub struct SpeakingFlags(pub u8);
 
 #[derive(Debug)]
 pub enum PeerCommand {
@@ -88,6 +108,7 @@ pub enum PeerCommand {
         user_id: UserId,
         tracks: Vec<TrackMetadataServer>,
     },
+    Speaking(Speaking),
 }
 
 #[derive(Debug, Clone)]

@@ -297,7 +297,6 @@ impl Sfu {
                 }
                 self.tracks.push(m.clone());
             }
-
             PeerEvent::MediaData(m) => {
                 // debug!("media data event");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
@@ -323,13 +322,11 @@ impl Sfu {
                     a.value().send(PeerCommand::MediaData(m.clone()))?;
                 }
             }
-
             PeerEvent::Dead => {
                 debug!("peerevent::dead");
                 self.peers.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
             }
-
             PeerEvent::NeedsKeyframe {
                 source_mid,
                 source_peer,
@@ -350,7 +347,6 @@ impl Sfu {
                     rid,
                 })?;
             }
-
             PeerEvent::Have { tracks } => {
                 debug!("have event {tracks:?}");
                 let Some(my_state) = self.voice_states.get(&user_id) else {
@@ -380,7 +376,6 @@ impl Sfu {
                 }
                 self.track_metadata.insert(user_id, tracks);
             }
-
             PeerEvent::WantHave { user_ids } => {
                 let (Some(state), Some(peer)) =
                     (self.voice_states.get(&user_id), self.peers.get(&user_id))
@@ -415,6 +410,31 @@ impl Sfu {
                     }) {
                         warn!("failed to send Have to peer {}: {}", user_id, e);
                     }
+                }
+            }
+            PeerEvent::Speaking(speaking) => {
+                let Some(my_state) = self.voice_states.get(&user_id) else {
+                    warn!("user has no voice state");
+                    return Ok(());
+                };
+
+                for a in &self.peers {
+                    if a.key() == &user_id {
+                        debug!("skip own user");
+                        continue;
+                    }
+
+                    let Some(state) = self.voice_states.get(a.key()) else {
+                        debug!("missing voice state");
+                        continue;
+                    };
+
+                    if state.thread_id != my_state.thread_id {
+                        debug!("wrong thread id");
+                        continue;
+                    }
+
+                    a.value().send(PeerCommand::Speaking(speaking.clone()))?;
                 }
             }
         }

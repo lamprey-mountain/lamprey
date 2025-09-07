@@ -1,5 +1,8 @@
 import {
 	createContext,
+	createEffect,
+	createSignal,
+	on,
 	onCleanup,
 	type ParentProps,
 	useContext,
@@ -18,6 +21,7 @@ export type VoiceState = {
 	musicPlaying: boolean;
 	rtc: VoiceClient | null;
 	threadId: string | null;
+	hasVoiceActivity: boolean;
 };
 
 export type VoiceActions = {
@@ -36,6 +40,7 @@ export const useVoice = () => useContext(VoiceCtx)!;
 
 export const VoiceProvider = (props: ParentProps) => {
 	const api = useApi();
+	const vad = createVoiceActivityDetection();
 	const [state, update] = createStore<VoiceState>({
 		muted: true,
 		deafened: false,
@@ -44,6 +49,9 @@ export const VoiceProvider = (props: ParentProps) => {
 		musicPlaying: false,
 		rtc: null,
 		threadId: null,
+		get hasVoiceActivity() {
+			return vad.hasVoiceActivity();
+		},
 	});
 
 	let streamMic: MediaStream | undefined;
@@ -54,6 +62,10 @@ export const VoiceProvider = (props: ParentProps) => {
 	let micTn: RTCRtpTransceiver | undefined;
 	let camTn: RTCRtpTransceiver | undefined;
 	let musicTn: RTCRtpTransceiver | undefined;
+
+	createEffect(on(vad.hasVoiceActivity, (activity) => {
+		state.rtc?.sendSpeaking(activity ? 1 : 0);
+	}));
 
 	api.events.on("sync", async (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
@@ -128,10 +140,18 @@ export const VoiceProvider = (props: ParentProps) => {
 						console.log("[voice] got microphone stream", stream);
 						const track = streamMic.getAudioTracks()[0];
 						if (track) {
-							await micTn.sender.replaceTrack(track);
-							micTn.direction = "sendonly";
+							if (micTn.currentDirection !== "stopped") {
+								await micTn.sender.replaceTrack(track);
+								micTn.direction = "sendonly";
+							} else {
+								console.warn(
+									"[voice] microphone transceiver is stopped",
+									micTn,
+								);
+							}
 						}
 					}
+					vad.connect(streamMic);
 				} else {
 					console.warn("[voice] couldn't get microphone stream");
 				}
@@ -287,4 +307,75 @@ function handleGetMediaError(e: Error) {
 			alert(`error opening media: ${e.message}`);
 			break;
 	}
+}
+
+// TODO: investigate more ways to debounce
+// deep neural network: https://www.microsoft.com/en-us/research/wp-content/uploads/2017/04/Tashev-Mirsamadi_DNN-based-Causal-VAD.pdf
+// another implementation: https://github.com/snakers4/silero-vad
+function createVoiceActivityDetection() {
+	console.log("[vad] init");
+
+	const [hasVoiceActivity, setHasVoiceActivity] = createSignal(false);
+	const threshold = 0.02;
+	const minFramesEnable = 3;
+	const minFramesDisable = 5;
+
+	const ctx = new AudioContext();
+	let source: MediaStreamAudioSourceNode;
+	const analyzer = ctx.createAnalyser();
+	analyzer.fftSize = 2048;
+
+	const array = new Uint8Array(analyzer.fftSize);
+
+	let running = false;
+	let consecutiveOn = 0;
+	let consecutiveOff = 0;
+
+	// calculates rms of the waveform: https://en.wikipedia.org/wiki/Root_mean_square#Audio_Engineering
+	const detect = () => {
+		analyzer.getByteTimeDomainData(array);
+		let sumSquares = 0;
+		for (let i = 0; i < array.length; i++) {
+			const normalized = (array[i] - 128) / 128;
+			sumSquares += normalized * normalized;
+		}
+
+		const rms = Math.sqrt(sumSquares / array.length);
+		const currentActivity = rms > threshold;
+
+		if (currentActivity) {
+			consecutiveOn++;
+			consecutiveOff = 0;
+			if (!hasVoiceActivity() && consecutiveOn >= minFramesEnable) {
+				setHasVoiceActivity(true);
+			}
+		} else {
+			consecutiveOff++;
+			consecutiveOn = 0;
+			if (hasVoiceActivity() && consecutiveOff >= minFramesDisable) {
+				setHasVoiceActivity(false);
+			}
+		}
+
+		if (running) {
+			requestAnimationFrame(detect);
+		}
+	};
+
+	onCleanup(() => {
+		console.log("[vad] cleanup");
+		running = false;
+	});
+
+	return {
+		hasVoiceActivity,
+		connect(stream: MediaStream) {
+			source?.disconnect();
+			source = ctx.createMediaStreamSource(stream);
+			source.connect(analyzer);
+			running = true;
+			detect();
+			console.log("[vad] new stream connected");
+		},
+	};
 }

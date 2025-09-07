@@ -89,7 +89,12 @@ export const Voice = (p: { thread: Thread }) => {
 							return (
 								<div
 									class="stream"
-									classList={{ fullscreen: focused() === stream.id }}
+									classList={{
+										fullscreen: focused() === stream.id,
+										speaking:
+											((voice.rtc?.speaking.get(stream.user_id)?.flags ?? 0) &
+												1) === 1,
+									}}
 									onClick={() =>
 										setFocused((s) => s === stream.id ? null : stream.id)}
 								>

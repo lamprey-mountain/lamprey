@@ -1,4 +1,4 @@
-import { createSignal, onCleanup } from "solid-js";
+import { createSignal } from "solid-js";
 import { useApi } from "./api";
 import { SignallingMessage, TrackMetadata } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -19,6 +19,11 @@ type LocalStream = {
 	media: MediaStream;
 };
 
+type Speaking = {
+	flags: number;
+	timeout: NodeJS.Timeout;
+};
+
 const RTC_CONFIG: RTCConfiguration = {
 	iceServers: [
 		{ urls: ["stun:relay.webwormhole.io"] },
@@ -34,6 +39,8 @@ export const createVoiceClient = () => {
 	const localStreams: Array<LocalStream> = [];
 	const [rtcState, setRtcState] = createSignal<RTCPeerConnectionState>("new");
 	const streams = new ReactiveMap<string, RemoteStream>();
+	const speaking = new ReactiveMap<string, Speaking>();
+	let chanSpeaking: RTCDataChannel | undefined;
 
 	function setup() {
 		conn.addEventListener("connectionstatechange", () => {
@@ -99,17 +106,32 @@ export const createVoiceClient = () => {
 			console.info("[rtc:data] datachannel", e.channel);
 		});
 
-		// // TODO: speaking indicators
-		// const chanSpeaking = conn.createDataChannel("speaking", {
-		// 	ordered: false,
-		// 	protocol: "speaking",
-		// 	maxRetransmits: 0,
-		// });
+		const chan = conn.createDataChannel("speaking", {
+			ordered: false,
+			protocol: "speaking",
+			maxRetransmits: 0,
+		});
 
-		// // let people create arbitrary datachannels?
-		// const chanStuff = conn.createDataChannel("arbitrary", {
-		// 	protocol: "broadcast",
-		// });
+		chan.addEventListener("close", () => {
+			console.log("[rtc:vad] speaking channel closed");
+		});
+
+		chan.addEventListener("error", (e) => {
+			console.error("[rtc:vad] speaking channel error", e.error);
+		});
+
+		chan.addEventListener("open", () => {
+			console.log("[rtc:vad] speaking channel opened");
+		});
+
+		chan.addEventListener("message", (e) => {
+			const { user_id, flags } = JSON.parse(e.data);
+			clearTimeout(speaking.get(user_id)?.timeout);
+			const timeout = setTimeout(() => speaking.delete(user_id), 10 * 1000);
+			speaking.set(user_id, { flags, timeout });
+		});
+
+		chanSpeaking = chan;
 	}
 
 	function close() {
@@ -365,5 +387,9 @@ export const createVoiceClient = () => {
 			return tr;
 		},
 		streams,
+		speaking,
+		sendSpeaking(flags: number) {
+			chanSpeaking?.send(JSON.stringify({ flags }));
+		},
 	};
 };

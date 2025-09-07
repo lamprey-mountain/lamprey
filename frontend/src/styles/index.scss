@@ -1437,6 +1437,7 @@ table {
 	position: relative;
 	grid-area: main;
 	min-height: 0;
+	overflow: hidden;
 
 	&.controls .bottom {
 		opacity: 1;
@@ -1566,6 +1567,10 @@ table {
 		&.fullscreen {
 			width: 100%;
 			grid-column: 1 / -1;
+		}
+
+		&.speaking {
+			border: solid $color-green 2px;
 		}
 	}
 }
@@ -1930,5 +1935,10 @@ details[open] > summary {
 		height: 1rem;
 		width: 1rem;
 		border-radius: 2px;
+	}
+
+	&.speaking img,
+	&.speaking .fallback-avatar {
+		border: solid $color-green 2px;
 	}
 }
