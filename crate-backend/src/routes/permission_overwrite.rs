@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
     PermissionOverwrite, PermissionOverwriteSet, PermissionOverwriteType, ThreadId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -78,7 +78,7 @@ async fn permission_thread_overwrite(
         .permission_overwrites
         .iter()
         .find(|o| o.ty == json.ty && o.id == overwrite_id);
-    if let Some(existing) = existing {
+    if let Some(existing) = &existing {
         let ea: HashSet<Permission> = existing.allow.iter().cloned().collect();
         let ed: HashSet<Permission> = existing.deny.iter().cloned().collect();
         let ja: HashSet<Permission> = json.allow.iter().cloned().collect();
@@ -126,8 +126,17 @@ async fn permission_thread_overwrite(
                     thread_id,
                     overwrite_id,
                     ty: json.ty,
-                    allow: json.allow,
-                    deny: json.deny,
+                    changes: if let Some(existing) = &existing {
+                        Changes::new()
+                            .change("allow", &existing.allow, &json.allow)
+                            .change("deny", &existing.deny, &json.deny)
+                            .build()
+                    } else {
+                        Changes::new()
+                            .add("allow", &json.allow)
+                            .add("deny", &json.deny)
+                            .build()
+                    },
                 },
             })
             .await?;

@@ -4,8 +4,8 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, Permission,
-    PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
+    AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
+    RoomId, SessionId, ThreadId, UserId,
 };
 
 // pub const SERVER_ROOM_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
@@ -43,7 +43,7 @@ pub struct AuditLogChange {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "metadata")]
 pub enum AuditLogEntryType {
     RoomCreate {
         changes: Vec<AuditLogChange>,
@@ -124,10 +124,11 @@ pub enum AuditLogEntryType {
     ThreadOverwriteSet {
         thread_id: ThreadId,
         overwrite_id: Uuid,
+        #[serde(rename = "type")]
         ty: PermissionOverwriteType,
-        allow: Vec<Permission>,
-        deny: Vec<Permission>,
+        changes: Vec<AuditLogChange>,
     },
+
     ThreadOverwriteDelete {
         thread_id: ThreadId,
         overwrite_id: Uuid,
