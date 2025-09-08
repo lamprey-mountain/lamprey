@@ -270,9 +270,7 @@ export const Root2: Component = (props: any) => {
 			onKeyDown={handleKeypress}
 			onContextMenu={handleContextMenu}
 		>
-			<Show when={api.users.cache.get("@self")}>
-				{props.children}
-			</Show>
+			{props.children}
 			<Portal mount={document.getElementById("overlay")!}>
 				<Overlay />
 			</Portal>

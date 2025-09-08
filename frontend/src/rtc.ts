@@ -202,16 +202,30 @@ export const createVoiceClient = () => {
 		}
 	}
 
+	const sendQueue: Array<SignallingMessage> = [];
+
 	async function send(payload: SignallingMessage) {
-		const ws = api.client.getWebsocket();
-		const user_id = api.users.cache.get("@self")!.id;
-		console.log("[rtc:signal] send", payload.type, payload);
-		ws.send(JSON.stringify({
-			type: "VoiceDispatch",
-			user_id,
-			payload,
-		}));
+		sendQueue.push(payload);
+		drainSendQueue();
 	}
+
+	async function drainSendQueue() {
+		const ws = api.client.getWebsocket();
+		const user_id = api.users.cache.get("@self")?.id;
+		if (!user_id) return;
+		for (const payload of sendQueue) {
+			console.log("[rtc:signal] send", payload.type, payload);
+			ws.send(JSON.stringify({
+				type: "VoiceDispatch",
+				user_id,
+				payload,
+			}));
+		}
+	}
+
+	api.events.on("ready", () => {
+		drainSendQueue();
+	});
 
 	api.events.on("sync", async (e) => {
 		if (e.type === "VoiceState") {
