@@ -67,13 +67,13 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		return html;
 	}
 
-	let highlightEl;
+	let highlightEl: HTMLDivElement;
 	function highlight() {
 		getHtml();
 		import("highlight.js").then(({ default: hljs }) => {
 			// HACK: retain line numbers
 			// FIXME: use language if provided instead of guessing
-			for (const el of [...highlightEl.querySelectorAll("pre")]) {
+			for (const el of [...highlightEl!.querySelectorAll("pre")]) {
 				el.dataset.highlighted = "";
 				hljs.highlightElement(el);
 			}
@@ -98,22 +98,11 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 		<div
 			class="body markdown"
 			classList={{ local: props.message.is_local }}
-			ref={highlightEl}
+			ref={highlightEl!}
 		>
 			<span innerHTML={getHtml()}></span>
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited" onClick={viewHistory}>(edited)</span>
-			</Show>
-		</div>
-	);
-}
-
-function MessageTextTagged(props: MessageTextTaggedProps) {
-	return (
-		<div class="body markdown" classList={{ local: props.message.is_local }}>
-			(deprecated message :( will be removed)
-			<Show when={props.message.id !== props.message.version_id}>
-				<span class="edited">{" "}(edited)</span>
 			</Show>
 		</div>
 	);
@@ -158,41 +147,41 @@ export function MessageView(props: MessageProps) {
 			props.message.edited_at ?? props.message.created_at ??
 				new Date().toString(),
 		);
-		if (props.message.type === MessageType.ThreadUpdate && false) {
-			const updates = [];
-			const listFormatter = new Intl.ListFormat();
-			const patch = props.message.patch as any;
-			if (patch) {
-				if (patch.name) updates.push(`set name to ${patch.name}`);
-				if (patch.description) {
-					updates.push(
-						patch.description ? `set description to ${patch.description}` : "",
-					);
-				}
-				if (patch.state) {
-					updates.push(`set state to ${patch.state}`);
-				}
-			} else {
-				console.warn("missing patch", props.message);
-			}
-			return (
-				<>
-					<span></span>
-					<div class="content">
-						<span class="body">
-							<Author message={props.message} thread={thread()} />{" "}
-							updated the thread:{" "}
-							{listFormatter.format(updates) || "did nothing"}
-						</span>
-					</div>
-					<div class="time">
-						<Time date={date} animGroup="message-ts" />
-					</div>
-				</>
-			);
-		} else if (
-			props.message.type === "DefaultMarkdown" ||
-			props.message.type === "DefaultTagged"
+		// if (props.message.type === "ThreadUpdate" && false) {
+		// 	const updates = [];
+		// 	const listFormatter = new Intl.ListFormat();
+		// 	const patch = props.message.patch as any;
+		// 	if (patch) {
+		// 		if (patch.name) updates.push(`set name to ${patch.name}`);
+		// 		if (patch.description) {
+		// 			updates.push(
+		// 				patch.description ? `set description to ${patch.description}` : "",
+		// 			);
+		// 		}
+		// 		if (patch.state) {
+		// 			updates.push(`set state to ${patch.state}`);
+		// 		}
+		// 	} else {
+		// 		console.warn("missing patch", props.message);
+		// 	}
+		// 	return (
+		// 		<>
+		// 			<span></span>
+		// 			<div class="content">
+		// 				<span class="body">
+		// 					<Author message={props.message} thread={thread()} />{" "}
+		// 					updated the thread:{" "}
+		// 					{listFormatter.format(updates) || "did nothing"}
+		// 				</span>
+		// 			</div>
+		// 			<div class="time">
+		// 				<Time date={date} animGroup="message-ts" />
+		// 			</div>
+		// 		</>
+		// 	);
+		// } else if (
+		if (
+			props.message.type === "DefaultMarkdown"
 		) {
 			const [arrow_width, set_arrow_width] = createSignal(0);
 			const user = api.users.fetch(() => props.message.author_id);
@@ -204,7 +193,7 @@ export function MessageView(props: MessageProps) {
 				});
 			};
 			const ctx = useCtx();
-			const withAvatar = ctx.settings.get("message_pfps") === "yes";
+			const withAvatar = ctx.userConfig().frontend["message_pfps"] === "yes";
 
 			// TODO: this code is getting messy and needs a refactor soon...
 			return (
@@ -329,6 +318,13 @@ export function MessageView(props: MessageProps) {
 					</Show>
 				</article>
 			);
+		} else {
+			<article
+				class="message menu-message"
+				data-message-id={props.message.id}
+			>
+				unknown message: {props.message.type}
+			</article>;
 		}
 	}
 

@@ -1,7 +1,6 @@
 import { Thread } from "sdk";
 import {
 	createEffect,
-	createMemo,
 	createSignal,
 	For,
 	Match,

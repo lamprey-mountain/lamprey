@@ -24,6 +24,7 @@ export type RelationshipWithUserId =
 	components["schemas"]["RelationshipWithUserId"];
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"];
+export type UserConfig = components["schemas"]["UserConfig"];
 
 export type Pagination<T> = {
 	total: number;

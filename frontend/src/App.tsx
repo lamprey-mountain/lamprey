@@ -19,7 +19,7 @@ import {
 import { type Dispatcher } from "./dispatch/types.ts";
 import { createStore } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
-import { createClient } from "sdk";
+import { createClient, UserConfig } from "sdk";
 import { createApi, useApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -94,6 +94,24 @@ function loadSavedConfig(): Config | null {
 	return JSON.parse(c);
 }
 
+const DEFAULT_USER_CONFIG: UserConfig = {
+	frontend: {},
+	notifs: {
+		messages: "Watching",
+		mentions: "Notify",
+		threads: "Watching",
+		room_public: "Watching",
+		room_private: "Watching",
+		room_dm: "Watching",
+	},
+};
+
+function loadSavedUserConfig(): UserConfig | null {
+	const c = localStorage.getItem("user_config");
+	if (!c) return null;
+	return JSON.parse(c);
+}
+
 // TODO: refactor bootstrap code?
 export const Root1: Component = (props: ParentProps) => {
 	const saved = loadSavedConfig();
@@ -151,6 +169,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		},
 	});
 
+	const api = createApi(client, events);
+
 	const cs = from(client.state);
 	createEffect(() => {
 		console.log("client state", cs());
@@ -175,6 +195,36 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
 
+	let userConfigLoaded = false;
+	const [userConfig, setUserConfig] = createSignal<UserConfig>(
+		loadSavedUserConfig() ?? DEFAULT_USER_CONFIG,
+	);
+
+	(async () => {
+		const { data } = await api.client.http.GET(
+			"/api/v1/user/{user_id}/config",
+			{
+				params: { path: { user_id: "@self" } },
+			},
+		);
+		if (data) {
+			setUserConfig(data);
+			userConfigLoaded = true;
+		} else {
+			alert("failed to load user config");
+		}
+	})();
+
+	createEffect(() => {
+		userConfig();
+		if (!userConfigLoaded) return;
+		localStorage.setItem("user_config", JSON.stringify(userConfig()));
+		api.client.http.PUT("/api/v1/user/{user_id}/config", {
+			params: { path: { user_id: "@self" } },
+			body: userConfig(),
+		});
+	});
+
 	const ctx: ChatCtx = {
 		client,
 		data,
@@ -197,45 +247,21 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		currentMedia,
 		setCurrentMedia,
 
-		settings: new ReactiveMap(
-			JSON.parse(localStorage.getItem("settings") ?? "[]"),
-		),
+		userConfig,
+		setUserConfig,
+
 		scrollToChatList: (pos: number) => {
 			// TODO: Implement actual scroll logic if needed
 			console.log("scrollToChatList called with position:", pos);
 		},
 	};
 
-	const api = createApi(client, events);
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
 
 	useMouseTracking(update);
 
 	onCleanup(() => client.stop());
-
-	createEffect(() => {
-		localStorage.setItem(
-			"settings",
-			JSON.stringify([...ctx.settings.entries()]),
-		);
-	});
-
-	// TODO: sync settings to server
-	// needs a new event to receive config updates
-	// api.client.http.GET("/api/v1/user/{user_id}/config", {
-	// 	params: {path: {user_id: "@self"}},
-	// });
-
-	// createEffect(() => {
-	// 	api.client.http.PUT("/api/v1/user/{user_id}/config", {
-	// 		params: {path: {user_id: "@self"}},
-	// 		body: {
-
-	// 			frontend: Object.fromEntries (ctx.settings.entries())
-	// 		}
-	// 	})
-	// })
 
 	createEffect(() => {
 		client.opts.apiUrl = config.base_url;
@@ -311,7 +337,8 @@ export const Root3 = (props: any) => {
 		<div
 			id="root"
 			classList={{
-				"underline-links": ctx.settings.get("underline_links") === "yes",
+				"underline-links":
+					ctx.userConfig().frontend["underline_links"] === "yes",
 			}}
 			onClick={handleClick}
 			onKeyDown={handleKeypress}

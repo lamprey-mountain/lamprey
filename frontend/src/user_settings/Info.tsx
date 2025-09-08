@@ -75,10 +75,14 @@ export function Info(props: VoidProps<{ user: User }>) {
 	};
 
 	const toggle = (setting: string) => () => {
-		ctx.settings.set(
-			setting,
-			ctx.settings.get(setting) === "yes" ? "no" : "yes",
-		);
+		const c = ctx.userConfig();
+		ctx.setUserConfig({
+			...c,
+			frontend: {
+				...c.frontend,
+				[setting]: c.frontend[setting] === "yes" ? "no" : "yes",
+			},
+		});
 	};
 
 	return (
@@ -134,7 +138,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 			<label>
 				<input
 					type="checkbox"
-					checked={ctx.settings.get("message_pfps") === "yes"}
+					checked={ctx.userConfig().frontend["message_pfps"] === "yes"}
 					onInput={toggle("message_pfps")}
 				/>{" "}
 				show pfps in messages (experimental)
@@ -143,7 +147,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 			<label>
 				<input
 					type="checkbox"
-					checked={ctx.settings.get("underline_links") === "yes"}
+					checked={ctx.userConfig().frontend["underline_links"] === "yes"}
 					onInput={toggle("underline_links")}
 				/>{" "}
 				always underline links

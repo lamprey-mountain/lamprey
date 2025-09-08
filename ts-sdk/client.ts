@@ -109,6 +109,7 @@ export function createClient(opts: ClientOptions): Client {
 		setState("connecting");
 		if (ws) {
 			ws.close();
+			setupWebsocket();
 		} else {
 			setupWebsocket();
 		}

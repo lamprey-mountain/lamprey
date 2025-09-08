@@ -4,7 +4,14 @@ import {
 	type Setter,
 	useContext,
 } from "solid-js";
-import type { Client, Media, MessageReady, MessageSync, Upload } from "sdk";
+import type {
+	Client,
+	Media,
+	MessageReady,
+	MessageSync,
+	Upload,
+	UserConfig,
+} from "sdk";
 import type { Action } from "./dispatch/types";
 import type { EditorState } from "prosemirror-state";
 import type { MessageListAnchor } from "./api/messages.ts";
@@ -102,7 +109,9 @@ export type ChatCtx = {
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
 
-	settings: ReactiveMap<string, string>;
+	userConfig: Accessor<UserConfig>;
+	setUserConfig: Setter<UserConfig>;
+
 	scrollToChatList: (pos: number) => void;
 };
 
