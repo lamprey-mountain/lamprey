@@ -4,11 +4,14 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiOwner};
+use common::v1::types::UserId;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
     PaginationQuery, PaginationResponse, Permission, RoomId,
 };
 use http::StatusCode;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
@@ -230,6 +233,73 @@ async fn emoji_list(
     Ok(Json(emoji))
 }
 
+/// Emoji lookup
+///
+/// Get info about an emoji.
+#[utoipa::path(
+    get,
+    path = "/emoji/{emoji_id}",
+    params(("emoji_id", description = "Emoji id")),
+    tags = ["emoji"],
+    responses(
+        (status = OK, body = PaginationResponse<EmojiCustom>, description = "success"),
+    )
+)]
+async fn emoji_lookup(
+    Path(emoji_id): Path<EmojiId>,
+    Auth(user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let emoji = data.emoji_get(emoji_id).await?;
+    match emoji.owner {
+        EmojiOwner::Room { room_id } => {
+            if data.room_member_get(room_id, user_id).await.is_ok() {
+                Ok(Json(EmojiLookup {
+                    id: emoji.id,
+                    name: emoji.name,
+                    creator_id: Some(emoji.creator_id),
+                    room_id: Some(room_id),
+                    animated: emoji.animated,
+                }))
+            } else {
+                Ok(Json(EmojiLookup {
+                    id: emoji.id,
+                    name: emoji.name,
+                    creator_id: None,
+                    room_id: None,
+                    animated: emoji.animated,
+                }))
+            }
+        }
+        EmojiOwner::User => Ok(Json(EmojiLookup {
+            id: emoji.id,
+            name: emoji.name,
+            creator_id: if user_id == emoji.creator_id {
+                Some(user_id)
+            } else {
+                None
+            },
+            room_id: None,
+            animated: emoji.animated,
+        })),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct EmojiLookup {
+    pub id: EmojiId,
+    pub name: String,
+
+    /// not returned unless you're in the room this emoji is in
+    pub creator_id: Option<UserId>,
+
+    /// not returned unless you're in the room this emoji is in and owner is a room
+    pub room_id: Option<RoomId>,
+
+    pub animated: bool,
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(emoji_create))
@@ -237,4 +307,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(emoji_delete))
         // .routes(routes!(emoji_update))
         .routes(routes!(emoji_list))
+        .routes(routes!(emoji_lookup))
 }
