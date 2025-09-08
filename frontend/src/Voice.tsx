@@ -20,10 +20,11 @@ import iconExit from "./assets/exit.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
-import { CDN_URL } from "./App.tsx";
 import { getColor } from "./User.tsx";
+import { useConfig } from "./config.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
+	const config = useConfig();
 	const api = useApi();
 	const [voice, actions] = useVoice();
 
@@ -170,7 +171,7 @@ export const Voice = (p: { thread: Thread }) => {
 										>
 											<Show when={user()?.avatar}>
 												<img
-													src={`${CDN_URL}/thumb/${user()?.avatar}?size=64`}
+													src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
 													class="avatar"
 												/>
 											</Show>

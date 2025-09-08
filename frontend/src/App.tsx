@@ -55,20 +55,14 @@ import {
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
-import { generateNickname } from "./nick.ts";
 import { Inbox } from "./Inbox.tsx";
 import { ThreadNav } from "./Nav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
-import { VoiceTray } from "./Voice.tsx";
-
-export const BASE_URL = localStorage.getItem("api_url") ??
-	"https://chat.celery.eu.org";
-export const CDN_URL = localStorage.getItem("cdn_url") ??
-	"https://chat-cdn.celery.eu.org";
+import { Config, ConfigProvider, useConfig } from "./config.tsx";
 
 const App: Component = () => {
 	return (
-		<Router root={Root}>
+		<Router root={Root1}>
 			<Route path="/" component={RouteHome} />
 			<Route path="/inbox" component={RouteInbox} />
 			<Route path="/friends" component={RouteFriends} />
@@ -94,11 +88,60 @@ const App: Component = () => {
 	);
 };
 
+function loadSavedConfig(): Config | null {
+	const c = localStorage.getItem("config");
+	if (!c) return null;
+	return JSON.parse(c);
+}
+
 // TODO: refactor bootstrap code?
-export const Root: Component = (props: ParentProps) => {
+export const Root1: Component = (props: ParentProps) => {
+	const saved = loadSavedConfig();
+	const [config, setConfig] = createSignal(saved);
+	const [resolved, setResolved] = createSignal(false);
+	console.log("[config] temporarily reusing existing config", saved);
+
+	(async () => {
+		const c: Config = await fetch("/config.json").then(
+			(res) => res.json(),
+			() => null,
+		);
+		console.log("[config] fetched new config", c);
+
+		if (c.base_url && typeof c?.base_url !== "string") {
+			throw new Error("config.base_url is not a string");
+		}
+
+		if (c.cdn_url && typeof c?.cdn_url !== "string") {
+			throw new Error("config.cdn_url is not a string");
+		}
+
+		c.base_url ??= localStorage.getItem("api_url") ??
+			"https://chat.celery.eu.org";
+		c.cdn_url ??= localStorage.getItem("cdn_url") ??
+			"https://chat-cdn.celery.eu.org";
+
+		console.log("[config] resolved new config", c);
+		localStorage.setItem("config", JSON.stringify(c));
+		setConfig(c);
+		setResolved(true);
+	})();
+
+	return (
+		<Show when={config()}>
+			<ConfigProvider value={config()!}>
+				<Root2 resolved={resolved()}>{props.children}</Root2>
+			</ConfigProvider>
+		</Show>
+	);
+};
+
+export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
+	const config = useConfig();
 	const events = createEmitter<Events>();
 	const client = createClient({
-		apiUrl: BASE_URL,
+		apiUrl: config.base_url,
+		token: localStorage.getItem("token") || undefined,
 		onSync(msg) {
 			console.log("recv", msg);
 			events.emit("sync", msg);
@@ -194,38 +237,42 @@ export const Root: Component = (props: ParentProps) => {
 	// 	})
 	// })
 
+	createEffect(() => {
+		client.opts.apiUrl = config.base_url;
+		const TOKEN = localStorage.getItem("token");
+		if (TOKEN) {
+			client.start(TOKEN);
+		} else {
+			ctx.dispatch({ do: "server.init_session" });
+		}
+	});
+
+	if (!client.opts.token) {
+		queueMicrotask(() => {
+			ctx.dispatch({ do: "server.init_session" });
+		});
+	}
+
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
 	(globalThis as any).client = client;
 	(globalThis as any).api = api;
 	(globalThis as any).flags = flags;
 
-	const TOKEN = localStorage.getItem("token")!;
-	if (TOKEN) {
-		client.start(TOKEN);
-	} else {
-		queueMicrotask(() => {
-			ctx.dispatch({ do: "server.init_session" });
-		});
-	}
-
 	return (
 		<api.Provider>
 			<chatctx.Provider value={ctx}>
 				<VoiceProvider>
-					<Root2 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root2>
+					<Root3 setMenu={setMenu} dispatch={dispatch}>{props.children}</Root3>
 				</VoiceProvider>
 			</chatctx.Provider>
 		</api.Provider>
 	);
 };
 
-export const Root2: Component = (props: any) => {
+export const Root3 = (props: any) => {
 	const ctx = useCtx();
 	const [voice] = useVoice();
-	const api = useApi();
-	const thread = () =>
-		voice.threadId ? api.threads.fetch(() => voice.threadId!)() : null;
 
 	const state = from(ctx.client.state);
 
@@ -234,7 +281,7 @@ export const Root2: Component = (props: any) => {
 	const handleClick = (e: MouseEvent) => {
 		props.setMenu(null);
 		if (!e.isTrusted) return;
-		const target = e.target as HTMLElement;
+		// const target = e.target as HTMLElement;
 		// if (target.matches("a[download]")) {
 		// 	const a = target as HTMLAnchorElement;
 		// 	e.preventDefault();

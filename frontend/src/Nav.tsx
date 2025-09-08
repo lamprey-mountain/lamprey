@@ -4,10 +4,11 @@ import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
-import { CDN_URL } from "./App.tsx";
 import { useVoice } from "./voice-provider.tsx";
+import { useConfig } from "./config.tsx";
 
 export const ThreadNav = (props: { room_id?: string }) => {
+	const config = useConfig();
 	const api = useApi();
 	const [voice] = useVoice();
 
@@ -159,7 +160,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 												fallback={<div class="fallback-avatar"></div>}
 											>
 												<img
-													src={`${CDN_URL}/thumb/${user()?.avatar}?size=64`}
+													src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
 												/>
 											</Show>{" "}
 											{name()}

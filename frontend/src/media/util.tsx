@@ -1,6 +1,6 @@
 import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
-import { CDN_URL } from "../App.tsx";
+import { useConfig } from "../config";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 
@@ -48,7 +48,8 @@ export const getHeight = (m: Media) => {
 
 /** get the cdn url for a piece of media */
 export const getUrl = (t: Media) => {
-	return `${CDN_URL}/media/${t.id}`;
+	const config = useConfig();
+	return `${config.cdn_url}/media/${t.id}`;
 };
 
 /** get the cdn url for the thumbnail for a piece of media */
@@ -58,10 +59,11 @@ export const getThumb = (media: Media, size?: number) => {
 
 /** get the cdn url for the thumbnail for a piece of media from its id */
 export const getThumbFromId = (media_id: string, size?: number) => {
+	const config = useConfig();
 	if (size) {
-		return `${CDN_URL}/thumb/${media_id}?size=${size}`;
+		return `${config.cdn_url}/thumb/${media_id}?size=${size}`;
 	} else {
-		return `${CDN_URL}/thumb/${media_id}`;
+		return `${config.cdn_url}/thumb/${media_id}`;
 	}
 };
 
