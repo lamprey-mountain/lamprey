@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    config::Config, MediaData, PeerEvent, SfuTrack, SignallingMessage, Speaking,
-    SpeakingWithoutUserId, TrackMetadataServer,
+    config::Config, MediaData, PeerEvent, SignallingMessage, Speaking, SpeakingWithoutUserId,
+    TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
@@ -562,7 +562,7 @@ impl Peer {
             if let TrackState::Negotiating(_) = track.state {
                 track.state = TrackState::Open(mid);
 
-                events.push(PeerEvent::MediaAdded(SfuTrack {
+                events.push(PeerEvent::MediaAdded(TrackMetadataSfu {
                     source_mid: mid,
                     kind: track.kind,
                     peer_id: self.user_id,

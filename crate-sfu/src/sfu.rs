@@ -1,6 +1,6 @@
 use crate::{
-    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuTrack,
-    SignallingMessage, TrackMetadataServer,
+    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SignallingMessage,
+    TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
@@ -21,8 +21,8 @@ use tracing::{debug, error, info, trace, warn};
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
     voice_states: DashMap<UserId, VoiceState>,
-    tracks: Vec<SfuTrack>,
-    track_metadata: DashMap<UserId, Vec<TrackMetadataServer>>,
+    tracks: Vec<TrackMetadataSfu>,
+    tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
     config: Config,
     backend_tx: Option<UnboundedSender<SfuEvent>>,
 }
@@ -46,7 +46,7 @@ impl Sfu {
             tracks: Vec::new(),
             config,
             backend_tx: None,
-            track_metadata: DashMap::new(),
+            tracks_by_user: DashMap::new(),
         }
     }
 
@@ -190,7 +190,7 @@ impl Sfu {
                 }
 
                 // also broadcast all the track metadata as well
-                for meta in &self.track_metadata {
+                for meta in &self.tracks_by_user {
                     let peer_id = meta.key();
 
                     if *peer_id == user_id {
@@ -325,7 +325,7 @@ impl Sfu {
             PeerEvent::Dead => {
                 debug!("peerevent::dead");
                 self.peers.remove(&user_id);
-                self.track_metadata.remove(&user_id);
+                self.tracks_by_user.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
             }
             PeerEvent::NeedsKeyframe {
@@ -375,7 +375,7 @@ impl Sfu {
                         tracks: tracks.clone(),
                     })?;
                 }
-                self.track_metadata.insert(user_id, tracks);
+                self.tracks_by_user.insert(user_id, tracks);
             }
             PeerEvent::WantHave { user_ids } => {
                 let (Some(state), Some(peer)) =
@@ -399,7 +399,7 @@ impl Sfu {
                         continue;
                     }
 
-                    let Some(meta) = self.track_metadata.get(&peer_id) else {
+                    let Some(meta) = self.tracks_by_user.get(&peer_id) else {
                         warn!("missing metadata for peer {}", peer_id);
                         continue;
                     };

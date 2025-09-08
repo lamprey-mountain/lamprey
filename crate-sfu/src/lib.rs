@@ -24,7 +24,7 @@ pub struct PeerEventEnvelope {
 #[derive(Debug)]
 pub enum PeerEvent {
     Signalling(SignallingMessage),
-    MediaAdded(SfuTrack),
+    MediaAdded(TrackMetadataSfu),
     MediaData(MediaData),
     Dead,
     NeedsKeyframe {
@@ -65,7 +65,7 @@ pub struct SpeakingFlags(pub u8);
 #[derive(Debug)]
 pub enum PeerCommand {
     Signalling(SignallingMessage),
-    MediaAdded(SfuTrack),
+    MediaAdded(TrackMetadataSfu),
     MediaData(MediaData),
     Kill,
     GenerateKeyframe {
@@ -89,21 +89,30 @@ pub struct TrackMetadataServer {
 }
 
 #[derive(Debug, Clone)]
-pub struct MediaData {
-    pub mid: Mid,
-    pub peer_id: UserId,
-    pub network_time: Instant,
-    pub time: MediaTime,
-    pub data: Arc<[u8]>,
-    pub params: PayloadParams,
-}
-
-#[derive(Debug, Clone)]
-pub struct SfuTrack {
+pub struct TrackMetadataSfu {
     pub source_mid: Mid,
     pub peer_id: UserId,
     pub thread_id: ThreadId,
     pub kind: MediaKindStr0m,
+    pub key: String,
+}
+
+#[derive(Debug)]
+pub struct TrackIn {
+    pub kind: MediaKindStr0m,
+    pub state: TrackState,
+    pub thread_id: ThreadId,
+    pub key: String,
+}
+
+#[derive(Debug)]
+pub struct TrackOut {
+    pub kind: MediaKindStr0m,
+    pub state: TrackState,
+    pub peer_id: UserId,
+    pub source_mid: Mid,
+    pub enabled: bool,
+    pub thread_id: ThreadId,
     pub key: String,
 }
 
@@ -124,23 +133,14 @@ impl TrackState {
     }
 }
 
-#[derive(Debug)]
-pub struct TrackIn {
-    pub kind: MediaKindStr0m,
-    pub state: TrackState,
-    pub thread_id: ThreadId,
-    pub key: String,
-}
-
-#[derive(Debug)]
-pub struct TrackOut {
-    pub kind: MediaKindStr0m,
-    pub state: TrackState,
+#[derive(Debug, Clone)]
+pub struct MediaData {
+    pub mid: Mid,
     pub peer_id: UserId,
-    pub source_mid: Mid,
-    pub enabled: bool,
-    pub thread_id: ThreadId,
-    pub key: String,
+    pub network_time: Instant,
+    pub time: MediaTime,
+    pub data: Arc<[u8]>,
+    pub params: PayloadParams,
 }
 
 #[derive(Debug, thiserror::Error)]
