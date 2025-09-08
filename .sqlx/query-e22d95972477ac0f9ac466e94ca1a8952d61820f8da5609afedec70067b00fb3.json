@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                with r as (\n                    select user_id, array_agg(role_id) as roles from role_member\n                    join role on role.room_id = $1 and role_member.role_id = role.id\n                    group by user_id\n                )\n            \tSELECT\n                \troom_id,\n                \tm.user_id,\n                \tmembership as \"membership: _\",\n                \toverride_name,\n                    override_description,\n                    joined_at,\n                \torigin,\n                \tcoalesce(r.roles, '{}') as \"roles!\"\n                FROM room_member m\n                left join r on r.user_id = m.user_id\n            \tWHERE room_id = $1 AND m.user_id > $2 AND m.user_id < $3 AND membership = 'Join'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN m.user_id END), m.user_id DESC LIMIT $5\n                ",
+  "query": "\n            with r as (\n                select user_id, array_agg(role_id) as roles from role_member\n                join role on role.room_id = $1 and role_member.role_id = role.id\n                group by user_id\n            )\n        \tSELECT\n            \troom_id,\n            \tm.user_id,\n            \tmembership as \"membership: _\",\n            \toverride_name,\n            \toverride_description,\n            \tjoined_at,\n            \torigin,\n                mute,\n                deaf,\n            \tcoalesce(r.roles, '{}') as \"roles!\"\n            FROM room_member m\n            left join r on r.user_id = m.user_id\n            WHERE room_id = $1 AND m.user_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -51,6 +51,16 @@
       },
       {
         "ordinal": 7,
+        "name": "mute",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "deaf",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
         "name": "roles!",
         "type_info": "UuidArray"
       }
@@ -58,10 +68,7 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -72,8 +79,10 @@
       true,
       false,
       true,
+      false,
+      false,
       null
     ]
   },
-  "hash": "b5ede35cc68eca50e96c5141ec35507b71cb388f83117448b1536efb95209d1b"
+  "hash": "e22d95972477ac0f9ac466e94ca1a8952d61820f8da5609afedec70067b00fb3"
 }
