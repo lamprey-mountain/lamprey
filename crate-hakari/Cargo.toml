@@ -20,6 +20,7 @@ publish = false
 arrayvec = { version = "0.7", features = ["serde"] }
 axum = { version = "0.8", features = ["macros", "ws"] }
 base64 = { version = "0.22" }
+bytemuck = { version = "1", default-features = false, features = ["extern_crate_alloc"] }
 byteorder = { version = "1" }
 chrono = { version = "0.4", features = ["serde"] }
 crossbeam-utils = { version = "0.8" }

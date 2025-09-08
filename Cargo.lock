@@ -921,6 +921,7 @@ dependencies = [
  "arrayvec",
  "axum",
  "base64 0.22.1",
+ "bytemuck",
  "byteorder",
  "chrono",
  "crossbeam-utils",
