@@ -205,7 +205,13 @@ impl Connection {
                         if let Ok(perms) =
                             srv.perms.for_thread(user_id, voice_state.thread_id).await
                         {
-                            if perms.has(Permission::View) {
+                            let is_ours = self.state.session().and_then(|s| s.user_id())
+                                == Some(voice_state.user_id);
+                            if perms.has(Permission::View) || is_ours {
+                                let mut voice_state = voice_state.clone();
+                                if !is_ours {
+                                    voice_state.session_id = None;
+                                }
                                 self.push_sync(MessageSync::VoiceState {
                                     user_id: voice_state.user_id,
                                     state: Some(voice_state),
