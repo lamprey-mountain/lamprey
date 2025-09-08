@@ -207,12 +207,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 				params: { path: { user_id: "@self" } },
 			},
 		);
-		if (data) {
-			setUserConfig(data);
-			userConfigLoaded = true;
-		} else {
-			alert("failed to load user config");
-		}
+		if (data) setUserConfig(data);
+		userConfigLoaded = true;
 	})();
 
 	createEffect(() => {
