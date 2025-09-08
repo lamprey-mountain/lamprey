@@ -29,20 +29,15 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "message": {
 			const ctx = useCtx();
 			const api = useApi();
-			const message = createMemo(() => api.messages.cache.get(item.message.id));
 			return (
-				<Show when={message()}>
-					{(message) => (
-						<li
-							class="message"
-							classList={{
-								"selected": message().id === ctx.thread_reply_id.get(thread.id),
-							}}
-						>
-							<MessageView message={message()} separate={item.separate} />
-						</li>
-					)}
-				</Show>
+				<li
+					class="message"
+					classList={{
+						"selected": item.message.id === ctx.thread_reply_id.get(thread.id),
+					}}
+				>
+					<MessageView message={item.message} separate={item.separate} />
+				</li>
 			);
 		}
 		case "info": {

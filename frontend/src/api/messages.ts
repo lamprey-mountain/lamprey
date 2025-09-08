@@ -388,6 +388,9 @@ export class Messages {
 					attachments: body.attachments?.map((i) => ({ id: i.id })),
 					nonce: id,
 				},
+				headers: {
+					"Idempotency-Key": id,
+				},
 			},
 		);
 		if (error) {

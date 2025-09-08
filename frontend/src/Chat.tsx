@@ -44,7 +44,13 @@ export const ChatMain = (props: ChatProps) => {
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
 	createEffect(() =>
-		console.log(messages.loading, messages.latest, messages.error, messages())
+		console.log(
+			"msgs",
+			messages.loading,
+			messages.latest,
+			messages.error,
+			messages(),
+		)
 	);
 
 	const markRead = throttle(
@@ -167,6 +173,7 @@ export const ChatMain = (props: ChatProps) => {
 				});
 				setTl((old) => [...reconcile(rendered)(old)]);
 				anchor();
+				console.log("reconciled", tl());
 				console.timeEnd("rendertimeline");
 			} else {
 				console.log("tried to render empty timeline");
@@ -338,7 +345,6 @@ export function renderTimeline(
 	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
 ): Array<TimelineItemT> {
 	const newItems: Array<TimelineItemT> = [];
-	// if (items.length === 0) throw new Error("no items");
 	if (has_before) {
 		newItems.push({
 			type: "spacer",
