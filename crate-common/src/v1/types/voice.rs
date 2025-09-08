@@ -163,7 +163,6 @@ pub enum SfuCommand {
     /// upsert voice state
     VoiceState {
         user_id: UserId,
-        thread_id: ThreadId,
         state: Option<VoiceState>,
     },
 }

@@ -81,7 +81,6 @@ async fn voice_state_disconnect(
     };
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
-        thread_id,
         state: None,
     });
     srv.users.voice_state_remove(&target_user_id);
@@ -148,7 +147,6 @@ async fn voice_state_move(
     };
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
-        thread_id,
         state: Some(state.clone()),
     });
 

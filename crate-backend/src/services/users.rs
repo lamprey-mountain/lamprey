@@ -192,7 +192,6 @@ impl ServiceUsers {
             if s.thread_id == thread_id {
                 let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
                     user_id: s.user_id,
-                    thread_id,
                     state: None,
                 });
                 if let Err(err) = r {

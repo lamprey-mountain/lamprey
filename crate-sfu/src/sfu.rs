@@ -146,11 +146,7 @@ impl Sfu {
             SfuCommand::Signalling { user_id, inner } => {
                 self.handle_signalling(user_id, inner, peer_send).await?
             }
-            SfuCommand::VoiceState {
-                user_id,
-                thread_id: _,
-                state,
-            } => {
+            SfuCommand::VoiceState { user_id, state } => {
                 let Some(state) = state else {
                     // user disconnected
                     let old = self.voice_states.remove(&user_id).map(|s| s.1);

@@ -5,7 +5,8 @@ use axum::extract::ws::{Message, WebSocket};
 use common::v1::types;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
-use common::v1::types::voice::{SfuCommand, SignallingMessage};
+use common::v1::types::util::Time;
+use common::v1::types::voice::{SfuCommand, SignallingMessage, VoiceState};
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -265,6 +266,9 @@ impl Connection {
                 let payload: SignallingMessage = serde_json::from_value(payload.clone())?;
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
+                        let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
+                        perms.ensure_view()?;
+                        perms.ensure(Permission::VoiceConnect)?;
                         let thread = srv.threads.get(state.thread_id, Some(user_id)).await?;
                         if thread.archived_at.is_some() {
                             return Err(Error::BadStatic("thread is archived"));
@@ -272,12 +276,43 @@ impl Connection {
                         if thread.deleted_at.is_some() {
                             return Err(Error::BadStatic("thread is removed"));
                         }
-                        let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
                         if thread.locked {
                             perms.ensure(Permission::ThreadLock)?;
                         }
-                        perms.ensure_view()?;
-                        perms.ensure(Permission::VoiceConnect)?;
+                        let mut state = VoiceState {
+                            user_id,
+                            thread_id: state.thread_id,
+                            session_id: Some(session.id),
+                            joined_at: Time::now_utc(),
+                            mute: false,
+                            deaf: false,
+                            // TODO: propagate from VoiceStateUpdate
+                            self_deaf: false,
+                            self_mute: false,
+                            self_video: false,
+                            self_screen: false,
+                        };
+                        if let Some(room_id) = thread.room_id {
+                            let rm = self.s.data().room_member_get(room_id, user_id).await?;
+                            state.mute = rm.mute;
+                            state.deaf = rm.deaf;
+                        }
+                        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                            user_id,
+                            state: Some(state),
+                        }) {
+                            error!("failed to send to sushi_sfu: {err}");
+                        }
+                        return Ok(());
+                    }
+                    SignallingMessage::VoiceState { state: None } => {
+                        if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
+                            user_id,
+                            state: None,
+                        }) {
+                            error!("failed to send to sushi_sfu: {err}");
+                        }
+                        return Ok(());
                     }
                     SignallingMessage::Offer { .. } => {
                         // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
