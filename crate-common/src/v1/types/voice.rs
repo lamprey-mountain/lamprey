@@ -70,13 +70,13 @@ pub struct VoiceState {
 
     /// whether this user is deafened by a moderator
     pub deaf: bool,
-    // useful for showing stuff in ui without connecting
-    // pub self_deaf: bool,
-    // pub self_mute: bool,
-    // pub self_video: bool,
-    // pub self_stream: bool,
 
-    // later
+    // useful for showing stuff in ui without connecting
+    pub self_deaf: bool,
+    pub self_mute: bool,
+    pub self_video: bool,
+    pub self_screen: bool,
+    // these can come later, if needed at all
     // pub suppress: bool,
     // pub requested_to_speak_at: Option<Time>,
 }

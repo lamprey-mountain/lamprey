@@ -6,9 +6,13 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    misc::UserIdReq, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    PaginationResponse, Permission, ThreadId, UserId,
+    misc::UserIdReq,
+    util::Changes,
+    voice::{SfuCommand, VoiceState},
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationResponse, Permission, ThreadId,
 };
+use serde::Deserialize;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
@@ -100,7 +104,7 @@ async fn voice_state_disconnect(
     Ok(())
 }
 
-/// Voice state move (TODO)
+/// Voice state move
 #[utoipa::path(
     post,
     path = "/voice/{thread_id}/member/{user_id}/move",
@@ -114,13 +118,65 @@ async fn voice_state_disconnect(
     )
 )]
 async fn voice_state_move(
-    Path((_room_id, _user_id)): Path<(ThreadId, UserId)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<()>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<VoiceStateMove>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    let srv = s.services();
+    let perms_source = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    perms_source.ensure_view()?;
+    perms_source.ensure(Permission::VoiceMove)?;
+    let perms_target = srv.perms.for_thread(auth_user_id, json.target_id).await?;
+    perms_target.ensure_view()?;
+    perms_target.ensure(Permission::VoiceMove)?;
+    let perms_user = srv.perms.for_thread(target_user_id, json.target_id).await?;
+    perms_user.ensure_view()?;
+
+    let Some(old) = srv.users.voice_state_get(thread_id, target_user_id) else {
+        return Err(Error::BadStatic("not connected to any thread"));
+    };
+
+    let state = VoiceState {
+        thread_id: json.target_id,
+        ..old
+    };
+    let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
+        user_id: target_user_id,
+        thread_id,
+        state: Some(state.clone()),
+    });
+
+    let thread = srv.threads.get(thread_id, None).await?;
+    if let Some(room_id) = thread.room_id {
+        let data = s.data();
+        data.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user_id,
+            session_id: None,
+            reason,
+            ty: AuditLogEntryType::MemberMove {
+                user_id: target_user_id,
+                changes: Changes::new()
+                    .change("thread_id", &old.thread_id, &state.thread_id)
+                    .build(),
+            },
+        })
+        .await?;
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, ToSchema, Deserialize)]
+struct VoiceStateMove {
+    target_id: ThreadId,
 }
 
 /// Voice state list
