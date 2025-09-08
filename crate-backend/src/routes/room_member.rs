@@ -134,15 +134,24 @@ async fn room_member_add(
     if let Ok(existing) = &existing {
         if existing.override_name == json.override_name
             && existing.override_description == json.override_description
+            && json.mute.is_none_or(|m| m == existing.mute)
+            && json.deaf.is_none_or(|m| m == existing.deaf)
         {
             return Err(Error::NotModified);
+        }
+    } else {
+        if json.mute == Some(true) {
+            perms.ensure(Permission::VoiceMute)?;
+        }
+        if json.deaf == Some(true) {
+            perms.ensure(Permission::VoiceDeafen)?;
         }
     }
 
     let origin = RoomMemberOrigin::Bridged {
         bridge_id: auth_user_id,
     };
-    d.room_member_put(room_id, target_user_id, origin, RoomMemberPut::default())
+    d.room_member_put(room_id, target_user_id, origin, json)
         .await?;
     s.services()
         .perms
@@ -159,10 +168,14 @@ async fn room_member_add(
                 &existing.override_description,
                 &res.override_description,
             )
+            .change("mute", &existing.mute, &res.mute)
+            .change("deaf", &existing.deaf, &res.deaf)
     } else {
         Changes::new()
             .add("override_name", &res.override_name)
             .add("override_description", &res.override_description)
+            .add("mute", &res.mute)
+            .add("deaf", &res.deaf)
     };
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -230,6 +243,13 @@ async fn room_member_update(
     if !json.changes(&start) {
         return Err(Error::NotModified);
     }
+    if json.mute.is_some_and(|m| m != start.mute) {
+        perms.ensure(Permission::VoiceMute)?;
+    }
+    if json.deaf.is_some_and(|m| m != start.deaf) {
+        perms.ensure(Permission::VoiceDeafen)?;
+    }
+
     d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
 
@@ -239,7 +259,9 @@ async fn room_member_update(
             "override_description",
             &start.override_description,
             &res.override_description,
-        );
+        )
+        .change("mute", &start.mute, &res.mute)
+        .change("deaf", &start.deaf, &res.deaf);
 
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),

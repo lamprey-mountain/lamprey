@@ -67,6 +67,11 @@ pub struct RoomMemberPut {
     pub override_description: Option<String>,
     // pub override_avatar: Option<String>,
     // maybe flair: Option<String> as a short bit of extra text by the name
+    /// whether this user is muted by a moderator
+    pub mute: Option<bool>,
+
+    /// whether this user is deafened by a moderator
+    pub deaf: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,6 +92,11 @@ pub struct RoomMemberPatch {
     pub override_description: Option<Option<String>>,
     // #[serde(default, deserialize_with = "some_option")]
     // pub override_avatar: Option<Option<String>>,
+    /// whether this user is muted by a moderator
+    pub mute: Option<bool>,
+
+    /// whether this user is deafened by a moderator
+    pub deaf: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
