@@ -126,15 +126,15 @@ export const Root1: Component = (props: ParentProps) => {
 		);
 		console.log("[config] fetched new config", c);
 
-		if (c.base_url && typeof c?.base_url !== "string") {
-			throw new Error("config.base_url is not a string");
+		if (c.api_url && typeof c?.api_url !== "string") {
+			throw new Error("config.api_url is not a string");
 		}
 
 		if (c.cdn_url && typeof c?.cdn_url !== "string") {
 			throw new Error("config.cdn_url is not a string");
 		}
 
-		c.base_url ??= localStorage.getItem("api_url") ??
+		c.api_url ??= localStorage.getItem("api_url") ??
 			"https://chat.celery.eu.org";
 		c.cdn_url ??= localStorage.getItem("cdn_url") ??
 			"https://chat-cdn.celery.eu.org";
@@ -158,7 +158,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const config = useConfig();
 	const events = createEmitter<Events>();
 	const client = createClient({
-		apiUrl: config.base_url,
+		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
 		onSync(msg) {
 			console.log("recv", msg);
@@ -260,7 +260,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	onCleanup(() => client.stop());
 
 	createEffect(() => {
-		client.opts.apiUrl = config.base_url;
+		client.opts.apiUrl = config.api_url;
 		const TOKEN = localStorage.getItem("token");
 		if (TOKEN) {
 			client.start(TOKEN);

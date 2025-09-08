@@ -1,7 +1,7 @@
 import { createContext, useContext } from "solid-js";
 
 export type Config = {
-	base_url: string;
+	api_url: string;
 	cdn_url: string;
 };
 
