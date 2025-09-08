@@ -155,7 +155,7 @@ export const ChatMain = (props: ChatProps) => {
 	createRenderEffect(
 		on(() => [messages(), read_marker_id()] as const, ([m, rid]) => {
 			console.log(m);
-			if (m?.items.length) {
+			if (m?.items) {
 				console.log("render timeline", m.items, rid);
 				console.time("rendertimeline");
 				const rendered = renderTimeline({
@@ -338,7 +338,7 @@ export function renderTimeline(
 	{ items, read_marker_id, has_before, has_after }: RenderTimelineParams,
 ): Array<TimelineItemT> {
 	const newItems: Array<TimelineItemT> = [];
-	if (items.length === 0) throw new Error("no items");
+	// if (items.length === 0) throw new Error("no items");
 	if (has_before) {
 		newItems.push({
 			type: "spacer",
@@ -346,8 +346,9 @@ export function renderTimeline(
 		});
 	} else {
 		newItems.push({
-			type: "spacer-mini2",
-			id: "spacer-top2",
+			type: "info",
+			id: "thread-header",
+			header: true,
 		});
 	}
 	for (let i = 0; i < items.length; i++) {
@@ -388,6 +389,7 @@ export function renderTimeline(
 		// 	id: "spacer-bottom-mini",
 		// });
 	}
+	console.log("newItems", newItems);
 	return newItems;
 }
 

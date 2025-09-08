@@ -268,14 +268,18 @@ input[type="submit"] {
 		flex-direction: column;
 		overflow-y: auto;
 
+		& > .header {
+			flex: 1;
+			display: flex;
+			justify-content: end;
+			flex-direction: column;
+		}
+
 		& > .header > header {
 			grid-column: span 3;
-			position: sticky;
-			z-index: 1;
-			top: 0;
-			padding: 0 144px;
-			background-color: $bg-300;
-			margin-bottom: 4px;
+			padding: 0 8px;
+			margin-top: 32px;
+			margin-bottom: 8px;
 			box-shadow: 0 2px 8px $bg-200;
 		}
 
@@ -321,10 +325,6 @@ input[type="submit"] {
 			&.context {
 				box-shadow: 4px 0 0 -1px inset #cc1856;
 				background-color: #cc185622;
-			}
-
-			&.header {
-				display: contents;
 			}
 		}
 	}

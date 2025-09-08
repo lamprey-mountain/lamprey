@@ -50,14 +50,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				<li class="header">
 					<header>
 						<h1>{thread.name}</h1>
-						<p>
-							{thread.description ?? "(no description)"}
-							{" / "}
-							<Switch>
-								<Match when={thread.state === "Archived"}>(archived)</Match>
-								<Match when={thread.state === "Deleted"}>(deleted)</Match>
-							</Switch>
-						</p>
+						<p>This is the start of {thread.name}. {thread.description}</p>
 					</header>
 				</li>
 			);

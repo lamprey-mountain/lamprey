@@ -65,6 +65,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<ThreadNotificationMenu />
+			<Item>join/leave</Item>
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
