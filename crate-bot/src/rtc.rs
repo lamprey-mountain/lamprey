@@ -3,9 +3,7 @@ use systemstat::{Platform, System};
 use tokio::time;
 
 use anyhow::{anyhow, Result};
-use common::v1::types::voice::{
-    MediaKindSerde, SessionDescription, SignallingMessage, TrackMetadata,
-};
+use common::v1::types::voice::{MediaKind, SessionDescription, SignallingMessage, TrackMetadata};
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     format::Codec,
@@ -82,7 +80,7 @@ impl Player {
                 sdp: SessionDescription(offer.to_sdp_string().into()),
                 tracks: vec![TrackMetadata {
                     mid: mid.to_string(),
-                    kind: MediaKindSerde::Audio,
+                    kind: MediaKind::Audio,
                     key: "music".into(),
                 }],
             }))

@@ -1640,6 +1640,10 @@ table {
 		&.connected {
 			color: $color-green;
 		}
+
+		&.failed {
+			color: $color-red;
+		}
 	}
 }
 

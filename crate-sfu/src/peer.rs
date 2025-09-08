@@ -10,13 +10,13 @@ use crate::{
 };
 use anyhow::Result;
 use common::v1::types::{
-    voice::{MediaKindSerde, SessionDescription, TrackMetadata, VoiceState},
+    voice::{MediaKind, SessionDescription, TrackMetadata, VoiceState},
     UserId,
 };
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     channel::ChannelId,
-    media::{Direction, MediaKind, Mid},
+    media::{Direction, MediaKind as MediaKindStr0m, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -129,8 +129,6 @@ impl Peer {
             let timeout = match self.rtc.poll_output()? {
                 Output::Timeout(v) => v,
                 Output::Transmit(v) => {
-                    // trace!("transmit {} bytes to {}", v.contents.len(), v.destination);
-
                     match v.destination {
                         SocketAddr::V4(_) => {
                             self.socket_v4.send_to(&v.contents, v.destination).await?;
@@ -184,7 +182,6 @@ impl Peer {
                         }
                         Event::ChannelData(data) => {
                             if self.speaking_chan == Some(data.id) {
-                                dbg!(&data.data);
                                 if let Ok(data) =
                                     serde_json::from_slice::<SpeakingWithoutUserId>(&data.data)
                                 {
@@ -351,8 +348,6 @@ impl Peer {
     }
 
     fn handle_remote_media_data(&mut self, d: MediaData) {
-        // debug!("handle_remote_media_data");
-
         let Some(track) = self
             .outbound
             .iter_mut()
@@ -393,10 +388,9 @@ impl Peer {
             SignallingMessage::Answer { sdp } => self.handle_answer(sdp)?,
             SignallingMessage::Offer { sdp, tracks } => self.handle_offer(sdp, tracks)?,
             SignallingMessage::Candidate { candidate } => {
+                // str0m only supports some candidates right now, not sure if this causes problems
                 if let Ok(candidate) = Candidate::from_sdp_string(&candidate) {
                     self.rtc.add_remote_candidate(candidate);
-                } else {
-                    warn!("invalid candidate: {candidate:?}")
                 }
             }
             SignallingMessage::Want { tracks: _ } => todo!(),
@@ -458,8 +452,8 @@ impl Peer {
                 mid,
                 TrackIn {
                     kind: match track.kind {
-                        MediaKindSerde::Video => MediaKind::Video,
-                        MediaKindSerde::Audio => MediaKind::Audio,
+                        MediaKind::Video => MediaKindStr0m::Video,
+                        MediaKind::Audio => MediaKindStr0m::Audio,
                     },
                     state,
                     thread_id: self.voice_state.thread_id,
@@ -507,14 +501,7 @@ impl Peer {
 
         for track in &mut self.outbound {
             if track.state == TrackState::Pending {
-                let mid = change.add_media(
-                    track.kind,
-                    Direction::SendOnly,
-                    // Some(track.ssrc.clone()),
-                    None,
-                    None,
-                    None,
-                );
+                let mid = change.add_media(track.kind, Direction::SendOnly, None, None, None);
                 track.state = TrackState::Negotiating(mid);
             }
         }
@@ -547,7 +534,6 @@ impl Peer {
             return Ok(());
         };
 
-        // debug!("emit media data");
         self.emit(PeerEvent::MediaData(MediaData {
             mid: data.mid,
             peer_id: self.user_id,
@@ -587,8 +573,8 @@ impl Peer {
                 tracks_metadata.push(TrackMetadataServer {
                     source_mid: mid,
                     kind: match track.kind {
-                        MediaKind::Audio => MediaKindSerde::Audio,
-                        MediaKind::Video => MediaKindSerde::Video,
+                        MediaKindStr0m::Audio => MediaKind::Audio,
+                        MediaKindStr0m::Video => MediaKind::Video,
                     },
                     key: track.key.clone(),
                 });

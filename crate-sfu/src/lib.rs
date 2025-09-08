@@ -1,48 +1,19 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{MediaKindSerde, SignallingMessage, VoiceState},
-    SessionId, ThreadId, UserId,
+    voice::{MediaKind, SignallingMessage},
+    ThreadId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use str0m::{
     format::PayloadParams,
-    media::{KeyframeRequestKind, MediaKind, MediaTime, Mid, Rid},
+    media::{KeyframeRequestKind, MediaKind as MediaKindStr0m, MediaTime, Mid, Rid},
 };
 
 pub mod config;
 pub mod peer;
 pub mod sfu;
 pub mod util;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SfuCommand {
-    /// the user who sent this, or None if this is from the server
-    pub user_id: Option<UserId>,
-
-    pub session_id: Option<SessionId>,
-
-    #[serde(flatten)]
-    pub inner: SignallingMessage,
-}
-
-#[derive(Debug, serde::Serialize)]
-#[serde(tag = "type")]
-pub enum SfuEvent {
-    VoiceDispatch {
-        user_id: UserId,
-        payload: SignallingMessage,
-    },
-    VoiceDispatchBroadcast {
-        thread_id: ThreadId,
-        payload: SignallingMessage,
-    },
-    VoiceState {
-        user_id: UserId,
-        old: Option<VoiceState>,
-        state: Option<VoiceState>,
-    },
-}
 
 #[derive(Debug)]
 pub struct PeerEventEnvelope {
@@ -53,7 +24,6 @@ pub struct PeerEventEnvelope {
 #[derive(Debug)]
 pub enum PeerEvent {
     Signalling(SignallingMessage),
-    SignallingBroadcast(SignallingMessage),
     MediaAdded(SfuTrack),
     MediaData(MediaData),
     Dead,
@@ -114,7 +84,7 @@ pub enum PeerCommand {
 #[derive(Debug, Clone)]
 pub struct TrackMetadataServer {
     pub source_mid: Mid,
-    pub kind: MediaKindSerde,
+    pub kind: MediaKind,
     pub key: String,
 }
 
@@ -133,7 +103,7 @@ pub struct SfuTrack {
     pub source_mid: Mid,
     pub peer_id: UserId,
     pub thread_id: ThreadId,
-    pub kind: MediaKind,
+    pub kind: MediaKindStr0m,
     pub key: String,
 }
 
@@ -156,7 +126,7 @@ impl TrackState {
 
 #[derive(Debug)]
 pub struct TrackIn {
-    pub kind: MediaKind,
+    pub kind: MediaKindStr0m,
     pub state: TrackState,
     pub thread_id: ThreadId,
     pub key: String,
@@ -164,7 +134,7 @@ pub struct TrackIn {
 
 #[derive(Debug)]
 pub struct TrackOut {
-    pub kind: MediaKind,
+    pub kind: MediaKindStr0m,
     pub state: TrackState,
     pub peer_id: UserId,
     pub source_mid: Mid,
@@ -179,21 +149,3 @@ pub enum Error {
     #[error("no voice state exists for this user")]
     NotConnected,
 }
-
-// impl From<MediaKindSerde> for MediaKind {
-//     fn from(kind: MediaKindSerde) -> Self {
-//         match kind {
-//             MediaKindSerde::Audio => MediaKind::Audio,
-//             MediaKindSerde::Video => MediaKind::Video,
-//         }
-//     }
-// }
-
-// impl From<MediaKind> for MediaKindSerde {
-//     fn from(kind: MediaKind) -> Self {
-//         match kind {
-//             MediaKind::Audio => MediaKindSerde::Audio,
-//             MediaKind::Video => MediaKindSerde::Video,
-//         }
-//     }
-// }

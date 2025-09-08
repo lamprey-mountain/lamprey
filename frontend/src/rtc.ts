@@ -58,6 +58,10 @@ export const createVoiceClient = () => {
 
 			if (conn.iceConnectionState === "failed") {
 				console.warn("[rtc:core] connection failed, restarting ice!");
+				console.warn(
+					"[rtc:core] local candidates:",
+					conn.getConfiguration().iceServers,
+				);
 				conn.restartIce();
 			}
 		});
@@ -74,8 +78,10 @@ export const createVoiceClient = () => {
 		});
 
 		conn.addEventListener("icecandidate", (e) => {
-			// console.debug("[rtc:core] icecandidate", e.candidate);
-			// sendWebsocket({ type: "Candidate", ...e.candidate?.toJSON() });
+			if (!e.candidate) return;
+			if (!e.candidate.candidate) return;
+			console.debug("[rtc:core] icecandidate", e.candidate);
+			send({ type: "Candidate", candidate: e.candidate.candidate });
 		});
 
 		conn.addEventListener("negotiationneeded", negotiate);
@@ -97,8 +103,14 @@ export const createVoiceClient = () => {
 				s.media.addTrack(tr);
 				console.log("[rtc:stream] added track", tr.kind, "to stream", s.id);
 			} else {
-				console.warn("[rtc:stream] missing stream, will wait for Have");
+				console.log("[rtc:stream] missing stream, will wait for Have");
 			}
+
+			console.log(
+				"[rtc:state] current remoteStreams, transceivers:",
+				remoteStreams,
+				transceivers,
+			);
 		});
 
 		conn.addEventListener("datachannel", (e) => {
@@ -193,9 +205,7 @@ export const createVoiceClient = () => {
 	async function send(payload: SignallingMessage) {
 		const ws = api.client.getWebsocket();
 		const user_id = api.users.cache.get("@self")!.id;
-		console.group("[rtc:signal] send", payload.type);
-		console.trace(payload);
-		console.groupEnd();
+		console.log("[rtc:signal] send", payload.type, payload);
 		ws.send(JSON.stringify({
 			type: "VoiceDispatch",
 			user_id,
@@ -276,11 +286,8 @@ export const createVoiceClient = () => {
 				// 	t.mid;
 				// }
 			} else if (msg.type === "Candidate") {
-				// TODO: handle ice negotiation
-				console.log("[rtc:signal] remote ICE candidate");
-				// const candidate = JSON.parse(msg.payload.candidate);
-				// console.log("[rtc:signal] remote ICE candidate", candidate);
-				// await c.addIceCandidate(candidate);
+				console.log("[rtc:signal] remote ICE candidate", msg.candidate);
+				await conn.addIceCandidate({ candidate: msg.candidate });
 			} else if (msg.type === "Have") {
 				const user_id = api.users.cache.get("@self")!.id;
 				const ruid = msg.user_id;
@@ -320,17 +327,23 @@ export const createVoiceClient = () => {
 							const tr = tn.receiver.track;
 							s.media.addTrack(tr);
 							console.log(
-								"[rtc:stream] (re)added track",
+								"[rtc:stream] (re)added track %s (kind %s) to stream %s",
+								tr.id,
 								tr.kind,
-								"to stream",
 								streamId,
 							);
 						} else {
-							console.warn(
+							console.log(
 								"[rtc:stream] missing transceiver, will wait for track event",
 							);
 						}
 					}
+
+					console.log(
+						"[rtc:state] current remoteStreams, transceivers:",
+						remoteStreams,
+						transceivers,
+					);
 				}
 			} else if (msg.type === "Want") {
 				// TODO: only subscribe to the tracks we want
@@ -355,7 +368,14 @@ export const createVoiceClient = () => {
 		connect(thread_id: string) {
 			const existing = api.voiceState();
 			if (existing) {
-				console.warn("already have a voice state!", existing);
+				console.warn(
+					"already have a voice state, attempting to reset first",
+					existing,
+				);
+				send({
+					type: "VoiceState",
+					state: null,
+				});
 			}
 			send({
 				type: "VoiceState",

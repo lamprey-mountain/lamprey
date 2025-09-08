@@ -65,6 +65,10 @@ impl From<DbRoomMember> for RoomMember {
             origin: row
                 .origin
                 .map(|o| serde_json::from_value(o).expect("invalid data in db")),
+
+            // FIXME: save in db
+            mute: false,
+            deaf: false,
         }
     }
 }

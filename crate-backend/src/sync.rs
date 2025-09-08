@@ -5,16 +5,15 @@ use axum::extract::ws::{Message, WebSocket};
 use common::v1::types;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
-use common::v1::types::voice::SignallingMessage;
+use common::v1::types::voice::{SfuCommand, SignallingMessage};
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
 };
 use tokio::time::Instant;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 use crate::error::{Error, Result};
-use crate::state::SfuRequest;
 use crate::ServerState;
 
 type WsMessage = axum::extract::ws::Message;
@@ -263,8 +262,8 @@ impl Connection {
                 };
 
                 let srv = self.s.services();
-                let msg: SignallingMessage = serde_json::from_value(payload.clone())?;
-                match &msg {
+                let payload: SignallingMessage = serde_json::from_value(payload.clone())?;
+                match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
                         let thread = srv.threads.get(state.thread_id, Some(user_id)).await?;
                         if thread.archived_at.is_some() {
@@ -293,12 +292,12 @@ impl Connection {
                     _ => {}
                 }
 
-                // TODO: error handling
-                let _ = self.s.sushi_sfu.send(SfuRequest {
+                if let Err(err) = self.s.sushi_sfu.send(SfuCommand::Signalling {
                     user_id,
-                    session_id: session.id,
                     inner: payload,
-                });
+                }) {
+                    error!("failed to send to sushi_sfu: {err}");
+                }
             }
         }
         Ok(())

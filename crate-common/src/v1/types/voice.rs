@@ -64,6 +64,21 @@ pub struct VoiceState {
 
     /// when this user joined the call
     pub joined_at: Time,
+
+    /// whether this user is muted by a moderator
+    pub mute: bool,
+
+    /// whether this user is deafened by a moderator
+    pub deaf: bool,
+    // useful for showing stuff in ui without connecting
+    // pub self_deaf: bool,
+    // pub self_mute: bool,
+    // pub self_video: bool,
+    // pub self_stream: bool,
+
+    // later
+    // pub suppress: bool,
+    // pub requested_to_speak_at: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,37 +87,16 @@ pub struct VoiceStateUpdate {
     pub thread_id: ThreadId,
 }
 
-// if i move stuff perms into voice member/states
-// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct VoiceMemberV2 {
-//     pub user_id: UserId,
-//     pub room_id: RoomId,
-//     pub thread_id: ThreadId,
-//     pub call_id: CallId,
-//     pub session_id: (),
-
-//     pub joined_at: Time,
-//     pub deaf: bool,
-//     pub mute: bool,
-//     pub self_deaf: bool,
-//     pub self_mute: bool,
-
-//     // pub self_video: bool,
-//     // pub self_stream: bool,
-//     pub video: Vec<()>, // includes user and display media
-
-//     pub suppress: bool,
-//     pub requested_to_speak_at: Option<Time>,
-// }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadata {
+    /// unique identifier for this track. equivilant to transceiver.mid
     pub mid: String,
-    pub kind: MediaKindSerde,
 
-    // group tracks together into streams; identical to ssrc but easier to manage client side
+    /// whether this track is for audio or video
+    pub kind: MediaKind,
+
+    /// group tracks together into streams; identical to ssrc but easier to manage client side
     pub key: String,
 }
 
@@ -120,26 +114,21 @@ pub enum SignallingMessage {
     Answer { sdp: SessionDescription },
 
     /// an ice candidate
-    Candidate {
-        candidate: IceCandidate,
-        // not supported by str0m or not needed at all?
-        // sdp_mid: Mid,
-        // sdp_mline_index: u16,
-    },
+    Candidate { candidate: IceCandidate },
 
-    // sent by server only
+    /// sent by server only
     Have {
         thread_id: ThreadId,
-
         user_id: UserId,
         tracks: Vec<TrackMetadata>,
     },
 
     /// sent by server and client
-    Want {
-        // tracks: Vec<Mid>,
-        tracks: Vec<String>,
-    },
+    /// replaces the previous Want
+    // should i default to sending everything? or require sending a Want to receive any data?
+    // TODO: server sent `Want`s
+    // TODO: client sent `Want`s
+    Want { tracks: Vec<String> },
 
     /// sent by client.
     VoiceState { state: Option<VoiceStateUpdate> },
@@ -147,7 +136,7 @@ pub enum SignallingMessage {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MediaKindSerde {
+pub enum MediaKind {
     Video,
     Audio,
 }
@@ -159,3 +148,40 @@ pub enum MediaKindSerde {
 //     /// between 0 and 1.5, defaults to 1
 //     volume: f64,
 // }
+
+// ========== EVERYTHING BELOW IS INTERNAL FOR BACKEND/VOICE ==========
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SfuCommand {
+    /// proxied signalling message from a user
+    Signalling {
+        /// the user who sent this
+        user_id: UserId,
+        inner: SignallingMessage,
+    },
+
+    /// upsert voice state
+    VoiceState {
+        user_id: UserId,
+        thread_id: ThreadId,
+        state: Option<VoiceState>,
+    },
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "type")]
+pub enum SfuEvent {
+    VoiceDispatch {
+        user_id: UserId,
+        payload: SignallingMessage,
+    },
+    VoiceDispatchBroadcast {
+        thread_id: ThreadId,
+        payload: SignallingMessage,
+    },
+    VoiceState {
+        user_id: UserId,
+        old: Option<VoiceState>,
+        state: Option<VoiceState>,
+    },
+}

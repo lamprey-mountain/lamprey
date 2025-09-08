@@ -17,8 +17,6 @@ use crate::v1::types::{
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoomMember {
-    // in the future, i might want to get rid of user_id and generally scope user profiles to rooms
-    // pub member_id: MemberId,
     pub user_id: UserId,
     pub room_id: RoomId,
 
@@ -28,7 +26,7 @@ pub struct RoomMember {
     pub joined_at: Time,
     // TODO?: pub left_at: Option<Time>,
     /// aka nickname
-    // TODO: rename to `nick`?
+    // TODO: rename to `nick`
     pub override_name: Option<String>,
 
     /// like nickname, but for your description/bio/about
@@ -42,9 +40,12 @@ pub struct RoomMember {
     // pub muted_until: Option<Time>,
     /// how this member joined the room, moderator only. is None if the origin is unknown.
     pub origin: Option<RoomMemberOrigin>,
-    // move stuff from voice state here?
-    // pub deaf: bool,
-    // pub mute: bool,
+
+    /// whether this user is muted by a moderator
+    pub mute: bool,
+
+    /// whether this user is deafened by a moderator
+    pub deaf: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

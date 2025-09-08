@@ -3,11 +3,10 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{Media, Message, RoomId, SessionId, ThreadId, UserId};
+use common::v1::types::{voice::SfuCommand, Media, Message, RoomId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
-use serde_json::Value;
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
 use url::Url;
@@ -20,15 +19,6 @@ use crate::{
     Result,
 };
 
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct SfuRequest {
-    pub user_id: UserId,
-    pub session_id: SessionId,
-
-    #[serde(flatten)]
-    pub inner: Value,
-}
-
 pub struct ServerStateInner {
     pub config: Config,
     pub pool: PgPool,
@@ -37,7 +27,7 @@ pub struct ServerStateInner {
     // this is fine probably
     pub sushi: Sender<MessageSync>,
     // channel_user: Arc<DashMap<UserId, (Sender<MessageServer>, Receiver<MessageServer>)>>,
-    pub sushi_sfu: Sender<SfuRequest>,
+    pub sushi_sfu: Sender<SfuCommand>,
 
     // TODO: write a wrapper around this (media is kind of like this?)
     pub blobs: opendal::Operator,

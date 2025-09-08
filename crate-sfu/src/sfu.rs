@@ -1,9 +1,12 @@
 use crate::{
-    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuCommand, SfuEvent,
-    SfuTrack, SignallingMessage, TrackMetadataServer,
+    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SfuTrack,
+    SignallingMessage, TrackMetadataServer,
 };
 use anyhow::Result;
-use common::v1::types::{util::Time, voice::VoiceState, UserId};
+use common::v1::types::{
+    voice::{SfuCommand, SfuEvent, VoiceState},
+    UserId,
+};
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use std::fmt::Debug;
@@ -13,7 +16,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, protocol::Message},
 };
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
@@ -134,17 +137,22 @@ impl Sfu {
 
     async fn handle_command(
         &self,
-        req: SfuCommand,
+        cmd: SfuCommand,
         peer_send: UnboundedSender<PeerEventEnvelope>,
     ) -> Result<()> {
-        // trace!("new rpc message {req:?}");
+        trace!("new rpc message {cmd:?}");
 
-        let user_id = req.user_id.unwrap();
-
-        match &req.inner {
-            SignallingMessage::VoiceState { state } => {
-                // user disconnected
+        match cmd {
+            SfuCommand::Signalling { user_id, inner } => {
+                self.handle_signalling(user_id, inner, peer_send).await?
+            }
+            SfuCommand::VoiceState {
+                user_id,
+                thread_id: _,
+                state,
+            } => {
                 let Some(state) = state else {
+                    // user disconnected
                     let old = self.voice_states.remove(&user_id).map(|s| s.1);
                     if let Some((_, peer)) = self.peers.remove(&user_id) {
                         peer.send(PeerCommand::Kill)?
@@ -159,19 +167,12 @@ impl Sfu {
                     return Ok(());
                 };
 
-                let new_state = VoiceState {
-                    user_id,
-                    session_id: req.session_id,
-                    thread_id: state.thread_id,
-                    joined_at: Time::now_utc(),
-                };
-                let old = self.voice_states.insert(user_id, new_state.clone());
-                debug!("got voice state {new_state:?}");
+                debug!("got voice state {state:?}");
+                let old = self.voice_states.insert(user_id, state.clone());
+
+                let peer = self.ensure_peer(user_id, peer_send.clone(), &state).await?;
 
                 // broadcast all tracks in a thread to the user
-                let peer = self
-                    .ensure_peer(user_id, peer_send.clone(), &new_state)
-                    .await?;
                 for track in &self.tracks {
                     if track.peer_id == user_id {
                         continue;
@@ -192,6 +193,7 @@ impl Sfu {
                     }
                 }
 
+                // also broadcast all the track metadata as well
                 for meta in &self.track_metadata {
                     let peer_id = meta.key();
 
@@ -220,10 +222,25 @@ impl Sfu {
                 // tell everyone about the voice state update
                 self.emit(SfuEvent::VoiceState {
                     user_id,
-                    state: Some(new_state),
+                    state: Some(state),
                     old,
                 })
                 .await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn handle_signalling(
+        &self,
+        user_id: UserId,
+        msg: SignallingMessage,
+        peer_send: UnboundedSender<PeerEventEnvelope>,
+    ) -> Result<()> {
+        match &msg {
+            SignallingMessage::VoiceState { .. } => {
+                warn!("raw signalling messages should not be sent here");
             }
             _ => {
                 let Some(voice_state) = self.voice_states.get(&user_id) else {
@@ -234,7 +251,7 @@ impl Sfu {
                 let peer = self
                     .ensure_peer(user_id, peer_send.clone(), &voice_state)
                     .await?;
-                peer.send(PeerCommand::Signalling(req.inner))?;
+                peer.send(PeerCommand::Signalling(msg))?;
             }
         }
 
@@ -249,19 +266,6 @@ impl Sfu {
                 debug!("signalling event {payload:?}");
                 self.emit(SfuEvent::VoiceDispatch { user_id, payload })
                     .await?;
-            }
-            PeerEvent::SignallingBroadcast(payload) => {
-                debug!("signalling event broadcast {payload:?}");
-                let Some(voice_state) = self.voice_states.get(&user_id) else {
-                    warn!("no voice state for {user_id}");
-                    return Ok(());
-                };
-
-                self.emit(SfuEvent::VoiceDispatchBroadcast {
-                    thread_id: voice_state.thread_id,
-                    payload,
-                })
-                .await?;
             }
             PeerEvent::MediaAdded(ref m) => {
                 debug!("media added event {event:?}");
@@ -325,6 +329,7 @@ impl Sfu {
             PeerEvent::Dead => {
                 debug!("peerevent::dead");
                 self.peers.remove(&user_id);
+                self.track_metadata.remove(&user_id);
                 self.tracks.retain(|a| a.peer_id != user_id);
             }
             PeerEvent::NeedsKeyframe {

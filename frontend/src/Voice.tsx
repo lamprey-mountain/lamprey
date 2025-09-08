@@ -273,6 +273,9 @@ export const VoiceTray = () => {
 							<Match when={voice.rtc?.state() === "connected"}>
 								<div class="status connected">connected</div>
 							</Match>
+							<Match when={voice.rtc?.state() === "failed"}>
+								<div class="status failed">failed</div>
+							</Match>
 							<Match when={true}>
 								<div class="status">{voice.rtc?.state()}</div>
 							</Match>

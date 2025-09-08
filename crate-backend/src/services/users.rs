@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::voice::{SignallingMessage, VoiceState};
+use common::v1::types::voice::{SfuCommand, VoiceState};
 use common::v1::types::{MessageSync, Thread, ThreadId, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
@@ -10,7 +10,6 @@ use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
-use crate::state::SfuRequest;
 use crate::types::{DbThreadCreate, DbThreadType};
 use crate::{Error, Result, ServerStateInner};
 
@@ -191,10 +190,10 @@ impl ServiceUsers {
     pub fn disconnect_everyone_from_thread(&self, thread_id: ThreadId) -> Result<()> {
         for s in &self.voice_states {
             if s.thread_id == thread_id {
-                let r = self.state.sushi_sfu.send(SfuRequest {
+                let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
                     user_id: s.user_id,
-                    session_id: s.session_id.expect("we always have session id"),
-                    inner: serde_json::to_value(SignallingMessage::VoiceState { state: None })?,
+                    thread_id,
+                    state: None,
                 });
                 if let Err(err) = r {
                     error!("failed to disconnect user from thread: {err}");
