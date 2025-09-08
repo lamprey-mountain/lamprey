@@ -995,6 +995,7 @@ code {
 	display: block;
 	object-fit: contain;
 	background: $bg-100;
+	border-radius: 8px;
 
 	/* should probably add a way to crop images in browser */
 	/* object-fit: cover; */
@@ -1521,17 +1522,32 @@ table {
 	}
 
 	.streams {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(max(320px, 30%), 1fr));
 		background: black;
 		height: 100%;
-		padding: 8px;
-		gap: 8px;
 		overflow-y: auto;
-		padding-bottom: 64px;
+
+		.centered {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			height: 100%;
+			padding: 16px;
+			padding-top: 32px;
+			padding-bottom: 64px;
+		}
+
+		.list {
+			display: flex;
+			flex-wrap: wrap;
+			align-content: center;
+			justify-content: center;
+			gap: 8px;
+		}
 	}
 
 	.stream {
+		width: 30%;
+		min-width: 320px;
 		aspect-ratio: 16 / 9;
 		border: solid $sep-500 1px;
 		background: $bg-100;
@@ -1543,9 +1559,9 @@ table {
 
 		video {
 			display: block;
-			/* border: solid red 1px; */
-			max-height: 100%;
-			max-width: 100%;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
 		}
 
 		.live {
@@ -1557,7 +1573,8 @@ table {
 			border-radius: 4px;
 			text-transform: uppercase;
 			font-weight: bold;
-			visibility: hidden;
+			/* visibility: hidden; */
+			display: none;
 		}
 
 		&:hover .live {
@@ -1566,11 +1583,29 @@ table {
 
 		&.fullscreen {
 			width: 100%;
-			grid-column: 1 / -1;
 		}
 
 		&.speaking {
 			border: solid $color-green 2px;
+		}
+
+		.status {
+			background: #0004;
+			padding: 4px;
+			border-radius: 4px;
+			position: absolute;
+			bottom: 8px;
+			left: 8px;
+		}
+	}
+
+	.stream.fullscreen + .list {
+		min-height: auto;
+		margin-top: 8px;
+
+		& .stream {
+			width: 20%;
+			min-width: 240px;
 		}
 	}
 }

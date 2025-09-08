@@ -126,10 +126,15 @@ export const createVoiceClient = () => {
 
 		chan.addEventListener("message", (e) => {
 			const { user_id, flags } = JSON.parse(e.data);
+			console.debug("[rtc:speaking] recv speaking", { user_id, flags });
 			clearTimeout(speaking.get(user_id)?.timeout);
 			const timeout = setTimeout(() => speaking.delete(user_id), 10 * 1000);
 			speaking.set(user_id, { flags, timeout });
 		});
+
+		if (chanSpeaking) {
+			console.warn("[rtc:speaking] already have a speaking channel");
+		}
 
 		chanSpeaking = chan;
 	}
@@ -348,6 +353,10 @@ export const createVoiceClient = () => {
 		conn,
 		state: rtcState,
 		connect(thread_id: string) {
+			const existing = api.voiceState();
+			if (existing) {
+				console.warn("already have a voice state!", existing);
+			}
 			send({
 				type: "VoiceState",
 				state: { thread_id },
@@ -389,6 +398,7 @@ export const createVoiceClient = () => {
 		streams,
 		speaking,
 		sendSpeaking(flags: number) {
+			console.debug("[rtc:speaking] send speaking", flags);
 			chanSpeaking?.send(JSON.stringify({ flags }));
 		},
 	};

@@ -1,9 +1,11 @@
 import { Thread } from "sdk";
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	For,
 	Match,
+	on,
 	onCleanup,
 	Show,
 	Switch,
@@ -14,15 +16,20 @@ import iconMic from "./assets/mic.png";
 import iconScreenshare from "./assets/screenshare.png";
 import iconSettings from "./assets/settings.png";
 import iconMusic from "./assets/music.png";
+import iconExit from "./assets/exit.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
+import { CDN_URL } from "./App.tsx";
+import { getColor } from "./User.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
 
-	if (!voice.threadId) actions.connect(p.thread.id);
+	createEffect(on(() => p.thread.id, (tid) => {
+		if (!voice.threadId) actions.connect(tid);
+	}));
 
 	const getName = (uid: string) => {
 		const user = api.users.fetch(() => uid);
@@ -74,47 +81,109 @@ export const Voice = (p: { thread: Thread }) => {
 	return (
 		<div
 			class="webrtc"
-			classList={{ controls: controls() }}
+			classList={{ controls: controls(), "stream-focused": !!focused() }}
 			onMouseMove={showControls}
 			onMouseOut={hideControls}
 		>
 			<div class="streams">
-				<Show when={voice.rtc}>
-					<For each={[...voice.rtc!.streams.values()]}>
-						{(stream) => {
-							let videoRef!: HTMLVideoElement;
-							createEffect(() => {
-								if (videoRef) videoRef.srcObject = stream.media;
-							});
-							return (
-								<div
-									class="stream"
-									classList={{
-										fullscreen: focused() === stream.id,
-										speaking:
-											((voice.rtc?.speaking.get(stream.user_id)?.flags ?? 0) &
-												1) === 1,
-									}}
-									onClick={() =>
-										setFocused((s) => s === stream.id ? null : stream.id)}
-								>
-									<div class="live">live</div>
-									<video
-										autoplay
-										playsinline
-										ref={videoRef!}
-										muted
-									/>
-								</div>
-							);
-						}}
-					</For>
-					<For each={getUsersWithoutStreams()}>
-						{(uid) => {
-							return <div class="stream">{getName(uid)}</div>;
-						}}
-					</For>
-				</Show>
+				<div class="centered">
+					<Show when={voice.rtc}>
+						<Show when={focused()}>
+							{((stream) => {
+								if (!stream) return;
+								let videoRef!: HTMLVideoElement;
+								createEffect(() => {
+									if (videoRef) videoRef.srcObject = stream.media;
+								});
+								return (
+									<div
+										class="stream"
+										classList={{
+											fullscreen: focused() === stream.id,
+											speaking:
+												((voice.rtc?.speaking.get(stream.user_id)?.flags ?? 0) &
+													1) === 1,
+										}}
+										onClick={() =>
+											setFocused((s) => (s === stream.id ? null : stream.id))}
+									>
+										<div class="live">live</div>
+										<video
+											autoplay
+											playsinline
+											ref={videoRef!}
+											muted
+										/>
+										<div class="status">
+											{getName(stream.user_id)}
+										</div>
+									</div>
+								);
+							})(voice.rtc?.streams.get(focused()!))}
+						</Show>
+						<div class="list">
+							<For each={[...voice.rtc!.streams.values()]}>
+								{(stream) => {
+									let videoRef!: HTMLVideoElement;
+									createEffect(() => {
+										if (videoRef) videoRef.srcObject = stream.media;
+									});
+
+									return (
+										<div
+											class="stream"
+											classList={{
+												speaking:
+													((voice.rtc?.speaking.get(stream.user_id)?.flags ??
+														0) &
+														1) === 1,
+											}}
+											style={{
+												display: focused() === stream.id ? "none" : undefined,
+											}}
+											onClick={() =>
+												setFocused((s) => (s === stream.id ? null : stream.id))}
+										>
+											<div class="live">live</div>
+											<video
+												autoplay
+												playsinline
+												ref={videoRef!}
+												muted
+											/>
+											<div class="status">
+												{getName(stream.user_id)}
+											</div>
+										</div>
+									);
+								}}
+							</For>
+							<For each={getUsersWithoutStreams()}>
+								{(uid) => {
+									const user = api.users.fetch(() => uid);
+									return (
+										<div
+											class="stream"
+											style={{
+												"background-color": getColor(uid),
+											}}
+										>
+											<Show when={user()?.avatar}>
+												<img
+													src={`${CDN_URL}/thumb/${user()?.avatar}?size=64`}
+													class="avatar"
+												/>
+											</Show>
+											<div class="status">
+												{getName(uid)}
+											</div>
+										</div>
+									);
+								}}
+							</For>
+						</div>
+					</Show>
+				</div>
 			</div>
 			<header class="top">
 				<b>{p.thread.name}</b>
@@ -151,6 +220,9 @@ export const Voice = (p: { thread: Thread }) => {
 							checked={voice.musicPlaying}
 							src={iconMusic}
 						/>
+					</button>
+					<button onClick={actions.disconnect}>
+						<img class="icon" src={iconExit} />
 					</button>
 				</div>
 			</div>

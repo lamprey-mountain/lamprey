@@ -20,7 +20,7 @@ export const getMsgTs = createWeaklyMemoized((m: Message) =>
 
 export function getMessageOverrideName(message: Message | undefined) {
 	if (!message) return undefined;
-	if (message.type === "DefaultMarkdown" || message.type === "DefaultTagged") {
+	if (message.type === "DefaultMarkdown") {
 		return message.override_name;
 	}
 	return undefined;
@@ -28,7 +28,7 @@ export function getMessageOverrideName(message: Message | undefined) {
 
 export function getMessageContent(message: Message | undefined) {
 	if (!message) return undefined;
-	if (message.type === "DefaultMarkdown" || message.type === "DefaultTagged") {
+	if (message.type === "DefaultMarkdown") {
 		return message.content;
 	}
 	return undefined;
