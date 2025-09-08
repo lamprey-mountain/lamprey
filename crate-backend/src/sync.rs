@@ -535,6 +535,7 @@ impl Connection {
                             .message_get(message.thread_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
+                        m.nonce = message.nonce;
                         m
                     },
                 },
@@ -544,6 +545,7 @@ impl Connection {
                             .message_get(message.thread_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
+                        m.nonce = message.nonce;
                         m
                     },
                 },
