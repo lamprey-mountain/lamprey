@@ -224,25 +224,12 @@ impl DataRoom for Postgres {
         .await?;
         let media_size = query_scalar!(
             r#"
-            with primary_tracks as (
-                select m.id as media_id,
-                       coalesce(
-                           (select t
-                            from jsonb_array_elements(m.data->'tracks') t
-                            where t->'source'->>'type' IN ('Uploaded', 'Downloaded')
-                            limit 1),
-                           (select t
-                            from jsonb_array_elements(m.data->'tracks') t
-                            limit 1)
-                       ) as track
-                from media m
-            )
-            select sum((track->>'size')::int) as total_size
+            select sum((m.data->'source'->'size')::int) as total_size
             from room r
             join thread t on t.room_id = r.id
             join message s on s.thread_id = t.id
             join media_link l on l.target_id = s.id and l.link_type = 'Message'
-            join primary_tracks pt on pt.media_id = l.media_id
+            join media m on m.id = l.media_id
             where r.id = $1
             "#,
             *room_id
