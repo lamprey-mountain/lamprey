@@ -14,7 +14,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 
 	return (
 		<ul class="member-list" data-room-id={props.room.id}>
-			<For each={members()?.items}>
+			<For each={members()?.items.filter((m) => m.membership === "Join")}>
 				{(member) => {
 					const user_id = () => member.user_id;
 					const user = api.users.fetch(user_id);
