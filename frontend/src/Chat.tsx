@@ -373,7 +373,7 @@ export function renderTimeline(
 		}
 		newItems.push({
 			type: "message",
-			id: msg.version_id,
+			id: msg.version_id + "/" + ("embeds" in msg ? msg.embeds.length : 0),
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});
