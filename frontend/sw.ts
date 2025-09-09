@@ -4,7 +4,7 @@
 
 declare const self: ServiceWorkerGlobalScope;
 
-const CACHE_VALID = ["v2.media", "v1.assets"];
+const CACHE_VALID: Array<string> = [];
 
 const makeError = (error: string, status = 400) => {
 	return new Response(JSON.stringify({ error }), {
@@ -16,7 +16,7 @@ const makeError = (error: string, status = 400) => {
 const deleteOldCaches = async () => {
 	const c = await caches.keys();
 
-	console.log("prune caches", {
+	console.log("[sw] prune caches", {
 		existing: c,
 		current: CACHE_VALID,
 	});
@@ -34,12 +34,12 @@ const shouldCache = (req: Request) => {
 };
 
 self.addEventListener("install", () => {
-	console.log("serviceworker installed");
+	console.log("[sw] serviceworker installed");
 	self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
-	console.log("serviceworker activated");
+	console.log("[sw] activated");
 	e.waitUntil(Promise.all([
 		deleteOldCaches(),
 		self.registration.navigationPreload.enable(),
@@ -47,63 +47,6 @@ self.addEventListener("activate", (e) => {
 	]));
 });
 
-self.addEventListener("fetch", (e) => {
-	const req = e.request;
-	const url = new URL(req.url);
-	if (!url.pathname.startsWith("/_media")) return;
-
-	e.respondWith(
-		(async () => {
-			// const client = await self.clients.get(e.clientId);
-			// client?.postMessage("hi!! helloo!!!!");
-
-			const cached = await caches.match(req);
-			if (cached) return cached;
-
-			if (req.method === "GET" && url.pathname === "/_media") {
-				const target = url.searchParams.get("url");
-				if (!target) return makeError("missing url");
-
-				const cached = await caches.match(target, { ignoreSearch: true });
-				if (cached) {
-					const lifetime = Date.now() - Date.parse(cached.headers.get("Date")!);
-					if (lifetime >= 60 * 60 * 24 * 1000) {
-						return cached;
-					}
-				}
-
-				const res = await fetch(target, { mode: "cors" });
-				if (res.status === 206) return res; // range requests are a bit h right now
-				if (res.ok) {
-					const res2 = res.clone();
-					e.waitUntil((async () => {
-						const cache = await caches.open("v2.media");
-						cache.put(target, res2);
-					})());
-				} else {
-					console.error(res);
-				}
-
-				return res;
-			}
-
-			const preload = await e.preloadResponse;
-			if (preload) return preload;
-
-			const res = await fetch(req);
-
-			if (res.ok && shouldCache(req)) {
-				const res2 = res.clone();
-				e.waitUntil((async () => {
-					const cache = await caches.open("v1.assets");
-					await cache.put(req, res2);
-				})());
-			}
-
-			return res;
-		})().catch((err) => {
-			console.error(err);
-			return makeError("network error", 408);
-		}),
-	);
-});
+// self.addEventListener("push", e => {
+// 	console.log("[sw] pushed", e.data);
+// });

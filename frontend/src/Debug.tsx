@@ -9,10 +9,24 @@ import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
 import { SearchInput } from "./SearchInput.tsx";
 
+// @ts-ignore
+const packageJson = __VITE_PACKAGE_JSON__;
+
+// @ts-ignore
+const gitCommit = __VITE_GIT_COMMIT__;
+
+// @ts-ignore
+const gitDirty = __VITE_GIT_DIRTY__;
+
 export const Debug = () => {
 	return (
 		<div class="debug">
 			<h3>area 51</h3>
+			<details>
+				<summary>build info</summary>
+				commit {gitCommit} {gitDirty && "(dirty)"}
+				<pre><code>{JSON.stringify(packageJson, null, 4)}</code></pre>
+			</details>
 			<details>
 				<summary>search thing</summary>
 				<SearchInput />
