@@ -120,6 +120,8 @@ export const Root1: Component = (props: ParentProps) => {
 	console.log("[config] temporarily reusing existing config", saved);
 
 	(async () => {
+		if (localStorage.dontFetchConfig) return;
+
 		const c: Config = await fetch("/config.json").then(
 			(res) => res.json(),
 			() => null,
