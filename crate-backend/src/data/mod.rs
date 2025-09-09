@@ -259,6 +259,12 @@ pub trait DataMessage {
         message_id: MessageId,
         create: DbMessageCreate,
     ) -> Result<MessageVerId>;
+    async fn message_update_in_place(
+        &self,
+        thread_id: ThreadId,
+        version_id: MessageVerId,
+        create: DbMessageCreate,
+    ) -> Result<()>;
     async fn message_get(
         &self,
         thread_id: ThreadId,

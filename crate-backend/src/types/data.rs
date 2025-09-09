@@ -124,7 +124,6 @@ impl From<DbThreadType> for ThreadType {
 
 impl From<DbThread> for Thread {
     fn from(row: DbThread) -> Self {
-        dbg!(&row);
         Thread {
             id: row.id,
             room_id: row.room_id.map(Into::into),
@@ -237,7 +236,7 @@ impl DbMessageCreate {
     pub fn content(&self) -> Option<String> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.content.clone(),
-            MessageType::ThreadRename(_patch) => Some("(thread rename)".to_owned()),
+            MessageType::ThreadRename(_patch) => None,
             _ => None,
         }
     }

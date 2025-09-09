@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::misc::Color;
-use common::v1::types::{self, MessageSync};
+use common::v1::types::{self, MessageSync, MessageType};
 use common::v1::types::{Embed, EmbedId};
 use common::v1::types::{Media, UserId};
 use mediatype::{MediaType, MediaTypeBuf};
@@ -17,7 +17,7 @@ use url::Url;
 use webpage::HTML;
 
 use crate::error::Error;
-use crate::types::{DbMessageCreate, MediaLinkType};
+use crate::types::{DbMessageCreate, MediaLinkType, MessageRef};
 use crate::Result;
 use crate::ServerStateInner;
 
@@ -230,12 +230,17 @@ impl ServiceEmbed {
 
     pub async fn queue(
         &self,
-        message_ref: Option<crate::types::MessageRef>,
+        message_ref: Option<MessageRef>,
         user_id: UserId,
         url: Url,
     ) -> Result<()> {
         if let Some(embed) = self.cache.get(&url).await {
             if let Some(message_ref) = message_ref {
+                info!(
+                    "reuse embed message: version_id = {} url = {:?}",
+                    message_ref.version_id,
+                    url.as_str()
+                );
                 if let Err(e) =
                     Self::attach_embed(&self.state, Some(message_ref), user_id, embed).await
                 {
@@ -506,43 +511,55 @@ impl ServiceEmbed {
 
     async fn attach_embed(
         state: &Arc<ServerStateInner>,
-        message_ref: Option<crate::types::MessageRef>,
+        message_ref: Option<MessageRef>,
         user_id: UserId,
         embed: Embed,
     ) -> Result<()> {
-        let Some(message_ref) = message_ref else {
+        let Some(mref) = message_ref else {
             return Ok(());
         };
         let data = state.data();
         let message = data
-            .message_get(message_ref.thread_id, message_ref.message_id, user_id)
+            .message_version_get(mref.thread_id, mref.version_id, user_id)
             .await?;
-        let mut new_message_type = message.message_type.clone();
-        let (embeds, attachments) = match &mut new_message_type {
-            common::v1::types::MessageType::DefaultMarkdown(m) => {
+
+        let mut message_type = message.message_type;
+        let (embeds, attachments) = match &mut message_type {
+            MessageType::DefaultMarkdown(m) => {
                 if m.embeds
                     .iter()
                     .any(|e| e.url.as_ref() == embed.url.as_ref())
                 {
+                    info!(
+                        "skip embed message: version_id = {} url = {:?}",
+                        mref.version_id,
+                        embed.url.as_ref().map(|u| u.as_str())
+                    );
                     return Ok(());
                 }
 
                 if let Some(media) = &embed.media {
-                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.thumbnail {
-                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.author_avatar {
-                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.site_avatar {
-                    data.media_link_insert(media.id, *message.version_id, MediaLinkType::Embed)
+                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
+
+                info!(
+                    "add embed message: version_id = {} url = {:?}",
+                    mref.version_id,
+                    embed.url.as_ref().map(|u| u.as_str())
+                );
 
                 m.embeds.push(embed);
                 (
@@ -553,15 +570,15 @@ impl ServiceEmbed {
             _ => return Ok(()),
         };
 
-        data.message_update(
-            message_ref.thread_id,
-            message_ref.message_id,
+        data.message_update_in_place(
+            mref.thread_id,
+            mref.version_id,
             DbMessageCreate {
-                thread_id: message_ref.thread_id,
+                thread_id: mref.thread_id,
                 attachment_ids: attachments,
                 author_id: message.author_id,
                 embeds,
-                message_type: new_message_type,
+                message_type,
                 edited_at: message.edited_at.map(|t| t.into()),
                 created_at: message.created_at.map(|t| t.into()),
             },
@@ -569,16 +586,18 @@ impl ServiceEmbed {
         .await?;
 
         let mut message = data
-            .message_get(message_ref.thread_id, message_ref.message_id, user_id)
+            .message_get(mref.thread_id, mref.message_id, user_id)
             .await?;
-        state.presign_message(&mut message).await?;
-        state
-            .broadcast_thread(
-                message_ref.thread_id,
-                user_id,
-                MessageSync::MessageUpdate { message },
-            )
-            .await?;
+        if message.version_id == mref.version_id {
+            state.presign_message(&mut message).await?;
+            state
+                .broadcast_thread(
+                    mref.thread_id,
+                    user_id,
+                    MessageSync::MessageUpdate { message },
+                )
+                .await?;
+        }
         Ok(())
     }
 }

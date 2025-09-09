@@ -200,6 +200,48 @@ impl DataMessage for Postgres {
         Ok(ver_id.into())
     }
 
+    // NOTE: ignores thread_id, attachment_ids in create
+    async fn message_update_in_place(
+        &self,
+        _thread_id: ThreadId,
+        version_id: MessageVerId,
+        create: DbMessageCreate,
+    ) -> Result<()> {
+        let message_type: DbMessageType = create.message_type.clone().into();
+        let mut tx = self.pool.begin().await?;
+        let embeds = serde_json::to_value(create.embeds.clone())?;
+        query!(
+            r#"
+            UPDATE message SET
+                content = $2,
+                metadata = $3,
+                reply_id = $4,
+                author_id = $5,
+                type = $6,
+                override_name = $7,
+                embeds = $8,
+                created_at = $9,
+                edited_at = $10
+            WHERE version_id = $1
+        "#,
+            *version_id,
+            create.content(),
+            create.metadata(),
+            create.reply_id().map(|i| *i),
+            *create.author_id,
+            message_type as _,
+            create.override_name(),
+            embeds,
+            create.created_at,
+            create.edited_at,
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        info!("update message in place");
+        Ok(())
+    }
+
     async fn message_get(
         &self,
         thread_id: ThreadId,

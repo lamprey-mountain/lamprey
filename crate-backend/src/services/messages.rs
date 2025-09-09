@@ -279,13 +279,13 @@ impl ServiceMessages {
                 .await?;
         }
 
-        if let Some(content) = &content {
-            tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
-        }
-
         let mut message = data
             .message_version_get(thread_id, version_id, user_id)
             .await?;
+
+        if let Some(content) = &content {
+            tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
+        }
 
         if let Some(embeds) = json.embeds {
             match &mut message.message_type {
