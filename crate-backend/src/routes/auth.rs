@@ -203,7 +203,6 @@ async fn auth_email_exec(
         .await?;
     let mut url = s.config.html_url.join("email-auth")?;
     url.set_query(Some(&format!("code={code}")));
-    dbg!(&url);
     let message = format!(
         "click this link to login: {url}\n\nif you didn't request this, ignore this email."
     );

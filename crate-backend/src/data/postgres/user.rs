@@ -95,7 +95,7 @@ impl From<DbUser> for User {
             description: row.description,
             status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
-            bot: row.bot.and_then(|r| serde_json::from_value(dbg!(r)).ok()),
+            bot: row.bot.and_then(|r| serde_json::from_value(r).ok()),
             puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
             suspended: row
                 .suspended

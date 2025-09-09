@@ -443,9 +443,9 @@ impl Connection {
                 user_id,
                 old_state,
             } => {
-                if let Some(state) = dbg!(state) {
+                if let Some(state) = state {
                     AuthCheck::Thread(state.thread_id)
-                } else if let Some(old) = dbg!(old_state) {
+                } else if let Some(old) = old_state {
                     AuthCheck::Thread(old.thread_id)
                 } else {
                     AuthCheck::User(*user_id)

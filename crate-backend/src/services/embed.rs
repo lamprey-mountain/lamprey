@@ -599,7 +599,6 @@ impl ServiceEmbed {
                 .await?;
         } else {
             info!("not sending update because message is not latest");
-            dbg!(message.version_id, mref.version_id);
         }
         Ok(())
     }
@@ -617,7 +616,7 @@ fn get_media(base: &Url, parsed: &HTML) -> Option<ParsedMedia> {
             .properties
             .get("type")
             .and_then(|s| MediaType::parse(s).ok());
-        if dbg!(c).is_none_or(|c| c.ty == "video") {
+        if c.is_none_or(|c| c.ty == "video") {
             return Some(ParsedMedia {
                 url: base.join(&vid.url).ok()?,
                 alt: vid.properties.get("alt").map(|s| s.to_owned()),

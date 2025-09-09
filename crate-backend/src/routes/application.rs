@@ -266,11 +266,9 @@ async fn puppet_ensure(
     if !parent.bot.is_some_and(|b| b.is_bridge) {
         return Err(Error::BadStatic("can't create that user"));
     };
-    let existing = data
-        .user_lookup_puppet(dbg!(auth_user_id), dbg!(&puppet_id))
-        .await?;
-    if let Some(id) = dbg!(existing) {
-        let user = dbg!(data.user_get(id).await?);
+    let existing = data.user_lookup_puppet(auth_user_id, &puppet_id).await?;
+    if let Some(id) = existing {
+        let user = data.user_get(id).await?;
         return Ok((StatusCode::OK, Json(user)));
     }
     let user = data

@@ -38,16 +38,16 @@ pub fn truncate_with_ellipsis(a: &str, max_len: usize) -> Cow<'_, str> {
 /// truncate a filename to a maximum length, while attempting to retain its
 /// extension
 pub fn truncate_filename(a: &str, max_len: usize) -> Cow<'_, str> {
-    match dbg!(a.rfind('.')) {
+    match a.rfind('.') {
         Some(idx) => {
-            let ext = dbg!(&a[idx..]);
+            let ext = &a[idx..];
             match ext.len().cmp(&max_len) {
                 // the file extension would be mangled anyways
                 Ordering::Greater => Cow::Borrowed(truncate(a, max_len)),
                 // remove extension to avoid returning dotfile
                 Ordering::Equal => Cow::Borrowed(truncate(a, max_len)),
                 Ordering::Less => {
-                    let name = dbg!(truncate(&a[0..idx], dbg!(max_len - ext.len())));
+                    let name = truncate(&a[0..idx], max_len - ext.len());
                     Cow::Owned(format!("{}{}", name, ext))
                 }
             }
