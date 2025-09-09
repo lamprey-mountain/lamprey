@@ -221,6 +221,7 @@ export const createVoiceClient = () => {
 				payload,
 			}));
 		}
+		sendQueue.splice(0, sendQueue.length);
 	}
 
 	api.events.on("ready", () => {
