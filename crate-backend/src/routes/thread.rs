@@ -7,7 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, ThreadType,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, ThreadMemberPut,
+    ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -47,8 +48,9 @@ async fn thread_create_room(
     Json(json): Json<ThreadCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
+    let srv = s.services();
     let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     match json.ty {
         ThreadType::Chat => {
@@ -87,25 +89,12 @@ async fn thread_create_room(
             nsfw: json.nsfw,
         })
         .await?;
-    // let starter_message_id = data
-    //     .message_create(DbMessageCreate {
-    //         thread_id,
-    //         attachment_ids: vec![],
-    //         author_id: user_id,
-    //         embeds: vec![],
-    //         message_type: MessageType::ThreadRename(MessageThreadRename {
-    //             patch: ThreadPatch {
-    //                 name: Some(json.name),
-    //                 description: Some(json.description),
-    //                 tags: None,
-    //                 nsfw: Some(json.nsfw),
-    //             },
-    //         }),
-    //         edited_at: None,
-    //         created_at: None,
-    //     })
-    //     .await?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+
+    data.thread_member_put(thread_id, user_id, ThreadMemberPut {})
+        .await?;
+    let thread_member = data.thread_member_get(thread_id, user_id).await?;
+
+    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
@@ -123,9 +112,6 @@ async fn thread_create_room(
     })
     .await?;
 
-    // let starter_message = data
-    //     .message_get(thread_id, starter_message_id, user_id)
-    //     .await?;
     s.broadcast_room(
         room_id,
         user_id,
@@ -134,15 +120,15 @@ async fn thread_create_room(
         },
     )
     .await?;
+    s.broadcast_thread(
+        thread.id,
+        user_id,
+        MessageSync::ThreadMemberUpsert {
+            member: thread_member,
+        },
+    )
+    .await?;
 
-    // s.broadcast_thread(
-    //     thread.id,
-    //     user_id,
-    //     MessageSync::MessageCreate {
-    //         message: starter_message,
-    //     },
-    // )
-    // .await?;
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
