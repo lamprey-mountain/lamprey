@@ -7,7 +7,7 @@ use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Diff;
 use common::v1::types::{
     Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync,
-    MessageType, Permission, ThreadId,
+    MessageType, Permission, ThreadId, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -147,8 +147,18 @@ impl ServiceMessages {
         }
         s.presign_message(&mut message).await?;
         message.nonce = nonce.or(json.nonce);
-        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
-            .await?;
+
+        let tm = data.thread_member_get(thread_id, user_id).await;
+        if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+            data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+                .await?;
+            let thread_member = data.thread_member_get(thread_id, user_id).await?;
+            let msg = MessageSync::ThreadMemberUpsert {
+                member: thread_member,
+            };
+            s.broadcast_thread(thread_id, user_id, msg).await?;
+        }
+
         let msg = MessageSync::MessageCreate {
             message: message.clone(),
         };
