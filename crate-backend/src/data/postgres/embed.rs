@@ -37,22 +37,13 @@ impl DataEmbed for Postgres {
         Ok(row)
     }
 
-    async fn url_embed_queue_finish(&self, id: Uuid, embed: Option<&Embed>) -> Result<()> {
+    async fn url_embed_queue_finish(&self, id: Uuid, _embed: Option<&Embed>) -> Result<()> {
         query!(
             "UPDATE url_embed_queue SET finished_at = NOW() WHERE id = $1",
             id
         )
         .execute(&self.pool)
         .await?;
-        if let Some(embed) = embed {
-            query!(
-                "UPDATE message SET embeds = embeds || $1::jsonb WHERE version_id = (SELECT (message_ref->>'version_id')::uuid FROM url_embed_queue WHERE id = $2)",
-                serde_json::to_value(embed)?,
-                id
-            )
-            .execute(&self.pool)
-            .await?;
-        }
         Ok(())
     }
 }

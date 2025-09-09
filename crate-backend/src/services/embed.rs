@@ -597,6 +597,9 @@ impl ServiceEmbed {
                     MessageSync::MessageUpdate { message },
                 )
                 .await?;
+        } else {
+            info!("not sending update because message is not latest");
+            dbg!(message.version_id, mref.version_id);
         }
         Ok(())
     }
