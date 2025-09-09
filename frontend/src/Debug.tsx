@@ -159,14 +159,19 @@ const UrlEmbedDbg = () => {
 	const api = useApi();
 	let url: string;
 	const [data, setData] = createSignal<Embed | null>(null);
+	const [error, setError] = createSignal<{ error: string } | null>(null);
 
 	async function generate(e: SubmitEvent) {
 		e.preventDefault();
 		if (!url) return;
-		const res = await api.client.http.POST("/api/v1/debug/embed-url", {
-			body: { url },
-		});
-		setData(res.data as any);
+		const { data, error } = await api.client.http.POST(
+			"/api/v1/debug/embed-url",
+			{
+				body: { url },
+			},
+		);
+		setData(data ?? null);
+		setError(error ?? null);
 	}
 
 	return (
@@ -177,6 +182,11 @@ const UrlEmbedDbg = () => {
 					<input type="url" onInput={(e) => (url = e.currentTarget.value)} />
 				</label>
 			</form>
+			<Show when={error()}>
+				<div style="border: solid red 1px;padding: 4px;background: #ff000044;">
+					<b>Error:</b> {error()?.error}
+				</div>
+			</Show>
 			<Show when={data()}>
 				<div>
 					<EmbedView embed={data()!} />
