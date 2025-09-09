@@ -10,7 +10,12 @@ export function ThreadMenu(props: { thread_id: string }) {
 	const api = useApi();
 	const nav = useNavigate();
 
+	const self_id = () => api.users.cache.get("@self")!.id;
 	const thread = api.threads.fetch(() => props.thread_id);
+	const self_thread_member = api.thread_members.fetch(
+		() => props.thread_id,
+		self_id,
+	);
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
 		const thread = api.threads.cache.get(props.thread_id)!;
@@ -60,12 +65,31 @@ export function ThreadMenu(props: { thread_id: string }) {
 		});
 	};
 
+	const joinOrLeaveThread = () => {
+		if (self_thread_member()?.membership === "Leave") {
+			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
+				params: {
+					path: { thread_id: props.thread_id, user_id: "@self" },
+				},
+				body: {},
+			});
+		} else {
+			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/member/{user_id}", {
+				params: {
+					path: { thread_id: props.thread_id, user_id: "@self" },
+				},
+			});
+		}
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<ThreadNotificationMenu />
-			<Item>join/leave</Item>
+			<Item onClick={joinOrLeaveThread}>
+				{self_thread_member()?.membership === "Leave" ? "join" : "leave"}
+			</Item>
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
