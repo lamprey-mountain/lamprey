@@ -14,7 +14,14 @@ export const RoomMembers = (props: { room: RoomT }) => {
 
 	return (
 		<ul class="member-list" data-room-id={props.room.id}>
-			<For each={members()?.items.filter((m) => m.membership === "Join")}>
+			<For
+				each={members()?.items.filter((m) => m.membership === "Join")}
+				fallback={
+					<div class="dim" style="text-align: center; margin-top: 8px">
+						no members!
+					</div>
+				}
+			>
 				{(member) => {
 					const user_id = () => member.user_id;
 					const user = api.users.fetch(user_id);
