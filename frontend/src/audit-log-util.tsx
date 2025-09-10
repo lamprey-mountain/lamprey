@@ -157,7 +157,7 @@ function renderPermissionDiff(
 	removedLabel: string,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
-	const diff = diffArrays(oldValues, newValues);
+	const diff = diffArrays([...oldValues].sort(), [...newValues].sort());
 	const added = diff.flatMap((i) => i.added ? i.value : []);
 	const removed = diff.flatMap((i) => i.removed ? i.value : []);
 
