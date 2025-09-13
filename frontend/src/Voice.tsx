@@ -224,7 +224,7 @@ export const Voice = (p: { thread: Thread }) => {
 							/>
 						</button>
 					</Show>
-					<button onClick={actions.disconnect}>
+					<button class="disconnect" onClick={actions.disconnect}>
 						<img class="icon" src={iconExit} />
 					</button>
 				</div>
