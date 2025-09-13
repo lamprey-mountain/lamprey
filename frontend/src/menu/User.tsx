@@ -85,27 +85,17 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const kickThread = () => {
-		ctx.dispatch({
-			do: "modal.prompt",
-			text: "kick reason",
-			cont: (reason) => {
-				if (!reason) return;
-				api.client.http.DELETE(
-					"/api/v1/thread/{thread_id}/member/{user_id}",
-					{
-						params: {
-							path: {
-								thread_id: props.thread_id!,
-								user_id: props.user_id,
-							},
-						},
-						headers: {
-							"X-Reason": reason,
-						},
+		api.client.http.DELETE(
+			"/api/v1/thread/{thread_id}/member/{user_id}",
+			{
+				params: {
+					path: {
+						thread_id: props.thread_id!,
+						user_id: props.user_id,
 					},
-				);
+				},
 			},
-		});
+		);
 	};
 
 	const ban = () => {
