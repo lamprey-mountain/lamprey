@@ -58,10 +58,10 @@ impl DataConnection for Postgres {
     ) -> Result<()> {
         query!(
             r#"
-            insert into connection (user_id, application_id, sccopes, created_at)
+            insert into connection (user_id, application_id, scopes, created_at)
             values ($1, $2, $3, now())
             on conflict (user_id, application_id) do update set
-                sccopes = excluded.sccopes
+                scopes = excluded.scopes
             "#,
             *user_id,
             *application_id,
@@ -81,7 +81,7 @@ impl DataConnection for Postgres {
             DbConnection,
             r#"
             select
-                c.application_id, c.sccopes as scopes, c.created_at,
+                c.application_id, c.scopes as scopes, c.created_at,
                 a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
                 a.bridge as app_bridge, a.public as app_public, a.oauth_secret as app_oauth_secret,
                 a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential
@@ -111,7 +111,7 @@ impl DataConnection for Postgres {
                 DbConnection,
                 r#"
                 select
-                    c.application_id, c.sccopes as scopes, c.created_at,
+                    c.application_id, c.scopes as scopes, c.created_at,
                     a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
                     a.bridge as app_bridge, a.public as app_public, a.oauth_secret as app_oauth_secret,
                     a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential
