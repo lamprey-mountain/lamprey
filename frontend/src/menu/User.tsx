@@ -31,19 +31,6 @@ export function UserMenu(props: UserMenuProps) {
 	);
 	const canModerate = () => permissions().rank > targetPerms().rank;
 
-	const room_member = props.room_id
-		? api.room_members.fetch(
-			() => props.room_id!,
-			() => props.user_id,
-		)
-		: () => null;
-	const thread_member = props.thread_id
-		? api.thread_members.fetch(
-			() => props.thread_id!,
-			() => props.user_id,
-		)
-		: () => null;
-
 	const userVoiceStates = () =>
 		[...api.voiceStates.values()].filter((s) => s.user_id === props.user_id);
 	const connectedToVoice = () => userVoiceStates().length;
@@ -189,7 +176,12 @@ export function UserMenu(props: UserMenuProps) {
 			<Show when={user()?.relationship?.relation !== "Block"}>
 				<Item onClick={openDm}>dm</Item>
 			</Show>
-			<Item>
+			<Item
+				onClick={() =>
+					user()?.relationship?.relation === "Block"
+						? unblockUser()
+						: blockUser()}
+			>
 				{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
 			</Item>
 			<Show when={false}>
