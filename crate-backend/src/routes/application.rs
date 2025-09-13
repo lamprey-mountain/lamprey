@@ -453,6 +453,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(oauth_introspect))
         .routes(routes!(oauth_revoke))
         .routes(routes!(oauth_userinfo))
-        .routes(routes!(oauth_revoke))
         .routes(routes!(oauth_autoconfig))
 }

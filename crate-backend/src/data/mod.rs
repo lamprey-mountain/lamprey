@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::application::Application;
+use common::v1::types::application::{Application, Connection, Scope};
 use common::v1::types::email::{EmailAddr, EmailInfo};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::Notification;
@@ -50,6 +50,7 @@ pub trait Data:
     + DataUserConfig
     + DataReaction
     + DataApplication
+    + DataConnection
     + DataEmoji
     + DataEmbed
     + DataUserEmail
@@ -531,6 +532,28 @@ pub trait DataApplication {
         owner_id: UserId,
         q: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<Application>>;
+}
+
+#[async_trait]
+pub trait DataConnection {
+    async fn connection_create(
+        &self,
+        user_id: UserId,
+        application_id: ApplicationId,
+        scopes: Vec<Scope>,
+    ) -> Result<()>;
+    async fn connection_get(
+        &self,
+        user_id: UserId,
+        application_id: ApplicationId,
+    ) -> Result<Connection>;
+    async fn connection_list(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<ApplicationId>,
+    ) -> Result<PaginationResponse<Connection>>;
+    async fn connection_delete(&self, user_id: UserId, application_id: ApplicationId)
+        -> Result<()>;
 }
 
 #[async_trait]

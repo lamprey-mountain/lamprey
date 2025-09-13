@@ -6,8 +6,9 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
-    PaginationQuery, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
+    application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
+    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, SessionStatus, User,
+    UserCreate, UserPatch, UserWithRelationship,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -277,37 +278,69 @@ async fn user_unsuspend(
     Err(Error::Unimplemented)
 }
 
-/// Connection list (TODO)
+/// Connection list
 #[utoipa::path(
     get,
     path = "/user/{user_id}/connection",
-    params(("user_id", description = "User id")),
+    params(
+        ("user_id", description = "User id"),
+        PaginationQuery<ApplicationId>
+    ),
     tags = ["user"],
-    responses((status = OK, body = User, description = "success")),
+    responses((status = OK, body = PaginationResponse<Connection>, description = "success")),
 )]
 async fn connection_list(
-    Path((_target_user_id, _app_id)): Path<(UserIdReq, ApplicationId)>,
-    Query(_paginate): Query<PaginationQuery<ApplicationId>>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserIdReq>,
+    Query(paginate): Query<PaginationQuery<ApplicationId>>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user_id != target_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let connections = s.data().connection_list(target_user_id, paginate).await?;
+    Ok(Json(connections))
 }
 
-/// Connection revoke (TODO)
+/// Connection revoke
 #[utoipa::path(
     delete,
     path = "/user/{user_id}/connection/{app_id}",
-    params(("user_id", description = "User id")),
+    params(
+        ("user_id", description = "User id"),
+        ("app_id", description = "Application id")
+    ),
     tags = ["user"],
-    responses((status = OK, body = User, description = "success")),
+    responses((status = NO_CONTENT, description = "success")),
 )]
 async fn connection_revoke(
-    Path((_target_user_id, _app_id)): Path<(UserIdReq, ApplicationId)>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user_id != target_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    s.data().connection_delete(target_user_id, app_id).await?;
+
+    s.broadcast(MessageSync::ConnectionDelete {
+        user_id: target_user_id,
+        app_id,
+    })?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
