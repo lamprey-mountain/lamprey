@@ -21,6 +21,7 @@ import { ToggleIcon } from "./ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
 import { getColor } from "./User.tsx";
 import { useConfig } from "./config.tsx";
+import { flags } from "./flags.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const config = useConfig();
@@ -215,12 +216,14 @@ export const Voice = (p: { thread: Thread }) => {
 							src={iconScreenshare}
 						/>
 					</button>
-					<button onClick={actions.playMusic}>
-						<ToggleIcon
-							checked={voice.musicPlaying}
-							src={iconMusic}
-						/>
-					</button>
+					<Show when={flags.has("voice_music")}>
+						<button onClick={actions.playMusic}>
+							<ToggleIcon
+								checked={voice.musicPlaying}
+								src={iconMusic}
+							/>
+						</button>
+					</Show>
 					<button onClick={actions.disconnect}>
 						<img class="icon" src={iconExit} />
 					</button>
