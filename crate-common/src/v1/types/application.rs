@@ -1,3 +1,6 @@
+use std::fmt;
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
@@ -125,7 +128,7 @@ pub struct Connection {
 /// an oauth scope
 ///
 /// WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum Scope {
@@ -152,5 +155,29 @@ impl Diff<Application> for ApplicationPatch {
             || self.public.changes(&other.public)
             || self.oauth_redirect_uris.changes(&other.oauth_redirect_uris)
             || self.oauth_confidential.changes(&other.oauth_confidential)
+    }
+}
+
+impl fmt::Display for Scope {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Scope::Identify => "identify",
+            Scope::Full => "full",
+            Scope::Auth => "auth",
+        };
+        f.write_str(s)
+    }
+}
+
+impl FromStr for Scope {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "identify" | "openid" => Ok(Scope::Identify),
+            "full" => Ok(Scope::Full),
+            "auth" => Ok(Scope::Auth),
+            _ => Err(()),
+        }
     }
 }

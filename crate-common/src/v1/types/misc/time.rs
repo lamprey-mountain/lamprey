@@ -1,4 +1,7 @@
-use std::ops::Deref;
+use std::{
+    ops::{Add, Deref},
+    time::Duration,
+};
 
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -63,5 +66,13 @@ impl From<PrimitiveDateTime> for Time {
 impl From<Time> for PrimitiveDateTime {
     fn from(value: Time) -> Self {
         PrimitiveDateTime::new(value.0.date(), value.0.time())
+    }
+}
+
+impl Add<Duration> for Time {
+    type Output = Time;
+
+    fn add(self, rhs: Duration) -> Self::Output {
+        Time::from(self.0 + rhs)
     }
 }

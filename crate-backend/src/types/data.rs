@@ -1,7 +1,7 @@
 use common::v1::types::{
     util::Time, Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet,
-    RoleId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, Thread,
-    ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
+    RoleId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
+    SessionType, Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
@@ -172,6 +172,7 @@ pub struct DbSession {
     pub token: SessionToken,
     pub status: DbSessionStatus,
     pub name: Option<String>,
+    pub expires_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(sqlx::Type)]
@@ -193,10 +194,12 @@ impl From<DbSession> for Session {
                 },
                 DbSessionStatus::Sudo => SessionStatus::Sudo {
                     user_id: row.user_id.expect("invalid data in db!").into(),
-                    expires_at: Time::now_utc(),
+                    sudo_expires_at: Time::now_utc(),
                 },
             },
             name: row.name,
+            expires_at: row.expires_at.map(|t| t.into()),
+            ty: SessionType::User, // FIXME
         }
     }
 }

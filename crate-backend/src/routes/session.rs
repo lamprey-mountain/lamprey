@@ -36,7 +36,7 @@ pub async fn session_create(
     json.validate()?;
     let data = s.data();
     let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
-    let session = data.session_create(token.clone(), json.name).await?;
+    let session = data.session_create(token.clone(), json.name, None).await?;
     let session_with_token = SessionWithToken { session, token };
     Ok((StatusCode::CREATED, Json(session_with_token)))
 }

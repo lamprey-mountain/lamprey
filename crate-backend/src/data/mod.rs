@@ -315,7 +315,12 @@ pub trait DataMessage {
 
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(&self, token: SessionToken, name: Option<String>) -> Result<Session>;
+    async fn session_create(
+        &self,
+        token: SessionToken,
+        name: Option<String>,
+        expires_at: Option<Time>,
+    ) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;
@@ -409,6 +414,18 @@ pub trait DataAuth {
         purpose: EmailPurpose,
     ) -> Result<()>;
     async fn auth_email_use(&self, code: String) -> Result<(EmailAddr, SessionId, EmailPurpose)>;
+    async fn oauth_auth_code_create(
+        &self,
+        code: String,
+        application_id: ApplicationId,
+        user_id: UserId,
+        redirect_uri: String,
+        scopes: Vec<Scope>,
+    ) -> Result<()>;
+    async fn oauth_auth_code_use(
+        &self,
+        code: String,
+    ) -> Result<(ApplicationId, UserId, String, Vec<Scope>)>;
 }
 
 #[async_trait]

@@ -8,7 +8,10 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::{Diff, Time};
+use crate::v1::types::{
+    util::{some_option, Diff, Time},
+    ApplicationId,
+};
 
 use super::{ids::SessionId, UserId};
 
@@ -30,9 +33,18 @@ pub struct Session {
     #[serde(flatten)]
     pub status: SessionStatus,
 
+    /// a human readable name for this session
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
+
+    #[serde(rename = "type")]
+    pub ty: SessionType,
+
+    /// when this token will expire. only set for oauth auth tokens
+    pub expires_at: Option<Time>,
+    // /// the oauth application this belongs to
+    // pub app_id: Option<ApplicationId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,7 +76,6 @@ pub struct SessionPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub name: Option<Option<String>>,
 }
-use crate::v1::types::util::some_option;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -79,36 +90,9 @@ pub enum SessionStatus {
     /// The session exists and can do administrative actions
     Sudo {
         user_id: UserId,
-
-        /// given ~5 minutes after auth to do stuff?
-        expires_at: Time,
+        sudo_expires_at: Time,
     },
 }
-
-// Granular session capability flags?
-// enum SessionCapability {
-//     Default,
-//     Trusted,
-//     Sudo,
-// }
-
-// the actual api design for usertrust pretty heavily depends on how antispam
-// is implemented
-
-// /// how trusted a user is
-// enum UserTrust {
-//     /// low permissions/trust, but intentionally
-//     Guest,
-
-//     /// likely spam
-//     Suspicious,
-
-//     /// don't know if its spam
-//     Untrusted,
-
-//     /// probably not spam
-//     Trusted,
-// }
 
 impl From<String> for SessionToken {
     fn from(value: String) -> Self {
@@ -150,4 +134,18 @@ impl Session {
     pub fn user_id(&self) -> Option<UserId> {
         self.status.user_id()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SessionType {
+    /// an user token
+    // NOTE: i might want to remove this and switch to purely oauth
+    User,
+
+    /// an oauth2 access token
+    Access,
+
+    /// an oauth2 refresh token
+    Refresh,
 }

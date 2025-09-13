@@ -285,7 +285,7 @@ async fn auth_email_complete(
         // this isn't *that* bad though and chances are if someone reset their password they may want to do other stuff too
         EmailPurpose::Reset => SessionStatus::Sudo {
             user_id,
-            expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+            sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
         },
     };
     d.session_set_status(session.id, status).await?;
@@ -528,7 +528,7 @@ async fn auth_sudo(
             session.id,
             SessionStatus::Sudo {
                 user_id: auth_user_id,
-                expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
+                sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
             },
         )
         .await?;

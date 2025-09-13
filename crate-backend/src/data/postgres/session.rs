@@ -1,6 +1,7 @@
 use async_trait::async_trait;
-use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
+use common::v1::types::{util::Time, SessionPatch, SessionStatus, SessionToken};
 use sqlx::{query, query_as, query_scalar, Acquire};
+use time::PrimitiveDateTime;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -16,17 +17,23 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataSession for Postgres {
-    async fn session_create(&self, token: SessionToken, name: Option<String>) -> Result<Session> {
+    async fn session_create(
+        &self,
+        token: SessionToken,
+        name: Option<String>,
+        expires_at: Option<Time>,
+    ) -> Result<Session> {
         let session_id = Uuid::now_v7();
         let session = query_as!(
             DbSession,
             r#"
-            INSERT INTO session (id, user_id, token, status, name)
-            VALUES ($1, NULL, $2, 'Unauthorized', $3)
-            RETURNING id, user_id, token, status as "status: _", name"#,
+            INSERT INTO session (id, user_id, token, status, name, expires_at)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4)
+            RETURNING id, user_id, token, status as "status: _", name, expires_at"#,
             session_id,
             token.0,
             name,
+            expires_at.map(PrimitiveDateTime::from),
         )
         .fetch_one(&self.pool)
         .await?;
@@ -36,7 +43,7 @@ impl DataSession for Postgres {
     async fn session_get(&self, id: SessionId) -> Result<Session> {
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE id = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at FROM session WHERE id = $1"#,
             id.into_inner()
         )
         .fetch_one(&self.pool)
@@ -47,7 +54,7 @@ impl DataSession for Postgres {
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name FROM session WHERE token = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at FROM session WHERE token = $1"#,
             token.0
         )
             .fetch_one(&self.pool)
@@ -81,7 +88,7 @@ impl DataSession for Postgres {
             query_as!(
                 DbSession,
                 r#"
-        	SELECT id, user_id, token, status as "status: _", name FROM session
+        	SELECT id, user_id, token, status as "status: _", name, expires_at FROM session
         	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
@@ -115,7 +122,7 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            SELECT id, user_id, token, status as "status: _", name
+            SELECT id, user_id, token, status as "status: _", name, expires_at
             FROM session
             WHERE id = $1
             FOR UPDATE

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::application::Scope;
 use common::v1::types::email::EmailAddr;
-use common::v1::types::SessionId;
+use common::v1::types::{ApplicationId, SessionId};
 use sqlx::{query, query_scalar};
 
 use crate::error::Result;
@@ -135,6 +136,51 @@ impl DataAuth for Postgres {
             asdf.addr.try_into().expect("invalid data in db"),
             asdf.session_id.into(),
             purpose,
+        ))
+    }
+
+    async fn oauth_auth_code_create(
+        &self,
+        code: String,
+        application_id: ApplicationId,
+        user_id: UserId,
+        redirect_uri: String,
+        scopes: Vec<Scope>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at)
+            VALUES ($1, $2, $3, $4, $5, now() + '10 minutes')
+            "#,
+            code,
+            *application_id,
+            *user_id,
+            redirect_uri,
+            serde_json::to_value(scopes).unwrap(),
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn oauth_auth_code_use(
+        &self,
+        code: String,
+    ) -> Result<(ApplicationId, UserId, String, Vec<Scope>)> {
+        let row = sqlx::query!(
+            "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes",
+            code,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        let scopes: Vec<Scope> = serde_json::from_value(row.scopes).unwrap_or_default();
+
+        Ok((
+            row.application_id.into(),
+            row.user_id.into(),
+            row.redirect_uri,
+            scopes,
         ))
     }
 }
