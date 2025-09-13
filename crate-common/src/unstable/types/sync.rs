@@ -168,9 +168,10 @@ pub enum Payload {
         until: Time,
     },
 
-    /// arbitrary custom event
-    Custom {
-        name: String,
-        payload: serde_json::Value,
+    /// arbitrary user defined event, for bots? with a matching MessageClient
+    /// entry? builtin pub/sub for bots?
+    Dispatch {
+        action: String,
+        payload: Option<serde_json::Value>,
     },
 }

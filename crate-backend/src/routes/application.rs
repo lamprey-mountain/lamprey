@@ -6,8 +6,9 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    application::{Application, ApplicationCreate},
-    util::Time,
+    application::{Application, ApplicationCreate, ApplicationPatch, Scope},
+    email::EmailAddr,
+    util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
     RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionWithToken,
@@ -15,6 +16,7 @@ use common::v1::types::{
 };
 use http::StatusCode;
 use serde::Deserialize;
+use url::Url;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -63,6 +65,9 @@ async fn app_create(
         description: json.description,
         bridge: json.bridge,
         public: json.public,
+        oauth_secret: None,
+        oauth_redirect_uris: vec![],
+        oauth_confidential: false,
     };
     data.application_insert(app.clone()).await?;
     Ok(Json(app))
@@ -113,8 +118,33 @@ async fn app_get(
     tags = ["application"],
     responses((status = OK, description = "success"))
 )]
-async fn app_patch(Auth(_auth_user_id): Auth, State(_s): State<Arc<ServerState>>) -> Result<()> {
-    Err(Error::Unimplemented)
+async fn app_patch(
+    Path((app_id,)): Path<(ApplicationId,)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<ApplicationPatch>,
+) -> Result<impl IntoResponse> {
+    patch.validate()?;
+    let data = s.data();
+    let mut app = data.application_get(app_id).await?;
+    if app.owner_id != auth_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    if !patch.changes(&app) {
+        return Err(Error::NotModified);
+    }
+
+    app.name = patch.name.unwrap_or(app.name);
+    app.description = patch.description.unwrap_or(app.description);
+    app.bridge = patch.bridge.unwrap_or(app.bridge);
+    app.public = patch.public.unwrap_or(app.public);
+    app.oauth_redirect_uris = patch.oauth_redirect_uris.unwrap_or(app.oauth_redirect_uris);
+    app.oauth_confidential = patch.oauth_confidential.unwrap_or(app.oauth_confidential);
+
+    data.application_update(app.clone()).await?;
+
+    Ok(Json(app))
 }
 
 /// App delete
@@ -290,6 +320,124 @@ async fn puppet_ensure(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
+/// App rotate oauth secret (TODO)
+#[utoipa::path(
+    post,
+    path = "/app/{app_id}/rotate-secret",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn app_rotate_secret(
+    Path((_app_id,)): Path<(ApplicationId,)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// Oauth exchange token (TODO)
+///
+/// exchange an authorization token for an access token
+#[utoipa::path(
+    post,
+    path = "/oauth/token",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn oauth_token() -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// Oauth introspect (TODO)
+#[utoipa::path(
+    post,
+    path = "/oauth/introspect",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn oauth_introspect() -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// Oauth revoke (TODO)
+#[utoipa::path(
+    post,
+    path = "/oauth/revoke",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn oauth_revoke() -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// Oauth autoconfig (TODO)
+#[utoipa::path(
+    get,
+    path = "/oauth/.well-known/openid-configuration",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn oauth_autoconfig() -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// Oauth autoconfig (TODO)
+#[utoipa::path(
+    get,
+    path = "/oauth/userinfo",
+    tags = ["application"],
+    responses((status = OK, description = "success"))
+)]
+async fn oauth_userinfo() -> Result<impl IntoResponse> {
+    Ok(())
+}
+
+/// openid connect automatic configuration
+struct Autoconfig {
+    issuer: Url,
+    /// this uses the html endpoint
+    // https://example.com/authorize?stuff=goes&here
+    authorization_endpoint: Url,
+    token_endpoint: Url,
+    userinfo_endpoint: Url,
+
+    /// code | token | id_token
+    response_types_supported: Vec<String>,
+
+    /// authorization_code | refresh_token
+    grant_types_supported: Vec<String>,
+}
+
+struct Userinfo {
+    sub: UserId,
+
+    /// primary email address (is None if email scope isnt provided)
+    email: Option<EmailAddr>,
+    email_verified: bool,
+
+    name: String,
+
+    // https://example.com/user/{user_id}
+    // where example.com is html_url and user_id is the user's uuid
+    profile: String,
+
+    /// calculated from version_id
+    updated_at: u64,
+
+    /// link to https://cdn.example.com/media/{media_id}
+    picture: Option<Url>,
+}
+
+struct IntrospectResponse {
+    active: bool,
+    scopes: Vec<Scope>,
+    client_id: ApplicationId,
+    /// this is specified to be "human readable", but in practice it would be
+    /// simpler and more useful to return the unique id of the user
+    username: UserId,
+    exp: Option<u64>,
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(app_create))
@@ -300,4 +448,11 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(app_create_session))
         .routes(routes!(puppet_ensure))
         .routes(routes!(app_invite_bot))
+        .routes(routes!(app_rotate_secret))
+        .routes(routes!(oauth_token))
+        .routes(routes!(oauth_introspect))
+        .routes(routes!(oauth_revoke))
+        .routes(routes!(oauth_userinfo))
+        .routes(routes!(oauth_revoke))
+        .routes(routes!(oauth_autoconfig))
 }

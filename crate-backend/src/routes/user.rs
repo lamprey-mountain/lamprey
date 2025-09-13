@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MediaTrackInfo, MessageSync,
     PaginationQuery, SessionStatus, User, UserCreate, UserPatch, UserWithRelationship,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -277,6 +277,39 @@ async fn user_unsuspend(
     Err(Error::Unimplemented)
 }
 
+/// Connection list (TODO)
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/connection",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = OK, body = User, description = "success")),
+)]
+async fn connection_list(
+    Path((_target_user_id, _app_id)): Path<(UserIdReq, ApplicationId)>,
+    Query(_paginate): Query<PaginationQuery<ApplicationId>>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
+/// Connection revoke (TODO)
+#[utoipa::path(
+    delete,
+    path = "/user/{user_id}/connection/{app_id}",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = OK, body = User, description = "success")),
+)]
+async fn connection_revoke(
+    Path((_target_user_id, _app_id)): Path<(UserIdReq, ApplicationId)>,
+    Auth(_auth_user_id): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -285,5 +318,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_audit_logs))
         .routes(routes!(user_suspend))
         .routes(routes!(user_unsuspend))
+        .routes(routes!(connection_list))
+        .routes(routes!(connection_revoke))
         .routes(routes!(guest_create))
 }

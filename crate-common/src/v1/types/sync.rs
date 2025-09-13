@@ -6,8 +6,8 @@ use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    user_status::StatusPatch, util::Time, InviteTargetId, InviteWithMetadata, Relationship,
-    ThreadMember,
+    application::Connection, user_status::StatusPatch, util::Time, ApplicationId, InviteTargetId,
+    InviteWithMetadata, Relationship, ThreadMember,
 };
 
 use super::{
@@ -290,12 +290,16 @@ pub enum MessageSync {
     RelationshipDelete {
         user_id: UserId,
     },
-    // /// arbitrary user defined event
-    // Dispatch {
-    //     user_id: UserId,
-    //     action: String,
-    //     payload: Option<serde_json::Value>,
-    // },
+
+    ConnectionCreate {
+        user_id: UserId,
+        connection: Connection,
+    },
+
+    ConnectionDelete {
+        user_id: UserId,
+        app_id: ApplicationId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

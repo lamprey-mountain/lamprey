@@ -459,10 +459,8 @@ impl Connection {
                 room_id,
                 emoji_id: _,
             } => AuthCheck::Room(*room_id),
-            // MessageSync::EmojiDelete { emoji_id, room_id } => match emoji.owner {
-            //     EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
-            //     EmojiOwner::User => AuthCheck::User(emoji.creator_id),
-            // },
+            MessageSync::ConnectionCreate { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::ConnectionDelete { user_id, .. } => AuthCheck::User(*user_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
