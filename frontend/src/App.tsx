@@ -44,6 +44,7 @@ import { MessageMenu, RoomMenu, ThreadMenu, UserMenu } from "./menu/mod.ts";
 import {
 	RoomNav,
 	RouteAdminSettings,
+	RouteAuthorize,
 	RouteFeed,
 	RouteHome,
 	RouteInvite,
@@ -83,6 +84,7 @@ const App: Component = () => {
 			<Route path="/verify-email" component={RouteVerifyEmail} />
 			<Route path="/user/:user_id" component={UserProfile} />
 			<Route path="/admin" component={RouteAdminSettings} />
+			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);

@@ -19,7 +19,12 @@ const tabs = [
 	{ name: "notifications", path: "notifications", component: Todo },
 	{ name: "blocked users", path: "blocks", component: Blocked },
 	{ name: "email", path: "email", component: Email },
-	{ name: "applications", path: "applications", component: Applications },
+	{
+		name: "applications",
+		path: "applications",
+		component: Applications,
+		noPad: true,
+	},
 ];
 
 export const UserSettings = (props: { user: User; page: string }) => {

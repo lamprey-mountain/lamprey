@@ -41,5 +41,5 @@ export const Copyable = (props: { children: string }) => {
 		ctx.dispatch({ do: "modal.alert", text: "copied!" });
 	};
 
-	return <code onClick={copy}>{props.children}</code>;
+	return <code class="copyable" onClick={copy}>{props.children}</code>;
 };

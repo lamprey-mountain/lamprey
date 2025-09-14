@@ -549,6 +549,7 @@ em {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="url"] {
 	background-color: $bg-300;
 	border: solid 1px $sep-500;
@@ -1987,4 +1988,108 @@ details[open] > summary {
 	&.speaking .fallback-avatar {
 		border: solid $color-green 2px;
 	}
+}
+
+.oauth-authorize {
+	padding: 8px;
+
+	.error {
+		color: $fg-100;
+		background: oklch(var(--color-error) / 0.5);
+		border: solid oklch(var(--color-error)) 1px;
+		padding: 8px;
+	}
+}
+
+.copyable {
+	padding: 0 2px;
+	border-radius: 2px;
+	cursor: pointer;
+
+	&:hover {
+		background: oklch(var(--color-fg6) / 0.2);
+	}
+}
+
+button.primary {
+	border: solid $link-200 1px;
+	background: $link-300;
+	color: $fg-100;
+
+	&:hover,
+	&:focus-visible {
+		background: $link-200;
+	}
+}
+
+button.big {
+	padding: 0.3rem 0.5rem;
+	/* border-radius: 4px; */
+}
+
+.applications-header {
+	display: flex;
+	gap: 8px;
+	margin: 8px 0 16px;
+
+	input {
+		flex: 1;
+		padding: 0 8px;
+	}
+}
+
+.applications-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 6rem;
+
+	& > li {
+		border: solid #444 1px;
+	}
+
+	& .oauth {
+		border: solid #444 1px;
+		margin: 4px;
+	}
+}
+
+.applications-savebar {
+	display: flex;
+	position: absolute;
+	bottom: 4px;
+	width: 100%;
+	padding-right: calc(100% - 60ch + 4px);
+}
+
+.applications-savebar-inner {
+	background: $bg-100;
+	border-radius: 4px;
+	display: flex;
+	flex: 1;
+	padding: 0.25rem;
+	padding-left: 0.5rem;
+	gap: 0.25rem;
+	align-items: center;
+	border-radius: 4px;
+
+	& .warning {
+		flex: 1;
+	}
+
+	& .save {
+		background: $color-green;
+		color: $bg-300;
+	}
+
+	& button {
+		padding: 4px 8px;
+		border-radius: 4px;
+	}
+}
+
+.applications-settings {
+	padding-right: calc(100% - 60ch);
+	padding-left: 0.25rem;
+	padding-top: 0.25rem;
 }
