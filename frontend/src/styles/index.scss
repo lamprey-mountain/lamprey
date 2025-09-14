@@ -2046,11 +2046,19 @@ button.big {
 
 	& > li {
 		border: solid #444 1px;
+		padding: 4px;
 	}
 
 	& .oauth {
 		border: solid #444 1px;
+		padding: 4px;
 		margin: 4px;
+	}
+
+	& .sessions {
+		border: solid #444 1px;
+		margin: 4px;
+		padding: 4px;
 	}
 }
 

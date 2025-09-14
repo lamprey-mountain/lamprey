@@ -6,10 +6,80 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type Application, type User } from "sdk";
+import { type Application, type Session, type User } from "sdk";
 import { useApi } from "../api.tsx";
 import { Copyable } from "../util.tsx";
 import { createStore, reconcile } from "solid-js/store";
+import { useCtx } from "../context.ts";
+
+const SessionList = (props: { appId: string }) => {
+	const api = useApi();
+	const ctx = useCtx();
+
+	const [sessions, { refetch }] = createResource(async () => {
+		const { data } = await api.client.http.GET("/api/v1/session", {
+			headers: { "x-puppet-id": props.appId },
+		});
+		return data?.items ?? [];
+	});
+
+	const revokeSession = (sessionId: string) => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "Are you sure you want to revoke this session?",
+			cont: async (confirmed) => {
+				if (confirmed) {
+					await api.client.http.DELETE("/api/v1/session/{session_id}", {
+						params: { path: { session_id: sessionId } },
+					});
+					refetch();
+				}
+			},
+		});
+	};
+
+	const renameSession = (sessionId: string) => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "New session name?",
+			cont: async (name) => {
+				if (name === null) return;
+				await api.client.http.PATCH("/api/v1/session/{session_id}", {
+					params: { path: { session_id: sessionId } },
+					body: { name: name || null },
+				});
+				refetch();
+			},
+		});
+	};
+
+	return (
+		<div class="sessions-list">
+			<h4>Sessions</h4>
+			<Show when={sessions.loading}>Loading sessions...</Show>
+			<Show when={sessions() && sessions()!.length > 0}>
+				<ul>
+					<For each={sessions()}>
+						{(session) => (
+							<li>
+								<span>{session.name || session.id}</span>
+								<button onClick={() => renameSession(session.id)}>
+									Rename
+								</button>
+								<button onClick={() => revokeSession(session.id)}>
+									Revoke
+								</button>
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
+			<Show when={sessions() && sessions()!.length === 0}>
+				<p>No active sessions.</p>
+			</Show>
+		</div>
+	);
+};
 
 export function Applications(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -86,15 +156,20 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	};
 
 	const rotateSecret = async (app_id: string) => {
-		await api.client.http.POST("/api/v1/app/{app_id}/rotate-secret", {
-			params: { path: { app_id } },
-		});
+		const { data } = await api.client.http.POST(
+			"/api/v1/app/{app_id}/rotate-secret",
+			{
+				params: { path: { app_id } },
+			},
+		);
+		// TODO: show Copyable secret, warn that tokens can only be seen once
 	};
 
 	const listSessions = async (app_id: string) => {
-		await api.client.http.GET("/api/v1/session", {
+		const { data } = await api.client.http.GET("/api/v1/session", {
 			headers: { "x-puppet-id": app_id },
 		});
+		return data;
 	};
 	globalThis.asdf = listSessions;
 
@@ -103,6 +178,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 			params: { path: { app_id } },
 			body: { name: "session" },
 		});
+		// TODO: show Copyable token, warn that tokens can only be seen once
 	};
 
 	const [search, setSearch] = createSignal("");
@@ -131,55 +207,64 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 					{(app, index) => {
 						return (
 							<li>
-								name:{" "}
+								<h3 class="dim">name</h3>
 								<input
 									type="text"
 									value={app.name}
 									onInput={(e) =>
 										updateApp(index(), "name", e.currentTarget.value)}
 								/>
-								<br />
-								id: <Copyable>{app.id}</Copyable>
-								<br />
-								description:{" "}
+								<div style="height: 8px" />
+								<h3 class="dim">description</h3>
 								<textarea
 									onInput={(e) =>
 										updateApp(index(), "description", e.currentTarget.value)}
 								>
 									{app.description ?? ""}
 								</textarea>
+								<div style="height: 8px" />
+								<h3 class="dim">id (click to copy)</h3>
+								<Copyable>{app.id}</Copyable>
+								<div style="height: 8px" />
+								<label>
+									<input
+										type="checkbox"
+										checked={app.bridge}
+										onInput={(e) =>
+											updateApp(index(), "bridge", e.currentTarget.checked)}
+									/>{" "}
+									bridge
+								</label>
 								<br />
-								bridge:{" "}
-								<input
-									type="checkbox"
-									checked={app.bridge}
-									onInput={(e) =>
-										updateApp(index(), "bridge", e.currentTarget.checked)}
-								/>
-								<br />
-								public:{" "}
-								<input
-									type="checkbox"
-									checked={app.public}
-									onInput={(e) =>
-										updateApp(index(), "public", e.currentTarget.checked)}
-								/>
+								<label>
+									<input
+										type="checkbox"
+										checked={app.public}
+										onInput={(e) =>
+											updateApp(index(), "public", e.currentTarget.checked)}
+									/>{" "}
+									public
+								</label>
 								<br />
 								<br />
 								<div class="oauth">
-									confidential:{" "}
-									<input
-										type="checkbox"
-										checked={app.oauth_confidential}
-										onInput={(e) =>
-											updateApp(
-												index(),
-												"oauth_confidential",
-												e.currentTarget.checked,
-											)}
-									/>
+									<b>oauth settings</b>
 									<br />
-									redirect_uris:
+									<label>
+										<input
+											type="checkbox"
+											checked={app.oauth_confidential}
+											onInput={(e) =>
+												updateApp(
+													index(),
+													"oauth_confidential",
+													e.currentTarget.checked,
+												)}
+										/>
+									</label>{" "}
+									confidential (can keep secrets)
+									<br />
+									<h3 class="dim">redirect uris</h3>
 									<ul>
 										<For each={app.oauth_redirect_uris}>
 											{(uri, uriIndex) => (
@@ -230,6 +315,10 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 									</button>
 								</div>
 								<div class="sessions">
+									<button onClick={() => createSession(app.id)}>
+										create session
+									</button>
+									<SessionList appId={app.id} />
 								</div>
 							</li>
 						);
