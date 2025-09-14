@@ -12,7 +12,7 @@ use common::v1::types::{
     MediaPatch, NotificationId, Permission, PermissionOverwriteType, Relationship,
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
-    SessionStatus, SessionToken, SessionType, ThreadMember, ThreadMemberPut, ThreadMembership,
+    SessionStatus, SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;

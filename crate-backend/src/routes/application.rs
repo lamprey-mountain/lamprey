@@ -7,7 +7,7 @@ use axum::{
 };
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch, Scope},
-    email::EmailAddr,
+    oauth::{Autoconfig, Userinfo},
     util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
@@ -620,7 +620,7 @@ async fn oauth_revoke(
     Ok(())
 }
 
-/// Oauth autoconfig (TODO)
+/// Oauth autoconfig
 #[utoipa::path(
     get,
     path = "/oauth/.well-known/openid-configuration",
@@ -633,8 +633,19 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,
+        scopes_supported: vec![
+            "identify".to_string(),
+            "openid".to_string(),
+            "full".to_string(),
+            "auth".to_string(),
+        ],
         response_types_supported: vec!["code".to_string()],
         grant_types_supported: vec!["authorization_code".to_string()],
+        subject_types_supported: vec!["public".to_string()],
+        token_endpoint_auth_methods_supported: vec![
+            "client_secret_post".to_string(),
+            "client_secret_basic".to_string(),
+        ],
     };
     Ok(Json(config))
 }
@@ -671,44 +682,6 @@ async fn oauth_userinfo(
             .and_then(|u| u.parse().ok()),
     };
     Ok(Json(info))
-}
-
-/// openid connect automatic configuration
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct Autoconfig {
-    issuer: Url,
-    /// this uses the html endpoint
-    // https://example.com/authorize?stuff=goes&here
-    authorization_endpoint: Url,
-    token_endpoint: Url,
-    userinfo_endpoint: Url,
-
-    /// code | token | id_token
-    response_types_supported: Vec<String>,
-
-    /// authorization_code | refresh_token
-    grant_types_supported: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct Userinfo {
-    sub: UserId,
-
-    /// primary email address (is None if email scope isnt provided)
-    email: Option<EmailAddr>,
-    email_verified: bool,
-
-    name: String,
-
-    // https://example.com/user/{user_id}
-    // where example.com is html_url and user_id is the user's uuid
-    profile: String,
-
-    /// calculated from version_id
-    updated_at: u64,
-
-    /// link to https://cdn.example.com/media/{media_id}
-    picture: Option<Url>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]

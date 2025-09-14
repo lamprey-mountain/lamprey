@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::{util::Time, SessionPatch, SessionStatus, SessionToken};
+use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
@@ -7,10 +7,9 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbSession, DbSessionStatus, PaginationDirection, PaginationQuery, PaginationResponse, Session,
-    SessionId, UserId,
+    DbSession, DbSessionCreate, DbSessionStatus, PaginationDirection, PaginationQuery,
+    PaginationResponse, Session, SessionId, UserId,
 };
-use common::v1::types::{ApplicationId, SessionType};
 
 use crate::data::DataSession;
 

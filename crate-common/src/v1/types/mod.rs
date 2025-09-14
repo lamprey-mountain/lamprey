@@ -24,6 +24,7 @@ pub mod media;
 pub mod message;
 pub mod moderation;
 pub mod notifications;
+pub mod oauth;
 pub mod pagination;
 pub mod permission;
 pub mod profile;
