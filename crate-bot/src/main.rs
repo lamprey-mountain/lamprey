@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
-    Message, MessageClient, MessageCreate, MessageSync, MessageType, Session, User, UserId,
+    Message, MessageClient, MessageCreate, MessageSync, MessageType, Session, User,
 };
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
