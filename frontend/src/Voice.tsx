@@ -22,6 +22,7 @@ import { useVoice } from "./voice-provider.tsx";
 import { getColor } from "./User.tsx";
 import { useConfig } from "./config.tsx";
 import { flags } from "./flags.ts";
+import { useNavigate } from "@solidjs/router";
 
 export const Voice = (p: { thread: Thread }) => {
 	const config = useConfig();
@@ -265,6 +266,8 @@ export const VoiceTray = () => {
 		clearInterval(interval);
 	});
 
+	const nav = useNavigate();
+
 	return (
 		<div class="voice-tray">
 			<Show when={voice.rtc}>
@@ -328,7 +331,7 @@ export const VoiceTray = () => {
 				<button onClick={actions.toggleDeafened}>
 					<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 				</button>
-				<button onClick={() => alert("todo")}>
+				<button onClick={() => nav("/settings")}>
 					<img class="icon" src={iconSettings} />
 				</button>
 			</div>
