@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
-use common::v1::types::email::{EmailAddr, EmailInfo};
+use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::types::UserIdReq;
@@ -133,6 +133,53 @@ async fn email_list(
     Ok(Json(emails).into_response())
 }
 
+/// Email update
+#[utoipa::path(
+    patch,
+    path = "/user/{user_id}/email/{addr}",
+    params(
+        ("user_id", description = "User id"),
+        ("addr", description = "email address"),
+    ),
+    tags = ["user_email"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn email_update(
+    Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(patch): Json<EmailInfoPatch>,
+) -> Result<impl IntoResponse> {
+    let email_addr: EmailAddr = email_addr.try_into()?;
+    let target_user_id = match target_user_id_req {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    if auth_user_id != target_user_id {
+        return Err(Error::NotFound);
+    }
+
+    // You can only set an email as primary if it's verified.
+    if patch.is_primary == Some(true) {
+        let emails = s.data().user_email_list(target_user_id).await?;
+        let email_info = emails
+            .iter()
+            .find(|e| e.email == email_addr)
+            .ok_or(Error::NotFound)?;
+        if !email_info.is_verified {
+            return Err(Error::BadRequest(
+                "Email address must be verified to be set as primary.".to_string(),
+            ));
+        }
+    }
+
+    s.data()
+        .user_email_update(target_user_id, email_addr, patch)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Email verification resend
 #[utoipa::path(
     post,
@@ -224,6 +271,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(email_add))
         .routes(routes!(email_list))
         .routes(routes!(email_delete))
+        .routes(routes!(email_update))
         .routes(routes!(email_verification_resend))
         .routes(routes!(email_verification_finish))
 }

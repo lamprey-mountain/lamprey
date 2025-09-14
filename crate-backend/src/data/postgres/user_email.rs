@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::email::{EmailAddr, EmailInfo};
+use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 
 use sqlx::{query, query_as, query_scalar};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
@@ -241,5 +241,42 @@ impl DataUserEmail for Postgres {
         .await?
         .ok_or(Error::NotFound)?;
         Ok(user_id.into())
+    }
+
+    async fn user_email_update(
+        &self,
+        user_id: UserId,
+        email_addr: EmailAddr,
+        patch: EmailInfoPatch,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        if patch.is_primary == Some(true) {
+            // Ensure other emails are not primary
+            sqlx::query!(
+                "UPDATE user_email_addresses SET is_primary = false WHERE user_id = $1 AND addr != $2",
+                *user_id,
+                email_addr.as_ref()
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        let res = sqlx::query!(
+            "UPDATE user_email_addresses SET is_primary = $3 WHERE user_id = $1 AND addr = $2",
+            *user_id,
+            email_addr.as_ref(),
+            patch.is_primary.unwrap_or(false)
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        if res.rows_affected() == 0 {
+            tx.rollback().await?;
+            return Err(Error::NotFound);
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }

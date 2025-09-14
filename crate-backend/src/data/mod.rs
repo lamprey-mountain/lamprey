@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scope};
-use common::v1::types::email::{EmailAddr, EmailInfo};
+use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::Notification;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
@@ -624,6 +624,13 @@ pub trait DataUserEmail {
         user_id: UserId,
         email_addr: EmailAddr,
     ) -> Result<String>;
+
+    async fn user_email_update(
+        &self,
+        user_id: UserId,
+        email_addr: EmailAddr,
+        patch: EmailInfoPatch,
+    ) -> Result<()>;
 }
 
 #[async_trait]

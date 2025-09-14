@@ -17,7 +17,7 @@ use common::v1::types::{
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use url::Url;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
@@ -412,7 +412,7 @@ struct OauthInfo {
     authorized: bool,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 struct AuthParams {
     // always "code"
     response_type: String,
