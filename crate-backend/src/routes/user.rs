@@ -4,6 +4,7 @@ use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::user_status::{Status, StatusPatch};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
@@ -343,6 +344,39 @@ async fn connection_revoke(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// User set status
+///
+/// for puppets
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/status",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn user_set_status(
+    Path((target_user_id,)): Path<(UserIdReq,)>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<StatusPatch>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user_id != target_user_id {
+        return Err(Error::MissingPermissions);
+    }
+
+    let srv = s.services();
+    srv.users
+        .status_set(target_user_id, json.apply(Status::offline()))
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -354,4 +388,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(connection_list))
         .routes(routes!(connection_revoke))
         .routes(routes!(guest_create))
+        .routes(routes!(user_set_status))
 }
