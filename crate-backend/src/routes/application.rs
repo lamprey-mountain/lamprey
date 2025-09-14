@@ -535,10 +535,6 @@ async fn oauth_token(
         return Err(Error::InvalidCredentials);
     };
 
-    if form.grant_type != "authorization_code" {
-        return Err(Error::BadStatic("unsupported grant_type"));
-    }
-
     let data = s.data();
     let app = data.application_get(client_id).await?;
     if app.id != client_id {
@@ -551,41 +547,114 @@ async fn oauth_token(
         }
     }
 
-    let (_app_id, user_id, redirect_uri, scopes) = data.oauth_auth_code_use(form.code).await?;
+    match form.grant_type.as_str() {
+        "authorization_code" => {
+            let code = form.code.ok_or(Error::BadStatic("missing code"))?;
+            let redirect_uri = form
+                .redirect_uri
+                .ok_or(Error::BadStatic("missing redirect_uri"))?;
 
-    if redirect_uri != form.redirect_uri.as_str() {
-        return Err(Error::InvalidCredentials);
+            let (_app_id, user_id, db_redirect_uri, scopes) =
+                data.oauth_auth_code_use(code).await?;
+
+            if redirect_uri.as_str() != db_redirect_uri {
+                return Err(Error::InvalidCredentials);
+            }
+
+            // create a new session for the user
+            let token = SessionToken(Uuid::new_v4().to_string());
+            let expires_in = 3600; // 1 hour
+            let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
+            let session = data
+                .session_create(DbSessionCreate {
+                    token: token.clone(),
+                    name: Some(app.name),
+                    expires_at: Some(expires_at),
+                    ty: SessionType::Access,
+                    application_id: Some(app.id),
+                })
+                .await?;
+            data.session_set_status(session.id, SessionStatus::Authorized { user_id })
+                .await?;
+
+            let refresh_token_string = Uuid::new_v4().to_string();
+            data.oauth_refresh_token_create(refresh_token_string.clone(), session.id)
+                .await?;
+
+            let response = OauthTokenResponse {
+                access_token: token.0,
+                token_type: "Bearer".to_string(),
+                expires_in,
+                refresh_token: Some(refresh_token_string),
+                scope: scopes
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            };
+
+            Ok(Json(response))
+        }
+        "refresh_token" => {
+            let refresh_token = form
+                .refresh_token
+                .ok_or(Error::BadStatic("missing refresh_token"))?;
+
+            let old_session_id = data.oauth_refresh_token_use(refresh_token).await?;
+            let old_session = data.session_get(old_session_id).await?;
+
+            if old_session.app_id != Some(app.id) {
+                return Err(Error::InvalidCredentials);
+            }
+
+            let user_id = old_session
+                .user_id()
+                .ok_or(Error::Internal("session has no user".to_string()))?;
+
+            // Invalidate old session
+            data.session_delete(old_session_id).await?;
+            s.services().sessions.invalidate(old_session_id).await;
+
+            // Create new access token and session
+            let token = SessionToken(Uuid::new_v4().to_string());
+            let expires_in = 3600; // 1 hour
+            let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
+            let new_session = data
+                .session_create(DbSessionCreate {
+                    token: token.clone(),
+                    name: Some(app.name.clone()),
+                    expires_at: Some(expires_at),
+                    ty: SessionType::Access,
+                    application_id: Some(app.id),
+                })
+                .await?;
+            data.session_set_status(new_session.id, SessionStatus::Authorized { user_id })
+                .await?;
+
+            // Create new refresh token
+            let new_refresh_token_string = Uuid::new_v4().to_string();
+            data.oauth_refresh_token_create(new_refresh_token_string.clone(), new_session.id)
+                .await?;
+
+            let connection = data.connection_get(user_id, app.id).await?;
+
+            let response = OauthTokenResponse {
+                access_token: token.0,
+                token_type: "Bearer".to_string(),
+                expires_in,
+                refresh_token: Some(new_refresh_token_string),
+                scope: connection
+                    .scopes
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            };
+
+            Ok(Json(response))
+        }
+        _ => Err(Error::BadStatic("unsupported grant_type")),
     }
-
-    // create a new session for the user
-    let token = SessionToken(Uuid::new_v4().to_string());
-    let expires_in = 3600; // 1 hour
-    let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
-    let session = data
-        .session_create(DbSessionCreate {
-            token: token.clone(),
-            name: Some(app.name),
-            expires_at: Some(expires_at),
-            ty: SessionType::Access,
-            application_id: Some(app.id),
-        })
-        .await?;
-    data.session_set_status(session.id, SessionStatus::Authorized { user_id })
-        .await?;
-
-    let response = OauthTokenResponse {
-        access_token: token.0,
-        token_type: "Bearer".to_string(),
-        expires_in,
-        refresh_token: None, // TODO: implement refresh tokens
-        scope: scopes
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
-            .join(" "),
-    };
-
-    Ok(Json(response))
 }
 
 /// Oauth introspect

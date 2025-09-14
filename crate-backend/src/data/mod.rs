@@ -428,6 +428,8 @@ pub trait DataAuth {
         &self,
         code: String,
     ) -> Result<(ApplicationId, UserId, String, Vec<Scope>)>;
+    async fn oauth_refresh_token_create(&self, token: String, session_id: SessionId) -> Result<()>;
+    async fn oauth_refresh_token_use(&self, token: String) -> Result<SessionId>;
 }
 
 #[async_trait]

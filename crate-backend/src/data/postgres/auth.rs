@@ -183,4 +183,25 @@ impl DataAuth for Postgres {
             scopes,
         ))
     }
+
+    async fn oauth_refresh_token_create(&self, token: String, session_id: SessionId) -> Result<()> {
+        sqlx::query!(
+            "INSERT INTO oauth_refresh_token (token, session_id) VALUES ($1, $2)",
+            token,
+            *session_id,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn oauth_refresh_token_use(&self, token: String) -> Result<SessionId> {
+        let row = sqlx::query!(
+            "DELETE FROM oauth_refresh_token WHERE token = $1 RETURNING session_id",
+            token,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.session_id.into())
+    }
 }

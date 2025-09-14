@@ -84,10 +84,11 @@ pub struct OauthAuthorizeResponse {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthTokenRequest {
     pub grant_type: String,
-    pub code: String,
-    pub redirect_uri: Url,
+    pub code: Option<String>,
+    pub redirect_uri: Option<Url>,
     pub client_id: Option<ApplicationId>,
     pub client_secret: Option<String>,
+    pub refresh_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

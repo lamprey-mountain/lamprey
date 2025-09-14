@@ -144,11 +144,8 @@ pub enum SessionType {
     // NOTE: i might remove this and switch to purely oauth
     User,
 
-    /// an oauth2 access token
+    /// a session created via oauth2
     Access,
-
-    /// an oauth2 refresh token
-    Refresh,
 }
 
 impl fmt::Display for SessionType {
@@ -156,7 +153,6 @@ impl fmt::Display for SessionType {
         let s = match self {
             SessionType::User => "User",
             SessionType::Access => "Access",
-            SessionType::Refresh => "Refresh",
         };
         f.write_str(s)
     }
@@ -169,7 +165,6 @@ impl FromStr for SessionType {
         match s {
             "User" => Ok(SessionType::User),
             "Access" => Ok(SessionType::Access),
-            "Refresh" => Ok(SessionType::Refresh),
             _ => Err(()),
         }
     }
