@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id FROM session WHERE id = $1",
+  "query": "\n            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at)\n            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now())\n            RETURNING id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id, last_seen_at",
   "describe": {
     "columns": [
       {
@@ -53,10 +53,20 @@
         "ordinal": 7,
         "name": "application_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_seen_at",
+        "type_info": "Timestamp"
       }
     ],
     "parameters": {
       "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamp",
+        "Text",
         "Uuid"
       ]
     },
@@ -68,8 +78,9 @@
       true,
       true,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "85a5de3477c3b4e68d2e4035e55a25e4a1361897e36b51d0e6dc98bd1e5d1e2f"
+  "hash": "da3fb7c4e1cce256486a39d4d110325d3f5e2431e660bd3261b006f0564911ec"
 }

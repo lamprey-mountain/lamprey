@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes",
+  "query": "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes, code_challenge, code_challenge_method",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,16 @@
         "ordinal": 3,
         "name": "scopes",
         "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "code_challenge",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "code_challenge_method",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -33,8 +43,10 @@
       false,
       false,
       false,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "c7b2100ae9bd747c2b766d8543fe1934296abccaec4feb243bb1d11561ebb02a"
+  "hash": "c705fcf8965140456e45e632b966fcfce0832929f070c4327fe4551c753388cf"
 }
