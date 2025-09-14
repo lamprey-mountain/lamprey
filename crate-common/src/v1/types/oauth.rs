@@ -28,9 +28,10 @@ pub struct Autoconfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(rename_all = "UPPERCASE")]
 pub enum CodeChallengeMethod {
     S256,
+
+    #[serde(rename = "plain")]
     Plain,
 }
 
