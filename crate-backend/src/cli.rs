@@ -22,9 +22,6 @@ pub enum Command {
     /// check config
     Check {},
 
-    /// (TEMP) migrate media from raw to v1
-    MigrateMedia {},
-
     /// garbage collect media deleted over a week ago
     GcMedia {},
 
@@ -33,4 +30,7 @@ pub enum Command {
 
     /// garbage collect expired sessions
     GcSession {},
+
+    /// run all garbage collection routines
+    GcAll {},
 }

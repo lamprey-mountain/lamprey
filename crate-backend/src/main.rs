@@ -20,7 +20,7 @@ use utoipa_axum::router::OpenApiRouter;
 use backend::{
     cli, config, error,
     routes::{self},
-    types::{self, Media, MessageId, MessageSync, PaginationQuery},
+    types::{self, MessageId, MessageSync, PaginationQuery},
     ServerState,
 };
 
@@ -150,22 +150,6 @@ async fn main() -> Result<()> {
         tracing::subscriber::set_global_default(subscriber)?;
     }
 
-    match &args.command {
-        cli::Command::Serve {} => serve(config).await?,
-        cli::Command::Check {} => check(config).await?,
-        cli::Command::MigrateMedia {} => migrate_media(config).await?,
-        cli::Command::GcMedia {} => gc_media(config).await?,
-        cli::Command::GcMessages {} => gc_messages(config).await?,
-        cli::Command::GcSession {} => gc_sessions(config).await?,
-    }
-
-    Ok(())
-}
-
-/// start the main server
-async fn serve(config: Config) -> Result<()> {
-    info!("Starting server with config: {:#?}", config);
-
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(5))
@@ -186,6 +170,22 @@ async fn serve(config: Config) -> Result<()> {
     blobs.check().await?;
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
+
+    match &args.command {
+        cli::Command::Serve {} => serve(state).await?,
+        cli::Command::Check {} => check(state).await?,
+        cli::Command::GcMedia {} => gc_media(state).await?,
+        cli::Command::GcMessages {} => gc_messages(state).await?,
+        cli::Command::GcSession {} => gc_sessions(state).await?,
+        cli::Command::GcAll {} => gc_all(state).await?,
+    }
+
+    Ok(())
+}
+
+/// start the main server
+async fn serve(state: Arc<ServerState>) -> Result<()> {
+    info!("Starting server");
 
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
@@ -212,114 +212,37 @@ async fn serve(config: Config) -> Result<()> {
 }
 
 /// check config
-async fn check(config: Config) -> Result<()> {
-    info!("Parsed config: {:#?}", config);
-    PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    let blobs_builder = opendal::services::S3::default()
-        .bucket(&config.s3.bucket)
-        .endpoint(config.s3.endpoint.as_str())
-        .region(&config.s3.region)
-        .access_key_id(&config.s3.access_key_id)
-        .secret_access_key(&config.s3.secret_access_key);
-    let blobs = opendal::Operator::new(blobs_builder)?
-        .layer(LoggingLayer::default())
-        .finish();
-    blobs.check().await?;
+async fn check(_state: Arc<ServerState>) -> Result<()> {
+    info!("done checking");
     Ok(())
 }
 
-/// temporary command to migrate media from raw -> v1
-async fn migrate_media(config: Config) -> Result<()> {
-    info!("Starting media migration with config: {:#?}", config);
-
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    use backend::data::postgres::{DbMedia, DbMediaData};
-
-    loop {
-        let rows = sqlx::query_as!(
-            DbMedia,
-            "select user_id, data from media where data->>'v' is null limit 50"
-        )
-        .fetch_all(&pool)
-        .await?;
-        let mut tx = pool.begin().await?;
-        if rows.is_empty() {
-            break;
-        }
-        for row in rows {
-            let media: DbMediaData = serde_json::from_value(row.data)?;
-            let media: Media = media.into();
-            let media_id = media.id;
-            let data =
-                serde_json::to_value(&DbMediaData::V1(media)).expect("failed to serialize media");
-            sqlx::query!("update media set data = $1 where id = $2", data, *media_id)
-                .execute(&mut *tx)
-                .await?;
-            info!("migrate {}", media_id);
-        }
-        tx.commit().await?;
-    }
-
-    Ok(())
-}
-
-async fn gc_media(config: Config) -> Result<()> {
-    info!(
-        "Starting media garbage collection job with config: {:#?}",
-        config
-    );
-
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    let blobs_builder = opendal::services::S3::default()
-        .bucket(&config.s3.bucket)
-        .endpoint(config.s3.endpoint.as_str())
-        .region(&config.s3.region)
-        .access_key_id(&config.s3.access_key_id)
-        .secret_access_key(&config.s3.secret_access_key);
-    let blobs = opendal::Operator::new(blobs_builder)?
-        .layer(LoggingLayer::default())
-        .finish();
-    blobs.check().await?;
+async fn gc_media(state: Arc<ServerState>) -> Result<()> {
+    info!("starting media garbage collection");
 
     info!("finding items...");
-    let result = sqlx::query_file!("sql/gc_media.sql").execute(&pool).await?;
+    let result = sqlx::query_file!("sql/gc_media.sql")
+        .execute(&state.pool)
+        .await?;
     info!("found {} items to delete", result.rows_affected());
 
     loop {
         let rows = sqlx::query!("select id from media where deleted_at is not null limit 50")
-            .fetch_all(&pool)
+            .fetch_all(&state.pool)
             .await?;
-        let mut tx = pool.begin().await?;
+        let mut tx = state.pool.begin().await?;
         if rows.is_empty() {
             break;
         }
         for row in rows {
-            let items = blobs
+            let items = state
+                .blobs
                 .list_with(&format!("media/{}/", row.id))
                 .recursive(true)
                 .await?;
             for item in items {
                 if item.metadata().is_file() {
-                    blobs.delete(item.path()).await?;
+                    state.blobs.delete(item.path()).await?;
                 }
             }
             sqlx::query!("delete from media where id = $1", row.id)
@@ -333,46 +256,32 @@ async fn gc_media(config: Config) -> Result<()> {
     Ok(())
 }
 
-async fn gc_messages(config: Config) -> Result<()> {
-    info!(
-        "Starting message garbage collection job with config: {:#?}",
-        config
-    );
-
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
+async fn gc_messages(state: Arc<ServerState>) -> Result<()> {
+    info!("starting message garbage collection job");
 
     let result = sqlx::raw_sql(include_str!("../sql/purge_messages.sql"))
-        .execute(&pool)
+        .execute(&state.pool)
         .await?;
     info!("done; {} rows affected", result.rows_affected());
 
     Ok(())
 }
 
-async fn gc_sessions(config: Config) -> Result<()> {
-    info!(
-        "Starting session garbage collection job with config: {:#?}",
-        config
-    );
-
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    sqlx::migrate!("./migrations").run(&pool).await?;
+async fn gc_sessions(state: Arc<ServerState>) -> Result<()> {
+    info!("starting session garbage collection job");
 
     let result = sqlx::raw_sql(include_str!("../sql/purge_sessions.sql"))
-        .execute(&pool)
+        .execute(&state.pool)
         .await?;
     info!("done; {} rows affected", result.rows_affected());
 
+    Ok(())
+}
+
+async fn gc_all(state: Arc<ServerState>) -> Result<()> {
+    info!("garbage collecting everything");
+    gc_media(state.clone()).await?;
+    gc_messages(state.clone()).await?;
+    gc_sessions(state.clone()).await?;
     Ok(())
 }
