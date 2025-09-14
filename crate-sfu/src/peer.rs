@@ -395,6 +395,7 @@ impl Peer {
             }
             SignallingMessage::Want { tracks: _ } => todo!(),
             SignallingMessage::Have { .. } => panic!("server only"),
+            SignallingMessage::Reconnect => panic!("handled by sfu"),
             SignallingMessage::VoiceState { state } => {
                 self.voice_state.thread_id = state.unwrap().thread_id;
             }

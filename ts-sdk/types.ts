@@ -164,6 +164,9 @@ export type SignallingMessage =
 		// TODO: move this to a top level event
 		type: "VoiceState";
 		state: { thread_id: string } | null;
+	}
+	| {
+		type: "Reconnect";
 	};
 
 export type VoiceState = {

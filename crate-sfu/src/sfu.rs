@@ -238,6 +238,19 @@ impl Sfu {
             SignallingMessage::VoiceState { .. } => {
                 warn!("raw signalling messages should not be sent here");
             }
+            SignallingMessage::Reconnect {} => {
+                let Some(voice_state) = self.voice_states.get(&user_id) else {
+                    warn!("no voice state for {user_id}");
+                    return Ok(());
+                };
+
+                if let Some((_, peer)) = self.peers.remove(&user_id) {
+                    peer.send(PeerCommand::Kill)?;
+                }
+
+                self.ensure_peer(user_id, peer_send.clone(), &voice_state)
+                    .await?;
+            }
             _ => {
                 let Some(voice_state) = self.voice_states.get(&user_id) else {
                     warn!("no voice state for {user_id}");

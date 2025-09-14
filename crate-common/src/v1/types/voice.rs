@@ -132,6 +132,10 @@ pub enum SignallingMessage {
 
     /// sent by client.
     VoiceState { state: Option<VoiceStateUpdate> },
+
+    /// trigger a full reset; client should dispose current RTCPeerConnection and create a new one
+    /// also useful to switch connection to another session
+    Reconnect,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

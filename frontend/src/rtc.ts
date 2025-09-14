@@ -32,7 +32,7 @@ const RTC_CONFIG: RTCConfiguration = {
 };
 
 export const createVoiceClient = () => {
-	const conn = new RTCPeerConnection(RTC_CONFIG);
+	let conn = new RTCPeerConnection(RTC_CONFIG);
 	const api = useApi();
 	const transceivers = new Map<string, RTCRtpTransceiver>();
 	const remoteStreams: Array<RemoteStream> = [];
@@ -154,6 +154,12 @@ export const createVoiceClient = () => {
 	function close() {
 		conn.close();
 		send({ type: "VoiceState", state: null });
+	}
+
+	function reconnect() {
+		conn.close();
+		conn = new RTCPeerConnection(RTC_CONFIG);
+		setup();
 	}
 
 	function getTrackMetadata(): TrackMetadata[] {
@@ -369,6 +375,9 @@ export const createVoiceClient = () => {
 				// 	console.log(tcr);
 				// 	if (tcr.mid === mid) tcr.sender.track!.enabled = true;
 				// }
+			} else if (msg.type === "Reconnect") {
+				console.warn("[rtc:signal] fully resetting!");
+				reconnect();
 			} else {
 				console.warn("[rtc:signal] unknown voice dispatch", msg);
 			}
