@@ -176,6 +176,7 @@ export const RouteHome = () => {
 			<RoomNav />
 			<ThreadNav />
 			<Home />
+			<VoiceTray />
 		</>
 	);
 };
@@ -186,6 +187,7 @@ export const RouteFeed = () => {
 			<Title title="feed" />
 			<RoomNav />
 			<Feed />
+			<VoiceTray />
 		</>
 	);
 };

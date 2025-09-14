@@ -242,6 +242,7 @@ export const VoiceTray = () => {
 	const room = thread()?.room_id
 		? api.rooms.fetch(() => thread()?.room_id!)
 		: () => null;
+	const user = () => api.users.cache.get("@self");
 
 	const calcConnectedDuration = () => {
 		const joinedAt = api.voiceState()?.joined_at;
@@ -312,7 +313,15 @@ export const VoiceTray = () => {
 				</div>
 			</Show>
 			<div class="row toolbar">
-				<div style="flex:1">{api.users.cache.get("@self")?.name}</div>
+				<div style="flex:1">
+					<Show when={user()} fallback="loading...">
+						{api.users.cache.get("@self")?.name}
+						<Show when={!user()?.registered_at}>
+							{" "}
+							<b class="dim">(guest)</b>
+						</Show>
+					</Show>
+				</div>
 				<button onClick={actions.toggleMic}>
 					<ToggleIcon checked={!voice.muted} src={iconMic} />
 				</button>
