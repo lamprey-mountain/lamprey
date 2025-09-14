@@ -3,6 +3,7 @@ use common::v1::types::application::{Application, Connection, Scope};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::Notification;
+use common::v1::types::oauth::CodeChallengeMethod;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
 use common::v1::types::user_config::UserConfig;
@@ -424,11 +425,20 @@ pub trait DataAuth {
         user_id: UserId,
         redirect_uri: String,
         scopes: Vec<Scope>,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<()>;
     async fn oauth_auth_code_use(
         &self,
         code: String,
-    ) -> Result<(ApplicationId, UserId, String, Vec<Scope>)>;
+    ) -> Result<(
+        ApplicationId,
+        UserId,
+        String,
+        Vec<Scope>,
+        Option<String>,
+        Option<String>,
+    )>;
     async fn oauth_refresh_token_create(&self, token: String, session_id: SessionId) -> Result<()>;
     async fn oauth_refresh_token_use(&self, token: String) -> Result<SessionId>;
 }

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::application::Scope;
 use common::v1::types::email::EmailAddr;
+use common::v1::types::oauth::CodeChallengeMethod;
 use common::v1::types::{ApplicationId, SessionId};
 use sqlx::{query, query_scalar};
 
@@ -146,17 +147,26 @@ impl DataAuth for Postgres {
         user_id: UserId,
         redirect_uri: String,
         scopes: Vec<Scope>,
+        code_challenge: Option<String>,
+        code_challenge_method: Option<CodeChallengeMethod>,
     ) -> Result<()> {
+        let method = code_challenge_method.map(|m| match m {
+            CodeChallengeMethod::S256 => "S256",
+            CodeChallengeMethod::Plain => "plain",
+        });
+
         sqlx::query!(
             r#"
-            INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at)
-            VALUES ($1, $2, $3, $4, $5, now() + '10 minutes')
+            INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at, code_challenge, code_challenge_method)
+            VALUES ($1, $2, $3, $4, $5, now() + '10 minutes', $6, $7)
             "#,
             code,
             *application_id,
             *user_id,
             redirect_uri,
             serde_json::to_value(scopes).unwrap(),
+            code_challenge,
+            method,
         )
         .execute(&self.pool)
         .await?;
@@ -166,9 +176,16 @@ impl DataAuth for Postgres {
     async fn oauth_auth_code_use(
         &self,
         code: String,
-    ) -> Result<(ApplicationId, UserId, String, Vec<Scope>)> {
+    ) -> Result<(
+        ApplicationId,
+        UserId,
+        String,
+        Vec<Scope>,
+        Option<String>,
+        Option<String>,
+    )> {
         let row = sqlx::query!(
-            "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes",
+            "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes, code_challenge, code_challenge_method",
             code,
         )
         .fetch_one(&self.pool)
@@ -181,6 +198,8 @@ impl DataAuth for Postgres {
             row.user_id.into(),
             row.redirect_uri,
             scopes,
+            row.code_challenge,
+            row.code_challenge_method,
         ))
     }
 

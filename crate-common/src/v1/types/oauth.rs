@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use url::Url;
 
 #[cfg(feature = "utoipa")]
@@ -23,6 +24,26 @@ pub struct Autoconfig {
     pub grant_types_supported: Vec<String>,
     pub subject_types_supported: Vec<String>,
     pub token_endpoint_auth_methods_supported: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(rename_all = "UPPERCASE")]
+pub enum CodeChallengeMethod {
+    S256,
+    Plain,
+}
+
+impl FromStr for CodeChallengeMethod {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "S256" => Ok(CodeChallengeMethod::S256),
+            "plain" => Ok(CodeChallengeMethod::Plain),
+            _ => Err(()),
+        }
+    }
 }
 
 /// user info response for openid connect
@@ -72,6 +93,8 @@ pub struct OauthAuthorizeParams {
     #[allow(unused)]
     // prompt | none, defaults to none
     pub prompt: Option<String>,
+    pub code_challenge: Option<String>,
+    pub code_challenge_method: Option<CodeChallengeMethod>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -89,6 +112,7 @@ pub struct OauthTokenRequest {
     pub client_id: Option<ApplicationId>,
     pub client_secret: Option<String>,
     pub refresh_token: Option<String>,
+    pub code_verifier: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

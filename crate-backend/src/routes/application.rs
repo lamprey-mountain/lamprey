@@ -5,6 +5,7 @@ use axum::{
     response::IntoResponse,
     Form, Json,
 };
+use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch, Scope},
     oauth::{
@@ -20,6 +21,7 @@ use common::v1::types::{
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -485,6 +487,8 @@ async fn oauth_authorize(
         auth_user_id,
         redirect_uri.to_string(),
         scopes,
+        q.code_challenge,
+        q.code_challenge_method,
     )
     .await?;
 
@@ -554,11 +558,32 @@ async fn oauth_token(
                 .redirect_uri
                 .ok_or(Error::BadStatic("missing redirect_uri"))?;
 
-            let (_app_id, user_id, db_redirect_uri, scopes) =
+            let (_app_id, user_id, db_redirect_uri, scopes, code_challenge, code_challenge_method) =
                 data.oauth_auth_code_use(code).await?;
 
             if redirect_uri.as_str() != db_redirect_uri {
                 return Err(Error::InvalidCredentials);
+            }
+
+            if let Some(code_challenge) = code_challenge {
+                let code_verifier = form
+                    .code_verifier
+                    .ok_or(Error::BadStatic("missing code_verifier"))?;
+                let method = code_challenge_method.unwrap_or_else(|| "plain".to_string());
+                let valid = match method.as_str() {
+                    "S256" => {
+                        let mut hasher = Sha256::new();
+                        hasher.update(code_verifier.as_bytes());
+                        let hash = hasher.finalize();
+                        let encoded = BASE64_URL_SAFE_NO_PAD.encode(hash);
+                        encoded == code_challenge
+                    }
+                    "plain" => code_verifier == code_challenge,
+                    _ => return Err(Error::BadStatic("unsupported code_challenge_method")),
+                };
+                if !valid {
+                    return Err(Error::InvalidCredentials);
+                }
             }
 
             // create a new session for the user
