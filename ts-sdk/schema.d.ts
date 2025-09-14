@@ -78,6 +78,23 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/app/{app_id}/rotate-secret": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** App rotate oauth secret */
+		post: operations["app_rotate_secret"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/app/{app_id}/session": {
 		parameters: {
 			query?: never;
@@ -411,6 +428,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/emoji/{emoji_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Emoji lookup
+		 * @description Get info about an emoji.
+		 */
+		get: operations["emoji_lookup"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/guest": {
 		parameters: {
 			query?: never;
@@ -581,6 +618,112 @@ export interface paths {
 		 * @description Report media
 		 */
 		post: operations["report_media"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/.well-known/openid-configuration": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Oauth autoconfig (TODO) */
+		get: operations["oauth_autoconfig"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/authorize": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Oauth info */
+		get: operations["oauth_info"];
+		put?: never;
+		/** Oauth authorize */
+		post: operations["oauth_authorize"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/introspect": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Oauth introspect */
+		post: operations["oauth_introspect"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/revoke": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Oauth revoke */
+		post: operations["oauth_revoke"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/token": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Oauth exchange token
+		 * @description exchange an authorization token for an access token
+		 */
+		post: operations["oauth_token"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/oauth/userinfo": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Oauth userinfo */
+		get: operations["oauth_userinfo"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1889,6 +2032,40 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/connection": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Connection list */
+		get: operations["connection_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/{user_id}/connection/{app_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/** Connection revoke */
+		delete: operations["connection_revoke"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/dm": {
 		parameters: {
 			query?: never;
@@ -2119,7 +2296,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Voice state move (TODO) */
+		/** Voice state move */
 		post: operations["voice_state_move"];
 		delete?: never;
 		options?: never;
@@ -2139,13 +2316,40 @@ export interface components {
 		AppInviteBot: {
 			room_id: components["schemas"]["Id"];
 		};
-		ApplicationCreate: {
+		Application: {
 			/** @description enables managing Puppet users */
 			bridge: boolean;
 			description?: string | null;
+			id: components["schemas"]["Id"];
 			name: string;
+			/** @description oauth whether this client can keep secrets confidential */
+			oauth_confidential: boolean;
+			oauth_redirect_uris?: string[];
+			/** @description only returned on oauth token rotate endpoint */
+			oauth_secret?: string | null;
+			owner_id: components["schemas"]["Id"];
 			/** @description if anyone can use this */
 			public: boolean;
+		};
+		ApplicationCreate: {
+			/** @description enables managing Puppet users */
+			bridge?: boolean;
+			description?: string | null;
+			name: string;
+			oauth_confidential?: boolean | null;
+			oauth_redirect_uris?: string[];
+			/** @description if anyone can use this */
+			public?: boolean;
+		};
+		ApplicationPatch: {
+			/** @description enables managing Puppet users */
+			bridge?: boolean | null;
+			description?: string | null;
+			name?: string | null;
+			oauth_confidential?: boolean | null;
+			oauth_redirect_uris?: string[] | null;
+			/** @description if anyone can use this */
+			public?: boolean | null;
 		};
 		/** @description metadata for audio */
 		Audio: {
@@ -2336,6 +2540,13 @@ export interface components {
 			type: "MemberDisconnect";
 		} | {
 			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "MemberMove";
+		} | {
+			metadata: {
 				role_id: components["schemas"]["Id"];
 				user_id: components["schemas"]["Id"];
 			};
@@ -2400,6 +2611,12 @@ export interface components {
 		};
 		/** @description a color */
 		Color: string;
+		/** @description an application that is authorized to a user */
+		Connection: {
+			application: components["schemas"]["Application"];
+			created_at: components["schemas"]["Time"];
+			scopes: components["schemas"]["Scope"][];
+		};
 		ContextResponse: {
 			has_after: boolean;
 			has_before: boolean;
@@ -2650,7 +2867,7 @@ export interface components {
 			upload_url?: string | null;
 		};
 		/** @enum {string} */
-		MediaKindSerde: "Video" | "Audio";
+		MediaKind: "Video" | "Audio";
 		MediaPatch: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
@@ -3004,6 +3221,16 @@ export interface components {
 			/** @enum {string} */
 			type: "RelationshipDelete";
 			user_id: components["schemas"]["Id"];
+		} | {
+			connection: components["schemas"]["Connection"];
+			/** @enum {string} */
+			type: "ConnectionCreate";
+			user_id: components["schemas"]["Id"];
+		} | {
+			app_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "ConnectionDelete";
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
@@ -3122,6 +3349,14 @@ export interface components {
 			/** Format: uri */
 			url: string;
 		};
+		OauthTokenRequest: {
+			client_id: components["schemas"]["Id"];
+			client_secret?: string | null;
+			code: string;
+			grant_type: string;
+			/** Format: uri */
+			redirect_uri: string;
+		};
 		/** @enum {string} */
 		PaginationDirection: "f" | "b";
 		PaginationQuery_Id: {
@@ -3158,6 +3393,17 @@ export interface components {
 				/** @description User who caused this entry to be created */
 				user_id: components["schemas"]["Id"];
 			})[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_Connection: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				application: components["schemas"]["Application"];
+				created_at: components["schemas"]["Time"];
+				scopes: components["schemas"]["Scope"][];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -3318,9 +3564,13 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: {
+				/** @description whether this user is deafened by a moderator */
+				deaf: boolean;
 				/** @description When this member joined the room */
 				joined_at: components["schemas"]["Time"];
 				membership: components["schemas"]["RoomMembership"];
+				/** @description whether this user is muted by a moderator */
+				mute: boolean;
 				origin?: null | components["schemas"]["RoomMemberOrigin"];
 				/** @description like nickname, but for your description/bio/about */
 				override_description?: string | null;
@@ -3338,8 +3588,12 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: (components["schemas"]["SessionStatus"] & {
+				app_id?: null | components["schemas"]["Id"];
+				expires_at?: null | components["schemas"]["Time"];
 				id: components["schemas"]["Id"];
+				/** @description a human readable name for this session */
 				name?: string | null;
+				type: components["schemas"]["SessionType"];
 			})[];
 			/** Format: int64 */
 			total: number;
@@ -3762,9 +4016,13 @@ export interface components {
 			public?: boolean | null;
 		};
 		RoomMember: {
+			/** @description whether this user is deafened by a moderator */
+			deaf: boolean;
 			/** @description When this member joined the room */
 			joined_at: components["schemas"]["Time"];
 			membership: components["schemas"]["RoomMembership"];
+			/** @description whether this user is muted by a moderator */
+			mute: boolean;
 			origin?: null | components["schemas"]["RoomMemberOrigin"];
 			/** @description like nickname, but for your description/bio/about */
 			override_description?: string | null;
@@ -3797,10 +4055,18 @@ export interface components {
 			type: "Creator";
 		};
 		RoomMemberPatch: {
+			/** @description whether this user is deafened by a moderator */
+			deaf?: boolean | null;
+			/** @description whether this user is muted by a moderator */
+			mute?: boolean | null;
 			override_description?: string | null;
 			override_name?: string | null;
 		};
 		RoomMemberPut: {
+			/** @description whether this user is deafened by a moderator */
+			deaf?: boolean | null;
+			/** @description whether this user is muted by a moderator */
+			mute?: boolean | null;
 			override_description?: string | null;
 			override_name?: string | null;
 		};
@@ -3859,6 +4125,13 @@ export interface components {
 			/** @enum {string} */
 			type: "System";
 		};
+		/**
+		 * @description an oauth scope
+		 *
+		 *     WORK IN PROGRESS!!! SUBJECT TO CHANGE!!!
+		 * @enum {string}
+		 */
+		Scope: "identify" | "full" | "auth";
 		/** @enum {string} */
 		SearchMessageFeatures:
 			| "Attachment"
@@ -3898,8 +4171,12 @@ export interface components {
 			target: string;
 		};
 		Session: components["schemas"]["SessionStatus"] & {
+			app_id?: null | components["schemas"]["Id"];
+			expires_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
+			/** @description a human readable name for this session */
 			name?: string | null;
+			type: components["schemas"]["SessionType"];
 		};
 		SessionCreate: {
 			name?: string | null;
@@ -3917,13 +4194,14 @@ export interface components {
 			status: "Authorized";
 			user_id: components["schemas"]["Id"];
 		} | {
-			/** @description given ~5 minutes after auth to do stuff? */
-			expires_at: components["schemas"]["Time"];
 			/** @enum {string} */
 			status: "Sudo";
+			sudo_expires_at: components["schemas"]["Time"];
 			user_id: components["schemas"]["Id"];
 		};
 		SessionToken: string;
+		/** @enum {string} */
+		SessionType: "User" | "Access" | "Refresh";
 		SessionWithToken: components["schemas"]["Session"] & {
 			token: components["schemas"]["SessionToken"];
 		};
@@ -4132,8 +4410,11 @@ export interface components {
 			code: string;
 		};
 		TrackMetadata: {
+			/** @description group tracks together into streams; identical to ssrc but easier to manage client side */
 			key: string;
-			kind: components["schemas"]["MediaKindSerde"];
+			/** @description whether this track is for audio or video */
+			kind: components["schemas"]["MediaKind"];
+			/** @description unique identifier for this track. equivilant to transceiver.mid */
 			mid: string;
 		};
 		/** @description Where this track came from. */
@@ -4209,12 +4490,24 @@ export interface components {
 		 *     - bots can connect to multiple threads with any connection strategy
 		 *     - both users and bots can only have one connection per thread */
 		VoiceState: {
+			/** @description whether this user is deafened by a moderator */
+			deaf: boolean;
 			/** @description when this user joined the call */
 			joined_at: components["schemas"]["Time"];
+			/** @description whether this user is muted by a moderator */
+			mute: boolean;
+			self_deaf: boolean;
+			self_mute: boolean;
+			self_screen: boolean;
+			self_video: boolean;
+			session_id?: null | components["schemas"]["Id"];
 			/** @description the thread this user is connected to */
 			thread_id: components["schemas"]["Id"];
 			/** @description the user this state belongs to */
 			user_id: components["schemas"]["Id"];
+		};
+		VoiceStateMove: {
+			target_id: components["schemas"]["Id"];
 		};
 		VoiceStateUpdate: {
 			thread_id: components["schemas"]["Id"];
@@ -4312,10 +4605,16 @@ export interface operations {
 		parameters: {
 			query?: never;
 			header?: never;
-			path?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ApplicationPatch"];
+			};
+		};
 		responses: {
 			/** @description success */
 			200: {
@@ -4365,6 +4664,26 @@ export interface operations {
 				"application/json": components["schemas"]["PuppetCreate"];
 			};
 		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_rotate_secret: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
 		responses: {
 			/** @description success */
 			200: {
@@ -4862,6 +5181,30 @@ export interface operations {
 			};
 		};
 	};
+	emoji_lookup: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Emoji id */
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_EmojiCustom"];
+				};
+			};
+		};
+	};
 	guest_create: {
 		parameters: {
 			query?: never;
@@ -5185,6 +5528,137 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["Report"];
 				};
+			};
+		};
+	};
+	oauth_autoconfig: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_info: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_authorize: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_introspect: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_revoke: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/x-www-form-urlencoded":
+					components["schemas"]["OauthTokenRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_userinfo: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -8168,6 +8642,58 @@ export interface operations {
 			};
 		};
 	};
+	connection_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Connection"];
+				};
+			};
+		};
+	};
+	connection_revoke: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: components["schemas"]["UserIdReq"];
+				/** @description Application id */
+				app_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	dm_list: {
 		parameters: {
 			query?: {
@@ -8550,13 +9076,13 @@ export interface operations {
 				/** @description Thread id */
 				thread_id: components["schemas"]["Id"];
 				/** @description User id */
-				user_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["UserIdReq"];
 			};
 			cookie?: never;
 		};
 		requestBody: {
 			content: {
-				"application/json": unknown;
+				"application/json": components["schemas"]["VoiceStateMove"];
 			};
 		};
 		responses: {
