@@ -17,7 +17,8 @@ export const ThreadSettings = (props: { thread: ThreadT; page: string }) => {
 	return (
 		<div class="settings">
 			<header>
-				thread settings: {currentTab()?.name}
+				thread settings: {currentTab()?.name}{" "}
+				<A href={`/thread/${props.thread.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>
