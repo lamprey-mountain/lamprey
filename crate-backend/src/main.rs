@@ -156,6 +156,7 @@ async fn main() -> Result<()> {
         cli::Command::MigrateMedia {} => migrate_media(config).await?,
         cli::Command::GcMedia {} => gc_media(config).await?,
         cli::Command::GcMessages {} => gc_messages(config).await?,
+        cli::Command::GcSession {} => gc_sessions(config).await?,
     }
 
     Ok(())
@@ -347,6 +348,28 @@ async fn gc_messages(config: Config) -> Result<()> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     let result = sqlx::raw_sql(include_str!("../sql/purge_messages.sql"))
+        .execute(&pool)
+        .await?;
+    info!("done; {} rows affected", result.rows_affected());
+
+    Ok(())
+}
+
+async fn gc_sessions(config: Config) -> Result<()> {
+    info!(
+        "Starting session garbage collection job with config: {:#?}",
+        config
+    );
+
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(5))
+        .connect(&config.database_url)
+        .await?;
+
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
+    let result = sqlx::raw_sql(include_str!("../sql/purge_sessions.sql"))
         .execute(&pool)
         .await?;
     info!("done; {} rows affected", result.rows_affected());

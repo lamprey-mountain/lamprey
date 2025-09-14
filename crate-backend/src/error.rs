@@ -15,7 +15,7 @@ pub enum Error {
     Sqlx(sqlx::Error),
     #[error("blocked by other user")]
     Blocked,
-    #[error("missing authentication")]
+    #[error("missing authentication (not provided or invalid/expired session)")]
     MissingAuth,
     #[error("bad header")]
     BadHeader,

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use common::v1::types::{SessionToken, UserId};
+use common::v1::types::{util::Time, SessionToken, UserId};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
 use crate::{
@@ -29,7 +29,6 @@ pub struct HeaderReason(pub Option<String>);
 pub struct HeaderIdempotencyKey(pub Option<String>);
 
 /// extract the X-Puppet-Id header
-// TODO: support X-Puppet-Id everywhere
 pub struct HeaderPuppetId(pub Option<UserId>);
 
 impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
@@ -52,6 +51,9 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
                 Error::NotFound => Error::MissingAuth,
                 other => other,
             })?;
+        if session.expires_at.is_some_and(|t| t > Time::now_utc()) {
+            return Err(Error::MissingAuth)
+        }
         Ok(Self(session))
     }
 }

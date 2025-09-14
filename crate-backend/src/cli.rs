@@ -30,4 +30,7 @@ pub enum Command {
 
     /// garbage collect messages deleted over a week ago
     GcMessages {},
+
+    /// garbage collect expired sessions
+    GcSession {},
 }
