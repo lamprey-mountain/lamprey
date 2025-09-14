@@ -631,7 +631,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Oauth autoconfig (TODO) */
+		/** Oauth autoconfig */
 		get: operations["oauth_autoconfig"];
 		put?: never;
 		post?: never;
@@ -2119,7 +2119,8 @@ export interface paths {
 		delete: operations["email_delete"];
 		options?: never;
 		head?: never;
-		patch?: never;
+		/** Email update */
+		patch: operations["email_update"];
 		trace?: never;
 	};
 	"/api/v1/user/{user_id}/email/{addr}/resend-verification": {
@@ -2636,6 +2637,13 @@ export interface components {
 			is_primary: boolean;
 			/** @description user verified they have access to the email address */
 			is_verified: boolean;
+		};
+		EmailInfoPatch: {
+			/** @description whether this is the user's primary email address
+			 *
+			 *     - there can only be one primary email address
+			 *     - the primary address has EmailTrust::Full */
+			is_primary?: boolean | null;
 		};
 		Embed: {
 			author_avatar?: null | components["schemas"]["Media"];
@@ -3350,7 +3358,7 @@ export interface components {
 			url: string;
 		};
 		OauthTokenRequest: {
-			client_id: components["schemas"]["Id"];
+			client_id?: null | components["schemas"]["Id"];
 			client_secret?: string | null;
 			code: string;
 			grant_type: string;
@@ -8789,6 +8797,33 @@ export interface operations {
 			cookie?: never;
 		};
 		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	email_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: components["schemas"]["UserIdReq"];
+				/** @description email address */
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["EmailInfoPatch"];
+			};
+		};
 		responses: {
 			/** @description success */
 			204: {
