@@ -51,7 +51,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
                 Error::NotFound => Error::MissingAuth,
                 other => other,
             })?;
-        if session.expires_at.is_some_and(|t| t > Time::now_utc()) {
+        if session.expires_at.is_some_and(|t| t < Time::now_utc()) {
             return Err(Error::MissingAuth);
         }
         Ok(Self(session))

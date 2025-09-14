@@ -19,7 +19,6 @@ use crate::ServerState;
 use super::util::{AuthRelaxed, AuthWithSession};
 use crate::error::{Error, Result};
 
-// TODO: expire old unused sessions
 /// Session create
 #[utoipa::path(
     post,

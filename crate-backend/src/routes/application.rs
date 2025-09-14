@@ -7,17 +7,20 @@ use axum::{
 };
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch, Scope},
-    oauth::{Autoconfig, Userinfo},
+    oauth::{
+        Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
+        OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
+    },
     util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
     RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionType,
-    SessionWithToken, User, UserId,
+    SessionWithToken, UserId,
 };
-use http::StatusCode;
-use serde::{Deserialize, Serialize};
-use url::Url;
-use utoipa::{IntoParams, ToSchema};
+use headers::HeaderMapExt;
+use http::{HeaderMap, StatusCode};
+use serde::Deserialize;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
@@ -368,9 +371,8 @@ async fn app_rotate_secret(
 async fn oauth_info(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<AuthParams>,
+    Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
-    dbg!(&q);
     let data = s.data();
     let srv = s.services();
     let app = data.application_get(q.client_id).await?;
@@ -381,7 +383,7 @@ async fn oauth_info(
         return Err(Error::BadStatic("unknown response_type"));
     }
     if q.redirect_uri
-        .is_some_and(|u| app.oauth_redirect_uris.iter().any(|a| a == u.as_str()))
+        .is_none_or(|u| !app.oauth_redirect_uris.iter().any(|a| a == u.as_str()))
     {
         return Err(Error::BadStatic("bad redirect_uri"));
     }
@@ -396,57 +398,12 @@ async fn oauth_info(
     } else {
         false
     };
-    Ok(Json(OauthInfo {
+    Ok(Json(OauthAuthorizeInfo {
         application: app,
         bot_user,
         auth_user,
         authorized,
     }))
-}
-
-#[derive(Debug, Serialize)]
-struct OauthInfo {
-    application: Application,
-    bot_user: User,
-    auth_user: User,
-    authorized: bool,
-}
-
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-struct AuthParams {
-    // always "code"
-    response_type: String,
-    client_id: ApplicationId,
-    scope: String,
-    #[allow(unused)]
-    state: Option<String>,
-    redirect_uri: Option<Url>,
-    #[allow(unused)]
-    // prompt | none, defaults to none
-    prompt: Option<String>,
-}
-
-#[derive(Deserialize, ToSchema)]
-pub struct OauthTokenRequest {
-    grant_type: String,
-    code: String,
-    redirect_uri: Url,
-    client_id: ApplicationId,
-    client_secret: Option<String>,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct OauthTokenResponse {
-    access_token: String,
-    token_type: String,
-    expires_in: u64,
-    refresh_token: Option<String>,
-    scope: String,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct OauthAuthorizeResponse {
-    redirect_uri: Url,
 }
 
 /// Oauth authorize
@@ -459,7 +416,7 @@ pub struct OauthAuthorizeResponse {
 async fn oauth_authorize(
     Auth(auth_user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<AuthParams>,
+    Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
@@ -520,30 +477,50 @@ async fn oauth_authorize(
 )]
 async fn oauth_token(
     State(s): State<Arc<ServerState>>,
+    headers: HeaderMap,
     Form(form): Form<OauthTokenRequest>,
 ) -> Result<impl IntoResponse> {
+    let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
+        headers.typed_get();
+    let client_id = if let Some(client_id) = form.client_id {
+        client_id
+    } else if let Some(creds) = &credentials {
+        creds
+            .username()
+            .parse()
+            .map_err(|_| Error::BadStatic("invalid client_id"))?
+    } else {
+        return Err(Error::InvalidCredentials);
+    };
+
+    let client_secret = if let Some(client_secret) = form.client_secret {
+        client_secret
+    } else if let Some(creds) = &credentials {
+        creds.password().to_string()
+    } else {
+        return Err(Error::InvalidCredentials);
+    };
+
     if form.grant_type != "authorization_code" {
         return Err(Error::BadStatic("unsupported grant_type"));
     }
 
     let data = s.data();
-
-    let (app_id, user_id, redirect_uri, scopes) = data.oauth_auth_code_use(form.code).await?;
-
-    if app_id != form.client_id {
+    let app = data.application_get(client_id).await?;
+    if app.id != client_id {
         return Err(Error::InvalidCredentials);
     }
+
+    if app.oauth_confidential {
+        if client_secret != app.oauth_secret.unwrap() {
+            return Err(Error::InvalidCredentials);
+        }
+    }
+
+    let (_app_id, user_id, redirect_uri, scopes) = data.oauth_auth_code_use(form.code).await?;
 
     if redirect_uri != form.redirect_uri.as_str() {
         return Err(Error::InvalidCredentials);
-    }
-
-    let app = data.application_get(app_id).await?;
-
-    if app.oauth_confidential {
-        if form.client_secret != app.oauth_secret {
-            return Err(Error::InvalidCredentials);
-        }
     }
 
     // create a new session for the user
@@ -556,7 +533,7 @@ async fn oauth_token(
             name: Some(app.name),
             expires_at: Some(expires_at),
             ty: SessionType::Access,
-            application_id: Some(app_id),
+            application_id: Some(app.id),
         })
         .await?;
     data.session_set_status(session.id, SessionStatus::Authorized { user_id })
@@ -592,7 +569,7 @@ async fn oauth_introspect(
         return Err(Error::BadStatic("not an oauth token"));
     };
     let connection = s.data().connection_get(user_id, app_id).await?;
-    let res = IntrospectResponse {
+    let res = OauthIntrospectResponse {
         active: true,
         scopes: connection.scopes,
         client_id: app_id,
@@ -682,17 +659,6 @@ async fn oauth_userinfo(
             .and_then(|u| u.parse().ok()),
     };
     Ok(Json(info))
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct IntrospectResponse {
-    active: bool,
-    scopes: Vec<Scope>,
-    client_id: ApplicationId,
-    /// this is specified to be "human readable", but in practice it would be
-    /// simpler and more useful to return the unique id of the user
-    username: UserId,
-    exp: Option<u64>,
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
