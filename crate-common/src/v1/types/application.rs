@@ -72,11 +72,8 @@ pub struct ApplicationCreate {
     #[serde(default)]
     pub public: bool,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
     #[serde(default)]
     pub oauth_redirect_uris: Vec<String>,
 
@@ -105,11 +102,8 @@ pub struct ApplicationPatch {
     /// if anyone can use this
     pub public: Option<bool>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
     pub oauth_redirect_uris: Option<Vec<String>>,
     pub oauth_confidential: Option<bool>,
 }
