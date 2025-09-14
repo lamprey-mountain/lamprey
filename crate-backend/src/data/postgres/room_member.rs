@@ -358,4 +358,31 @@ impl DataRoomMember for Postgres {
             |i: &RoomBan| i.user_id.to_string()
         )
     }
+
+    async fn room_ban_create_bulk(
+        &self,
+        room_id: RoomId,
+        ban_ids: &[UserId],
+        reason: Option<String>,
+        expires_at: Option<Time>,
+    ) -> Result<()> {
+        let ban_ids: Vec<Uuid> = ban_ids.iter().map(|id| id.into_inner()).collect();
+        query!(
+            r#"
+            INSERT INTO room_ban (room_id, user_id, reason, created_at, expires_at)
+            SELECT $1, user_id, $3, now(), $4
+            FROM UNNEST($2::uuid[]) as user_id
+            ON CONFLICT (room_id, user_id) DO UPDATE
+            SET expires_at = EXCLUDED.expires_at, reason = EXCLUDED.reason
+            "#,
+            *room_id,
+            &ban_ids,
+            reason,
+            expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
+        )
+        .execute(&self.pool)
+        .await?;
+        info!("inserted room bans");
+        Ok(())
+    }
 }

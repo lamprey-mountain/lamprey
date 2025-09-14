@@ -443,14 +443,13 @@ async fn room_ban_create(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Room ban create bulk (TODO)
-#[allow(unused)]
+/// Room ban create bulk
 #[utoipa::path(
     post,
     path = "/room/{room_id}/ban",
     params(("room_id" = RoomId, description = "Room id")),
     tags = ["room_member"],
-    responses((status = NO_CONTENT, description = "success")),
+    responses((status = NO_CONTENT, description = "success"))
 )]
 async fn room_ban_create_bulk(
     Path(room_id): Path<RoomId>,
@@ -458,8 +457,66 @@ async fn room_ban_create_bulk(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanBulkCreate>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+) -> Result<impl IntoResponse> {
+    create.validate()?;
+    let srv = s.services();
+    let d = s.data();
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
+    perms.ensure(Permission::MemberBan)?;
+
+    let room = srv.rooms.get(room_id, None).await?;
+    let auth_user_rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+
+    for &target_user_id in &create.target_ids {
+        if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
+            if room.owner_id != Some(auth_user_id) && member.membership == RoomMembership::Join {
+                let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+                if auth_user_rank <= other_rank {
+                    return Err(Error::BadStatic(
+                        "your rank is too low to ban one of the users",
+                    ));
+                }
+            }
+        }
+    }
+
+    d.room_ban_create_bulk(
+        room_id,
+        &create.target_ids,
+        reason.clone(),
+        create.expires_at,
+    )
+    .await?;
+
+    for &target_user_id in &create.target_ids {
+        srv.perms.invalidate_room(target_user_id, room_id).await;
+        srv.perms.invalidate_is_mutual(target_user_id);
+        d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
+            .await?;
+        let member = d.room_member_get(room_id, target_user_id).await?;
+
+        d.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user_id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MemberBan {
+                room_id,
+                user_id: target_user_id,
+            },
+        })
+        .await?;
+
+        s.broadcast_room(
+            room_id,
+            auth_user_id,
+            MessageSync::RoomMemberUpsert { member },
+        )
+        .await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Room ban remove
