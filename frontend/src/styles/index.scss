@@ -1992,12 +1992,59 @@ details[open] > summary {
 
 .oauth-authorize {
 	padding: 8px;
+	display: grid;
+	place-items: center;
+	height: 100%;
+	width: 100%;
+
+	/* HACK: we're the only thing that should be on the page anyways */
+	position: fixed;
 
 	.error {
 		color: $fg-100;
 		background: oklch(var(--color-error) / 0.5);
 		border: solid oklch(var(--color-error)) 1px;
 		padding: 8px;
+	}
+
+	.avatar {
+		width: 32px;
+		height: 32px;
+	}
+
+	menu {
+		display: flex;
+		justify-content: end;
+	}
+
+	button {
+		flex: 1;
+		text-align: center;
+		max-width: 120px;
+	}
+
+	.description {
+		max-width: 60ch;
+		margin: 4px 0;
+		border: solid #444 1px;
+		padding: 8px;
+		border-radius: 4px;
+	}
+
+	.contents {
+		white-space: pre-wrap;
+		max-width: 30ch;
+	}
+
+	.info {
+		background: #111;
+		padding: 8px;
+		margin: 4px 0;
+		border-radius: 4px;
+
+		& > ul {
+			list-style: disc inside;
+		}
 	}
 }
 
@@ -2012,7 +2059,7 @@ details[open] > summary {
 }
 
 button.primary {
-	border: solid $link-200 1px;
+	/* border: solid $link-200 1px; */
 	background: $link-300;
 	color: $fg-100;
 

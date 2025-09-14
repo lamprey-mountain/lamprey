@@ -25,6 +25,14 @@ export type RelationshipWithUserId =
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"];
 export type UserConfig = components["schemas"]["UserConfig"];
+export type Application = components["schemas"]["Application"];
+
+export type OauthInfo = {
+	application: Application;
+	bot_user: User;
+	auth_user: User;
+	authorized: boolean;
+};
 
 export type Pagination<T> = {
 	total: number;

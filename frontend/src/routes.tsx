@@ -22,6 +22,7 @@ import { Feed } from "./Feed.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { AdminSettings } from "./AdminSettings.tsx";
+export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => document.title = props.title ?? "");
@@ -199,63 +200,5 @@ export const RouteInvite = (p: RouteSectionProps) => {
 				<RouteInviteInner code={p.params.code!} />
 			</Show>
 		</>
-	);
-};
-
-export const RouteAuthorize = (p: RouteSectionProps) => {
-	const ctx = useCtx();
-
-	const [data] = createResource(async () => {
-		// HACK: openapi fetch typescript doesn't like manually built urls here
-		const { data, error } = await ctx.client.http.GET(
-			("/api/v1/oauth/authorize" + p.location.search) as any,
-			{},
-		);
-		if (error) throw error.error;
-		return data;
-	});
-
-	const authorize = async () => {
-		try {
-			const { data, error } = await ctx.client.http.POST(
-				("/api/v1/oauth/authorize" + p.location.search) as any,
-				{},
-			);
-			if (error) {
-				console.error(error);
-			} else {
-				location.href = data.redirect_uri;
-			}
-		} catch (err) {
-			console.error(err);
-		}
-	};
-
-	return (
-		<div class="oauth-authorize">
-			<ErrorBoundary
-				fallback={() => (
-					<div class="error">error: {(data.error as Error)?.message}</div>
-				)}
-			>
-				<Show when={data.loading}>
-					loading...
-				</Show>
-				<Show when={data()}>
-					<OauthAuthorizePrompt data={data()} />
-					<pre style="display:none">{JSON.stringify(data(), null, 2)}</pre>
-					authorize {data().application.name}?
-					<button onClick={authorize}>authorize</button>
-				</Show>
-			</ErrorBoundary>
-		</div>
-	);
-};
-
-export const OauthAuthorizePrompt = (props: VoidProps<{ data: any }>) => {
-	return (
-		<div>
-			signed in as {props.data.auth_user.id}
-		</div>
 	);
 };
