@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use common::v1::types::{util::Time, SessionToken, UserId};
@@ -42,8 +42,8 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
             .headers
             .typed_get()
             .ok_or_else(|| Error::MissingAuth)?;
-        let session = s
-            .services()
+        let srv = s.services();
+        let session = srv
             .sessions
             .get_by_token(SessionToken(auth.token().to_string()))
             .await
@@ -53,6 +53,10 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed {
             })?;
         if session.expires_at.is_some_and(|t| t < Time::now_utc()) {
             return Err(Error::MissingAuth);
+        }
+        if session.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
+            s.data().session_set_last_seen_at(session.id).await?;
+            srv.sessions.invalidate(session.id).await;
         }
         Ok(Self(session))
     }

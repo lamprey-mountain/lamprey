@@ -22,9 +22,9 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id)
-            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6)
-            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id"#,
+            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now())
+            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at"#,
             session_id,
             create.token.0,
             create.name,
@@ -40,8 +40,8 @@ impl DataSession for Postgres {
     async fn session_get(&self, id: SessionId) -> Result<Session> {
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id FROM session WHERE id = $1"#,
-            id.into_inner()
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at FROM session WHERE id = $1"#,
+            *id,
         )
         .fetch_one(&self.pool)
         .await?;
@@ -51,7 +51,7 @@ impl DataSession for Postgres {
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id FROM session WHERE token = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at FROM session WHERE token = $1"#,
             token.0
         )
             .fetch_one(&self.pool)
@@ -64,7 +64,7 @@ impl DataSession for Postgres {
         let status_db: DbSessionStatus = status.into();
         query!(
             r#"UPDATE session SET status = $2, user_id = $3 WHERE id = $1"#,
-            session_id.into_inner(),
+            *session_id,
             status_db as _,
             user_id,
         )
@@ -85,19 +85,19 @@ impl DataSession for Postgres {
             query_as!(
                 DbSession,
                 r#"
-        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id FROM session
+        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at FROM session
         	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
-                user_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *user_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
             query_scalar!(
                 "SELECT count(*) FROM session WHERE user_id = $1 AND status != 'Unauthorized'",
-                user_id.into_inner()
+                *user_id
             ),
             |i: &Session| i.id.to_string()
         )
@@ -119,23 +119,33 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id
+            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at
             FROM session
             WHERE id = $1
             FOR UPDATE
             "#,
             session_id.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await?;
         query!(
             "UPDATE session SET name = $2 WHERE id = $1",
-            session_id.into_inner(),
+            *session_id,
             patch.name.unwrap_or(session.name),
         )
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
+        Ok(())
+    }
+
+    async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()> {
+        query!(
+            "UPDATE session SET last_seen_at = now() WHERE id = $1",
+            *session_id
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

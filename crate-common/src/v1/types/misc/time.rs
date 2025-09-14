@@ -1,5 +1,5 @@
 use std::{
-    ops::{Add, Deref},
+    ops::{Add, Deref, Sub},
     time::Duration,
 };
 
@@ -74,5 +74,13 @@ impl Add<Duration> for Time {
 
     fn add(self, rhs: Duration) -> Self::Output {
         Time::from(self.0 + rhs)
+    }
+}
+
+impl Sub<Duration> for Time {
+    type Output = Time;
+
+    fn sub(self, rhs: Duration) -> Self::Output {
+        Time::from(self.0 - rhs)
     }
 }

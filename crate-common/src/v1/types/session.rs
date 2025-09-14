@@ -46,6 +46,9 @@ pub struct Session {
 
     /// the oauth application this belongs to
     pub app_id: Option<ApplicationId>,
+
+    /// the last time this session was used
+    pub last_seen_at: Time,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

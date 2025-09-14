@@ -177,6 +177,7 @@ pub struct DbSession {
     pub expires_at: Option<PrimitiveDateTime>,
     pub ty: String,
     pub application_id: Option<Uuid>,
+    pub last_seen_at: PrimitiveDateTime,
 }
 
 pub struct DbSessionCreate {
@@ -213,6 +214,7 @@ impl From<DbSession> for Session {
             expires_at: row.expires_at.map(|t| t.into()),
             ty: SessionType::from_str(&row.ty).unwrap_or(SessionType::User),
             app_id: row.application_id.map(Into::into),
+            last_seen_at: row.last_seen_at.into(),
         }
     }
 }

@@ -333,6 +333,7 @@ pub trait DataSession {
     ) -> Result<PaginationResponse<Session>>;
     async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&self, session_id: SessionId) -> Result<()>;
+    async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()>;
 }
 
 #[async_trait]
