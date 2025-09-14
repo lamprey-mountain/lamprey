@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
@@ -44,6 +45,11 @@ async fn role_create(
     let perms = srv.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
+
+    for p in &json.permissions {
+        perms.ensure(*p)?;
+    }
+
     let room = srv.rooms.get(room_id, None).await?;
     let rank = srv.perms.get_user_rank(room_id, user_id).await?;
     if rank == 0 && room.owner_id != Some(user_id) {
@@ -126,6 +132,15 @@ async fn role_update(
     let room = srv.rooms.get(room_id, None).await?;
     if rank <= start_role.position && room.owner_id != Some(user_id) {
         return Err(Error::BadStatic("your rank is too low"));
+    }
+
+    if let Some(new_perms) = &json.permissions {
+        let new_perms_set: HashSet<Permission> = new_perms.iter().cloned().collect();
+        let old_perms_set: HashSet<Permission> = start_role.permissions.iter().cloned().collect();
+
+        for p in new_perms_set.symmetric_difference(&old_perms_set) {
+            perms.ensure(*p)?;
+        }
     }
     d.role_update(room_id, role_id, json.clone()).await?;
     let end_role = d.role_select(room_id, role_id).await?;
