@@ -75,6 +75,12 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
                     let user = s.services().users.get(user_id).await?;
                     let puppet = s.services().users.get(puppet_id).await?;
 
+                    if let Some(bot) = puppet.bot {
+                        if bot.owner_id == user.id {
+                            return Ok(Self(session, puppet_id));
+                        }
+                    }
+
                     let Some(bot) = user.bot else {
                         return Err(Error::BadStatic("user is not a bot"));
                     };
