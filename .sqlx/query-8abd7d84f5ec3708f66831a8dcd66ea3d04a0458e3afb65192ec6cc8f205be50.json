@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT id, owner_id, name, description, bridge, public\n            FROM application\n        \tWHERE id = $1\n            ",
+  "query": "\n        \tSELECT id, owner_id, name, description, bridge, public, oauth_secret, oauth_redirect_uris, oauth_confidential\n            FROM application\n        \tWHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,21 @@
         "ordinal": 5,
         "name": "public",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "oauth_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "oauth_redirect_uris",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "oauth_confidential",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -45,8 +60,11 @@
       false,
       true,
       false,
+      false,
+      true,
+      false,
       false
     ]
   },
-  "hash": "0727751b9de2def8913e45c27cc627ff7e24031455872176c6214052486572c8"
+  "hash": "8abd7d84f5ec3708f66831a8dcd66ea3d04a0458e3afb65192ec6cc8f205be50"
 }

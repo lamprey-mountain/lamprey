@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            update application set\n                name = $2,\n                description = $3,\n                bridge = $4,\n                public = $5,\n                oauth_secret = $6,\n                oauth_redirect_uris = $7,\n                oauth_confidential = $8\n            where id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool",
+        "Text",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f16558ba334a5fa6d8ccf9034570ed219e46573b64c13ba8146b80490cc965f4"
+}

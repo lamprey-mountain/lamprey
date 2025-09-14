@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            \tSELECT id, owner_id, name, description, bridge, public\n                FROM application\n            \tWHERE owner_id = $1 AND id > $2 AND id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "query": "\n            \tSELECT id, owner_id, name, description, bridge, public, oauth_secret, oauth_redirect_uris, oauth_confidential\n                FROM application\n            \tWHERE owner_id = $1 AND id > $2 AND id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,21 @@
         "ordinal": 5,
         "name": "public",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "oauth_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "oauth_redirect_uris",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "oauth_confidential",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -49,8 +64,11 @@
       false,
       true,
       false,
+      false,
+      true,
+      false,
       false
     ]
   },
-  "hash": "c0f90849d7f7ea2a7e9b821b593664b93032c62453c90f910e13be024b611e37"
+  "hash": "af1bd07d7b530cc40cc244b9d2367558f11b5ca4e4c356c68b7eb509e6dc08d0"
 }

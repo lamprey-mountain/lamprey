@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, token, status as \"status: _\", name FROM session WHERE id = $1",
+  "query": "SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id FROM session WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -38,6 +38,21 @@
         "ordinal": 4,
         "name": "name",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expires_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "ty",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "application_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -50,8 +65,11 @@
       true,
       false,
       false,
+      true,
+      true,
+      false,
       true
     ]
   },
-  "hash": "fdd09855fdd395cca66c7f48ff4d023013268b95177a42398d7b383cd8f7d47f"
+  "hash": "85a5de3477c3b4e68d2e4035e55a25e4a1361897e36b51d0e6dc98bd1e5d1e2f"
 }

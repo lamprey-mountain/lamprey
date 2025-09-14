@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select\n                c.application_id, c.scopes as scopes, c.created_at,\n                a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,\n                a.bridge as app_bridge, a.public as app_public, a.oauth_secret as app_oauth_secret,\n                a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential\n            from connection c\n            join application a on c.application_id = a.id\n            where c.user_id = $1 and c.application_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "application_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "scopes",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "app_owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "app_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "app_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "app_bridge",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "app_public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "app_oauth_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "app_oauth_redirect_uris",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 10,
+        "name": "app_oauth_confidential",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "2f332324e40c2958fbfbc4a292f9f6e590d48939b183de9e7218f0d84ff490a3"
+}

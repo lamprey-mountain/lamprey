@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        \tSELECT id, user_id, token, status as \"status: _\", name FROM session\n        \tWHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'\n        \tORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n        \t",
+  "query": "\n            SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id\n            FROM session\n            WHERE id = $1\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -38,15 +38,26 @@
         "ordinal": 4,
         "name": "name",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "expires_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "ty",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "application_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -54,8 +65,11 @@
       true,
       false,
       false,
+      true,
+      true,
+      false,
       true
     ]
   },
-  "hash": "d4647992c386eb26299c36d2f196e4f7a06c6977d09765c98833409a430279d7"
+  "hash": "ec26ec5874c1377d4a8fccc8998822da20336f75f9012f9a0e18e868e6ab36e5"
 }
