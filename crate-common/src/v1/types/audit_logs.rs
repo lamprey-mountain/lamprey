@@ -4,8 +4,8 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
-    RoomId, SessionId, ThreadId, UserId,
+    role::RoleReorderItem, AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId,
+    PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
 };
 
 // pub const SERVER_ROOM_ID: Uuid = uuid!("00000000-0000-0000-0000-000000000000");
@@ -89,6 +89,10 @@ pub enum AuditLogEntryType {
 
     RoleDelete {
         role_id: RoleId,
+    },
+
+    RoleReorder {
+        roles: Vec<RoleReorderItem>,
     },
 
     InviteCreate {

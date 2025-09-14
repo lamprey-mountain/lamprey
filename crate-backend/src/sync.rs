@@ -421,6 +421,7 @@ impl Connection {
                 }
             }
             MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
+            MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),

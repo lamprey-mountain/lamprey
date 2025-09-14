@@ -13,6 +13,7 @@ use crate::v1::types::{
 use super::{
     emoji::EmojiCustom,
     reaction::ReactionKey,
+    role::RoleReorderItem,
     user_config::UserConfig,
     voice::{SignallingMessage, VoiceState},
     EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
@@ -189,6 +190,11 @@ pub enum MessageSync {
     RoleDelete {
         room_id: RoomId,
         role_id: RoleId,
+    },
+
+    RoleReorder {
+        room_id: RoomId,
+        roles: Vec<RoleReorderItem>,
     },
 
     InviteCreate {
