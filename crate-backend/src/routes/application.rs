@@ -24,7 +24,7 @@ use validator::Validate;
 
 use crate::{
     routes::util::{AuthWithSession, HeaderReason},
-    types::DbUserCreate,
+    types::{DbSessionCreate, DbUserCreate},
     ServerState,
 };
 
@@ -195,13 +195,13 @@ async fn app_create_session(
     if app.owner_id == auth_user_id {
         let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
         let session = data
-            .session_create(
-                token.clone(),
-                json.name,
-                None,
-                SessionType::Access,
-                Some(app.id),
-            )
+            .session_create(DbSessionCreate {
+                token: token.clone(),
+                name: json.name,
+                expires_at: None,
+                ty: SessionType::User,
+                application_id: None,
+            })
             .await?;
         data.session_set_status(
             session.id,
@@ -551,13 +551,13 @@ async fn oauth_token(
     let expires_in = 3600; // 1 hour
     let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
     let session = data
-        .session_create(
-            token.clone(),
-            Some(app.name),
-            Some(expires_at),
-            SessionType::Access,
-            Some(app_id),
-        )
+        .session_create(DbSessionCreate {
+            token: token.clone(),
+            name: Some(app.name),
+            expires_at: Some(expires_at),
+            ty: SessionType::Access,
+            application_id: Some(app_id),
+        })
         .await?;
     data.session_set_status(session.id, SessionStatus::Authorized { user_id })
         .await?;

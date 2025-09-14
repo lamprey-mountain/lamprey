@@ -13,7 +13,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::types::SessionIdReq;
+use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
 use super::util::{AuthRelaxed, AuthWithSession};
@@ -37,7 +37,13 @@ pub async fn session_create(
     let data = s.data();
     let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
     let session = data
-        .session_create(token.clone(), json.name, None, SessionType::User, None)
+        .session_create(DbSessionCreate {
+            token: token.clone(),
+            name: json.name,
+            expires_at: None,
+            ty: SessionType::User,
+            application_id: None,
+        })
         .await?;
     let session_with_token = SessionWithToken { session, token };
     Ok((StatusCode::CREATED, Json(session_with_token)))

@@ -18,14 +18,7 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataSession for Postgres {
-    async fn session_create(
-        &self,
-        token: SessionToken,
-        name: Option<String>,
-        expires_at: Option<Time>,
-        ty: SessionType,
-        application_id: Option<ApplicationId>,
-    ) -> Result<Session> {
+    async fn session_create(&self, create: DbSessionCreate) -> Result<Session> {
         let session_id = Uuid::now_v7();
         let session = query_as!(
             DbSession,
@@ -34,11 +27,11 @@ impl DataSession for Postgres {
             VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6)
             RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id"#,
             session_id,
-            token.0,
-            name,
-            expires_at.map(PrimitiveDateTime::from),
-            ty.to_string(),
-            application_id.map(|id| id.into_inner()),
+            create.token.0,
+            create.name,
+            create.expires_at.map(PrimitiveDateTime::from),
+            create.ty.to_string(),
+            create.application_id.map(|id| id.into_inner()),
         )
         .fetch_one(&self.pool)
         .await?;

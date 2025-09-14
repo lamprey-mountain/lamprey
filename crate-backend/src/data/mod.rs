@@ -19,11 +19,11 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbThreadCreate, DbThreadPrivate, DbUserCreate,
-    EmailPurpose, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message, MessageId,
-    MessageRef, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId, RolePatch,
-    RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, Thread,
-    ThreadId, ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbSessionCreate, DbThreadCreate, DbThreadPrivate,
+    DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message,
+    MessageId, MessageRef, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId,
+    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
+    Thread, ThreadId, ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -315,16 +315,7 @@ pub trait DataMessage {
 
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(
-        &self,
-        token: SessionToken,
-        name: Option<String>,
-        expires_at: Option<Time>,
-        ty: SessionType,
-        application_id: Option<ApplicationId>,
-    ) -> Result<Session>;
-    // replace the above with below
-    // async fn session_create(&self, session: DbSession) -> Result<Session>;
+    async fn session_create(&self, create: DbSessionCreate) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;

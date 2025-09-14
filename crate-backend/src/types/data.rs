@@ -8,6 +8,7 @@ use std::str::FromStr;
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
+pub use common::v1::types::ids::*;
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
 pub struct DbRoom {
@@ -176,6 +177,14 @@ pub struct DbSession {
     pub expires_at: Option<PrimitiveDateTime>,
     pub ty: String,
     pub application_id: Option<Uuid>,
+}
+
+pub struct DbSessionCreate {
+    pub token: SessionToken,
+    pub name: Option<String>,
+    pub expires_at: Option<Time>,
+    pub ty: SessionType,
+    pub application_id: Option<ApplicationId>,
 }
 
 #[derive(sqlx::Type)]
