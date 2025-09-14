@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::{Error, Result};
 use common::v1::types::{
     self, misc::UserIdReq, pagination::PaginationQuery, ApplicationId, Media, MediaCreate,
-    MediaCreateSource, MessageCreate, MessageId, RoomId, Session, Thread, ThreadId, ThreadType,
-    User, UserId,
+    MediaCreateSource, MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId,
+    ThreadType, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -38,73 +38,76 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn thread_create(&mut self, thread: Thread) -> Result<()> {
-        info!("chat upsert thread");
-        let Some(autobridge_config) = self
-            .globals
-            .config
-            .autobridge
-            .iter()
-            .find(|c| c.lamprey_room_id == thread.room_id.unwrap())
-        else {
-            return Ok(());
-        };
+    async fn sync(&mut self, msg: MessageSync) -> std::result::Result<(), Self::Error> {
+        match msg {
+            MessageSync::ThreadCreate { thread } => {
+                info!("chat upsert thread");
+                let Some(autobridge_config) = self
+                    .globals
+                    .config
+                    .autobridge
+                    .iter()
+                    .find(|c| c.lamprey_room_id == thread.room_id.unwrap())
+                else {
+                    return Ok(());
+                };
 
-        if self
-            .globals
-            .get_portal_by_thread_id(thread.id)
-            .await?
-            .is_some()
-        {
-            return Ok(());
-        }
+                if self
+                    .globals
+                    .get_portal_by_thread_id(thread.id)
+                    .await?
+                    .is_some()
+                {
+                    return Ok(());
+                }
 
-        if let Err(e) = self
-            .globals
-            .bridge_chan
-            .send(BridgeMessage::LampreyThreadCreate {
-                thread_id: thread.id,
-                room_id: autobridge_config.lamprey_room_id,
-                thread_name: thread.name,
-                discord_guild_id: autobridge_config.discord_guild_id,
-            })
-            .await
-        {
-            error!("failed to send lamprey thread create message: {e}");
-        }
-        Ok(())
-    }
-
-    async fn message_create(&mut self, message: types::Message) -> Result<()> {
-        info!("chat upsert message");
-        self.globals
-            .portal_send(
-                message.thread_id,
-                PortalMessage::LampreyMessageCreate { message },
-            )
-            .await;
-        Ok(())
-    }
-
-    async fn message_update(&mut self, message: types::Message) -> Result<()> {
-        info!("chat upsert message");
-        self.globals
-            .portal_send(
-                message.thread_id,
-                PortalMessage::LampreyMessageUpdate { message },
-            )
-            .await;
-        Ok(())
-    }
-
-    async fn message_delete(&mut self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
-        info!("chat delete message");
-        self.globals
-            .portal_send(
+                if let Err(e) = self
+                    .globals
+                    .bridge_chan
+                    .send(BridgeMessage::LampreyThreadCreate {
+                        thread_id: thread.id,
+                        room_id: autobridge_config.lamprey_room_id,
+                        thread_name: thread.name,
+                        discord_guild_id: autobridge_config.discord_guild_id,
+                    })
+                    .await
+                {
+                    error!("failed to send lamprey thread create message: {e}");
+                }
+            }
+            MessageSync::MessageCreate { message } => {
+                info!("lamprey message create");
+                self.globals
+                    .portal_send(
+                        message.thread_id,
+                        PortalMessage::LampreyMessageCreate { message },
+                    )
+                    .await;
+            }
+            MessageSync::MessageUpdate { message } => {
+                info!("lamprey message update");
+                self.globals
+                    .portal_send(
+                        message.thread_id,
+                        PortalMessage::LampreyMessageUpdate { message },
+                    )
+                    .await;
+            }
+            MessageSync::MessageDelete {
+                room_id: _,
                 thread_id,
-                PortalMessage::LampreyMessageDelete { message_id },
-            )
-            .await;
+                message_id,
+            } => {
+                info!("lamprey message delete");
+                self.globals
+                    .portal_send(
+                        thread_id,
+                        PortalMessage::LampreyMessageDelete { message_id },
+                    )
+                    .await;
+            }
+            _ => {}
+        }
         Ok(())
     }
 }

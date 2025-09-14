@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
-    Message, MessageClient, MessageCreate, MessageType, Session, User, UserId,
+    Message, MessageClient, MessageCreate, MessageSync, MessageType, Session, User, UserId,
 };
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
@@ -117,6 +117,56 @@ impl Handle {
         } else {
             warn!("no user for this connection");
         }
+        Ok(())
+    }
+
+    async fn handle_message(&mut self, message: Message) -> anyhow::Result<()> {
+        let content = match &message.message_type {
+            MessageType::DefaultMarkdown(m) => m.content.as_deref(),
+            // MessageType::MessagePinned(message_pin) => todo!(),
+            // MessageType::MessageUnpinned(message_pin) => todo!(),
+            // MessageType::MemberAdd(message_member) => todo!(),
+            // MessageType::MemberRemove(message_member) => todo!(),
+            // MessageType::MemberJoin(message_member) => todo!(),
+            // MessageType::Call(message_call) => todo!(),
+            // MessageType::ThreadRename(message_thread_rename) => todo!(),
+            // MessageType::ThreadPingback(message_thread_pingback) => todo!(),
+            _ => None,
+        };
+
+        if let Some(content) = content {
+            debug!("message from {}: {}", message.author_id, content);
+        } else {
+            debug!("message from {} without content", message.author_id);
+        }
+
+        if let Some(command) = content.and_then(|c| c.strip_prefix("!")) {
+            debug!("got raw command {command:?}");
+            let command =
+                Command::try_parse_from(std::iter::once("bot").chain(command.split_whitespace()));
+            let resp = match command {
+                Ok(command) => {
+                    debug!("got command {command:?}");
+                    match self.handle_command(&message, command).await {
+                        Ok(s) => s,
+                        Err(e) => e.to_string(),
+                    }
+                }
+                Err(err) => err.to_string(),
+            };
+            let resp = MessageCreate {
+                content: Some(resp.into()),
+                attachments: vec![],
+                metadata: None,
+                reply_id: Some(message.id),
+                override_name: None,
+                nonce: None,
+                embeds: vec![],
+                created_at: None,
+            };
+            self.http.message_create(message.thread_id, &resp).await?;
+        }
+
         Ok(())
     }
 
@@ -267,85 +317,35 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn message_create(&mut self, message: Message) -> Result<(), Self::Error> {
-        let content = match &message.message_type {
-            MessageType::DefaultMarkdown(m) => m.content.as_deref(),
-            // MessageType::MessagePinned(message_pin) => todo!(),
-            // MessageType::MessageUnpinned(message_pin) => todo!(),
-            // MessageType::MemberAdd(message_member) => todo!(),
-            // MessageType::MemberRemove(message_member) => todo!(),
-            // MessageType::MemberJoin(message_member) => todo!(),
-            // MessageType::Call(message_call) => todo!(),
-            // MessageType::ThreadRename(message_thread_rename) => todo!(),
-            // MessageType::ThreadPingback(message_thread_pingback) => todo!(),
-            _ => None,
-        };
-
-        if let Some(content) = content {
-            debug!("message from {}: {}", message.author_id, content);
-        } else {
-            debug!("message from {} without content", message.author_id);
-        }
-
-        if let Some(command) = content.and_then(|c| c.strip_prefix("!")) {
-            debug!("got raw command {command:?}");
-            let command =
-                Command::try_parse_from(std::iter::once("bot").chain(command.split_whitespace()));
-            let resp = match command {
-                Ok(command) => {
-                    debug!("got command {command:?}");
-                    match self.handle_command(&message, command).await {
-                        Ok(s) => s,
-                        Err(e) => e.to_string(),
+    async fn sync(&mut self, msg: MessageSync) -> Result<(), Self::Error> {
+        match msg {
+            MessageSync::MessageCreate { message } => self.handle_message(message).await?,
+            MessageSync::VoiceState {
+                user_id,
+                state,
+                old_state: _,
+            } => {
+                debug!("got voice state for {user_id}: {state:?}");
+                if let Some(user) = &self.user {
+                    if user.id == user_id && state == None {
+                        if let Some(p) = &*self.player.lock().await {
+                            p.send(PlayerCommand::Stop).await?;
+                        }
                     }
-                }
-                Err(err) => err.to_string(),
-            };
-            let resp = MessageCreate {
-                content: Some(resp.into()),
-                attachments: vec![],
-                metadata: None,
-                reply_id: Some(message.id),
-                override_name: None,
-                nonce: None,
-                embeds: vec![],
-                created_at: None,
-            };
-            self.http.message_create(message.thread_id, &resp).await?;
-        }
+                };
 
-        Ok(())
-    }
-
-    async fn voice_state(
-        &mut self,
-        user_id: UserId,
-        state: Option<VoiceState>,
-    ) -> Result<(), Self::Error> {
-        debug!("got voice state for {user_id}: {state:?}");
-        if let Some(user) = &self.user {
-            if user.id == user_id && state == None {
-                if let Some(p) = &*self.player.lock().await {
-                    p.send(PlayerCommand::Stop).await?;
+                self.voice_states.retain(|s| s.user_id != user_id);
+                if let Some(state) = state {
+                    self.voice_states.push(state);
                 }
             }
-        };
-
-        self.voice_states.retain(|s| s.user_id != user_id);
-        if let Some(state) = state {
-            self.voice_states.push(state);
-        }
-        Ok(())
-    }
-
-    async fn voice_dispatch(
-        &mut self,
-        user_id: UserId,
-        payload: SignallingMessage,
-    ) -> Result<(), Self::Error> {
-        debug!("got voice dispatch for {user_id}: {payload:?}");
-        if let Some(p) = &*self.player.lock().await {
-            p.send(PlayerCommand::Signalling(payload)).await?;
+            MessageSync::VoiceDispatch { user_id, payload } => {
+                debug!("got voice dispatch for {user_id}: {payload:?}");
+                if let Some(p) = &*self.player.lock().await {
+                    p.send(PlayerCommand::Signalling(payload)).await?;
+                }
+            }
+            _ => {}
         }
         Ok(())
     }
