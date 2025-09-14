@@ -457,7 +457,15 @@ export function createApi(
 		} else if (msg.type === "UserDelete") {
 			users.cache.delete(msg.id);
 		} else if (msg.type === "SessionCreate") {
-			// TODO
+			// NOTE: should this be a SessionUpdate? or a special SessionLogin/SessionAuth event?
+			// TODO: dont reload page on auth change
+			const s = session();
+			if (
+				msg.session?.id === s?.id && s.status === "Unauthorized" &&
+				msg.session.status === "Authorized"
+			) {
+				location.reload();
+			}
 		} else if (msg.type === "SessionUpdate") {
 			if (msg.session?.id === session()?.id) {
 				setSession(session);
