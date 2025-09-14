@@ -4,6 +4,7 @@ use common::v1::types::{
     SessionType, Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
 };
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
@@ -173,6 +174,8 @@ pub struct DbSession {
     pub status: DbSessionStatus,
     pub name: Option<String>,
     pub expires_at: Option<PrimitiveDateTime>,
+    pub ty: String,
+    pub application_id: Option<Uuid>,
 }
 
 #[derive(sqlx::Type)]
@@ -199,7 +202,8 @@ impl From<DbSession> for Session {
             },
             name: row.name,
             expires_at: row.expires_at.map(|t| t.into()),
-            ty: SessionType::User, // FIXME
+            ty: SessionType::from_str(&row.ty).unwrap_or(SessionType::User),
+            app_id: row.application_id.map(Into::into),
         }
     }
 }

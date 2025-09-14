@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -43,8 +43,9 @@ pub struct Session {
 
     /// when this token will expire. only set for oauth auth tokens
     pub expires_at: Option<Time>,
-    // /// the oauth application this belongs to
-    // pub app_id: Option<ApplicationId>,
+
+    /// the oauth application this belongs to
+    pub app_id: Option<ApplicationId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,7 +141,7 @@ impl Session {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SessionType {
     /// an user token
-    // NOTE: i might want to remove this and switch to purely oauth
+    // NOTE: i might remove this and switch to purely oauth
     User,
 
     /// an oauth2 access token
@@ -148,4 +149,28 @@ pub enum SessionType {
 
     /// an oauth2 refresh token
     Refresh,
+}
+
+impl fmt::Display for SessionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            SessionType::User => "User",
+            SessionType::Access => "Access",
+            SessionType::Refresh => "Refresh",
+        };
+        f.write_str(s)
+    }
+}
+
+impl FromStr for SessionType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "User" => Ok(SessionType::User),
+            "Access" => Ok(SessionType::Access),
+            "Refresh" => Ok(SessionType::Refresh),
+            _ => Err(()),
+        }
+    }
 }

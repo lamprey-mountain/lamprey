@@ -11,8 +11,8 @@ use common::v1::types::{
     util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
     ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
-    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionWithToken,
-    User, UserId,
+    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionType,
+    SessionWithToken, User, UserId,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -194,7 +194,15 @@ async fn app_create_session(
     let app = data.application_get(app_id).await?;
     if app.owner_id == auth_user_id {
         let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
-        let session = data.session_create(token.clone(), json.name, None).await?;
+        let session = data
+            .session_create(
+                token.clone(),
+                json.name,
+                None,
+                SessionType::Access,
+                Some(app.id),
+            )
+            .await?;
         data.session_set_status(
             session.id,
             SessionStatus::Authorized {
@@ -543,7 +551,13 @@ async fn oauth_token(
     let expires_in = 3600; // 1 hour
     let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
     let session = data
-        .session_create(token.clone(), Some(app.name), Some(expires_at))
+        .session_create(
+            token.clone(),
+            Some(app.name),
+            Some(expires_at),
+            SessionType::Access,
+            Some(app_id),
+        )
         .await?;
     data.session_set_status(session.id, SessionStatus::Authorized { user_id })
         .await?;
@@ -574,19 +588,18 @@ async fn oauth_introspect(
     AuthWithSession(session, user_id): AuthWithSession,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
-    // let Some(app_id) = session.app_id else {
-    //     return Err(Error::BadStatic("not an oauth token"));
-    // };
-    // let connection = s.data().connection_get(user_id, app_id).await?;
-    // let res = IntrospectResponse {
-    //     active: true,
-    //     scopes: connection.scopes,
-    //     client_id: app_id,
-    //     username: user_id,
-    //     exp: session.expires_at.map(|e| e.unix_timestamp() as u64),
-    // };
-    // Ok(Json(res))
+    let Some(app_id) = session.app_id else {
+        return Err(Error::BadStatic("not an oauth token"));
+    };
+    let connection = s.data().connection_get(user_id, app_id).await?;
+    let res = IntrospectResponse {
+        active: true,
+        scopes: connection.scopes,
+        client_id: app_id,
+        username: user_id,
+        exp: session.expires_at.map(|e| e.unix_timestamp() as u64),
+    };
+    Ok(Json(res))
 }
 
 /// Oauth revoke
@@ -626,7 +639,7 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
     Ok(Json(config))
 }
 
-/// Oauth userinfo (TODO)
+/// Oauth userinfo
 #[utoipa::path(
     get,
     path = "/oauth/userinfo",

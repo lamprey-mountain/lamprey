@@ -12,7 +12,7 @@ use common::v1::types::{
     MediaPatch, NotificationId, Permission, PermissionOverwriteType, Relationship,
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
+    SessionStatus, SessionToken, SessionType, ThreadMember, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -320,7 +320,11 @@ pub trait DataSession {
         token: SessionToken,
         name: Option<String>,
         expires_at: Option<Time>,
+        ty: SessionType,
+        application_id: Option<ApplicationId>,
     ) -> Result<Session>;
+    // replace the above with below
+    // async fn session_create(&self, session: DbSession) -> Result<Session>;
     async fn session_get(&self, session_id: SessionId) -> Result<Session>;
     async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
     async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;

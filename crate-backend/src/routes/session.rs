@@ -7,7 +7,7 @@ use axum::{extract::State, Json};
 use common::v1::types::util::Diff;
 use common::v1::types::{
     MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId,
-    SessionPatch, SessionStatus, SessionToken, SessionWithToken,
+    SessionPatch, SessionStatus, SessionToken, SessionType, SessionWithToken,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -36,7 +36,9 @@ pub async fn session_create(
     json.validate()?;
     let data = s.data();
     let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
-    let session = data.session_create(token.clone(), json.name, None).await?;
+    let session = data
+        .session_create(token.clone(), json.name, None, SessionType::User, None)
+        .await?;
     let session_with_token = SessionWithToken { session, token };
     Ok((StatusCode::CREATED, Json(session_with_token)))
 }
