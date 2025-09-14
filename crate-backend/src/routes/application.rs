@@ -13,9 +13,9 @@ use common::v1::types::{
     },
     util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
-    ExternalPlatform, MessageSync, PaginationQuery, Permission, Puppet, PuppetCreate, RoomId,
-    RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus, SessionToken, SessionType,
-    SessionWithToken, UserId,
+    ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission, Puppet,
+    PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
+    SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
@@ -39,7 +39,10 @@ use crate::error::{Error, Result};
     post,
     path = "/app",
     tags = ["application"],
-    responses((status = CREATED, description = "success"))
+    request_body = ApplicationCreate,
+    responses(
+        (status = CREATED, description = "success", body = Application)
+    )
 )]
 async fn app_create(
     Auth(auth_user_id): Auth,
@@ -85,7 +88,10 @@ async fn app_create(
     get,
     path = "/app",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    params(PaginationQuery<ApplicationId>),
+    responses(
+        (status = OK, description = "success", body = PaginationResponse<Application>)
+    )
 )]
 async fn app_list(
     Auth(auth_user_id): Auth,
@@ -105,7 +111,9 @@ async fn app_list(
     get,
     path = "/app/{app_id}",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = OK, description = "success", body = Application)
+    )
 )]
 async fn app_get(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -127,7 +135,10 @@ async fn app_get(
     patch,
     path = "/app/{app_id}",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    request_body = ApplicationPatch,
+    responses(
+        (status = OK, description = "success", body = Application)
+    )
 )]
 async fn app_patch(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -163,7 +174,9 @@ async fn app_patch(
     delete,
     path = "/app/{app_id}",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = NO_CONTENT, description = "success")
+    )
 )]
 async fn app_delete(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -184,7 +197,10 @@ async fn app_delete(
     post,
     path = "/app/{app_id}/session",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    request_body = SessionCreate,
+    responses(
+        (status = CREATED, description = "success", body = SessionWithToken)
+    )
 )]
 async fn app_create_session(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -233,7 +249,10 @@ struct AppInviteBot {
     post,
     path = "/app/{app_id}/invite",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    request_body = AppInviteBot,
+    responses(
+        (status = NO_CONTENT, description = "success")
+    )
 )]
 async fn app_invite_bot(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -296,7 +315,11 @@ async fn app_invite_bot(
     put,
     path = "/app/{app_id}/puppet/{puppet_id}",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    request_body = PuppetCreate,
+    responses(
+        (status = OK, description = "success", body = User),
+        (status = CREATED, description = "created", body = User)
+    )
 )]
 async fn puppet_ensure(
     Path((app_id, puppet_id)): Path<(ApplicationId, String)>,
@@ -344,7 +367,9 @@ async fn puppet_ensure(
     post,
     path = "/app/{app_id}/rotate-secret",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = OK, description = "success", body = Application)
+    )
 )]
 async fn app_rotate_secret(
     Path((app_id,)): Path<(ApplicationId,)>,
@@ -366,7 +391,10 @@ async fn app_rotate_secret(
     get,
     path = "/oauth/authorize",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    params(OauthAuthorizeParams),
+    responses(
+        (status = OK, description = "success", body = OauthAuthorizeInfo)
+    )
 )]
 async fn oauth_info(
     Auth(auth_user_id): Auth,
@@ -411,7 +439,10 @@ async fn oauth_info(
     post,
     path = "/oauth/authorize",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    params(OauthAuthorizeParams),
+    responses(
+        (status = OK, description = "success", body = OauthAuthorizeResponse)
+    )
 )]
 async fn oauth_authorize(
     Auth(auth_user_id): Auth,
@@ -473,7 +504,10 @@ async fn oauth_authorize(
     post,
     path = "/oauth/token",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    request_body = OauthTokenRequest,
+    responses(
+        (status = OK, description = "success", body = OauthTokenResponse)
+    )
 )]
 async fn oauth_token(
     State(s): State<Arc<ServerState>>,
@@ -559,7 +593,9 @@ async fn oauth_token(
     post,
     path = "/oauth/introspect",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = OK, description = "success", body = OauthIntrospectResponse)
+    )
 )]
 async fn oauth_introspect(
     AuthWithSession(session, user_id): AuthWithSession,
@@ -584,7 +620,9 @@ async fn oauth_introspect(
     post,
     path = "/oauth/revoke",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = NO_CONTENT, description = "success")
+    )
 )]
 async fn oauth_revoke(
     AuthWithSession(session, _): AuthWithSession,
@@ -602,7 +640,9 @@ async fn oauth_revoke(
     get,
     path = "/oauth/.well-known/openid-configuration",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = OK, description = "success", body = Autoconfig)
+    )
 )]
 async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     let config = Autoconfig {
@@ -632,7 +672,9 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
     get,
     path = "/oauth/userinfo",
     tags = ["application"],
-    responses((status = OK, description = "success"))
+    responses(
+        (status = OK, description = "success", body = Userinfo)
+    )
 )]
 async fn oauth_userinfo(
     Auth(auth_user_id): Auth,
