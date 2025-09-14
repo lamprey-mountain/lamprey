@@ -41,11 +41,8 @@ pub struct Application {
     /// only returned on oauth token rotate endpoint
     pub oauth_secret: Option<String>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
+    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
     pub oauth_redirect_uris: Vec<String>,
 
     /// oauth whether this client can keep secrets confidential
