@@ -237,12 +237,10 @@ export const Voice = (p: { thread: Thread }) => {
 export const VoiceTray = () => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
-	const thread = voice.threadId
-		? api.threads.fetch(() => voice.threadId!)
-		: () => null;
-	const room = thread()?.room_id
-		? api.rooms.fetch(() => thread()?.room_id!)
-		: () => null;
+	const thread = () =>
+		voice.threadId ? api.threads.fetch(() => voice.threadId!)() : null;
+	const room = () =>
+		thread()?.room_id ? api.rooms.fetch(() => thread()?.room_id!)() : null;
 	const user = () => api.users.cache.get("@self");
 
 	const calcConnectedDuration = () => {
