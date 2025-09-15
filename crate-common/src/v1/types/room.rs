@@ -46,7 +46,7 @@ pub struct Room {
 
     pub icon: Option<MediaId>,
 
-    #[serde(flatten)]
+    #[serde(rename = "type")]
     pub room_type: RoomType,
 
     /// number of people in this room
@@ -118,7 +118,6 @@ pub struct RoomPatch {
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "type")]
 pub enum RoomType {
     /// the default generic room type
     #[default]
