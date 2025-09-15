@@ -34,11 +34,13 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 			classList={{ color: !!props.embed.color }}
 			style={{ "--color": props.embed.color || undefined }}
 		>
-			<Show when={props.embed.title}>
+			<Show when={props.embed.title || props.embed.url}>
 				<div class="info">
 					<header>
 						<Show when={props.embed.url} fallback={<b>{props.embed.title}</b>}>
-							<a class="title" href={props.embed.url!}>{props.embed.title}</a>
+							<a class="title" href={props.embed.url!}>
+								{props.embed.title || props.embed.url}
+							</a>
 						</Show>
 						<Show when={props.embed.site_name || props.embed.url}>
 							<span class="site">
