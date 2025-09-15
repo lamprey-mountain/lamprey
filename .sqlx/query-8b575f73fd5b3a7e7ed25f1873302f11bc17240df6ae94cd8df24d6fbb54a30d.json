@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                  AND r.type != 'Server'\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
   "describe": {
     "columns": [
       {
@@ -81,5 +81,5 @@
       true
     ]
   },
-  "hash": "0c9a12e38f15ef0af46d0eda2828a298285f78e3b4759f9406c50cd3cf5eb931"
+  "hash": "8b575f73fd5b3a7e7ed25f1873302f11bc17240df6ae94cd8df24d6fbb54a30d"
 }
