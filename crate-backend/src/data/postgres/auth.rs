@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::application::Scope;
 use common::v1::types::email::EmailAddr;
-use common::v1::types::oauth::CodeChallengeMethod;
 use common::v1::types::{ApplicationId, SessionId};
 use sqlx::{query, query_scalar};
 
@@ -148,13 +147,8 @@ impl DataAuth for Postgres {
         redirect_uri: String,
         scopes: Vec<Scope>,
         code_challenge: Option<String>,
-        code_challenge_method: Option<CodeChallengeMethod>,
+        code_challenge_method: Option<String>,
     ) -> Result<()> {
-        let method = code_challenge_method.map(|m| match m {
-            CodeChallengeMethod::S256 => "S256",
-            CodeChallengeMethod::Plain => "plain",
-        });
-
         sqlx::query!(
             r#"
             INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at, code_challenge, code_challenge_method)
@@ -166,7 +160,7 @@ impl DataAuth for Postgres {
             redirect_uri,
             serde_json::to_value(scopes).unwrap(),
             code_challenge,
-            method,
+            code_challenge_method,
         )
         .execute(&self.pool)
         .await?;
