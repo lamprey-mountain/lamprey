@@ -7,6 +7,24 @@ function timeAgo(date: Date): string {
 		style: "long",
 		numeric: "auto",
 	});
+
+	if (diff < 0) {
+		if (diff > -1000 * 60) {
+			return "now";
+		}
+		if (diff > -1000 * 60 * 60) {
+			return fmt.format(-Math.round(diff / (1000 * 60)), "minute");
+		}
+		if (diff > -1000 * 60 * 60 * 24) {
+			return fmt.format(-Math.round(diff / (1000 * 60 * 60)), "hour");
+		}
+		if (diff > -1000 * 60 * 60 * 24 * 3000) {
+			return fmt.format(-Math.round(diff / (1000 * 60 * 60 * 24)), "day");
+		}
+
+		return "far later";
+	}
+
 	if (diff < 1000 * 60) return "now"; // FIXME: i18n
 	if (diff < 1000 * 60 * 60) {
 		return fmt.format(-Math.round(diff / (1000 * 60)), "minute");
@@ -14,7 +32,7 @@ function timeAgo(date: Date): string {
 	if (diff < 1000 * 60 * 60 * 24) {
 		return fmt.format(-Math.round(diff / (1000 * 60 * 60)), "hour");
 	}
-	if (diff < 1000 * 60 * 60 * 24 * 30) {
+	if (diff < 1000 * 60 * 60 * 24 * 3000) {
 		return fmt.format(-Math.round(diff / (1000 * 60 * 60 * 24)), "day");
 	}
 	// if (diff < 1000 * 60 * 60 * 24 * 365) return fmt.format(Math.round(diff / (1000 * 60 * 60 * 24)), "month");

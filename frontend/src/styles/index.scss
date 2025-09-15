@@ -1099,7 +1099,7 @@ code {
 	width: 64px;
 	display: block;
 	object-fit: contain;
-	background: $bg-100;
+	/* background: $bg-100; */
 	border-radius: 8px;
 
 	/* should probably add a way to crop images in browser */
@@ -2254,4 +2254,91 @@ button.big {
 	padding-right: calc(100% - 60ch);
 	padding-left: 0.25rem;
 	padding-top: 0.25rem;
+}
+
+.invites .invite {
+	display: flex;
+	align-items: center;
+	border-radius: 4px;
+	padding: 4px 2px;
+
+	&:hover {
+		background: $bg-300;
+	}
+
+	.code {
+		width: 8rem;
+
+		code {
+			background: none;
+		}
+	}
+
+	.creator {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 12rem;
+		overflow: hidden;
+
+		.info {
+			flex: 1;
+		}
+
+		.name {
+			@include truncate;
+		}
+
+		time {
+			@include truncate;
+		}
+
+		.avatar {
+			height: 36px;
+			width: 36px;
+		}
+	}
+
+	.uses {
+		width: 4rem;
+	}
+
+	.expires {
+		width: 6rem;
+	}
+
+	.dim {
+		font-size: 1rem;
+	}
+
+	.mono {
+		font-family: var(--font-mono);
+	}
+
+	button {
+		border: solid $sep-500 1px;
+	}
+}
+
+.invites header {
+	display: flex;
+
+	.code {
+		width: 8rem;
+		padding: 0 4px;
+	}
+
+	.creator {
+		width: 12rem;
+	}
+
+	.uses {
+		width: 4rem;
+	}
+
+	div {
+		font-weight: bold;
+		font-size: 0.9rem;
+		color: $fg-500;
+	}
 }

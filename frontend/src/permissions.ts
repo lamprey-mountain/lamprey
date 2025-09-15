@@ -8,9 +8,7 @@ type Perm = {
 };
 
 // unused permissions commented out for now
-export const permissions: Array<
-	Perm
-> = [
+export const permissions: Array<Perm> = [
 	{
 		id: "Admin",
 		name: "Admin",
@@ -262,8 +260,6 @@ export const moderatorPermissions: Array<Permission> = [
 	"BotsManage",
 	"EmojiAdd",
 	"EmojiManage",
-	"EmojiUseExternal",
-	"InviteCreate",
 	"InviteManage",
 	"MemberBan",
 	"MemberBridge",
@@ -276,7 +272,6 @@ export const moderatorPermissions: Array<Permission> = [
 	"RoleApply",
 	"RoleManage",
 	"RoomManage",
-	"ThreadArchive",
 	"ThreadDelete",
 	"ThreadEdit",
 	"ThreadLock",

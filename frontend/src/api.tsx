@@ -17,6 +17,7 @@ import type {
 	Client,
 	EmojiCustom,
 	Invite,
+	InviteWithMetadata,
 	Media,
 	Message,
 	MessageCreate,
@@ -582,7 +583,7 @@ export type Api = {
 	};
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;
-		list: (room_id: () => string) => Resource<Pagination<Invite>>;
+		list: (room_id: () => string) => Resource<Pagination<InviteWithMetadata>>;
 		cache: ReactiveMap<string, Invite>;
 	};
 	roles: {

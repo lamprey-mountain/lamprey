@@ -88,6 +88,7 @@ export function getColor(id: string) {
 
 type AvatarProps = {
 	user?: User;
+	pad?: number;
 	// room_member?: RoomMember,
 	// thread_member?: ThreadMember,
 };
@@ -103,8 +104,8 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 	}
 
 	const size = 64;
-	const pad = 4;
-	const totalSize = size + pad * 2;
+	const pad = () => props.pad ?? 4;
+	const totalSize = () => size + pad() * 2;
 	const circPos = size;
 	const circRad = 8;
 	const circPad = 6;
@@ -118,15 +119,22 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 		>
 			{/* not sure if i want avatars to be boxes, circles, rounded boxes, ..? */}
 			<mask id="rbox">
-				<rect rx="6" width={size} height={size} x={pad} y={pad} fill="white" />
+				<rect
+					rx="6"
+					width={size}
+					height={size}
+					x={pad()}
+					y={pad()}
+					fill="white"
+				/>
 				<circle cx={circPos} cy={circPos} r={circRad + circPad} fill="black" />
 			</mask>
 			<g mask="url(#rbox)">
 				<rect
 					width={size}
 					height={size}
-					x={pad}
-					y={pad}
+					x={pad()}
+					y={pad()}
 					fill={getColor(props.user?.id ?? "")}
 				/>
 				<Show when={props.user?.avatar}>
@@ -135,8 +143,8 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 						preserveAspectRatio="xMidYMid slice"
 						width={size}
 						height={size}
-						x={pad}
-						y={pad}
+						x={pad()}
+						y={pad()}
 						href={fetchThumb(props.user!.avatar!)!}
 					/>
 				</Show>
@@ -157,29 +165,33 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 	}
 
 	const size = 64;
-	const pad = 4;
-	const totalSize = size + pad * 2;
-	const circPos = size;
-	const circRad = 8;
-	const circPad = 6;
+	const pad = () => props.pad ?? 4;
+	const totalSize = () => size + pad() * 2;
 	return (
 		<svg
 			class="avatar status-indicator"
 			data-status={props.user?.status.type ?? "Offline"}
-			viewBox={`0 0 ${totalSize} ${totalSize}`}
+			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"
-			style={{ "--pad": `${pad}px` }}
+			style={{ "--pad": `${pad()}px` }}
 		>
 			{/* not sure if i want avatars to be boxes, circles, rounded boxes, ..? */}
 			<mask id="rbox2">
-				<rect rx="6" width={size} height={size} x={pad} y={pad} fill="white" />
+				<rect
+					rx="6"
+					width={size}
+					height={size}
+					x={pad()}
+					y={pad()}
+					fill="white"
+				/>
 			</mask>
 			<g mask="url(#rbox2)">
 				<rect
 					width={size}
 					height={size}
-					x={pad}
-					y={pad}
+					x={pad()}
+					y={pad()}
 					fill={getColor(props.user?.id ?? "")}
 				/>
 				<Show when={props.user?.avatar}>
@@ -188,8 +200,8 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 						preserveAspectRatio="xMidYMid slice"
 						width={size}
 						height={size}
-						x={pad}
-						y={pad}
+						x={pad()}
+						y={pad()}
 						href={fetchThumb(props.user!.avatar!)!}
 					/>
 				</Show>
