@@ -142,7 +142,7 @@ async fn admin_broadcast(
             let ss = s.clone();
             tokio::spawn(async move {
                 let srv = ss.services();
-                let (thread, _) = srv.users.init_dm(auth_user_id, user.id).await?;
+                let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id).await?;
                 if !thread.locked {
                     ss.data().thread_lock(thread.id).await?;
                     srv.threads.invalidate(thread.id).await;
