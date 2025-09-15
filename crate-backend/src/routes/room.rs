@@ -161,7 +161,7 @@ async fn room_list(
         .perms
         .for_room(user_id, SERVER_ROOM_ID)
         .await?
-        .has(Permission::Admin);
+        .has(Permission::ServerOversee);
     let res = data.room_list(user_id, q, is_admin).await?;
     Ok(Json(res))
 }

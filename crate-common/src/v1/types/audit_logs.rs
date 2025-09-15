@@ -197,4 +197,13 @@ pub enum AuditLogEntryType {
     UserRegistered {
         user_id: UserId,
     },
+
+    AdminWhisper {
+        user_id: UserId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    AdminBroadcast {
+        changes: Vec<AuditLogChange>,
+    },
 }

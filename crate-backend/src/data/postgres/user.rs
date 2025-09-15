@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{self};
+use common::v1::types::{self, PaginationDirection, PaginationQuery, PaginationResponse};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as, query_scalar, Acquire};
 use uuid::Uuid;
 
+use crate::data::postgres::Pagination;
 use crate::error::Result;
+use crate::gen_paginate;
 use crate::types::{DbUserCreate, User, UserId, UserPatch, UserVerId};
 
 use crate::data::DataUser;
@@ -202,6 +204,33 @@ impl DataUser for Postgres {
         .fetch_one(&self.pool)
         .await?;
         Ok(row.into())
+    }
+
+    async fn user_list(
+        &self,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<User>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbUser,
+                r#"
+                SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                FROM usr
+            	WHERE id > $1 AND id < $2
+            	  AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
+            	ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                "#,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!("SELECT count(*) FROM usr WHERE bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false"),
+            |i: &User| i.id.to_string()
+        )
     }
 
     async fn user_lookup_puppet(
