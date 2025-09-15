@@ -128,7 +128,7 @@ export function Input(props: InputProps) {
 			</Show>
 			<div class="text">
 				<label class="upload">
-					upload file
+					+
 					<input
 						multiple
 						type="file"

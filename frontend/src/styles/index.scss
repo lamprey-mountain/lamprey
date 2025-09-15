@@ -239,13 +239,21 @@ input[type="submit"] {
 
 		& > .text {
 			display: flex;
+			background: $bg-300;
+			border: solid $bg-400 1px;
+			box-shadow: 2px 2px 8px #1114;
+			border-radius: 4px;
+			overflow: hidden;
+			align-items: center;
 
 			& > .upload {
-				width: 124px;
-				padding: 4px;
-				background: $bg-300;
-				border: solid $bg-400 1px;
+				/* background: $bg-200; */
 				cursor: pointer;
+				width: 2rem;
+				height: 2rem;
+				display: grid;
+				place-items: center;
+				font-weight: bold;
 
 				&:hover {
 					background: $bg-200;
@@ -258,7 +266,7 @@ input[type="submit"] {
 
 			& > .editor {
 				flex: 1;
-				box-shadow: 2px 2px 8px #1114;
+				border: none;
 			}
 		}
 	}
