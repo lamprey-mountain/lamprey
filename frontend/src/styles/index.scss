@@ -1164,6 +1164,10 @@ button[disabled] {
 		padding: 8px;
 		max-width: 320px;
 
+		& header {
+			@include truncate;
+		}
+
 		& .title {
 			font-weight: bold;
 		}
