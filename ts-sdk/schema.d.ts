@@ -4,6 +4,46 @@
  */
 
 export interface paths {
+	"/api/v1/admin/broadcast": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin broadcast
+		 * @description send a system dm to everyone on the server
+		 */
+		post: operations["admin_broadcast"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/whisper": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin whisper
+		 * @description send a system dm to one person in particular
+		 */
+		post: operations["admin_whisper"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/app": {
 		parameters: {
 			query?: never;
@@ -536,7 +576,7 @@ export interface paths {
 		options?: never;
 		head?: never;
 		/**
-		 * Invite patch (TODO)
+		 * Invite patch
 		 * @description Edit an invite
 		 */
 		patch: operations["invite_patch"];
@@ -2354,6 +2394,13 @@ export interface components {
 			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
 			version_id: components["schemas"]["Id"];
 		};
+		AdminBroadcast: {
+			message: components["schemas"]["MessageCreate"];
+		};
+		AdminWhisper: {
+			message: components["schemas"]["MessageCreate"];
+			user_id: components["schemas"]["Id"];
+		};
 		AppInviteBot: {
 			room_id: components["schemas"]["Id"];
 		};
@@ -2618,6 +2665,25 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "UserUpdate";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "UserRegistered";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "AdminWhisper";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "AdminBroadcast";
 		};
 		AuthEmailComplete: {
 			code: string;
@@ -3669,7 +3735,7 @@ export interface components {
 		PaginationResponse_Room: {
 			cursor?: string | null;
 			has_more: boolean;
-			items: (components["schemas"]["RoomType"] & {
+			items: {
 				archived_at?: null | components["schemas"]["Time"];
 				description?: string | null;
 				icon?: null | components["schemas"]["Id"];
@@ -3694,12 +3760,13 @@ export interface components {
 				 * @description number of active threads
 				 */
 				thread_count: number;
+				type: components["schemas"]["RoomType"];
 				/**
 				 * Format: uuid
 				 * @description A monotonically increasing id that is updated every time this room is modified.
 				 */
 				version_id: string;
-			})[];
+			}[];
 			/** Format: int64 */
 			total: number;
 		};
@@ -3802,6 +3869,7 @@ export interface components {
 				 * @description tiebroken by id
 				 */
 				position?: number | null;
+				recipient?: null | components["schemas"]["User"];
 				room_id?: null | components["schemas"]["Id"];
 				/** Format: int64 */
 				root_message_count?: number | null;
@@ -4113,7 +4181,7 @@ export interface components {
 			role_id: components["schemas"]["Id"];
 		};
 		/** @description A room */
-		Room: components["schemas"]["RoomType"] & {
+		Room: {
 			archived_at?: null | components["schemas"]["Time"];
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
@@ -4138,6 +4206,7 @@ export interface components {
 			 * @description number of active threads
 			 */
 			thread_count: number;
+			type: components["schemas"]["RoomType"];
 			/**
 			 * Format: uuid
 			 * @description A monotonically increasing id that is updated every time this room is modified.
@@ -4256,20 +4325,8 @@ export interface components {
 			name?: string | null;
 			public?: boolean | null;
 		};
-		RoomType: {
-			/** @enum {string} */
-			type: "Default";
-		} | {
-			participants: [
-				string,
-				string,
-			];
-			/** @enum {string} */
-			type: "Dm";
-		} | {
-			/** @enum {string} */
-			type: "System";
-		};
+		/** @enum {string} */
+		RoomType: "Default" | "Server";
 		/**
 		 * @description an oauth scope
 		 *
@@ -4510,6 +4567,7 @@ export interface components {
 			 * @description tiebroken by id
 			 */
 			position?: number | null;
+			recipient?: null | components["schemas"]["User"];
 			room_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			root_message_count?: number | null;
@@ -4718,6 +4776,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+	admin_broadcast: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AdminBroadcast"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	admin_whisper: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AdminWhisper"];
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	app_list: {
 		parameters: {
 			query?: {
