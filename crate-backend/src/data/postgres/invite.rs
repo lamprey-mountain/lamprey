@@ -81,6 +81,7 @@ impl DataInvite for Postgres {
                 InviteTarget::Room { room }
             }
             "thread" => {
+                // FIXME: get thread via services
                 let thread = self
                     .thread_get(ThreadId::from(row.target_id.unwrap()))
                     .await?;

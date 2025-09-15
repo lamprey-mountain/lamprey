@@ -13,7 +13,7 @@ use validator::Validate;
 use crate::v1::types::notifications::NotifsThread;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
-use crate::v1::types::{MessageVerId, TagId};
+use crate::v1::types::{MessageVerId, TagId, User};
 
 use super::{RoomId, ThreadId, UserId};
 
@@ -48,7 +48,7 @@ use table::{ThreadTypeTablePrivate, ThreadTypeTablePublic};
 use report::{ThreadTypeReportPrivate, ThreadTypeReportPublic};
 
 /// A thread
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Thread {
@@ -118,6 +118,9 @@ pub struct Thread {
     // i don't want to hang while counting potentially thousands of messages!
     // pub unread_count: u64,
     pub notifications: Option<NotifsThread>,
+
+    /// for dm threads, this is who the dm is with
+    pub recipient: Option<User>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

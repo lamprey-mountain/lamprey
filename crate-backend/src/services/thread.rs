@@ -60,6 +60,11 @@ impl ServiceThreads {
                 .await
                 .map_err(|err| err.fake_clone())?;
             thread = Thread {
+                recipient: if let Some(recipient_id) = private_data.recipient_id {
+                    Some(self.state.services().users.get(recipient_id.into()).await?)
+                } else {
+                    None
+                },
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
                 mention_count: Some(0),            // TODO
@@ -100,7 +105,8 @@ impl ServiceThreads {
             .await?;
         perms.ensure_view()?;
         let data = self.state.data();
-        let thread_old = data.thread_get(thread_id).await?;
+        let srv = self.state.services();
+        let thread_old = srv.threads.get(thread_id, None).await?;
         if thread_old.archived_at.is_some() {
             return Err(Error::BadStatic("thread is archived"));
         }

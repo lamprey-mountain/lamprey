@@ -94,6 +94,7 @@ pub struct DbThreadPrivate {
     pub ty: DbThreadType,
     pub last_read_id: Option<Uuid>,
     pub is_unread: bool,
+    pub recipient_id: Option<Uuid>,
 }
 
 pub struct DbThreadCreate {
@@ -136,21 +137,27 @@ impl From<DbThread> for Thread {
             description: row.description,
             nsfw: row.nsfw,
             locked: row.locked,
-
             member_count: row.member_count.try_into().expect("count is negative?"),
-            // FIXME: calculate fields
-            online_count: 0,
-            tags: Default::default(),
             permission_overwrites: serde_json::from_value(row.permission_overwrites).unwrap(),
             archived_at: row.archived_at.map(|t| t.into()),
             deleted_at: row.deleted_at.map(|t| t.into()),
-            parent_id: None,
-            position: None,
-
             ty: row.ty.into(),
             last_version_id: row.last_version_id.map(|i| i.into()),
             message_count: Some(row.message_count.try_into().expect("count is negative?")),
-            root_message_count: None, // TODO
+
+            // these fields get filled in later
+            is_unread: None,
+            last_read_id: None,
+            mention_count: None,
+            notifications: None,
+            recipient: None,
+
+            // TODO: store or calculate the fields below
+            tags: Default::default(),
+            parent_id: None,
+            position: None,
+            online_count: 0,
+            root_message_count: None,
             bitrate: if row.ty == DbThreadType::Voice {
                 Some(64000)
             } else {
@@ -161,10 +168,6 @@ impl From<DbThread> for Thread {
             } else {
                 None
             },
-            is_unread: None,
-            last_read_id: None,
-            mention_count: None,
-            notifications: None,
         }
     }
 }

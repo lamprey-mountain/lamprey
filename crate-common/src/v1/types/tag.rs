@@ -97,7 +97,7 @@ pub struct TagPatch {
 }
 
 /// something that can a tag can be applied to
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Taggable {
     Room(Room),
