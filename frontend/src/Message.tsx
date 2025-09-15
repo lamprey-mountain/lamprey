@@ -47,7 +47,7 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	allowedTags: sanitizeHtml.defaults.allowedTags.concat(["ins", "del"]),
 };
 
-const md = marked.use({
+export const md = marked.use({
 	breaks: true,
 	gfm: true,
 });

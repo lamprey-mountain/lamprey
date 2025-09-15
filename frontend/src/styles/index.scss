@@ -627,7 +627,7 @@ input[type="url"] {
 
 	& > main {
 		&.padded {
-			padding: 0.25rem;
+			padding: 0.5rem;
 			padding-right: calc(100% - 60ch);
 		}
 
@@ -919,7 +919,7 @@ summary {
 
 	& .role-main,
 	.role-edit {
-		padding: 0.25rem;
+		padding: 0.5rem;
 		overflow-y: auto;
 	}
 
@@ -936,45 +936,118 @@ summary {
 	}
 
 	& .role-list > li {
-		border: solid $sep-500 1px;
-		background: $bg-300;
-		margin-top: 4px;
+		/* border: solid $sep-500 1px; */
+		/* background: $bg-300; */
 		padding: 4px;
 		cursor: pointer;
+
+		& + li {
+			border-top: solid $sep-500 1px;
+		}
+
+		&:hover {
+			background: $bg-300;
+		}
 
 		& .info {
 			display: flex;
 			gap: 4px;
+
+			& div {
+				@include truncate;
+			}
 		}
 
 		& .spacer {
 			flex: 1;
 		}
 
+		& .divider {
+			background: $sep-500;
+			width: 1px;
+			margin: 0 2px;
+		}
+
 		& .name {
 			font-size: 1em;
 			font-weight: bold;
 		}
+
+		& .member-count {
+			min-width: 8rem;
+		}
+
+		& .perm-admin {
+			color: $error-500;
+		}
+
+		& .perm-mod {
+			color: $warn-500;
+		}
+
+		& .perm-safe {
+			color: $color-blue;
+		}
+
+		& .mentionable {
+			color: $link-500;
+			background: oklch(var(--color-link-300) / 0.2);
+			padding: 0 2px;
+			border-radius: 2px;
+		}
+
+		& .self-applicable {
+			color: $color-green;
+		}
 	}
 
 	& .role-edit {
-		background: $bg-300;
-		min-width: 300px;
+		background: $bg-100;
+		width: max(360px, 50%);
 		overflow-y: auto;
+
+		& .toolbar {
+			float: right;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+		}
 
 		& h3 {
 			font-size: 1em;
 			font-weight: bold;
+			margin-top: 8px;
 		}
 
 		& textarea,
 		input[type="text"] {
 			border: solid $sep-500 1px;
 			background: $bg-200;
+			padding: 0 2px;
 		}
 
 		& button[disabled] {
 			background: $bg-300;
+		}
+
+		label {
+			display: flex;
+			gap: 2px;
+			cursor: pointer;
+			padding: 2px 0;
+
+			&:hover {
+				background: $bg-200;
+			}
+		}
+
+		.description {
+			color: $fg-500;
+		}
+
+		input[type="checkbox"] {
+			align-self: flex-start;
+			margin: 4px;
 		}
 	}
 }

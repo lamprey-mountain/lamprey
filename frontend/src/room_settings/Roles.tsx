@@ -2,7 +2,9 @@ import {
 	createEffect,
 	createSignal,
 	For,
+	Match,
 	Show,
+	Switch,
 	type VoidProps,
 } from "solid-js";
 import { useApi } from "../api.tsx";
@@ -11,11 +13,10 @@ import type { RoomT } from "../types.ts";
 import type { Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore } from "solid-js/store";
+import { md } from "../Message.tsx";
+import { moderatorPermissions, permissionGroups } from "../permissions.ts";
 
 function isDirty(a: Role, b: Role): boolean {
-	console.log(
-		new Set(a.permissions).symmetricDifference(new Set(b.permissions)),
-	);
 	return a.name !== b.name ||
 		a.description !== b.description ||
 		a.is_self_applicable !== b.is_self_applicable ||
@@ -23,64 +24,6 @@ function isDirty(a: Role, b: Role): boolean {
 		new Set(a.permissions).symmetricDifference(new Set(b.permissions)).size !==
 			0;
 }
-
-// unused permissions commented out for now
-export const permissions: Array<{ id: Permission }> = [
-	{ id: "Admin" },
-	{ id: "BotsAdd" },
-	{ id: "BotsManage" },
-	{ id: "EmojiAdd" },
-	{ id: "EmojiManage" },
-	{ id: "EmojiUseExternal" },
-	{ id: "InviteCreate" },
-	{ id: "InviteManage" },
-	{ id: "MemberBan" },
-	{ id: "MemberBanManage" },
-	{ id: "MemberBridge" },
-	{ id: "MemberKick" },
-	{ id: "MemberManage" },
-	{ id: "MessageAttachments" },
-	{ id: "MessageCreate" },
-	{ id: "MessageDelete" },
-	{ id: "MessageEmbeds" },
-	// { id: "MessageMassMention" },
-	// { id: "MessageMove" },
-	{ id: "MessagePin" },
-	{ id: "ProfileAvatar" },
-	{ id: "ProfileOverride" },
-	{ id: "ReactionAdd" },
-	{ id: "ReactionClear" },
-	{ id: "RoleApply" },
-	{ id: "RoleManage" },
-	{ id: "RoomManage" },
-	// { id: "TagApply" },
-	// { id: "TagManage" },
-	{ id: "ThreadArchive" },
-	{ id: "ThreadCreateChat" },
-	// { id: "ThreadCreateDocument" },
-	// { id: "ThreadCreateEvent" },
-	// { id: "ThreadCreateForumLinear" },
-	// { id: "ThreadCreateForumTree" },
-	// { id: "ThreadCreatePrivate" },
-	// { id: "ThreadCreatePublic" },
-	// { id: "ThreadCreateTable" },
-	// { id: "ThreadCreateVoice" },
-	{ id: "ThreadDelete" },
-	{ id: "ThreadEdit" },
-	// { id: "ThreadForward" },
-	{ id: "ThreadLock" },
-	{ id: "ThreadPin" },
-	// { id: "ThreadPublish" },
-	{ id: "ViewAuditLog" },
-	{ id: "VoiceConnect" },
-	{ id: "VoiceDeafen" },
-	{ id: "VoiceDisconnect" },
-	{ id: "VoiceMove" },
-	{ id: "VoiceMute" },
-	{ id: "VoicePriority" },
-	{ id: "VoiceSpeak" },
-	{ id: "VoiceVideo" },
-];
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -134,38 +77,85 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	createEffect(() => console.log("editName", editName()));
+	const [search, setSearch] = createSignal("");
 
 	return (
 		<>
 			<div class="room-settings-roles">
 				<div class="role-main">
 					<h2>roles</h2>
-					<button onClick={api.roles.list(() => props.room.id)}>
-						fetch more
-					</button>
-					<br />
-					<button onClick={createRole}>create role</button>
-					<br />
+					<header class="applications-header">
+						<input
+							type="search"
+							placeholder="search"
+							aria-label="search"
+							onInput={(e) => setSearch(e.target.value)}
+						/>
+						<button class="big primary" onClick={createRole}>
+							create role
+						</button>
+					</header>
 					<Show when={roles()}>
 						<ul class="role-list">
-							<For each={roles()!.items}>
+							<For
+								each={roles()!.items.sort((a, b) => b.position - a.position)
+									.filter((i) => i.name.includes(search()))}
+							>
 								{(i) => (
 									<li
 										onClick={() => {
-											setEditing(structuredClone(i));
-											setEditName(i.name);
-											setEditDesc(i.description || undefined);
+											if (editing.id === i.id) {
+												setEditing({ id: null });
+											} else {
+												setEditing(structuredClone(i));
+												setEditName(i.name);
+												setEditDesc(i.description || undefined);
+											}
 										}}
 									>
 										<div class="info">
 											<h3 class="name">{i.name}</h3>
-											<div class="spacer"></div>
+											<Show when={i.description}>
+												<div class="divider"></div>
+												<div class="description">{i.description}</div>
+											</Show>
 										</div>
-										<details>
-											<summary>json</summary>
-											<pre>{JSON.stringify(i, null, 2)}</pre>
-										</details>
+										<div class="info">
+											<div class="member-count">{i.member_count} members</div>
+											<div class="divider"></div>
+											<Switch>
+												<Match when={i.permissions.includes("Admin")}>
+													<div class="perm-admin">admin!</div>
+												</Match>
+												<Match when={i.permissions.length === 0}>
+													<div>cosmetic</div>
+												</Match>
+												<Match when={true}>
+													<div>
+														<span class="perm-safe">
+															{i.permissions.filter((i) =>
+																!moderatorPermissions.includes(i)
+															).length}
+														</span>
+														+
+														<span class="perm-mod">
+															{i.permissions.filter((i) =>
+																moderatorPermissions.includes(i)
+															).length}
+														</span>{" "}
+														permissions
+													</div>
+												</Match>
+											</Switch>
+											<Show when={i.is_self_applicable}>
+												<div class="divider"></div>
+												<div class="self-applicable">self applicable</div>
+											</Show>
+											<Show when={i.is_mentionable}>
+												<div class="divider"></div>
+												<div class="mentionable">@mentionable</div>
+											</Show>
+										</div>
 									</li>
 								)}
 							</For>
@@ -219,11 +209,20 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						>
 							{editDesc()}
 						</textarea>
-						<h3>ticky boxes</h3>
+						<br />
+						<br />
 						<For
 							each={[
-								"is_mentionable",
-								"is_self_applicable",
+								{
+									key: "is_mentionable",
+									name: "Mentionable",
+									description: "Anyone can mention this role",
+								},
+								{
+									key: "is_self_applicable",
+									name: "Self applicable",
+									description: "Anyone can apply this role to themselves",
+								},
 							] as const}
 						>
 							{(i) => (
@@ -231,50 +230,89 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 									<label>
 										<input
 											type="checkbox"
-											checked={(editing as Role)[i]}
+											checked={(editing as Role)[i.key]}
 											onInput={(e) => {
 												setEditing((r) => ({
 													...r,
-													[i]: (e.target as HTMLInputElement).checked,
+													[i.key]: (e.target as HTMLInputElement).checked,
 												}));
 											}}
 										/>
-										{i}
+										<div>
+											<div class="name">
+												{i.name}
+											</div>
+											<div
+												class="description"
+												innerHTML={md.parseInline(
+													i.description ?? "",
+												) as string}
+											/>
+										</div>
 									</label>
 								</div>
 							)}
 						</For>
-						<h3>permissions</h3>
-						<ul>
-							<For each={permissions}>
-								{(perm) => {
-									const perms = () => (editing as Role).permissions ?? [];
-									return (
-										<li>
-											<label>
-												<input
-													type="checkbox"
-													checked={perms().includes(perm.id)}
-													onInput={(e) => {
-														const { checked } = e.target as HTMLInputElement;
-														setEditing((r) => {
-															const old = (r as Role).permissions;
-															return {
-																...r,
-																permissions: checked
-																	? [...old, perm.id]
-																	: old.filter((i) => i !== perm.id),
-															};
-														});
-													}}
-												/>
-												{perm.id}
-											</label>
-										</li>
-									);
-								}}
-							</For>
-						</ul>
+						<For
+							each={[
+								"room",
+								"members",
+								"messages",
+								"threads",
+								"voice",
+								"dangerous",
+							]}
+						>
+							{(group) => {
+								return (
+									<>
+										<h3>{group} permissions</h3>
+										<ul>
+											<For each={permissionGroups.get(group)}>
+												{(perm) => {
+													const perms = () =>
+														(editing as Role).permissions ?? [];
+													return (
+														<li>
+															<label>
+																<input
+																	type="checkbox"
+																	checked={perms().includes(perm.id)}
+																	onInput={(e) => {
+																		const { checked } = e
+																			.target as HTMLInputElement;
+																		setEditing((r) => {
+																			const old = (r as Role).permissions;
+																			return {
+																				...r,
+																				permissions: checked
+																					? [...old, perm.id]
+																					: old.filter((i) => i !== perm.id),
+																			};
+																		});
+																	}}
+																/>
+																<div>
+																	<div class="name">
+																		{perm.name}
+																	</div>
+																	<div
+																		class="description"
+																		innerHTML={md.parseInline(
+																			perm.description ?? "",
+																		) as string}
+																	/>
+																</div>
+															</label>
+														</li>
+													);
+												}}
+											</For>
+										</ul>
+									</>
+								);
+							}}
+						</For>
 					</div>
 				</Show>
 			</div>

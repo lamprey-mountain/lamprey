@@ -1,9 +1,9 @@
 import type { Permission, PermissionOverwrite, Thread } from "sdk";
 import { batch, createSignal, For, Show, type VoidProps } from "solid-js";
-import { permissions } from "../room_settings/Roles.tsx";
 import { useApi } from "../api.tsx";
 import { createStore, produce } from "solid-js/store";
 import { Copyable } from "../util.tsx";
+import { permissions } from "../permissions.ts";
 
 type PermState = "allow" | "deny" | "inherit";
 
