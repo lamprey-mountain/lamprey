@@ -18,7 +18,6 @@ type ImageViewProps = MediaProps & {
 
 export const ImageView = (props: ImageViewProps) => {
 	const ctx = useCtx();
-	console.log(props.media);
 	const [loaded, setLoaded] = createSignal(false);
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
@@ -44,10 +43,6 @@ export const ImageView = (props: ImageViewProps) => {
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
 				class="image"
-				onMouseOver={() => {
-					// prefetch image
-					fetch(getUrl(props.media), { priority: "low" });
-				}}
 				onClick={() => {
 					ctx.dispatch({
 						do: "modal.open",
