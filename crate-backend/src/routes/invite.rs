@@ -7,9 +7,8 @@ use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut,
+    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut, SERVER_ROOM_ID,
 };
-use futures::future::join_all;
 use http::StatusCode;
 use nanoid::nanoid;
 use serde::Serialize;
@@ -62,7 +61,11 @@ pub async fn invite_delete(
             },
         ),
         InviteTarget::Server => (
-            s.services.perms.is_admin(user_id).await?,
+            s.services()
+                .perms
+                .for_room(user_id, SERVER_ROOM_ID)
+                .await?
+                .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
     };
@@ -74,7 +77,7 @@ pub async fn invite_delete(
             room_id: match id_target {
                 InviteTargetId::Room { room_id } => room_id,
                 InviteTargetId::Thread { room_id, .. } => room_id,
-                InviteTargetId::Server => todo!(),
+                InviteTargetId::Server => SERVER_ROOM_ID,
             },
             user_id,
             session_id: None,
@@ -106,7 +109,15 @@ pub async fn invite_delete(
                 .await?;
             }
             InviteTargetId::Server => {
-                // don't emit events
+                s.broadcast_room(
+                    SERVER_ROOM_ID,
+                    user_id,
+                    MessageSync::InviteDelete {
+                        code,
+                        target: id_target,
+                    },
+                )
+                .await?;
             }
         };
     }
@@ -146,7 +157,10 @@ pub async fn invite_resolve(
             let perms = s.perms.for_thread(user_id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
-        InviteTarget::Server => !s.perms.is_admin(user_id).await?,
+        InviteTarget::Server => {
+            let perms = s.perms.for_room(user_id, SERVER_ROOM_ID).await?;
+            !perms.has(Permission::InviteManage)
+        }
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -183,6 +197,7 @@ pub async fn invite_use(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
+    let srv = s.services();
     let invite = d.invite_select(code.clone()).await?;
     if invite.is_dead() {
         return Err(Error::NotFound);
@@ -199,8 +214,8 @@ pub async fn invite_use(
             d.room_member_put(room.id, user_id, Some(origin), RoomMemberPut::default())
                 .await?;
             let member = d.room_member_get(room.id, user_id).await?;
-            s.services.perms.invalidate_room(user_id, room.id).await;
-            s.services.perms.invalidate_is_mutual(user_id);
+            srv.perms.invalidate_room(user_id, room.id).await;
+            srv.perms.invalidate_is_mutual(user_id);
             let room_id = room.id;
             // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
             s.broadcast_room(room_id, user_id, MessageSync::RoomCreate { room })
@@ -219,11 +234,10 @@ pub async fn invite_use(
                 // make sure to prevent people from creating accounts they can't log into
                 return Err(Error::BadStatic("add an auth method first"));
             }
-            s.data()
-                .user_set_registered(user_id, Some(Time::now_utc()), Some(invite.invite.code.0))
+            d.user_set_registered(user_id, Some(Time::now_utc()), Some(invite.invite.code.0))
                 .await?;
-            s.services().users.invalidate(user_id).await;
-            let updated_user = s.services().users.get(user_id).await?;
+            srv.users.invalidate(user_id).await;
+            let updated_user = srv.users.get(user_id).await?;
             s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
         }
     }
@@ -256,6 +270,11 @@ pub async fn invite_room_create(
     let perms = s.services.perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::InviteCreate)?;
+
+    if room_id == SERVER_ROOM_ID {
+        return Err(Error::BadStatic("You can't create an invite for the server room. Use the make-admin subcommand in the cli instead."));
+    }
+
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         .chars()
         .collect();
@@ -356,7 +375,7 @@ pub async fn invite_room_list(
     Ok(Json(res))
 }
 
-/// Invite patch (TODO)
+/// Invite patch
 ///
 /// Edit an invite
 #[utoipa::path(
@@ -402,7 +421,11 @@ pub async fn invite_patch(
             },
         ),
         InviteTarget::Server => (
-            s.services.perms.is_admin(user_id).await?,
+            s.services()
+                .perms
+                .for_room(user_id, SERVER_ROOM_ID)
+                .await?
+                .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
     };
@@ -467,14 +490,18 @@ pub async fn invite_patch(
 pub async fn invite_server_create(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let user = s.services().users.get(user_id).await?;
+    let srv = s.services();
+    let user = srv.users.get(user_id).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot create server invites"));
     }
+
+    let perms = srv.perms.for_room(user_id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::InviteCreate)?;
 
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         .chars()
@@ -483,9 +510,33 @@ pub async fn invite_server_create(
     d.invite_insert_server(user_id, code.clone(), json.expires_at, json.max_uses)
         .await?;
     let invite = d.invite_select(code).await?;
-    s.broadcast(MessageSync::InviteCreate {
-        invite: invite.clone(),
-    })?;
+
+    let changes = Changes::new()
+        .add("code", &invite.invite.code)
+        .add("description", &invite.invite.description)
+        .add("expires_at", &invite.invite.expires_at)
+        .add("max_uses", &invite.max_uses)
+        .build();
+
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::InviteCreate { changes },
+    })
+    .await?;
+
+    s.broadcast_room(
+        SERVER_ROOM_ID,
+        user_id,
+        MessageSync::InviteCreate {
+            invite: invite.clone(),
+        },
+    )
+    .await?;
+
     Ok((StatusCode::CREATED, Json(invite)))
 }
 
@@ -508,37 +559,18 @@ pub async fn invite_server_list(
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let srv = s.services();
     let d = s.data();
-    let user = s.services().users.get(user_id).await?;
+    let user = srv.users.get(user_id).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot list server invites"));
     }
+
+    // TODO: let users list their own server invites
+    let perms = srv.perms.for_room(user_id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::InviteManage)?;
+
     let res = d.invite_list_server(paginate).await?;
-    let items: Vec<InviteWithPotentialMetadata> = join_all(res.items.into_iter().map(|i| {
-        let s = s.clone();
-        async move {
-            if i.invite.creator_id != user_id
-                && !s.services.perms.is_admin(user_id).await.unwrap_or(false)
-            {
-                InviteWithPotentialMetadata::Invite(i.strip_metadata())
-            } else {
-                InviteWithPotentialMetadata::InviteWithMetadata(i)
-            }
-        }
-    }))
-    .await;
-    let cursor = items.last().map(|i| match i {
-        InviteWithPotentialMetadata::Invite(invite) => invite.code.0.clone(),
-        InviteWithPotentialMetadata::InviteWithMetadata(invite_with_metadata) => {
-            invite_with_metadata.invite.code.0.clone()
-        }
-    });
-    let res = PaginationResponse {
-        items,
-        total: res.total,
-        has_more: res.has_more,
-        cursor,
-    };
     Ok(Json(res))
 }
 

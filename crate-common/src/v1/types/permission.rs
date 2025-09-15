@@ -146,15 +146,16 @@ pub enum Permission {
     /// (server) the "root user" permission that allows everything.
     /// probably shouldn't implement this for the same reasons as Admin
     /// but i think it is a necessary evil
+    // TODO: remove, Admin works fine here
     ServerAdmin,
 
-    /// (server) can access metrics (prometheus)
+    /// (server, unimplemented) can access metrics (prometheus)
     ServerMetrics,
 
-    /// (server) can view everything
+    /// (server, unimplemented) can view everything
     ServerOversee,
 
-    /// (server) access reports
+    /// (server, unimplemented) access reports
     ServerReports,
 
     /// (unimplemented) apply tags to threads
