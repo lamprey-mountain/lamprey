@@ -23,7 +23,7 @@ use backend::{
     routes::{self},
     types::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
-        RoomCreate, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
+        RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
     },
     ServerState,
 };
@@ -218,6 +218,8 @@ async fn main() -> Result<()> {
         cli::Command::Register { user_id, reason } => {
             data.user_set_registered(*user_id, Some(Time::now_utc()), None)
                 .await?;
+            data.room_member_put(SERVER_ROOM_ID, *user_id, None, RoomMemberPut::default())
+                .await?;
             data.audit_logs_room_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id: SERVER_ROOM_ID,
@@ -231,7 +233,7 @@ async fn main() -> Result<()> {
             // right now i'd need to restart backend or it would think the user is still a guest
             info!("registered!");
         }
-        cli::Command::MakeAdmin { user_id, full } => {
+        cli::Command::MakeAdmin { user_id } => {
             data.room_member_put(
                 SERVER_ROOM_ID,
                 *user_id,
@@ -239,21 +241,18 @@ async fn main() -> Result<()> {
                 types::RoomMemberPut::default(),
             )
             .await?;
-            if *full {
-                let roles = data
-                    .role_list(
-                        SERVER_ROOM_ID,
-                        PaginationQuery {
-                            from: None,
-                            to: None,
-                            dir: Some(types::PaginationDirection::F),
-                            limit: Some(2),
-                        },
-                    )
-                    .await?;
-                dbg!(&roles);
-                data.role_member_put(*user_id, roles.items[1].id).await?;
-            }
+            let roles = data
+                .role_list(
+                    SERVER_ROOM_ID,
+                    PaginationQuery {
+                        from: None,
+                        to: None,
+                        dir: Some(types::PaginationDirection::F),
+                        limit: Some(2),
+                    },
+                )
+                .await?;
+            data.role_member_put(*user_id, roles.items[1].id).await?;
         }
     }
 

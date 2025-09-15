@@ -237,6 +237,8 @@ pub async fn invite_use(
             }
             d.user_set_registered(user_id, Some(Time::now_utc()), Some(invite.invite.code.0))
                 .await?;
+            d.room_member_put(SERVER_ROOM_ID, user_id, None, RoomMemberPut::default())
+                .await?;
             srv.users.invalidate(user_id).await;
             let updated_user = srv.users.get(user_id).await?;
             d.audit_logs_room_append(AuditLogEntry {

@@ -45,11 +45,5 @@ pub enum Command {
     },
 
     /// make a user an admin
-    MakeAdmin {
-        user_id: UserId,
-
-        /// make this user a full administrator, otherwise just invite to the server room
-        #[arg(short, long)]
-        full: bool,
-    },
+    MakeAdmin { user_id: UserId },
 }
