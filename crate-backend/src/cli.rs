@@ -36,7 +36,13 @@ pub enum Command {
     GcAll {},
 
     /// upgrade a guest to a registered user
-    Register { user_id: UserId },
+    Register {
+        user_id: UserId,
+
+        /// audit log reason why this user was manually registered
+        #[arg(short, long)]
+        reason: Option<String>,
+    },
 
     /// make a user an admin
     MakeAdmin {

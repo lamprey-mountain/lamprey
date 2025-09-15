@@ -193,8 +193,8 @@ pub enum AuditLogEntryType {
 
     // // for server audit log, which doesnt exist yet
     // ServerUpdate,
-    // UserCreate,
-    // UserUpdate, // if changed by an admin?
-    // UserDelete,
     // RoomDelete,
+    UserRegistered {
+        user_id: UserId,
+    },
 }

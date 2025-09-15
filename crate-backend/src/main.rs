@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
-use common::v1::types::util::Time;
+use common::v1::types::{util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
@@ -22,8 +22,8 @@ use backend::{
     cli, config, error,
     routes::{self},
     types::{
-        self, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery, RoomCreate,
-        RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
+        self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
+        RoomCreate, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
     },
     ServerState,
 };
@@ -215,10 +215,20 @@ async fn main() -> Result<()> {
         cli::Command::GcMessages {} => gc_messages(state).await?,
         cli::Command::GcSession {} => gc_sessions(state).await?,
         cli::Command::GcAll {} => gc_all(state).await?,
-        cli::Command::Register { user_id } => {
+        cli::Command::Register { user_id, reason } => {
             data.user_set_registered(*user_id, Some(Time::now_utc()), None)
                 .await?;
+            data.audit_logs_room_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: SERVER_ROOM_ID,
+                user_id: SERVER_USER_ID,
+                session_id: None,
+                reason: reason.to_owned(),
+                ty: AuditLogEntryType::UserRegistered { user_id: *user_id },
+            })
+            .await?;
             // TODO: invalidate cache
+            // right now i'd need to restart backend or it would think the user is still a guest
             info!("registered!");
         }
         cli::Command::MakeAdmin { user_id, full } => {

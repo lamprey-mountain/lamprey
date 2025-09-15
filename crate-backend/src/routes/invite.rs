@@ -195,6 +195,7 @@ pub async fn invite_use(
     Path(code): Path<InviteCode>,
     Auth(user_id): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
@@ -238,6 +239,15 @@ pub async fn invite_use(
                 .await?;
             srv.users.invalidate(user_id).await;
             let updated_user = srv.users.get(user_id).await?;
+            d.audit_logs_room_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: SERVER_ROOM_ID,
+                user_id,
+                session_id: None,
+                reason,
+                ty: AuditLogEntryType::UserRegistered { user_id },
+            })
+            .await?;
             s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
         }
     }
