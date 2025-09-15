@@ -1,14 +1,20 @@
-import { For, Show, type VoidProps } from "solid-js";
+import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
-import { Dropdown } from "../Dropdown.tsx";
 import { Copyable } from "../util.tsx";
 
-export function Members(props: VoidProps<{ room: RoomT }>) {
+export function Integrations(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const api = useApi();
-	const members = api.room_members.list(() => props.room.id);
+
+	const [integrations] = createResource(async () => {
+		const { data } = await api.client.http.GET(
+			"/api/v1/room/{room_id}/integration",
+			{ params: { path: { room_id: props.room.id } } },
+		);
+		return data;
+	});
 
 	const addRole = (user_id: string) => () => {
 		ctx.dispatch({
@@ -75,23 +81,28 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 
 	return (
 		<>
-			<h2>members</h2>
+			<h2>integrations</h2>
 			<button onClick={() => api.roles.list(() => props.room.id)}>
 				fetch more
 			</button>
-			<Show when={members()}>
+			<Show when={integrations()}>
 				<ul class="room-settings-members">
-					<For each={members()!.items}>
+					<For each={integrations()!.items}>
 						{(i) => {
-							const user = api.users.fetch(() => i.user_id);
 							const name = () =>
-								(i.membership === "Join" ? i.override_name : null) ??
-									user()?.name;
+								(i.member.membership === "Join"
+									? i.member.override_name
+									: null) ??
+									i.bot.name;
 							return (
 								<li>
 									<h3 class="name">{name()}</h3>
 									<ul class="roles">
-										<For each={i.membership === "Join" ? i.roles : []}>
+										<For
+											each={i.member.membership === "Join"
+												? i.member.roles
+												: []}
+										>
 											{(role_id) => {
 												const role = api.roles.fetch(
 													() => props.room.id,
@@ -99,7 +110,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 												);
 												return (
 													<li>
-														<button onClick={removeRole(i.user_id, role_id)}>
+														<button onClick={removeRole(i.bot.id, role_id)}>
 															{role()?.name ?? "role"}
 														</button>
 													</li>
@@ -107,17 +118,17 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 											}}
 										</For>
 										<li class="add">
-											<button onClick={addRole(i.user_id)}>
+											<button onClick={addRole(i.bot.id)}>
 												<em>add role...</em>
 											</button>
 										</li>
 									</ul>
 									<div>
-										user id: <Copyable>{i.user_id}</Copyable>
+										user id: <Copyable>{i.bot.id}</Copyable>
 									</div>
 									<div>
-										<button onClick={() => kick(i.user_id)}>kick</button>
-										<button onClick={() => ban(i.user_id)}>ban</button>
+										<button onClick={() => kick(i.bot.id)}>kick</button>
+										<button onClick={() => ban(i.bot.id)}>ban</button>
 									</div>
 									<details>
 										<summary>json</summary>

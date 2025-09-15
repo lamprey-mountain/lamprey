@@ -896,18 +896,15 @@ summary {
 		& > .roles {
 			display: flex;
 			gap: 4px;
+		}
+	}
 
-			& li {
-				border: solid $sep-500 1px;
-			}
+	& button {
+		background: $bg-200;
+		border: solid $sep-500 1px;
 
-			& button {
-				background: $bg-200;
-
-				&:hover {
-					background: $bg-300;
-				}
-			}
+		&:hover {
+			background: $bg-300;
 		}
 	}
 }
