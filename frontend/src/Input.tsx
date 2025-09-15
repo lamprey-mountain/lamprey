@@ -96,7 +96,7 @@ export function Input(props: InputProps) {
 	});
 
 	return (
-		<div class="input" style="position:relative">
+		<div class="input">
 			<div class="typing">
 				<Show when={getTyping().length}>
 					typing: {getTyping()}

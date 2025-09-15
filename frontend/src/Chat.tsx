@@ -390,10 +390,10 @@ export function renderTimeline(
 			id: "spacer-bottom",
 		});
 	} else {
-		// newItems.push({
-		// 	type: "spacer-mini",
-		// 	id: "spacer-bottom-mini",
-		// });
+		newItems.push({
+			type: "spacer-mini",
+			id: "spacer-bottom-mini",
+		});
 	}
 	console.log("newItems", newItems);
 	return newItems;
