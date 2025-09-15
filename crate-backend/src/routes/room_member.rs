@@ -232,9 +232,6 @@ async fn room_member_update(
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
     perms.ensure_view()?;
-    if target_user_id != auth_user_id {
-        perms.ensure(Permission::MemberManage)?;
-    }
 
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
@@ -248,6 +245,13 @@ async fn room_member_update(
     }
     if json.deaf.is_some_and(|m| m != start.deaf) {
         perms.ensure(Permission::VoiceDeafen)?;
+    }
+    if json
+        .override_name
+        .as_ref()
+        .is_some_and(|m| m != &start.override_name)
+    {
+        perms.ensure(Permission::MemberManage)?;
     }
 
     d.room_member_patch(room_id, target_user_id, json).await?;

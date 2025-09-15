@@ -49,6 +49,7 @@ pub enum Permission {
     BotsManage,
 
     /// can add emoji and remove emoji they have added
+    // TODO: merge with EmojiManage
     EmojiAdd,
 
     /// can remove all emoji
