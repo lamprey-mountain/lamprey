@@ -36,7 +36,13 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				(props.room_id ? t.room_id === props.room_id : t.room_id === null) &&
 				!t.deleted_at
 			);
-		threads.sort((a, b) => a.id < b.id ? 1 : -1);
+		if (props.room_id) {
+			threads.sort((a, b) => a.id < b.id ? 1 : -1);
+		} else {
+			threads.sort((a, b) =>
+				(a.last_version_id ?? "") < (b.last_version_id ?? "") ? 1 : -1
+			);
+		}
 		setList(threads);
 	});
 
