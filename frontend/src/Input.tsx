@@ -104,7 +104,10 @@ export function Input(props: InputProps) {
 			</div>
 			<Show when={atts()?.length}>
 				<div class="attachments">
-					<header>attachments</header>
+					<header>
+						{atts()?.length}{" "}
+						{atts()?.length === 1 ? "attachment" : "attachments"}
+					</header>
 					<ul>
 						<For each={atts()}>
 							{(att) => <RenderUploadItem thread={props.thread} att={att} />}
