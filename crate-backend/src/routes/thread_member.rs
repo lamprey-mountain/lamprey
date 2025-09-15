@@ -112,7 +112,7 @@ pub async fn thread_member_add(
     let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
     perms.ensure_view()?;
     if target_user_id != auth_user_id {
-        perms.ensure(Permission::MemberManage)?;
+        perms.ensure(Permission::MemberKick)?;
     }
 
     let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
