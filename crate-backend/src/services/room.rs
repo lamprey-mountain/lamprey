@@ -9,7 +9,7 @@ use common::v1::types::{
 use moka::future::Cache;
 
 use crate::error::{Error, Result};
-use crate::types::{DbRoleCreate, MediaLinkType};
+use crate::types::{DbRoleCreate, DbRoomCreate, MediaLinkType};
 use crate::ServerStateInner;
 
 pub struct ServiceRooms {
@@ -87,9 +87,14 @@ impl ServiceRooms {
         Ok(end)
     }
 
-    pub async fn create(&self, create: RoomCreate, creator: UserId) -> Result<Room> {
+    pub async fn create(
+        &self,
+        create: RoomCreate,
+        creator: UserId,
+        extra: DbRoomCreate,
+    ) -> Result<Room> {
         let data = self.state.data();
-        let mut room = data.room_create(create).await?;
+        let mut room = data.room_create(create, extra).await?;
         let room_id = room.id;
 
         let changes = Changes::new()

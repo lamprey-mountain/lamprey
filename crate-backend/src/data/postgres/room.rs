@@ -7,8 +7,8 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{
-    DbRoom, PaginationDirection, PaginationQuery, PaginationResponse, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, UserId,
+    DbRoom, DbRoomCreate, DbRoomType, PaginationDirection, PaginationQuery, PaginationResponse,
+    Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId,
 };
 
 use crate::data::DataRoom;
@@ -17,13 +17,14 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoom for Postgres {
-    async fn room_create(&self, create: RoomCreate) -> Result<Room> {
+    async fn room_create(&self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room> {
         let mut conn = self.pool.acquire().await?;
-        let room_id = Uuid::now_v7();
+        let room_id = extra.id.map(|i| *i).unwrap_or_else(Uuid::now_v7);
+        let ty: DbRoomType = extra.ty.into();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public)
-    	    VALUES ($1, $2, $3, $4, $5, $6)
+    	    INSERT INTO room (id, version_id, name, description, icon, public, type)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7)
         ",
             room_id,
             room_id,
@@ -31,6 +32,7 @@ impl DataRoom for Postgres {
             create.description,
             create.icon.map(|i| *i),
             create.public.unwrap_or(false),
+            ty as _,
         )
         .execute(&mut *conn)
         .await?;
@@ -47,6 +49,7 @@ impl DataRoom for Postgres {
             SELECT
                 room.id,
                 room.version_id,
+                room.type as "ty: _",
                 room.name,
                 room.description,
                 room.icon,
@@ -78,6 +81,7 @@ impl DataRoom for Postgres {
                 SELECT
                     room.id,
                     room.version_id,
+                    room.type as "ty: _",
                     room.name,
                     room.description,
                     room.icon,
@@ -149,6 +153,7 @@ impl DataRoom for Postgres {
                 SELECT
                     r.id,
                     r.version_id,
+                    r.type as "ty: _",
                     r.name,
                     r.description,
                     r.icon,

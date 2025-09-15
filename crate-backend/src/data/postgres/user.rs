@@ -110,16 +110,16 @@ impl From<DbUser> for User {
 #[async_trait]
 impl DataUser for Postgres {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User> {
-        let user_id = Uuid::now_v7();
+        let user_id = patch.id.unwrap_or_else(|| Uuid::now_v7().into());
         let user = User {
-            id: user_id.into(),
-            version_id: user_id.into(),
+            id: user_id,
+            version_id: user_id.into_inner().into(),
             name: patch.name,
             description: patch.description,
             avatar: None,
             status: types::user_status::Status::online(),
             bot: patch.bot,
-            system: false,
+            system: patch.system,
             puppet: patch.puppet,
             suspended: None,
             registered_at: patch.registered_at,

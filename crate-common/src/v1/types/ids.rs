@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::{fmt::Display, marker::PhantomData};
-use uuid::Uuid;
+use uuid::{uuid, Uuid};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -212,3 +212,13 @@ genid!(Livestream);
 genid!(RtcPeer);
 
 genid!(Notification);
+
+pub const SERVER_USER_ID: UserId = Id {
+    inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),
+    phantom: std::marker::PhantomData,
+};
+
+pub const SERVER_ROOM_ID: RoomId = Id {
+    inner: uuid!("00000000-0000-7000-0000-736572766572"),
+    phantom: std::marker::PhantomData,
+};

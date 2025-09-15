@@ -124,14 +124,8 @@ pub enum RoomType {
     #[default]
     Default,
 
-    #[deprecated]
-    /// direct messages between two people
-    Dm { participants: (UserId, UserId) },
-
-    #[deprecated]
-    /// system messages
-    // or maybe these are dms from a System user
-    System,
+    /// server pseudo room
+    Server,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

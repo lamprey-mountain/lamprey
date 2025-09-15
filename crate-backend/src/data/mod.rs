@@ -19,11 +19,12 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbSessionCreate, DbThreadCreate, DbThreadPrivate,
-    DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink, MediaLinkType, Message,
-    MessageId, MessageRef, MessageVerId, PaginationQuery, PaginationResponse, Permissions, RoleId,
-    RolePatch, RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId,
-    Thread, ThreadId, ThreadPatch, ThreadVerId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate, DbSessionCreate, DbThreadCreate,
+    DbThreadPrivate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
+    MediaLinkType, Message, MessageId, MessageRef, MessageVerId, PaginationQuery,
+    PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId,
+    UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -66,7 +67,7 @@ pub trait Data:
 
 #[async_trait]
 pub trait DataRoom {
-    async fn room_create(&self, create: RoomCreate) -> Result<Room>;
+    async fn room_create(&self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room>;
     async fn room_get(&self, room_id: RoomId) -> Result<Room>;
     async fn room_list(
         &self,

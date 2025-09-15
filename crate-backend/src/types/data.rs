@@ -20,15 +20,23 @@ pub struct DbRoom {
     pub icon: Option<Uuid>,
     pub archived_at: Option<PrimitiveDateTime>,
     pub public: bool,
+    pub ty: DbRoomType,
+}
+
+pub struct DbRoomCreate {
+    pub id: Option<RoomId>,
+    pub ty: RoomType,
 }
 
 pub struct DbUserCreate {
+    pub id: Option<UserId>,
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
     pub bot: Option<Bot>,
     pub puppet: Option<Puppet>,
     pub registered_at: Option<Time>,
+    pub system: bool,
 }
 
 #[derive(sqlx::Type)]
@@ -37,13 +45,6 @@ pub enum DbMembership {
     Join,
     Leave,
     Ban, // unused
-}
-
-#[derive(sqlx::Type)]
-#[sqlx(type_name = "room_type")]
-pub enum DbRoomType {
-    Default,
-    Dm, // unused
 }
 
 impl From<DbRoom> for Room {
@@ -56,7 +57,7 @@ impl From<DbRoom> for Room {
             name: row.name,
             description: row.description,
             icon: row.icon.map(|i| i.into()),
-            room_type: RoomType::Default,
+            room_type: row.ty.into(),
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
 
@@ -464,4 +465,29 @@ pub enum EmailPurpose {
 
     /// reset password
     Reset,
+}
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "room_type")]
+pub enum DbRoomType {
+    Default,
+    Server,
+}
+
+impl Into<DbRoomType> for RoomType {
+    fn into(self) -> DbRoomType {
+        match self {
+            RoomType::Default => DbRoomType::Default,
+            RoomType::Server => DbRoomType::Server,
+        }
+    }
+}
+
+impl Into<RoomType> for DbRoomType {
+    fn into(self) -> RoomType {
+        match self {
+            DbRoomType::Default => RoomType::Default,
+            DbRoomType::Server => RoomType::Server,
+        }
+    }
 }

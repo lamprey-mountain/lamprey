@@ -2,6 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
+use common::v1::types::util::Time;
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
@@ -20,7 +21,10 @@ use utoipa_axum::router::OpenApiRouter;
 use backend::{
     cli, config, error,
     routes::{self},
-    types::{self, MessageId, MessageSync, PaginationQuery},
+    types::{
+        self, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery, RoomCreate,
+        RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
+    },
     ServerState,
 };
 
@@ -170,6 +174,39 @@ async fn main() -> Result<()> {
     blobs.check().await?;
 
     let state = Arc::new(ServerState::new(config, pool, blobs));
+
+    let srv = state.services();
+    let data = state.data();
+    if data.user_get(SERVER_USER_ID).await.is_err() {
+        data.user_create(DbUserCreate {
+            id: Some(SERVER_USER_ID),
+            parent_id: None,
+            name: "root".to_string(),
+            description: None,
+            bot: None,
+            puppet: None,
+            registered_at: Some(Time::now_utc()),
+            system: true,
+        })
+        .await?;
+    }
+    if data.room_get(SERVER_ROOM_ID).await.is_err() {
+        srv.rooms
+            .create(
+                RoomCreate {
+                    name: "server".to_string(),
+                    description: None,
+                    icon: None,
+                    public: Some(false),
+                },
+                SERVER_USER_ID,
+                DbRoomCreate {
+                    id: Some(SERVER_ROOM_ID),
+                    ty: RoomType::Server,
+                },
+            )
+            .await?;
+    }
 
     match &args.command {
         cli::Command::Serve {} => serve(state).await?,

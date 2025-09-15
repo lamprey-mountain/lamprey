@@ -223,26 +223,26 @@ async fn guest_create(
     let data = s.data();
     let srv = s.services();
 
-    // Create a new guest user
     let user = data
         .user_create(DbUserCreate {
+            id: None,
             parent_id: None,
             name: create.name,
             description: create.description,
-            bot: None, // No longer using bot for guest status
+            bot: None,
             puppet: None,
-            registered_at: None, // Mark as guest
+            registered_at: None,
+            system: false,
         })
         .await?;
 
-    // Associate the current session with the new guest user
     data.session_set_status(session.id, SessionStatus::Authorized { user_id: user.id })
         .await?;
-    srv.sessions.invalidate(session.id).await; // Invalidate old session to force reload
-    let updated_session = srv.sessions.get(session.id).await?; // Get the updated session
+    srv.sessions.invalidate(session.id).await;
+    let updated_session = srv.sessions.get(session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
         session: updated_session,
-    })?; // Broadcast session update
+    })?;
 
     Ok((StatusCode::CREATED, Json(user)))
 }

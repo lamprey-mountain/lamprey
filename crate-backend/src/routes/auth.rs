@@ -102,12 +102,14 @@ async fn auth_oauth_redirect(
                 Err(Error::NotFound) => {
                     let user = data
                         .user_create(DbUserCreate {
+                            id: None,
                             parent_id: None,
                             name: u.user.global_name.unwrap_or(u.user.username),
                             description: None,
                             bot: None,
                             puppet: None,
                             registered_at: None,
+                            system: false,
                         })
                         .await?;
                     data.auth_oauth_put("discord".into(), user.id, u.user.id, true)
@@ -135,12 +137,14 @@ async fn auth_oauth_redirect(
                 Err(Error::NotFound) => {
                     let user = data
                         .user_create(DbUserCreate {
+                            id: None,
                             parent_id: None,
                             name: u.name.unwrap_or(u.login),
                             description: u.bio,
                             bot: None,
                             puppet: None,
                             registered_at: None,
+                            system: false,
                         })
                         .await?;
                     data.auth_oauth_put("github".into(), user.id, u.id.to_string(), true)

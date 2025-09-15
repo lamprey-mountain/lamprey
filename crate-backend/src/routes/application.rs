@@ -54,6 +54,7 @@ async fn app_create(
     let data = s.data();
     let user = data
         .user_create(DbUserCreate {
+            id: None,
             parent_id: Some(auth_user_id),
             name: json.name.clone(),
             description: json.description.clone(),
@@ -68,6 +69,7 @@ async fn app_create(
             }),
             puppet: None,
             registered_at: Some(Time::now_utc()),
+            system: false,
         })
         .await?;
     let app = Application {
@@ -347,6 +349,7 @@ async fn puppet_ensure(
     }
     let user = data
         .user_create(DbUserCreate {
+            id: None,
             parent_id,
             name: json.name,
             description: json.description,
@@ -359,6 +362,7 @@ async fn puppet_ensure(
                 alias_id: None,
             }),
             registered_at: Some(Time::now_utc()),
+            system: false,
         })
         .await?;
     Ok((StatusCode::CREATED, Json(user)))

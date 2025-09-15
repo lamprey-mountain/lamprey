@@ -8,7 +8,8 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use common::v1::types::{
-    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, RoomMetrics, UserId,
+    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, RoomMetrics, RoomType,
+    UserId,
 };
 use headers::ETag;
 use serde::{Deserialize, Serialize};
@@ -20,8 +21,8 @@ use crate::{
     error::Result,
     routes::util::AuthSudo,
     types::{
-        MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission, Room,
-        RoomCreate, RoomId, RoomPatch,
+        DbRoomCreate, MediaLinkType, MessageSync, PaginationQuery, PaginationResponse, Permission,
+        Room, RoomCreate, RoomId, RoomPatch,
     },
     Error, ServerState,
 };
@@ -62,7 +63,11 @@ async fn room_create(
         }
     }
 
-    let room = s.services().rooms.create(json, user_id).await?;
+    let extra = DbRoomCreate {
+        id: None,
+        ty: RoomType::Default,
+    };
+    let room = s.services().rooms.create(json, user_id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)

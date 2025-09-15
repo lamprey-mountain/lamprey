@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    r.id,\n                    r.version_id,\n                    r.type as \"ty: _\",\n                    r.name,\n                    r.description,\n                    r.icon,\n                    r.archived_at,\n                    r.public,\n                    r.owner_id\n                FROM room_member rm1\n                JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n                JOIN room r ON rm1.room_id = r.id\n                WHERE rm1.user_id = $1 AND rm2.user_id = $2\n                  AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n                  AND r.id > $3 AND r.id < $4\n                ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC\n                LIMIT $6\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "ty: _",
+        "type_info": {
+          "Custom": {
+            "name": "room_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Server"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "icon",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "0c9a12e38f15ef0af46d0eda2828a298285f78e3b4759f9406c50cd3cf5eb931"
+}
