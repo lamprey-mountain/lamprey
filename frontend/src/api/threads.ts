@@ -62,7 +62,7 @@ export class Threads {
 						path: { room_id: room_id_signal() },
 						query: {
 							dir: "f",
-							limit: 100,
+							limit: 1024,
 							from: pagination?.items.at(-1)?.id,
 						},
 					},
