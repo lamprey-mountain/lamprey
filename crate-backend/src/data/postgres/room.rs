@@ -70,6 +70,7 @@ impl DataRoom for Postgres {
         &self,
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
+        include_server_room: bool,
     ) -> Result<PaginationResponse<Room>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
@@ -90,18 +91,27 @@ impl DataRoom for Postgres {
                     room.owner_id
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
-            	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3 AND room_member.membership = 'Join'
+            	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
+            	  AND room_member.membership = 'Join'
+            	  AND (room.type != 'Server' OR $6)
             	ORDER BY (CASE WHEN $4 = 'f' THEN room.id END), room.id DESC LIMIT $5
                 "#,
-                user_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *user_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                include_server_room,
             ),
             query_scalar!(
-                "SELECT count(*) FROM room_member WHERE room_member.user_id = $1",
-                user_id.into_inner()
+                r#"
+                SELECT count(*) FROM room_member rm
+                JOIN room ON room.id = rm.room_id
+                WHERE rm.user_id = $1 AND rm.membership = 'Join'
+                  AND (room.type != 'Server' OR $2)
+                "#,
+                *user_id,
+                include_server_room,
             ),
             |i: &Room| i.id.to_string()
         )
@@ -166,13 +176,14 @@ impl DataRoom for Postgres {
                 WHERE rm1.user_id = $1 AND rm2.user_id = $2
                   AND rm1.membership = 'Join' AND rm2.membership = 'Join'
                   AND r.id > $3 AND r.id < $4
+                  AND r.type != 'Server'
                 ORDER BY (CASE WHEN $5 = 'f' THEN r.id END), r.id DESC
                 LIMIT $6
                 "#,
-                user_a_id.into_inner(),
-                user_b_id.into_inner(),
-                p.after.into_inner(),
-                p.before.into_inner(),
+                *user_a_id,
+                *user_b_id,
+                *p.after,
+                *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
@@ -181,11 +192,13 @@ impl DataRoom for Postgres {
                 SELECT count(*)
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
+                JOIN room r ON rm1.room_id = r.id
                 WHERE rm1.user_id = $1 AND rm2.user_id = $2
                   AND rm1.membership = 'Join' AND rm2.membership = 'Join'
+                  AND r.type != 'Server'
                 "#,
-                user_a_id.into_inner(),
-                user_b_id.into_inner()
+                *user_a_id,
+                *user_b_id,
             ),
             |i: &Room| i.id.to_string()
         )

@@ -152,7 +152,7 @@ pub enum Permission {
     /// (server, unimplemented) can access metrics (prometheus)
     ServerMetrics,
 
-    /// (server, unimplemented) can view everything
+    /// (server, unimplemented) can view the server room and all members on the server
     ServerOversee,
 
     /// (server, unimplemented) access reports
@@ -240,6 +240,12 @@ pub enum Permission {
 
     /// (internal) can view this thing; see other ViewFoo permissions for things you can set
     // TODO: make this not internal; ie let people restrict who can view what
+    //
+    // steps:
+    // - remove View
+    // - remove ensure_view
+    // - enfore current view logic in perms.for_{room_thread}
+    // - add ViewThread (view all threads/view this thread)
     View,
 
     /// view audit log

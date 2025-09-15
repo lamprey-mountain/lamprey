@@ -9,7 +9,7 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, RoomMetrics, RoomType,
-    UserId,
+    UserId, SERVER_ROOM_ID,
 };
 use headers::ETag;
 use serde::{Deserialize, Serialize};
@@ -156,7 +156,13 @@ async fn room_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let res = data.room_list(user_id, q).await?;
+    let srv = s.services();
+    let is_admin = srv
+        .perms
+        .for_room(user_id, SERVER_ROOM_ID)
+        .await?
+        .has(Permission::Admin);
+    let res = data.room_list(user_id, q, is_admin).await?;
     Ok(Json(res))
 }
 

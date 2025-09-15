@@ -73,6 +73,7 @@ pub trait DataRoom {
         &self,
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
+        include_server_room: bool,
     ) -> Result<PaginationResponse<Room>>;
     async fn room_list_mutual(
         &self,

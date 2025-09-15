@@ -102,7 +102,7 @@ async fn mutual_room_list(
 
     let data = s.data();
     if auth_user_id == target_user_id {
-        let rooms = data.room_list(auth_user_id, q).await?;
+        let rooms = data.room_list(auth_user_id, q, false).await?;
         return Ok(Json(rooms));
     }
 
