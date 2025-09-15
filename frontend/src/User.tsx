@@ -135,7 +135,9 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 					height={size}
 					x={pad()}
 					y={pad()}
-					fill={getColor(props.user?.id ?? "")}
+					fill={props.user?.avatar
+						? "oklch(var(--color-bg3))"
+						: getColor(props.user?.id ?? "")}
 				/>
 				<Show when={props.user?.avatar}>
 					<image
@@ -192,7 +194,9 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 					height={size}
 					x={pad()}
 					y={pad()}
-					fill={getColor(props.user?.id ?? "")}
+					fill={props.user?.avatar
+						? "oklch(var(--color-bg3))"
+						: getColor(props.user?.id ?? "")}
 				/>
 				<Show when={props.user?.avatar}>
 					<image
