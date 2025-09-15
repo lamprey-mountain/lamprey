@@ -113,9 +113,9 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 		<svg
 			class="avatar status-indicator"
 			data-status={props.user?.status.type ?? "Offline"}
-			viewBox={`0 0 ${totalSize} ${totalSize}`}
+			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"
-			style={{ "--pad": `${pad}px` }}
+			style={{ "--pad": `${pad()}px` }}
 		>
 			{/* not sure if i want avatars to be boxes, circles, rounded boxes, ..? */}
 			<mask id="rbox">
