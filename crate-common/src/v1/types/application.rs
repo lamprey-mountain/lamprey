@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::util::Time;
+use crate::v1::types::{util::Time, RoomMember, User};
 
 use super::{util::Diff, ApplicationId, UserId};
 
@@ -115,6 +115,15 @@ pub struct Connection {
     pub application: Application,
     pub scopes: Vec<Scope>,
     pub created_at: Time,
+}
+
+/// an application that is authorized to a room
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Integration {
+    pub application: Application,
+    pub bot: User,
+    pub member: RoomMember,
 }
 
 /// an oauth scope

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
+    ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
@@ -384,5 +384,33 @@ impl DataRoomMember for Postgres {
         .await?;
         info!("inserted room bans");
         Ok(())
+    }
+
+    async fn room_bot_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<ApplicationId>,
+    ) -> Result<PaginationResponse<ApplicationId>> {
+        let p: Pagination<_> = paginate.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_scalar!(
+                r#"
+                SELECT user_id FROM room_member
+                JOIN usr ON usr.id = user_id
+                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND usr.bot->'access' IS NOT NULL
+                ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC
+                LIMIT $5
+                "#,
+                *room_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!("SELECT count(*) FROM room_ban WHERE room_id = $1", *room_id),
+            |i: &ApplicationId| i.to_string()
+        )
     }
 }

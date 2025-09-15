@@ -135,6 +135,12 @@ pub trait DataRoomMember {
         reason: Option<String>,
         expires_at: Option<Time>,
     ) -> Result<()>;
+
+    async fn room_bot_list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<ApplicationId>,
+    ) -> Result<PaginationResponse<ApplicationId>>;
 }
 
 #[async_trait]

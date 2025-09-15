@@ -7,7 +7,9 @@ use axum::{
     Json,
 };
 use axum_extra::TypedHeader;
-use common::v1::types::{AuditLogEntry, AuditLogEntryId, RoomMetrics, UserId};
+use common::v1::types::{
+    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, RoomMetrics, UserId,
+};
 use headers::ETag;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -320,6 +322,48 @@ struct TransferOwnership {
     owner_id: UserId,
 }
 
+/// Room integration list
+///
+/// list bots in a room
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/integration",
+    params(("room_id", description = "Room id")),
+    tags = ["room"],
+    responses((status = OK, description = "success", body = PaginationResponse<Integration>))
+)]
+async fn room_integration_list(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    Query(q): Query<PaginationQuery<ApplicationId>>,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
+    perms.ensure_view()?;
+    let data = s.data();
+    let ids = data.room_bot_list(room_id, q).await?;
+    let mut integrations = vec![];
+    for id in ids.items {
+        let (app, bot, member) = tokio::join!(
+            data.application_get(id),
+            data.user_get(id.into_inner().into()),
+            data.room_member_get(room_id, id.into_inner().into()),
+        );
+        integrations.push(Integration {
+            application: app?,
+            bot: bot?,
+            member: member?,
+        });
+    }
+    Ok(Json(PaginationResponse {
+        items: integrations,
+        total: ids.total,
+        has_more: ids.has_more,
+        cursor: ids.cursor,
+    }))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
@@ -330,4 +374,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_ack))
         .routes(routes!(room_metrics))
         .routes(routes!(room_transfer_ownership))
+        .routes(routes!(room_integration_list))
 }

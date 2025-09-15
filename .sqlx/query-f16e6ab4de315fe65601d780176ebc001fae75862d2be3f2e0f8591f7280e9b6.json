@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT user_id FROM room_member\n                JOIN usr ON usr.id = user_id\n                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND usr.bot->'access' IS NOT NULL\n                ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC\n                LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f16e6ab4de315fe65601d780176ebc001fae75862d2be3f2e0f8591f7280e9b6"
+}
