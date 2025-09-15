@@ -152,7 +152,7 @@ pub enum Permission {
     /// (server, unimplemented) can access metrics (prometheus)
     ServerMetrics,
 
-    /// (server, unimplemented) can view the server room and all members on the server
+    /// (server) can view the server room and all members on the server
     ServerOversee,
 
     /// (server, unimplemented) access reports

@@ -9,7 +9,7 @@ use common::v1::types::{
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
     RoomMembership, UserId,
 };
-use common::v1::types::{RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin};
+use common::v1::types::{RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -44,6 +44,12 @@ async fn room_member_list(
     let d = s.data();
     let perms = s.services().perms.for_room(user_id, room_id).await?;
     perms.ensure_view()?;
+
+    // extra permission check to prevent returning the entire list of registered users
+    if room_id == SERVER_ROOM_ID {
+        perms.ensure(Permission::ServerOversee)?;
+    }
+
     let res = d.room_member_list(room_id, paginate).await?;
     Ok(Json(res))
 }
@@ -334,6 +340,9 @@ async fn room_member_delete(
     if target_user_id != auth_user_id {
         perms.ensure(Permission::MemberKick)?;
     }
+    if room_id == SERVER_ROOM_ID {
+        return Err(Error::BadStatic("cannot kick people from the server room"));
+    }
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
@@ -404,6 +413,9 @@ async fn room_ban_create(
     let d = s.data();
     let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
+    if room_id == SERVER_ROOM_ID {
+        return Err(Error::BadStatic("cannot kick people from the server room"));
+    }
 
     // enforce ranking if you're banning a member
     if let Ok(member) = d.room_member_get(room_id, target_user_id).await {
@@ -467,6 +479,9 @@ async fn room_ban_create_bulk(
     let d = s.data();
     let perms = srv.perms.for_room(auth_user_id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
+    if room_id == SERVER_ROOM_ID {
+        return Err(Error::BadStatic("cannot kick people from the server room"));
+    }
 
     let room = srv.rooms.get(room_id, None).await?;
     let auth_user_rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
