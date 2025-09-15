@@ -53,6 +53,10 @@ export function RoomMenu(props: { room_id: string }) {
 				<Item onClick={settings("/invites")}>invites</Item>
 				<Item onClick={settings("/roles")}>roles</Item>
 				<Item onClick={settings("/members")}>members</Item>
+				<Item onClick={settings("/integrations")}>integrations</Item>
+				<Item onClick={settings("/emoji")}>emoji</Item>
+				<Item onClick={settings("/logs")}>audit log</Item>
+				<Item onClick={settings("/metrics")}>metrics</Item>
 			</Submenu>
 			<Item onClick={leave}>leave</Item>
 			<Separator />
