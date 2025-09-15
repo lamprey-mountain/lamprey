@@ -229,10 +229,19 @@ export const ChatMain = (props: ChatProps) => {
 
 	const [dragging, setDragging] = createSignal(false);
 
+	const getTyping = () => {
+		// TODO: fix types here
+		const user_id = api.users.cache.get("@self")?.id;
+		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
+			.filter((i) => i !== user_id);
+		return user_ids;
+	};
+
 	return (
 		<div
 			ref={chatRef}
 			class="chat"
+			classList={{ "has-typing": !!getTyping().length }}
 			data-thread-id={props.thread.id}
 			role="log"
 			onKeyDown={(e) => {

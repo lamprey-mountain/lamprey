@@ -57,7 +57,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 			return <li class="spacer" style="min-height:8rem;flex:1"></li>;
 		}
 		case "spacer-mini": {
-			return <li class="spacer" style="min-height:3rem"></li>;
+			return <li class="spacer mini"></li>;
 		}
 		case "unread-marker": {
 			return (

@@ -39,7 +39,6 @@ export function Input(props: InputProps) {
 	}
 
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
-	// const typing = () => api.typing.get(props.thread.id);
 
 	const sendTyping = leading(throttle, () => {
 		ctx.client.http.POST("/api/v1/thread/{thread_id}/typing", {
@@ -64,13 +63,14 @@ export function Input(props: InputProps) {
 		if (user_id) return getName(user_id);
 	};
 
+	const fmt = new (Intl as any).ListFormat();
+
 	const getTyping = () => {
 		// TODO: fix types here
-		const fmt = new (Intl as any).ListFormat();
 		const user_id = api.users.cache.get("@self")?.id;
 		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
-		return fmt.format(user_ids.map((i) => getName(i) ?? "someone"));
+		return user_ids;
 	};
 
 	const onSubmit = (text: string) => {
@@ -97,11 +97,12 @@ export function Input(props: InputProps) {
 
 	return (
 		<div class="input">
-			<div class="typing">
-				<Show when={getTyping().length}>
-					typing: {getTyping()}
-				</Show>
-			</div>
+			<Show when={getTyping().length}>
+				<div class="typing">
+					{fmt.format(getTyping().map((i) => getName(i) || "someone"))}{" "}
+					{getTyping().length === 1 ? "is" : "are"} typing
+				</div>
+			</Show>
 			<Show when={atts()?.length}>
 				<div class="attachments">
 					<header>

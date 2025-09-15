@@ -189,8 +189,24 @@ input[type="submit"] {
 		max-height: 50%;
 
 		& > .typing {
-			background: $bg-300;
-			padding: 0 4px;
+			background: $bg-400;
+			padding: 2px 4px;
+			border: solid $bg-400 1px;
+			border-bottom: none;
+			border-top-right-radius: 4px;
+			border-top-left-radius: 4px;
+			color: $fg-400;
+
+			& ~ .text {
+				border-top-left-radius: 0;
+				border-top-right-radius: 0;
+				border-top: none;
+			}
+
+			&::after {
+				content: "";
+				animation: dots infinite 800ms;
+			}
 		}
 
 		& > .reply {
@@ -346,6 +362,14 @@ input[type="submit"] {
 		padding: 8px;
 		background: $bg-100;
 		z-index: 100;
+	}
+
+	& .spacer.mini {
+		min-height: 3rem;
+	}
+
+	&.has-typing .spacer.mini {
+		min-height: 4rem;
 	}
 }
 
