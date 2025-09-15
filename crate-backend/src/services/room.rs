@@ -134,7 +134,7 @@ impl ServiceRooms {
             description: Some("Default role".to_string()),
             permissions: EVERYONE_TRUSTED.to_vec(),
             is_self_applicable: false,
-            is_mentionable: true,
+            is_mentionable: false,
         };
         data.role_create(role_admin, 1).await?;
         data.role_create(role_moderator, 1).await?;
