@@ -16,7 +16,7 @@ use super::Postgres;
 #[async_trait]
 impl DataPermission for Postgres {
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
-        let mut perms: Permissions = query_scalar!(
+        let perms: Permissions = query_scalar!(
             r#"
             WITH perms AS (
                 SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission
@@ -35,63 +35,14 @@ impl DataPermission for Postgres {
             FROM perms
             WHERE user_id = $1 AND room_id = $2
         "#,
-            user_id.into_inner(),
-            room_id.into_inner()
+            *user_id,
+            *room_id,
         )
         .fetch_all(&self.pool)
         .await?
         .into_iter()
         .map(Into::into)
         .collect();
-
-        // Apply role overwrites
-        let role_overwrites = sqlx::query!(
-            r#"
-            SELECT
-                po.allow as "allow!: Json<Vec<Permission>>",
-                po.deny as "deny!: Json<Vec<Permission>>"
-            FROM permission_overwrite po
-            JOIN role_member rm ON po.actor_id = rm.role_id
-            WHERE po.target_id = $1 AND rm.user_id = $2
-            "#,
-            room_id.into_inner(),
-            user_id.into_inner(),
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        for overwrite in role_overwrites {
-            for p in overwrite.allow.0 {
-                perms.add(p);
-            }
-            for p in overwrite.deny.0 {
-                perms.remove(p);
-            }
-        }
-
-        // Apply user overwrites
-        let user_overwrites = sqlx::query!(
-            r#"
-            SELECT
-                allow as "allow!: Json<Vec<Permission>>",
-                deny as "deny!: Json<Vec<Permission>>"
-            FROM permission_overwrite
-            WHERE target_id = $1 AND actor_id = $2
-            "#,
-            room_id.into_inner(),
-            user_id.into_inner(),
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        if let Some(overwrite) = user_overwrites {
-            for p in overwrite.allow.0 {
-                perms.add(p);
-            }
-            for p in overwrite.deny.0 {
-                perms.remove(p);
-            }
-        }
 
         Ok(perms)
     }
@@ -101,17 +52,23 @@ impl DataPermission for Postgres {
         user_id: UserId,
         thread_id: ThreadId,
     ) -> Result<Permissions> {
-        let room_id: Option<Uuid> = query_scalar!(
-            "SELECT room_id FROM thread WHERE id = $1",
-            thread_id.into_inner()
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let room_id: Option<Uuid> =
+            query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
+                .fetch_one(&self.pool)
+                .await?;
 
         let mut perms = if let Some(room_id_uuid) = room_id {
             self.permission_room_get(user_id, room_id_uuid.into())
                 .await?
         } else {
+            query_scalar!(
+                "SELECT 1 FROM thread_member WHERE thread_id = $1 AND user_id = $2",
+                *thread_id,
+                *user_id,
+            )
+            .fetch_one(&self.pool)
+            .await?;
+
             let mut p = Permissions::empty();
             p.add(Permission::View);
             for a in EVERYONE_TRUSTED {
@@ -130,8 +87,8 @@ impl DataPermission for Postgres {
             JOIN role_member rm ON po.actor_id = rm.role_id
             WHERE po.target_id = $1 AND rm.user_id = $2
             "#,
-            thread_id.into_inner(),
-            user_id.into_inner(),
+            *thread_id,
+            *user_id,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -154,8 +111,8 @@ impl DataPermission for Postgres {
             FROM permission_overwrite
             WHERE target_id = $1 AND actor_id = $2
             "#,
-            thread_id.into_inner(),
-            user_id.into_inner(),
+            *thread_id,
+            *user_id,
         )
         .fetch_optional(&self.pool)
         .await?;
