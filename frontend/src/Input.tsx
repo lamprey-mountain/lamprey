@@ -8,6 +8,7 @@ import { leading, throttle } from "@solid-primitives/scheduled";
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { getMessageContent, getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
+import { usePermissions } from "./hooks/usePermissions.ts";
 
 type InputProps = {
 	thread: ThreadT;
@@ -95,8 +96,24 @@ export function Input(props: InputProps) {
 		editor.focus();
 	});
 
+	const perms = usePermissions(
+		() => api.users.cache.get("@self")!.id,
+		() => props.thread.room_id ?? undefined,
+		() => props.thread.id,
+	);
+
+	const locked = () => {
+		return !perms.has("MessageCreate") ||
+			(props.thread.locked && !perms.has("ThreadLock"));
+	};
+
 	return (
-		<div class="input">
+		<div
+			class="input"
+			classList={{
+				locked: locked(),
+			}}
+		>
 			<Show when={getTyping().length}>
 				<div class="typing">
 					{fmt.format(getTyping().map((i) => getName(i) || "someone"))}{" "}
@@ -138,13 +155,17 @@ export function Input(props: InputProps) {
 						type="file"
 						onInput={uploadFile}
 						value="upload file"
+						disabled={locked()}
 					/>
 				</label>
 				<editor.View
 					onSubmit={onSubmit}
 					onChange={onChange}
 					onUpload={handleUpload}
-					placeholder="send a message..."
+					placeholder={locked()
+						? "you cannot send mesages here"
+						: `send a message...`}
+					disabled={locked()}
 				/>
 			</div>
 		</div>

@@ -188,6 +188,23 @@ input[type="submit"] {
 		padding: 4px;
 		max-height: 50%;
 
+		&.locked {
+			cursor: not-allowed;
+
+			& > .text > .upload {
+				cursor: inherit;
+				color: $sep-800;
+
+				&:hover {
+					background: none;
+				}
+			}
+
+			& .editor .placeholder {
+				color: $sep-800;
+			}
+		}
+
 		& > .typing {
 			background: $bg-400;
 			padding: 2px 4px;
@@ -380,10 +397,6 @@ input[type="submit"] {
 	padding: 4px;
 	white-space: pre-wrap;
 	overflow-y: auto;
-
-	&.disabled {
-		background-color: $bg-400;
-	}
 
 	& .placeholder {
 		position: absolute;
