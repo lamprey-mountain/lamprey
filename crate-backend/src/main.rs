@@ -215,6 +215,36 @@ async fn main() -> Result<()> {
         cli::Command::GcMessages {} => gc_messages(state).await?,
         cli::Command::GcSession {} => gc_sessions(state).await?,
         cli::Command::GcAll {} => gc_all(state).await?,
+        cli::Command::Register { user_id } => {
+            data.user_set_registered(*user_id, Some(Time::now_utc()), None)
+                .await?;
+            // TODO: invalidate cache
+            info!("registered!");
+        }
+        cli::Command::MakeAdmin { user_id, full } => {
+            data.room_member_put(
+                SERVER_ROOM_ID,
+                *user_id,
+                None,
+                types::RoomMemberPut::default(),
+            )
+            .await?;
+            if *full {
+                let roles = data
+                    .role_list(
+                        SERVER_ROOM_ID,
+                        PaginationQuery {
+                            from: None,
+                            to: None,
+                            dir: Some(types::PaginationDirection::F),
+                            limit: Some(2),
+                        },
+                    )
+                    .await?;
+                dbg!(&roles);
+                data.role_member_put(*user_id, roles.items[1].id).await?;
+            }
+        }
     }
 
     Ok(())

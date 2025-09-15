@@ -79,7 +79,7 @@ impl DataRoomMember for Postgres {
         &self,
         room_id: RoomId,
         user_id: UserId,
-        origin: RoomMemberOrigin,
+        origin: Option<RoomMemberOrigin>,
         put: RoomMemberPut,
     ) -> Result<()> {
         query!(
@@ -99,7 +99,7 @@ impl DataRoomMember for Postgres {
             DbMembership::Join as _,
             put.override_name,
             put.override_description,
-            &serde_json::to_value(origin)?,
+            origin.and_then(|o| serde_json::to_value(o).ok()),
             put.mute.unwrap_or(false),
             put.deaf.unwrap_or(false),
         )

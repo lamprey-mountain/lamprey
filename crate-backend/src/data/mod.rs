@@ -91,7 +91,7 @@ pub trait DataRoomMember {
         &self,
         room_id: RoomId,
         user_id: UserId,
-        origin: RoomMemberOrigin,
+        origin: Option<RoomMemberOrigin>,
         put: RoomMemberPut,
     ) -> Result<()>;
     async fn room_member_patch(
@@ -397,7 +397,7 @@ pub trait DataUser {
         &self,
         user_id: UserId,
         registered_at: Option<common::v1::types::util::Time>,
-        parent_invite: String,
+        parent_invite: Option<String>,
     ) -> Result<UserVerId>;
 }
 

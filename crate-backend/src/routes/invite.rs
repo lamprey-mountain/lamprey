@@ -196,7 +196,7 @@ pub async fn invite_use(
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,
             };
-            d.room_member_put(room.id, user_id, origin, RoomMemberPut::default())
+            d.room_member_put(room.id, user_id, Some(origin), RoomMemberPut::default())
                 .await?;
             let member = d.room_member_get(room.id, user_id).await?;
             s.services.perms.invalidate_room(user_id, room.id).await;
@@ -220,7 +220,7 @@ pub async fn invite_use(
                 return Err(Error::BadStatic("add an auth method first"));
             }
             s.data()
-                .user_set_registered(user_id, Some(Time::now_utc()), invite.invite.code.0)
+                .user_set_registered(user_id, Some(Time::now_utc()), Some(invite.invite.code.0))
                 .await?;
             s.services().users.invalidate(user_id).await;
             let updated_user = s.services().users.get(user_id).await?;

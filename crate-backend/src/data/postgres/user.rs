@@ -226,7 +226,7 @@ impl DataUser for Postgres {
         &self,
         user_id: UserId,
         registered_at: Option<Time>,
-        parent_invite: String,
+        parent_invite: Option<String>,
     ) -> Result<UserVerId> {
         let version_id = UserVerId::new();
         query!(

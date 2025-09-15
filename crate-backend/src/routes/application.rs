@@ -285,8 +285,13 @@ async fn app_invite_bot(
     let origin = RoomMemberOrigin::BotInstall {
         user_id: auth_user_id,
     };
-    data.room_member_put(json.room_id, bot_user_id, origin, RoomMemberPut::default())
-        .await?;
+    data.room_member_put(
+        json.room_id,
+        bot_user_id,
+        Some(origin),
+        RoomMemberPut::default(),
+    )
+    .await?;
 
     let member = data.room_member_get(json.room_id, bot_user_id).await?;
 

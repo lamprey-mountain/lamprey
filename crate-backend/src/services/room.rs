@@ -147,7 +147,7 @@ impl ServiceRooms {
         data.room_member_put(
             room_id,
             creator,
-            RoomMemberOrigin::Creator,
+            Some(RoomMemberOrigin::Creator),
             RoomMemberPut::default(),
         )
         .await?;

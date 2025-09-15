@@ -151,7 +151,7 @@ async fn room_member_add(
     let origin = RoomMemberOrigin::Bridged {
         bridge_id: auth_user_id,
     };
-    d.room_member_put(room_id, target_user_id, origin, json)
+    d.room_member_put(room_id, target_user_id, Some(origin), json)
         .await?;
     s.services()
         .perms

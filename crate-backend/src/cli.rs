@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use common::v1::types::UserId;
 
 /// Simple program to greet a person
 #[derive(Debug, Parser)]
@@ -33,4 +34,16 @@ pub enum Command {
 
     /// run all garbage collection routines
     GcAll {},
+
+    /// upgrade a guest to a registered user
+    Register { user_id: UserId },
+
+    /// make a user an admin
+    MakeAdmin {
+        user_id: UserId,
+
+        /// make this user a full administrator, otherwise just invite to the server room
+        #[arg(short, long)]
+        full: bool,
+    },
 }
