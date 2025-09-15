@@ -66,7 +66,7 @@ export class Roles {
 						path: { room_id: room_id_sig() },
 						query: {
 							dir: "f",
-							limit: 100,
+							limit: 1024,
 							from: pagination?.items.at(-1)?.id,
 						},
 					},
