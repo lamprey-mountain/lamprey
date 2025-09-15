@@ -290,29 +290,32 @@ export const VoiceTray = () => {
 						<div style="width:8px"></div>
 						<Duration ms={connectedDuration()} />
 					</div>
-					<button onClick={actions.disconnect}>disconnect</button>
+					<button style="width: auto" onClick={actions.disconnect}>
+						disconnect
+					</button>
 				</div>
 				<div class="row">
 					<div>
-						<Show when={room()} fallback={thread()?.name}>
-							{room()?.name} / {thread()?.name}
-						</Show>
+						in{" "}
+						<a href={`/thread/${thread()?.id}`}>
+							<Show when={room()} fallback={thread()?.name}>
+								{room()?.name} / {thread()?.name}
+							</Show>
+						</a>
 					</div>
 					<div style="flex:1"></div>
-					<div>
-						<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
-							<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
-						</button>
-						<button
-							data-tooltip="toggle screenshare"
-							onClick={actions.toggleScreen}
-						>
-							<ToggleIcon
-								checked={voice.screenshareEnabled}
-								src={iconScreenshare}
-							/>
-						</button>
-					</div>
+					<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
+						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+					</button>
+					<button
+						data-tooltip="toggle screenshare"
+						onClick={actions.toggleScreen}
+					>
+						<ToggleIcon
+							checked={voice.screenshareEnabled}
+							src={iconScreenshare}
+						/>
+					</button>
 				</div>
 			</Show>
 			<div class="row toolbar">

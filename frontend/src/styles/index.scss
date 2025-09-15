@@ -410,9 +410,9 @@ pre {
 a {
 	color: $link-500;
 	cursor: pointer;
+	border-radius: 2px;
 
 	&:hover {
-		text-decoration: underline;
 		background: #fff2;
 	}
 }
@@ -1631,22 +1631,21 @@ table {
 }
 
 .voice-tray {
-	padding: 4px;
-	border: solid $sep-500 1px;
+	padding: 8px;
+	border-top: solid $bg-300 1px;
 	background: $bg-100;
-	display: inline-block;
 	grid-area: tray;
-
-	/* 64 (room nav) + 256 (thread nav) */
-	/* this will be responsive (maybe with grid) when actually impl'd in ui */
-	width: 320px;
 
 	.row {
 		display: flex;
+		align-items: center;
 	}
 
 	button {
-		/* height: .5rem; */
+		height: 24px;
+		width: 24px;
+		display: grid;
+		place-items: center;
 	}
 
 	.status {
