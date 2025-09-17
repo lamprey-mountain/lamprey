@@ -4,10 +4,13 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    role::RoleReorderItem, AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
+    role::RoleReorderItem, util::Time, AuditLogEntryId, EmojiId, InviteCode, MessageId,
+    MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
 };
 
+// TODO: coalesce multiple events into one event, if possible
+// eg. multiple FooUpdates from the same user
+// or add bulk kick/ban audit log events and merge everything there
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuditLogEntry {
@@ -180,6 +183,16 @@ pub enum AuditLogEntryType {
     UserUpdate {
         changes: Vec<AuditLogChange>,
     },
+
+    UserSuspend {
+        expires_at: Option<Time>,
+        user_id: UserId,
+    },
+
+    UserUnsuspend {
+        user_id: UserId,
+    },
+
     // TODO: impl these events
     // FriendAdd,
     // FriendRemove,

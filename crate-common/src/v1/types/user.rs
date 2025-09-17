@@ -49,9 +49,9 @@ pub struct User {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Suspended {
-    pub at: Time,
-    pub until: Option<Time>,
-    pub reason: String,
+    pub created_at: Time,
+    pub expires_at: Option<Time>,
+    pub reason: Option<String>,
 }
 
 /// represents a user on another platform

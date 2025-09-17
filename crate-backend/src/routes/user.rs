@@ -5,12 +5,15 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user_status::{Status, StatusPatch};
-use common::v1::types::util::{Changes, Diff};
+use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
     MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, SessionStatus, User,
     UserCreate, UserPatch, UserWithRelationship,
 };
+use common::v1::types::{Permission, Suspended, SERVER_ROOM_ID};
+use serde::Deserialize;
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::routes::util::{AuthWithSession, HeaderReason};
@@ -247,7 +250,12 @@ async fn guest_create(
     Ok((StatusCode::CREATED, Json(user)))
 }
 
-/// User suspend (TODO)
+#[derive(Deserialize, ToSchema)]
+struct SuspendRequest {
+    expires_at: Option<Time>,
+}
+
+/// User suspend
 #[utoipa::path(
     post,
     path = "/user/{user_id}/suspend",
@@ -256,14 +264,50 @@ async fn guest_create(
     responses((status = OK, body = User, description = "success")),
 )]
 async fn user_suspend(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<SuspendRequest>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    if target_user_id != auth_user_id {
+        let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+        perms.ensure(Permission::MemberBan)?;
+    }
+    d.user_suspended(
+        target_user_id,
+        Some(Suspended {
+            created_at: Time::now_utc(),
+            expires_at: json.expires_at,
+            reason: reason.clone(),
+        }),
+    )
+    .await?;
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user_id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::UserSuspend {
+            expires_at: json.expires_at,
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+    srv.users.invalidate(target_user_id).await;
+    let user = srv.users.get(target_user_id).await?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
+    Ok(Json(user))
 }
 
-/// User unsuspend (TODO)
+/// User unsuspend
 #[utoipa::path(
     delete,
     path = "/user/{user_id}/suspend",
@@ -272,11 +316,35 @@ async fn user_suspend(
     responses((status = OK, body = User, description = "success")),
 )]
 async fn user_unsuspend(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user_id): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let srv = s.services();
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserId(target_user_id) => target_user_id,
+    };
+    let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::MemberBan)?;
+    d.user_suspended(target_user_id, None).await?;
+    d.audit_logs_room_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user_id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::UserUnsuspend {
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+    srv.users.invalidate(target_user_id).await;
+    let user = srv.users.get(target_user_id).await?;
+    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
+    Ok(Json(user))
 }
 
 /// Connection list

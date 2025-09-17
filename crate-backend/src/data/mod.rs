@@ -12,7 +12,7 @@ use common::v1::types::{
     MediaPatch, NotificationId, Permission, PermissionOverwriteType, Relationship,
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
-    SessionStatus, SessionToken, ThreadMember, ThreadMemberPut, ThreadMembership,
+    SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
 };
 
 use uuid::Uuid;
@@ -403,6 +403,11 @@ pub trait DataUser {
         user_id: UserId,
         registered_at: Option<common::v1::types::util::Time>,
         parent_invite: Option<String>,
+    ) -> Result<UserVerId>;
+    async fn user_suspended(
+        &self,
+        user_id: UserId,
+        suspended: Option<Suspended>,
     ) -> Result<UserVerId>;
 }
 

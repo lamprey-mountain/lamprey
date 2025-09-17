@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{self, PaginationDirection, PaginationQuery, PaginationResponse};
+use common::v1::types::{
+    self, PaginationDirection, PaginationQuery, PaginationResponse, Suspended,
+};
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::{query, query_as, query_scalar, Acquire};
@@ -30,63 +32,6 @@ pub struct DbUser {
     pub registered_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
 }
-
-// #[derive(Deserialize, sqlx::Type)]
-// #[sqlx(type_name = "bot_access_type")]
-// pub enum DbBotAccess {
-//     Private,
-//     Public,
-//     PublicDiscoverable,
-// }
-
-// impl From<DbBotAccess> for BotAccess {
-//     fn from(value: DbBotAccess) -> Self {
-//         match value {
-//             DbBotAccess::Private => BotAccess::Private,
-//             DbBotAccess::Public => BotAccess::Public {
-//                 is_discoverable: false,
-//             },
-//             DbBotAccess::PublicDiscoverable => BotAccess::Public {
-//                 is_discoverable: true,
-//             },
-//         }
-//     }
-// }
-
-// impl From<BotAccess> for DbBotAccess {
-//     fn from(value: BotAccess) -> Self {
-//         match value {
-//             BotAccess::Private => DbBotAccess::Private,
-//             BotAccess::Public { is_discoverable } => {
-//                 if is_discoverable {
-//                     DbBotAccess::Public
-//                 } else {
-//                     DbBotAccess::PublicDiscoverable
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// impl From<DbUserState> for UserState {
-//     fn from(value: DbUserState) -> Self {
-//         match value {
-//             DbUserState::Active => UserState::Active,
-//             DbUserState::Suspended => UserState::Suspended,
-//             DbUserState::Deleted => UserState::Deleted,
-//         }
-//     }
-// }
-
-// impl From<UserState> for DbUserState {
-//     fn from(value: UserState) -> Self {
-//         match value {
-//             UserState::Active => DbUserState::Active,
-//             UserState::Suspended => DbUserState::Suspended,
-//             UserState::Deleted => DbUserState::Deleted,
-//         }
-//     }
-// }
 
 impl From<DbUser> for User {
     fn from(row: DbUser) -> Self {
@@ -264,6 +209,23 @@ impl DataUser for Postgres {
             *version_id,
             registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             parent_invite,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(version_id)
+    }
+
+    async fn user_suspended(
+        &self,
+        user_id: UserId,
+        suspended: Option<Suspended>,
+    ) -> Result<UserVerId> {
+        let version_id = UserVerId::new();
+        query!(
+            "UPDATE usr SET version_id = $2, suspended = $3 WHERE id = $1",
+            *user_id,
+            *version_id,
+            suspended.map(|t| serde_json::to_value(t).unwrap()),
         )
         .execute(&self.pool)
         .await?;
