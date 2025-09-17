@@ -88,7 +88,7 @@ pub struct DbThread {
     pub deleted_at: Option<PrimitiveDateTime>,
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct DbThreadPrivate {
     pub id: ThreadId,
     pub ty: DbThreadType,
