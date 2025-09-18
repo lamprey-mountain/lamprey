@@ -7,7 +7,6 @@ type Perm = {
 	group?: string;
 };
 
-// unused permissions commented out for now
 export const permissions: Array<Perm> = [
 	{
 		id: "Admin",
@@ -239,7 +238,7 @@ export const permissions: Array<Perm> = [
 	{
 		id: "VoicePriority",
 		name: "Priority speaker",
-		description: "(unimplemented)  Can talk louder",
+		description: "(unimplemented) Can talk louder",
 		group: "voice",
 	},
 	{
@@ -253,6 +252,37 @@ export const permissions: Array<Perm> = [
 		name: "Video",
 		description: "Can send video and screenshare in voice threads",
 		group: "voice",
+	},
+	{
+		id: "ServerMetrics",
+		name: "View metrics",
+		description: "(unimplemented) Can access the metrics endpoint",
+		group: "server",
+	},
+	{
+		id: "ServerOversee",
+		name: "Oversee",
+		description: "Can view the server room and all members on the server",
+		group: "server",
+	},
+	{
+		id: "ServerReports",
+		name: "View reports",
+		description: "(unimplemented) Can view server reports",
+		group: "server",
+	},
+	{
+		id: "RoleApply",
+		name: "Apply roles",
+		description: "Can apply and remove roles to members.",
+		group: "server members",
+	},
+	{
+		id: "MemberBan",
+		name: "Suspend members",
+		description:
+			"Can suspend and unsuspend server members permanently or for a period of time",
+		group: "server members",
 	},
 ];
 
