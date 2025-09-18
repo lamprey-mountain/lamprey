@@ -245,7 +245,7 @@ pub enum Permission {
     // - remove View
     // - remove ensure_view
     // - enfore current view logic in perms.for_{room_thread}
-    // - add ViewThread (view all threads/view this thread)
+    // - add ViewThread (view all threads/view this room)
     View,
 
     /// view audit log

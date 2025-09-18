@@ -30,10 +30,10 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::RoleApply,
     Permission::RoleManage,
     Permission::RoomManage,
-    // Permission::ServerAdmin,   // server perm doesnt apply
-    // Permission::ServerMetrics, // server perm doesnt apply
-    // Permission::ServerOversee, // server perm doesnt apply
-    // Permission::ServerReports, // server perm doesnt apply
+    Permission::ServerAdmin,
+    Permission::ServerMetrics,
+    Permission::ServerOversee,
+    Permission::ServerReports,
     Permission::TagApply,
     Permission::TagManage,
     Permission::ThreadArchive,
