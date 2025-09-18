@@ -24,12 +24,10 @@ pastey = "0.1.1"
 utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
 formatting_extra = []
-feat_reactions = []
 feat_custom_embeds = []
 feat_thread_linking = []
 feat_thread_type_forums = []
 feat_thread_type_event = []
-feat_thread_type_voice = []
 feat_thread_type_document = []
 feat_thread_type_table = []
 feat_thread_type_report = []
@@ -39,18 +37,16 @@ feat_message_move = []
 feat_message_forwarding = []
 feat_automod = []
 feat_interaction = []
-feat_interaction_reaction = ["feat_interaction", "feat_reactions"]
+feat_interaction_reaction = ["feat_interaction"]
 feat_interaction_status = ["feat_interaction"]
 feat_voice = []
 
 default = [
   "utoipa",
   "validator",
-  "feat_reactions",
   "feat_custom_emoji",
   "feat_custom_embeds",
   "feat_thread_type_forums",
   "feat_interaction_reaction",
   "feat_voice",
-  "feat_thread_type_voice",
 ]

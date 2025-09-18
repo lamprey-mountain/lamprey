@@ -19,8 +19,6 @@ use super::{RoomId, ThreadId, UserId};
 
 pub mod chat;
 pub mod forum;
-
-#[cfg(feature = "feat_thread_type_voice")]
 pub mod voice;
 
 #[cfg(feature = "feat_thread_type_event")]
@@ -140,7 +138,6 @@ pub enum ThreadType {
     /// long form chat history
     Forum,
 
-    #[cfg(feature = "feat_thread_type_voice")]
     /// call
     Voice,
 

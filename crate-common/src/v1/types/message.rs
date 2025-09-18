@@ -6,18 +6,12 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-#[allow(unused_imports)]
-#[cfg(feature = "feat_reactions")]
-use crate::v1::types::emoji::Emoji;
-
-#[allow(unused_imports)]
-#[cfg(feature = "feat_reactions")]
-use crate::v1::types::reaction::ReactionCounts;
-
 #[cfg(feature = "feat_automod")]
 use crate::v1::types::RedexId;
 
+use crate::v1::types::emoji::Emoji;
 use crate::v1::types::moderation::Report;
+use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::util::some_option;
 use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
@@ -150,6 +144,7 @@ pub struct MessageCreate {
     #[serde(default)]
     pub embeds: Vec<EmbedCreate>,
 
+    /// custom timestamps (timestamp massaging), for bridge bots
     pub created_at: Option<Time>,
 }
 
@@ -390,7 +385,6 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<String>,
 
-    #[cfg(feature = "feat_reactions")]
     #[serde(default)]
     pub reactions: ReactionCounts,
     // // experimental! don't touch yet.

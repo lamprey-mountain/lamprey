@@ -28,10 +28,7 @@ pub mod oauth;
 pub mod pagination;
 pub mod permission;
 pub mod profile;
-
-#[cfg(feature = "feat_reactions")]
 pub mod reaction;
-
 // pub mod redex;
 pub mod role;
 pub mod room;
@@ -47,8 +44,6 @@ pub mod user;
 pub mod user_config;
 pub mod user_status;
 pub mod visibility;
-
-#[cfg(feature = "feat_voice")]
 pub mod voice;
 
 pub use media::{
