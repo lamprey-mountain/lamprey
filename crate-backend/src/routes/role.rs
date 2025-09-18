@@ -34,15 +34,16 @@ use crate::error::{Error, Result};
 )]
 async fn role_create(
     Path(room_id): Path<RoomId>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoleCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
 
@@ -51,8 +52,8 @@ async fn role_create(
     }
 
     let room = srv.rooms.get(room_id, None).await?;
-    let rank = srv.perms.get_user_rank(room_id, user.id).await?;
-    if rank == 0 && room.owner_id != Some(user.id) {
+    let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+    if rank == 0 && room.owner_id != Some(auth_user.id) {
         // special case: we don't want people with only the base role to be able
         // to create roles, as that role will always be position 1 and won't be
         // able to be edited or applied
@@ -84,7 +85,7 @@ async fn role_create(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: user.id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::RoleCreate { changes },
@@ -92,7 +93,7 @@ async fn role_create(
     .await?;
 
     let msg = MessageSync::RoleCreate { role: role.clone() };
-    s.broadcast_room(room_id, user.id, msg).await?;
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
     srv.perms.invalidate_user_ranks(room_id);
     Ok((StatusCode::CREATED, Json(role)))
 }
@@ -113,24 +114,25 @@ async fn role_create(
 )]
 async fn role_update(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RolePatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
     if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
-    let rank = srv.perms.get_user_rank(room_id, user.id).await?;
+    let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
-    if rank <= start_role.position && room.owner_id != Some(user.id) {
+    if rank <= start_role.position && room.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
 
@@ -172,7 +174,7 @@ async fn role_update(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: user.id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::RoleUpdate { changes },
@@ -185,7 +187,7 @@ async fn role_update(
     if end_role.permissions != start_role.permissions {
         s.services().perms.invalidate_room_all(room_id);
     }
-    s.broadcast_room(room_id, user.id, msg).await?;
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
     Ok(Json(end_role).into_response())
 }
 
@@ -205,22 +207,23 @@ async fn role_update(
 async fn role_delete(
     Path((room_id, role_id)): Path<(RoomId, RoleId)>,
     Query(query): Query<RoleDeleteQuery>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     if room_id.into_inner() == role_id.into_inner() {
         return Err(Error::BadStatic("cannot delete the default role"));
     }
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
-    let rank = srv.perms.get_user_rank(room_id, user.id).await?;
+    let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
-    if rank <= role.position && room.owner_id != Some(user.id) {
+    if rank <= role.position && room.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("your rank is too low"));
     }
     if role.member_count == 0 || query.force {
@@ -229,7 +232,7 @@ async fn role_delete(
         d.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: user.id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::RoleDelete { role_id },
@@ -238,7 +241,7 @@ async fn role_delete(
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
         srv.perms.invalidate_room_all(room_id);
-        s.broadcast_room(room_id, user.id, msg).await?;
+        s.broadcast_room(room_id, auth_user.id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)
@@ -342,6 +345,7 @@ async fn role_member_add(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
@@ -399,6 +403,7 @@ async fn role_member_remove(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
@@ -479,6 +484,7 @@ async fn role_reorder(
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleReorder>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     body.validate()?;
 
     let d = s.data();

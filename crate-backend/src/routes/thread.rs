@@ -47,6 +47,7 @@ async fn thread_create_room(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
     let data = s.data();
@@ -287,6 +288,7 @@ async fn thread_update(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let thread = s
         .services()
@@ -380,6 +382,7 @@ async fn thread_archive(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
@@ -445,6 +448,7 @@ async fn thread_unarchive(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
     let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
@@ -506,6 +510,7 @@ async fn thread_remove(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -553,6 +558,7 @@ async fn thread_restore(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -604,6 +610,7 @@ async fn thread_typing(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
@@ -647,6 +654,7 @@ async fn thread_lock(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let thread_before = srv.threads.get(thread_id, None).await?;
@@ -702,6 +710,7 @@ async fn thread_unlock(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let thread_before = srv.threads.get(thread_id, None).await?;

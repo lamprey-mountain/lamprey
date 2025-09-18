@@ -156,16 +156,21 @@ impl Connection {
 
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
-                    let user = srv
-                        .users
-                        .status_set(
-                            user_id,
-                            status
-                                .map(|s| s.apply(Status::offline()))
-                                .unwrap_or(Status::online()),
-                        )
-                        .await?;
-                    Some(user)
+                    let user = srv.users.get(user_id).await?;
+                    if user.is_suspended() {
+                        Some(user)
+                    } else {
+                        let user = srv
+                            .users
+                            .status_set(
+                                user_id,
+                                status
+                                    .map(|s| s.apply(Status::offline()))
+                                    .unwrap_or(Status::online()),
+                            )
+                            .await?;
+                        Some(user)
+                    }
                 } else {
                     None
                 };
@@ -234,6 +239,8 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                let user = srv.users.get(user_id).await?;
+                user.ensure_unsuspended()?;
                 srv.users
                     .status_set(user_id, status.apply(Status::offline()))
                     .await?;
@@ -263,6 +270,9 @@ impl Connection {
                 };
 
                 let srv = self.s.services();
+                let user = srv.users.get(user_id).await?;
+                user.ensure_unsuspended()?;
+
                 let payload: SignallingMessage = serde_json::from_value(payload.clone())?;
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {

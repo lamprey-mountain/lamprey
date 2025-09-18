@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::error::Error;
 use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::MediaId;
@@ -330,5 +331,27 @@ impl Diff<Relationship> for RelationshipPatch {
             || self.relation.changes(&other.relation)
             || self.petname.changes(&other.petname)
             || self.ignore.changes(&other.ignore)
+    }
+}
+
+impl User {
+    pub fn is_suspended(&self) -> bool {
+        if let Some(s) = &self.suspended {
+            if s.expires_at.is_some_and(|t| *t < *Time::now_utc()) {
+                false
+            } else {
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn ensure_unsuspended(&self) -> Result<(), Error> {
+        if self.is_suspended() {
+            Err(Error::UserSuspended)
+        } else {
+            Ok(())
+        }
     }
 }

@@ -44,6 +44,8 @@ async fn message_create(
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let srv = s.services();
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
@@ -232,6 +234,7 @@ async fn message_edit(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -274,6 +277,7 @@ async fn message_delete(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -420,6 +424,7 @@ async fn message_version_delete(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -545,6 +550,7 @@ async fn message_moderate(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
 ) -> Result<StatusCode> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
 
     if !json.remove.is_empty() || !json.restore.is_empty() {

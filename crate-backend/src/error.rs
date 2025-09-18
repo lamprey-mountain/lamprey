@@ -1,6 +1,7 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use axum::{extract::ws::Message, http::StatusCode, response::IntoResponse, Json};
+use common::v1::types::error::Error as ApiError;
 use common::v1::types::{MessageEnvelope, MessagePayload};
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -106,6 +107,9 @@ pub enum Error {
 
     #[error("OtelExporterBuildError: {0}")]
     OtelExporterBuildError(#[from] ExporterBuildError),
+
+    #[error("{0}")]
+    ApiError(ApiError),
 }
 
 impl From<sqlx::Error> for Error {
@@ -142,6 +146,9 @@ impl Error {
             Error::Unimplemented => StatusCode::NOT_IMPLEMENTED,
             Error::NotModified => StatusCode::NOT_MODIFIED,
             Error::Validation(_) => StatusCode::BAD_REQUEST,
+            Error::ApiError(err) => match err {
+                ApiError::UserSuspended => StatusCode::FORBIDDEN,
+            },
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -154,6 +161,7 @@ impl Error {
             Error::UnauthSession => Error::UnauthSession,
             Error::NotFound => Error::NotFound,
             Error::MissingPermissions => Error::MissingPermissions,
+            Error::ApiError(err) => Error::ApiError(err.clone()),
             Error::BadStatic(s) => Error::BadStatic(s),
             Error::BadRequest(s) => Error::BadRequest(s.clone()),
             Error::TooBig => Error::TooBig,
@@ -203,6 +211,12 @@ impl From<Error> for Message {
             })
             .expect("error should always be able to be serialized"),
         )
+    }
+}
+
+impl From<ApiError> for Error {
+    fn from(err: ApiError) -> Self {
+        Self::ApiError(err)
     }
 }
 

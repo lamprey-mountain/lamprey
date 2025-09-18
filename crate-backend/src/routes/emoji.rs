@@ -34,14 +34,15 @@ use crate::ServerState;
     )
 )]
 async fn emoji_create(
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::EmojiAdd)?;
 
@@ -64,7 +65,9 @@ async fn emoji_create(
     }
 
     let media_id = json.media_id;
-    let emoji = data.emoji_create(user.id, room_id, json.clone()).await?;
+    let emoji = data
+        .emoji_create(auth_user.id, room_id, json.clone())
+        .await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
 
@@ -76,7 +79,7 @@ async fn emoji_create(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: user.id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiCreate {
@@ -87,7 +90,7 @@ async fn emoji_create(
 
     s.broadcast_room(
         room_id,
-        user.id,
+        auth_user.id,
         MessageSync::EmojiCreate {
             emoji: emoji.clone(),
         },
@@ -138,16 +141,17 @@ async fn emoji_get(
 )]
 async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
-    let perms = srv.perms.for_room(user.id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    if emoji.creator_id == user.id {
+    if emoji.creator_id == auth_user.id {
         perms.ensure(Permission::EmojiAdd)?;
     } else {
         perms.ensure(Permission::EmojiManage)?;
@@ -158,7 +162,7 @@ async fn emoji_delete(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: user.id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiDelete { emoji_id },
@@ -168,7 +172,7 @@ async fn emoji_delete(
     if let EmojiOwner::Room { room_id } = emoji.owner {
         s.broadcast_room(
             room_id,
-            user.id,
+            auth_user.id,
             MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,

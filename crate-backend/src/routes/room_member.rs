@@ -111,6 +111,7 @@ async fn room_member_add(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomMemberPut>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
@@ -230,6 +231,7 @@ async fn room_member_update(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
@@ -329,6 +331,7 @@ async fn room_member_delete(
     Query(_q): Query<LeaveQuery>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
@@ -405,6 +408,7 @@ async fn room_ban_create(
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
@@ -474,6 +478,7 @@ async fn room_ban_create_bulk(
     State(s): State<Arc<ServerState>>,
     Json(create): Json<RoomBanBulkCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     create.validate()?;
     let srv = s.services();
     let d = s.data();
@@ -557,6 +562,7 @@ async fn room_ban_remove(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,

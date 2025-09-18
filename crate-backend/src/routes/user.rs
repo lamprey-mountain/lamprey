@@ -43,6 +43,7 @@ async fn user_update(
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -270,6 +271,7 @@ async fn user_suspend(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SuspendRequest>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
@@ -321,6 +323,7 @@ async fn user_unsuspend(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
@@ -428,6 +431,8 @@ async fn user_set_status(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<StatusPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,

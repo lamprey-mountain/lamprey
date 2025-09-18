@@ -41,6 +41,8 @@ async fn admin_whisper(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminWhisper>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let srv = s.services();
     let d = s.data();
 
@@ -99,6 +101,8 @@ async fn admin_broadcast(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminBroadcast>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let srv = s.services();
     let d = s.data();
 

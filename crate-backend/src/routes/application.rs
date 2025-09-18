@@ -51,6 +51,7 @@ async fn app_create(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let user = data
         .user_create(DbUserCreate {
@@ -150,6 +151,7 @@ async fn app_patch(
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<ApplicationPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     patch.validate()?;
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
@@ -187,6 +189,7 @@ async fn app_delete(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
     if app.owner_id == auth_user.id {
@@ -212,6 +215,7 @@ async fn app_create_session(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
@@ -265,6 +269,7 @@ async fn app_invite_bot(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AppInviteBot>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
 
@@ -336,6 +341,8 @@ async fn puppet_ensure(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PuppetCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     if *app_id != *auth_user.id {
         return Err(Error::MissingPermissions);
     }

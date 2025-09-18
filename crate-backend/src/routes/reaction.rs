@@ -38,6 +38,7 @@ async fn reaction_add(
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -90,6 +91,7 @@ async fn reaction_remove(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
@@ -142,6 +144,7 @@ async fn reaction_purge(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;

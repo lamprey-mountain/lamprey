@@ -35,6 +35,7 @@ async fn permission_thread_overwrite(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
@@ -178,6 +179,7 @@ async fn permission_thread_delete(
     Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;

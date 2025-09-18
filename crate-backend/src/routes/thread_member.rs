@@ -106,6 +106,7 @@ pub async fn thread_member_add(
     HeaderReason(_reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
@@ -168,6 +169,7 @@ pub async fn thread_member_delete(
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,

@@ -239,11 +239,12 @@ pub async fn debug_version() -> Result<impl IntoResponse> {
     )
 )]
 pub async fn debug_embed_url(
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<EmbedRequest>,
 ) -> Result<impl IntoResponse> {
-    let mut embed = ServiceEmbed::generate_inner(&s.inner, user.id, json.url).await?;
+    auth_user.ensure_unsuspended()?;
+    let mut embed = ServiceEmbed::generate_inner(&s.inner, auth_user.id, json.url).await?;
     if let Some(m) = &mut embed.media {
         s.presign(m).await?;
     }

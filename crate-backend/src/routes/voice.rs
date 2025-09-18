@@ -68,6 +68,8 @@ async fn voice_state_disconnect(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
@@ -123,6 +125,8 @@ async fn voice_state_move(
     HeaderReason(reason): HeaderReason,
     Json(json): Json<VoiceStateMove>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,

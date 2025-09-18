@@ -34,17 +34,18 @@ use super::util::{Auth, HeaderReason};
 )]
 pub async fn invite_delete(
     Path(code): Path<InviteCode>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
     let (has_perm, id_target) = match invite.invite.target {
         InviteTarget::Room { room } => (
             s.services()
                 .perms
-                .for_room(user.id, room.id)
+                .for_room(auth_user.id, room.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Room { room_id: room.id },
@@ -52,7 +53,7 @@ pub async fn invite_delete(
         InviteTarget::Thread { room, thread } => (
             s.services()
                 .perms
-                .for_thread(user.id, thread.id)
+                .for_thread(auth_user.id, thread.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Thread {
@@ -63,13 +64,13 @@ pub async fn invite_delete(
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(user.id, SERVER_ROOM_ID)
+                .for_room(auth_user.id, SERVER_ROOM_ID)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
     };
-    let can_delete = user.id == invite.invite.creator_id || has_perm;
+    let can_delete = auth_user.id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
         d.audit_logs_room_append(AuditLogEntry {
@@ -79,7 +80,7 @@ pub async fn invite_delete(
                 InviteTargetId::Thread { room_id, .. } => room_id,
                 InviteTargetId::Server => SERVER_ROOM_ID,
             },
-            user_id: user.id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::InviteDelete { code: code.clone() },
@@ -89,7 +90,7 @@ pub async fn invite_delete(
             InviteTargetId::Room { room_id } => {
                 s.broadcast_room(
                     room_id,
-                    user.id,
+                    auth_user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -100,7 +101,7 @@ pub async fn invite_delete(
             InviteTargetId::Thread { thread_id, .. } => {
                 s.broadcast_thread(
                     thread_id,
-                    user.id,
+                    auth_user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -111,7 +112,7 @@ pub async fn invite_delete(
             InviteTargetId::Server => {
                 s.broadcast_room(
                     SERVER_ROOM_ID,
-                    user.id,
+                    auth_user.id,
                     MessageSync::InviteDelete {
                         code,
                         target: id_target,
@@ -139,26 +140,26 @@ pub async fn invite_delete(
 )]
 pub async fn invite_resolve(
     Path(code): Path<InviteCode>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(code).await?;
-    if invite.invite.creator_id == user.id {
+    if invite.invite.creator_id == auth_user.id {
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
         InviteTarget::Room { room } => {
-            let perms = s.perms.for_room(user.id, room.id).await?;
+            let perms = s.perms.for_room(auth_user.id, room.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Thread { room: _, thread } => {
-            let perms = s.perms.for_thread(user.id, thread.id).await?;
+            let perms = s.perms.for_thread(auth_user.id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Server => {
-            let perms = s.perms.for_room(user.id, SERVER_ROOM_ID).await?;
+            let perms = s.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
             !perms.has(Permission::InviteManage)
         }
     };
@@ -273,13 +274,15 @@ pub async fn invite_use(
 )]
 pub async fn invite_room_create(
     Path(room_id): Path<RoomId>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let d = s.data();
-    let perms = s.services.perms.for_room(user.id, room_id).await?;
+    let perms = s.services.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::InviteCreate)?;
 
@@ -293,7 +296,7 @@ pub async fn invite_room_create(
     let code = InviteCode(nanoid!(8, &alphabet));
     d.invite_insert_room(
         room_id,
-        user.id,
+        auth_user.id,
         code.clone(),
         json.expires_at,
         json.max_uses,
@@ -311,7 +314,7 @@ pub async fn invite_room_create(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id: user.id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::InviteCreate { changes },
@@ -320,7 +323,7 @@ pub async fn invite_room_create(
 
     s.broadcast_room(
         room_id,
-        user.id,
+        auth_user.id,
         MessageSync::InviteCreate {
             invite: invite.clone(),
         },
@@ -500,14 +503,16 @@ pub async fn invite_patch(
     responses((status = OK, body = Invite, description = "success")),
 )]
 pub async fn invite_server_create(
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let d = s.data();
     let srv = s.services();
-    let user = srv.users.get(user.id).await?;
+    let user = srv.users.get(auth_user.id).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot create server invites"));
     }

@@ -33,6 +33,7 @@ async fn dm_init(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
     s.broadcast(MessageSync::ThreadCreate {

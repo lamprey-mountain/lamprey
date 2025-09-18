@@ -36,10 +36,11 @@ use super::util::{Auth, HeaderReason};
     tags = ["room"],
 )]
 async fn room_create(
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
 
     // FIXME: run this in a transaction
@@ -67,7 +68,7 @@ async fn room_create(
         id: None,
         ty: RoomType::Default,
     };
-    let room = s.services().rooms.create(json, user.id, extra).await?;
+    let room = s.services().rooms.create(json, auth_user.id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
@@ -181,13 +182,14 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
 
@@ -214,10 +216,10 @@ async fn room_edit(
     let room = s
         .services()
         .rooms
-        .update(room_id, user.id, json, reason.clone())
+        .update(room_id, auth_user.id, json, reason.clone())
         .await?;
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, user.id, msg).await?;
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
     Ok(Json(room))
 }
 
@@ -307,6 +309,8 @@ async fn room_transfer_ownership(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let srv = s.services();
     let data = s.data();
     let target_user_id = json.owner_id;

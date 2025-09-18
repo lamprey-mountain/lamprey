@@ -34,6 +34,7 @@ async fn email_add(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user.id,
@@ -93,6 +94,9 @@ async fn email_delete(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    // we need to keep email addresses in case we need to tell the suspended user anything
+    auth_user.ensure_unsuspended()?;
+
     let email: EmailAddr = email.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user.id,
@@ -196,6 +200,7 @@ async fn email_verification_resend(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user.id,
@@ -250,6 +255,7 @@ async fn email_verification_finish(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
         UserIdReq::UserSelf => auth_user.id,

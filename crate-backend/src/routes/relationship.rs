@@ -55,6 +55,8 @@ async fn friend_add(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let data = s.data();
 
     let existing = data
@@ -173,6 +175,8 @@ async fn friend_remove(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
     let data = s.data();
 
     let existing = data

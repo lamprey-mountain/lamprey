@@ -34,10 +34,11 @@ use super::util::Auth;
     )
 )]
 async fn media_create(
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
@@ -48,7 +49,7 @@ async fn media_create(
             let media_id = MediaId::new();
             let srv = s.services();
             srv.media
-                .create_upload(media_id, user.id, json.clone())
+                .create_upload(media_id, auth_user.id, json.clone())
                 .await?;
             let upload_url = Some(
                 s.config()
@@ -70,7 +71,7 @@ async fn media_create(
             }
 
             let srv = s.services();
-            let media = srv.media.import_from_url(user.id, json).await?;
+            let media = srv.media.import_from_url(auth_user.id, json).await?;
             let mut headers = HeaderMap::new();
             let size = media.source.size;
             headers.insert("content-length", size.into());
@@ -96,13 +97,14 @@ async fn media_create(
 )]
 async fn media_patch(
     Path(media_id): Path<MediaId>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     json.validate()?;
     if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user.id {
+        if up.user_id == auth_user.id {
             if let Some(alt) = json.alt {
                 up.create.alt = alt;
             }
@@ -120,7 +122,7 @@ async fn media_patch(
         }
     }
     let (media, uploader_id) = s.data().media_select(media_id).await?;
-    if uploader_id != user.id {
+    if uploader_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
     s.data().media_update(media_id, json).await?;
@@ -390,11 +392,12 @@ async fn media_check(
 )]
 async fn media_delete(
     Path(media_id): Path<MediaId>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user.id {
+        if up.user_id == auth_user.id {
             s.services().media.uploads.remove(&media_id);
         }
         Ok(StatusCode::NO_CONTENT)
@@ -416,6 +419,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(media_get))
         .routes(routes!(media_delete))
         .routes(routes!(media_done))
+        // TODO: move these to cdn?
         .route(
             "/internal/media-upload/{media_id}",
             routing::patch(media_upload).head(media_check),
