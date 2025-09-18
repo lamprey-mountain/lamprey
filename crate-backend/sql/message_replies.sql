@@ -6,7 +6,8 @@ with recursive message_tree as (
     from
         message
     where
-        id = $2
+        ($2::uuid is not null and id = $2::uuid)
+        or ($2::uuid is null and reply_id is null)
     union all
     select
         m.id,
@@ -44,7 +45,7 @@ message_reaction as (
 select
     msg.type as "message_type: DbMessageType",
     msg.id,
-    msg.thread_id, 
+    msg.thread_id,
     msg.version_id,
     msg.ordering,
     msg.content,

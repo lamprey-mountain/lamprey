@@ -320,7 +320,7 @@ pub trait DataMessage {
     async fn message_replies(
         &self,
         thread_id: ThreadId,
-        message_id: MessageId,
+        root_message_id: Option<MessageId>,
         user_id: UserId,
         depth: u16,
         breadth: Option<u16>,

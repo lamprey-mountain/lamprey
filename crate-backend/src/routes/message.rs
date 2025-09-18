@@ -693,7 +693,50 @@ async fn message_replies(
         .await?;
     perms.ensure_view()?;
     let mut res = data
-        .message_replies(thread_id, message_id, auth_user.id, q.depth, q.breadth, q.q)
+        .message_replies(
+            thread_id,
+            Some(message_id),
+            auth_user.id,
+            q.depth,
+            q.breadth,
+            q.q,
+        )
+        .await?;
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+    Ok(Json(res))
+}
+
+/// Message roots
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/reply",
+    params(
+        RepliesQuery,
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["message"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+    ),
+)]
+async fn message_roots(
+    Path((thread_id,)): Path<(ThreadId,)>,
+    Query(q): Query<RepliesQuery>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    q.validate()?;
+    let data = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    let mut res = data
+        .message_replies(thread_id, None, auth_user.id, q.depth, q.breadth, q.q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -713,6 +756,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_version_get))
         .routes(routes!(message_version_delete))
         .routes(routes!(message_replies))
+        .routes(routes!(message_roots))
         .routes(routes!(message_moderate))
         .routes(routes!(message_migrate))
 }

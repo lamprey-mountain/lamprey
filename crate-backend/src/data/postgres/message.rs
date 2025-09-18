@@ -379,13 +379,14 @@ impl DataMessage for Postgres {
     async fn message_replies(
         &self,
         thread_id: ThreadId,
-        message_id: MessageId,
+        root_message_id: Option<MessageId>,
         user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
+        let rmid = root_message_id.map(|i| *i);
         gen_paginate!(
             p,
             self.pool,
@@ -393,7 +394,7 @@ impl DataMessage for Postgres {
                 DbMessage,
                 r"sql/message_replies.sql",
                 *thread_id,
-                *message_id,
+                rmid,
                 depth as i32,
                 breadth.map(|b| b as i64),
                 *p.after,
@@ -405,7 +406,7 @@ impl DataMessage for Postgres {
             query_file_scalar!(
                 "sql/message_replies_count.sql",
                 *thread_id,
-                *message_id,
+                rmid,
                 depth as i32
             ),
             |i: &Message| i.id.to_string()
