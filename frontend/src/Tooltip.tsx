@@ -283,6 +283,7 @@ export function createTooltip(props: CreateTooltipProps) {
 			onCleanup(() => {
 				el.removeEventListener("mouseenter", showTip);
 				el.removeEventListener("mouseleave", considerHidingTip);
+				setVisible(false);
 			});
 
 			render(() => {

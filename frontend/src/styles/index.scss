@@ -228,18 +228,32 @@ input[type="submit"] {
 
 		& > .reply {
 			display: flex;
+			border-top-right-radius: 4px;
+			border-top-left-radius: 4px;
+			border: solid 1px $sep-500;
+			background-color: oklch(var(--color-bg1) / 0.8);
+			overflow: hidden;
+
+			& ~ .text {
+				border-top-left-radius: 0;
+				border-top-right-radius: 0;
+				border-top: none;
+			}
 
 			& > .info {
-				padding: 0 4px;
-				background-color: oklch(var(--color-bg1) / 0.8);
+				padding: 2px 8px;
 				flex: 1;
-				border: solid 1px $sep-500;
 			}
 
 			& > .cancel {
-				width: 124px;
-				border: solid 1px $sep-500;
 				background-color: $bg-200;
+				display: grid;
+				place-items: center;
+				width: 28px;
+
+				&:hover {
+					background-color: $bg-100;
+				}
 			}
 		}
 
@@ -533,7 +547,7 @@ em {
 			padding: 8px;
 			color: $fg-300;
 			max-width: 500px;
-			min-width: 100px;
+			/* min-width: 100px; */
 			min-height: 50px;
 		}
 	}

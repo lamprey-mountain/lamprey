@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
-import type { ThreadT } from "./types.ts";
+import type { MessageT, ThreadT } from "./types.ts";
 import Editor, { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
@@ -9,6 +9,8 @@ import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { getMessageContent, getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
+import cancelIc from "./assets/x.png";
+import { createTooltip } from "./Tooltip.tsx";
 
 type InputProps = {
 	thread: ThreadT;
@@ -97,7 +99,7 @@ export function Input(props: InputProps) {
 	});
 
 	const perms = usePermissions(
-		() => api.users.cache.get("@self")!.id,
+		() => api.users.cache.get("@self")?.id ?? "",
 		() => props.thread.room_id ?? undefined,
 		() => props.thread.id,
 	);
@@ -133,19 +135,8 @@ export function Input(props: InputProps) {
 					</ul>
 				</div>
 			</Show>
-			<Show when={reply_id()}>
-				<div class="reply">
-					<button
-						class="cancel"
-						onClick={() => ctx.thread_reply_id.delete(props.thread.id)}
-					>
-						cancel
-					</button>
-					<div class="info">
-						replying to {getMessageOverrideName(reply()) ??
-							getNameNullable(reply()?.author_id)}: {getMessageContent(reply())}
-					</div>
-				</div>
+			<Show when={reply()}>
+				<InputReply thread={props.thread} reply={reply()!} />
 			</Show>
 			<div class="text">
 				<label class="upload">
@@ -258,3 +249,42 @@ function RenderUploadItem(props: { thread: ThreadT; att: Attachment }) {
 		</>
 	);
 }
+
+const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
+	const ctx = useCtx();
+	const api = useApi();
+	const tip = createTooltip({ tip: () => "remove reply" });
+	const getName = (user_id: string) => {
+		const user = api.users.fetch(() => user_id);
+		const member = api.room_members.fetch(
+			() => props.thread.room_id,
+			() => user_id,
+		);
+
+		const m = member();
+		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
+	};
+
+	const getNameNullable = (user_id?: string) => {
+		if (user_id) return getName(user_id);
+	};
+
+	return (
+		<div class="reply">
+			<button
+				class="cancel"
+				onClick={() => ctx.thread_reply_id.delete(props.thread.id)}
+				ref={tip.content}
+			>
+				<img class="icon" src={cancelIc} />
+			</button>
+			<div class="info">
+				replying to{" "}
+				<b>
+					{getMessageOverrideName(props.reply) ??
+						getNameNullable(props.reply?.author_id)}
+				</b>
+			</div>
+		</div>
+	);
+};

@@ -263,13 +263,14 @@ export const createEditor = (_opts: EditorProps) => {
 				view?.destroy();
 			});
 
-			// createEffect(() => {
-			// 	view.setProps({
-			// 		// HACK: make prosemirror update properly
-			// 		editable: () => !(props.disabled ?? false),
-			// 	});
-			// 	// if (props.disabled)
-			// });
+			createEffect(() => {
+				// update when placeholder changes too
+				props.placeholder;
+
+				view?.setProps({
+					editable: () => !(props.disabled ?? false),
+				});
+			});
 
 			return (
 				<div
