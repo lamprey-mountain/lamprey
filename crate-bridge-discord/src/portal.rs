@@ -213,7 +213,7 @@ impl Portal {
                 discord_id,
                 reply_content,
             );
-            content = format!("{} ਵਿਚ{}", reply.author.mention(), content);
+            content = format!("{} {}", reply.author.mention(), content);
             embeds.push(CreateEmbed::new().description(description));
 
             if let Some(att) = reply.attachments.first() {
