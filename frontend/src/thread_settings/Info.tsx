@@ -4,6 +4,7 @@ import { useCtx } from "../context.ts";
 
 export function Info(props: VoidProps<{ thread: Thread }>) {
 	const ctx = useCtx();
+	const [editingNsfw, setEditingNsfw] = createSignal(props.thread.nsfw);
 	const [editingName, setEditingName] = createSignal(props.thread.name);
 	const [editingDescription, setEditingDescription] = createSignal(
 		props.thread.description,
@@ -12,7 +13,11 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
 			params: { path: { thread_id: props.thread.id } },
-			body: { name: editingName(), description: editingDescription() },
+			body: {
+				name: editingName(),
+				description: editingDescription(),
+				nsfw: editingNsfw(),
+			},
 		});
 	};
 
@@ -64,9 +69,20 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 			<div>
 				thread id: <code class="select-all">{props.thread.id}</code>
 			</div>
-			<br />
+			<div>
+				<label>
+					<div>
+						<input
+							type="checkbox"
+							checked={editingNsfw()}
+							onInput={(e) => setEditingNsfw(e.currentTarget.checked)}
+						/>
+						<b>nsfw</b>
+					</div>
+					<div>mark this thread as not safe for work</div>
+				</label>
+			</div>
 			<div>(todo) tags</div>
-			<div>(todo) archived</div>
 			<div>(todo) visibility</div>
 			<br />
 			{/* TODO: add padding to all settings */}
