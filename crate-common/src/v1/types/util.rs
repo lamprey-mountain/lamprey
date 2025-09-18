@@ -1,3 +1,5 @@
+//! utility stuff
+
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 

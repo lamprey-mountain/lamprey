@@ -33,11 +33,15 @@ use crate::error::{Error, Result};
 pub async fn thread_member_list(
     Path(thread_id): Path<ThreadId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let res = d.thread_member_list(thread_id, paginate).await?;
     Ok(Json(res))
@@ -58,18 +62,18 @@ pub async fn thread_member_list(
 )]
 pub async fn thread_member_get(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user_id, thread_id)
+        .for_thread(auth_user.id, thread_id)
         .await?;
     perms.ensure_view()?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
@@ -97,25 +101,25 @@ pub async fn thread_member_get(
 )]
 pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(_reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    if target_user_id != auth_user_id {
+    if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -135,7 +139,7 @@ pub async fn thread_member_add(
     } else {
         s.broadcast_thread(
             thread_id,
-            auth_user_id,
+            auth_user.id,
             MessageSync::ThreadMemberUpsert {
                 member: res.clone(),
             },
@@ -160,23 +164,23 @@ pub async fn thread_member_add(
 )]
 pub async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    if target_user_id != auth_user_id {
+    if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -199,7 +203,7 @@ pub async fn thread_member_delete(
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ThreadMemberUpsert { member: res },
     )
     .await?;

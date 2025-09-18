@@ -36,7 +36,7 @@ struct AdminBroadcast {
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminWhisper>,
@@ -44,7 +44,7 @@ async fn admin_whisper(
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::Admin)?;
 
@@ -57,7 +57,7 @@ async fn admin_whisper(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::AdminWhisper {
@@ -67,7 +67,7 @@ async fn admin_whisper(
     })
     .await?;
 
-    let (thread, _) = srv.users.init_dm(auth_user_id, json.user_id).await?;
+    let (thread, _) = srv.users.init_dm(auth_user.id, json.user_id).await?;
     if !thread.locked {
         d.thread_lock(thread.id).await?;
         srv.threads.invalidate(thread.id).await;
@@ -94,7 +94,7 @@ async fn admin_whisper(
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AdminBroadcast>,
@@ -102,7 +102,7 @@ async fn admin_broadcast(
     let srv = s.services();
     let d = s.data();
 
-    let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::Admin)?;
 
@@ -115,7 +115,7 @@ async fn admin_broadcast(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::AdminBroadcast { changes },

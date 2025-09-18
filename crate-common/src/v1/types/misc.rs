@@ -1,3 +1,5 @@
+//! miscellaneous types
+
 use std::fmt::Display;
 
 use serde::Deserialize;

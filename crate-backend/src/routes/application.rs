@@ -47,7 +47,7 @@ use crate::error::{Error, Result};
     )
 )]
 async fn app_create(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
@@ -55,11 +55,11 @@ async fn app_create(
     let user = data
         .user_create(DbUserCreate {
             id: None,
-            parent_id: Some(auth_user_id),
+            parent_id: Some(auth_user.id),
             name: json.name.clone(),
             description: json.description.clone(),
             bot: Some(Bot {
-                owner_id: auth_user_id,
+                owner_id: auth_user.id,
                 access: if json.public {
                     return Err(Error::Unimplemented);
                 } else {
@@ -74,7 +74,7 @@ async fn app_create(
         .await?;
     let app = Application {
         id: user.id.into_inner().into(),
-        owner_id: auth_user_id,
+        owner_id: auth_user.id,
         name: json.name,
         description: json.description,
         bridge: json.bridge,
@@ -98,12 +98,12 @@ async fn app_create(
     )
 )]
 async fn app_list(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     Query(q): Query<PaginationQuery<ApplicationId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let mut list = data.application_list(auth_user_id, q).await?;
+    let mut list = data.application_list(auth_user.id, q).await?;
     for app in &mut list.items {
         app.oauth_secret = None;
     }
@@ -121,13 +121,13 @@ async fn app_list(
 )]
 async fn app_get(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
     app.oauth_secret = None;
-    if app.owner_id == auth_user_id || app.public {
+    if app.owner_id == auth_user.id || app.public {
         Ok(Json(app))
     } else {
         Err(Error::NotFound)
@@ -146,14 +146,14 @@ async fn app_get(
 )]
 async fn app_patch(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<ApplicationPatch>,
 ) -> Result<impl IntoResponse> {
     patch.validate()?;
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
-    if app.owner_id != auth_user_id {
+    if app.owner_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
 
@@ -184,12 +184,12 @@ async fn app_patch(
 )]
 async fn app_delete(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let app = data.application_get(app_id).await?;
-    if app.owner_id == auth_user_id {
+    if app.owner_id == auth_user.id {
         data.application_delete(app_id).await?;
         data.user_delete(app_id.into_inner().into()).await?;
     }
@@ -208,14 +208,14 @@ async fn app_delete(
 )]
 async fn app_create_session(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
-    if app.owner_id == auth_user_id {
+    if app.owner_id == auth_user.id {
         let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
         let session = data
             .session_create(DbSessionCreate {
@@ -260,7 +260,7 @@ struct AppInviteBot {
 )]
 async fn app_invite_bot(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<AppInviteBot>,
@@ -268,12 +268,12 @@ async fn app_invite_bot(
     let data = s.data();
     let app = data.application_get(app_id).await?;
 
-    if !app.public && app.owner_id != auth_user_id {
+    if !app.public && app.owner_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user_id, json.room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, json.room_id).await?;
     perms.ensure(Permission::BotsAdd)?;
 
     let bot_user_id: UserId = app.id.into_inner().into();
@@ -283,7 +283,7 @@ async fn app_invite_bot(
     }
 
     let origin = RoomMemberOrigin::BotInstall {
-        user_id: auth_user_id,
+        user_id: auth_user.id,
     };
     data.room_member_put(
         json.room_id,
@@ -297,7 +297,7 @@ async fn app_invite_bot(
 
     s.broadcast_room(
         json.room_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::RoomMemberUpsert {
             member: member.clone(),
         },
@@ -307,7 +307,7 @@ async fn app_invite_bot(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: json.room_id,
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::BotAdd {
@@ -332,22 +332,22 @@ async fn app_invite_bot(
 )]
 async fn puppet_ensure(
     Path((app_id, puppet_id)): Path<(ApplicationId, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PuppetCreate>,
 ) -> Result<impl IntoResponse> {
-    if *app_id != *auth_user_id {
+    if *app_id != *auth_user.id {
         return Err(Error::MissingPermissions);
     }
 
-    let parent_id = Some(auth_user_id);
+    let parent_id = Some(auth_user.id);
     let data = s.data();
     let srv = s.services();
-    let parent = srv.users.get(auth_user_id).await?;
+    let parent = srv.users.get(auth_user.id).await?;
     if !parent.bot.is_some_and(|b| b.is_bridge) {
         return Err(Error::BadStatic("can't create that user"));
     };
-    let existing = data.user_lookup_puppet(auth_user_id, &puppet_id).await?;
+    let existing = data.user_lookup_puppet(auth_user.id, &puppet_id).await?;
     if let Some(id) = existing {
         let user = data.user_get(id).await?;
         return Ok((StatusCode::OK, Json(user)));
@@ -360,7 +360,7 @@ async fn puppet_ensure(
             description: json.description,
             bot: None,
             puppet: Some(Puppet {
-                owner_id: auth_user_id,
+                owner_id: auth_user.id,
                 external_platform: ExternalPlatform::Discord,
                 external_id: puppet_id.clone(),
                 external_url: None,
@@ -384,12 +384,12 @@ async fn puppet_ensure(
 )]
 async fn app_rotate_secret(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
-    if app.owner_id != auth_user_id {
+    if app.owner_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
     app.oauth_secret = Some(Uuid::new_v4().to_string());
@@ -408,14 +408,14 @@ async fn app_rotate_secret(
     )
 )]
 async fn oauth_info(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let app = data.application_get(q.client_id).await?;
-    if app.owner_id != auth_user_id && !app.public {
+    if app.owner_id != auth_user.id && !app.public {
         return Err(Error::NotFound);
     }
     if q.response_type != "code" {
@@ -430,9 +430,9 @@ async fn oauth_info(
     for scope in q.scope.split(' ') {
         scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
     }
-    let auth_user = srv.users.get(auth_user_id).await?;
+    let auth_user = srv.users.get(auth_user.id).await?;
     let bot_user = srv.users.get(app.id.into_inner().into()).await?;
-    let authorized = if let Ok(existing) = data.connection_get(auth_user_id, app.id).await {
+    let authorized = if let Ok(existing) = data.connection_get(auth_user.id, app.id).await {
         HashSet::from_iter(existing.scopes).is_superset(&scopes)
     } else {
         false
@@ -456,13 +456,13 @@ async fn oauth_info(
     )
 )]
 async fn oauth_authorize(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
-    if app.owner_id != auth_user_id && !app.public {
+    if app.owner_id != auth_user.id && !app.public {
         return Err(Error::NotFound);
     }
     if q.response_type != "code" {
@@ -486,14 +486,14 @@ async fn oauth_authorize(
         scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
     }
     let scopes: Vec<_> = scopes.into_iter().collect();
-    data.connection_create(auth_user_id, app.id, scopes.clone())
+    data.connection_create(auth_user.id, app.id, scopes.clone())
         .await?;
 
     let code = Uuid::new_v4().to_string();
     data.oauth_auth_code_create(
         code.clone(),
         app.id,
-        auth_user_id,
+        auth_user.id,
         redirect_uri.to_string(),
         scopes,
         q.code_challenge,
@@ -701,18 +701,18 @@ async fn oauth_token(
     )
 )]
 async fn oauth_introspect(
-    AuthWithSession(session, user_id): AuthWithSession,
+    AuthWithSession(session, user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let Some(app_id) = session.app_id else {
         return Err(Error::BadStatic("not an oauth token"));
     };
-    let connection = s.data().connection_get(user_id, app_id).await?;
+    let connection = s.data().connection_get(user.id, app_id).await?;
     let res = OauthIntrospectResponse {
         active: true,
         scopes: connection.scopes,
         client_id: app_id,
-        username: user_id,
+        username: user.id,
         exp: session.expires_at.map(|e| e.unix_timestamp() as u64),
     };
     Ok(Json(res))
@@ -780,14 +780,14 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
     )
 )]
 async fn oauth_userinfo(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let user = srv.users.get(auth_user_id).await?;
+    let user = srv.users.get(auth_user.id).await?;
     let email = data
-        .user_email_list(auth_user_id)
+        .user_email_list(auth_user.id)
         .await?
         .into_iter()
         .find(|e| e.is_primary);

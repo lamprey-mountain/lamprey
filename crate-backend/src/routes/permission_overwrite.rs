@@ -29,14 +29,14 @@ use crate::ServerState;
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_thread_overwrite(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let thread = srv.threads.get(thread_id, None).await?;
@@ -51,7 +51,7 @@ async fn permission_thread_overwrite(
     }
 
     if let Some(room_id) = thread.room_id {
-        let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
         let other_rank = match json.ty {
             PermissionOverwriteType::Role => {
                 let role = s.data().role_select(room_id, overwrite_id.into()).await?;
@@ -64,7 +64,7 @@ async fn permission_thread_overwrite(
             }
         };
         let room = srv.rooms.get(room_id, None).await?;
-        if rank <= other_rank && room.owner_id != Some(auth_user_id) {
+        if rank <= other_rank && room.owner_id != Some(auth_user.id) {
             return Err(Error::BadStatic("your rank is too low"));
         }
     } else {
@@ -122,14 +122,14 @@ async fn permission_thread_overwrite(
         )
         .await?;
     srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
         s.data()
             .audit_logs_room_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user_id,
+                user_id: auth_user.id,
                 session_id: None,
                 reason: reason.clone(),
                 ty: AuditLogEntryType::ThreadOverwriteSet {
@@ -154,7 +154,7 @@ async fn permission_thread_overwrite(
 
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ThreadUpdate { thread },
     )
     .await?;
@@ -173,13 +173,13 @@ async fn permission_thread_overwrite(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_thread_delete(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
 
@@ -200,7 +200,7 @@ async fn permission_thread_delete(
         .find(|o| o.id == overwrite_id)
     {
         if let Some(room_id) = thread.room_id {
-            let rank = srv.perms.get_user_rank(room_id, auth_user_id).await?;
+            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
             let other_rank = match existing.ty {
                 PermissionOverwriteType::Role => {
                     let role = s.data().role_select(room_id, overwrite_id.into()).await?;
@@ -213,7 +213,7 @@ async fn permission_thread_delete(
                 }
             };
             let room = srv.rooms.get(room_id, None).await?;
-            if rank <= other_rank && room.owner_id != Some(auth_user_id) {
+            if rank <= other_rank && room.owner_id != Some(auth_user.id) {
                 return Err(Error::BadStatic("your rank is too low"));
             }
         } else {
@@ -236,14 +236,14 @@ async fn permission_thread_delete(
         .permission_overwrite_delete(thread_id, overwrite_id)
         .await?;
     srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
         s.data()
             .audit_logs_room_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id,
-                user_id: auth_user_id,
+                user_id: auth_user.id,
                 session_id: None,
                 reason: reason.clone(),
                 ty: AuditLogEntryType::ThreadOverwriteDelete {
@@ -256,7 +256,7 @@ async fn permission_thread_delete(
 
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ThreadUpdate { thread },
     )
     .await?;
@@ -278,7 +278,7 @@ async fn permission_thread_delete(
     responses((status = OK, body = PermissionOverwrite, description = "success"))
 )]
 async fn permission_tag_overwrite(
-    Auth(_auth_user_id): Auth,
+    Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<PermissionOverwrite>,
 ) -> Result<Json<PermissionOverwrite>> {
@@ -300,7 +300,7 @@ async fn permission_tag_overwrite(
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_tag_delete(
-    Auth(_auth_user_id): Auth,
+    Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)

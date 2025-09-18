@@ -32,14 +32,12 @@ pub struct User {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     pub description: Option<String>,
 
-    // NOTE: do i want to resolve media here?
-    // it's nice to have but is redundant, immutable, and common data
     pub avatar: Option<MediaId>,
-
     pub bot: Option<Bot>,
     pub system: bool,
     pub puppet: Option<Puppet>,
     pub suspended: Option<Suspended>,
+    // TODO: rename to presence
     pub status: Status,
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
@@ -334,64 +332,3 @@ impl Diff<Relationship> for RelationshipPatch {
             || self.ignore.changes(&other.ignore)
     }
 }
-
-// mod next {
-//     pub struct User {
-//         pub id: UserId,
-//         pub version_id: UserVerId,
-//         pub name: String,
-//         pub description: Option<String>,
-//         pub presence: Presence,
-//         pub registered_at: Option<Time>,
-//         pub deleted_at: Option<Time>,
-
-//         pub puppet: Option<Puppet>,
-//         pub bot: Option<Bot>,
-//         pub system: Option<System>,
-//         // pub suspended_at: Option<Time>,
-//         // pub suspended_reason: SuspendedReason, // ???
-//     }
-
-//     struct Puppet {
-//         /// the user who created this puppet
-//         owner_id: UserId,
-
-//         /// what platform this puppet is connected to
-//         external_platform: ExternalPlatform,
-
-//         /// an opaque identifier from the other platform
-//         #[cfg_attr(
-//             feature = "utoipa",
-//             schema(required = false, min_length = 1, max_length = 8192)
-//         )]
-//         external_id: String,
-
-//         /// a url on the other platform that this account can be reached at
-//         external_url: Option<Url>,
-
-//         /// makes two users be considered the same user, for importing
-//         /// stuff from other platforms
-//         /// can you alias to another puppet?
-//         alias_id: Option<UserId>,
-//     }
-
-//     struct Bot {
-//         /// who/what has control over this bot
-//         #[serde(flatten)]
-//         owner: BotOwner,
-
-//         /// who can use the bot
-//         access: BotAccess,
-
-//         /// enables managing Puppet users
-//         is_bridge: bool,
-//         // do i really need all these urls?
-//         // url_terms_of_service: Option<Url>,
-//         // url_privacy_policy: Option<Url>,
-//         // url_help_docs: Vec<Url>,
-//         // url_main_site: Vec<Url>,
-//         // url_interactions: Vec<Url>, // webhook
-//     }
-
-//     struct System {}
-// }

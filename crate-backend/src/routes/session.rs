@@ -13,10 +13,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::routes::util::Auth;
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
-use super::util::{AuthRelaxed, AuthWithSession};
+use super::util::AuthRelaxed;
 use crate::error::{Error, Result};
 
 /// Session create
@@ -60,11 +61,11 @@ pub async fn session_create(
 )]
 pub async fn session_list(
     Query(q): Query<PaginationQuery<SessionId>>,
-    AuthWithSession(_session, user_id): AuthWithSession,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let res = data.session_list(user_id, q).await?;
+    let res = data.session_list(auth_user.id, q).await?;
     Ok(Json(res))
 }
 

@@ -177,11 +177,11 @@ async fn auth_oauth_redirect(
 )]
 async fn auth_oauth_delete(
     Path(provider): Path<String>,
-    AuthSudo(auth_user_id): AuthSudo,
+    AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    data.auth_oauth_delete(provider, auth_user_id).await?;
+    data.auth_oauth_delete(provider, auth_user.id).await?;
     Ok(())
 }
 
@@ -312,7 +312,7 @@ struct AuthEmailComplete {
     responses((status = OK, body = TotpStateWithSecret, description = "success")),
 )]
 async fn auth_totp_init(
-    AuthSudo(_auth_user_id): AuthSudo,
+    AuthSudo(_auth_user): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -326,7 +326,7 @@ async fn auth_totp_init(
     responses((status = OK, body = TotpState, description = "success")),
 )]
 async fn auth_totp_exec(
-    Auth(_auth_user_id): Auth,
+    Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<TotpVerificationRequest>,
 ) -> Result<Json<()>> {
@@ -341,7 +341,7 @@ async fn auth_totp_exec(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_get(
-    AuthSudo(_auth_user_id): AuthSudo,
+    AuthSudo(_auth_user): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -355,7 +355,7 @@ async fn auth_totp_recovery_get(
     responses((status = OK, body = TotpRecoveryCodes, description = "success")),
 )]
 async fn auth_totp_recovery_rotate(
-    AuthSudo(_auth_user_id): AuthSudo,
+    AuthSudo(_auth_user): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -369,7 +369,7 @@ async fn auth_totp_recovery_rotate(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_totp_delete(
-    AuthSudo(_auth_user_id): AuthSudo,
+    AuthSudo(_auth_user): AuthSudo,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -383,7 +383,7 @@ async fn auth_totp_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
-    AuthSudo(auth_user_id): AuthSudo,
+    AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PasswordSet>,
 ) -> Result<impl IntoResponse> {
@@ -395,7 +395,7 @@ async fn auth_password_set(
     };
     let hash = argon2::hash_raw(json.password.as_bytes(), &salt, &config).unwrap();
     let data = s.data();
-    data.auth_password_set(auth_user_id, &hash, &salt).await?;
+    data.auth_password_set(auth_user.id, &hash, &salt).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -407,11 +407,11 @@ async fn auth_password_set(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
-    AuthSudo(auth_user_id): AuthSudo,
+    AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    data.auth_password_delete(auth_user_id).await?;
+    data.auth_password_delete(auth_user.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -461,10 +461,10 @@ async fn auth_password_exec(
     responses((status = OK, body = AuthState, description = "success")),
 )]
 async fn auth_state(
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let auth_state = fetch_auth_state(&s, auth_user_id).await?;
+    let auth_state = fetch_auth_state(&s, auth_user.id).await?;
     Ok(Json(auth_state))
 }
 
@@ -490,7 +490,7 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
     responses((status = OK, body = CaptchaChallenge, description = "success")),
 )]
 async fn auth_captcha_init(
-    Auth(_auth_user_id): Auth,
+    Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
@@ -507,7 +507,7 @@ async fn auth_captcha_init(
     ),
 )]
 async fn auth_captcha_submit(
-    Auth(_auth_user_id): Auth,
+    Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<CaptchaResponse>,
 ) -> Result<Json<()>> {
@@ -524,14 +524,14 @@ async fn auth_captcha_submit(
     responses((status = NO_CONTENT, description = "ok")),
 )]
 async fn auth_sudo(
-    AuthWithSession(session, auth_user_id): AuthWithSession,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     s.data()
         .session_set_status(
             session.id,
             SessionStatus::Sudo {
-                user_id: auth_user_id,
+                user_id: auth_user.id,
                 sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
             },
         )

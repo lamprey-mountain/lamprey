@@ -31,15 +31,15 @@ use super::util::Auth;
 )]
 async fn email_add(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -90,15 +90,15 @@ async fn email_add(
 )]
 async fn email_delete(
     Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let email: EmailAddr = email.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -117,14 +117,14 @@ async fn email_delete(
 )]
 async fn email_list(
     Path(target_user_id_req): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -146,16 +146,16 @@ async fn email_list(
 )]
 async fn email_update(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<EmailInfoPatch>,
 ) -> Result<impl IntoResponse> {
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -193,15 +193,15 @@ async fn email_update(
 )]
 async fn email_verification_resend(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -247,15 +247,15 @@ async fn email_verification_resend(
 )]
 async fn email_verification_finish(
     Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let email_addr: EmailAddr = email_addr.try_into()?;
     let target_user_id = match target_user_id_req {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 

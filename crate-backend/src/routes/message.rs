@@ -38,7 +38,7 @@ use crate::error::Result;
 )]
 async fn message_create(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
@@ -46,7 +46,7 @@ async fn message_create(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
 
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -54,13 +54,13 @@ async fn message_create(
         return Err(Error::BadStatic("thread is removed"));
     }
     if thread.locked {
-        let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+        let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
         perms.ensure(Permission::ThreadLock)?;
     }
 
     let message = srv
         .messages
-        .create(thread_id, auth_user_id, reason, nonce, json)
+        .create(thread_id, auth_user.id, reason, nonce, json)
         .await?;
     Ok((StatusCode::CREATED, Json(message)))
 }
@@ -99,11 +99,15 @@ struct ContextResponse {
 async fn message_context(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<ContextQuery>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let limit = q.limit.unwrap_or(10);
     if limit > 1024 {
@@ -115,15 +119,17 @@ async fn message_context(
         dir: Some(PaginationDirection::B),
         limit: Some(limit),
     };
-    let before = data.message_list(thread_id, user_id, before_q).await?;
+    let before = data.message_list(thread_id, auth_user.id, before_q).await?;
     let after_q = PaginationQuery {
         from: Some(message_id),
         to: q.to_end,
         dir: Some(PaginationDirection::F),
         limit: Some(limit),
     };
-    let after = data.message_list(thread_id, user_id, after_q).await?;
-    let message = data.message_get(thread_id, message_id, user_id).await?;
+    let after = data.message_list(thread_id, auth_user.id, after_q).await?;
+    let message = data
+        .message_get(thread_id, message_id, auth_user.id)
+        .await?;
     let mut res = ContextResponse {
         items: before
             .items
@@ -156,13 +162,17 @@ async fn message_context(
 async fn message_list(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
-    let mut res = data.message_list(thread_id, user_id, q).await?;
+    let mut res = data.message_list(thread_id, auth_user.id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -184,13 +194,19 @@ async fn message_list(
 )]
 async fn message_get(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
-    let mut message = data.message_get(thread_id, message_id, user_id).await?;
+    let mut message = data
+        .message_get(thread_id, message_id, auth_user.id)
+        .await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
 }
@@ -211,13 +227,13 @@ async fn message_get(
 )]
 async fn message_edit(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
 ) -> Result<(StatusCode, Json<Message>)> {
     let srv = s.services();
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -225,13 +241,13 @@ async fn message_edit(
         return Err(Error::BadStatic("thread is removed"));
     }
     if thread.locked {
-        let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+        let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
         perms.ensure(Permission::ThreadLock)?;
     }
 
     let (status, message) = srv
         .messages
-        .edit(thread_id, message_id, auth_user_id, reason, json)
+        .edit(thread_id, message_id, auth_user.id, reason, json)
         .await?;
     Ok((status, Json(message)))
 }
@@ -254,23 +270,25 @@ async fn message_edit(
 )]
 async fn message_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<StatusCode> {
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    let message = data.message_get(thread_id, message_id, user_id).await?;
+    let message = data
+        .message_get(thread_id, message_id, auth_user.id)
+        .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
     }
-    if message.author_id == user_id {
+    if message.author_id == auth_user.id {
         perms.add(Permission::MessageEdit);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -288,7 +306,7 @@ async fn message_delete(
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageDelete {
@@ -301,7 +319,7 @@ async fn message_delete(
 
     s.broadcast_thread(
         thread.id,
-        user_id,
+        auth_user.id,
         MessageSync::MessageDelete {
             room_id: thread.room_id,
             thread_id,
@@ -330,14 +348,18 @@ async fn message_delete(
 async fn message_version_list(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<PaginationResponse<Message>>> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let mut res = data
-        .message_version_list(thread_id, message_id, user_id, q)
+        .message_version_list(thread_id, message_id, auth_user.id, q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -361,14 +383,18 @@ async fn message_version_list(
 )]
 async fn message_version_get(
     Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<Message>> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let mut message = data
-        .message_version_get(thread_id, version_id, user_id)
+        .message_version_get(thread_id, version_id, auth_user.id)
         .await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
@@ -390,26 +416,26 @@ async fn message_version_get(
 )]
 async fn message_version_delete(
     Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<Json<()>> {
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     let message = data
-        .message_version_get(thread_id, version_id, user_id)
+        .message_version_get(thread_id, version_id, auth_user.id)
         .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete this message type"));
     }
-    if message.author_id == user_id {
+    if message.author_id == auth_user.id {
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
 
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -422,12 +448,16 @@ async fn message_version_delete(
 
     data.message_version_delete(thread_id, version_id).await?;
 
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = s
+        .services()
+        .threads
+        .get(thread_id, Some(auth_user.id))
+        .await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageVersionDelete {
@@ -510,7 +540,7 @@ struct MessageModerate {
 )]
 async fn message_moderate(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
@@ -530,11 +560,11 @@ async fn message_moderate(
 
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageDelete)?;
 
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -547,13 +577,13 @@ async fn message_moderate(
 
     // TODO: fix n+1 query
     for id in &json.delete {
-        let message = data.message_get(thread_id, *id, user_id).await?;
+        let message = data.message_get(thread_id, *id, auth_user.id).await?;
         if !message.message_type.is_deletable() {
             return Err(Error::BadStatic("cant delete one of the messages"));
         }
     }
 
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     data.message_delete_bulk(thread_id, &json.delete).await?;
     for id in &json.delete {
         data.media_link_delete_all(id.into_inner()).await?;
@@ -563,7 +593,7 @@ async fn message_moderate(
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageDeleteBulk {
@@ -576,7 +606,7 @@ async fn message_moderate(
 
     s.broadcast_thread(
         thread.id,
-        user_id,
+        auth_user.id,
         MessageSync::MessageDeleteBulk {
             thread_id,
             message_ids: json.delete,
@@ -645,15 +675,19 @@ fn fn_one() -> u16 {
 async fn message_replies(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<RepliesQuery>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     q.validate()?;
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let mut res = data
-        .message_replies(thread_id, message_id, user_id, q.depth, q.breadth, q.q)
+        .message_replies(thread_id, message_id, auth_user.id, q.depth, q.breadth, q.q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;

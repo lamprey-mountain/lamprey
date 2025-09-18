@@ -42,7 +42,7 @@ use crate::error::Result;
 )]
 async fn thread_create_room(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadCreate>,
@@ -50,7 +50,7 @@ async fn thread_create_room(
     json.validate()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     match json.ty {
         ThreadType::Chat => {
@@ -71,7 +71,7 @@ async fn thread_create_room(
     let thread_id = data
         .thread_create(DbThreadCreate {
             room_id: Some(room_id.into_inner()),
-            creator_id: user_id,
+            creator_id: auth_user.id,
             name: json.name.clone(),
             description: json.description.clone(),
             ty: match json.ty {
@@ -90,15 +90,15 @@ async fn thread_create_room(
         })
         .await?;
 
-    data.thread_member_put(thread_id, user_id, ThreadMemberPut {})
+    data.thread_member_put(thread_id, auth_user.id, ThreadMemberPut {})
         .await?;
-    let thread_member = data.thread_member_get(thread_id, user_id).await?;
+    let thread_member = data.thread_member_get(thread_id, auth_user.id).await?;
 
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::ThreadCreate {
@@ -114,7 +114,7 @@ async fn thread_create_room(
 
     s.broadcast_room(
         room_id,
-        user_id,
+        auth_user.id,
         MessageSync::ThreadCreate {
             thread: thread.clone(),
         },
@@ -122,7 +122,7 @@ async fn thread_create_room(
     .await?;
     s.broadcast_thread(
         thread.id,
-        user_id,
+        auth_user.id,
         MessageSync::ThreadMemberUpsert {
             member: thread_member,
         },
@@ -165,12 +165,20 @@ async fn thread_create(
 )]
 async fn thread_get(
     Path((thread_id,)): Path<(ThreadId,)>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
-    let thread = s.services().threads.get(thread_id, Some(user_id)).await?;
+    let thread = s
+        .services()
+        .threads
+        .get(thread_id, Some(auth_user.id))
+        .await?;
     Ok((StatusCode::OK, Json(thread)))
 }
 
@@ -188,18 +196,18 @@ async fn thread_get(
 async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     let mut res = data.thread_list(room_id, q).await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
         // FIXME: dubious performance
-        threads.push(srv.threads.get(t.id, Some(user_id)).await?);
+        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
     Ok(Json(res))
@@ -218,17 +226,17 @@ async fn thread_list(
 async fn thread_list_archived(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<PaginationQuery<ThreadId>>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     let mut res = data.thread_list_archived(room_id, q).await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.threads.get(t.id, Some(user_id)).await?);
+        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
     Ok(Json(res))
@@ -274,7 +282,7 @@ async fn thread_list_removed(
 )]
 async fn thread_update(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadPatch>,
@@ -283,7 +291,7 @@ async fn thread_update(
     let thread = s
         .services()
         .threads
-        .update(user_id, thread_id, json, reason)
+        .update(auth_user.id, thread_id, json, reason)
         .await?;
     Ok(Json(thread))
 }
@@ -322,26 +330,30 @@ struct AckRes {
 )]
 async fn thread_ack(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
 ) -> Result<Json<AckRes>> {
     let data = s.data();
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
         message_id
     } else {
-        data.message_version_get(thread_id, version_id, user_id)
+        data.message_version_get(thread_id, version_id, auth_user.id)
             .await?
             .id
     };
-    data.unread_put(user_id, thread_id, message_id, version_id)
+    data.unread_put(auth_user.id, thread_id, message_id, version_id)
         .await?;
     s.services()
         .threads
-        .invalidate_user(thread_id, user_id)
+        .invalidate_user(thread_id, auth_user.id)
         .await;
     Ok(Json(AckRes {
         message_id,
@@ -364,15 +376,15 @@ async fn thread_ack(
 )]
 async fn thread_archive(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
-    if user_id != thread_before.creator_id {
+    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    if auth_user.id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
     if thread_before.deleted_at.is_some() {
@@ -388,12 +400,12 @@ async fn thread_archive(
     data.thread_archive(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -408,7 +420,7 @@ async fn thread_archive(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)
@@ -429,15 +441,15 @@ async fn thread_archive(
 )]
 async fn thread_unarchive(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
-    if user_id != thread_before.creator_id {
+    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    if auth_user.id != thread_before.creator_id {
         perms.ensure(Permission::ThreadArchive)?;
     }
     if thread_before.deleted_at.is_some() {
@@ -451,12 +463,12 @@ async fn thread_unarchive(
     }
     data.thread_unarchive(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -471,7 +483,7 @@ async fn thread_unarchive(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)
@@ -490,27 +502,27 @@ async fn thread_unarchive(
 )]
 async fn thread_remove(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
-    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.thread_delete(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -521,7 +533,7 @@ async fn thread_remove(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)
@@ -537,26 +549,26 @@ async fn thread_remove(
 )]
 async fn thread_restore(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure(Permission::ThreadDelete)?;
-    let thread_before = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.thread_undelete(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -567,7 +579,7 @@ async fn thread_restore(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)
@@ -589,14 +601,14 @@ async fn thread_restore(
 )]
 async fn thread_typing(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_thread(user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MessageCreate)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -607,13 +619,13 @@ async fn thread_typing(
         perms.ensure(Permission::ThreadLock)?;
     }
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
-    srv.threads.typing_set(thread_id, user_id, until).await;
+    srv.threads.typing_set(thread_id, auth_user.id, until).await;
     s.broadcast_thread(
         thread_id,
-        user_id,
+        auth_user.id,
         MessageSync::ThreadTyping {
             thread_id,
-            user_id,
+            user_id: auth_user.id,
             until: until.into(),
         },
     )
@@ -631,14 +643,18 @@ async fn thread_typing(
 )]
 async fn thread_lock(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let thread_before = srv.threads.get(thread_id, None).await?;
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
@@ -650,12 +666,12 @@ async fn thread_lock(
     data.thread_lock(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -666,7 +682,7 @@ async fn thread_lock(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)
@@ -682,14 +698,18 @@ async fn thread_lock(
 )]
 async fn thread_unlock(
     Path(thread_id): Path<ThreadId>,
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let thread_before = srv.threads.get(thread_id, None).await?;
-    let perms = s.services().perms.for_thread(user_id, thread_id).await?;
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
@@ -701,12 +721,12 @@ async fn thread_unlock(
     data.thread_unlock(thread_id).await?;
     srv.threads.invalidate(thread_id).await;
     srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::ThreadUpdate {
@@ -717,7 +737,7 @@ async fn thread_unlock(
             },
         })
         .await?;
-        s.broadcast_room(room_id, user_id, MessageSync::ThreadUpdate { thread })
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
     Ok(StatusCode::NO_CONTENT)

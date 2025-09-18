@@ -34,14 +34,14 @@ use crate::ServerState;
     )
 )]
 async fn emoji_create(
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     Path(room_id): Path<RoomId>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<EmojiCustomCreate>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::EmojiAdd)?;
 
@@ -64,7 +64,7 @@ async fn emoji_create(
     }
 
     let media_id = json.media_id;
-    let emoji = data.emoji_create(user_id, room_id, json.clone()).await?;
+    let emoji = data.emoji_create(user.id, room_id, json.clone()).await?;
     data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
 
@@ -76,7 +76,7 @@ async fn emoji_create(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id,
+        user_id: user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiCreate {
@@ -87,7 +87,7 @@ async fn emoji_create(
 
     s.broadcast_room(
         room_id,
-        user_id,
+        user.id,
         MessageSync::EmojiCreate {
             emoji: emoji.clone(),
         },
@@ -138,16 +138,16 @@ async fn emoji_get(
 )]
 async fn emoji_delete(
     Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
-    let perms = srv.perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
-    if emoji.creator_id == user_id {
+    if emoji.creator_id == user.id {
         perms.ensure(Permission::EmojiAdd)?;
     } else {
         perms.ensure(Permission::EmojiManage)?;
@@ -158,7 +158,7 @@ async fn emoji_delete(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
-        user_id,
+        user_id: user.id,
         session_id: None,
         reason: reason.clone(),
         ty: AuditLogEntryType::EmojiDelete { emoji_id },
@@ -168,7 +168,7 @@ async fn emoji_delete(
     if let EmojiOwner::Room { room_id } = emoji.owner {
         s.broadcast_room(
             room_id,
-            user_id,
+            user.id,
             MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,
@@ -221,13 +221,13 @@ async fn emoji_delete(
 )]
 async fn emoji_list(
     Path(room_id): Path<RoomId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     Query(q): Query<PaginationQuery<EmojiId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
     let emoji = data.emoji_list(room_id, q).await?;
     Ok(Json(emoji))
@@ -247,14 +247,14 @@ async fn emoji_list(
 )]
 async fn emoji_lookup(
     Path(emoji_id): Path<EmojiId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
     match emoji.owner {
         EmojiOwner::Room { room_id } => {
-            if data.room_member_get(room_id, user_id).await.is_ok() {
+            if data.room_member_get(room_id, user.id).await.is_ok() {
                 Ok(Json(EmojiLookup {
                     id: emoji.id,
                     name: emoji.name,
@@ -275,8 +275,8 @@ async fn emoji_lookup(
         EmojiOwner::User => Ok(Json(EmojiLookup {
             id: emoji.id,
             name: emoji.name,
-            creator_id: if user_id == emoji.creator_id {
-                Some(user_id)
+            creator_id: if user.id == emoji.creator_id {
+                Some(user.id)
             } else {
                 None
             },

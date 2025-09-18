@@ -36,7 +36,7 @@ use super::util::{Auth, HeaderReason};
     tags = ["room"],
 )]
 async fn room_create(
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<RoomCreate>,
 ) -> Result<impl IntoResponse> {
@@ -67,7 +67,7 @@ async fn room_create(
         id: None,
         ty: RoomType::Default,
     };
-    let room = s.services().rooms.create(json, user_id, extra).await?;
+    let room = s.services().rooms.create(json, user.id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
         data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
@@ -91,14 +91,14 @@ async fn room_create(
 )]
 async fn room_get(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(user_id, room_id).await?;
+    let perms = srv.perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
-    let room = srv.rooms.get(room_id, Some(user_id)).await?;
+    let room = srv.rooms.get(room_id, Some(user.id)).await?;
 
     // TODO: use typedheader once the empty if-none-match bug is fixed
     // TODO: last-modified
@@ -152,17 +152,17 @@ enum RoomListInclude {
 )]
 async fn room_list(
     Query(q): Query<PaginationQuery<RoomId>>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let is_admin = srv
         .perms
-        .for_room(user_id, SERVER_ROOM_ID)
+        .for_room(user.id, SERVER_ROOM_ID)
         .await?
         .has(Permission::ServerOversee);
-    let res = data.room_list(user_id, q, is_admin).await?;
+    let res = data.room_list(user.id, q, is_admin).await?;
     Ok(Json(res))
 }
 
@@ -181,13 +181,13 @@ async fn room_list(
 )]
 async fn room_edit(
     Path((room_id,)): Path<(RoomId,)>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<RoomPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
 
@@ -214,10 +214,10 @@ async fn room_edit(
     let room = s
         .services()
         .rooms
-        .update(room_id, user_id, json, reason.clone())
+        .update(room_id, user.id, json, reason.clone())
         .await?;
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, user_id, msg).await?;
+    s.broadcast_room(room_id, user.id, msg).await?;
     Ok(Json(room))
 }
 
@@ -237,11 +237,11 @@ async fn room_edit(
 async fn room_audit_logs(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ViewAuditLog)?;
     let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
@@ -282,11 +282,11 @@ async fn room_ack(
 )]
 async fn room_metrics(
     Path(room_id): Path<RoomId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(user_id, room_id).await?;
+    let perms = s.services().perms.for_room(user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ViewAuditLog)?;
     let metrics = data.room_metrics(room_id).await?;
@@ -303,7 +303,7 @@ async fn room_metrics(
 )]
 async fn room_transfer_ownership(
     Path(room_id): Path<RoomId>,
-    AuthSudo(auth_user_id): AuthSudo,
+    AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
 ) -> Result<impl IntoResponse> {
@@ -311,20 +311,20 @@ async fn room_transfer_ownership(
     let data = s.data();
     let target_user_id = json.owner_id;
 
-    let perms = s.services().perms.for_room(auth_user_id, room_id).await?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    let room_start = srv.rooms.get(room_id, Some(auth_user_id)).await?;
-    if room_start.owner_id != Some(auth_user_id) {
+    let room_start = srv.rooms.get(room_id, Some(auth_user.id)).await?;
+    if room_start.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you aren't the room owner"));
     }
 
     data.room_set_owner(room_id, target_user_id).await?;
-    srv.perms.invalidate_room(auth_user_id, room_id).await;
+    srv.perms.invalidate_room(auth_user.id, room_id).await;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.rooms.invalidate(room_id).await;
-    let room = srv.rooms.get(room_id, Some(auth_user_id)).await?;
+    let room = srv.rooms.get(room_id, Some(auth_user.id)).await?;
     let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(room_id, auth_user_id, msg).await?;
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
     Ok(Json(room))
 }
 
@@ -345,12 +345,12 @@ struct TransferOwnership {
 )]
 async fn room_integration_list(
     Path(room_id): Path<RoomId>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<ApplicationId>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user_id, room_id).await?;
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     let data = s.data();
     let ids = data.room_bot_list(room_id, q).await?;

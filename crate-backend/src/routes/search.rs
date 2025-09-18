@@ -28,14 +28,14 @@ use crate::error::Result;
     )
 )]
 pub async fn search_messages(
-    Auth(user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Json(json): Json<SearchMessageRequest>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
-    let mut res = data.search_message(user_id, json, q).await?;
+    let mut res = data.search_message(auth_user.id, json, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use common::v1::types::{util::Time, SessionToken, UserId};
+use common::v1::types::{util::Time, SessionToken, User, UserId};
 use headers::{authorization::Bearer, Authorization, HeaderMapExt};
 
 use crate::{
@@ -14,13 +14,13 @@ use crate::{
 pub struct AuthRelaxed(pub Session);
 
 /// extract the client's Session iff it is authenticated
-pub struct AuthWithSession(pub Session, pub UserId);
+pub struct AuthWithSession(pub Session, pub User);
 
 /// extract the client's Session iff it is authenticated and return the user_id
-pub struct Auth(pub UserId);
+pub struct Auth(pub User);
 
 /// extract the client's Session iff it is in sudo mode and return the user_id
-pub struct AuthSudo(pub UserId);
+pub struct AuthSudo(pub User);
 
 /// extract the X-Reason header
 pub struct HeaderReason(pub Option<String>);
@@ -75,13 +75,13 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
             SessionStatus::Authorized { user_id } | SessionStatus::Sudo { user_id, .. } => {
                 let HeaderPuppetId(puppet_id) =
                     HeaderPuppetId::from_request_parts(parts, s).await?;
+                let user = s.services().users.get(user_id).await?;
                 if let Some(puppet_id) = puppet_id {
-                    let user = s.services().users.get(user_id).await?;
                     let puppet = s.services().users.get(puppet_id).await?;
 
-                    if let Some(bot) = puppet.bot {
+                    if let Some(bot) = &puppet.bot {
                         if bot.owner_id == user.id {
-                            return Ok(Self(session, puppet_id));
+                            return Ok(Self(session, puppet));
                         }
                     }
 
@@ -93,7 +93,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
                         return Err(Error::BadStatic("bot is not a bridge"));
                     }
 
-                    let Some(p) = puppet.puppet else {
+                    let Some(p) = &puppet.puppet else {
                         return Err(Error::BadStatic("can only puppet users of type Puppet"));
                     };
 
@@ -101,9 +101,9 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
                         return Err(Error::BadStatic("can only puppet your own puppets"));
                     }
 
-                    Ok(Self(session, puppet_id))
+                    Ok(Self(session, puppet))
                 } else {
-                    Ok(Self(session, user_id))
+                    Ok(Self(session, user))
                 }
             }
         }
@@ -117,9 +117,8 @@ impl FromRequestParts<Arc<ServerState>> for Auth {
         parts: &mut Parts,
         s: &Arc<ServerState>,
     ) -> Result<Self, Self::Rejection> {
-        let AuthWithSession(_session, user_id) =
-            AuthWithSession::from_request_parts(parts, s).await?;
-        Ok(Self(user_id))
+        let AuthWithSession(_session, user) = AuthWithSession::from_request_parts(parts, s).await?;
+        Ok(Self(user))
     }
 }
 
@@ -134,7 +133,10 @@ impl FromRequestParts<Arc<ServerState>> for AuthSudo {
         match session.status {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
             SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
-            SessionStatus::Sudo { user_id, .. } => Ok(Self(user_id)),
+            SessionStatus::Sudo { user_id, .. } => {
+                let user = s.services().users.get(user_id).await?;
+                Ok(Self(user))
+            }
         }
     }
 }

@@ -6,22 +6,18 @@
 
 // maybe rename self -> something else (@me instead of @self)
 
-/// utility stuff
-pub mod util;
-
-/// miscellaneous types
-pub mod misc;
-
 pub mod application;
 pub mod audit_logs;
 pub mod auth;
 pub mod email;
 pub mod embed;
 pub mod emoji;
+pub mod error;
 pub mod ids;
 pub mod invite;
 pub mod media;
 pub mod message;
+pub mod misc;
 pub mod moderation;
 pub mod notifications;
 pub mod oauth;
@@ -29,6 +25,7 @@ pub mod pagination;
 pub mod permission;
 pub mod profile;
 pub mod reaction;
+pub mod util;
 // pub mod redex;
 pub mod role;
 pub mod room;

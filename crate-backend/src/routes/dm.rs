@@ -30,11 +30,11 @@ use crate::error::{Error, Result};
 )]
 async fn dm_init(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let (thread, is_new) = srv.users.init_dm(auth_user_id, target_user_id).await?;
+    let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
     s.broadcast(MessageSync::ThreadCreate {
         thread: thread.clone(),
     })?;
@@ -61,15 +61,15 @@ async fn dm_init(
 )]
 async fn dm_get(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let Some(thread_id) = data.dm_get(auth_user_id, target_user_id).await? else {
+    let Some(thread_id) = data.dm_get(auth_user.id, target_user_id).await? else {
         return Err(Error::NotFound);
     };
     let srv = s.services();
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     Ok(Json(thread))
 }
 
@@ -91,23 +91,23 @@ async fn dm_get(
 )]
 async fn mutual_room_list(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     Query(q): Query<PaginationQuery<RoomId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
 
     let data = s.data();
-    if auth_user_id == target_user_id {
-        let rooms = data.room_list(auth_user_id, q, false).await?;
+    if auth_user.id == target_user_id {
+        let rooms = data.room_list(auth_user.id, q, false).await?;
         return Ok(Json(rooms));
     }
 
     let rooms = data
-        .room_list_mutual(auth_user_id, target_user_id, q)
+        .room_list_mutual(auth_user.id, target_user_id, q)
         .await?;
     Ok(Json(rooms))
 }
@@ -130,26 +130,26 @@ async fn mutual_room_list(
 )]
 async fn dm_list(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
     let data = s.data();
-    let mut res = data.dm_list(auth_user_id, q).await?;
+    let mut res = data.dm_list(auth_user.id, q).await?;
 
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.threads.get(t.id, Some(auth_user_id)).await?);
+        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
 

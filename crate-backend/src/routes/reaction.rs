@@ -34,16 +34,16 @@ use crate::{Error, ServerState};
 )]
 async fn reaction_add(
     Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -53,14 +53,14 @@ async fn reaction_add(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_put(auth_user_id, thread_id, message_id, key.clone())
+    data.reaction_put(auth_user.id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ReactionCreate {
             thread_id,
-            user_id: auth_user_id,
+            user_id: auth_user.id,
             message_id,
             key,
         },
@@ -87,15 +87,15 @@ async fn reaction_add(
 )]
 async fn reaction_remove(
     Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -105,14 +105,14 @@ async fn reaction_remove(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_delete(auth_user_id, thread_id, message_id, key.clone())
+    data.reaction_delete(auth_user.id, thread_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ReactionDelete {
             thread_id,
-            user_id: auth_user_id,
+            user_id: auth_user.id,
             message_id,
             key,
         },
@@ -138,16 +138,16 @@ async fn reaction_remove(
 )]
 async fn reaction_purge(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ReactionClear)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -159,12 +159,12 @@ async fn reaction_purge(
     }
     data.reaction_purge(thread_id, message_id).await?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user_id)).await?;
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         data.audit_logs_room_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: auth_user_id,
+            user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::ReactionPurge {
@@ -177,7 +177,7 @@ async fn reaction_purge(
 
     s.broadcast_thread(
         thread_id,
-        auth_user_id,
+        auth_user.id,
         MessageSync::ReactionPurge {
             thread_id,
             message_id,
@@ -206,13 +206,13 @@ async fn reaction_purge(
 )]
 async fn reaction_list(
     Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user_id, thread_id).await?;
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     let list = data.reaction_list(thread_id, message_id, key, q).await?;
     Ok(Json(list))

@@ -34,7 +34,7 @@ use super::util::Auth;
     )
 )]
 async fn media_create(
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaCreate>,
 ) -> Result<impl IntoResponse> {
@@ -48,7 +48,7 @@ async fn media_create(
             let media_id = MediaId::new();
             let srv = s.services();
             srv.media
-                .create_upload(media_id, user_id, json.clone())
+                .create_upload(media_id, user.id, json.clone())
                 .await?;
             let upload_url = Some(
                 s.config()
@@ -70,7 +70,7 @@ async fn media_create(
             }
 
             let srv = s.services();
-            let media = srv.media.import_from_url(user_id, json).await?;
+            let media = srv.media.import_from_url(user.id, json).await?;
             let mut headers = HeaderMap::new();
             let size = media.source.size;
             headers.insert("content-length", size.into());
@@ -96,13 +96,13 @@ async fn media_create(
 )]
 async fn media_patch(
     Path(media_id): Path<MediaId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MediaPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user_id {
+        if up.user_id == user.id {
             if let Some(alt) = json.alt {
                 up.create.alt = alt;
             }
@@ -120,7 +120,7 @@ async fn media_patch(
         }
     }
     let (media, uploader_id) = s.data().media_select(media_id).await?;
-    if uploader_id != user_id {
+    if uploader_id != user.id {
         return Err(Error::MissingPermissions);
     }
     s.data().media_update(media_id, json).await?;
@@ -146,7 +146,7 @@ async fn media_patch(
 )]
 async fn media_done(
     Path(media_id): Path<MediaId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
@@ -155,7 +155,7 @@ async fn media_done(
         .uploads
         .get_mut(&media_id)
         .ok_or(Error::NotFound)?;
-    if up.user_id != user_id {
+    if up.user_id != user.id {
         return Err(Error::NotFound);
     }
     debug!(
@@ -194,7 +194,7 @@ async fn media_done(
             let mut media = s
                 .services()
                 .media
-                .process_upload(up, media_id, user_id, &filename)
+                .process_upload(up, media_id, user.id, &filename)
                 .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
@@ -216,7 +216,7 @@ async fn media_done(
 /// Media upload
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     body: Body,
@@ -227,7 +227,7 @@ async fn media_upload(
         .uploads
         .get_mut(&media_id)
         .ok_or(Error::NotFound)?;
-    if up.user_id != user_id {
+    if up.user_id != user.id {
         return Err(Error::NotFound);
     }
     debug!(
@@ -295,7 +295,7 @@ async fn media_upload(
             let mut media = s
                 .services()
                 .media
-                .process_upload(up, media_id, user_id, &filename)
+                .process_upload(up, media_id, user.id, &filename)
                 .await?;
             debug!("finished processing media");
             s.presign(&mut media).await?;
@@ -327,7 +327,7 @@ async fn media_upload(
 )]
 async fn media_get(
     Path((media_id,)): Path<(MediaId,)>,
-    Auth(_user_id): Auth,
+    Auth(_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let (mut media, _) = s.data().media_select(media_id).await?;
@@ -349,11 +349,11 @@ async fn media_get(
 // )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user_id {
+        if up.user_id == user.id {
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
             headers.insert(
@@ -390,11 +390,11 @@ async fn media_check(
 )]
 async fn media_delete(
     Path(media_id): Path<MediaId>,
-    Auth(user_id): Auth,
+    Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == user_id {
+        if up.user_id == user.id {
             s.services().media.uploads.remove(&media_id);
         }
         Ok(StatusCode::NO_CONTENT)

@@ -38,16 +38,16 @@ use crate::error::{Error, Result};
 )]
 async fn user_update(
     Path(target_user_id): Path<UserIdReq>,
-    AuthWithSession(session, auth_user_id): AuthWithSession,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<UserPatch>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
@@ -85,7 +85,7 @@ async fn user_update(
     data.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: Some(session.id),
         reason,
         ty: AuditLogEntryType::UserUpdate {
@@ -115,14 +115,14 @@ async fn user_update(
 )]
 async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
@@ -151,18 +151,18 @@ async fn user_delete(
 )]
 async fn user_get(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
     let user = srv.users.get(target_user_id).await?;
     let data = s.data();
     let relationship = data
-        .user_relationship_get(auth_user_id, target_user_id)
+        .user_relationship_get(auth_user.id, target_user_id)
         .await?
         .unwrap_or_default();
     Ok(Json(UserWithRelationship {
@@ -186,15 +186,15 @@ async fn user_get(
 async fn user_audit_logs(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<AuditLogEntryId>>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
 
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::NotFound);
     }
 
@@ -265,7 +265,7 @@ struct SuspendRequest {
 )]
 async fn user_suspend(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SuspendRequest>,
@@ -273,11 +273,11 @@ async fn user_suspend(
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if target_user_id != auth_user_id {
-        let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+    if target_user_id != auth_user.id {
+        let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
         perms.ensure(Permission::MemberBan)?;
     }
     d.user_suspended(
@@ -292,7 +292,7 @@ async fn user_suspend(
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::UserSuspend {
@@ -317,23 +317,23 @@ async fn user_suspend(
 )]
 async fn user_unsuspend(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    let perms = srv.perms.for_room(auth_user_id, SERVER_ROOM_ID).await?;
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::MemberBan)?;
     d.user_suspended(target_user_id, None).await?;
     d.audit_logs_room_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
-        user_id: auth_user_id,
+        user_id: auth_user.id,
         session_id: None,
         reason,
         ty: AuditLogEntryType::UserUnsuspend {
@@ -361,15 +361,15 @@ async fn user_unsuspend(
 async fn connection_list(
     Path(target_user_id): Path<UserIdReq>,
     Query(paginate): Query<PaginationQuery<ApplicationId>>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
@@ -390,15 +390,15 @@ async fn connection_list(
 )]
 async fn connection_revoke(
     Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
@@ -424,16 +424,16 @@ async fn connection_revoke(
 )]
 async fn user_set_status(
     Path((target_user_id,)): Path<(UserIdReq,)>,
-    Auth(auth_user_id): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<StatusPatch>,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user_id,
+        UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
 
-    if auth_user_id != target_user_id {
+    if auth_user.id != target_user_id {
         return Err(Error::MissingPermissions);
     }
 
