@@ -88,9 +88,10 @@
 
 button,
 input[type="submit"] {
-	padding: 0 0.25rem;
 	background-color: $bg-300;
 	cursor: pointer;
+	padding: 2px 4px;
+	border: solid $sep-500 1px;
 
 	&:hover,
 	&:focus {
@@ -536,7 +537,7 @@ em {
 			position: absolute;
 			animation: popup-base 150ms cubic-bezier(0.42, 1.31, 0.52, 1.09) forwards;
 			background-color: $bg-200;
-			border: solid 1px $sep-500;
+			border: solid 1px $sep-300;
 			width: 100%;
 			height: 100%;
 		}
@@ -544,11 +545,26 @@ em {
 		& > .inner {
 			animation: popup-content 100ms cubic-bezier(0.33, 1.05, 0.39, 0.92)
 				forwards;
-			padding: 8px;
+			padding: 16px;
 			color: $fg-300;
 			max-width: 500px;
 			/* min-width: 100px; */
 			min-height: 50px;
+		}
+	}
+
+	.bottom {
+		background: $bg-150;
+		margin: -15px;
+		margin-top: 16px;
+		padding: 8px 15px;
+		display: flex;
+		gap: 6px;
+		justify-content: end;
+
+		button, input[type="submit"] {
+			padding: 2px 4px;
+			border: solid $sep-500 1px;
 		}
 	}
 }
@@ -622,7 +638,7 @@ input[type="url"] {
 	color: $fg-200;
 	display: grid;
 	grid-template-rows: auto 1fr;
-	grid-template-columns: 144px 1fr;
+	grid-template-columns: 256px 1fr;
 	overflow: hidden;
 
 	& > header {
@@ -634,20 +650,28 @@ input[type="url"] {
 
 	& > nav {
 		background-color: $bg-150;
+		padding-top: 8px;
+		padding-left: 72px;
+		padding-bottom: 128px;
+		padding-right: 8px;
 
 		& a,
 		button {
 			display: block;
-			padding: 2px 4px;
+			padding: 4px 8px;
 			background-color: none;
 
 			&:hover,
 			&:focus {
-				background-color: $bg-100;
+				background-color: #fff1;
+
+				&.active {
+					background-color: #fff3;
+				}
 			}
 
-			&.selected {
-				background-color: $bg-400;
+			&.active {
+				background-color: #fff2;
 			}
 		}
 	}

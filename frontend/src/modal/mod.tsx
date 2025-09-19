@@ -63,10 +63,11 @@ const ModalAlert = (props: { text: string }) => {
 	return (
 		<Modal>
 			<p>{props.text}</p>
-			<div style="height: 8px"></div>
-			<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
-				okay!
-			</button>
+			<div class="bottom">
+				<button onClick={() => ctx.dispatch({ do: "modal.close" })}>
+					okay!
+				</button>
+			</div>
 		</Modal>
 	);
 };
@@ -78,23 +79,24 @@ const ModalConfirm = (
 	return (
 		<Modal>
 			<p>{props.text}</p>
-			<div style="height: 8px"></div>
-			<button
-				onClick={() => {
-					props.cont(true);
-					ctx.dispatch({ do: "modal.close" });
-				}}
-			>
-				okay!
-			</button>&nbsp;
-			<button
-				onClick={() => {
-					props.cont(false);
-					ctx.dispatch({ do: "modal.close" });
-				}}
-			>
-				nevermind...
-			</button>
+			<div class="bottom">
+				<button
+					onClick={() => {
+						props.cont(true);
+						ctx.dispatch({ do: "modal.close" });
+					}}
+				>
+					okay!
+				</button>
+				<button
+					onClick={() => {
+						props.cont(false);
+						ctx.dispatch({ do: "modal.close" });
+					}}
+				>
+					nevermind...
+				</button>
+			</div>
 		</Modal>
 	);
 };
@@ -119,16 +121,17 @@ const ModalPrompt = (
 				}}
 			>
 				<input type="text" name="text" use:autofocus autofocus />
-				<div style="height: 8px"></div>
-				<input type="submit" value="done!"></input>{" "}
-				<button
-					onClick={() => {
-						props.cont(null);
-						ctx.dispatch({ do: "modal.close" });
-					}}
-				>
-					nevermind...
-				</button>
+				<div class="bottom">
+					<input type="submit" value="done!"></input>{" "}
+					<button
+						onClick={() => {
+							props.cont(null);
+							ctx.dispatch({ do: "modal.close" });
+						}}
+					>
+						nevermind...
+					</button>
+				</div>
 			</form>
 		</Modal>
 	);
