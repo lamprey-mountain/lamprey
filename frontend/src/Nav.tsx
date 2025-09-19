@@ -83,7 +83,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	return (
 		<nav id="nav">
 			<Show when={flags.has("nav_header")}>
-				<header style="background: #eef1;padding:8px">
+				<header>
 					{props.room_id ? (room()?.name ?? "loading...") : "home"}
 				</header>
 			</Show>
