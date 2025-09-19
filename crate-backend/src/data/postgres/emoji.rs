@@ -2,13 +2,13 @@ use async_trait::async_trait;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::EmojiId;
 use sqlx::{query, query_as, query_scalar, Acquire};
-use tracing::info;
 use uuid::Uuid;
 
+use crate::consts::MAX_CUSTOM_EMOJI;
 use crate::data::DataEmoji;
 use crate::error::Result;
-use crate::gen_paginate;
 use crate::types::{PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId};
+use crate::{gen_paginate, Error};
 
 use super::{Pagination, Postgres};
 
@@ -47,6 +47,19 @@ impl DataEmoji for Postgres {
     ) -> Result<EmojiCustom> {
         let mut conn = self.pool.acquire().await?;
         let emoji_id = Uuid::now_v7();
+        let count = query_scalar!(
+            "SELECT count(*) FROM custom_emoji WHERE room_id = $1",
+            *room_id,
+        )
+        .fetch_optional(&mut *conn)
+        .await?
+        .flatten()
+        .unwrap_or(0) as u32;
+        if count >= MAX_CUSTOM_EMOJI {
+            return Err(Error::BadStatic(
+                "max number of custom emoji reached (1024)",
+            ));
+        }
         query!(
             "
     	    INSERT INTO custom_emoji (id, creator_id ,name, media_id, room_id, animated, owner)
@@ -60,7 +73,6 @@ impl DataEmoji for Postgres {
         )
         .execute(&mut *conn)
         .await?;
-        info!("inserted room");
         self.emoji_get(emoji_id.into()).await
     }
 
