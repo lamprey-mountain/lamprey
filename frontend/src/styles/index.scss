@@ -44,7 +44,6 @@
 	scrollbar-width: none;
 
 	& > ul {
-		padding: 0 8px;
 		padding-top: 8px;
 		padding-bottom: 240px;
 		display: flex;
@@ -77,15 +76,6 @@
 		&.closed {
 			color: $sep-500;
 		}
-
-		&.unread {
-			font-weight: bold;
-			color: $fg-200;
-			padding-left: 6px;
-			border-left: solid $fg-500 2px;
-			border-top-left-radius: 0;
-			border-bottom-left-radius: 0;
-		}
 	}
 
 	& header {
@@ -95,6 +85,25 @@
 		background: $bg-100;
 		padding: 8px 16px;
 		border-bottom: solid $sep-300 1px;
+	}
+}
+
+#nav li {
+	padding: 0 8px;
+
+	&.unread {
+		font-weight: bold;
+		color: $fg-200;
+		position: relative;
+
+		&::before {
+			position: absolute;
+			top: 10%;
+			left: 0;
+			content: "";
+			border-left: solid $sep-500 3px;
+			height: 80%;
+		}
 	}
 }
 
@@ -198,7 +207,7 @@ input[type="submit"] {
 		background-image: linear-gradient(to top, $bg-200 25%, transparent);
 		display: flex;
 		flex-direction: column;
-		padding: 4px;
+		padding: 8px;
 		max-height: 50%;
 
 		&.locked {
@@ -298,6 +307,10 @@ input[type="submit"] {
 				gap: 4px;
 				padding: 4px;
 			}
+
+			button {
+				border: none;
+			}
 		}
 
 		& > .text {
@@ -346,10 +359,9 @@ input[type="submit"] {
 		}
 
 		& > .header > header {
-			grid-column: span 3;
 			padding: 0 8px;
 			margin-top: 32px;
-			margin-bottom: 8px;
+			margin-bottom: 16px;
 			box-shadow: 0 2px 8px $bg-200;
 		}
 
@@ -409,11 +421,11 @@ input[type="submit"] {
 	}
 
 	& .spacer.mini {
-		min-height: 3rem;
+		min-height: 3.5rem;
 	}
 
 	&.has-typing .spacer.mini {
-		min-height: 4rem;
+		min-height: 4.5rem;
 	}
 }
 
@@ -717,34 +729,27 @@ article.message {
 	display: grid;
 	grid-template-columns: 128px 1fr max-content;
 
-	&:hover {
-		& > * {
-			background-color: oklch(var(--color-bg1) / 0.3);
-		}
-
-		& > time {
-			visibility: visible;
-		}
-	}
-
 	&.reply {
 		/* grid-template-rows: auto auto; */
 	}
 
 	& .author {
-		@include truncate;
-		cursor: pointer;
-		color: $fg-400;
 		text-align: right;
 		padding: 0 8px;
 
-		&:hover,
-		&:focus {
-			text-decoration: underline;
-		}
+		.user {
+			@include truncate;
+			cursor: pointer;
+			color: $fg-400;
 
-		&.override-name {
-			color: #9ca9db;
+			&:hover,
+			&:focus {
+				text-decoration: underline;
+			}
+
+			&.override-name {
+				color: #9ca9db;
+			}
 		}
 	}
 
@@ -817,6 +822,10 @@ article.message {
 	& > time {
 		visibility: hidden;
 		color: $fg-400;
+	}
+
+	&:hover > time {
+		visibility: visible;
 	}
 }
 
@@ -968,6 +977,30 @@ summary {
 
 		&:hover {
 			background: $bg-300;
+		}
+	}
+
+	.roles {
+		display: flex;
+		flex-direction: column;
+	}
+	.roles label {
+		display: flex;
+		gap: 2px;
+		cursor: pointer;
+		padding: 2px 0;
+
+		&:hover {
+			background: $bg-200;
+		}
+
+		input[type="checkbox"] {
+			align-self: flex-start;
+			margin: 4px;
+		}
+
+		& .has {
+			font-weight: bold;
 		}
 	}
 }
@@ -1264,7 +1297,7 @@ pre.numbered {
 	font-size: 0.9rem;
 	align-items: center;
 	gap: 8px;
-	margin: 2px 8px;
+	margin: 8px;
 
 	& > hr {
 		flex: 1;
@@ -1312,8 +1345,10 @@ button[disabled] {
 	grid-template-areas: "info thumb" "info thumb" "media media";
 	/* width: 20em; */
 	background: $bg-150;
-	border: solid $sep-500 1px;
+	border: solid $sep-300 1px;
 	margin-bottom: 4px;
+	border-top-right-radius: 4px;
+	border-bottom-right-radius: 4px;
 
 	&.color {
 		box-shadow: inset 4px 0 var(--color);
@@ -1521,7 +1556,7 @@ table {
 
 .message.withavatar {
 	grid-template-columns: 52px auto;
-	grid-template-rows: auto 1em auto;
+	grid-template-rows: auto 1.25em auto;
 	grid-template-areas: "reply reply" "avatar author" "avatar content";
 
 	& > .reply {
@@ -1535,13 +1570,13 @@ table {
 
 	& > .avatar {
 		grid-area: avatar;
+		padding-top: 4px;
 	}
 
 	& > .author {
 		grid-area: author;
 		text-align: left;
 		padding: 0;
-		line-height: 1;
 
 		& > time {
 			margin-left: 4px;
@@ -1577,14 +1612,14 @@ table {
 		grid-template-rows: auto;
 
 		& .avatar {
-			grid-row: initial;
-			height: 0;
+			display: none;
 		}
 	}
 }
 
 .message + .message > .withavatar.separate {
 	margin-top: 8px;
+	padding: 4px 0;
 }
 
 #root > header {
@@ -1805,6 +1840,13 @@ table {
 		width: 24px;
 		display: grid;
 		place-items: center;
+		background: none;
+		border: none;
+		border-radius: 4px;
+
+		&:hover {
+			background: #fff2;
+		}
 	}
 
 	.status {

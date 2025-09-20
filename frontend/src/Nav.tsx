@@ -102,14 +102,16 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 				<Show when={!props.room_id}>
 					<Show when={flags.has("inbox")}>
-						<A
-							href="/inbox"
-							class="menu-thread"
-							draggable={false}
-							end
-						>
-							inbox
-						</A>
+						<li>
+							<A
+								href="/inbox"
+								class="menu-thread"
+								draggable={false}
+								end
+							>
+								inbox
+							</A>
+						</li>
 					</Show>
 				</Show>
 
@@ -125,6 +127,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 							classList={{
 								dragging: dragging() === idx(),
 								over: target() === idx(),
+								unread: thread.is_unread,
 							}}
 						>
 							<ItemThread thread={thread} />
