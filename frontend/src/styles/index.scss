@@ -200,152 +200,6 @@ input[type="submit"] {
 	scrollbar-color: $bg-300 $bg-150;
 	scrollbar-gutter: stable;
 
-	& > .input {
-		position: absolute;
-		bottom: 0;
-		width: 100%;
-		background-image: linear-gradient(to top, $bg-200 25%, transparent);
-		display: flex;
-		flex-direction: column;
-		padding: 8px;
-		max-height: 50%;
-
-		&.locked {
-			cursor: not-allowed;
-
-			& > .text > .upload {
-				cursor: inherit;
-				color: $sep-800;
-
-				&:hover {
-					background: none;
-				}
-			}
-
-			& .editor .placeholder {
-				color: $sep-800;
-			}
-		}
-
-		& > .typing {
-			background: $bg-400;
-			padding: 2px 4px;
-			border: solid $bg-400 1px;
-			border-bottom: none;
-			border-top-right-radius: 4px;
-			border-top-left-radius: 4px;
-			color: $fg-400;
-
-			& ~ .text {
-				border-top-left-radius: 0;
-				border-top-right-radius: 0;
-				border-top: none;
-			}
-
-			&::after {
-				content: "";
-				animation: dots infinite 800ms;
-			}
-		}
-
-		& > .reply {
-			display: flex;
-			border-top-right-radius: 4px;
-			border-top-left-radius: 4px;
-			border: solid 1px $sep-500;
-			background-color: oklch(var(--color-bg1) / 0.8);
-			overflow: hidden;
-
-			& ~ .text {
-				border-top-left-radius: 0;
-				border-top-right-radius: 0;
-				border-top: none;
-			}
-
-			& > .info {
-				padding: 2px 8px;
-				flex: 1;
-			}
-
-			& > .cancel {
-				background-color: $bg-200;
-				display: grid;
-				place-items: center;
-				width: 28px;
-
-				&:hover {
-					background-color: $bg-100;
-				}
-			}
-		}
-
-		& > .attachments {
-			position: absolute;
-			top: 0;
-			translate: 0 -100%;
-			right: 4px;
-			border: solid $sep-500 1px;
-			border-radius: 4px;
-			max-height: 320px;
-			overflow: hidden auto;
-			background: $bg-200;
-			display: flex;
-			flex-direction: column;
-			box-shadow: 2px 2px 8px #1114;
-
-			header {
-				background: $bg-150;
-				padding: 6px;
-				margin-bottom: 4px;
-				padding-left: 56px;
-				line-height: 1;
-			}
-
-			ul {
-				display: flex;
-				flex-direction: column;
-				gap: 4px;
-				padding: 4px;
-			}
-
-			button {
-				border: none;
-			}
-		}
-
-		& > .text {
-			display: flex;
-			background: $bg-300;
-			border: solid $bg-400 1px;
-			box-shadow: 2px 2px 8px #1114;
-			border-radius: 4px;
-			overflow: hidden;
-			align-items: center;
-
-			& > .upload {
-				cursor: pointer;
-				width: 2rem;
-				height: 2rem;
-				display: grid;
-				place-items: center;
-				font-weight: bold;
-
-				&:hover {
-					background: $bg-200;
-				}
-
-				& > input[type="file"] {
-					display: none;
-				}
-			}
-
-			& > .editor {
-				flex: 1;
-				border: none;
-			}
-		}
-	}
-
 	& > .list {
 		display: flex;
 		flex-direction: column;
@@ -427,6 +281,158 @@ input[type="submit"] {
 	&.has-typing .spacer.mini {
 		min-height: 4.5rem;
 	}
+}
+
+.input {
+	position: absolute;
+	bottom: 0;
+	width: 100%;
+	background-image: linear-gradient(to top, $bg-200 25%, transparent);
+	display: flex;
+	flex-direction: column;
+	padding: 8px;
+	max-height: 50%;
+
+	&.locked {
+		cursor: not-allowed;
+
+		& > .text > .upload {
+			cursor: inherit;
+			color: $sep-800;
+
+			&:hover {
+				background: none;
+			}
+		}
+
+		& .editor .placeholder {
+			color: $sep-800;
+		}
+	}
+
+	& > .typing {
+		background: $bg-400;
+		padding: 2px 4px;
+		border: solid $bg-400 1px;
+		border-bottom: none;
+		border-top-right-radius: 4px;
+		border-top-left-radius: 4px;
+		color: $fg-400;
+
+		& ~ .text {
+			border-top-left-radius: 0;
+			border-top-right-radius: 0;
+			border-top: none;
+		}
+
+		&::after {
+			content: "";
+			animation: dots infinite 800ms;
+		}
+	}
+
+	& > .reply {
+		display: flex;
+		border-top-right-radius: 4px;
+		border-top-left-radius: 4px;
+		border: solid 1px $sep-500;
+		background-color: oklch(var(--color-bg1) / 0.8);
+		overflow: hidden;
+
+		& ~ .text {
+			border-top-left-radius: 0;
+			border-top-right-radius: 0;
+			border-top: none;
+		}
+
+		& > .info {
+			padding: 2px 8px;
+			flex: 1;
+		}
+
+		& > .cancel {
+			background-color: $bg-200;
+			display: grid;
+			place-items: center;
+			width: 28px;
+
+			&:hover {
+				background-color: $bg-100;
+			}
+		}
+	}
+
+	& > .attachments {
+		position: absolute;
+		top: 0;
+		translate: 0 -100%;
+		right: 4px;
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		max-height: 320px;
+		overflow: hidden auto;
+		background: $bg-200;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 2px 2px 8px #1114;
+
+		header {
+			background: $bg-150;
+			padding: 6px;
+			margin-bottom: 4px;
+			padding-left: 56px;
+			line-height: 1;
+		}
+
+		ul {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			padding: 4px;
+		}
+
+		button {
+			border: none;
+		}
+	}
+
+	& > .text {
+		display: flex;
+		background: $bg-300;
+		border: solid $bg-400 1px;
+		box-shadow: 2px 2px 8px #1114;
+		border-radius: 4px;
+		overflow: hidden;
+		align-items: center;
+
+		& > .upload {
+			cursor: pointer;
+			width: 2rem;
+			height: 2rem;
+			display: grid;
+			place-items: center;
+			font-weight: bold;
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			& > input[type="file"] {
+				display: none;
+			}
+		}
+
+		& > .editor {
+			flex: 1;
+			border: none;
+		}
+	}
+}
+
+.quick-create {
+	position: relative;
+	background-image: none;
+	padding: 8px 0;
 }
 
 .editor {

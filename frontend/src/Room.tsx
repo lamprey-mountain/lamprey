@@ -6,6 +6,11 @@ import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus, UserView } from "./User.tsx";
 import { tooltip } from "./Tooltip.tsx";
+import { createEditor } from "./Editor.tsx";
+import { uuidv7 } from "uuidv7";
+import { EditorState } from "prosemirror-state";
+import { RenderUploadItem } from "./Input.tsx";
+import { handleSubmit } from "./dispatch/submit.ts";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
@@ -40,7 +45,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						},
 						<Show when={user()}>
 							<UserView
-								user={user()}
+								user={user()!}
 								room_member={member}
 							/>
 						</Show>,
@@ -107,7 +112,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	const n = useNavigate();
 	// <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
 	return (
 		<div class="room-home">
@@ -118,34 +122,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<button onClick={() => leaveRoom(room_id())}>leave room</button>
 			<br />
 			<br />
-			<form
-				onSubmit={async (e) => {
-					e.preventDefault();
-					const message = e.target.querySelector("input")?.value;
-					if (!message) return;
-					const t = await ctx.client.http.POST(
-						"/api/v1/room/{room_id}/thread",
-						{
-							params: {
-								path: { room_id: props.room.id },
-							},
-							body: { name: "thread" },
-						},
-					);
-					if (!t.data) return;
-					ctx.dispatch({
-						do: "thread.send",
-						thread_id: t.data.id,
-						text: message,
-					});
-					n(`/thread/${t.data.id}`);
-				}}
-			>
-				<label>
-					quick create thread<br />
-					<input type="text" placeholder="message" autofocus />
-				</label>
-			</form>
+			<QuickCreate room={props.room} />
 			<br />
 			<A href={`/room/${props.room.id}/settings`}>settings</A>
 			<br />
@@ -199,6 +176,100 @@ export const RoomHome = (props: { room: RoomT }) => {
 					)}
 				</For>
 			</ul>
+		</div>
+	);
+};
+
+// NOTE the room id is reused as the thread id for draft messages and attachments
+const QuickCreate = (
+	props: { room: RoomT },
+) => {
+	const ctx = useCtx();
+	const api = useApi();
+	const n = useNavigate();
+
+	const editor = createEditor({});
+
+	function uploadFile(e: InputEvent) {
+		const target = e.target! as HTMLInputElement;
+		const files = Array.from(target.files!);
+		for (const file of files) {
+			handleUpload(file);
+		}
+	}
+
+	function handleUpload(file: File) {
+		console.log(file);
+		const local_id = uuidv7();
+		ctx.dispatch({
+			do: "upload.init",
+			file,
+			local_id,
+			thread_id: props.room.id,
+		});
+	}
+
+	const onSubmit = async (text: string) => {
+		if (!text) return;
+		const t = await ctx.client.http.POST(
+			"/api/v1/room/{room_id}/thread",
+			{
+				params: {
+					path: { room_id: props.room.id },
+				},
+				body: { name: "thread" },
+			},
+		);
+
+		if (!t.data) return;
+		handleSubmit(ctx, t.data.id, text, null as any, api, props.room.id);
+		n(`/thread/${t.data.id}`);
+	};
+
+	const onChange = (state: EditorState) => {
+		// reuse room id as the thread id for draft messages
+		ctx.thread_editor_state.set(props.room.id, state);
+	};
+
+	const atts = () => ctx.thread_attachments.get(props.room.id);
+	return (
+		<div class="input quick-create">
+			<div style="margin-bottom: 2px">quick create thread</div>
+			<Show when={atts()?.length}>
+				<div class="attachments">
+					<header>
+						{atts()?.length}{" "}
+						{atts()?.length === 1 ? "attachment" : "attachments"}
+					</header>
+					<ul>
+						<For each={atts()}>
+							{(att) => (
+								<RenderUploadItem
+									thread_id={props.room.id}
+									att={att}
+								/>
+							)}
+						</For>
+					</ul>
+				</div>
+			</Show>
+			<div class="text">
+				<label class="upload">
+					+
+					<input
+						multiple
+						type="file"
+						onInput={uploadFile}
+						value="upload file"
+					/>
+				</label>
+				<editor.View
+					onSubmit={onSubmit}
+					onChange={onChange}
+					onUpload={handleUpload}
+					placeholder={"send a message..."}
+				/>
+			</div>
 		</div>
 	);
 };

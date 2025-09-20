@@ -1,12 +1,12 @@
 import { For, Match, Show, Switch } from "solid-js/web";
 import { type Attachment, useCtx } from "./context.ts";
 import type { MessageT, ThreadT } from "./types.ts";
-import Editor, { createEditor } from "./Editor.tsx";
+import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
-import { createEffect, createSignal, on, onCleanup } from "solid-js";
-import { getMessageContent, getMessageOverrideName } from "./util.tsx";
+import { createEffect, onCleanup } from "solid-js";
+import { getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import cancelIc from "./assets/x.png";
@@ -54,16 +54,12 @@ export function Input(props: InputProps) {
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
 		const member = api.room_members.fetch(
-			() => props.thread.room_id,
+			() => props.thread.room_id!,
 			() => user_id,
 		);
 
 		const m = member();
 		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
-	};
-
-	const getNameNullable = (user_id?: string) => {
-		if (user_id) return getName(user_id);
 	};
 
 	const fmt = new (Intl as any).ListFormat();
@@ -130,7 +126,9 @@ export function Input(props: InputProps) {
 					</header>
 					<ul>
 						<For each={atts()}>
-							{(att) => <RenderUploadItem thread={props.thread} att={att} />}
+							{(att) => (
+								<RenderUploadItem thread_id={props.thread.id} att={att} />
+							)}
 						</For>
 					</ul>
 				</div>
@@ -163,7 +161,9 @@ export function Input(props: InputProps) {
 	);
 }
 
-function RenderUploadItem(props: { thread: ThreadT; att: Attachment }) {
+export function RenderUploadItem(
+	props: { thread_id: string; att: Attachment },
+) {
 	const ctx = useCtx();
 	const thumbUrl = URL.createObjectURL(props.att.file);
 	onCleanup(() => {
@@ -193,7 +193,7 @@ function RenderUploadItem(props: { thread: ThreadT; att: Attachment }) {
 	}
 
 	function removeAttachment(local_id: string) {
-		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: props.thread.id });
+		ctx.dispatch({ do: "upload.cancel", local_id, thread_id: props.thread_id });
 	}
 
 	function pause() {
@@ -257,7 +257,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
 		const member = api.room_members.fetch(
-			() => props.thread.room_id,
+			() => props.thread.room_id!,
 			() => user_id,
 		);
 

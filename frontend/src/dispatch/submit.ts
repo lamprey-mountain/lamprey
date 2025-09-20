@@ -10,6 +10,7 @@ export async function handleSubmit(
 	text: string,
 	_update: SetStoreFunction<Data>,
 	api: Api,
+	atts_thread_id?: string,
 ) {
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
@@ -72,7 +73,7 @@ export async function handleSubmit(
 		}
 		return;
 	}
-	const atts = ctx.thread_attachments.get(thread_id) ?? [];
+	const atts = ctx.thread_attachments.get(atts_thread_id ?? thread_id) ?? [];
 	const reply_id = ctx.thread_reply_id.get(thread_id);
 	if (text.length === 0 && atts.length === 0) return false;
 	if (!atts.every((i) => i.status === "uploaded")) return false;
@@ -83,6 +84,6 @@ export async function handleSubmit(
 		attachments,
 		embeds: [],
 	});
-	ctx.thread_attachments.delete(thread_id);
+	ctx.thread_attachments.delete(atts_thread_id ?? thread_id);
 	ctx.thread_reply_id.delete(thread_id);
 }
