@@ -233,7 +233,7 @@ const QuickCreate = (
 
 	const atts = () => ctx.thread_attachments.get(props.room.id);
 	return (
-		<div class="input quick-create">
+		<div class="message-input quick-create">
 			<div style="margin-bottom: 2px">quick create thread</div>
 			<Show when={atts()?.length}>
 				<div class="attachments">

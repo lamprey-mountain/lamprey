@@ -107,7 +107,7 @@ export function Input(props: InputProps) {
 
 	return (
 		<div
-			class="input"
+			class="message-input"
 			classList={{
 				locked: locked(),
 			}}
