@@ -201,5 +201,7 @@ impl Diff<RoomMember> for RoomMemberPatch {
             || self
                 .override_description
                 .changes(&other.override_description)
+            || self.mute.changes(&other.mute)
+            || self.deaf.changes(&other.deaf)
     }
 }
