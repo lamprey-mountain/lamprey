@@ -6,10 +6,11 @@ use common::v1::types::{RoomId, ThreadId};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        parse_webhook, ChannelType, CommandOptionType, CreateChannel, CreateCommand,
-        CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook, EditWebhookMessage,
-        EventHandler, ExecuteWebhook, GatewayIntents, Guild, GuildChannel, Http, Interaction,
-        InteractionContext, MessagePagination, Permissions, Ready, Webhook,
+        parse_webhook, ChannelType, CommandDataOptionValue, CommandInteraction, CommandOptionType,
+        CreateChannel, CreateCommand, CreateCommandOption, CreateInteractionResponseMessage,
+        CreateWebhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
+        GuildChannel, Http, Interaction, InteractionContext, InteractionResponseFlags,
+        MessagePagination, Permissions, Ready, Webhook,
     },
     model::prelude::{
         ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction, TypingStartEvent,
@@ -33,13 +34,19 @@ impl TypeMapKey for GlobalsKey {
     type Value = Arc<Globals>;
 }
 
+async fn send_ephemeral_reply(ctx: &Context, command: &CommandInteraction, content: &str) {
+    let builder = CreateInteractionResponseMessage::new()
+        .content(content.to_string())
+        .flags(InteractionResponseFlags::EPHEMERAL);
+    let response = serenity::all::CreateInteractionResponse::Message(builder);
+    if let Err(err) = command.create_response(&ctx.http, response).await {
+        error!("failed to respond to interaction: {err:?}");
+    }
+}
+
 fn get_commands() -> Vec<CreateCommand> {
     let ping = CreateCommand::new("ping")
         .description("healthcheck for the bridge")
-        .default_member_permissions(Permissions::from_bits_truncate(536870944));
-
-    let control = CreateCommand::new("control")
-        .description("open the control panel")
         .default_member_permissions(Permissions::from_bits_truncate(536870944));
 
     let link = CreateCommand::new("link")
@@ -98,7 +105,22 @@ fn get_commands() -> Vec<CreateCommand> {
                     )
             );
 
-    vec![ping, control, link]
+    let unlink = CreateCommand::new("unlink")
+        .description("unlink something from lamprey")
+        .default_member_permissions(Permissions::from_bits_truncate(536870944))
+        .contexts(vec![InteractionContext::Guild])
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "guild",
+            "unlink this guild",
+        ))
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::SubCommand,
+            "channel",
+            "unlink this channel",
+        ));
+
+    vec![ping, link, unlink]
 }
 
 #[async_trait]
@@ -207,169 +229,6 @@ impl EventHandler for Handler {
                     if webhook.id == w {
                         return;
                     }
-                }
-            }
-        }
-
-        if message.content.starts_with("!disco ") {
-            let args: Vec<&str> = message.content.split_whitespace().skip(1).collect();
-            let guild_id = if let Some(id) = message.guild_id {
-                id
-            } else {
-                let _ = message
-                    .reply_ping(&ctx.http, "error: link command used outside of a guild")
-                    .await;
-                return;
-            };
-            let guild = ctx.cache.guild(guild_id).expect("guild").to_owned();
-            let perms: Permissions = message
-                .member
-                .as_ref()
-                .map(|m| {
-                    m.roles
-                        .iter()
-                        .flat_map(|r| guild.roles.get(r))
-                        .fold(Permissions::empty(), |p, r| p | r.permissions)
-                })
-                .unwrap_or_default();
-            match args.get(0) {
-                Some(&"link") => {
-                    if !perms.manage_guild() {
-                        let _ = message
-                            .reply_ping(&ctx.http, "missing ManageGuild permission")
-                            .await;
-                        return;
-                    }
-
-                    if args.len() < 3 {
-                        let _ = message
-                            .reply_ping(&ctx.http, "usage: !disco link <roomId> <threadId>")
-                            .await;
-                        return;
-                    }
-
-                    let lamprey_room_id: RoomId = match args[1].parse() {
-                        Ok(id) => id,
-                        Err(_) => {
-                            let _ = message
-                                .reply_ping(&ctx.http, "error: invalid room id")
-                                .await;
-                            return;
-                        }
-                    };
-
-                    let lamprey_thread_id: ThreadId = match args[2].parse() {
-                        Ok(id) => id,
-                        Err(_) => {
-                            let _ = message
-                                .reply_ping(&ctx.http, "error: invalid thread id")
-                                .await;
-                            return;
-                        }
-                    };
-
-                    let has_existing_discord = globals
-                        .get_portal_by_discord_channel(message.channel_id)
-                        .await
-                        .is_ok_and(|p| p.is_some());
-                    if has_existing_discord {
-                        let _ = message
-                            .reply_ping(&ctx.http, "error: this discord channel is already bridged")
-                            .await;
-                        return;
-                    }
-
-                    let has_existing_lamprey = globals
-                        .get_portal_by_thread_id(lamprey_thread_id)
-                        .await
-                        .is_ok_and(|p| p.is_some());
-                    if has_existing_lamprey {
-                        let _ = message
-                            .reply_ping(&ctx.http, "error: that lamprey thread is already bridged")
-                            .await;
-                        return;
-                    }
-
-                    let thread = guild
-                        .threads
-                        .iter()
-                        .find(|t| t.id == message.channel_id)
-                        .cloned();
-
-                    let Ok(webhook) = ctx
-                        .http
-                        .create_webhook(
-                            thread
-                                .as_ref()
-                                .and_then(|t| t.parent_id)
-                                .unwrap_or(message.channel_id),
-                            &CreateWebhook::new("bridg"),
-                            Some("for bridge"),
-                        )
-                        .await
-                    else {
-                        let _ = message
-                            .reply_ping(&ctx.http, "error: could not create webhook")
-                            .await;
-                        return;
-                    };
-
-                    let _ = globals
-                        .insert_portal(PortalConfig {
-                            lamprey_thread_id,
-                            lamprey_room_id,
-                            discord_guild_id: guild_id,
-                            discord_channel_id: thread
-                                .as_ref()
-                                .and_then(|t| t.parent_id)
-                                .unwrap_or(message.channel_id),
-                            discord_thread_id: thread.map(|t| t.id),
-                            discord_webhook: webhook.url().unwrap(),
-                        })
-                        .await;
-                    let _ = message.reply_ping(&ctx.http, "linked").await;
-                }
-                Some(&"unlink") => {
-                    if !perms.manage_guild() {
-                        let _ = message
-                            .reply_ping(&ctx.http, "missing ManageGuild permission")
-                            .await;
-                        return;
-                    }
-
-                    if let Ok(Some(portal)) = globals
-                        .get_portal_by_discord_channel(message.channel_id)
-                        .await
-                    {
-                        if let Ok(w) = Webhook::from_url(&ctx.http, &portal.discord_webhook).await {
-                            if w.delete(&ctx.http).await.is_err() {
-                                let _ = message
-                                    .reply_ping(&ctx.http, "warning: could not delete webhook")
-                                    .await;
-                            }
-                        }
-
-                        match globals.delete_portal(portal.lamprey_thread_id).await {
-                            Ok(_) => {
-                                let _ = message.reply_ping(&ctx.http, "done").await;
-                            }
-                            Err(err) => {
-                                error!("failed to unlink: {err:?}");
-                                let _ = message
-                                    .reply_ping(&ctx.http, "failed to unlink, see logs for info")
-                                    .await;
-                            }
-                        }
-                    } else {
-                        let _ = message
-                            .reply_ping(&ctx.http, "this channel isnt bridged")
-                            .await;
-                    }
-                }
-                _ => {
-                    let _ = message
-                        .reply_ping(&ctx.http, "usage:\n!disco link [roomId] [threadId] -- link this channel to a lamprey thread\n!disco unlink -- unlink this channel\n!disco help -- print this text")
-                        .await;
                 }
             }
         }
@@ -532,25 +391,265 @@ impl EventHandler for Handler {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        info!("interaction create {interaction:?}");
+
         let Some(command) = interaction.into_command() else {
             return;
         };
 
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap().clone();
+
         match command.data.name.as_str() {
             "ping" => {
-                let res = command
-                    .create_response(
-                        ctx.http(),
-                        serenity::all::CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new().content("pong!"),
-                        ),
-                    )
-                    .await;
-                if let Err(err) = res {
-                    error!("failed to respond to interaction: {err:?}")
+                send_ephemeral_reply(&ctx, &command, "pong!").await;
+            }
+            "link" => {
+                let guild_id = command.guild_id.unwrap();
+                let channel_id = command.channel_id;
+
+                let subcommand = &command.data.options[0];
+                match subcommand.name.as_str() {
+                    "channel" => {
+                        if let CommandDataOptionValue::SubCommand(options) = &subcommand.value {
+                            let mut room_id_str = None;
+                            let mut thread_id_str = None;
+                            for opt in options {
+                                match opt.name.as_str() {
+                                    "room_id" => {
+                                        room_id_str = opt.value.as_str().to_owned();
+                                    }
+                                    "thread_id" => {
+                                        thread_id_str = opt.value.as_str().to_owned();
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            let (Some(room_id_str), Some(thread_id_str)) =
+                                (room_id_str, thread_id_str)
+                            else {
+                                send_ephemeral_reply(
+                                    &ctx,
+                                    &command,
+                                    "error: missing required options",
+                                )
+                                .await;
+                                return;
+                            };
+
+                            let lamprey_room_id: RoomId = match room_id_str.parse() {
+                                Ok(id) => id,
+                                Err(_) => {
+                                    send_ephemeral_reply(&ctx, &command, "error: invalid room id")
+                                        .await;
+                                    return;
+                                }
+                            };
+
+                            let lamprey_thread_id: ThreadId = match thread_id_str.parse() {
+                                Ok(id) => id,
+                                Err(_) => {
+                                    send_ephemeral_reply(
+                                        &ctx,
+                                        &command,
+                                        "error: invalid thread id",
+                                    )
+                                    .await;
+                                    return;
+                                }
+                            };
+
+                            let has_existing_discord = globals
+                                .get_portal_by_discord_channel(channel_id)
+                                .await
+                                .is_ok_and(|p| p.is_some());
+                            if has_existing_discord {
+                                send_ephemeral_reply(
+                                    &ctx,
+                                    &command,
+                                    "error: this discord channel is already bridged",
+                                )
+                                .await;
+                                return;
+                            }
+
+                            let has_existing_lamprey = globals
+                                .get_portal_by_thread_id(lamprey_thread_id)
+                                .await
+                                .is_ok_and(|p| p.is_some());
+                            if has_existing_lamprey {
+                                send_ephemeral_reply(
+                                    &ctx,
+                                    &command,
+                                    "error: that lamprey thread is already bridged",
+                                )
+                                .await;
+                                return;
+                            }
+
+                            let guild = ctx.cache.guild(guild_id).expect("guild").to_owned();
+                            let thread = guild.threads.iter().find(|t| t.id == channel_id).cloned();
+
+                            let Ok(webhook) = ctx
+                                .http
+                                .create_webhook(
+                                    thread
+                                        .as_ref()
+                                        .and_then(|t| t.parent_id)
+                                        .unwrap_or(channel_id),
+                                    &CreateWebhook::new("bridg"),
+                                    Some("for bridge"),
+                                )
+                                .await
+                            else {
+                                send_ephemeral_reply(
+                                    &ctx,
+                                    &command,
+                                    "error: could not create webhook",
+                                )
+                                .await;
+                                return;
+                            };
+
+                            let _ = globals
+                                .insert_portal(PortalConfig {
+                                    lamprey_thread_id,
+                                    lamprey_room_id,
+                                    discord_guild_id: guild_id,
+                                    discord_channel_id: thread
+                                        .as_ref()
+                                        .and_then(|t| t.parent_id)
+                                        .unwrap_or(channel_id),
+                                    discord_thread_id: thread.map(|t| t.id),
+                                    discord_webhook: webhook.url().unwrap(),
+                                })
+                                .await;
+                            send_ephemeral_reply(&ctx, &command, "linked").await;
+                        }
+                    }
+                    "guild" => {
+                        if let CommandDataOptionValue::SubCommand(options) = &subcommand.value {
+                            let mut room_id_str = None;
+                            let mut continuous = None;
+                            for opt in options {
+                                match opt.name.as_str() {
+                                    "room_id" => {
+                                        room_id_str = opt.value.as_str().to_owned();
+                                    }
+                                    "continuous" => {
+                                        continuous = opt.value.as_bool();
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            let Some(room_id_str) = room_id_str else {
+                                send_ephemeral_reply(&ctx, &command, "error: missing room_id")
+                                    .await;
+                                return;
+                            };
+
+                            let lamprey_room_id: RoomId = match room_id_str.parse() {
+                                Ok(id) => id,
+                                Err(_) => {
+                                    send_ephemeral_reply(&ctx, &command, "error: invalid room id")
+                                        .await;
+                                    return;
+                                }
+                            };
+
+                            let realm_config = crate::common::RealmConfig {
+                                lamprey_room_id,
+                                discord_guild_id: guild_id,
+                                continuous: continuous.unwrap_or(false),
+                            };
+
+                            if let Err(e) = globals.insert_realm(realm_config).await {
+                                error!("failed to insert realm: {e}");
+                                send_ephemeral_reply(&ctx, &command, "error: failed to link guild")
+                                    .await;
+                                return;
+                            }
+
+                            send_ephemeral_reply(&ctx, &command, "guild linked").await;
+                        }
+                    }
+                    _ => {}
                 }
             }
-            _ => todo!(),
+            "unlink" => {
+                let guild_id = command.guild_id.unwrap();
+                let channel_id = command.channel_id;
+
+                let subcommand = &command.data.options[0];
+                match subcommand.name.as_str() {
+                    "channel" => {
+                        if let Ok(Some(portal)) =
+                            globals.get_portal_by_discord_channel(channel_id).await
+                        {
+                            if let Ok(w) =
+                                Webhook::from_url(&ctx.http, &portal.discord_webhook).await
+                            {
+                                if w.delete(&ctx.http).await.is_err() {
+                                    send_ephemeral_reply(
+                                        &ctx,
+                                        &command,
+                                        "warning: could not delete webhook",
+                                    )
+                                    .await;
+                                }
+                            }
+
+                            match globals.delete_portal(portal.lamprey_thread_id).await {
+                                Ok(_) => {
+                                    send_ephemeral_reply(&ctx, &command, "done").await;
+                                }
+                                Err(err) => {
+                                    error!("failed to unlink: {err:?}");
+                                    send_ephemeral_reply(
+                                        &ctx,
+                                        &command,
+                                        "failed to unlink, see logs for info",
+                                    )
+                                    .await;
+                                }
+                            }
+                        } else {
+                            send_ephemeral_reply(&ctx, &command, "this channel isnt bridged").await;
+                        }
+                    }
+                    "guild" => {
+                        let realms = match globals.get_realms().await {
+                            Ok(r) => r,
+                            Err(e) => {
+                                error!("failed to get realms: {e}");
+                                send_ephemeral_reply(&ctx, &command, "error: failed to get realms")
+                                    .await;
+                                return;
+                            }
+                        };
+
+                        let Some(realm) = realms.iter().find(|r| r.discord_guild_id == guild_id)
+                        else {
+                            send_ephemeral_reply(&ctx, &command, "error: this guild is not linked")
+                                .await;
+                            return;
+                        };
+
+                        if let Err(e) = globals.delete_realm(realm.lamprey_room_id).await {
+                            error!("failed to delete realm: {e}");
+                            send_ephemeral_reply(&ctx, &command, "error: failed to unlink guild")
+                                .await;
+                            return;
+                        }
+
+                        send_ephemeral_reply(&ctx, &command, "guild unlinked").await;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -696,7 +795,7 @@ impl Discord {
         Ok(())
     }
 
-    async fn get_hook(&mut self, url: String, http: &Http) -> Result<RefMut<String, Webhook>> {
+    async fn get_hook(&mut self, url: String, http: &Http) -> Result<RefMut<'_, String, Webhook>> {
         let hook = match self.hooks.entry(url.clone()) {
             dashmap::Entry::Occupied(hook) => hook.into_ref(),
             dashmap::Entry::Vacant(vacant) => vacant.insert(Webhook::from_url(&http, &url).await?),
