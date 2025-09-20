@@ -6,6 +6,7 @@ import {
 	Match,
 	on,
 	onCleanup,
+	onMount,
 	Show,
 	Switch,
 } from "solid-js";
@@ -23,6 +24,8 @@ import { getColor } from "./User.tsx";
 import { useConfig } from "./config.tsx";
 import { flags } from "./flags.ts";
 import { useNavigate } from "@solidjs/router";
+import { VoiceDebug } from "./VoiceDebug.tsx";
+import { createPopup } from "./popup.tsx";
 
 export const Voice = (p: { thread: Thread }) => {
 	const config = useConfig();
@@ -266,25 +269,40 @@ export const VoiceTray = () => {
 
 	const nav = useNavigate();
 
+	const popup = createPopup({
+		title: () => "webrtc debug",
+		content: () => <VoiceDebug onClose={popup.hide} />,
+	});
+
+	const openDebug = () => {
+		if (popup.visible()) {
+			popup.hide();
+		} else {
+			popup.show();
+		}
+	};
+
 	return (
 		<div class="voice-tray">
 			<Show when={voice.rtc}>
 				<div class="row">
 					<div style="flex:1;display:flex;align-items:center">
-						<Switch>
-							<Match when={!voice.rtc}>
-								<div class="status disconnected">disconnected</div>
-							</Match>
-							<Match when={voice.rtc?.state() === "connected"}>
-								<div class="status connected">connected</div>
-							</Match>
-							<Match when={voice.rtc?.state() === "failed"}>
-								<div class="status failed">failed</div>
-							</Match>
-							<Match when={true}>
-								<div class="status">{voice.rtc?.state()}</div>
-							</Match>
-						</Switch>
+						<button class="status" onClick={openDebug}>
+							<Switch>
+								<Match when={!voice.rtc}>
+									<div class="status disconnected">disconnected</div>
+								</Match>
+								<Match when={voice.rtc?.state() === "connected"}>
+									<div class="status connected">connected</div>
+								</Match>
+								<Match when={voice.rtc?.state() === "failed"}>
+									<div class="status failed">failed</div>
+								</Match>
+								<Match when={true}>
+									<div class="status">{voice.rtc?.state()}</div>
+								</Match>
+							</Switch>
+						</button>
 						<div style="width:8px"></div>
 						<Duration ms={connectedDuration()} />
 					</div>
@@ -336,6 +354,7 @@ export const VoiceTray = () => {
 					<img class="icon" src={iconSettings} />
 				</button>
 			</div>
+			<popup.View />
 		</div>
 	);
 };

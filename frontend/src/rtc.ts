@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { useApi } from "./api";
 import { SignallingMessage, TrackMetadata } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
+import { createEmitter, createEventBus } from "@solid-primitives/event-bus";
 
 type RemoteStream = {
 	id: string;
@@ -41,6 +42,9 @@ export const createVoiceClient = () => {
 	const streams = new ReactiveMap<string, RemoteStream>();
 	const speaking = new ReactiveMap<string, Speaking>();
 	let chanSpeaking: RTCDataChannel | undefined;
+	const events = createEmitter<{
+		reconnect: { conn: RTCPeerConnection };
+	}>();
 
 	function setup() {
 		conn.addEventListener("connectionstatechange", () => {
@@ -159,6 +163,7 @@ export const createVoiceClient = () => {
 	function reconnect() {
 		conn.close();
 		conn = new RTCPeerConnection(RTC_CONFIG);
+		events.emit("reconnect", { conn });
 		setup();
 	}
 
@@ -445,5 +450,6 @@ export const createVoiceClient = () => {
 			console.debug("[rtc:speaking] send speaking", flags);
 			chanSpeaking?.send(JSON.stringify({ flags }));
 		},
+		events,
 	};
 };

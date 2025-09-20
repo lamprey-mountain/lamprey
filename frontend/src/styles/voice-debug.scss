@@ -1,0 +1,173 @@
+@use "./util.scss" as *;
+
+.voice-debug {
+	height: 100%;
+	display: grid;
+	grid-template-rows: auto 1fr;
+	grid-template-columns: 256px 1fr;
+
+	& > header {
+		grid-column: span 2 / span 2;
+		background-color: $bg-200;
+		border-bottom: solid 1px $sep-500;
+		padding: 0.5rem;
+	}
+
+	& > nav {
+		background-color: $bg-150;
+		padding-top: 8px;
+		padding-left: 72px;
+		padding-bottom: 128px;
+		padding-right: 8px;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		scrollbar-width: none;
+
+		& > ul {
+			padding-top: 8px;
+			padding-bottom: 240px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		& button {
+			display: block;
+			padding: 2px 8px;
+			background: none;
+			border: none;
+			border-radius: 2px;
+			color: $fg-400;
+
+			&:hover,
+			&:focus {
+				background-color: #fff1;
+
+				&.active {
+					background-color: #fff3;
+				}
+			}
+
+			&.active {
+				background-color: #fff2;
+			}
+		}
+	}
+
+	& > main {
+		overflow-y: auto;
+	}
+}
+
+.voice-debug-sdp {
+	padding: 8px;
+
+	h3 {
+		font-size: 1rem;
+		font-weight: bold;
+		display: inline-block;
+	}
+
+	& section, details {
+		border-radius: 4px;
+		padding: 8px;
+		margin-top: 8px;
+	}
+
+	.session {
+		border: solid oklch(var(--color-teal) / 0.5) 1px;
+		background: oklch(var(--color-teal) / 0.1);
+
+		h3 {
+			color: oklch(var(--color-teal));
+		}
+
+		::marker {
+			color: oklch(var(--color-teal));
+		}
+	}
+
+	.session-attrs {
+		border: solid oklch(var(--color-cyan) / 0.5) 1px;
+		background: oklch(var(--color-cyan) / 0.1);
+
+		h3 {
+			color: oklch(var(--color-cyan));
+		}
+
+		::marker {
+			color: oklch(var(--color-cyan));
+		}
+	}
+
+	.media {
+		border: solid oklch(var(--color-orange) / 0.5) 1px;
+		background: oklch(var(--color-orange) / 0.1);
+
+		h3 {
+			color: oklch(var(--color-orange));
+		}
+
+		::marker {
+			color: oklch(var(--color-orange));
+		}
+	}
+
+	.media-attrs {
+		border: solid oklch(var(--color-red) / 0.5) 1px;
+		background: oklch(var(--color-red) / 0.1);
+
+		h3 {
+			color: oklch(var(--color-red));
+		}
+
+		::marker {
+			color: oklch(var(--color-red));
+		}
+	}
+
+	.origin {
+		border: solid oklch(var(--color-green) / 0.5) 1px;
+		background: oklch(var(--color-green) / 0.1);
+
+		h3 {
+			color: oklch(var(--color-green));
+		}
+
+		::marker {
+			color: oklch(var(--color-green));
+		}
+	}
+
+	.errors {
+		border: solid #000 1px;
+		background: #0004;
+	}
+
+	b {
+		font-weight: bold;
+	}
+
+	li {
+		background: #1112;
+		border-radius: 4px;
+		margin-top: 4px;
+		padding: 4px 8px;
+	}
+
+	.value {
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		white-space: nowrap;
+
+		@include truncate;
+	}
+
+	.ip-addr {
+		background: #fa32;
+		color: #fa3;
+		padding: 0 2px;
+		font-weight: bold;
+		border-radius: 2px;
+	}
+}
