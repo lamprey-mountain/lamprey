@@ -45,7 +45,7 @@ async fn voice_state_get(
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    let state = srv.users.voice_state_get(thread_id, target_user_id);
+    let state = srv.users.voice_state_get(target_user_id);
     Ok(Json(state))
 }
 
@@ -78,7 +78,7 @@ async fn voice_state_disconnect(
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::VoiceDisconnect)?;
-    let Some(_state) = srv.users.voice_state_get(thread_id, target_user_id) else {
+    let Some(_state) = srv.users.voice_state_get(target_user_id) else {
         return Ok(());
     };
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
@@ -141,7 +141,7 @@ async fn voice_state_move(
     let perms_user = srv.perms.for_thread(target_user_id, json.target_id).await?;
     perms_user.ensure_view()?;
 
-    let Some(old) = srv.users.voice_state_get(thread_id, target_user_id) else {
+    let Some(old) = srv.users.voice_state_get(target_user_id) else {
         return Err(Error::BadStatic("not connected to any thread"));
     };
 

@@ -9,14 +9,16 @@ use dashmap::DashMap;
 
 use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
+use tracing::error;
 use url::Url;
+use uuid::Uuid;
 
 use crate::{
     config::Config,
     data::{postgres::Postgres, Data},
     services::Services,
     sync::Connection,
-    Result,
+    Error, Result,
 };
 
 pub struct ServerStateInner {
@@ -31,6 +33,9 @@ pub struct ServerStateInner {
 
     // TODO: write a wrapper around this (media is kind of like this?)
     pub blobs: opendal::Operator,
+
+    pub sfus: DashMap<Uuid, ()>,
+    pub thread_to_sfu: DashMap<ThreadId, Uuid>,
 }
 
 pub struct ServerState {
@@ -122,6 +127,29 @@ impl ServerStateInner {
         }
         Ok(())
     }
+
+    pub fn alloc_sfu(&self, thread_id: ThreadId) -> Result<Uuid> {
+        if let Some(existing) = self.thread_to_sfu.get(&thread_id) {
+            return Ok(*existing);
+        }
+
+        let sfu_thread_counts = DashMap::<Uuid, u64>::new();
+        for i in &self.sfus {
+            sfu_thread_counts.insert(*i.key(), 0);
+        }
+        for i in &self.thread_to_sfu {
+            *sfu_thread_counts.get_mut(i.value()).unwrap() += 1;
+        }
+        let mut sorted: Vec<_> = dbg!(sfu_thread_counts).into_iter().collect();
+        sorted.sort_by_key(|(_, count)| *count);
+        if let Some((chosen, _)) = dbg!(sorted).first() {
+            self.thread_to_sfu.insert(thread_id, *chosen);
+            Ok(dbg!(*chosen))
+        } else {
+            error!("no available sfu");
+            Err(Error::BadStatic("no available sfu"))
+        }
+    }
 }
 
 impl ServerState {
@@ -138,6 +166,9 @@ impl ServerState {
                 // maybe i should increase the limit at some point? or make it unlimited?
                 sushi: tokio::sync::broadcast::channel(100).0,
                 sushi_sfu: tokio::sync::broadcast::channel(100).0,
+
+                sfus: DashMap::new(),
+                thread_to_sfu: DashMap::new(),
             });
             Services::new(inner.clone())
         });

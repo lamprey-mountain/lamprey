@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use axum::{
     extract::{
@@ -7,12 +7,16 @@ use axum::{
     },
     response::IntoResponse,
 };
-use common::v1::types::voice::SfuEvent;
 use common::v1::types::MessageSync;
+use common::v1::types::{
+    voice::{SfuCommand, SfuEvent, SignallingMessage},
+    ThreadId,
+};
 use http::HeaderMap;
 use tokio::select;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 
 use crate::error::Result;
 use crate::{Error, ServerState};
@@ -40,98 +44,173 @@ async fn internal_rpc(
         return Err(Error::MissingAuth);
     }
 
-    Ok(ws.on_upgrade(move |socket| sfu_worker(s, socket)))
+    Ok(ws.on_upgrade(move |socket| SfuHandle::new(s).spawn(socket)))
 }
 
-async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
-    let mut outbox = s.sushi_sfu.subscribe();
-    loop {
-        select! {
-            msg = outbox.recv() => {
-                let stringified = serde_json::to_string(&msg.unwrap()).unwrap();
-                if let Err(e) = socket.send(Message::text(stringified)).await {
-                    error!("Failed to send message to websocket: {:?}", e);
-                    break;
+#[derive(Clone)]
+struct SfuHandle {
+    id: Uuid,
+    s: Arc<ServerState>,
+}
+
+impl SfuHandle {
+    fn new(s: Arc<ServerState>) -> Self {
+        Self {
+            s,
+            id: Uuid::new_v4(),
+        }
+    }
+
+    async fn spawn(self, mut socket: WebSocket) {
+        self.s.sfus.insert(self.id, ());
+
+        let mut outbox = self.s.sushi_sfu.subscribe();
+        loop {
+            select! {
+                msg = outbox.recv() => {
+                    if let Err(e) = self.handle_command(msg.unwrap(), &mut socket).await {
+                        error!("Failed to send message to websocket: {:?}", e);
+                        break;
+                    }
                 }
-            }
-            msg = socket.recv() => {
-                if let Some(Ok(Message::Text(text))) = msg {
-                    if let Ok(json) = serde_json::from_str::<SfuEvent>(&text) {
-                        let s = s.clone();
-                        tokio::spawn(async move {
-                            let result = match json {
-                                SfuEvent::VoiceDispatch { user_id, payload } => {
-                                    s.broadcast(MessageSync::VoiceDispatch { user_id, payload })
-                                }
-                                SfuEvent::VoiceState {
-                                    user_id,
-                                    old,
-                                    state,
-                                } => {
-                                    debug!("change voice state {user_id} {old:?} {state:?}");
-                                    let srv = s.services();
-                                    if let Some(state) = &state {
-                                        srv.users.voice_state_put(state.clone());
-                                    } else {
-                                        srv.users.voice_state_remove(&user_id);
-                                    }
-                                    match (&state, &old) {
-                                        (Some(new), Some(old)) if new.thread_id != old.thread_id => {
-                                            // TODO: only send this to people who can't see the new thread
-                                            // maybe edit the if let below?
-                                            let _ = s
-                                                .broadcast_thread(
-                                                    old.thread_id,
-                                                    user_id,
-                                                    MessageSync::VoiceState {
-                                                        user_id,
-                                                        state: None,
-                                                        old_state: Some(old.clone()),
-                                                    },
-                                                )
-                                                .await;
-                                        }
-                                        _ => {}
-                                    }
-                                    if let Some(v) = &old {
-                                        let _ = s
-                                            .broadcast_thread(
-                                                v.thread_id,
-                                                user_id,
-                                                MessageSync::VoiceState {
-                                                    user_id,
-                                                    state: state.clone(),
-                                                    old_state: old.clone(),
-                                                },
-                                            )
-                                            .await;
-                                    }
-                                    if let Some(v) = &state {
-                                        let _ = s
-                                            .broadcast_thread(
-                                                v.thread_id,
-                                                user_id,
-                                                MessageSync::VoiceState {
-                                                    user_id,
-                                                    state,
-                                                    old_state: old,
-                                                },
-                                            )
-                                            .await;
-                                    }
-                                    Ok(())
-                                }
-                            };
-                            if let Err(e) = result {
+                msg = socket.recv() => {
+                    if let Some(Ok(Message::Text(text))) = msg {
+                        if let Ok(json) = serde_json::from_str::<SfuEvent>(&text) {
+                            if let Err(e) = self.handle_event(json).await {
                                 error!("Error processing SFU command: {:?}", e);
                             }
-                        });
+                        }
+                    } else {
+                        break;
                     }
-                } else {
-                    break;
                 }
             }
         }
+
+        // when this sfu gets shut down all clients connected to it need to reconnect
+        self.s.sfus.remove(&self.id);
+        let mut needs_reconnect = HashSet::new();
+        self.s.thread_to_sfu.retain(|thread_id, sfu_id| {
+            if sfu_id == &self.id {
+                needs_reconnect.insert(*thread_id);
+                false
+            } else {
+                true
+            }
+        });
+        for thread_id in &needs_reconnect {
+            if dbg!(self.s.alloc_sfu(*thread_id)).is_err() {
+                warn!("no sfu exists");
+                // clients will be told to reconnect anyways to trigger a client error
+            }
+        }
+        for state in self.s.services.users.voice_states_list() {
+            if needs_reconnect.contains(&state.thread_id) {
+                if let Err(err) = self.s.broadcast(MessageSync::VoiceDispatch {
+                    user_id: state.user_id,
+                    payload: SignallingMessage::Reconnect,
+                }) {
+                    error!("failed to broadcast reconnect {err}");
+                };
+            }
+        }
+    }
+
+    async fn handle_event(&self, json: SfuEvent) -> Result<()> {
+        match json {
+            SfuEvent::VoiceDispatch { user_id, payload } => self
+                .s
+                .broadcast(MessageSync::VoiceDispatch { user_id, payload })?,
+            SfuEvent::VoiceState {
+                user_id,
+                old,
+                state,
+            } => {
+                debug!("change voice state {user_id} {old:?} {state:?}");
+                let srv = self.s.services();
+                if let Some(state) = &state {
+                    srv.users.voice_state_put(state.clone());
+                } else {
+                    srv.users.voice_state_remove(&user_id);
+                }
+
+                match (&state, &old) {
+                    (Some(new), Some(old)) if new.thread_id != old.thread_id => {
+                        // TODO: only send this to people who can't see the new thread
+                        // maybe edit the if let below?
+                        self.s
+                            .broadcast_thread(
+                                old.thread_id,
+                                user_id,
+                                MessageSync::VoiceState {
+                                    user_id,
+                                    state: None,
+                                    old_state: Some(old.clone()),
+                                },
+                            )
+                            .await?;
+                    }
+                    _ => {}
+                }
+
+                if let Some(v) = &old {
+                    self.s
+                        .broadcast_thread(
+                            v.thread_id,
+                            user_id,
+                            MessageSync::VoiceState {
+                                user_id,
+                                state: state.clone(),
+                                old_state: old.clone(),
+                            },
+                        )
+                        .await?;
+                }
+
+                if let Some(v) = &state {
+                    self.s
+                        .broadcast_thread(
+                            v.thread_id,
+                            user_id,
+                            MessageSync::VoiceState {
+                                user_id,
+                                state,
+                                old_state: old,
+                            },
+                        )
+                        .await?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn handle_command(&self, msg: SfuCommand, socket: &mut WebSocket) -> Result<()> {
+        let should_send = match &msg {
+            SfuCommand::Signalling { user_id, inner: _ } => {
+                let state = self.s.services.users.voice_state_get(*user_id);
+                state.is_some_and(|s| self.is_ours(s.thread_id))
+            }
+            SfuCommand::VoiceState { user_id, state } => {
+                let old = self.s.services.users.voice_state_get(*user_id);
+                let old_is_ours = old.is_some_and(|s| self.is_ours(s.thread_id));
+                let new_is_ours = state.as_ref().is_some_and(|s| self.is_ours(s.thread_id));
+                old_is_ours || new_is_ours
+            }
+        };
+
+        if should_send {
+            let stringified = serde_json::to_string(&msg).unwrap();
+            socket.send(Message::text(stringified)).await?;
+        }
+
+        Ok(())
+    }
+
+    /// if this thread is managed by us
+    fn is_ours(&self, thread_id: ThreadId) -> bool {
+        self.s.thread_to_sfu.get(&thread_id).map(|i| *i) == Some(self.id)
     }
 }
 

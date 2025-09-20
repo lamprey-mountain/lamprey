@@ -143,7 +143,7 @@ impl ServiceUsers {
         self.voice_states.remove(user_id);
     }
 
-    pub fn voice_state_get(&self, _thread_id: ThreadId, user_id: UserId) -> Option<VoiceState> {
+    pub fn voice_state_get(&self, user_id: UserId) -> Option<VoiceState> {
         self.voice_states.get(&user_id).map(|s| s.to_owned())
     }
 

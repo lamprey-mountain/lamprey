@@ -306,6 +306,7 @@ impl Connection {
                             state.mute = rm.mute;
                             state.deaf = rm.deaf;
                         }
+                        dbg!(self.s.alloc_sfu(state.thread_id)?);
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: Some(state),
