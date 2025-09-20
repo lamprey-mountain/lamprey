@@ -2,30 +2,27 @@ import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { getTimestampFromUUID, type User } from "sdk";
 import { formatChanges } from "../audit-log-util.tsx";
+import { ReactiveSet } from "@solid-primitives/set";
+import { Time } from "../Time.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
+	const collapsed = new ReactiveSet();
 
+	// FIXME: return newest records first
 	const [log] = createResource(async () => {
 		const { data } = await api.client.http.GET(
 			"/api/v1/user/{user_id}/audit-logs",
 			{
-				params: { path: { user_id: "@self" } },
+				params: { path: { user_id: "@self" }, query: { dir: "b", limit: 100 } },
 			},
 		);
 		return data;
 	});
 
-	const dateFmt = new Intl.DateTimeFormat("en-US", {
-		dateStyle: "short",
-		timeStyle: "short",
-		hour12: false,
-	});
-
 	return (
 		<>
 			<h2>audit log</h2>
-			<br />
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
 					<For each={log()!.items}>
@@ -33,36 +30,29 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 							const ts = () => getTimestampFromUUID(entry.id);
 							return (
 								<li data-id={entry.id}>
-									<div class="info">
-										<h3>{entry.type}</h3>
+									<div
+										class="info"
+										onClick={() =>
+											collapsed.has(entry.id)
+												? collapsed.delete(entry.id)
+												: collapsed.add(entry.id)}
+									>
+										<div style="display:flex;gap:4px">
+											<h3>{entry.type}</h3>
+										</div>
+										<Time date={ts()} />
 									</div>
-									<ul>
-										<li>
-											<em class="light">caused by:</em> you
-										</li>
-										<li>
-											<em class="light">caused at:</em>{" "}
-											<time datetime={ts().toISOString()}>
-												{dateFmt.format(ts())}
-											</time>
-										</li>
-										<Show when={entry.reason}>
-											<li>
-												<em class="light">reason:</em> {entry.reason}
-											</li>
-										</Show>
-									</ul>
-									<br />
-									<h3>info</h3>
-									<ul>{formatChanges(props.user.id, entry)}</ul>
-									<h3>changes</h3>
-									<ul>
-									</ul>
-									<br />
-									<details>
-										<summary>json</summary>
-										<pre>{JSON.stringify(entry, null, 4)}</pre>
-									</details>
+									<Show
+										when={(formatChanges(props.user.id, entry).length !== 0 ||
+											entry.reason) && !collapsed.has(entry.id)}
+									>
+										<ul class="metadata">
+											<Show when={entry.reason}>
+												<li>reason: {entry.reason}</li>
+											</Show>
+											{formatChanges(props.user.id, entry)}
+										</ul>
+									</Show>
 								</li>
 							);
 						}}
