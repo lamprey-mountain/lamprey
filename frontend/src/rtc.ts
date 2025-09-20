@@ -82,6 +82,7 @@ export const createVoiceClient = () => {
 		});
 
 		conn.addEventListener("icecandidate", (e) => {
+			return;
 			if (!e.candidate) return;
 			if (!e.candidate.candidate) return;
 			console.debug("[rtc:core] icecandidate", e.candidate);
@@ -322,6 +323,7 @@ export const createVoiceClient = () => {
 					return;
 				}
 
+				console.group("[rtc:stream] process Have")
 				console.log("[rtc:signal] got Have from %s", ruid, msg.tracks);
 				console.log(
 					"[rtc:signal] current transceivers",
@@ -331,6 +333,7 @@ export const createVoiceClient = () => {
 					const streamId = `${ruid}:${track.key}`;
 					let s = remoteStreams.find((s) => s.id === streamId);
 					if (s) {
+						console.debug("[rtc:stream] reuse stream %s", streamId, s);
 						s.mids.push(track.mid);
 					} else {
 						const media = new MediaStream();
@@ -354,7 +357,7 @@ export const createVoiceClient = () => {
 							s.media.addTrack(tr);
 							console.log(
 								"[rtc:stream] (re)added track %s (kind %s) to stream %s",
-								tr.id,
+								mid,
 								tr.kind,
 								streamId,
 							);
@@ -371,6 +374,7 @@ export const createVoiceClient = () => {
 						transceivers,
 					);
 				}
+					console.groupEnd()
 			} else if (msg.type === "Want") {
 				// TODO: only subscribe to the tracks we want
 				// NOTE: `Want` is also called `Subscribe` in some older design notes
@@ -451,5 +455,6 @@ export const createVoiceClient = () => {
 			chanSpeaking?.send(JSON.stringify({ flags }));
 		},
 		events,
+		transceivers,
 	};
 };

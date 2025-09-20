@@ -1,4 +1,5 @@
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
@@ -11,11 +12,12 @@ import {
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
 import { ReactiveMap } from "@solid-primitives/map";
+import { Copyable } from "./util";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
 
-	const [tab, setTab] = createSignal("stats");
+	const [tab, setTab] = createSignal("streams");
 	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
 		null,
 	);
@@ -47,6 +49,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			<nav>
 				<For
 					each={[
+						{ tab: "streams", label: "streams" },
 						{ tab: "stats", label: "stats" },
 						{ tab: "sdp-local", label: "local sdp" },
 						{ tab: "sdp-remote", label: "remote sdp" },
@@ -67,6 +70,52 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			</nav>
 			<main>
 				<Switch>
+					<Match when={tab() === "streams"}>
+						<div style="margin: 8px;">
+							<h3>{voice.rtc?.streams.size} stream(s)</h3>
+							<br />
+							<For each={[...voice.rtc?.streams.values() ?? []]}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<div>
+												<b>key</b>: {s.key}
+											</div>
+											<div>
+												<b>transceivers:</b>
+												<ul style="list-style: inside">
+													<For each={s.mids}>
+														{(m) => {
+															const t = voice.rtc?.transceivers.get(m);
+															return (
+																<li>
+																	<b>{m}</b> {t?.sender.track?.kind ??
+																		t?.receiver.track.kind}
+																</li>
+															);
+														}}
+													</For>
+												</ul>
+											</div>
+										</div>
+									);
+								}}
+							</For>
+							<br />
+							<h3>
+								{voice.rtc?.conn.getTransceivers().length} transceivers
+							</h3>
+							<ul style="list-style: inside">
+								<For each={voice.rtc?.conn.getTransceivers()}>{t => (
+									<li>{t.mid} {t.direction}{" "}
+										{t?.sender.track?.kind ??
+											t?.receiver.track.kind}</li>
+								)}</For></ul>
+						</div>
+					</Match>
 					<Match when={tab() === "stats"}>
 						<VoiceStats />
 					</Match>
@@ -349,6 +398,7 @@ const VoiceStats = () => {
 				}));
 			}
 		});
+		// console.log(candidates)
 	}, 1000);
 	onCleanup(() => clearInterval(statsInterval));
 
