@@ -49,7 +49,7 @@ async fn voice_state_get(
     Ok(Json(state))
 }
 
-/// Voice state disconnect (TODO)
+/// Voice state disconnect
 #[utoipa::path(
     delete,
     path = "/voice/{thread_id}/member/{user_id}",

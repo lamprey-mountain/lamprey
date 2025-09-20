@@ -445,10 +445,7 @@ impl Connection {
             MessageSync::ReactionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::VoiceDispatch { user_id, payload } => match payload {
-                SignallingMessage::Have { thread_id, .. } => AuthCheck::Thread(*thread_id),
-                _ => AuthCheck::User(*user_id),
-            },
+            MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::VoiceState {
                 state,
                 user_id,

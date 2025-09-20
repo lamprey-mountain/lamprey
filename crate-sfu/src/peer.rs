@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::Result;
 use common::v1::types::{
-    voice::{MediaKind, SessionDescription, TrackMetadata, VoiceState},
+    voice::{MediaKind, SessionDescription, TrackId, TrackMetadata, VoiceState},
     UserId,
 };
 use str0m::{
@@ -47,6 +47,8 @@ pub struct Peer {
 
     /// metadata for each track we are receiving from the user
     tracks_metadata: Vec<TrackMetadataServer>,
+
+    /// we want Have messages for media from these users
     have_queue: Vec<UserId>,
 
     user_id: UserId,
@@ -265,6 +267,7 @@ impl Peer {
         Ok(())
     }
 
+    /// handle a command from the sfu
     async fn handle_sfu_command(&mut self, command: PeerCommand) -> Result<()> {
         match command {
             PeerCommand::Signalling(cmd) => {
@@ -316,6 +319,7 @@ impl Peer {
         Ok(())
     }
 
+    /// map tracks from these users to local outbound tracks, then send a Have message for them
     fn process_haves(&mut self, user_id: UserId, tracks: Vec<TrackMetadataServer>) -> Result<bool> {
         let mut out = vec![];
         for t in tracks {
@@ -326,7 +330,7 @@ impl Peer {
             if let Some(a) = our_track {
                 if let TrackState::Open(mid) = a.state {
                     out.push(TrackMetadata {
-                        mid: mid.to_string(),
+                        mid: TrackId(mid.to_string()),
                         kind: t.kind,
                         key: t.key,
                     });
@@ -347,6 +351,7 @@ impl Peer {
         Ok(true)
     }
 
+    /// handle media data from a remote peer
     fn handle_remote_media_data(&mut self, d: MediaData) {
         let Some(track) = self
             .outbound
@@ -382,6 +387,7 @@ impl Peer {
         }
     }
 
+    /// handle a signalling message from the peer
     async fn handle_signalling(&mut self, command: SignallingMessage) -> Result<()> {
         debug!("signalling {command:?}");
         match command {
@@ -403,6 +409,7 @@ impl Peer {
         Ok(())
     }
 
+    /// handle an sdp answer from the peer
     fn handle_answer(&mut self, sdp: SessionDescription) -> Result<()> {
         if let SignallingState::HaveLocalOffer(pending) =
             std::mem::replace(&mut self.signalling_state, SignallingState::Stable)
@@ -426,6 +433,7 @@ impl Peer {
         Ok(())
     }
 
+    /// handle an sdp offer from the peer
     fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
         let ready_for_offer = matches!(self.signalling_state, SignallingState::Stable);
         if !ready_for_offer {
@@ -435,7 +443,7 @@ impl Peer {
         let offer = SdpOffer::from_sdp_string(&sdp)?;
         let answer = self.rtc.sdp_api().accept_offer(offer)?;
 
-        // renegotiate
+        // renegotiate outbound tracks
         for track in &mut self.outbound {
             if let TrackState::Negotiating(_) = track.state {
                 track.state = TrackState::Pending;
@@ -444,7 +452,7 @@ impl Peer {
 
         let inbound_old = std::mem::take(&mut self.inbound);
         for track in tracks {
-            let mid = Mid::from(track.mid.as_str());
+            let mid = Mid::from(&*track.mid);
             let state = inbound_old
                 .get(&mid)
                 .map(|t| t.state)
@@ -478,10 +486,11 @@ impl Peer {
                 line.to_string()
             })
             .collect::<Vec<String>>()
-            .join("\r\n");
+            .join("\r\n")
+            + "\r\n";
 
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
-            sdp: SessionDescription(sdp_str + "\r\n"),
+            sdp: SessionDescription(sdp_str),
         }))?;
         self.signalling_state = SignallingState::Stable;
 
@@ -491,6 +500,7 @@ impl Peer {
         Ok(())
     }
 
+    /// send an sdp offer if we have tracks that haven't been negotiated yet
     fn negotiate_if_needed(&mut self) -> Result<bool> {
         if matches!(self.signalling_state, SignallingState::HaveLocalOffer(_)) {
             // NOTE: do i overwrite the pending offer here?
@@ -500,6 +510,7 @@ impl Peer {
 
         let mut change = self.rtc.sdp_api();
 
+        // create pending outbound tracks
         for track in &mut self.outbound {
             if track.state == TrackState::Pending {
                 let mid = change.add_media(track.kind, Direction::SendOnly, None, None, None);
@@ -524,6 +535,7 @@ impl Peer {
         Ok(true)
     }
 
+    /// handle media data from the local peer
     fn handle_media_data(&self, data: str0m::media::MediaData) -> Result<()> {
         let Some(track) = self.inbound.get(&data.mid) else {
             debug!("no inbound track");
@@ -544,14 +556,6 @@ impl Peer {
             params: data.params,
         }))?;
 
-        Ok(())
-    }
-
-    fn emit(&self, event: PeerEvent) -> Result<()> {
-        self.events.send(PeerEventEnvelope {
-            user_id: self.user_id,
-            payload: event,
-        })?;
         Ok(())
     }
 
@@ -603,7 +607,7 @@ impl Peer {
                     .tracks_metadata
                     .iter()
                     .map(|t| TrackMetadata {
-                        mid: t.source_mid.to_string(),
+                        mid: TrackId(t.source_mid.to_string()),
                         kind: t.kind,
                         key: t.key.clone(),
                     })
@@ -615,6 +619,15 @@ impl Peer {
             self.emit(event)?;
         }
 
+        Ok(())
+    }
+
+    /// send an event to the sfu
+    fn emit(&self, event: PeerEvent) -> Result<()> {
+        self.events.send(PeerEventEnvelope {
+            user_id: self.user_id,
+            payload: event,
+        })?;
         Ok(())
     }
 }

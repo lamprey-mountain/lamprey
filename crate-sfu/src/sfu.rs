@@ -51,7 +51,8 @@ impl Sfu {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        let (peer_send, mut peer_events) = tokio::sync::mpsc::unbounded_channel();
+        let (peer_send, mut peer_events) =
+            tokio::sync::mpsc::unbounded_channel::<PeerEventEnvelope>();
         let (backend_tx, mut backend_rx) = mpsc::unbounded_channel();
         self.backend_tx = Some(backend_tx);
 
@@ -92,7 +93,7 @@ impl Sfu {
             'inner: loop {
                 tokio::select! {
                     Some(envelope) = peer_events.recv() => {
-                        if let Err(err) = self.handle_event(envelope).await {
+                        if let Err(err) = self.handle_event(envelope.user_id, envelope.payload).await {
                             error!("error handling peer event: {err}");
                         }
                     }
@@ -267,9 +268,8 @@ impl Sfu {
         Ok(())
     }
 
-    async fn handle_event(&mut self, envelope: PeerEventEnvelope) -> Result<()> {
-        let user_id = envelope.user_id;
-        let event = envelope.payload;
+    #[tracing::instrument(skip(self, event))]
+    async fn handle_event(&mut self, user_id: UserId, event: PeerEvent) -> Result<()> {
         match event {
             PeerEvent::Signalling(payload) => {
                 debug!("signalling event {payload:?}");

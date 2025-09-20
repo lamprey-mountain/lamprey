@@ -26,6 +26,11 @@ pub struct SessionDescription(pub String);
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct IceCandidate(pub String);
 
+/// a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TrackId(pub String);
+
 impl Deref for SessionDescription {
     type Target = str;
 
@@ -35,6 +40,14 @@ impl Deref for SessionDescription {
 }
 
 impl Deref for IceCandidate {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Deref for TrackId {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -81,25 +94,30 @@ pub struct VoiceState {
     // pub requested_to_speak_at: Option<Time>,
 }
 
+/// represents an update that a user would like to make to their voice state
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceStateUpdate {
     pub thread_id: ThreadId,
 }
 
+/// metadata about a track
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadata {
     /// unique identifier for this track. equivilant to transceiver.mid
-    pub mid: String,
+    pub mid: TrackId,
 
     /// whether this track is for audio or video
     pub kind: MediaKind,
 
     /// group tracks together into streams; identical to ssrc but easier to manage client side
+    ///
+    /// currently there are two streams `user` and `screen` used by frontend
     pub key: String,
 }
 
+/// messages that either the sfu or client can send to each other
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
@@ -116,7 +134,7 @@ pub enum SignallingMessage {
     /// an ice candidate
     Candidate { candidate: IceCandidate },
 
-    /// sent by server only
+    /// mapping of media ids to streams. sent by server only
     Have {
         thread_id: ThreadId,
         user_id: UserId,
@@ -128,9 +146,9 @@ pub enum SignallingMessage {
     // should i default to sending everything? or require sending a Want to receive any data?
     // TODO: server sent `Want`s
     // TODO: client sent `Want`s
-    Want { tracks: Vec<String> },
+    Want { tracks: Vec<TrackId> },
 
-    /// sent by client.
+    /// sent by client to update their voice state (including disconnecting)
     VoiceState { state: Option<VoiceStateUpdate> },
 
     /// trigger a full reset; client should dispose current RTCPeerConnection and create a new one
@@ -155,6 +173,7 @@ pub enum MediaKind {
 
 // ========== EVERYTHING BELOW IS INTERNAL FOR BACKEND/VOICE ==========
 
+/// emitted by backend, handled by the sfu
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SfuCommand {
     /// proxied signalling message from a user
@@ -171,17 +190,17 @@ pub enum SfuCommand {
     },
 }
 
-#[derive(Debug, serde::Serialize)]
+/// emitted by the sfu, handled by backend
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum SfuEvent {
+    /// send this message to this user
     VoiceDispatch {
         user_id: UserId,
         payload: SignallingMessage,
     },
-    VoiceDispatchBroadcast {
-        thread_id: ThreadId,
-        payload: SignallingMessage,
-    },
+
+    /// upsert voice state
     VoiceState {
         user_id: UserId,
         old: Option<VoiceState>,

@@ -243,6 +243,7 @@ pub enum MessageSync {
     /// receive arbitrary data from a voice server
     // TEMP: for prototyping
     VoiceDispatch {
+        /// who to send this dispatch to
         user_id: UserId,
         // TODO: multiple servers
         // server_id: ServerId,

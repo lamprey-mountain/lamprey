@@ -7,11 +7,8 @@ use axum::{
     },
     response::IntoResponse,
 };
-use common::v1::types::{
-    voice::{SignallingMessage, VoiceState},
-    ThreadId,
-};
-use common::v1::types::{MessageSync, UserId};
+use common::v1::types::voice::SfuEvent;
+use common::v1::types::MessageSync;
 use http::HeaderMap;
 use tokio::select;
 use tracing::{debug, error};
@@ -20,27 +17,8 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::error::Result;
 use crate::{Error, ServerState};
 
-// TODO: does this count as an implementation detail or should it be moved to common?
-
-#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
-#[serde(tag = "type")]
-pub enum SfuCommand {
-    VoiceDispatch {
-        user_id: UserId,
-        payload: SignallingMessage,
-    },
-
-    VoiceDispatchBroadcast {
-        thread_id: ThreadId,
-        payload: SignallingMessage,
-    },
-
-    VoiceState {
-        user_id: UserId,
-        old: Option<VoiceState>,
-        state: Option<VoiceState>,
-    },
-}
+// NOTE: does the backend<->sfu protocol count as an implementation detail, or
+// should it be moved to common?
 
 /// Internal rpc
 #[utoipa::path(
@@ -78,25 +56,14 @@ async fn sfu_worker(s: Arc<ServerState>, mut socket: WebSocket) {
             }
             msg = socket.recv() => {
                 if let Some(Ok(Message::Text(text))) = msg {
-                    if let Ok(json) = serde_json::from_str::<SfuCommand>(&text) {
+                    if let Ok(json) = serde_json::from_str::<SfuEvent>(&text) {
                         let s = s.clone();
                         tokio::spawn(async move {
                             let result = match json {
-                                SfuCommand::VoiceDispatch { user_id, payload } => {
+                                SfuEvent::VoiceDispatch { user_id, payload } => {
                                     s.broadcast(MessageSync::VoiceDispatch { user_id, payload })
                                 }
-                                SfuCommand::VoiceDispatchBroadcast { thread_id, payload } => {
-                                    for state in s.services.users.voice_states_list() {
-                                        if state.thread_id == thread_id {
-                                            let _ = s.broadcast(MessageSync::VoiceDispatch {
-                                                user_id: state.user_id,
-                                                payload: payload.clone(),
-                                            });
-                                        }
-                                    }
-                                    Ok(())
-                                }
-                                SfuCommand::VoiceState {
+                                SfuEvent::VoiceState {
                                     user_id,
                                     old,
                                     state,
