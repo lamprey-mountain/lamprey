@@ -647,9 +647,6 @@ async fn message_migrate(
 // TODO: move these structs to common
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
 struct RepliesQuery {
-    #[serde(flatten)]
-    q: PaginationQuery<MessageId>,
-
     /// how deeply to fetch replies
     #[serde(default = "fn_one")]
     #[validate(range(min = 1, max = 8))]
@@ -681,6 +678,7 @@ fn fn_one() -> u16 {
 async fn message_replies(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Query(q): Query<RepliesQuery>,
+    Query(pagination): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -699,7 +697,7 @@ async fn message_replies(
             auth_user.id,
             q.depth,
             q.breadth,
-            q.q,
+            pagination,
         )
         .await?;
     for message in &mut res.items {
@@ -724,6 +722,7 @@ async fn message_replies(
 async fn message_roots(
     Path((thread_id,)): Path<(ThreadId,)>,
     Query(q): Query<RepliesQuery>,
+    Query(pagination): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -736,7 +735,14 @@ async fn message_roots(
         .await?;
     perms.ensure_view()?;
     let mut res = data
-        .message_replies(thread_id, None, auth_user.id, q.depth, q.breadth, q.q)
+        .message_replies(
+            thread_id,
+            None,
+            auth_user.id,
+            q.depth,
+            q.breadth,
+            pagination,
+        )
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
