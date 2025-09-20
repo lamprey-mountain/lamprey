@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For,  Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
@@ -26,7 +26,9 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		}
 	});
 
-	const room = props.room_id ? api.rooms.fetch(() => props.room_id!) : () => null;
+	const room = props.room_id
+		? api.rooms.fetch(() => props.room_id!)
+		: () => null;
 
 	// update list when room changes
 	createEffect(() => {

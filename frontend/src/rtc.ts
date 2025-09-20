@@ -323,7 +323,7 @@ export const createVoiceClient = () => {
 					return;
 				}
 
-				console.group("[rtc:stream] process Have")
+				console.group("[rtc:stream] process Have");
 				console.log("[rtc:signal] got Have from %s", ruid, msg.tracks);
 				console.log(
 					"[rtc:signal] current transceivers",
@@ -374,7 +374,7 @@ export const createVoiceClient = () => {
 						transceivers,
 					);
 				}
-					console.groupEnd()
+				console.groupEnd();
 			} else if (msg.type === "Want") {
 				// TODO: only subscribe to the tracks we want
 				// NOTE: `Want` is also called `Subscribe` in some older design notes

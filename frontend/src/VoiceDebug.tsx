@@ -109,11 +109,15 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 								{voice.rtc?.conn.getTransceivers().length} transceivers
 							</h3>
 							<ul style="list-style: inside">
-								<For each={voice.rtc?.conn.getTransceivers()}>{t => (
-									<li>{t.mid} {t.direction}{" "}
-										{t?.sender.track?.kind ??
-											t?.receiver.track.kind}</li>
-								)}</For></ul>
+								<For each={voice.rtc?.conn.getTransceivers()}>
+									{(t) => (
+										<li>
+											{t.mid} {t.direction} {t?.sender.track?.kind ??
+												t?.receiver.track.kind}
+										</li>
+									)}
+								</For>
+							</ul>
 						</div>
 					</Match>
 					<Match when={tab() === "stats"}>
