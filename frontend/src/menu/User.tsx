@@ -16,6 +16,9 @@ export function UserMenu(props: UserMenuProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const user = api.users.fetch(() => props.user_id);
+	const room_member = props.room_id
+		? api.room_members.fetch(() => props.room_id!, () => props.user_id)
+		: () => null;
 	const self_id = () => api.users.cache.get("@self")!.id;
 
 	const { has: hasPermission, permissions } = usePermissions(
@@ -158,6 +161,20 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
+	const mute = () => {
+		api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
+			params: { path: { room_id: props.room_id!, user_id: props.user_id } },
+			body: { mute: !room_member()?.mute },
+		});
+	};
+
+	const deafen = () => {
+		api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
+			params: { path: { room_id: props.room_id!, user_id: props.user_id } },
+			body: { deaf: !room_member()?.deaf },
+		});
+	};
+
 	return (
 		<Menu>
 			<Show when={props.thread_id}>
@@ -220,10 +237,14 @@ export function UserMenu(props: UserMenuProps) {
 				<Item>deafen</Item>
 			</Show>
 			<Show when={hasPermission("VoiceMute")}>
-				<Item>room mute</Item>
+				<Item onClick={mute}>
+					{room_member()?.mute ? "room unmute" : "room mute"}
+				</Item>
 			</Show>
 			<Show when={hasPermission("VoiceDeafen")}>
-				<Item>room deafen</Item>
+				<Item onClick={deafen}>
+					{room_member()?.deaf ? "room undeafen" : "room deafen"}
+				</Item>
 			</Show>
 			<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
 				<Item onClick={disconnect}>disconnect</Item>
