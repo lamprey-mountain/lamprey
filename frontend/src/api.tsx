@@ -30,7 +30,6 @@ import type {
 	Session,
 	Thread,
 	ThreadMember,
-	User,
 	UserWithRelationship,
 	VoiceState,
 } from "sdk";
@@ -580,6 +579,9 @@ export type Api = {
 			message_id: string | undefined,
 			version_id: string,
 		) => Promise<void>;
+	};
+	dms: {
+		list: () => Resource<Pagination<Thread>>;
 	};
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;

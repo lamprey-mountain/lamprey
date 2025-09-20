@@ -1,5 +1,4 @@
-import { createEffect, createSignal, For, onMount, Show } from "solid-js";
-import { useCtx } from "./context.ts";
+import { createEffect, createSignal, For,  Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
@@ -27,7 +26,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		}
 	});
 
-	const room = api.rooms.fetch(() => props.room_id);
+	const room = props.room_id ? api.rooms.fetch(() => props.room_id!) : () => null;
 
 	// update list when room changes
 	createEffect(() => {
@@ -127,7 +126,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 							classList={{
 								dragging: dragging() === idx(),
 								over: target() === idx(),
-								unread: thread.is_unread,
+								unread: thread.type !== "Voice" && !!thread.is_unread,
 							}}
 						>
 							<ItemThread thread={thread} />
@@ -193,7 +192,7 @@ const ItemThread = (props: { thread: Thread }) => {
 			class="menu-thread"
 			classList={{
 				closed: !!props.thread.archived_at,
-				unread: props.thread.is_unread,
+				unread: props.thread.type !== "Voice" && !!props.thread.is_unread,
 			}}
 			data-thread-id={props.thread.id}
 		>
