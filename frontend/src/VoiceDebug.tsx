@@ -6,20 +6,26 @@ import {
 	onCleanup,
 	Show,
 	Switch,
+	VoidProps,
 } from "solid-js";
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
+import { ReactiveMap } from "@solid-primitives/map";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
 
-	const [tab, setTab] = createSignal("sdp-local");
-	const [localSdp, setLocalSdp] = createSignal<string | null>(null);
-	const [remoteSdp, setRemoteSdp] = createSignal<string | null>(null);
+	const [tab, setTab] = createSignal("stats");
+	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
+	const [remoteSdp, setRemoteSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
 
 	const updateSdps = () => {
-		setLocalSdp(voice.rtc!.conn.localDescription!.sdp);
-		setRemoteSdp(voice.rtc!.conn.remoteDescription!.sdp);
+		setLocalSdp(voice.rtc!.conn.localDescription);
+		setRemoteSdp(voice.rtc!.conn.remoteDescription);
 	};
 	updateSdps();
 
@@ -41,6 +47,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			<nav>
 				<For
 					each={[
+						{ tab: "stats", label: "stats" },
 						{ tab: "sdp-local", label: "local sdp" },
 						{ tab: "sdp-remote", label: "remote sdp" },
 					]}
@@ -60,14 +67,43 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			</nav>
 			<main>
 				<Switch>
+					<Match when={tab() === "stats"}>
+						<VoiceStats />
+					</Match>
 					<Match when={tab() === "sdp-local"}>
 						<Show when={localSdp()} fallback={"no local sdp?"}>
-							{(s) => <VoiceSdp sdp={s()} />}
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>local sdp ({s().type})</h3>
+										<button
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
 						</Show>
 					</Match>
 					<Match when={tab() === "sdp-remote"}>
 						<Show when={remoteSdp()} fallback={"no remote sdp?"}>
-							{(s) => <VoiceSdp sdp={s()} />}
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>remote sdp ({s().type})</h3>
+										<button
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
 						</Show>
 					</Match>
 					<Match when={tab() === "foobar"}>
@@ -84,13 +120,6 @@ export const VoiceSdp = (props: { sdp: string }) => {
 
 	return (
 		<div class="voice-debug-sdp">
-			<h3>sdp inspector</h3>
-			<button
-				style="margin-left: 4px"
-				onClick={() => navigator.clipboard.writeText(props.sdp)}
-			>
-				copy
-			</button>
 			<Show when={sdp().errors.length}>
 				<details class="errors" open>
 					<summary>
@@ -236,5 +265,232 @@ const HighlightIpAddr = (props: { addr: string }) => {
 				)}
 			</For>
 		</span>
+	);
+};
+
+const VoiceStats = () => {
+	// critical stats:
+	// - bitrate
+	// - {bytes,packets} {sent,recv,retransmit}
+	// - ping/jitter
+	// - codec
+
+	const [voice] = useVoice();
+	const [codec, setCodec] = createSignal<
+		Record<
+			string,
+			{
+				type: string;
+				codec: string;
+				channels: number;
+				clockRate: number;
+				mime: string;
+			}
+		>
+	>();
+
+	const bandwidthIn = new ReactiveMap<
+		string,
+		Array<{ ts: number; bytes: number }>
+	>();
+	const bandwidthOut = new ReactiveMap<
+		string,
+		Array<{ ts: number; bytes: number }>
+	>();
+	const jitters = new ReactiveMap<
+		string,
+		Array<{ ts: number; jitter: number }>
+	>();
+
+	const statsInterval = setInterval(async () => {
+		const stats = await voice.rtc?.conn.getStats();
+		const candidates: Array<unknown> = [];
+		stats?.forEach((v) => {
+			v.timestamp;
+			if (
+				v.type === "candidate-pair" || v.type === "local-candidate" ||
+				v.type === "remote-candidate"
+			) {
+				candidates.push(v);
+				return;
+			} else if (v.type === "outbound-rtp") {
+				v.mid;
+				v.bytesSent;
+				v.headerBytesSent;
+				v.packetsSent;
+				v.retransmittedBytesSent;
+				v.retransmittedPacketsSent;
+				const b = bandwidthOut.get(v.mid) ?? [];
+				b.push({ ts: v.timestamp, bytes: v.bytesSent });
+				if (b.length > 31) b.shift();
+				bandwidthOut.set(v.mid, [...b]);
+			} else if (v.type === "inbound-rtp") {
+				const b = bandwidthIn.get(v.mid) ?? [];
+				b.push({ ts: v.timestamp, bytes: v.bytesReceived });
+				if (b.length > 31) b.shift();
+				bandwidthIn.set(v.mid, [...b]);
+
+				const j = jitters.get(v.mid) ?? [];
+				j.push({ ts: v.timestamp, jitter: v.jitter * 1000 });
+				if (j.length > 31) j.shift();
+				jitters.set(v.mid, [...j]);
+			} else if (v.type === "remote-outbound-rtp") {
+				v.packetsSent;
+			} else if (v.type === "codec") {
+				setCodec((c) => ({
+					...c,
+					[v.payloadType]: {
+						type: v.codecType,
+						codec: v.codec,
+						channels: v.channels,
+						clockRate: v.clockRate,
+						mime: v.mimeType,
+					},
+				}));
+			}
+		});
+	}, 1000);
+	onCleanup(() => clearInterval(statsInterval));
+
+	const [format, setFormat] = createSignal("bytes");
+
+	return (
+		<div style="padding: 8px">
+			<button
+				style="display:none"
+				onClick={() =>
+					setFormat((f) =>
+						({ bytes: "packet", packets: "bytes" } as Record<string, string>)[f]
+					)}
+			>
+				format: {format()}
+			</button>
+			<br />
+			<For each={[...bandwidthIn.entries()]}>
+				{([mid, bw]) => {
+					const jitter = jitters.get(mid) ?? [];
+					return (
+						<>
+							<details open>
+								<summary>
+									<h3>bytes sent (mid {mid})</h3>
+								</summary>
+								<Chart
+									points={bw.map((e) => e.bytes)}
+									height={bw.reduce((acc, i) => Math.max(acc, i.bytes), 0)}
+								/>
+							</details>
+							<details open>
+								<summary>
+									<h3>jitter (mid {mid})</h3>
+								</summary>
+								<Chart
+									unit="ms"
+									points={jitter.map((e) => e.jitter)}
+									height={jitter.reduce((acc, i) => Math.max(acc, i.jitter), 0)}
+								/>
+							</details>
+						</>
+					);
+				}}
+			</For>
+			<For each={[...bandwidthOut.entries()]}>
+				{([mid, bw]) => {
+					return (
+						<details open>
+							<summary>
+								<h3>bytes sent (mid {mid})</h3>
+							</summary>
+							<Chart
+								points={bw.map((e) => e.bytes)}
+								height={bw.reduce((acc, i) => Math.max(acc, i.bytes), 0)}
+							/>
+						</details>
+					);
+				}}
+			</For>
+			<br />
+			codecs
+			<ul>
+				<For each={Object.entries(codec() ?? {})}>
+					{([pt, codec]) => (
+						<li>
+							{pt}: {JSON.stringify(codec)}
+						</li>
+					)}
+				</For>
+			</ul>
+		</div>
+	);
+};
+
+const Chart = (
+	props: VoidProps<{ points: Array<number>; height: number; unit?: string }>,
+) => {
+	const scaleX = () => 20;
+	const scaleY = () => 100 / props.height;
+
+	const pathStroke = () =>
+		[
+			`M 0 ${-props.points[0] * scaleY()}`,
+			...props.points.slice(1).map((d, i) =>
+				`L ${(i + 1) * scaleX()} ${-d * scaleY()}`
+			),
+		].join(" ");
+	const pathFill = () =>
+		[
+			`M 0 0`,
+			`L 0 ${-props.points[0] * scaleY()}`,
+			...props.points.slice(1).map((d, i) =>
+				`L ${(i + 1) * scaleX()} ${-d * scaleY()}`
+			),
+			`L ${scaleX() * (props.points.length - 1)} 0`,
+		].join(" ");
+
+	return (
+		<svg class="chart" viewBox="0 -100 300 116">
+			<defs>
+				<linearGradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
+					<stop offset="0%" stop-color="#08f6" />
+					<stop offset="100%" stop-color="#08f1" />
+				</linearGradient>
+			</defs>
+			<For each={[-25, -50, -75, -100]}>
+				{(y) => (
+					<>
+						<line
+							x1="0"
+							x2="600"
+							y1={y}
+							y2={y}
+							stroke="#aaaa"
+							stoke-width="1"
+						/>
+						<text x="0" y={y + 8 + 4} fill="#aaa" font-size="10">
+							{(props.height * (-y / 200)).toFixed(2)} {props.unit}
+						</text>
+					</>
+				)}
+			</For>
+			<For each={[0, 50, 100, 150, 200, 250, 300]}>
+				{(x) => (
+					<>
+						<line
+							x1={x}
+							x2={x}
+							y1="-100"
+							y2="0"
+							stroke="#aaaa"
+							stoke-width="1"
+						/>
+						<text x={x + 4} y={8 + 4} fill="#aaa" font-size="10">
+							{((1 - (x / 300)) * 31).toFixed(0)}s
+						</text>
+					</>
+				)}
+			</For>
+			<path d={pathStroke()} fill="none" stroke="#08f" stroke-width="2" />
+			<path d={pathFill()} fill="url(#chart-gradient)" />
+		</svg>
 	);
 };

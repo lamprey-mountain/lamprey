@@ -57,18 +57,19 @@
 	& > main {
 		overflow-y: auto;
 	}
-}
-
-.voice-debug-sdp {
-	padding: 8px;
 
 	h3 {
 		font-size: 1rem;
 		font-weight: bold;
 		display: inline-block;
 	}
+}
 
-	& section, details {
+.voice-debug-sdp {
+	margin: 8px;
+
+	& section,
+	details {
 		border-radius: 4px;
 		padding: 8px;
 		margin-top: 8px;
@@ -170,4 +171,9 @@
 		font-weight: bold;
 		border-radius: 2px;
 	}
+}
+
+.chart {
+	height: 150px;
+	background: #fff1;
 }
