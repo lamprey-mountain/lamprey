@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};
@@ -9,7 +10,9 @@ use common::v1::types::{
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
     RoomMembership, UserId,
 };
-use common::v1::types::{RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID};
+use common::v1::types::{
+    RoleId, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
+};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -109,7 +112,7 @@ async fn room_member_add(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<RoomMemberPut>,
+    Json(mut json): Json<RoomMemberPut>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
@@ -138,28 +141,95 @@ async fn room_member_add(
 
     let d = s.data();
     let existing = d.room_member_get(room_id, target_user_id).await;
-    if let Ok(existing) = &existing {
-        if existing.override_name == json.override_name
-            && existing.override_description == json.override_description
-            && json.mute.is_none_or(|m| m == existing.mute)
-            && json.deaf.is_none_or(|m| m == existing.deaf)
-        {
-            return Err(Error::NotModified);
+
+    if let Ok(start) = &existing {
+        if json.mute.is_some_and(|m| m != start.mute) {
+            perms.ensure(Permission::VoiceMute)?;
+        }
+
+        if json.deaf.is_some_and(|m| m != start.deaf) {
+            perms.ensure(Permission::VoiceDeafen)?;
+        }
+
+        if json.override_name.is_some() && json.override_name != start.override_name {
+            perms.ensure(Permission::MemberManage)?;
+        }
+
+        if let Some(r) = &mut json.roles {
+            r.sort();
+            perms.ensure(Permission::RoleApply)?;
+            let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
+            let new = HashSet::<RoleId>::from_iter(r.iter().copied());
+            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+
+            // removed roles
+            for role_id in old.difference(&new) {
+                let role = d.role_select(room_id, *role_id).await?;
+                if role.position >= rank {
+                    return Err(Error::BadStatic("cannot remove role above your role"));
+                }
+            }
+
+            // added roles
+            for role_id in new.difference(&old) {
+                let role = d.role_select(room_id, *role_id).await?;
+                if role.position >= rank {
+                    return Err(Error::BadStatic("cannot add role above your role"));
+                }
+            }
         }
     } else {
         if json.mute == Some(true) {
             perms.ensure(Permission::VoiceMute)?;
         }
+
         if json.deaf == Some(true) {
             perms.ensure(Permission::VoiceDeafen)?;
+        }
+
+        if json.override_name.is_some() {
+            perms.ensure(Permission::MemberManage)?;
+        }
+
+        if let Some(r) = &mut json.roles {
+            r.sort();
+            perms.ensure(Permission::RoleApply)?;
+            let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+            for role_id in r {
+                let role = d.role_select(room_id, *role_id).await?;
+                if role.position >= rank {
+                    return Err(Error::BadStatic("cannot add role above your role"));
+                }
+            }
         }
     }
 
     let origin = RoomMemberOrigin::Bridged {
         bridge_id: auth_user.id,
     };
-    d.room_member_put(room_id, target_user_id, Some(origin), json)
+    d.room_member_put(room_id, target_user_id, Some(origin), json.clone())
         .await?;
+
+    if let Some(r) = json.roles {
+        if let Ok(start) = &existing {
+            let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
+            let new = HashSet::<RoleId>::from_iter(r.iter().copied());
+            // removed roles
+            for role_id in old.difference(&new) {
+                d.role_member_delete(target_user_id, *role_id).await?;
+            }
+
+            // added roles
+            for role_id in new.difference(&old) {
+                d.role_member_put(target_user_id, *role_id).await?;
+            }
+        } else {
+            for role_id in r {
+                d.role_member_put(target_user_id, role_id).await?;
+            }
+        }
+    }
+
     s.services()
         .perms
         .invalidate_room(target_user_id, room_id)
@@ -177,12 +247,14 @@ async fn room_member_add(
             )
             .change("mute", &existing.mute, &res.mute)
             .change("deaf", &existing.deaf, &res.deaf)
+            .change("roles", &existing.roles, &res.roles)
     } else {
         Changes::new()
             .add("override_name", &res.override_name)
             .add("override_description", &res.override_description)
             .add("mute", &res.mute)
             .add("deaf", &res.deaf)
+            .add("roles", &res.roles)
     };
 
     d.audit_logs_room_append(AuditLogEntry {
@@ -229,7 +301,7 @@ async fn room_member_update(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<RoomMemberPatch>,
+    Json(mut json): Json<RoomMemberPatch>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
@@ -238,6 +310,7 @@ async fn room_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
+    let srv = s.services();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
 
@@ -262,6 +335,41 @@ async fn room_member_update(
         perms.ensure(Permission::MemberManage)?;
     }
 
+    // TODO: run futures concurrently
+    if let Some(r) = &mut json.roles {
+        r.sort();
+        perms.ensure(Permission::RoleApply)?;
+        let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
+        let new = HashSet::<RoleId>::from_iter(r.iter().copied());
+        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+
+        // removed roles
+        for role_id in old.difference(&new) {
+            let role = d.role_select(room_id, *role_id).await?;
+            if role.position >= rank {
+                return Err(Error::BadStatic("cannot remove role above your role"));
+            }
+        }
+
+        // added roles
+        for role_id in new.difference(&old) {
+            let role = d.role_select(room_id, *role_id).await?;
+            if role.position >= rank {
+                return Err(Error::BadStatic("cannot add role above your role"));
+            }
+        }
+
+        // removed roles
+        for role_id in old.difference(&new) {
+            d.role_member_delete(target_user_id, *role_id).await?;
+        }
+
+        // added roles
+        for role_id in new.difference(&old) {
+            d.role_member_put(target_user_id, *role_id).await?;
+        }
+    }
+
     d.room_member_patch(room_id, target_user_id, json).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
 
@@ -274,6 +382,7 @@ async fn room_member_update(
         )
         .change("mute", &start.mute, &res.mute)
         .change("deaf", &start.deaf, &res.deaf)
+        .change("roles", &start.roles, &res.roles)
         .build();
 
     if !changes.is_empty() {

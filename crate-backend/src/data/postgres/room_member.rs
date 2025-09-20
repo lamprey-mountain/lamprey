@@ -50,6 +50,8 @@ impl From<DbRoomBan> for RoomBan {
 
 impl From<DbRoomMember> for RoomMember {
     fn from(row: DbRoomMember) -> Self {
+        let mut roles: Vec<_> = row.roles.into_iter().map(Into::into).collect();
+        roles.sort();
         RoomMember {
             user_id: row.user_id.into(),
             room_id: row.room_id.into(),
@@ -61,7 +63,7 @@ impl From<DbRoomMember> for RoomMember {
             joined_at: row.joined_at.assume_utc().into(),
             override_name: row.override_name,
             override_description: row.override_description,
-            roles: row.roles.into_iter().map(Into::into).collect(),
+            roles,
             mute: row.mute,
             deaf: row.deaf,
 

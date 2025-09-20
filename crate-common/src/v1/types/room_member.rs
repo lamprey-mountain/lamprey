@@ -72,6 +72,9 @@ pub struct RoomMemberPut {
 
     /// whether this user is deafened by a moderator
     pub deaf: Option<bool>,
+
+    /// the roles that this member has
+    pub roles: Option<Vec<RoleId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -97,6 +100,9 @@ pub struct RoomMemberPatch {
 
     /// whether this user is deafened by a moderator
     pub deaf: Option<bool>,
+
+    /// the roles that this member has
+    pub roles: Option<Vec<RoleId>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -203,5 +209,6 @@ impl Diff<RoomMember> for RoomMemberPatch {
                 .changes(&other.override_description)
             || self.mute.changes(&other.mute)
             || self.deaf.changes(&other.deaf)
+            || self.roles.changes(&other.roles)
     }
 }
