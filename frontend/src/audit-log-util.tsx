@@ -127,6 +127,19 @@ export function formatChanges(
 				formatted.push(
 					<li>{c.new ? "marked as nsfw" : "unmarked as nsfw"}</li>,
 				);
+			} else if (ent.type === "MemberUpdate" && c.key === "roles") {
+				const diff = diffArrays(
+					(c.old ?? []) as Array<string>,
+					(c.new ?? []) as Array<string>,
+				);
+				const added = diff.flatMap((i) => i.added ? i.value : []);
+				const removed = diff.flatMap((i) => i.removed ? i.value : []);
+				for (const r of added) {
+					formatted.push(<li>added role {r}</li>);
+				}
+				for (const r of removed) {
+					formatted.push(<li>removed role {r}</li>);
+				}
 			} else if (c.new) {
 				formatted.push(
 					<li>
