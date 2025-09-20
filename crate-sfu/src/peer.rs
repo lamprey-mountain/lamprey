@@ -404,7 +404,7 @@ impl Peer {
             SignallingMessage::VoiceState { state } => {
                 self.voice_state.thread_id = state.unwrap().thread_id;
             }
-            SignallingMessage::Ready => {}
+            SignallingMessage::Ready { .. } => {}
         }
         Ok(())
     }

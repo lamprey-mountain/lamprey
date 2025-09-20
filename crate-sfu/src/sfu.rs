@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use common::v1::types::{
     voice::{SfuCommand, SfuEvent, VoiceState},
-    UserId,
+    SfuId, UserId,
 };
 use dashmap::DashMap;
 use std::fmt::Debug;
@@ -19,6 +19,9 @@ pub struct Sfu {
     tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
     config: Config,
     backend_tx: UnboundedSender<SfuEvent>,
+
+    /// the uuid assigned to us by backend
+    sfu_id: Option<SfuId>,
 }
 
 impl Debug for Sfu {
@@ -41,6 +44,7 @@ impl Sfu {
             config,
             backend_tx,
             tracks_by_user: DashMap::new(),
+            sfu_id: None,
         }
     }
 
@@ -71,13 +75,16 @@ impl Sfu {
     }
 
     async fn handle_command(
-        &self,
+        &mut self,
         cmd: SfuCommand,
         peer_send: UnboundedSender<PeerEventEnvelope>,
     ) -> Result<()> {
         trace!("new rpc message {cmd:?}");
 
         match cmd {
+            SfuCommand::Ready { sfu_id } => {
+                self.sfu_id = Some(sfu_id);
+            }
             SfuCommand::Signalling { user_id, inner } => {
                 self.handle_signalling(user_id, inner, peer_send).await?
             }
@@ -169,6 +176,17 @@ impl Sfu {
             user_id,
             state: Some(state),
             old,
+        })
+        .await?;
+
+        // we're ready for the peer to send us stuff!
+        self.emit(SfuEvent::VoiceDispatch {
+            user_id,
+            payload: SignallingMessage::Ready {
+                sfu_id: self
+                    .sfu_id
+                    .expect("we always receive a Ready before anything else"),
+            },
         })
         .await?;
 

@@ -204,14 +204,9 @@ genid!(Report, "00000000-0000-0000-0000-000modreport");
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
-genid!(Application);
-
-// genid!(Region); // not a uuid?
-genid!(Server); // rename? Worker, Host
-genid!(Livestream);
-genid!(RtcPeer);
-
-genid!(Notification);
+genid!(Application, "00000000-0000-0000-0000-0application");
+genid!(Notification, "00000000-0000-0000-0000-notification");
+genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 
 pub const SERVER_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),

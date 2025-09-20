@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Time, SessionId, UserId};
+use crate::v1::types::{util::Time, SessionId, SfuId, UserId};
 
 use super::ThreadId;
 
@@ -123,7 +123,13 @@ pub struct TrackMetadata {
 #[serde(tag = "type")]
 pub enum SignallingMessage {
     /// the allocated sfu is ready to accept voice payloads
-    Ready,
+    // NOTE: do i get rid of this and have VoiceState be the ready message? ie.
+    // send a VoiceState once the voice server has been successfully allocated.
+    // probably not tbh
+    Ready {
+        /// the id of the selected sfu. internal; for debugging.
+        sfu_id: SfuId,
+    },
 
     /// a sdp offer
     Offer {
@@ -212,6 +218,10 @@ pub struct SpeakingWithoutUserId {
 /// emitted by backend, handled by the sfu
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SfuCommand {
+    Ready {
+        sfu_id: SfuId,
+    },
+
     /// proxied signalling message from a user
     Signalling {
         /// the user who sent this

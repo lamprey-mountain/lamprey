@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{voice::SfuCommand, Media, Message, RoomId, ThreadId, UserId};
+use common::v1::types::{voice::SfuCommand, Media, Message, RoomId, SfuId, ThreadId, UserId};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
@@ -11,7 +11,6 @@ use sqlx::PgPool;
 use tokio::sync::broadcast::Sender;
 use tracing::error;
 use url::Url;
-use uuid::Uuid;
 
 use crate::{
     config::Config,
@@ -34,8 +33,8 @@ pub struct ServerStateInner {
     // TODO: write a wrapper around this (media is kind of like this?)
     pub blobs: opendal::Operator,
 
-    pub sfus: DashMap<Uuid, ()>,
-    pub thread_to_sfu: DashMap<ThreadId, Uuid>,
+    pub sfus: DashMap<SfuId, ()>,
+    pub thread_to_sfu: DashMap<ThreadId, SfuId>,
 }
 
 pub struct ServerState {
@@ -128,23 +127,26 @@ impl ServerStateInner {
         Ok(())
     }
 
-    pub fn alloc_sfu(&self, thread_id: ThreadId) -> Result<Uuid> {
+    /// select the "best" sfu and pair it with this thread id. return the existing sfu id if it exists.
+    ///
+    /// currently "best" means the sfu with least load in terms of # of threads using it
+    pub fn alloc_sfu(&self, thread_id: ThreadId) -> Result<SfuId> {
         if let Some(existing) = self.thread_to_sfu.get(&thread_id) {
             return Ok(*existing);
         }
 
-        let sfu_thread_counts = DashMap::<Uuid, u64>::new();
+        let sfu_thread_counts = DashMap::<SfuId, u64>::new();
         for i in &self.sfus {
             sfu_thread_counts.insert(*i.key(), 0);
         }
         for i in &self.thread_to_sfu {
             *sfu_thread_counts.get_mut(i.value()).unwrap() += 1;
         }
-        let mut sorted: Vec<_> = dbg!(sfu_thread_counts).into_iter().collect();
+        let mut sorted: Vec<_> = sfu_thread_counts.into_iter().collect();
         sorted.sort_by_key(|(_, count)| *count);
-        if let Some((chosen, _)) = dbg!(sorted).first() {
+        if let Some((chosen, _)) = sorted.first() {
             self.thread_to_sfu.insert(thread_id, *chosen);
-            Ok(dbg!(*chosen))
+            Ok(*chosen)
         } else {
             error!("no available sfu");
             Err(Error::BadStatic("no available sfu"))

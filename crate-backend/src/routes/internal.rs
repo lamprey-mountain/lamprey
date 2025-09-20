@@ -7,16 +7,15 @@ use axum::{
     },
     response::IntoResponse,
 };
-use common::v1::types::MessageSync;
 use common::v1::types::{
     voice::{SfuCommand, SfuEvent, SignallingMessage},
     ThreadId,
 };
+use common::v1::types::{MessageSync, SfuId};
 use http::HeaderMap;
 use tokio::select;
 use tracing::{debug, error, warn};
 use utoipa_axum::{router::OpenApiRouter, routes};
-use uuid::Uuid;
 
 use crate::error::Result;
 use crate::{Error, ServerState};
@@ -44,20 +43,21 @@ async fn internal_rpc(
         return Err(Error::MissingAuth);
     }
 
-    Ok(ws.on_upgrade(move |socket| SfuHandle::new(s).spawn(socket)))
+    Ok(ws.on_upgrade(move |socket| SfuConnection::new(s).spawn(socket)))
 }
 
+/// a websocket connection to a selective forwarding unit
 #[derive(Clone)]
-struct SfuHandle {
-    id: Uuid,
+struct SfuConnection {
+    id: SfuId,
     s: Arc<ServerState>,
 }
 
-impl SfuHandle {
+impl SfuConnection {
     fn new(s: Arc<ServerState>) -> Self {
         Self {
             s,
-            id: Uuid::new_v4(),
+            id: SfuId::new(),
         }
     }
 
@@ -65,6 +65,16 @@ impl SfuHandle {
         self.s.sfus.insert(self.id, ());
 
         let mut outbox = self.s.sushi_sfu.subscribe();
+
+        if let Err(e) = self
+            .handle_command(SfuCommand::Ready { sfu_id: self.id }, &mut socket)
+            .await
+        {
+            error!("Failed to send message to websocket: {:?}", e);
+            self.shutdown();
+            return;
+        }
+
         loop {
             select! {
                 msg = outbox.recv() => {
@@ -87,6 +97,10 @@ impl SfuHandle {
             }
         }
 
+        self.shutdown();
+    }
+
+    fn shutdown(&self) {
         // when this sfu gets shut down all clients connected to it need to reconnect
         self.s.sfus.remove(&self.id);
         let mut needs_reconnect = HashSet::new();
@@ -99,7 +113,7 @@ impl SfuHandle {
             }
         });
         for thread_id in &needs_reconnect {
-            if dbg!(self.s.alloc_sfu(*thread_id)).is_err() {
+            if self.s.alloc_sfu(*thread_id).is_err() {
                 warn!("no sfu exists");
                 // clients will be told to reconnect anyways to trigger a client error
             }
@@ -147,6 +161,7 @@ impl SfuHandle {
 
     async fn handle_command(&self, msg: SfuCommand, socket: &mut WebSocket) -> Result<()> {
         let should_send = match &msg {
+            SfuCommand::Ready { .. } => true,
             SfuCommand::Signalling { user_id, inner: _ } => {
                 let state = self.s.services.users.voice_state_get(*user_id);
                 state.is_some_and(|s| self.is_ours(s.thread_id))
