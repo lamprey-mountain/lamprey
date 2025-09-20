@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM application WHERE id = $1",
+  "query": "UPDATE application SET deleted_at = now() WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "ec971d5a4d00f05aa406d6793b4fde01a3625430ad68cd0fa303b67d6d3f8b24"
+  "hash": "d61618413c71192291406eb4405db4000dff293ee8f956e9a875d57ab708775d"
 }

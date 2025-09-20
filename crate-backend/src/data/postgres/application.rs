@@ -64,7 +64,7 @@ impl DataApplication for Postgres {
     }
 
     async fn application_delete(&self, id: ApplicationId) -> Result<()> {
-        query!("DELETE FROM application WHERE id = $1", *id)
+        query!("UPDATE application SET deleted_at = now() WHERE id = $1", *id)
             .execute(&self.pool)
             .await?;
         Ok(())
