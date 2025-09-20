@@ -83,7 +83,7 @@ pub enum Permission {
     MemberKick,
 
     /// edit member name
-    // TODO: rename to MemberManageProfile
+    // TODO: rename to ~~MemberManageProfile~~ MemberNickname
     // TODO: add MemberChangeProfile for changing your own nickname/profile
     MemberManage,
 
@@ -218,6 +218,7 @@ pub enum Permission {
     ThreadLock,
 
     /// (unimplemented) pin (and unpin) threads
+    // NOTE: this allows moving threads around in general, not really pinning
     ThreadPin,
 
     /// (unimplemented) create announcements
@@ -244,7 +245,7 @@ pub enum Permission {
     // steps:
     // - remove View
     // - remove ensure_view
-    // - enfore current view logic in perms.for_{room_thread}
+    // - enforce current view logic in perms.for_{room_thread}
     // - add ViewThread (view all threads/view this room)
     View,
 

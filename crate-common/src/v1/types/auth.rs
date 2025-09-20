@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 use crate::v1::types::{email::EmailAddr, util::Time, SessionId, UserId};
 
@@ -92,6 +93,37 @@ pub struct CaptchaResponse {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WebauthnChallenge {
+    /// public key credentials request as stringified json
+    pub challenge: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WebauthnFinish {
+    /// if this authenticator should be registered if it doesn't exist yet
+    pub register: bool,
+
+    /// public key credentials response as stringified json
+    pub credential: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WebauthnAuthenticator {
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: Time,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WebauthnPatch {
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct AuthState {
     /// if there is at least one verified and primary email address
     ///
@@ -106,6 +138,9 @@ pub struct AuthState {
 
     /// the oauth providers this user has authenticated with
     pub oauth_providers: Vec<String>,
+
+    /// registered webauthn authenticators
+    pub authenticators: Vec<WebauthnAuthenticator>,
 }
 
 impl AuthState {
@@ -114,6 +149,6 @@ impl AuthState {
         // totp ignored, it only does 2fa
         // has_password ignored, it only is effective if an email is set
         // (technically, you *can* login with user id + password, but people probably won't remember their user id)
-        !self.oauth_providers.is_empty() || self.has_email
+        !self.oauth_providers.is_empty() || self.has_email || !self.authenticators.is_empty()
     }
 }

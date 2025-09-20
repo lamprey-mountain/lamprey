@@ -105,7 +105,7 @@ pub struct VoiceStateUpdate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadata {
-    /// unique identifier for this track. equivilant to transceiver.mid
+    /// unique identifier for this track. equivalent to transceiver.mid
     pub mid: TrackId,
 
     /// whether this track is for audio or video
@@ -165,20 +165,13 @@ pub enum SignallingMessage {
     Reconnect,
 }
 
+/// the kind of media this track is for
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaKind {
     Video,
     Audio,
 }
-
-// /// config the local user sets on someone else
-// struct VoiceConfig {
-//     mute: bool,
-//
-//     /// between 0 and 1.5, defaults to 1
-//     volume: f64,
-// }
 
 /// Flags for speaking
 ///

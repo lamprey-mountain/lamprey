@@ -104,3 +104,23 @@ pub enum Taggable {
     Thread(Thread),
     Tag(Tag),
 }
+
+// // instead of the current system, i cold also do something closer to docker labels
+// mod next {
+//     pub struct Tag {
+//         pub id: TagId,
+//         pub name: String,
+//         pub description: Option<String>,
+//         pub color: Option<Color>,
+//         pub archived: bool,
+//         pub roles: Vec<RoleId>, // only these roles can apply this tag
+//         pub thread_count: u64,
+//     }
+
+//     pub struct TagApply {
+//         pub tag_id: TagId,
+//         pub value: Option<String>,
+//     }
+
+//     // when searching threads, you can filter by "tag exists" and "tag value = something"
+// }

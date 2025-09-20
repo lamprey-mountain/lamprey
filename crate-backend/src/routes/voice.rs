@@ -217,7 +217,7 @@ async fn voice_state_list(
     }))
 }
 
-/// Voice region list
+/// Voice region list (TODO)
 #[utoipa::path(
     get,
     path = "/voice/region",

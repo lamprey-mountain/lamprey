@@ -20,11 +20,12 @@ pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
 
+    // NOTE: this will always be Join
     pub membership: RoomMembership,
 
     /// When this member joined the room
     pub joined_at: Time,
-    // TODO?: pub left_at: Option<Time>,
+
     /// aka nickname
     // TODO: rename to `nick`
     pub override_name: Option<String>,
@@ -36,8 +37,6 @@ pub struct RoomMember {
     /// the roles that this member has
     pub roles: Vec<RoleId>,
 
-    // timeouts/temporary mutes
-    // pub muted_until: Option<Time>,
     /// how this member joined the room, moderator only. is None if the origin is unknown.
     pub origin: Option<RoomMemberOrigin>,
 
@@ -46,6 +45,9 @@ pub struct RoomMember {
 
     /// whether this user is deafened by a moderator
     pub deaf: bool,
+    // TODO(#507): timeouts/mutes
+    // /// temporarily prevent a member from communicating
+    // pub timeout_until: Option<Time>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

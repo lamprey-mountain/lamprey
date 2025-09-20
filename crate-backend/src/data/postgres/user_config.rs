@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::user_config::UserConfig;
+use common::v1::types::user_config::UserConfigGlobal;
 use sqlx::{query, query_scalar};
 
 use crate::error::Result;
@@ -11,7 +11,7 @@ use super::Postgres;
 
 #[async_trait]
 impl DataUserConfig for Postgres {
-    async fn user_config_set(&self, user_id: UserId, config: &UserConfig) -> Result<()> {
+    async fn user_config_set(&self, user_id: UserId, config: &UserConfigGlobal) -> Result<()> {
         query!(
             "update usr set config = $2 where id = $1",
             *user_id,
@@ -22,7 +22,7 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfig> {
+    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfigGlobal> {
         let conf = query_scalar!("select config from usr where id = $1", *user_id)
             .fetch_one(&self.pool)
             .await?;

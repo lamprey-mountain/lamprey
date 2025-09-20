@@ -12,7 +12,7 @@ use super::{
     emoji::EmojiCustom,
     reaction::ReactionKey,
     role::RoleReorderItem,
-    user_config::UserConfig,
+    user_config::UserConfigGlobal,
     voice::{SignallingMessage, VoiceState},
     EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
     Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
@@ -258,7 +258,7 @@ pub enum MessageSync {
 
     UserConfig {
         user_id: UserId,
-        config: UserConfig,
+        config: UserConfigGlobal,
     },
 
     UserDelete {

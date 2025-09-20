@@ -21,15 +21,19 @@ pub mod chat;
 pub mod forum;
 pub mod voice;
 
+// TODO: remove
 #[cfg(feature = "feat_thread_type_event")]
 pub mod event;
 
+// TODO: remove
 #[cfg(feature = "feat_thread_type_document")]
 pub mod document;
 
+// TODO: remove
 #[cfg(feature = "feat_thread_type_table")]
 pub mod table;
 
+// TODO: remove, will re-add if needed later
 #[cfg(feature = "feat_thread_type_report")]
 pub mod report;
 
@@ -89,11 +93,19 @@ pub struct Thread {
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
 
+    /// a locked thread can only be interacted with (sending messages,
+    /// (un)archiving, etc) by people with the `ThreadLock` permission
     pub locked: bool,
+
+    /// the category thread this thread is in, if any
     pub parent_id: Option<ThreadId>,
 
-    /// tiebroken by id
-    pub position: Option<u8>,
+    /// the position of this thread in the navbar
+    ///
+    /// - lower numbers come first (0 is the first thread)
+    /// - threads with the same position are tiebroken by id
+    /// - threads without a position come last, ordered by newest first
+    pub position: Option<u64>,
 
     /// permission overwrites for this thread
     pub permission_overwrites: Vec<PermissionOverwrite>,
@@ -115,8 +127,8 @@ pub struct Thread {
     // to implement efficiently. if someone marks a very old message as unread,
     // i don't want to hang while counting potentially thousands of messages!
     // pub unread_count: u64,
-    pub notifications: Option<NotifsThread>,
-
+    pub notifications: Option<NotifsThread>, // TODO: remove
+    // pub user_config: UserConfigThread,
     /// for dm threads, this is who the dm is with
     pub recipient: Option<User>,
 }
@@ -216,6 +228,26 @@ pub struct ThreadPatch {
 
     /// not safe for work
     pub nsfw: Option<bool>,
+}
+
+/// reorder some threads
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ThreadReorder {
+    /// the threads to reorder
+    #[serde(default)]
+    #[validate(length(min = 1, max = 1024))]
+    pub threads: Vec<ThreadReorderItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ThreadReorderItem {
+    pub id: ThreadId,
+    pub position: Option<Option<u64>>,
+    pub parent_id: Option<Option<ThreadId>>,
 }
 
 impl Diff<Thread> for ThreadPatch {

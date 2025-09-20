@@ -5,7 +5,7 @@ use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch}
 use common::v1::types::notifications::Notification;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::SearchMessageRequest;
-use common::v1::types::user_config::UserConfig;
+use common::v1::types::user_config::UserConfigGlobal;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
@@ -533,8 +533,8 @@ pub trait DataUserRelationship {
 
 #[async_trait]
 pub trait DataUserConfig {
-    async fn user_config_set(&self, user_id: UserId, config: &UserConfig) -> Result<()>;
-    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfig>;
+    async fn user_config_set(&self, user_id: UserId, config: &UserConfigGlobal) -> Result<()>;
+    async fn user_config_get(&self, user_id: UserId) -> Result<UserConfigGlobal>;
 }
 
 #[async_trait]

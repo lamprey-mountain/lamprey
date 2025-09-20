@@ -500,6 +500,40 @@ async fn room_member_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[allow(unused)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+struct RoomMemberSearch {
+    query: String,
+    limit: Option<u16>,
+}
+
+#[derive(Debug, Serialize, ToSchema, IntoParams)]
+struct RoomMemberSearchResponse {
+    items: Vec<RoomMember>,
+}
+
+/// Room member search (TODO)
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/member/search",
+    params(
+        RoomMemberSearch,
+        ("room_id" = RoomId, description = "Room id"),
+    ),
+    tags = ["room_member"],
+    responses(
+        (status = OK, body = RoomMemberSearchResponse, description = "success"),
+    )
+)]
+async fn room_member_search(
+    Path(_room_id): Path<RoomId>,
+    Query(_search): Query<RoomMemberSearch>,
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<()> {
+    Err(Error::Unimplemented)
+}
+
 /// Room ban create
 #[utoipa::path(
     put,
@@ -784,6 +818,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_member_add))
         .routes(routes!(room_member_update))
         .routes(routes!(room_member_delete))
+        .routes(routes!(room_member_search))
         .routes(routes!(room_ban_create_bulk))
         .routes(routes!(room_ban_create))
         .routes(routes!(room_ban_remove))

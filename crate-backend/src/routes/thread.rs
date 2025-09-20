@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, ThreadMemberPut,
-    ThreadType,
+    ThreadReorder, ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -264,6 +264,35 @@ async fn thread_list_removed(
     // let data = s.data();
     // let perms = s.services().perms.for_room(user_id, room_id).await?;
     // perms.ensure_view()?;
+    // let mut res = data.thread_list_removed(room_id, q).await?;
+    Err(Error::Unimplemented)
+}
+
+/// Room thread reorder (TODO)
+///
+/// Reorder the threads in a room. Requires the `ThreadReorder` permission.
+#[utoipa::path(
+    patch,
+    path = "/room/{room_id}/thread",
+    params(("room_id", description = "Room id")),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = (), description = "Reorder threads success"),
+    )
+)]
+async fn thread_reorder(
+    Path((room_id,)): Path<(RoomId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_json): Json<ThreadReorder>,
+) -> Result<()> {
+    // let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+    // let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ThreadPin)?;
     // let mut res = data.thread_list_removed(room_id, q).await?;
     Err(Error::Unimplemented)
 }
@@ -760,6 +789,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_list))
         .routes(routes!(thread_list_archived))
         .routes(routes!(thread_list_removed))
+        .routes(routes!(thread_reorder))
         .routes(routes!(thread_update))
         .routes(routes!(thread_ack))
         .routes(routes!(thread_archive))

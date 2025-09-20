@@ -64,6 +64,7 @@ pub struct Room {
 
     /// anyone can view and join
     pub public: bool,
+    // pub user_config: UserConfigRoom,
 }
 
 /// User-specific room data

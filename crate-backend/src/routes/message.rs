@@ -526,7 +526,7 @@ struct MessageModerate {
 ///
 /// Removing a message:
 /// - Removing a message hides it from all non-moderators and the sender.
-/// - Removal is reversable via restoration, unlike deletion.
+/// - Removal is reversible via restoration, unlike deletion.
 /// - Removed messages are never garbage collected.
 /// - There is (will be) an endpoint for deleting all removed messages.
 /// - This is a "softer" form of deletion, intended for moderators you don't fully trust.

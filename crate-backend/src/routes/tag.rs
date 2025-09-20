@@ -1,3 +1,18 @@
+// TODO: rework the entire tags api
+//
+// this is both overengineered and underengineered in that i could either
+// greatly simplify it, but if im gonna make it complex i might as well go all out
+//
+// eg. i could have available_tags: [{ id: 123, name: whatever }], applied_tags:
+// [123] like discord, which makes tagging part of PATCHing threads normally
+//
+// alternatively, i could have labels (copy docker) for more rich information
+// than just tags alone
+//
+// either way, while tag inheritance seems like it *could* be useful, its
+// probably not worth it. (and recursive sql queries are pretty painful to work
+// with.)
+
 use std::sync::Arc;
 
 use axum::extract::{Path, Query};

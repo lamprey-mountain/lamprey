@@ -15,6 +15,10 @@ use common::v1::types::auth::TotpRecoveryCodes;
 use common::v1::types::auth::TotpState;
 use common::v1::types::auth::TotpStateWithSecret;
 use common::v1::types::auth::TotpVerificationRequest;
+use common::v1::types::auth::WebauthnAuthenticator;
+use common::v1::types::auth::WebauthnChallenge;
+use common::v1::types::auth::WebauthnFinish;
+use common::v1::types::auth::WebauthnPatch;
 use common::v1::types::email::EmailAddr;
 use common::v1::types::util::Time;
 use common::v1::types::MessageSync;
@@ -478,6 +482,7 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
         has_totp: false, // TODO
         has_password: password.is_some(),
         oauth_providers,
+        authenticators: vec![],
     };
     Ok(auth_state)
 }
@@ -512,6 +517,74 @@ async fn auth_captcha_submit(
     Json(_json): Json<CaptchaResponse>,
 ) -> Result<Json<()>> {
     Err(Error::Unimplemented)
+}
+
+/// Auth webauthn init (TODO)
+#[utoipa::path(
+    get,
+    path = "/auth/webauthn/init",
+    tags = ["auth"],
+    responses((status = OK, body = WebauthnChallenge, description = "webauthn challenge")),
+)]
+async fn auth_webauthn_init(
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Auth webauthn exec (TODO)
+///
+/// Register a new authenticator or login with one
+#[utoipa::path(
+    post,
+    path = "/auth/webauthn/exec",
+    tags = ["auth"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    ),
+)]
+async fn auth_webauthn_exec(
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<WebauthnFinish>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Auth webauthn patch (TODO)
+#[utoipa::path(
+    patch,
+    path = "/auth/webauthn/authenticator/{authenticator_id}",
+    tags = ["auth"],
+    responses(
+        (status = OK, body = WebauthnAuthenticator, description = "success"),
+    ),
+)]
+async fn auth_webauthn_patch(
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+    Path(_authenticator_id): Path<Uuid>,
+    Json(_json): Json<WebauthnPatch>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Auth webauthn delete (TODO)
+#[utoipa::path(
+    delete,
+    path = "/auth/webauthn/authenticator/{authenticator_id}",
+    tags = ["auth"],
+    responses(
+        (status = NO_CONTENT, description = "success"),
+    ),
+)]
+async fn auth_webauthn_delete(
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+    Path(_authenticator_id): Path<Uuid>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
 }
 
 /// Auth sudo (TEMP)
@@ -558,6 +631,10 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(auth_password_exec))
         .routes(routes!(auth_captcha_init))
         .routes(routes!(auth_captcha_submit))
+        .routes(routes!(auth_webauthn_init))
+        .routes(routes!(auth_webauthn_exec))
+        .routes(routes!(auth_webauthn_patch))
+        .routes(routes!(auth_webauthn_delete))
         .routes(routes!(auth_state))
         .routes(routes!(auth_sudo))
 }

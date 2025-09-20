@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::v1::types::{MediaId, MessageId, ReportId, RoomId, ThreadId, UserId};
+use crate::v1::types::{ReportId, ThreadId, UserId};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -13,6 +13,9 @@ use validator::Validate;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Report {
     pub id: ReportId,
+
+    /// the associated thread id of this report. every report has a thread created for it.
+    pub thread_id: ThreadId,
 
     /// user id of who reported this
     // do i want to make this an Option and allow anonymous reports?
@@ -30,15 +33,9 @@ pub struct Report {
 
     /// where the report is being sent to
     pub destination: ReportDestination,
-
-    /// what's being reported
-    // #[serde(flatten)]
-    pub target: ReportTarget,
-    // /// number of reports for this target
-    // /// count by room/destination
-    // pub dedup_count: u64,
 }
 
+/// who the report is sent to
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ReportDestination {
@@ -49,29 +46,9 @@ pub enum ReportDestination {
     Server,
 }
 
-// might need to have some kind of Anything enum that can be anything in the api
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ReportTarget {
-    User { target_id: UserId },
-    Room { target_id: RoomId },
-    Thread { target_id: ThreadId },
-    Message { target_id: MessageId },
-    Media { target_id: MediaId },
-}
-
-/// synced with thread if there is any
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ReportStatus {
-    Open,
-    Duplicate,
-    Invalid,
-    Resolved,
-}
-
 // these reasons are more or less copied from revolt.chat for now
 // (theres quite a lot considering ui design, it looks like they're meant to be nested inside subcategories?)
+// i should probably reduce it down to maybe 4 to 8 preset reasons
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ReportReason {
@@ -139,19 +116,12 @@ pub struct ReportCreate {
     pub reason: ReportReason,
 
     /// user supplied note
+    // copy url of whatever is reported here
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 4096)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
     pub note: Option<String>,
-
-    /// where the report is being sent to
-    pub destination: ReportDestination,
-}
-
-impl ReportStatus {
-    pub fn is_active(&self) -> bool {
-        *self == ReportStatus::Open
-    }
+    // maybe copy thread create params here?
 }

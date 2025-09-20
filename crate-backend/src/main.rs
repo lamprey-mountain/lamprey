@@ -83,12 +83,12 @@ impl Modify for NestedTags {
             {
                 "name": "user",
                 "description": "working with users",
-                "tags": ["user", "user_email", "relationship", "dm"],
+                "tags": ["user", "user_email", "user_config", "relationship", "dm"],
             },
             {
                 "name": "misc",
                 "description": "random other routes that i dont have anywhere to put yet",
-                "tags": ["debug", "invite", "media", "moderation", "notification", "sync", "search", "application", "public"],
+                "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public"],
             },
         ]);
         openapi

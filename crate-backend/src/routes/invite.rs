@@ -32,7 +32,7 @@ use super::util::{Auth, HeaderReason};
         (status = NO_CONTENT, description = "success"),
     )
 )]
-pub async fn invite_delete(
+async fn invite_delete(
     Path(code): Path<InviteCode>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -138,7 +138,7 @@ pub async fn invite_delete(
         (status = OK, body = InviteWithMetadata, description = "success with metadata"),
     )
 )]
-pub async fn invite_resolve(
+async fn invite_resolve(
     Path(code): Path<InviteCode>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -192,7 +192,7 @@ pub async fn invite_resolve(
         (status = OK, description = "success"),
     )
 )]
-pub async fn invite_use(
+async fn invite_use(
     Path(code): Path<InviteCode>,
     Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -272,7 +272,7 @@ pub async fn invite_use(
         (status = OK, body = Invite, description = "success"),
     )
 )]
-pub async fn invite_room_create(
+async fn invite_room_create(
     Path(room_id): Path<RoomId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -354,7 +354,7 @@ enum InviteWithPotentialMetadata {
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
 )]
-pub async fn invite_room_list(
+async fn invite_room_list(
     Path(room_id): Path<RoomId>,
     Query(paginate): Query<PaginationQuery<InviteCode>>,
     Auth(user): Auth,
@@ -405,7 +405,7 @@ pub async fn invite_room_list(
         (status = OK, body = Invite, description = "success"),
     )
 )]
-pub async fn invite_patch(
+async fn invite_patch(
     Path(code): Path<InviteCode>,
     Auth(user): Auth,
     HeaderReason(reason): HeaderReason,
@@ -502,7 +502,7 @@ pub async fn invite_patch(
     tags = ["invite"],
     responses((status = OK, body = Invite, description = "success")),
 )]
-pub async fn invite_server_create(
+async fn invite_server_create(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -571,7 +571,7 @@ pub async fn invite_server_create(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
 )]
-pub async fn invite_server_list(
+async fn invite_server_list(
     Query(paginate): Query<PaginationQuery<InviteCode>>,
     Auth(user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -591,6 +591,47 @@ pub async fn invite_server_list(
     Ok(Json(res))
 }
 
+/// Invite user create
+///
+/// Creates an invite that adds this user as a friend when used
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/invite",
+    params(("user_id", description = "User id")),
+    tags = ["invite"],
+    responses((status = OK, body = Invite, description = "success")),
+)]
+async fn invite_user_create(
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+    Json(_json): Json<InviteCreate>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Invite user list
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/invite",
+    params(
+        PaginationQuery<InviteCode>,
+        ("user_id", description = "User id"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
+    )
+)]
+async fn invite_user_list(
+    Query(_paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+// TODO: consider merging invite_server_* with invite_room_*?
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(invite_delete))
@@ -601,4 +642,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(invite_room_list))
         .routes(routes!(invite_server_create))
         .routes(routes!(invite_server_list))
+        .routes(routes!(invite_user_create))
+        .routes(routes!(invite_user_list))
 }

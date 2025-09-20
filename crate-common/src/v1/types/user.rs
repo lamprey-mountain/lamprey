@@ -12,7 +12,7 @@ use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::MediaId;
 
-use super::user_config::UserConfig;
+use super::user_config::UserConfigGlobal;
 use super::{UserId, UserVerId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +43,7 @@ pub struct User {
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
     // pub email: Vec<Email>,
+    // pub user_config: UserConfigRoom,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,7 +107,7 @@ pub struct Bot {
 pub struct UserWithPrivate {
     #[serde(flatten)]
     pub inner: User,
-    pub config: UserConfig,
+    pub config: UserConfigGlobal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -7,17 +7,15 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::notifications::NotifsGlobal;
-
-// use crate::v1::types::notifications::NotifsGlobal;
-
 // #[cfg(feature = "validator")]
 // use validator::Validate;
 
+use crate::v1::types::notifications::{NotifsGlobal, NotifsRoom, NotifsThread};
+
 /// configuration for a user
-#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfig {
+pub struct UserConfigGlobal {
     // TODO: implement notifications
     /// global notification config
     pub notifs: NotifsGlobal,
@@ -27,6 +25,59 @@ pub struct UserConfig {
     // pub privacy_safety: PrivacySafety,
     /// config specific to frontend
     pub frontend: HashMap<String, serde_json::Value>,
+}
+
+/// configuration for a user in a room
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct UserConfigRoom {
+    /// room notification config
+    pub notifs: NotifsRoom,
+
+    /// config specific to frontend
+    pub frontend: HashMap<String, serde_json::Value>,
+}
+
+/// configuration for a user in a thread
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct UserConfigThread {
+    /// thread notification config
+    pub notifs: NotifsThread,
+
+    /// config specific to frontend
+    pub frontend: HashMap<String, serde_json::Value>,
+}
+
+/// configuration for a user for another user
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct UserConfigUser {
+    /// config in voice threads
+    pub voice: VoiceConfig,
+
+    /// config specific to frontend
+    pub frontend: HashMap<String, serde_json::Value>,
+}
+
+/// voice config the local user can set on someone else
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct VoiceConfig {
+    /// whether to mute voice
+    pub mute: bool,
+
+    /// defaults to 1 (aka 100% volume)
+    pub volume: f64,
+}
+
+impl Default for VoiceConfig {
+    fn default() -> Self {
+        Self {
+            mute: false,
+            volume: 1.0,
+        }
+    }
 }
 
 // #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
