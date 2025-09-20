@@ -28,7 +28,7 @@ use tracing::{debug, error, info, warn};
 
 pub struct Player {
     rtc: Rtc,
-    mid: Mid,
+    mid: Option<Mid>,
     pending: Option<SdpPendingOffer>,
     sock: UdpSocket,
     controller: Receiver<PlayerCommand>,
@@ -67,26 +67,6 @@ impl Player {
         // init webrtc
         debug!("init webrtc");
         let mut rtc = Rtc::new();
-        let mut changes = rtc.sdp_api();
-        let mid = changes.add_media(
-            str0m::media::MediaKind::Audio,
-            str0m::media::Direction::SendOnly,
-            None,
-            None,
-            None,
-        );
-        let (offer, pending) = changes.apply().unwrap();
-
-        emitter
-            .send(PlayerEvent::Signalling(SignallingMessage::Offer {
-                sdp: SessionDescription(offer.to_sdp_string().into()),
-                tracks: vec![TrackMetadata {
-                    mid: TrackId(mid.to_string()),
-                    kind: MediaKind::Audio,
-                    key: "music".into(),
-                }],
-            }))
-            .await?;
 
         let addr = select_host_address_ipv4()?;
         let sock = UdpSocket::bind(format!("{addr}:0")).await?;
@@ -100,8 +80,8 @@ impl Player {
             emitter,
             sock,
             rtc,
-            mid,
-            pending: Some(pending),
+            mid: None,
+            pending: None,
             audio: None,
             paused: false,
         })
@@ -110,9 +90,34 @@ impl Player {
     pub async fn handle_command(&mut self, cmd: PlayerCommand) -> anyhow::Result<()> {
         debug!("handle command {cmd:?}");
         match cmd {
-            PlayerCommand::Signalling(msg) => {
-                match msg {
-                    SignallingMessage::Offer { sdp, .. } => {
+            PlayerCommand::Signalling(msg) => match msg {
+                SignallingMessage::Ready { .. } => {
+                    let mut changes = self.rtc.sdp_api();
+                    let mid = changes.add_media(
+                        str0m::media::MediaKind::Audio,
+                        str0m::media::Direction::SendOnly,
+                        None,
+                        None,
+                        None,
+                    );
+                    let (offer, pending) = changes.apply().unwrap();
+                    self.mid = Some(mid);
+                    self.pending = Some(pending);
+                    self.emitter
+                        .send(PlayerEvent::Signalling(SignallingMessage::Offer {
+                            sdp: SessionDescription(offer.to_sdp_string().into()),
+                            tracks: vec![TrackMetadata {
+                                mid: TrackId(mid.to_string()),
+                                kind: MediaKind::Audio,
+                                key: "music".into(),
+                            }],
+                        }))
+                        .await?;
+                }
+                SignallingMessage::Offer { sdp, .. } => {
+                    if self.pending.is_some() {
+                        debug!("ignoring offer because we are impolite");
+                    } else {
                         let sdp = SdpOffer::from_sdp_string(&sdp)?;
                         let answer = self.rtc.sdp_api().accept_offer(sdp)?;
                         self.emitter
@@ -120,17 +125,19 @@ impl Player {
                                 sdp: SessionDescription(answer.to_sdp_string()),
                             }))
                             .await?;
-                        warn!("received offer, should impl renegotiation");
                     }
-                    SignallingMessage::Answer { sdp } => {
-                        let sdp = SdpAnswer::from_sdp_string(&sdp)?;
-                        self.rtc
-                            .sdp_api()
-                            .accept_answer(self.pending.take().unwrap(), sdp)?;
-                    }
-                    _ => {} // TODO: handle other messages
                 }
-            }
+                SignallingMessage::Answer { sdp } => {
+                    let sdp = SdpAnswer::from_sdp_string(&sdp)?;
+                    if let Some(pending) = self.pending.take() {
+                        self.rtc.sdp_api().accept_answer(pending, sdp)?;
+                    } else {
+                        warn!("got answer without a pending offer, ignoring");
+                    }
+                }
+                SignallingMessage::Reconnect => todo!("remote requested a full reconnect"),
+                _ => {}
+            },
             PlayerCommand::Play(path_buf) => {
                 if self.audio.is_some() && self.paused {
                     self.paused = false;
@@ -200,7 +207,9 @@ impl Player {
                     continue;
                 }
                 str0m::Output::Event(event) => {
-                    debug!("{event:?}");
+                    if !matches!(event, str0m::Event::MediaData(_)) {
+                        debug!("str0m event {event:?}");
+                    }
                     match event {
                         str0m::Event::Connected => info!("player connected!"),
                         _ => {}
@@ -280,7 +289,12 @@ impl Player {
             return;
         }
 
-        let writer = if let Some(w) = self.rtc.writer(self.mid) {
+        let Some(mid) = self.mid else {
+            // we don't have a mid yet, so wait a bit first
+            return;
+        };
+
+        let writer = if let Some(w) = self.rtc.writer(mid) {
             w
         } else {
             warn!("writer for mid not available");
