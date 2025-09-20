@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n             INSERT OR REPLACE INTO realm (lamprey_room_id, discord_guild_id, continuous)\n             VALUES (?, ?, ?)\n             ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "4252e74119a333e169d9a3f27138b0bbd7b88e81f82e0e8c01e3e3ff589df1e0"
+}

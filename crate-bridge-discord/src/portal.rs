@@ -1,31 +1,20 @@
+use std::fmt::Debug;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::common::Globals;
-use crate::data::AttachmentMetadata;
-use crate::data::Data;
-use crate::data::MessageMetadata;
-use crate::data::PortalConfig;
-use crate::data::Puppet;
+use crate::common::{Globals, PortalConfig};
+use crate::data::{AttachmentMetadata, Data, MessageMetadata, Puppet};
 use crate::discord::DiscordMessage;
+
 use anyhow::Result;
-use common::v1::types::media::MediaRef;
-use common::v1::types::EmbedCreate;
-use common::v1::types::RoomId;
-use common::v1::types::{self, Message, MessageId, ThreadId};
+use common::v1::types::{self, media::MediaRef, EmbedCreate, Message, MessageId, RoomId, ThreadId};
 use reqwest::Url;
-use serenity::all::CreateAllowedMentions;
-use serenity::all::CreateAttachment;
-use serenity::all::CreateEmbed;
-use serenity::all::EditAttachments;
-use serenity::all::EditWebhookMessage;
-use serenity::all::Mentionable;
 use serenity::all::{
-    ChannelId as DcChannelId, Message as DcMessage, MessageId as DcMessageId,
-    MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
+    ChannelId as DcChannelId, CreateAllowedMentions, CreateAttachment, CreateEmbed,
+    EditAttachments, EditWebhookMessage, ExecuteWebhook, Mentionable, Message as DcMessage,
+    MessageId as DcMessageId, MessageReferenceKind, MessageType as DcMessageType,
+    MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
-use serenity::all::{ExecuteWebhook, MessageReferenceKind};
-use std::fmt::Debug;
 use time::OffsetDateTime;
 use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};

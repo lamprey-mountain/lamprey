@@ -42,15 +42,20 @@ impl EventHandler for Handle {
         match msg {
             MessageSync::ThreadCreate { thread } => {
                 info!("chat upsert thread");
-                let Some(autobridge_config) = self
-                    .globals
-                    .config
-                    .autobridge
+                let Ok(realms) = self.globals.get_realms().await else {
+                    return Ok(());
+                };
+
+                let Some(realm_config) = realms
                     .iter()
-                    .find(|c| c.lamprey_room_id == thread.room_id.unwrap())
+                    .find(|c| Some(c.lamprey_room_id) == thread.room_id)
                 else {
                     return Ok(());
                 };
+
+                if !realm_config.continuous {
+                    return Ok(());
+                }
 
                 if self
                     .globals
@@ -66,9 +71,9 @@ impl EventHandler for Handle {
                     .bridge_chan
                     .send(BridgeMessage::LampreyThreadCreate {
                         thread_id: thread.id,
-                        room_id: autobridge_config.lamprey_room_id,
+                        room_id: realm_config.lamprey_room_id,
                         thread_name: thread.name,
-                        discord_guild_id: autobridge_config.discord_guild_id,
+                        discord_guild_id: realm_config.discord_guild_id,
                     })
                     .await
                 {

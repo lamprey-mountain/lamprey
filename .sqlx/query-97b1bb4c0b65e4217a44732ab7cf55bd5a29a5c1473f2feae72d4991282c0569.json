@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM realm WHERE lamprey_room_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "97b1bb4c0b65e4217a44732ab7cf55bd5a29a5c1473f2feae72d4991282c0569"
+}

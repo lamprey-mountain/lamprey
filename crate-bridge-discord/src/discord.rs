@@ -6,9 +6,10 @@ use common::v1::types::{RoomId, ThreadId};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        parse_webhook, ChannelType, CreateChannel, CreateWebhook, EditWebhookMessage, EventHandler,
-        ExecuteWebhook, GatewayIntents, Guild, GuildChannel, Http, MessagePagination, Permissions,
-        Ready, Webhook,
+        parse_webhook, ChannelType, CommandOptionType, CreateChannel, CreateCommand,
+        CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook, EditWebhookMessage,
+        EventHandler, ExecuteWebhook, GatewayIntents, Guild, GuildChannel, Http, Interaction,
+        InteractionContext, MessagePagination, Permissions, Ready, Webhook,
     },
     model::prelude::{
         ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction, TypingStartEvent,
@@ -19,8 +20,8 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
 
 use crate::{
-    common::{BridgeMessage, Globals, GlobalsTrait},
-    data::{Data, PortalConfig},
+    common::{BridgeMessage, Globals, GlobalsTrait, PortalConfig},
+    data::Data,
     portal::{Portal, PortalMessage},
 };
 
@@ -32,10 +33,82 @@ impl TypeMapKey for GlobalsKey {
     type Value = Arc<Globals>;
 }
 
+fn get_commands() -> Vec<CreateCommand> {
+    let ping = CreateCommand::new("ping")
+        .description("healthcheck for the bridge")
+        .default_member_permissions(Permissions::from_bits_truncate(536870944));
+
+    let control = CreateCommand::new("control")
+        .description("open the control panel")
+        .default_member_permissions(Permissions::from_bits_truncate(536870944));
+
+    let link = CreateCommand::new("link")
+            .description("link something to lamprey")
+            .default_member_permissions(Permissions::from_bits_truncate(536870944))
+            .contexts(vec![InteractionContext::Guild])
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::SubCommand, "guild", "link this guild")
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::String,
+                            "room_id",
+                            "the uuid of the room to link to",
+                        )
+                        .required(true),
+                    )
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::Boolean,
+                            "backfill",
+                            "whether to clone the full history of every channel",
+                        )
+                    )
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::Boolean,
+                            "continuous",
+                            "whether to create new portals as channels/threads are created (this is bidirectional)",
+                        )
+                    ),
+            )
+            .add_option(
+                CreateCommandOption::new(CommandOptionType::SubCommand, "channel", "link this channel")
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::String,
+                            "room_id",
+                            "the uuid of the room to link to",
+                        )
+                        .required(true),
+                    )
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::String,
+                            "thread_id",
+                            "the uuid of the thread to link to",
+                        )
+                        .required(true),
+                    )
+                    .add_sub_option(
+                        CreateCommandOption::new(
+                            CommandOptionType::Boolean,
+                            "backfill",
+                            "whether to clone the full history of this channel",
+                        )
+                    )
+            );
+
+    vec![ping, control, link]
+}
+
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _ctx: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         info!("discord ready {}", ready.user.name);
+
+        if let Err(err) = ctx.http.create_global_commands(&get_commands()).await {
+            error!("error while registering commands: {err:?}")
+        }
     }
 
     async fn guild_create(&self, ctx: Context, guild: Guild, _is_new: Option<bool>) {
@@ -91,14 +164,18 @@ impl EventHandler for Handler {
                     continue;
                 }
 
-                let Some(_autobridge_config) = globals
-                    .config
-                    .autobridge
-                    .iter()
-                    .find(|c| c.discord_guild_id == guild.id)
+                let Ok(realms) = globals.get_realms().await else {
+                    continue;
+                };
+
+                let Some(realm_config) = realms.iter().find(|c| c.discord_guild_id == guild.id)
                 else {
                     continue;
                 };
+
+                if !realm_config.continuous {
+                    continue;
+                }
 
                 if let Err(e) = globals
                     .bridge_chan
@@ -451,6 +528,29 @@ impl EventHandler for Handler {
             .await
         {
             error!("failed to send discord channel create message: {e}");
+        }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let Some(command) = interaction.into_command() else {
+            return;
+        };
+
+        match command.data.name.as_str() {
+            "ping" => {
+                let res = command
+                    .create_response(
+                        ctx.http(),
+                        serenity::all::CreateInteractionResponse::Message(
+                            CreateInteractionResponseMessage::new().content("pong!"),
+                        ),
+                    )
+                    .await;
+                if let Err(err) = res {
+                    error!("failed to respond to interaction: {err:?}")
+                }
+            }
+            _ => todo!(),
         }
     }
 }

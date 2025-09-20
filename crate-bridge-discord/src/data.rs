@@ -2,23 +2,12 @@ use anyhow::Result;
 use async_trait::async_trait;
 use common::v1::types::{MediaId, MessageId, RoomId, ThreadId};
 use serenity::all::{
-    AttachmentId as DcAttachmentId, ChannelId as DcChannelId, GuildId as DcGuildId,
-    MessageId as DcMessageId,
+    AttachmentId as DcAttachmentId, ChannelId as DcChannelId, MessageId as DcMessageId,
 };
 use sqlx::{query, query_as};
 use uuid::Uuid;
 
-use crate::common::Globals;
-
-#[derive(Debug, Clone)]
-pub struct PortalConfig {
-    pub lamprey_thread_id: ThreadId,
-    pub lamprey_room_id: RoomId,
-    pub discord_guild_id: DcGuildId,
-    pub discord_channel_id: DcChannelId,
-    pub discord_thread_id: Option<DcChannelId>,
-    pub discord_webhook: String,
-}
+use crate::common::{Globals, PortalConfig, RealmConfig};
 
 struct PortalConfigRow {
     pub lamprey_thread_id: String,
@@ -94,6 +83,34 @@ pub struct Puppet {
     pub bot: Option<bool>,
 }
 
+struct RealmConfigRow {
+    lamprey_room_id: String,
+    discord_guild_id: String,
+    continuous: bool,
+}
+
+impl TryFrom<RealmConfigRow> for RealmConfig {
+    type Error = anyhow::Error;
+
+    fn try_from(value: RealmConfigRow) -> Result<Self> {
+        Ok(Self {
+            lamprey_room_id: value.lamprey_room_id.parse()?,
+            discord_guild_id: value.discord_guild_id.parse()?,
+            continuous: value.continuous,
+        })
+    }
+}
+
+impl From<RealmConfig> for RealmConfigRow {
+    fn from(value: RealmConfig) -> Self {
+        Self {
+            lamprey_room_id: value.lamprey_room_id.to_string(),
+            discord_guild_id: value.discord_guild_id.to_string(),
+            continuous: value.continuous,
+        }
+    }
+}
+
 impl TryFrom<MessageMetadataRow> for MessageMetadata {
     type Error = anyhow::Error;
 
@@ -159,6 +176,9 @@ pub trait Data {
     async fn delete_message_dc(&self, message_id: DcMessageId) -> Result<()>;
     async fn get_puppet(&self, ext_platform: &str, ext_id: &str) -> Result<Option<Puppet>>;
     async fn insert_puppet(&self, data: Puppet) -> Result<()>;
+    async fn get_realms(&self) -> Result<Vec<RealmConfig>>;
+    async fn insert_realm(&self, config: RealmConfig) -> Result<()>;
+    async fn delete_realm(&self, lamprey_room_id: RoomId) -> Result<()>;
 }
 
 #[async_trait]
@@ -375,6 +395,46 @@ impl Data for Globals {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn get_realms(&self) -> Result<Vec<RealmConfig>> {
+        let rows = query_as!(
+            RealmConfigRow,
+            r#"
+            SELECT
+              lamprey_room_id AS "lamprey_room_id!: String",
+              discord_guild_id AS "discord_guild_id!: String",
+              continuous
+            FROM realm
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter().map(|r| r.try_into()).collect()
+    }
+
+    async fn insert_realm(&self, config: RealmConfig) -> Result<()> {
+        let row: RealmConfigRow = config.into();
+        query!(
+            r#"
+             INSERT OR REPLACE INTO realm (lamprey_room_id, discord_guild_id, continuous)
+             VALUES (?, ?, ?)
+             "#,
+            row.lamprey_room_id,
+            row.discord_guild_id,
+            row.continuous
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn delete_realm(&self, lamprey_room_id: RoomId) -> Result<()> {
+        let id = lamprey_room_id.to_string();
+        query!("DELETE FROM realm WHERE lamprey_room_id = ?", id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }

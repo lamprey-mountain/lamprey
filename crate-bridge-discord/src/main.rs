@@ -1,7 +1,7 @@
 use anyhow::Result;
 use common::{BridgeMessage, Config, Globals};
 use dashmap::DashMap;
-use data::{Data, PortalConfig};
+use data::Data;
 use discord::Discord;
 use figment::providers::{Env, Format, Toml};
 use lamprey::Lamprey;
@@ -12,6 +12,8 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 mod discord;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+
+use crate::common::PortalConfig;
 
 mod common;
 mod data;
@@ -158,14 +160,18 @@ async fn main() -> Result<()> {
                     channel_id,
                     channel_name,
                 } => {
-                    let Some(autobridge_config) = bridge_globals
-                        .config
-                        .autobridge
-                        .iter()
-                        .find(|c| c.discord_guild_id == guild_id)
+                    let Ok(realms) = bridge_globals.get_realms().await else {
+                        continue;
+                    };
+
+                    let Some(realm_config) = realms.iter().find(|c| c.discord_guild_id == guild_id)
                     else {
                         continue;
                     };
+
+                    if !realm_config.continuous {
+                        continue;
+                    }
 
                     if bridge_globals
                         .get_portal_by_discord_channel(channel_id)
@@ -192,7 +198,7 @@ async fn main() -> Result<()> {
                     };
 
                     let thread = match ly
-                        .create_thread(autobridge_config.lamprey_room_id, thread_name.clone(), None)
+                        .create_thread(realm_config.lamprey_room_id, thread_name.clone(), None)
                         .await
                     {
                         Ok(thread) => thread,
@@ -218,7 +224,7 @@ async fn main() -> Result<()> {
 
                     let portal_config = PortalConfig {
                         lamprey_thread_id: thread.id,
-                        lamprey_room_id: autobridge_config.lamprey_room_id,
+                        lamprey_room_id: realm_config.lamprey_room_id,
                         discord_guild_id: guild_id,
                         discord_channel_id: channel_id,
                         discord_thread_id: None,
@@ -244,10 +250,14 @@ async fn main() -> Result<()> {
 
     let startup_autobridge_task = tokio::spawn(async move {
         let globals = globals.clone();
-        for bridge in &globals.config.autobridge {
-            info!("autobridging {}", bridge.lamprey_room_id);
+        for realm in globals.get_realms().await? {
+            if !realm.continuous {
+                continue;
+            }
+
+            info!("creating new portal for {:?}", realm);
             let ly = globals.lamprey_handle().await?;
-            let threads = ly.room_threads(bridge.lamprey_room_id).await?;
+            let threads = ly.room_threads(realm.lamprey_room_id).await?;
             for thread in threads {
                 if globals.get_portal_by_thread_id(thread.id).await?.is_some() {
                     continue;
@@ -256,9 +266,9 @@ async fn main() -> Result<()> {
                     .bridge_chan
                     .send(BridgeMessage::LampreyThreadCreate {
                         thread_id: thread.id,
-                        room_id: bridge.lamprey_room_id,
+                        room_id: realm.lamprey_room_id,
                         thread_name: thread.name,
-                        discord_guild_id: bridge.discord_guild_id,
+                        discord_guild_id: realm.discord_guild_id,
                     })
                     .await
                 {

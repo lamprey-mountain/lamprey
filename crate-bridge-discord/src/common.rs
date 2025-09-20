@@ -25,12 +25,6 @@ pub struct Globals {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct AutoBridgeConfig {
-    pub lamprey_room_id: RoomId,
-    pub discord_guild_id: DcGuildId,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub database_url: String,
     pub lamprey_token: String,
@@ -38,10 +32,29 @@ pub struct Config {
     pub lamprey_ws_url: Option<String>,
     pub lamprey_cdn_url: Option<String>,
     pub discord_token: String,
-    #[serde(default)]
-    pub autobridge: Vec<AutoBridgeConfig>,
     pub otel_trace_endpoint: Option<String>,
     pub rust_log: String,
+}
+
+/// defines a single chatroom bridged together
+#[derive(Debug, Clone)]
+pub struct PortalConfig {
+    pub lamprey_thread_id: ThreadId,
+    pub lamprey_room_id: RoomId,
+    pub discord_guild_id: DcGuildId,
+    pub discord_channel_id: DcChannelId,
+    pub discord_thread_id: Option<DcChannelId>,
+    pub discord_webhook: String,
+}
+
+/// defines a collection of chatrooms bridged together (eg. discord guilds and lamprey rooms)
+#[derive(Debug, Clone)]
+pub struct RealmConfig {
+    pub lamprey_room_id: RoomId,
+    pub discord_guild_id: DcGuildId,
+
+    /// if new portals are automatically created when a discord channel or lamprey thread is created
+    pub continuous: bool,
 }
 
 #[async_trait]

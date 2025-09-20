@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n              lamprey_room_id AS \"lamprey_room_id!: String\",\n              discord_guild_id AS \"discord_guild_id!: String\",\n              continuous\n            FROM realm\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "lamprey_room_id!: String",
+        "ordinal": 0,
+        "type_info": "Null"
+      },
+      {
+        "name": "discord_guild_id!: String",
+        "ordinal": 1,
+        "type_info": "Null"
+      },
+      {
+        "name": "continuous",
+        "ordinal": 2,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f9111571ddb1fc92fa06c201b5c5971ba6b5075e3bf2566328fa68246f003068"
+}
