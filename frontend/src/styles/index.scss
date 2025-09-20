@@ -436,6 +436,7 @@ input[type="submit"] {
 	padding: 4px;
 	white-space: pre-wrap;
 	overflow-y: auto;
+	caret-color: $fg-400;
 
 	& .placeholder {
 		position: absolute;
