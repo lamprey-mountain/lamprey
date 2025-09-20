@@ -273,21 +273,24 @@ async fn room_member_update(
             &res.override_description,
         )
         .change("mute", &start.mute, &res.mute)
-        .change("deaf", &start.deaf, &res.deaf);
+        .change("deaf", &start.deaf, &res.deaf)
+        .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth_user.id,
-        session_id: None,
-        reason: reason.clone(),
-        ty: AuditLogEntryType::MemberUpdate {
+    if !changes.is_empty() {
+        d.audit_logs_room_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
             room_id,
-            user_id: target_user_id,
-            changes: changes.build(),
-        },
-    })
-    .await?;
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MemberUpdate {
+                room_id,
+                user_id: target_user_id,
+                changes,
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_room(
         room_id,

@@ -239,7 +239,7 @@ impl DataRoomMember for Postgres {
         query!(
             r#"
             UPDATE room_member
-        	SET override_name = $3, override_description = $4
+        	SET override_name = $3, override_description = $4, mute = $5, deaf = $6
             WHERE room_id = $1 AND user_id = $2 AND membership = 'Join'
         "#,
             *room_id,
@@ -248,6 +248,8 @@ impl DataRoomMember for Postgres {
             patch
                 .override_description
                 .unwrap_or(item.override_description),
+            patch.mute.unwrap_or(item.mute),
+            patch.deaf.unwrap_or(item.deaf),
         )
         .execute(&mut *tx)
         .await?;
