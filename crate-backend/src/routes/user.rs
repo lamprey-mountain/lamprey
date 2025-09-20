@@ -181,7 +181,7 @@ async fn user_get(
     ),
     tags = ["user"],
     responses(
-        (status = OK, body = User, description = "success"),
+        (status = OK, body = PaginationResponse<AuditLogEntry>, description = "success"),
     )
 )]
 async fn user_audit_logs(
