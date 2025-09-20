@@ -44,7 +44,7 @@ impl Sfu {
         }
     }
 
-    pub async fn run(config: Config) -> Result<()> {
+    pub async fn run(config: Config) {
         let (peer_send, mut peer_events) = mpsc::unbounded_channel::<PeerEventEnvelope>();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         let (command_tx, mut command_rx) = mpsc::unbounded_channel();

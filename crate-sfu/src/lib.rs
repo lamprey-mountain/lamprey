@@ -13,6 +13,8 @@ pub mod backend;
 pub mod config;
 pub mod peer;
 pub mod sfu;
+pub mod signalling;
+pub mod state;
 pub mod util;
 
 /// an event emitted by the peer and handled by the sfu

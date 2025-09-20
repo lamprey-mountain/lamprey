@@ -5,7 +5,8 @@ use std::{
 };
 
 use crate::{
-    config::Config, MediaData, PeerEvent, SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
+    config::Config, signalling::Signalling, MediaData, PeerEvent, SignallingMessage,
+    TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
@@ -15,7 +16,6 @@ use common::v1::types::{
     UserId,
 };
 use str0m::{
-    change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     channel::ChannelId,
     media::{Direction, Mid},
     net::{Protocol, Receive},
@@ -38,7 +38,7 @@ pub struct Peer {
     socket_v6: UdpSocket,
     packet_v4: [u8; 2000],
     packet_v6: [u8; 2000],
-    signalling_state: SignallingState,
+    signalling: Signalling,
 
     /// media data we are receiving from the user
     inbound: HashMap<Mid, TrackIn>,
@@ -59,12 +59,6 @@ pub struct Peer {
 
     /// the datachannel where speaking data is sent
     speaking_chan: Option<ChannelId>,
-}
-
-#[derive(Debug)]
-enum SignallingState {
-    Stable,
-    HaveLocalOffer(SdpPendingOffer),
 }
 
 impl Peer {
@@ -109,7 +103,7 @@ impl Peer {
             packet_v6: [0; 2000],
             tracks_metadata: vec![],
             have_queue: vec![],
-            signalling_state: SignallingState::Stable,
+            signalling: Signalling::new(),
             speaking_chan: None,
         };
 
@@ -416,20 +410,12 @@ impl Peer {
 
     /// handle an sdp answer from the peer
     fn handle_answer(&mut self, sdp: SessionDescription) -> Result<()> {
-        if let SignallingState::HaveLocalOffer(pending) =
-            std::mem::replace(&mut self.signalling_state, SignallingState::Stable)
-        {
-            let answer = SdpAnswer::from_sdp_string(&sdp)?;
-            self.rtc.sdp_api().accept_answer(pending, answer)?;
-            info!("accept answer");
+        self.signalling.handle_answer(&mut self.rtc, sdp)?;
 
-            for track in &mut self.outbound {
-                if let TrackState::Negotiating(m) = track.state {
-                    track.state = TrackState::Open(m);
-                }
+        for track in &mut self.outbound {
+            if let TrackState::Negotiating(m) = track.state {
+                track.state = TrackState::Open(m);
             }
-        } else {
-            warn!("received answer but we don't have a local offer");
         }
 
         let user_ids = std::mem::take(&mut self.have_queue);
@@ -440,13 +426,7 @@ impl Peer {
 
     /// handle an sdp offer from the peer
     fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
-        let ready_for_offer = matches!(self.signalling_state, SignallingState::Stable);
-        if !ready_for_offer {
-            warn!("offer collision, but we are polite offer so allow it");
-        }
-
-        let offer = SdpOffer::from_sdp_string(&sdp)?;
-        let answer = self.rtc.sdp_api().accept_offer(offer)?;
+        let answer = self.signalling.handle_offer(&mut self.rtc, sdp)?;
 
         // renegotiate outbound tracks
         for track in &mut self.outbound {
@@ -494,7 +474,6 @@ impl Peer {
         self.emit(PeerEvent::Signalling(SignallingMessage::Answer {
             sdp: SessionDescription(sdp_str),
         }))?;
-        self.signalling_state = SignallingState::Stable;
 
         let user_ids = std::mem::take(&mut self.have_queue);
         self.emit(PeerEvent::WantHave { user_ids })?;
@@ -503,13 +482,7 @@ impl Peer {
     }
 
     /// send an sdp offer if we have tracks that haven't been negotiated yet
-    fn negotiate_if_needed(&mut self) -> Result<bool> {
-        if matches!(self.signalling_state, SignallingState::HaveLocalOffer(_)) {
-            // NOTE: do i overwrite the pending offer here?
-            warn!("trying to negotiate, but we already have a local offer");
-            return Ok(false);
-        }
-
+    fn negotiate_if_needed(&mut self) -> Result<()> {
         let mut change = self.rtc.sdp_api();
 
         // create pending outbound tracks
@@ -520,21 +493,14 @@ impl Peer {
             }
         }
 
-        if !change.has_changes() {
-            return Ok(false);
+        if let Some(offer) = self.signalling.negotiate_if_needed(change)? {
+            self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
+                sdp: SessionDescription(offer.to_sdp_string()),
+                tracks: vec![],
+            }))?;
         }
 
-        let Some((offer, pending)) = change.apply() else {
-            return Ok(false);
-        };
-
-        self.emit(PeerEvent::Signalling(SignallingMessage::Offer {
-            sdp: SessionDescription(offer.to_sdp_string()),
-            tracks: vec![],
-        }))?;
-        self.signalling_state = SignallingState::HaveLocalOffer(pending);
-
-        Ok(true)
+        Ok(())
     }
 
     /// handle media data from the local peer
