@@ -43,7 +43,10 @@ export class RoomMembers {
 							membership: "Leave",
 							room_id,
 							user_id,
-							membership_updated_at: new Date().toISOString(),
+							deaf: false,
+							mute: false,
+							roles: [],
+							joined_at: new Date().toISOString(),
 						};
 						return placeholder;
 					}

@@ -586,7 +586,8 @@ em {
 		gap: 6px;
 		justify-content: end;
 
-		button, input[type="submit"] {
+		button,
+		input[type="submit"] {
 			padding: 2px 4px;
 			border: solid $sep-500 1px;
 		}
@@ -602,7 +603,7 @@ em {
 	height: 100%;
 	overflow-y: auto;
 	scrollbar-width: none;
-	z-index: 1;
+	z-index: 999;
 
 	& > .inner {
 		position: absolute;
@@ -953,54 +954,103 @@ summary {
 }
 
 .room-settings-members {
-	& > li {
-		border: solid $sep-500 1px;
-		background: $bg-300;
-		margin-top: 4px;
-		padding: 4px;
-		display: grid;
+	& header {
+		display: flex;
 
-		& > .name {
-			font-size: 1em;
-			font-weight: bold;
+		& .name {
+			width: 224px;
+			margin-left: 36px;
 		}
 
-		& > .roles {
+		& .joined {
+			width: 96px;
+		}
+	}
+
+	& .edit-roles {
+		position: fixed;
+		top: 0;
+		left: 0;
+		background-color: $bg-300;
+		border: solid 1px $sep-500;
+		box-shadow: 2px 2px 8px $bg-100;
+		min-width: 128px;
+		max-width: 256px;
+
+		& label {
+			display: flex;
+			gap: 2px;
+			cursor: pointer;
+			padding: 2px 0;
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			input[type="checkbox"] {
+				align-self: flex-start;
+				margin: 4px;
+			}
+
+			& .has {
+				font-weight: bold;
+			}
+
+			&.disabled {
+				cursor: not-allowed;
+				color: $fg-500;
+			}
+		}
+	}
+
+	& > ul > li {
+		& + li {
+			border-top: solid $sep-500 1px;
+		}
+
+		padding: 8px 4px;
+		display: flex;
+
+		& .profile {
+			display: flex;
+			gap: 8px;
+			align-items: start;
+			width: 256px;
+
+			& .avatar {
+				height: 32px;
+				width: 32px;
+				margin-top: 2px;
+			}
+
+			& .name {
+				font-size: 1rem;
+				/* margin-left: 2px; */
+			}
+		}
+
+		& .roles {
 			display: flex;
 			gap: 4px;
-		}
-	}
+			align-items: center;
 
-	& button {
-		background: $bg-200;
-		border: solid $sep-500 1px;
+			& button {
+				padding: 0 4px;
+				font-size: 0.9em;
+				border: none;
+				border-radius: 2px;
+				background: $bg-300;
 
-		&:hover {
-			background: $bg-300;
-		}
-	}
-
-	.roles {
-		display: flex;
-		flex-direction: column;
-	}
-	.roles label {
-		display: flex;
-		gap: 2px;
-		cursor: pointer;
-		padding: 2px 0;
-
-		&:hover {
-			background: $bg-200;
+				&:hover {
+					background: $bg-400;
+				}
+			}
 		}
 
-		input[type="checkbox"] {
-			align-self: flex-start;
-			margin: 4px;
-		}
-
-		& .has {
-			font-weight: bold;
+		& .joined {
+			width: 96px;
+			display: flex;
+			flex-direction: column;
 		}
 	}
 }

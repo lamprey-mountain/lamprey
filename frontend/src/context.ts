@@ -97,6 +97,7 @@ export type ChatCtx = {
 	t: i18n.NullableTranslator<i18n.Flatten<typeof en>>;
 	events: Emitter<Events>;
 	menu: Accessor<Menu | null>;
+	setMenu: Setter<Menu | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
 	thread_attachments: ReactiveMap<string, Array<Attachment>>;
 	thread_editor_state: Map<string, EditorState>;

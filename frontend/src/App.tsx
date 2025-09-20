@@ -235,6 +235,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		t: i18n.translator(() => dict()),
 		events,
 		menu,
+		setMenu,
 		thread_anchor: new ReactiveMap(),
 		thread_attachments: new ReactiveMap(),
 		thread_editor_state: new Map(),

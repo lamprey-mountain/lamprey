@@ -112,7 +112,7 @@ export function usePermissions(
 
 		console.log("[perms] resolved perms", finalPermissions);
 
-		const rank = roles.reduce(
+		const rank = room?.owner_id === user_id() ? Infinity : roles.reduce(
 			(max, role) =>
 				member.roles.includes(role.id) ? Math.max(role.position, max) : max,
 			0,

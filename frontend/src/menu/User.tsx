@@ -207,7 +207,7 @@ export function UserMenu(props: UserMenuProps) {
 			<Show when={hasPermission("RoleApply")}>
 				<Item>roles</Item>
 			</Show>
-			<Show when={hasPermission("MemberKick")}>
+			<Show when={hasPermission("MemberKick") && props.thread_id}>
 				<Item onClick={kickThread}>remove from thread</Item>
 			</Show>
 			<Separator />
