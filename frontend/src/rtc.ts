@@ -251,6 +251,7 @@ export const createVoiceClient = () => {
 				}
 			}
 		} else if (e.type === "VoiceDispatch") {
+			console.log("voice dispatch", api.voiceState(), e);
 			if (!api.voiceState()) return;
 
 			const msg = e.payload as SignallingMessage;
@@ -305,13 +306,6 @@ export const createVoiceClient = () => {
 						answer: msg.sdp,
 					});
 				}
-
-				// // TODO: copy Have logic here?
-				// for (const t of msg.tracks) {
-				// 	t.kind;
-				// 	t.key;
-				// 	t.mid;
-				// }
 			} else if (msg.type === "Candidate") {
 				console.log("[rtc:signal] remote ICE candidate", msg.candidate);
 				await conn.addIceCandidate({ candidate: msg.candidate });
@@ -334,7 +328,7 @@ export const createVoiceClient = () => {
 					let s = remoteStreams.find((s) => s.id === streamId);
 					if (s) {
 						console.debug("[rtc:stream] reuse stream %s", streamId, s);
-						s.mids.push(track.mid);
+						if (!s.mids.includes(track.mid)) s.mids.push(track.mid);
 					} else {
 						const media = new MediaStream();
 						console.log("[rtc:stream] initialized new stream", streamId, media);
@@ -402,13 +396,9 @@ export const createVoiceClient = () => {
 			const existing = api.voiceState();
 			if (existing) {
 				console.warn(
-					"already have a voice state, attempting to reset first",
+					"[rtc:signal] already have a voice state, not resetting first",
 					existing,
 				);
-				send({
-					type: "VoiceState",
-					state: null,
-				});
 			}
 			send({
 				type: "VoiceState",
@@ -423,6 +413,13 @@ export const createVoiceClient = () => {
 		},
 		createStream(key: string) {
 			const user_id = api.users.cache.get("@self")!.id;
+			const existing = localStreams.find((i) =>
+				i.key === key && i.user_id === user_id
+			);
+			if (existing) {
+				console.log("[rtc:local] reuse local stream", key, existing);
+				return existing;
+			}
 			console.log("[rtc:local] create local stream", key);
 			const media = new MediaStream();
 			localStreams.push({

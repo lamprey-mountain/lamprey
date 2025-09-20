@@ -134,52 +134,11 @@ impl SfuHandle {
                     srv.users.voice_state_remove(&user_id);
                 }
 
-                match (&state, &old) {
-                    (Some(new), Some(old)) if new.thread_id != old.thread_id => {
-                        // TODO: only send this to people who can't see the new thread
-                        // maybe edit the if let below?
-                        self.s
-                            .broadcast_thread(
-                                old.thread_id,
-                                user_id,
-                                MessageSync::VoiceState {
-                                    user_id,
-                                    state: None,
-                                    old_state: Some(old.clone()),
-                                },
-                            )
-                            .await?;
-                    }
-                    _ => {}
-                }
-
-                if let Some(v) = &old {
-                    self.s
-                        .broadcast_thread(
-                            v.thread_id,
-                            user_id,
-                            MessageSync::VoiceState {
-                                user_id,
-                                state: state.clone(),
-                                old_state: old.clone(),
-                            },
-                        )
-                        .await?;
-                }
-
-                if let Some(v) = &state {
-                    self.s
-                        .broadcast_thread(
-                            v.thread_id,
-                            user_id,
-                            MessageSync::VoiceState {
-                                user_id,
-                                state,
-                                old_state: old,
-                            },
-                        )
-                        .await?;
-                }
+                self.s.broadcast(MessageSync::VoiceState {
+                    user_id,
+                    state,
+                    old_state: old,
+                })?;
             }
         }
 

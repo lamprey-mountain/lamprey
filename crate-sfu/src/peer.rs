@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    config::Config, signalling::Signalling, MediaData, PeerEvent, SignallingMessage,
+    config::Config, signalling::Signalling, Error, MediaData, PeerEvent, SignallingMessage,
     TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
@@ -399,11 +399,12 @@ impl Peer {
                 }
             }
             SignallingMessage::Want { tracks: _ } => todo!(),
-            SignallingMessage::Have { .. } => panic!("server only"),
+            SignallingMessage::Have { .. } => return Err(Error::HaveServerOnly.into()),
             SignallingMessage::Reconnect => panic!("handled by sfu"),
             SignallingMessage::VoiceState { state } => {
                 self.voice_state.thread_id = state.unwrap().thread_id;
             }
+            SignallingMessage::Ready => {}
         }
         Ok(())
     }

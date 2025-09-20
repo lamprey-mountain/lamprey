@@ -486,8 +486,10 @@ export function createApi(
 			if (msg.user_id === users.cache.get("@self")?.id) {
 				setVoiceState(state);
 			}
+		} else if (msg.type === "VoiceDispatch") {
+			// handled by rtc.ts
 		} else {
-			// console.warn(`unknown event ${msg.type}`, msg);
+			console.warn(`unknown event ${msg.type}`, msg);
 		}
 	});
 

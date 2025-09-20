@@ -255,7 +255,7 @@ export const createEditor = (_opts: EditorProps) => {
 					},
 				});
 
-				console.log("editor mounted", editorRef, view);
+				// console.log("editor mounted", editorRef, view);
 				view.focus();
 			});
 

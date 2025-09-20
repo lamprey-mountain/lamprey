@@ -137,6 +137,9 @@ export type TrackMetadata = {
 
 export type SignallingMessage =
 	| {
+		type: "Ready";
+	}
+	| {
 		type: "Offer";
 		sdp: string;
 		tracks: TrackMetadata[];

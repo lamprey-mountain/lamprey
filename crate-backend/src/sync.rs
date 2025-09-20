@@ -53,6 +53,7 @@ enum AuthCheck {
     User(UserId),
     UserMutual(UserId),
     Thread(ThreadId),
+    EitherThread(ThreadId, ThreadId),
 }
 
 impl Connection {
@@ -306,7 +307,7 @@ impl Connection {
                             state.mute = rm.mute;
                             state.deaf = rm.deaf;
                         }
-                        dbg!(self.s.alloc_sfu(state.thread_id)?);
+                        self.s.alloc_sfu(state.thread_id)?;
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: Some(state),
@@ -450,15 +451,12 @@ impl Connection {
                 state,
                 user_id,
                 old_state,
-            } => {
-                if let Some(state) = state {
-                    AuthCheck::Thread(state.thread_id)
-                } else if let Some(old) = old_state {
-                    AuthCheck::Thread(old.thread_id)
-                } else {
-                    AuthCheck::User(*user_id)
-                }
-            }
+            } => match (state, old_state) {
+                (None, None) => AuthCheck::User(*user_id),
+                (None, Some(o)) => AuthCheck::Thread(o.thread_id),
+                (Some(s), None) => AuthCheck::Thread(s.thread_id),
+                (Some(s), Some(o)) => AuthCheck::EitherThread(s.thread_id, o.thread_id),
+            },
             MessageSync::EmojiCreate { emoji } => match emoji.owner {
                 EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
                 EmojiOwner::User => AuthCheck::User(emoji.creator_id),
@@ -496,6 +494,21 @@ impl Connection {
                     .for_thread(user_id, thread_id)
                     .await?;
                 perms.has(Permission::View)
+            }
+            (Some(user_id), AuthCheck::EitherThread(thread_id_0, thread_id_1)) => {
+                let perms0 = self
+                    .s
+                    .services()
+                    .perms
+                    .for_thread(user_id, thread_id_0)
+                    .await?;
+                let perms1 = self
+                    .s
+                    .services()
+                    .perms
+                    .for_thread(user_id, thread_id_1)
+                    .await?;
+                perms0.has(Permission::View) || perms1.has(Permission::View)
             }
             (Some(auth_user_id), AuthCheck::ThreadOrUser(thread_id, target_user_id)) => {
                 if auth_user_id == target_user_id {
@@ -560,6 +573,7 @@ impl Connection {
                     mut state,
                     mut old_state,
                 } => {
+                    // strip session_id for voice states that aren't ours
                     let is_ours = self.state.session().and_then(|s| s.user_id()) == Some(user_id);
                     if !is_ours {
                         if let Some(s) = &mut state {
@@ -570,6 +584,20 @@ impl Connection {
                             s.session_id = None;
                         }
                     }
+
+                    // if we don't have view perms in the new thread, treat it like a disconnect
+                    if let Some(s) = &state {
+                        let perms = self
+                            .s
+                            .services()
+                            .perms
+                            .for_thread(user_id, s.thread_id)
+                            .await?;
+                        if !perms.has(Permission::View) {
+                            state = None;
+                        }
+                    }
+
                     MessageSync::VoiceState {
                         user_id,
                         state,

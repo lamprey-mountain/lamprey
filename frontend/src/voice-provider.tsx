@@ -63,6 +63,8 @@ export const VoiceProvider = (props: ParentProps) => {
 	let camTn: RTCRtpTransceiver | undefined;
 	let musicTn: RTCRtpTransceiver | undefined;
 
+	let rtcCreated = false;
+
 	createEffect(on(vad.hasVoiceActivity, (activity) => {
 		state.rtc?.sendSpeaking(activity ? 1 : 0);
 	}));
@@ -74,22 +76,26 @@ export const VoiceProvider = (props: ParentProps) => {
 		) {
 			const rtc = state.rtc;
 			if (!rtc) return;
-			rtc.createStream("user");
-			rtc.createStream("screen");
-			rtc.createStream("music");
-			micTn = rtc.createTransceiver("user", "audio");
-			camTn = rtc.createTransceiver("user", "video");
-			screenAudTn = rtc.createTransceiver("screen", "audio");
-			screenVidTn = rtc.createTransceiver("screen", "video");
-			musicTn = rtc.createTransceiver("music", "audio");
+
+			if (!rtcCreated) {
+				rtc.createStream("user");
+				rtc.createStream("screen");
+				rtc.createStream("music");
+				micTn = rtc.createTransceiver("user", "audio");
+				camTn = rtc.createTransceiver("user", "video");
+				screenAudTn = rtc.createTransceiver("screen", "audio");
+				screenVidTn = rtc.createTransceiver("screen", "video");
+				musicTn = rtc.createTransceiver("music", "audio");
+				rtcCreated = true;
+			}
 
 			// if we have an existing microphone stream, use it
 			if (streamMic && !state.muted) {
 				console.log("[voice] restore microphone stream");
 				const track = streamMic.getAudioTracks()[0];
 				if (track) {
-					await micTn.sender.replaceTrack(track);
-					micTn.direction = "sendonly";
+					await micTn!.sender.replaceTrack(track);
+					micTn!.direction = "sendonly";
 				}
 			}
 
@@ -98,14 +104,15 @@ export const VoiceProvider = (props: ParentProps) => {
 				console.log("[voice] restore camera stream");
 				const track = streamCam.getVideoTracks()[0];
 				if (track) {
-					await camTn.sender.replaceTrack(track);
-					camTn.direction = "sendonly";
+					await camTn!.sender.replaceTrack(track);
+					camTn!.direction = "sendonly";
 				}
 			}
 		}
 	});
 
 	onCleanup(() => {
+		console.log("[rtc] cleanup");
 		const rtc = state.rtc;
 		if (!rtc) return;
 		rtc.disconnect();
@@ -117,13 +124,16 @@ export const VoiceProvider = (props: ParentProps) => {
 				update("rtc", createVoiceClient());
 			}
 			update("threadId", threadId);
+			console.log("[rtc] connect to %s", threadId, state.rtc);
 			state.rtc?.connect(threadId);
 		},
 		disconnect() {
+			console.log("[rtc] disconnect");
 			state.rtc?.disconnect();
 			state.rtc?.conn.close();
 			update("rtc", null);
 			update("threadId", null);
+			rtcCreated = false;
 		},
 		toggleMic: async () => {
 			if (!streamMic) {

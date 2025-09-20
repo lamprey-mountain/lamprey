@@ -32,7 +32,7 @@ export const Voice = (p: { thread: Thread }) => {
 	const [voice, actions] = useVoice();
 
 	createEffect(on(() => p.thread.id, (tid) => {
-		if (!voice.threadId) actions.connect(tid);
+		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
 	}));
 
 	const getName = (uid: string) => {

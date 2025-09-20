@@ -89,6 +89,7 @@ impl Sfu {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self, peer_send))]
     async fn handle_voice_state(
         &self,
         user_id: UserId,
@@ -363,6 +364,7 @@ impl Sfu {
         Ok(())
     }
 
+    /// emit an event to backend
     async fn emit(&self, event: SfuEvent) -> Result<()> {
         self.backend_tx
             .send(event)

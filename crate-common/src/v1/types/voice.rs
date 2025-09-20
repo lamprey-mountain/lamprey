@@ -122,6 +122,9 @@ pub struct TrackMetadata {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
 pub enum SignallingMessage {
+    /// the allocated sfu is ready to accept voice payloads
+    Ready,
+
     /// a sdp offer
     Offer {
         sdp: SessionDescription,
