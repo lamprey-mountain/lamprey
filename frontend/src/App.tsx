@@ -357,11 +357,17 @@ export const Root3 = (props: any) => {
 							console.log("listening to stream", stream);
 							if (audioRef) audioRef.srcObject = stream.media;
 						});
+						createEffect(() => {
+							const c = voice.userConfig.get(stream.user_id) ??
+								{ mute: false, mute_video: false, volume: 100 };
+							audioRef.volume = c.volume / 100;
+						});
 						return (
 							<audio
 								autoplay
 								ref={audioRef!}
-								muted={voice.deafened}
+								muted={voice.deafened ||
+									voice.userConfig.get(stream.user_id)?.mute === true}
 							/>
 						);
 					}}

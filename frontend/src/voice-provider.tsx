@@ -10,6 +10,7 @@ import {
 import { createStore } from "solid-js/store";
 import { useApi } from "./api";
 import { createVoiceClient } from "./rtc";
+import { ReactiveMap } from "@solid-primitives/map";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
@@ -22,6 +23,13 @@ export type VoiceState = {
 	rtc: VoiceClient | null;
 	threadId: string | null;
 	hasVoiceActivity: boolean;
+	userConfig: ReactiveMap<string, VoiceConfigUser>;
+};
+
+type VoiceConfigUser = {
+	volume: number;
+	mute: boolean;
+	mute_video: boolean;
 };
 
 export type VoiceActions = {
@@ -49,6 +57,7 @@ export const VoiceProvider = (props: ParentProps) => {
 		musicPlaying: false,
 		rtc: null,
 		threadId: null,
+		userConfig: new ReactiveMap(),
 		get hasVoiceActivity() {
 			return vad.hasVoiceActivity();
 		},

@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import { useApi } from "./api";
 import { SignallingMessage, TrackMetadata } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import { createEmitter, createEventBus } from "@solid-primitives/event-bus";
+import { createEmitter } from "@solid-primitives/event-bus";
 
 type RemoteStream = {
 	id: string;
@@ -361,6 +361,9 @@ export const createVoiceClient = () => {
 							);
 						}
 					}
+
+					// update streams for reactivity
+					streams.set(streamId, { ...s });
 
 					console.log(
 						"[rtc:state] current remoteStreams, transceivers:",

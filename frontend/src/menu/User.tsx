@@ -3,6 +3,7 @@ import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
+import { useVoice } from "../voice-provider.tsx";
 
 type UserMenuProps = {
 	user_id: string;
@@ -37,6 +38,7 @@ export function UserMenu(props: UserMenuProps) {
 	const userVoiceStates = () =>
 		[...api.voiceStates.values()].filter((s) => s.user_id === props.user_id);
 	const connectedToVoice = () => userVoiceStates().length;
+	const [voice, voiceActions] = useVoice();
 
 	const sendFriendRequest = () => {
 		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
@@ -229,12 +231,72 @@ export function UserMenu(props: UserMenuProps) {
 			</Show>
 			<Separator />
 			<Show when={props.user_id !== self_id() && connectedToVoice()}>
-				<Item>volume</Item>
-				<Item>mute (for yourself)</Item>
+				{
+					/*
+TODO: setting volume greater than 1
+<li>
+	<label style="display:block;padding:0 8px;padding-top:8px">
+		<div class="dim">volume</div>
+		<input
+			type="range"
+			min="0"
+			max="150"
+			step="0.01"
+			list="volume-detents"
+			value={voice.userConfig.get(props.user_id)?.volume ?? 100}
+			onInput={(e) =>
+				voice.userConfig.set(props.user_id, {
+					...voice.userConfig.get(props.user_id) ??
+						{ mute: false, mute_video: false, volume: 100 },
+					volume: parseFloat(e.target.value),
+				})}
+		/>
+	</label>
+	// TODO: move this to root
+	<datalist id="volume-detents">
+		<option value="100" />
+	</datalist>
+</li>
+					*/
+				}
+				<li>
+					<label style="display:block;padding:0 8px;padding-top:8px">
+						<div class="dim">volume</div>
+						<input
+							type="range"
+							min="0"
+							max="100"
+							list="volume-detents"
+							value={voice.userConfig.get(props.user_id)?.volume ?? 100}
+							onInput={(e) =>
+								voice.userConfig.set(props.user_id, {
+									...voice.userConfig.get(props.user_id) ??
+										{ mute: false, mute_video: false, volume: 100 },
+									volume: parseFloat(e.target.value),
+								})}
+						/>
+					</label>
+				</li>
+				<Item
+					onClick={() => {
+						const c = voice.userConfig.get(props.user_id) ??
+							{ mute: false, mute_video: false, volume: 100 };
+						c.mute = !c.mute;
+						voice.userConfig.set(props.user_id, { ...c });
+					}}
+				>
+					{voice.userConfig.get(props.user_id)?.mute === true
+						? "unmute"
+						: "mute"}
+				</Item>
 			</Show>
 			<Show when={props.user_id === self_id() && connectedToVoice()}>
-				<Item>mute</Item>
-				<Item>deafen</Item>
+				<Item onClick={voiceActions.toggleMic}>
+					{voice.muted ? "unmute" : "mute"}
+				</Item>
+				<Item onClick={voiceActions.toggleDeafened}>
+					{voice.deafened ? "undeafen" : "deafen"}
+				</Item>
 			</Show>
 			<Show when={hasPermission("VoiceMute")}>
 				<Item onClick={mute}>
