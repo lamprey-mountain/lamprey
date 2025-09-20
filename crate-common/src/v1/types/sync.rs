@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use serde_json::Value;
-
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
@@ -42,18 +40,12 @@ pub enum MessageClient {
 
     #[cfg(feature = "feat_voice")]
     /// send arbitrary data to a voice server
-    // TEMP: for prototyping
+    // NOTE: should i split this into multiple messages? i'll probably keep it how it is currently tbh
+    // TODO: handle multiple connections/servers (or find out how to split one connection amongst multiple hosts?)
     VoiceDispatch {
         user_id: UserId,
-        // TODO: multiple servers
-        // server_id: ServerId,
-        payload: Value,
+        payload: SignallingMessage,
     },
-    // #[cfg(feature = "feat_voice")]
-    // /// connect or disconnect to a voice channel
-    // VoiceState {
-    //     thread_id: Option<ThreadId>,
-    // },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -241,12 +233,9 @@ pub enum MessageSync {
 
     #[cfg(feature = "feat_voice")]
     /// receive arbitrary data from a voice server
-    // TEMP: for prototyping
     VoiceDispatch {
         /// who to send this dispatch to
         user_id: UserId,
-        // TODO: multiple servers
-        // server_id: ServerId,
         payload: SignallingMessage,
     },
 

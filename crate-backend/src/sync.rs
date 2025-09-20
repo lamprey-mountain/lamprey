@@ -273,7 +273,6 @@ impl Connection {
                 let user = srv.users.get(user_id).await?;
                 user.ensure_unsuspended()?;
 
-                let payload: SignallingMessage = serde_json::from_value(payload.clone())?;
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
                         let perms = srv.perms.for_thread(user_id, state.thread_id).await?;

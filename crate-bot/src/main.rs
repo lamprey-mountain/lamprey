@@ -111,7 +111,7 @@ impl Handle {
             self.control
                 .send(MessageClient::VoiceDispatch {
                     user_id: user.id,
-                    payload: serde_json::to_value(msg)?,
+                    payload: msg,
                 })
                 .await?;
         } else {
@@ -257,7 +257,7 @@ impl Handle {
                             self_control
                                 .send(MessageClient::VoiceDispatch {
                                     user_id,
-                                    payload: serde_json::to_value(msg).unwrap(),
+                                    payload: msg,
                                 })
                                 .await
                                 .expect("controller is dead!");

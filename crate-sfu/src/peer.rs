@@ -5,18 +5,19 @@ use std::{
 };
 
 use crate::{
-    config::Config, MediaData, PeerEvent, SignallingMessage, Speaking, SpeakingWithoutUserId,
-    TrackMetadataServer, TrackMetadataSfu,
+    config::Config, MediaData, PeerEvent, SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
-    voice::{MediaKind, SessionDescription, TrackId, TrackMetadata, VoiceState},
+    voice::{
+        SessionDescription, Speaking, SpeakingWithoutUserId, TrackId, TrackMetadata, VoiceState,
+    },
     UserId,
 };
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     channel::ChannelId,
-    media::{Direction, MediaKind as MediaKindStr0m, Mid},
+    media::{Direction, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -142,73 +143,7 @@ impl Peer {
                     continue;
                 }
                 Output::Event(v) => {
-                    match v {
-                        Event::Connected => debug!("connected!"),
-
-                        Event::MediaAdded(m) => {
-                            debug!("media added {m:?}");
-                            self.register_media(m.mid)?;
-                        }
-
-                        Event::MediaChanged(m) => {
-                            debug!("media changed {m:?}");
-                            self.register_media(m.mid)?;
-                        }
-
-                        Event::MediaData(m) => self.handle_media_data(m)?,
-
-                        Event::KeyframeRequest(r) => {
-                            debug!("keyframe request {r:?}");
-                            let track = self
-                                .outbound
-                                .iter()
-                                .find(|t| t.state == TrackState::Open(r.mid));
-                            if let Some(track) = track {
-                                self.emit(PeerEvent::NeedsKeyframe {
-                                    source_mid: track.source_mid,
-                                    source_peer: track.peer_id,
-                                    for_peer: self.user_id,
-                                    kind: r.kind,
-                                    rid: r.rid,
-                                })?;
-                            } else {
-                                warn!("track not found");
-                            }
-                        }
-
-                        Event::ChannelOpen(chan, label) => {
-                            if label == "speaking" {
-                                debug!("open speaking channel {chan:?}");
-                                self.speaking_chan = Some(chan);
-                            }
-                        }
-                        Event::ChannelData(data) => {
-                            if self.speaking_chan == Some(data.id) {
-                                if let Ok(data) =
-                                    serde_json::from_slice::<SpeakingWithoutUserId>(&data.data)
-                                {
-                                    debug!("recv speaking {data:?}");
-                                    self.emit(PeerEvent::Speaking(Speaking {
-                                        user_id: self.user_id,
-                                        flags: data.flags,
-                                    }))?;
-                                } else {
-                                    debug!("recv speaking invalid data");
-                                }
-                            }
-                        }
-
-                        Event::PeerStats(_)
-                        | Event::MediaIngressStats(_)
-                        | Event::MediaEgressStats(_)
-                        | Event::EgressBitrateEstimate(_) => {
-                            debug!("{v:?}");
-                        }
-
-                        _ => {
-                            trace!("{v:?}");
-                        }
-                    };
+                    self.handle_event(v).await?;
                     continue;
                 }
             };
@@ -263,6 +198,76 @@ impl Peer {
                 self.rtc.disconnect();
             }
         }
+
+        Ok(())
+    }
+
+    async fn handle_event(&mut self, event: Event) -> Result<()> {
+        match event {
+            Event::Connected => debug!("connected!"),
+
+            Event::MediaAdded(m) => {
+                debug!("media added {m:?}");
+                self.register_media(m.mid)?;
+            }
+
+            Event::MediaChanged(m) => {
+                debug!("media changed {m:?}");
+                self.register_media(m.mid)?;
+            }
+
+            Event::MediaData(m) => self.handle_media_data(m)?,
+
+            Event::KeyframeRequest(r) => {
+                debug!("keyframe request {r:?}");
+                let track = self
+                    .outbound
+                    .iter()
+                    .find(|t| t.state == TrackState::Open(r.mid));
+                if let Some(track) = track {
+                    self.emit(PeerEvent::NeedsKeyframe {
+                        source_mid: track.source_mid,
+                        source_peer: track.peer_id,
+                        for_peer: self.user_id,
+                        kind: r.kind,
+                        rid: r.rid,
+                    })?;
+                } else {
+                    warn!("track not found");
+                }
+            }
+
+            Event::ChannelOpen(chan, label) => {
+                if label == "speaking" {
+                    debug!("open speaking channel {chan:?}");
+                    self.speaking_chan = Some(chan);
+                }
+            }
+            Event::ChannelData(data) => {
+                if self.speaking_chan == Some(data.id) {
+                    if let Ok(data) = serde_json::from_slice::<SpeakingWithoutUserId>(&data.data) {
+                        debug!("recv speaking {data:?}");
+                        self.emit(PeerEvent::Speaking(Speaking {
+                            user_id: self.user_id,
+                            flags: data.flags,
+                        }))?;
+                    } else {
+                        debug!("recv speaking invalid data");
+                    }
+                }
+            }
+
+            Event::PeerStats(_)
+            | Event::MediaIngressStats(_)
+            | Event::MediaEgressStats(_)
+            | Event::EgressBitrateEstimate(_) => {
+                debug!("{event:?}");
+            }
+
+            _ => {
+                trace!("{event:?}");
+            }
+        };
 
         Ok(())
     }
@@ -460,10 +465,7 @@ impl Peer {
             self.inbound.insert(
                 mid,
                 TrackIn {
-                    kind: match track.kind {
-                        MediaKind::Video => MediaKindStr0m::Video,
-                        MediaKind::Audio => MediaKindStr0m::Audio,
-                    },
+                    kind: track.kind.into(),
                     state,
                     thread_id: self.voice_state.thread_id,
                     key: track.key,
@@ -577,10 +579,7 @@ impl Peer {
 
                 tracks_metadata.push(TrackMetadataServer {
                     source_mid: mid,
-                    kind: match track.kind {
-                        MediaKindStr0m::Audio => MediaKind::Audio,
-                        MediaKindStr0m::Video => MediaKind::Video,
-                    },
+                    kind: track.kind.into(),
                     key: track.key.clone(),
                 });
             } else {

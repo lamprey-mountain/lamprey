@@ -148,83 +148,94 @@ impl Sfu {
                 self.handle_signalling(user_id, inner, peer_send).await?
             }
             SfuCommand::VoiceState { user_id, state } => {
-                let Some(state) = state else {
-                    // user disconnected
-                    let old = self.voice_states.remove(&user_id).map(|s| s.1);
-                    if let Some((_, peer)) = self.peers.remove(&user_id) {
-                        peer.send(PeerCommand::Kill)?
-                    };
-                    self.emit(SfuEvent::VoiceState {
-                        user_id,
-                        state: None,
-                        old,
-                    })
-                    .await?;
-                    debug!("remove voice state");
-                    return Ok(());
-                };
-
-                debug!("got voice state {state:?}");
-                let old = self.voice_states.insert(user_id, state.clone());
-
-                let peer = self.ensure_peer(user_id, peer_send.clone(), &state).await?;
-
-                // broadcast all tracks in a thread to the user
-                for track in &self.tracks {
-                    if track.peer_id == user_id {
-                        continue;
-                    }
-
-                    let Some(other) = self.voice_states.get(&track.peer_id) else {
-                        warn!("dead track not cleaned up for peer {}", track.peer_id);
-                        continue;
-                    };
-
-                    if state.thread_id != other.thread_id {
-                        continue;
-                    }
-
-                    debug!("sending track {track:?}");
-                    if let Err(e) = peer.send(PeerCommand::MediaAdded(track.clone())) {
-                        warn!("failed to send MediaAdded to peer {}: {}", user_id, e);
-                    }
-                }
-
-                // also broadcast all the track metadata as well
-                for meta in &self.tracks_by_user {
-                    let peer_id = meta.key();
-
-                    if *peer_id == user_id {
-                        continue;
-                    }
-
-                    let Some(other) = self.voice_states.get(&peer_id) else {
-                        warn!("dead track not cleaned up for peer {}", peer_id);
-                        continue;
-                    };
-
-                    if state.thread_id != other.thread_id {
-                        continue;
-                    }
-
-                    debug!("sending track_metadata {} {:?}", peer_id, meta.value());
-                    if let Err(e) = peer.send(PeerCommand::Have {
-                        user_id: *peer_id,
-                        tracks: meta.value().clone(),
-                    }) {
-                        warn!("failed to send Have to peer {}: {}", user_id, e);
-                    }
-                }
-
-                // tell everyone about the voice state update
-                self.emit(SfuEvent::VoiceState {
-                    user_id,
-                    state: Some(state),
-                    old,
-                })
-                .await?;
+                self.handle_voice_state(user_id, state, peer_send).await?
             }
         }
+
+        Ok(())
+    }
+
+    async fn handle_voice_state(
+        &self,
+        user_id: UserId,
+        state: Option<VoiceState>,
+        peer_send: UnboundedSender<PeerEventEnvelope>,
+    ) -> Result<()> {
+        let Some(state) = state else {
+            // user disconnected
+            let old = self.voice_states.remove(&user_id).map(|s| s.1);
+            if let Some((_, peer)) = self.peers.remove(&user_id) {
+                peer.send(PeerCommand::Kill)?
+            };
+            self.emit(SfuEvent::VoiceState {
+                user_id,
+                state: None,
+                old,
+            })
+            .await?;
+            debug!("remove voice state");
+            return Ok(());
+        };
+
+        debug!("got voice state {state:?}");
+        let old = self.voice_states.insert(user_id, state.clone());
+
+        let peer = self.ensure_peer(user_id, peer_send.clone(), &state).await?;
+
+        // broadcast all tracks in a thread to the user
+        for track in &self.tracks {
+            if track.peer_id == user_id {
+                continue;
+            }
+
+            let Some(other) = self.voice_states.get(&track.peer_id) else {
+                warn!("dead track not cleaned up for peer {}", track.peer_id);
+                continue;
+            };
+
+            if state.thread_id != other.thread_id {
+                continue;
+            }
+
+            debug!("sending track {track:?}");
+            if let Err(e) = peer.send(PeerCommand::MediaAdded(track.clone())) {
+                warn!("failed to send MediaAdded to peer {}: {}", user_id, e);
+            }
+        }
+
+        // also broadcast all the track metadata as well
+        for meta in &self.tracks_by_user {
+            let peer_id = meta.key();
+
+            if *peer_id == user_id {
+                continue;
+            }
+
+            let Some(other) = self.voice_states.get(&peer_id) else {
+                warn!("dead track not cleaned up for peer {}", peer_id);
+                continue;
+            };
+
+            if state.thread_id != other.thread_id {
+                continue;
+            }
+
+            debug!("sending track_metadata {} {:?}", peer_id, meta.value());
+            if let Err(e) = peer.send(PeerCommand::Have {
+                user_id: *peer_id,
+                tracks: meta.value().clone(),
+            }) {
+                warn!("failed to send Have to peer {}: {}", user_id, e);
+            }
+        }
+
+        // tell everyone about the voice state update
+        self.emit(SfuEvent::VoiceState {
+            user_id,
+            state: Some(state),
+            old,
+        })
+        .await?;
 
         Ok(())
     }
@@ -270,18 +281,16 @@ impl Sfu {
 
     #[tracing::instrument(skip(self, event))]
     async fn handle_event(&mut self, user_id: UserId, event: PeerEvent) -> Result<()> {
+        if !matches!(event, PeerEvent::MediaData(_)) {
+            debug!("handle event {event:?}");
+        }
+
         match event {
             PeerEvent::Signalling(payload) => {
-                debug!("signalling event {payload:?}");
                 self.emit(SfuEvent::VoiceDispatch { user_id, payload })
                     .await?;
             }
-            PeerEvent::MediaAdded(ref m) => {
-                debug!("media added event {event:?}");
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
+            PeerEvent::MediaAdded(m) => {
                 if self
                     .tracks
                     .iter()
@@ -290,50 +299,13 @@ impl Sfu {
                     debug!("skipping this track, we already have it");
                     return Ok(());
                 }
-                for a in &self.peers {
-                    if a.key() == &user_id {
-                        debug!("drop: no echo");
-                        continue;
-                    }
-
-                    let Some(state) = self.voice_states.get(a.key()) else {
-                        debug!("drop: no voice state");
-                        continue;
-                    };
-
-                    if state.thread_id != my_state.thread_id {
-                        debug!("drop: no thread id");
-                        continue;
-                    }
-
-                    a.value().send(PeerCommand::MediaAdded(m.clone()))?;
-                }
-                self.tracks.push(m.clone());
+                self.broadcast_thread(user_id, PeerCommand::MediaAdded(m.clone()))
+                    .await?;
+                self.tracks.push(m);
             }
             PeerEvent::MediaData(m) => {
-                // debug!("media data event");
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
-                for a in &self.peers {
-                    if a.key() == &user_id {
-                        // debug!("skip own user");
-                        continue;
-                    }
-
-                    let Some(state) = self.voice_states.get(a.key()) else {
-                        debug!("missing voice state");
-                        continue;
-                    };
-
-                    if state.thread_id != my_state.thread_id {
-                        // debug!("wrong thread id");
-                        continue;
-                    }
-
-                    a.value().send(PeerCommand::MediaData(m.clone()))?;
-                }
+                self.broadcast_thread(user_id, PeerCommand::MediaData(m))
+                    .await?;
             }
             PeerEvent::Dead => {
                 debug!("peerevent::dead");
@@ -363,93 +335,49 @@ impl Sfu {
             }
             PeerEvent::Have { tracks } => {
                 debug!("have event {tracks:?}");
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
-                for a in &self.peers {
-                    if a.key() == &user_id {
-                        debug!("skip own user");
-                        continue;
-                    }
-
-                    let Some(state) = self.voice_states.get(a.key()) else {
-                        debug!("missing voice state");
-                        continue;
-                    };
-
-                    if state.thread_id != my_state.thread_id {
-                        debug!("wrong thread id");
-                        continue;
-                    }
-
-                    a.value().send(PeerCommand::Have {
-                        user_id,
-                        tracks: tracks.clone(),
-                    })?;
-                }
-                self.tracks_by_user.insert(user_id, tracks);
+                self.broadcast_thread(user_id, PeerCommand::Have { user_id, tracks })
+                    .await?;
             }
             PeerEvent::WantHave { user_ids } => {
-                let (Some(state), Some(peer)) =
-                    (self.voice_states.get(&user_id), self.peers.get(&user_id))
-                else {
-                    warn!("received peer event from dead peer?");
-                    return Ok(());
-                };
-
-                for peer_id in user_ids {
-                    if peer_id == user_id {
-                        continue;
-                    }
-
-                    let Some(other) = self.voice_states.get(&peer_id) else {
-                        warn!("dead track not cleaned up for peer {}", peer_id);
-                        continue;
-                    };
-
-                    if state.thread_id != other.thread_id {
-                        continue;
-                    }
-
-                    let Some(meta) = self.tracks_by_user.get(&peer_id) else {
-                        warn!("missing metadata for peer {}", peer_id);
-                        continue;
-                    };
-
-                    debug!("sending requested track_metadata {} {:?}", peer_id, meta);
-                    if let Err(e) = peer.send(PeerCommand::Have {
-                        user_id: peer_id,
-                        tracks: meta.to_owned(),
-                    }) {
-                        warn!("failed to send Have to peer {}: {}", user_id, e);
-                    }
-                }
+                self.handle_want_have(user_id, &user_ids).await?;
             }
             PeerEvent::Speaking(speaking) => {
-                let Some(my_state) = self.voice_states.get(&user_id) else {
-                    warn!("user has no voice state");
-                    return Ok(());
-                };
+                self.broadcast_thread(user_id, PeerCommand::Speaking(speaking))
+                    .await?;
+            }
+        }
 
-                for a in &self.peers {
-                    if a.key() == &user_id {
-                        debug!("skip own user");
-                        continue;
-                    }
+        Ok(())
+    }
 
-                    let Some(state) = self.voice_states.get(a.key()) else {
-                        debug!("missing voice state");
-                        continue;
-                    };
+    async fn handle_want_have(&self, user_id: UserId, user_ids: &[UserId]) -> Result<()> {
+        let (Some(state), Some(peer)) = (self.voice_states.get(&user_id), self.peers.get(&user_id))
+        else {
+            warn!("received peer event from dead peer?");
+            return Ok(());
+        };
 
-                    if state.thread_id != my_state.thread_id {
-                        debug!("wrong thread id");
-                        continue;
-                    }
+        for peer_id in user_ids {
+            let Some(other) = self.voice_states.get(&peer_id) else {
+                warn!("dead track not cleaned up for peer {}", peer_id);
+                continue;
+            };
 
-                    a.value().send(PeerCommand::Speaking(speaking.clone()))?;
-                }
+            if state.thread_id != other.thread_id {
+                continue;
+            }
+
+            let Some(meta) = self.tracks_by_user.get(&peer_id) else {
+                warn!("missing metadata for peer {}", peer_id);
+                continue;
+            };
+
+            debug!("sending requested track_metadata {} {:?}", peer_id, meta);
+            if let Err(e) = peer.send(PeerCommand::Have {
+                user_id: *peer_id,
+                tracks: meta.to_owned(),
+            }) {
+                warn!("failed to send Have to peer {}: {}", user_id, e);
             }
         }
 
@@ -471,6 +399,33 @@ impl Sfu {
                 Ok(peer_sender)
             }
         }
+    }
+
+    /// send a command to every peer in a thread
+    async fn broadcast_thread(&self, user_id: UserId, command: PeerCommand) -> Result<()> {
+        let Some(my_state) = self.voice_states.get(&user_id) else {
+            warn!("user has no voice state");
+            return Ok(());
+        };
+
+        for peer in &self.peers {
+            if peer.key() == &user_id {
+                continue;
+            }
+
+            let Some(state) = self.voice_states.get(peer.key()) else {
+                debug!("missing voice state");
+                continue;
+            };
+
+            if state.thread_id != my_state.thread_id {
+                continue;
+            }
+
+            peer.value().send(command.clone())?;
+        }
+
+        Ok(())
     }
 
     async fn emit(&self, event: SfuEvent) -> Result<()> {

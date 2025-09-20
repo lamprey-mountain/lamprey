@@ -171,6 +171,39 @@ pub enum MediaKind {
 //     volume: f64,
 // }
 
+/// Flags for speaking
+///
+/// Audio = 1 << 0
+/// Indicator = 1 << 1
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(transparent)]
+pub struct SpeakingFlags(pub u8);
+
+impl SpeakingFlags {
+    #[inline]
+    pub fn has_audio(&self) -> bool {
+        self.0 & 1 == 1
+    }
+
+    #[inline]
+    pub fn has_indicator(&self) -> bool {
+        self.0 & 2 == 2
+    }
+}
+
+/// a message sent to the client to indicate that someone is speaking
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Speaking {
+    pub user_id: UserId,
+    pub flags: SpeakingFlags,
+}
+
+/// a message sent from the client to indicate that they're speaking
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SpeakingWithoutUserId {
+    pub flags: SpeakingFlags,
+}
+
 // ========== EVERYTHING BELOW IS INTERNAL FOR BACKEND/VOICE ==========
 
 /// emitted by backend, handled by the sfu
@@ -206,4 +239,28 @@ pub enum SfuEvent {
         old: Option<VoiceState>,
         state: Option<VoiceState>,
     },
+}
+
+#[cfg(feature = "str0m")]
+mod str0m {
+    use super::MediaKind;
+    use str0m::media::MediaKind as MediaKindStr0m;
+
+    impl From<MediaKind> for MediaKindStr0m {
+        fn from(value: MediaKind) -> Self {
+            match value {
+                MediaKind::Video => MediaKindStr0m::Video,
+                MediaKind::Audio => MediaKindStr0m::Audio,
+            }
+        }
+    }
+
+    impl From<MediaKindStr0m> for MediaKind {
+        fn from(value: MediaKindStr0m) -> Self {
+            match value {
+                MediaKindStr0m::Video => MediaKind::Video,
+                MediaKindStr0m::Audio => MediaKind::Audio,
+            }
+        }
+    }
 }

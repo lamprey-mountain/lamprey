@@ -1,10 +1,9 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{MediaKind, SignallingMessage},
+    voice::{MediaKind, SignallingMessage, Speaking},
     ThreadId, UserId,
 };
-use serde::{Deserialize, Serialize};
 use str0m::{
     format::PayloadParams,
     media::{KeyframeRequestKind, MediaKind as MediaKindStr0m, MediaTime, Mid, Rid},
@@ -15,14 +14,8 @@ pub mod peer;
 pub mod sfu;
 pub mod util;
 
-#[derive(Debug)]
-pub struct PeerEventEnvelope {
-    pub user_id: UserId,
-    pub payload: PeerEvent,
-}
-
 /// an event emitted by the peer and handled by the sfu
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PeerEvent {
     /// send a signalling message to the peer user
     Signalling(SignallingMessage),
@@ -56,7 +49,7 @@ pub enum PeerEvent {
 }
 
 /// an command emitted by the sfu and handled by the peer
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PeerCommand {
     /// we got a signalling message from the user
     Signalling(SignallingMessage),
@@ -86,6 +79,13 @@ pub enum PeerCommand {
 
     /// a remote peer is speaking
     Speaking(Speaking),
+}
+
+/// a peer event with user_id, so the sfu knows where the event came from
+#[derive(Debug)]
+pub struct PeerEventEnvelope {
+    pub user_id: UserId,
+    pub payload: PeerEvent,
 }
 
 #[derive(Debug, Clone)]
@@ -150,40 +150,10 @@ pub struct MediaData {
     pub params: PayloadParams,
 }
 
+/// errors that can be emitted from the sfu
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// no voice state exists for this user
     #[error("no voice state exists for this user")]
     NotConnected,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Speaking {
-    user_id: UserId,
-    flags: SpeakingFlags,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct SpeakingWithoutUserId {
-    flags: SpeakingFlags,
-}
-
-/// Flags for speaking
-///
-/// Audio = 1 << 0
-/// Indicator = 1 << 1
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-#[serde(transparent)]
-pub struct SpeakingFlags(pub u8);
-
-impl SpeakingFlags {
-    #[inline]
-    pub fn has_audio(&self) -> bool {
-        self.0 & 1 == 1
-    }
-
-    #[inline]
-    pub fn has_indicator(&self) -> bool {
-        self.0 & 2 == 2
-    }
 }

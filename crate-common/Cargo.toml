@@ -19,11 +19,13 @@ validator = { version = "0.20.0", features = ["derive"], optional = true }
 strum = { version = "0.27.1", features = ["derive"] }
 pastey = "0.1.1"
 thiserror = "2.0.16"
+str0m = { version = "0.10.0", optional = true }
 
 [features]
 # serde = []
 utoipa = ["dep:utoipa"]
 validator = ["dep:validator"]
+str0m = ["dep:str0m"]
 formatting_extra = []
 feat_custom_embeds = []
 feat_thread_linking = []
@@ -50,4 +52,5 @@ default = [
   "feat_thread_type_forums",
   "feat_interaction_reaction",
   "feat_voice",
+  "str0m",
 ]
