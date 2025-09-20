@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
         .finish();
     tracing::subscriber::set_global_default(sub)?;
 
-    let _ = Sfu::new(config.clone()).run().await;
+    let _ = Sfu::run(config.clone()).await;
 
     Ok(())
 }

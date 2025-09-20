@@ -9,6 +9,7 @@ use str0m::{
     media::{KeyframeRequestKind, MediaKind as MediaKindStr0m, MediaTime, Mid, Rid},
 };
 
+pub mod backend;
 pub mod config;
 pub mod peer;
 pub mod sfu;

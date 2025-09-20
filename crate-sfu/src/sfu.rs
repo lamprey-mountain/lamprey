@@ -1,6 +1,6 @@
 use crate::{
-    config::Config, peer::Peer, PeerCommand, PeerEvent, PeerEventEnvelope, SignallingMessage,
-    TrackMetadataServer, TrackMetadataSfu,
+    backend::BackendConnection, config::Config, peer::Peer, PeerCommand, PeerEvent,
+    PeerEventEnvelope, SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
@@ -8,15 +8,9 @@ use common::v1::types::{
     UserId,
 };
 use dashmap::DashMap;
-use futures_util::{SinkExt, StreamExt};
 use std::fmt::Debug;
-use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedSender};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::{client::IntoClientRequest, protocol::Message},
-};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, trace, warn};
 
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
@@ -24,7 +18,7 @@ pub struct Sfu {
     tracks: Vec<TrackMetadataSfu>,
     tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
     config: Config,
-    backend_tx: Option<UnboundedSender<SfuEvent>>,
+    backend_tx: UnboundedSender<SfuEvent>,
 }
 
 impl Debug for Sfu {
@@ -33,106 +27,46 @@ impl Debug for Sfu {
             .field("peers", &self.peers)
             .field("voice_states", &self.voice_states)
             .field("tracks", &self.tracks)
-            .field("backend_tx", &self.backend_tx.is_some())
+            .field("backend_tx", &self.backend_tx)
             .finish()
     }
 }
 
 impl Sfu {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, backend_tx: UnboundedSender<SfuEvent>) -> Self {
         Self {
             peers: DashMap::new(),
             voice_states: DashMap::new(),
             tracks: Vec::new(),
             config,
-            backend_tx: None,
+            backend_tx,
             tracks_by_user: DashMap::new(),
         }
     }
 
-    pub async fn run(mut self) -> Result<()> {
-        let (peer_send, mut peer_events) =
-            tokio::sync::mpsc::unbounded_channel::<PeerEventEnvelope>();
-        let (backend_tx, mut backend_rx) = mpsc::unbounded_channel();
-        self.backend_tx = Some(backend_tx);
+    pub async fn run(config: Config) -> Result<()> {
+        let (peer_send, mut peer_events) = mpsc::unbounded_channel::<PeerEventEnvelope>();
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
+        let (command_tx, mut command_rx) = mpsc::unbounded_channel();
+
+        let backend = BackendConnection::new(config.clone(), event_rx, command_tx);
+        tokio::spawn(backend.spawn());
+
+        let mut sfu = Sfu::new(config, event_tx);
 
         loop {
-            // Reconnection loop
-            let url_str = format!("{}/api/v1/internal/rpc", self.config.api_url)
-                .replace("http", "ws")
-                .replace("https", "wss");
-
-            let mut request = match url_str.into_client_request() {
-                Ok(req) => req,
-                Err(e) => {
-                    error!("Failed to create client request: {}. Retrying in 5s.", e);
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    continue;
-                }
-            };
-            request.headers_mut().insert(
-                "Authorization",
-                format!("Server {}", self.config.token).try_into().unwrap(),
-            );
-
-            info!("Connecting to backend websocket...");
-            let ws_stream = match connect_async(request).await {
-                Ok((stream, _)) => {
-                    info!("Connected to backend websocket");
-                    stream
-                }
-                Err(e) => {
-                    warn!("Failed to connect to backend: {}. Retrying in 5s.", e);
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    continue;
-                }
-            };
-
-            let (mut ws_tx, mut ws_rx) = ws_stream.split();
-
-            'inner: loop {
-                tokio::select! {
-                    Some(envelope) = peer_events.recv() => {
-                        if let Err(err) = self.handle_event(envelope.user_id, envelope.payload).await {
-                            error!("error handling peer event: {err}");
-                        }
+            tokio::select! {
+                Some(envelope) = peer_events.recv() => {
+                    if let Err(err) = sfu.handle_event(envelope.user_id, envelope.payload).await {
+                        error!("error handling peer event: {err}");
                     }
-                    Some(event) = backend_rx.recv() => {
-                        let json = match serde_json::to_string(&event) {
-                            Ok(j) => j,
-                            Err(e) => {
-                                error!("Failed to serialize event: {}", e);
-                                continue;
-                            }
-                        };
-                        if let Err(e) = ws_tx.send(Message::text(json)).await {
-                            error!("Failed to send message to backend: {}", e);
-                            break 'inner;
-                        }
-                    }
-                    Some(msg) = ws_rx.next() => {
-                        match msg {
-                            Ok(Message::Text(t)) => {
-                                let command: SfuCommand = serde_json::from_str(&t).unwrap();
-                                if let Err(err) = self.handle_command(command, peer_send.clone()).await {
-                                    error!("error handling peer command: {err}");
-                                }
-                            }
-                            Ok(Message::Close(_)) => {
-                                info!("Backend websocket closed");
-                                break 'inner;
-                            }
-                            Err(e) => {
-                                error!("Error receiving from backend: {}", e);
-                                break 'inner;
-                            }
-                            _ => {}
-                        }
+                }
+                Some(command) = command_rx.recv() => {
+                    if let Err(err) = sfu.handle_command(command, peer_send.clone()).await {
+                        error!("error handling peer command: {err}");
                     }
                 }
             }
-            warn!("Disconnected from backend. Reconnecting in 5 seconds...");
-            tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
 
@@ -335,6 +269,7 @@ impl Sfu {
             }
             PeerEvent::Have { tracks } => {
                 debug!("have event {tracks:?}");
+                self.tracks_by_user.insert(user_id, tracks.clone());
                 self.broadcast_thread(user_id, PeerCommand::Have { user_id, tracks })
                     .await?;
             }
@@ -429,9 +364,8 @@ impl Sfu {
     }
 
     async fn emit(&self, event: SfuEvent) -> Result<()> {
-        if let Some(tx) = &self.backend_tx {
-            tx.send(event).map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        }
-        Ok(())
+        self.backend_tx
+            .send(event)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 }
