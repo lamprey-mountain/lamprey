@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use common::v1::types::{RoomId, ThreadId};
 use dashmap::{mapref::one::RefMut, DashMap};
@@ -18,10 +18,10 @@ use serenity::{
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
-    common::{BridgeMessage, Globals, GlobalsTrait, PortalConfig},
+    common::{BridgeMessage, Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
     data::Data,
     portal::{Portal, PortalMessage},
 };
@@ -42,6 +42,151 @@ async fn send_ephemeral_reply(ctx: &Context, command: &CommandInteraction, conte
     if let Err(err) = command.create_response(&ctx.http, response).await {
         error!("failed to respond to interaction: {err:?}");
     }
+}
+
+async fn backfill_channel(
+    ctx: &Context,
+    globals: Arc<Globals>,
+    channel_id: ChannelId,
+) -> Result<()> {
+    let Some(config) = globals.get_portal_by_discord_channel(channel_id).await? else {
+        warn!("backfill_channel: no portal for {}", channel_id);
+        return Ok(());
+    };
+
+    let portal = globals
+        .portals
+        .entry(config.lamprey_thread_id)
+        .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
+
+    let mut p = MessagePagination::After(MessageId::new(1));
+    loop {
+        let msgs = ctx
+            .http()
+            .get_messages(channel_id, Some(p), Some(100))
+            .await?;
+
+        if msgs.is_empty() {
+            break;
+        }
+
+        info!(
+            "discord backfill {} messages for channel {}",
+            msgs.len(),
+            channel_id
+        );
+
+        let last_id = msgs.first().unwrap().id;
+        for message in msgs.into_iter().rev() {
+            let _ = portal.send(PortalMessage::DiscordMessageCreate { message });
+        }
+        p = MessagePagination::After(last_id);
+    }
+    info!("finished backfill for channel {}", channel_id);
+    Ok(())
+}
+
+async fn backfill_guild(
+    ctx: &Context,
+    globals: Arc<Globals>,
+    guild_id: GuildId,
+    realm_config: RealmConfig,
+) -> Result<()> {
+    let guild = ctx
+        .cache
+        .guild(guild_id)
+        .ok_or(anyhow!("failed to get guild {guild_id} from cache"))?
+        .to_owned();
+
+    let all_channels: Vec<_> = guild.channels.values().chain(&guild.threads).collect();
+
+    for channel in all_channels {
+        if !matches!(
+            channel.kind,
+            ChannelType::Text
+                | ChannelType::News
+                | ChannelType::PublicThread
+                | ChannelType::PrivateThread
+                | ChannelType::NewsThread
+        ) {
+            continue;
+        }
+
+        if globals
+            .get_portal_by_discord_channel(channel.id)
+            .await
+            .is_ok_and(|p| p.is_some())
+        {
+            let ctx = ctx.clone();
+            let globals = globals.clone();
+            let channel_id = channel.id;
+            tokio::spawn(async move {
+                if let Err(e) = backfill_channel(&ctx, globals, channel_id).await {
+                    error!(
+                        "failed to backfill existing portal for channel {}: {}",
+                        channel_id, e
+                    );
+                }
+            });
+            continue;
+        }
+
+        // create portal
+        let ly = globals.lamprey_handle().await?;
+        let thread = ly
+            .create_thread(realm_config.lamprey_room_id, channel.name.clone(), None)
+            .await?;
+
+        let (is_thread, parent_id) = if matches!(
+            channel.kind,
+            ChannelType::PublicThread | ChannelType::PrivateThread | ChannelType::NewsThread
+        ) {
+            (true, channel.parent_id)
+        } else {
+            (false, Some(channel.id))
+        };
+        let Some(webhook_channel_id) = parent_id else {
+            info!("channel {} has no parent, skipping", channel.id);
+            continue;
+        };
+
+        let webhook = discord_create_webhook(
+            globals.clone(),
+            webhook_channel_id,
+            WEBHOOK_NAME.to_string(),
+        )
+        .await?;
+
+        let portal_config = PortalConfig {
+            lamprey_thread_id: thread.id,
+            lamprey_room_id: realm_config.lamprey_room_id,
+            discord_guild_id: guild_id,
+            discord_channel_id: webhook_channel_id,
+            discord_thread_id: if is_thread { Some(channel.id) } else { None },
+            discord_webhook: webhook.url().unwrap().to_string(),
+        };
+
+        globals.insert_portal(portal_config.clone()).await?;
+
+        globals
+            .portals
+            .entry(portal_config.lamprey_thread_id)
+            .or_insert_with(|| Portal::summon(globals.clone(), portal_config));
+
+        let globals = globals.clone();
+        let ctx = ctx.clone();
+        let channel_id = channel.id;
+        tokio::spawn(async move {
+            if let Err(e) = backfill_channel(&ctx, globals, channel_id).await {
+                error!(
+                    "failed to backfill new portal for channel {}: {}",
+                    channel_id, e
+                );
+            }
+        });
+    }
+
+    Ok(())
 }
 
 fn get_commands() -> Vec<CreateCommand> {
@@ -414,6 +559,7 @@ impl EventHandler for Handler {
                         if let CommandDataOptionValue::SubCommand(options) = &subcommand.value {
                             let mut room_id_str = None;
                             let mut thread_id_str = None;
+                            let mut backfill = None;
                             for opt in options {
                                 match opt.name.as_str() {
                                     "room_id" => {
@@ -421,6 +567,9 @@ impl EventHandler for Handler {
                                     }
                                     "thread_id" => {
                                         thread_id_str = opt.value.as_str().to_owned();
+                                    }
+                                    "backfill" => {
+                                        backfill = opt.value.as_bool();
                                     }
                                     _ => {}
                                 }
@@ -498,7 +647,7 @@ impl EventHandler for Handler {
                                         .as_ref()
                                         .and_then(|t| t.parent_id)
                                         .unwrap_or(channel_id),
-                                    &CreateWebhook::new("bridg"),
+                                    &CreateWebhook::new(WEBHOOK_NAME),
                                     Some("for bridge"),
                                 )
                                 .await
@@ -525,13 +674,29 @@ impl EventHandler for Handler {
                                     discord_webhook: webhook.url().unwrap(),
                                 })
                                 .await;
-                            send_ephemeral_reply(&ctx, &command, "linked").await;
+
+                            if backfill.unwrap_or(false) {
+                                send_ephemeral_reply(&ctx, &command, "linked, backfilling...")
+                                    .await;
+                                let ctx = ctx.clone();
+                                let globals = globals.clone();
+                                tokio::spawn(async move {
+                                    if let Err(e) =
+                                        backfill_channel(&ctx, globals, channel_id).await
+                                    {
+                                        error!("failed to backfill channel {}: {}", channel_id, e);
+                                    }
+                                });
+                            } else {
+                                send_ephemeral_reply(&ctx, &command, "linked").await;
+                            }
                         }
                     }
                     "guild" => {
                         if let CommandDataOptionValue::SubCommand(options) = &subcommand.value {
                             let mut room_id_str = None;
                             let mut continuous = None;
+                            let mut backfill = None;
                             for opt in options {
                                 match opt.name.as_str() {
                                     "room_id" => {
@@ -539,6 +704,9 @@ impl EventHandler for Handler {
                                     }
                                     "continuous" => {
                                         continuous = opt.value.as_bool();
+                                    }
+                                    "backfill" => {
+                                        backfill = opt.value.as_bool();
                                     }
                                     _ => {}
                                 }
@@ -559,20 +727,39 @@ impl EventHandler for Handler {
                                 }
                             };
 
-                            let realm_config = crate::common::RealmConfig {
+                            let realm_config = RealmConfig {
                                 lamprey_room_id,
                                 discord_guild_id: guild_id,
                                 continuous: continuous.unwrap_or(false),
                             };
 
-                            if let Err(e) = globals.insert_realm(realm_config).await {
+                            if let Err(e) = globals.insert_realm(realm_config.clone()).await {
                                 error!("failed to insert realm: {e}");
                                 send_ephemeral_reply(&ctx, &command, "error: failed to link guild")
                                     .await;
                                 return;
                             }
 
-                            send_ephemeral_reply(&ctx, &command, "guild linked").await;
+                            if backfill.unwrap_or(false) {
+                                send_ephemeral_reply(
+                                    &ctx,
+                                    &command,
+                                    "guild linked, backfilling...",
+                                )
+                                .await;
+
+                                let globals = globals.clone();
+                                let ctx = ctx.clone();
+                                tokio::spawn(async move {
+                                    if let Err(e) =
+                                        backfill_guild(&ctx, globals, guild_id, realm_config).await
+                                    {
+                                        error!("failed to backfill guild {}: {}", guild_id, e);
+                                    }
+                                });
+                            } else {
+                                send_ephemeral_reply(&ctx, &command, "guild linked").await;
+                            }
                         }
                     }
                     _ => {}

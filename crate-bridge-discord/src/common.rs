@@ -112,3 +112,5 @@ pub enum BridgeMessage {
         channel_name: String,
     },
 }
+
+pub const WEBHOOK_NAME: &'static str = "bridg";
