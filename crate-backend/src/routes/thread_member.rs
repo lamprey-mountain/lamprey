@@ -147,10 +147,7 @@ pub async fn thread_member_add(
                 attachment_ids: vec![],
                 author_id: auth_user.id,
                 embeds: vec![],
-                message_type: MessageType::MemberAdd(MessageMember {
-                    target_user_id,
-                    actor_user_id: auth_user.id,
-                }),
+                message_type: MessageType::MemberAdd(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
             })
@@ -258,10 +255,7 @@ pub async fn thread_member_delete(
                 attachment_ids: vec![],
                 author_id: auth_user.id,
                 embeds: vec![],
-                message_type: MessageType::MemberRemove(MessageMember {
-                    target_user_id,
-                    actor_user_id: auth_user.id,
-                }),
+                message_type: MessageType::MemberRemove(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
             })

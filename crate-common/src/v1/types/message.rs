@@ -252,7 +252,6 @@ pub enum MessageType {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePin {
     pub message_id: MessageId,
-    pub user_id: UserId,
     pub reason: Option<String>,
 }
 
@@ -296,7 +295,6 @@ pub struct MessagesMoved {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageMember {
     pub target_user_id: UserId,
-    pub actor_user_id: UserId,
 }
 
 /// Following a room and will receive announcement posts from it
@@ -304,7 +302,6 @@ pub struct MessageMember {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageRoomFollowed {
     pub thread_id: ThreadId,
-    pub user_id: UserId,
     pub reason: Option<String>,
 }
 
