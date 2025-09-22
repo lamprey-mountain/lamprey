@@ -27,6 +27,7 @@ export type UserWithRelationship =
 export type UserConfig = components["schemas"]["UserConfig"];
 export type Application = components["schemas"]["Application"];
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
+export type MessageSync = components["schemas"]["MessageSync"];
 
 export type OauthInfo = {
 	application: Application;
@@ -63,71 +64,6 @@ export type MessageEnvelope =
 	| MessageReady
 	| { op: "Resumed" }
 	| { op: "Reconnect"; can_resume: boolean };
-
-export type MessageSync =
-	| { type: "RoomCreate"; room: Room }
-	| { type: "RoomUpdate"; room: Room }
-	| { type: "ThreadCreate"; thread: Thread }
-	| { type: "ThreadUpdate"; thread: Thread }
-	| { type: "ThreadTyping"; thread_id: string; user_id: string; until: string }
-	| {
-		type: "ThreadAck";
-		thread_id: string;
-		message_id: string;
-		version_id: string;
-	}
-	| { type: "MessageCreate"; message: Message }
-	| { type: "MessageUpdate"; message: Message }
-	| {
-		type: "MessageDelete";
-		room_id?: string; // deprecated
-		thread_id: string;
-		message_id: string;
-	}
-	| {
-		type: "MessageVersionDelete";
-		room_id?: string; // deprecated
-		thread_id: string;
-		message_id: string;
-		version_id: string;
-	}
-	| { type: "MessageDeleteBulk"; thread_id: string; message_ids: string[] }
-	| { type: "RoomMemberUpsert"; member: RoomMember }
-	| { type: "ThreadMemberUpsert"; member: ThreadMember }
-	| { type: "RoleCreate"; role: Role }
-	| { type: "RoleUpdate"; role: Role }
-	| { type: "RoleDelete"; room_id: string; role_id: string }
-	| { type: "InviteCreate"; invite: InviteWithMetadata }
-	| { type: "InviteUpdate"; invite: InviteWithMetadata }
-	| { type: "InviteDelete"; code: string; target: string }
-	| {
-		type: "ReactionCreate";
-		user_id: string;
-		thread_id: string;
-		message_id: string;
-		key: string;
-	}
-	| {
-		type: "ReactionDelete";
-		user_id: string;
-		thread_id: string;
-		message_id: string;
-		key: string;
-	}
-	| { type: "ReactionPurge"; thread_id: string; message_id: string }
-	| { type: "EmojiCreate"; emoji: EmojiCustom }
-	| { type: "EmojiDelete"; emoji_id: string; room_id: string }
-	| { type: "VoiceDispatch"; user_id: string; payload: any }
-	| { type: "VoiceState"; user_id: string; state: any }
-	| { type: "UserCreate"; user: User }
-	| { type: "UserUpdate"; user: User }
-	| { type: "UserConfig"; user_id: string; config: any }
-	| { type: "UserDelete"; id: string }
-	| { type: "SessionCreate"; session: Session }
-	| { type: "SessionUpdate"; session: Session }
-	| { type: "SessionDelete"; id: string; user_id?: string }
-	| { type: "RelationshipUpsert"; user_id: string; relationship: unknown }
-	| { type: "RelationshipDelete"; user_id: string };
 
 export type TrackMetadata = {
 	mid: string;

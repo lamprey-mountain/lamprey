@@ -1,11 +1,6 @@
 import type { AuditLogEntry, Pagination } from "sdk";
-import { createEffect, createResource, type Resource } from "solid-js";
-import type { Api } from "../api.tsx";
-
-type Listing<T> = {
-	pagination: Pagination<T> | null;
-	prom: Promise<unknown> | null;
-};
+import { createEffect, createResource, type Resource, untrack } from "solid-js";
+import type { Api, Listing } from "../api.tsx";
 
 export class AuditLogs {
 	api: Api = null as unknown as Api;
@@ -44,21 +39,29 @@ export class AuditLogs {
 			};
 		};
 
-		const [resource, { mutate }] = createResource(
+		const room_id = untrack(room_id_signal);
+		const l = this._cachedListings.get(room_id);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<AuditLogEntry>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._cachedListings.set(room_id, l2);
+
+		const [resource, { refetch, mutate }] = createResource(
 			room_id_signal,
 			async (room_id) => {
-				let l = this._cachedListings.get(room_id)!;
+				const l = this._cachedListings.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
-				}
-
-				if (!l) {
-					l = {
-						prom: null,
-						pagination: null,
-					};
-					this._cachedListings.set(room_id, l);
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
@@ -66,21 +69,13 @@ export class AuditLogs {
 				const res = await prom;
 				l!.pagination = res;
 				l!.prom = null;
-
-				for (const mut of this._listingMutators) {
-					if (mut.room_id === room_id) mut.mutate(res);
-				}
-
 				return res!;
 			},
 		);
 
-		const mut = { room_id: room_id_signal(), mutate };
-		this._listingMutators.add(mut);
-
-		createEffect(() => {
-			mut.room_id = room_id_signal();
-		});
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
 
 		return resource;
 	}

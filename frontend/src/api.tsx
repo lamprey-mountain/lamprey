@@ -488,6 +488,12 @@ export function createApi(
 			}
 		} else if (msg.type === "VoiceDispatch") {
 			// handled by rtc.ts
+		} else if (msg.type === "AuditLogEntryCreate") {
+			const cached = audit_logs._cachedListings.get(msg.entry.room_id);
+			if (cached?.pagination) {
+				cached.pagination.items.unshift(msg.entry);
+				cached.pagination.total += 1;
+			}
 		} else {
 			console.warn(`unknown event ${msg.type}`, msg);
 		}
