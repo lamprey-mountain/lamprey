@@ -786,7 +786,7 @@ async fn room_ban_remove(
     ),
     tags = ["room_member", "badge.perm.MemberBan"],
     responses(
-        (status = OK, body = RoomMember, description = "success"),
+        (status = OK, body = RoomBan, description = "success"),
     )
 )]
 async fn room_ban_get(
@@ -816,7 +816,7 @@ async fn room_ban_get(
     ),
     tags = ["room_member", "badge.perm.MemberBan"],
     responses(
-        (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
+        (status = OK, body = PaginationResponse<RoomBan>, description = "success"),
     )
 )]
 async fn room_ban_list(
