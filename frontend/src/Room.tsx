@@ -14,6 +14,7 @@ import { handleSubmit } from "./dispatch/submit.ts";
 import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
@@ -74,12 +75,35 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const nav = useNavigate();
 	const room_id = () => props.room.id;
 
-	const getThreads = createMemo(() => {
-		const threads = [...api.threads.cache.values()]
-			.filter((t) => t.room_id === props.room.id && !t.deleted_at);
-		threads.sort((a, b) => a.id < b.id ? 1 : -1);
-		return threads;
+	const [threadFilter, setThreadFilter] = createSignal("active");
+
+	const fetchMore = () => {
+		const filter = threadFilter();
+		if (filter === "active") {
+			return api.threads.list(room_id);
+		} else if (filter === "archived") {
+			return api.threads.listArchived(room_id);
+		} else if (filter === "removed") {
+			return api.threads.listRemoved(room_id);
+		}
+	};
+
+	const threadsResource = createMemo(fetchMore);
+
+	const [bottom, setBottom] = createSignal<Element | undefined>();
+
+	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
+		for (const entry of entries) {
+			if (entry.isIntersecting) fetchMore();
+		}
 	});
+
+	const getThreads = () => {
+		const items = threadsResource()?.()?.items;
+		if (!items) return [];
+		// sort descending by id
+		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
+	};
 
 	function createThread(room_id: string) {
 		ctx.dispatch({
@@ -115,8 +139,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	const [threadFilter, setThreadFilter] = createSignal("active");
-
 	const user_id = () => api.users.cache.get("@self")!.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
@@ -141,7 +163,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 			</Show>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
-					{getThreads().length} active threads
+					{threadsResource()?.()?.total ?? getThreads().length} {threadFilter()}
+					{" "}
+					threads
 				</h3>
 				<div class="thread-filter">
 					<button
@@ -210,6 +234,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 					)}
 				</For>
 			</ul>
+			<div ref={setBottom}></div>
 		</div>
 	);
 };

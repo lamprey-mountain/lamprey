@@ -135,20 +135,80 @@ export function createApi(
 			}
 		} else if (msg.type === "ThreadUpdate") {
 			const { thread } = msg;
+			const old_thread = threads.cache.get(thread.id);
 			threads.cache.set(thread.id, thread);
+
 			if (thread.room_id) {
-				const l = threads._cachedListings.get(thread.room_id);
-				if (l?.pagination) {
-					const p = l.pagination;
-					const idx = p.items.findIndex((i) => i.id === thread.id);
-					if (idx !== -1) {
-						for (const mut of threads._listingMutators) {
-							if (mut.room_id === thread.room_id) {
-								mut.mutate({
-									...p,
-									items: p.items.toSpliced(idx, 1, thread),
-								});
-							}
+				const was_archived = !!old_thread?.archived_at;
+				const is_archived = !!thread.archived_at;
+				const was_removed = !!old_thread?.deleted_at;
+				const is_removed = !!thread.deleted_at;
+
+				const get_status = (archived: boolean, removed: boolean) => {
+					if (removed) return "removed";
+					if (archived) return "archived";
+					return "active";
+				};
+
+				const old_status = get_status(was_archived, was_removed);
+				const new_status = get_status(is_archived, is_removed);
+
+				if (old_status !== new_status) {
+					// Thread moved between lists
+					const old_listing = (old_status === "active"
+						? threads._cachedListings
+						: old_status === "archived"
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+
+					if (old_listing?.pagination) {
+						const p = old_listing.pagination;
+						const idx = p.items.findIndex((i) =>
+							i.id === thread.id
+						);
+						if (idx !== -1) {
+							old_listing.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1),
+								total: p.total - 1,
+							});
+						}
+					}
+
+					const new_listing = (new_status === "active"
+						? threads._cachedListings
+						: new_status === "archived"
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+
+					if (new_listing?.pagination) {
+						const p = new_listing.pagination;
+						if (p.items.findIndex((i) => i.id === thread.id) === -1) {
+							new_listing.mutate({
+								...p,
+								items: [...p.items, thread],
+								total: p.total + 1,
+							});
+						}
+					}
+				} else {
+					// Thread was updated in place
+					const listing = (new_status === "active"
+						? threads._cachedListings
+						: new_status === "archived"
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+
+					if (listing?.pagination) {
+						const p = listing.pagination;
+						const idx = p.items.findIndex((i) =>
+							i.id === thread.id
+						);
+						if (idx !== -1) {
+							listing.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1, thread),
+							});
 						}
 					}
 				}
@@ -630,6 +690,8 @@ export type Api = {
 	threads: {
 		fetch: (thread_id: () => string) => Resource<Thread>;
 		list: (room_id: () => string) => Resource<Pagination<Thread>>;
+		listArchived: (room_id: () => string) => Resource<Pagination<Thread>>;
+		listRemoved: (room_id: () => string) => Resource<Pagination<Thread>>;
 		cache: ReactiveMap<string, Thread>;
 		ack: (
 			thread_id: string,
