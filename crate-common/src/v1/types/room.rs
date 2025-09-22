@@ -8,7 +8,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::NotifsRoom, util::{some_option, Diff}, MediaId, Permission, ThreadId, UserId
+    notifications::NotifsRoom,
+    util::{some_option, Diff},
+    MediaId, Permission, ThreadId, UserId,
 };
 
 use super::{ids::RoomId, util::Time};

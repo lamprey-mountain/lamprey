@@ -210,14 +210,14 @@ pub enum MessageType {
     /// (TODO) one or more messages were moved
     MessagesMoved(MessagesMoved),
 
-    /// a member was added to the thread or group dm
+    /// a thread member was added to the thread or group dm
     MemberAdd(MessageMember),
 
-    /// a member was removed from the thread or group dm
+    /// a thread member was removed from the thread or group dm
     MemberRemove(MessageMember),
 
-    /// (TODO) a member joined the room
-    MemberJoin(MessageMember),
+    /// a room member joined the room
+    MemberJoin,
 
     /// (TODO) call ended in a dm/gdm
     Call(MessageCall),
@@ -481,7 +481,7 @@ impl MessageType {
             MessageType::MessageUnpinned(_) => true,
             MessageType::MemberAdd(_) => false,
             MessageType::MemberRemove(_) => false,
-            MessageType::MemberJoin(_) => true,
+            MessageType::MemberJoin => true,
             MessageType::ThreadRename(_) => false,
             MessageType::ThreadPingback(_) => true,
             #[cfg(feature = "feat_automod")]

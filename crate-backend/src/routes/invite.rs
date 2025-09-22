@@ -6,8 +6,9 @@ use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
-    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut, SERVER_ROOM_ID,
+    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, MessageType,
+    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut,
+    RoomMembership, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -194,7 +195,7 @@ async fn invite_resolve(
 )]
 async fn invite_use(
     Path(code): Path<InviteCode>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
@@ -204,30 +205,48 @@ async fn invite_use(
     if invite.is_dead() {
         return Err(Error::NotFound);
     }
-    match invite.invite.target {
+    match &invite.invite.target {
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
-            if d.room_ban_get(room.id, user.id).await.is_ok() {
+            if d.room_ban_get(room.id, auth_user.id).await.is_ok() {
                 return Err(Error::BadStatic("banned"));
             }
             let origin = RoomMemberOrigin::Invite {
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,
             };
-            d.room_member_put(room.id, user.id, Some(origin), RoomMemberPut::default())
-                .await?;
-            let member = d.room_member_get(room.id, user.id).await?;
-            srv.perms.invalidate_room(user.id, room.id).await;
-            srv.perms.invalidate_is_mutual(user.id);
+            let existing = d.room_member_get(room.id, auth_user.id).await;
+            if existing.is_ok_and(|e| e.membership == RoomMembership::Join) {
+                return Ok(());
+            }
+
+            d.room_member_put(
+                room.id,
+                auth_user.id,
+                Some(origin),
+                RoomMemberPut::default(),
+            )
+            .await?;
+            let member = d.room_member_get(room.id, auth_user.id).await?;
+            srv.perms.invalidate_room(auth_user.id, room.id).await;
+            srv.perms.invalidate_is_mutual(auth_user.id);
             let room_id = room.id;
             // FIXME: don't send RoomCreate to *everyone* when someone joins, just the joining user
-            s.broadcast_room(room_id, user.id, MessageSync::RoomCreate { room })
-                .await?;
-            s.broadcast_room(room_id, user.id, MessageSync::RoomMemberUpsert { member })
-                .await?;
+            s.broadcast_room(
+                room_id,
+                auth_user.id,
+                MessageSync::RoomCreate { room: room.clone() },
+            )
+            .await?;
+            s.broadcast_room(
+                room_id,
+                auth_user.id,
+                MessageSync::RoomMemberUpsert { member },
+            )
+            .await?;
         }
         InviteTarget::Server => {
             let srv = s.services();
-            let user = srv.users.get(user.id).await?;
+            let user = srv.users.get(auth_user.id).await?;
             if user.registered_at.is_some() {
                 return Err(Error::BadStatic("User is not a guest account"));
             }
@@ -255,6 +274,37 @@ async fn invite_use(
         }
     }
     d.invite_incr_use(code).await?;
+
+    let room_id = match &invite.invite.target {
+        InviteTarget::Room { room } => room.id,
+        InviteTarget::Thread { room, .. } => room.id,
+        InviteTarget::Server => SERVER_ROOM_ID,
+    };
+    let room = srv.rooms.get(room_id, None).await?;
+    if let Some(wti) = room.welcome_thread_id {
+        let message_id = d
+            .message_create(crate::types::DbMessageCreate {
+                thread_id: wti,
+                attachment_ids: vec![],
+                author_id: auth_user.id,
+                embeds: vec![],
+                message_type: MessageType::MemberJoin,
+                edited_at: None,
+                created_at: None,
+            })
+            .await?;
+        let message = d.message_get(wti, message_id, auth_user.id).await?;
+        srv.threads.invalidate(wti).await; // message count
+        s.broadcast_thread(
+            wti,
+            auth_user.id,
+            MessageSync::MessageCreate {
+                message: message.clone(),
+            },
+        )
+        .await?;
+    }
+
     Ok(())
 }
 

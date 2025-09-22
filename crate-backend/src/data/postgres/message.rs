@@ -57,7 +57,7 @@ impl From<MessageType> for DbMessageType {
             MessageType::ThreadRename(_) => DbMessageType::ThreadRename,
             MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
             MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
-            MessageType::MemberJoin(_) => DbMessageType::MemberJoin,
+            MessageType::MemberJoin => DbMessageType::MemberJoin,
             _ => todo!(),
         }
     }
@@ -103,11 +103,7 @@ impl From<DbMessage> for Message {
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
                 ),
-                DbMessageType::MemberJoin => MessageType::MemberJoin(
-                    row.metadata
-                        .and_then(|m| serde_json::from_value(m).ok())
-                        .expect("invalid data in db"),
-                ),
+                DbMessageType::MemberJoin => MessageType::MemberJoin,
                 ty => {
                     panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }

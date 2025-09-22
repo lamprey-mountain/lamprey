@@ -270,7 +270,7 @@ impl DbMessageCreate {
             MessageType::ThreadRename(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberAdd(patch) => Some(serde_json::to_value(patch).ok()?),
             MessageType::MemberRemove(patch) => Some(serde_json::to_value(patch).ok()?),
-            MessageType::MemberJoin(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::MemberJoin => None,
             _ => None,
         }
     }
