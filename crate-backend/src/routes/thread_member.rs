@@ -93,7 +93,7 @@ pub async fn thread_member_get(
         ("thread_id" = ThreadId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread_member"],
+    tags = ["thread_member", "badge.perm-opt.MemberKick"],
     responses(
         (status = OK, body = ThreadMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -158,7 +158,7 @@ pub async fn thread_member_add(
         ("thread_id" = ThreadId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread_member"],
+    tags = ["thread_member", "badge.perm-opt.MemberKick"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

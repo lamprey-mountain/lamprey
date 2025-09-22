@@ -101,7 +101,14 @@ async fn room_member_get(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = [
+        "room_member",
+        "badge.perm.MemberBridge",
+        "badge.perm-opt.VoiceMute",
+        "badge.perm-opt.VoiceDeafen",
+        "badge.perm-opt.MemberManage",
+        "badge.perm-opt.RoleApply",
+    ],
     responses(
         (status = OK, body = RoomMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -290,7 +297,13 @@ async fn room_member_add(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = [
+        "room_member",
+        "badge.perm-opt.VoiceMute",
+        "badge.perm-opt.VoiceDeafen",
+        "badge.perm-opt.MemberManage",
+        "badge.perm-opt.RoleApply",
+    ],
     responses(
         (status = OK, body = RoomMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -431,7 +444,7 @@ struct LeaveQuery {
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm-opt.MemberKick"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -542,7 +555,7 @@ async fn room_member_search(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm.MemberBan"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -614,7 +627,7 @@ async fn room_ban_create(
     post,
     path = "/room/{room_id}/ban",
     params(("room_id" = RoomId, description = "Room id")),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm.MemberBan"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn room_ban_create_bulk(
@@ -697,7 +710,7 @@ async fn room_ban_create_bulk(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm.MemberBan"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -755,7 +768,7 @@ async fn room_ban_remove(
         ("room_id" = RoomId, description = "Room id"),
         ("user_id" = UserId, description = "User id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm.MemberBan"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -785,7 +798,7 @@ async fn room_ban_get(
         PaginationQuery<UserId>,
         ("room_id" = RoomId, description = "Room id"),
     ),
-    tags = ["room_member"],
+    tags = ["room_member", "badge.perm.MemberBan"],
     responses(
         (status = OK, body = PaginationResponse<RoomMember>, description = "success"),
     )

@@ -27,7 +27,7 @@ use super::util::{Auth, HeaderReason};
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.perm-opt.InviteManage"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -267,7 +267,7 @@ async fn invite_use(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.perm.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
@@ -399,7 +399,7 @@ async fn invite_room_list(
     params(
         ("invite_code", description = "The code identifying this invite"),
     ),
-    tags = ["invite"],
+    tags = ["invite", "badge.perm-opt.InviteManage"],
     responses(
         (status = NOT_MODIFIED, description = "not modified"),
         (status = OK, body = Invite, description = "success"),
@@ -499,7 +499,7 @@ async fn invite_patch(
 #[utoipa::path(
     post,
     path = "/server/invite",
-    tags = ["invite"],
+    tags = ["invite", "badge.perm.InviteCreate"],
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_server_create(

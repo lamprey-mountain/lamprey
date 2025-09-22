@@ -74,6 +74,7 @@ async fn dm_get(
     Ok(Json(thread))
 }
 
+// TODO: move to routes/user.rs
 /// Mutual rooms list
 ///
 /// List rooms both you and the target are in. Calling it on yourself lists

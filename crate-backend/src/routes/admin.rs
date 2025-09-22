@@ -32,7 +32,7 @@ struct AdminBroadcast {
 #[utoipa::path(
     post,
     path = "/admin/whisper",
-    tags = ["admin"],
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_whisper(
@@ -92,7 +92,7 @@ async fn admin_whisper(
 #[utoipa::path(
     post,
     path = "/admin/broadcast",
-    tags = ["admin"],
+    tags = ["admin", "badge.admin_only", "badge.perm.Admin"],
     responses((status = NO_CONTENT, description = "ok"))
 )]
 async fn admin_broadcast(

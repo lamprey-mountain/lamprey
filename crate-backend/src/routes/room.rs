@@ -136,6 +136,7 @@ enum RoomListInclude {
     Archived,
 }
 
+// TODO: merge with mutual rooms list (listing rooms you're in will become GET /user/@self/room)
 /// Room list
 #[utoipa::path(
     get,
@@ -169,7 +170,7 @@ async fn room_list(
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["room"],
+    tags = ["room", "badge.perm.RoomManage"],
     responses(
         (status = OK, description = "edit success"),
         (status = NOT_MODIFIED, description = "no change"),
@@ -226,7 +227,7 @@ async fn room_edit(
         PaginationQuery<AuditLogId>,
         ("room_id", description = "Room id"),
     ),
-    tags = ["room"],
+    tags = ["room", "badge.perm.ViewAuditLog"],
     responses(
         (status = 200, description = "fetch audit logs success", body = PaginationResponse<AuditLogEntry>),
     )
@@ -295,7 +296,7 @@ async fn room_metrics(
     post,
     path = "/room/{room_id}/transfer-ownership",
     params(("room_id", description = "Room id")),
-    tags = ["room"],
+    tags = ["auth", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
 async fn room_transfer_ownership(

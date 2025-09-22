@@ -27,7 +27,7 @@ use crate::error::{Error, Result};
     params(
         ("room_id", description = "Room id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleManage"],
     responses(
         (status = CREATED, body = Role, description = "success"),
     )
@@ -106,7 +106,7 @@ async fn role_create(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleManage"],
     responses(
         (status = OK, body = Role, description = "success"),
         (status = NOT_MODIFIED, description = "success"),
@@ -199,7 +199,7 @@ async fn role_update(
         ("room_id", description = "Room id"),
         ("role_id", description = "Role id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleManage"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -334,7 +334,7 @@ async fn role_member_list(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleApply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -392,7 +392,7 @@ async fn role_member_add(
         ("role_id", description = "Role id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleApply"],
     responses(
         (status = OK, body = RoomMember, description = "success"),
     )
@@ -472,7 +472,7 @@ async fn role_member_bulk_edit(
     patch,
     path = "/room/{room_id}/role",
     params(("room_id", description = "Room id")),
-    tags = ["role"],
+    tags = ["role", "badge.perm.RoleManage"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

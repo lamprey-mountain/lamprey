@@ -31,7 +31,13 @@ use crate::error::Result;
     post,
     path = "/thread/{thread_id}/message",
     params(("thread_id", description = "Thread id")),
-    tags = ["message"],
+    tags = [
+        "message",
+        "badge.perm.MessageCreate",
+        "badge.perm-opt.MessageAttachments",
+        "badge.perm-opt.MessageEmbeds",
+        "badge.perm-opt.MemberBridge",
+    ],
     responses(
         (status = CREATED, body = Message, description = "Create message success"),
     )
@@ -233,7 +239,7 @@ async fn message_edit(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<MessagePatch>,
-) -> Result<(StatusCode, Json<Message>)> {
+) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
@@ -266,6 +272,10 @@ async fn message_edit(
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id")
     ),
+    tags = [
+        "message",
+        "badge.perm-opt.MessageDelete",
+    ],
     tags = ["message"],
     responses(
         (status = NO_CONTENT, description = "delete message success"),
@@ -276,7 +286,7 @@ async fn message_delete(
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
-) -> Result<StatusCode> {
+) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
@@ -355,7 +365,7 @@ async fn message_version_list(
     Query(q): Query<PaginationQuery<MessageVerId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<PaginationResponse<Message>>> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s
         .services()
@@ -390,7 +400,7 @@ async fn message_version_get(
     Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-) -> Result<Json<Message>> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s
         .services()
@@ -414,7 +424,10 @@ async fn message_version_get(
         ("message_id", description = "Message id"),
         ("version_id", description = "Version id"),
     ),
-    tags = ["message"],
+    tags = [
+        "message",
+        "badge.perm-opt.MessageDelete",
+    ],
     responses(
         (status = NO_CONTENT, description = "delete message success"),
     )
@@ -424,7 +437,7 @@ async fn message_version_delete(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-) -> Result<Json<()>> {
+) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
@@ -535,13 +548,18 @@ struct MessageModerate {
 /// Permissions:
 /// - `MessageDelete` allows deleting messages and viewing deleted messages.
 /// - `MessageRemove` allows removing/restoring messages and viewing removed messages.
-/// - `Omnescience` allows viewing deleted and removed messages.
+/// - `Omnescience` (unimplemented) allows viewing deleted and removed messages.
 /// - Users always have `MessageDelete` for their own messages.
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}/message",
     params(("thread_id", description = "Thread id")),
-    tags = ["message"],
+    tags = [
+        "message",
+        "badge.perm-opt.MessageDelete",
+        // TODO: "badge.perm-opt.MessageRemove",
+        // TODO: "badge.perm-opt.Omnescience",
+    ],
     responses((status = OK, description = "success")),
 )]
 async fn message_moderate(
@@ -550,7 +568,7 @@ async fn message_moderate(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageModerate>,
-) -> Result<StatusCode> {
+) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
 
@@ -632,7 +650,10 @@ async fn message_moderate(
     post,
     path = "/thread/{thread_id}/migrate",
     params(("thread_id", description = "Thread id")),
-    tags = ["message"],
+    tags = [
+        "message",
+        "badge.perm.MessageMove",
+    ],
     responses((status = NO_CONTENT, description = "move success")),
 )]
 async fn message_migrate(
@@ -641,8 +662,8 @@ async fn message_migrate(
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<MessageMigrate>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
 }
 
 // TODO: move these structs to common

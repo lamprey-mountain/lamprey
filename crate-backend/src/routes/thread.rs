@@ -35,7 +35,12 @@ use crate::error::Result;
     post,
     path = "/room/{room_id}/thread",
     params(("room_id", description = "Room id")),
-    tags = ["thread"],
+    tags = [
+        "thread",
+        "badge.perm-opt.ThreadCreateChat",
+        "badge.perm-opt.ThreadCreateForumTree",
+        "badge.perm-opt.ThreadCreateVoice",
+    ],
     responses(
         (status = CREATED, body = Thread, description = "Create thread success"),
     )
@@ -276,6 +281,7 @@ async fn thread_list_removed(
     path = "/room/{room_id}/thread",
     params(("room_id", description = "Room id")),
     tags = ["thread"],
+    // TODO: tags = ["thread", "badge.perm.ThreadReorder"],
     responses(
         (status = OK, body = (), description = "Reorder threads success"),
     )
@@ -304,7 +310,7 @@ async fn thread_reorder(
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm-opt.ThreadEdit"],
     responses(
         (status = OK, body = Thread, description = "edit message success"),
         (status = NOT_MODIFIED, body = Thread, description = "no change"),
@@ -399,7 +405,7 @@ async fn thread_ack(
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm-opt.ThreadArchive"],
     responses(
         (status = OK, body = Thread, description = "success"),
         (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
@@ -465,7 +471,7 @@ async fn thread_archive(
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm-opt.ThreadArchive"],
     responses(
         (status = OK, body = Thread, description = "success"),
         (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
@@ -530,7 +536,7 @@ async fn thread_unarchive(
     put,
     path = "/thread/{thread_id}/remove",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn thread_remove(
@@ -578,7 +584,7 @@ async fn thread_remove(
     delete,
     path = "/thread/{thread_id}/remove",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn thread_restore(
@@ -629,7 +635,7 @@ async fn thread_restore(
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.MessageCreate"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -674,7 +680,7 @@ async fn thread_typing(
     put,
     path = "/thread/{thread_id}/lock",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn thread_lock(
@@ -730,7 +736,7 @@ async fn thread_lock(
     delete,
     path = "/thread/{thread_id}/lock",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn thread_unlock(

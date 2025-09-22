@@ -25,7 +25,7 @@ use crate::ServerState;
         ("thread_id", description = "Thread id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_thread_overwrite(
@@ -170,7 +170,7 @@ async fn permission_thread_overwrite(
         ("thread_id", description = "Thread id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["thread"],
+    tags = ["thread", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
 async fn permission_thread_delete(

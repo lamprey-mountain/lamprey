@@ -7,15 +7,14 @@ use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
-use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_http::{
-    catch_panic::CatchPanicLayer, cors::CorsLayer, propagate_header::PropagateHeaderLayer,
+    catch_panic::CatchPanicLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
 };
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use utoipa::{openapi::extensions::Extensions, Modify, OpenApi};
+use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 
 use backend::{
@@ -30,6 +29,10 @@ use backend::{
 
 use config::Config;
 use error::Result;
+
+use crate::util::{cors, BadgeModifier, NestedTags};
+
+mod util;
 
 // NOTE: the `sync` tag doesn't seem to show up, so i moved its docs to index.md
 #[derive(OpenApi)]
@@ -56,81 +59,8 @@ use error::Result;
         (name = "sync", description = include_str!("../docs/sync.md")),
         (name = "auth", description = include_str!("../docs/auth.md")),
     ),
-    modifiers(&NestedTags),
 )]
 struct ApiDoc;
-
-struct NestedTags;
-
-impl Modify for NestedTags {
-    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-        let tag_groups = json!([
-            {
-                "name": "auth",
-                "description": "authentication and session management",
-                "tags": ["session", "auth"],
-            },
-            {
-                "name": "room",
-                "description": "working with rooms",
-                "tags": ["room", "room_member", "role", "emoji", "tag"],
-            },
-            {
-                "name": "thread",
-                "description": "working with threads",
-                "tags": ["thread", "thread_member", "message", "reaction", "voice"],
-            },
-            {
-                "name": "user",
-                "description": "working with users",
-                "tags": ["user", "user_email", "user_config", "relationship", "dm"],
-            },
-            {
-                "name": "misc",
-                "description": "random other routes that i dont have anywhere to put yet",
-                "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public", "admin"],
-            },
-        ]);
-
-        if let Some(tags) = &mut openapi.tags {
-            for tag in tags {
-                tag.extensions
-                    .get_or_insert_with(|| {
-                        utoipa::openapi::extensions::Extensions::builder().build()
-                    })
-                    .insert(
-                        "x-displayName".to_string(),
-                        tag.name.replace("_", " ").into(),
-                    );
-            }
-        }
-
-        openapi
-            .extensions
-            .get_or_insert_default()
-            .merge(Extensions::builder().add("x-tagGroups", tag_groups).build());
-    }
-}
-
-fn cors() -> CorsLayer {
-    use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
-    const UPLOAD_OFFSET: HeaderName = HeaderName::from_static("upload-offset");
-    const UPLOAD_LENGTH: HeaderName = HeaderName::from_static("upload-length");
-    const IDEMPOTENCY_KEY: HeaderName = HeaderName::from_static("idempotency-key");
-    const REASON: HeaderName = HeaderName::from_static("x-reason");
-    const PUPPET_ID: HeaderName = HeaderName::from_static("x-puppet-id");
-    CorsLayer::very_permissive()
-        .expose_headers([CONTENT_TYPE, UPLOAD_OFFSET, UPLOAD_LENGTH])
-        .allow_headers([
-            AUTHORIZATION,
-            CONTENT_TYPE,
-            UPLOAD_OFFSET,
-            UPLOAD_LENGTH,
-            IDEMPOTENCY_KEY,
-            REASON,
-            PUPPET_ID,
-        ])
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -277,10 +207,12 @@ async fn main() -> Result<()> {
 async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
-    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
         .with_state(state)
         .split_for_parts();
+    NestedTags.modify(&mut api);
+    BadgeModifier.modify(&mut api);
     let router = router
         .route("/api/docs.json", get(|| async { Json(api) }))
         .route(

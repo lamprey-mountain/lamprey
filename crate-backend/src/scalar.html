@@ -5,8 +5,55 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 	</head>
+
 	<body>
-		<script id="api-reference" data-url="/api/docs.json"></script>
+		<div id="app"></div>
 		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+		<script>
+			Scalar.createApiReference("#app", {
+				url: "http://localhost:4000/api/docs.json",
+			});
+		</script>
+		<style>
+			.markdown-alert-permission-required,
+			.markdown-alert-permission-optional {
+				color: var(--badge-text-color, var(--scalar-color-2));
+				background: var(--badge-background-color, var(--scalar-background-2));
+				border: var(--scalar-border-width) solid
+					var(--badge-border-color, var(--scalar-border-color));
+				padding: 4px 8px;
+				padding-left: 12px;
+				border-radius: var(--scalar-radius-lg);
+				position: relative;
+				overflow: hidden;
+
+				&::after {
+					content: "";
+					display: block;
+					position: absolute;
+					height: 100%;
+					width: 4px;
+					top: 0;
+					left: 0;
+					background: #b1e27d;
+				}
+
+				&::before {
+					content: "required permission";
+					display: block;
+					font-size: var(--scalar-mini);
+					margin-bottom: 6px;
+				}
+			}
+
+			.markdown-alert-permission-optional {
+				&::after {
+					background: #c7e6a6;
+				}
+				&::before {
+					content: "optional permission";
+				}
+			}
+		</style>
 	</body>
 </html>

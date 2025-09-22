@@ -25,7 +25,10 @@ use crate::ServerState;
 #[utoipa::path(
     post,
     path = "/room/{room_id}/emoji",
-    tags = ["emoji"],
+    tags = [
+        "emoji",
+        "badge.perm.EmojiAdd",
+    ],
     params(
         ("room_id", description = "Room id"),
     ),
@@ -106,7 +109,7 @@ async fn emoji_create(
     ),
     tags = ["emoji"],
     responses(
-        (status = OK,  body=EmojiCustom, description = "success"),
+        (status = OK,  body = EmojiCustom, description = "success"),
     )
 )]
 async fn emoji_get(
@@ -129,7 +132,10 @@ async fn emoji_get(
         ("room_id", description = "Room id"),
         ("emoji_id", description = "Emoji id"),
     ),
-    tags = ["emoji"],
+    tags = [
+        "emoji",
+        "badge.perm.EmojiAdd",
+    ],
     responses(
         (status = NO_CONTENT, description = "success"),
     )

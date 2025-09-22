@@ -57,7 +57,7 @@ async fn voice_state_get(
         ("thread_id", description = "Thread id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice"],
+    tags = ["voice", "badge.perm.VoiceDisconnect"],
     responses(
         (status = NO_CONTENT, description = "ok"),
     )
@@ -113,7 +113,7 @@ async fn voice_state_disconnect(
         ("thread_id", description = "Thread id"),
         ("user_id", description = "User id"),
     ),
-    tags = ["voice"],
+    tags = ["voice", "badge.perm.VoiceMove"],
     responses(
         (status = OK, body = (), description = "ok"),
     )

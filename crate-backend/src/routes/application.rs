@@ -256,7 +256,7 @@ struct AppInviteBot {
 #[utoipa::path(
     post,
     path = "/app/{app_id}/invite",
-    tags = ["application"],
+    tags = ["application", "badge.perm.BotsAdd"],
     request_body = AppInviteBot,
     responses(
         (status = NO_CONTENT, description = "success")

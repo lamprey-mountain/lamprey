@@ -26,7 +26,7 @@ use crate::{Error, ServerState};
         ("message_id", description = "Message id"),
         ("key", description = "Reaction key"),
     ),
-    tags = ["reaction"],
+    tags = ["reaction", "badge.perm.ReactionAdd"],
     responses(
         (status = CREATED, description = "new reaction created"),
         (status = OK, description = "already exists"),
@@ -81,7 +81,7 @@ async fn reaction_add(
         ("message_id", description = "Message id"),
         ("key", description = "Reaction key"),
     ),
-    tags = ["reaction"],
+    tags = ["reaction", "badge.perm.ReactionAdd"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -133,7 +133,7 @@ async fn reaction_remove(
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id"),
     ),
-    tags = ["reaction"],
+    tags = ["reaction", "badge.perm.ReactionClear"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
