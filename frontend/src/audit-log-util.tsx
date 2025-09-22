@@ -89,6 +89,16 @@ export function formatChanges(
 			formatted.push(<li>unbanned user {ent.metadata.user_id}</li>);
 			break;
 		}
+		case "ThreadMemberAdd": {
+			formatted.push(<li>added user {ent.metadata.user_id}</li>);
+			formatted.push(<li>to thread {ent.metadata.thread_id}</li>);
+			break;
+		}
+		case "ThreadMemberRemove": {
+			formatted.push(<li>removed user {ent.metadata.user_id}</li>);
+			formatted.push(<li>to thread {ent.metadata.thread_id}</li>);
+			break;
+		}
 	}
 
 	if ("changes" in ent.metadata) {
