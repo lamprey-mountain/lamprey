@@ -58,6 +58,12 @@ export function usePermissions(
 		console.log("[perms] in room", rid);
 
 		const room = api.rooms.fetch(() => rid)();
+
+		if (room?.owner_id === user_id()) {
+			console.log("[perms] user is owner");
+			return { permissions: new Set(["Admin"]), rank: Infinity };
+		}
+
 		const member = api.room_members.fetch(() => rid, user_id)();
 		const rolesResource = api.roles.list(() => rid);
 
@@ -112,7 +118,7 @@ export function usePermissions(
 
 		console.log("[perms] resolved perms", finalPermissions);
 
-		const rank = room?.owner_id === user_id() ? Infinity : roles.reduce(
+		const rank = roles.reduce(
 			(max, role) =>
 				member.roles.includes(role.id) ? Math.max(role.position, max) : max,
 			0,
