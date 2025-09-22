@@ -11,7 +11,7 @@ use common::v1::types::{
     RoomMembership, UserId,
 };
 use common::v1::types::{
-    RoleId, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
+    RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
