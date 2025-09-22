@@ -143,7 +143,9 @@ impl ServiceMessages {
         let mut message = data.message_get(thread_id, message_id, user_id).await?;
 
         if let Some(content) = &content {
-            tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
+            if perms.has(Permission::MessageEmbeds) {
+                tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
+            }
         }
         s.presign_message(&mut message).await?;
         message.nonce = nonce.or(json.nonce);
@@ -294,7 +296,9 @@ impl ServiceMessages {
             .await?;
 
         if let Some(content) = &content {
-            tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
+            if perms.has(Permission::MessageEmbeds) {
+                tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
+            }
         }
 
         if let Some(embeds) = json.embeds {
