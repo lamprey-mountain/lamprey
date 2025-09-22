@@ -2558,3 +2558,63 @@ article.message.oneline {
 		padding: 0;
 	}
 }
+
+.room-settings-bans {
+	& header {
+		display: flex;
+
+		& .name {
+			width: 160px;
+			margin-left: 36px;
+		}
+
+		& .created {
+			width: 128px;
+		}
+
+		& .expires {
+			width: 128px;
+		}
+	}
+
+	& > ul > li {
+		& + li {
+			border-top: solid $sep-500 1px;
+		}
+
+		padding: 8px 4px;
+		display: flex;
+
+		& .profile {
+			display: flex;
+			gap: 8px;
+			align-items: start;
+			width: 192px;
+
+			& .avatar {
+				height: 32px;
+				width: 32px;
+				margin-top: 2px;
+			}
+
+			& .name {
+				font-size: 1rem;
+				/* margin-left: 2px; */
+			}
+		}
+
+		& .created {
+			width: 128px;
+		}
+
+		& .expires {
+			width: 128px;
+		}
+
+		& .reason {
+			flex: 1;
+			@include truncate;
+			margin-right: 8px;
+		}
+	}
+}

@@ -26,6 +26,7 @@ import type {
 	Pagination,
 	Role,
 	Room,
+	RoomBan,
 	RoomMember,
 	Session,
 	Thread,
@@ -45,6 +46,7 @@ import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
 import { RoomMembers } from "./api/room_members.ts";
+import { RoomBans } from "./api/room_bans.ts";
 import { Roles } from "./api/roles.ts";
 import { AuditLogs } from "./api/audit_log.ts";
 import { ThreadMembers } from "./api/thread_members.ts";
@@ -79,6 +81,7 @@ export function createApi(
 	const invites = new Invites();
 	const roles = new Roles();
 	const room_members = new RoomMembers();
+	const room_bans = new RoomBans();
 	const thread_members = new ThreadMembers();
 	const users = new Users();
 	const messages = new Messages();
@@ -494,6 +497,50 @@ export function createApi(
 				cached.pagination.items.unshift(msg.entry);
 				cached.pagination.total += 1;
 			}
+		} else if (msg.type === "BanCreate") {
+			const { ban } = msg;
+			const c = room_bans.cache.get(ban.room_id);
+			if (c) {
+				c.set(ban.user_id, ban);
+			} else {
+				room_bans.cache.set(ban.room_id, new ReactiveMap());
+				room_bans.cache.get(ban.room_id)!.set(ban.user_id, ban);
+			}
+			const l = room_bans._cachedListings.get(ban.room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex((i) => i.user_id === ban.user_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, ban),
+					});
+				} else {
+					l.mutate({
+						...p,
+						items: [...p.items, ban],
+						total: p.total + 1,
+					});
+				}
+			}
+		} else if (msg.type === "BanDelete") {
+			const { room_id, user_id } = msg;
+			const c = room_bans.cache.get(room_id);
+			if (c) {
+				c.delete(user_id);
+			}
+			const l = room_bans._cachedListings.get(room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex((i) => i.user_id === user_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1),
+						total: p.total - 1,
+					});
+				}
+			}
 		} else {
 			console.warn(`unknown event ${msg.type}`, msg);
 		}
@@ -527,6 +574,7 @@ export function createApi(
 		invites,
 		roles,
 		room_members,
+		room_bans,
 		thread_members,
 		users,
 		messages,
@@ -555,6 +603,7 @@ export function createApi(
 	threads.api = api;
 	roles.api = api;
 	room_members.api = api;
+	room_bans.api = api;
 	thread_members.api = api;
 	invites.api = api;
 	users.api = api;
@@ -611,6 +660,14 @@ export type Api = {
 		) => Resource<RoomMember>;
 		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
 		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
+	};
+	room_bans: {
+		fetch: (
+			room_id: () => string,
+			user_id: () => string,
+		) => Resource<RoomBan>;
+		list: (room_id: () => string) => Resource<Pagination<RoomBan>>;
+		cache: ReactiveMap<string, ReactiveMap<string, RoomBan>>;
 	};
 	thread_members: {
 		fetch: (
