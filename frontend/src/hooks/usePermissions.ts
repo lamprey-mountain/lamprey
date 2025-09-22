@@ -3,7 +3,7 @@ import type { Permission } from "sdk";
 import { useApi } from "../api";
 
 export function usePermissions(
-	user_id: () => string,
+	user_id: () => string | undefined,
 	room_id: () => string | undefined,
 	thread_id: () => string | undefined,
 ) {
@@ -12,6 +12,8 @@ export function usePermissions(
 	console.log("[perms] hook used");
 
 	const permissions = createMemo(() => {
+		if (!user_id()) return { permissions: new Set(), rank: 0 };
+
 		const finalPermissions = new Set<Permission>();
 		const rid = room_id();
 

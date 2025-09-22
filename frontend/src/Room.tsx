@@ -139,7 +139,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	const user_id = () => api.users.cache.get("@self")!.id;
+	const user_id = () => api.users.cache.get("@self")?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	return (
