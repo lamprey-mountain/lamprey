@@ -15,8 +15,7 @@ export type TimelineItemT =
 		| { type: "spacer" }
 		| { type: "spacer-mini" }
 		| { type: "spacer-mini2" }
-		| { type: "unread-marker" }
-		| { type: "time-split"; date: Date }
+		| { type: "divider"; unread: boolean; date?: Date }
 		| {
 			type: "message";
 			message: MessageT;
@@ -59,21 +58,29 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "spacer-mini": {
 			return <li class="spacer mini"></li>;
 		}
-		case "unread-marker": {
+		case "divider": {
 			return (
-				<li class="unread-marker">
-					<div class="content">new messages</div>
-				</li>
-			);
-		}
-		case "time-split": {
-			return (
-				<li class="time-split">
+				<li
+					class="divider"
+					classList={{ unread: item.unread, time: !!item.date }}
+				>
+					<Show when={item.unread}>
+						<div class="new">new</div>
+					</Show>
 					<hr />
-					<time datetime={item.date.toISOString()}>
-						{item.date.toDateString()}
-					</time>
-					<hr />
+					<Show when={item.date}>
+						{(d) => (
+							<>
+								<time datetime={d().toISOString()}>
+									{d().toDateString()}
+								</time>
+								<hr />
+							</>
+						)}
+					</Show>
+					<Show when={item.unread}>
+						<div class="new hidden">new</div>
+					</Show>
 				</li>
 			);
 		}

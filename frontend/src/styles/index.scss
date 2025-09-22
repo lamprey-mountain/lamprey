@@ -232,28 +232,6 @@ input[type="submit"] {
 				overflow-anchor: none;
 			}
 
-			&.unread-marker {
-				color: #3fa9c9;
-				margin: 8px 0;
-
-				& > .content {
-					grid-column: 1 / 4;
-					text-align: center;
-					display: flex;
-					align-items: center;
-
-					&::before,
-					&::after {
-						content: "";
-						display: block;
-						background: #3fa9c9;
-						height: 1px;
-						flex: 1;
-						margin: 0 8px;
-					}
-				}
-			}
-
 			&.selected {
 				box-shadow: 4px 0 0 -1px inset #67dc82;
 				background-color: #67dc8222;
@@ -1359,22 +1337,45 @@ pre.numbered {
 	color: $error-500;
 }
 
-.chat > .list > li.time-split {
+.chat > .list > li.divider {
 	display: flex;
 	color: $fg-600;
 	font-size: 0.9rem;
 	align-items: center;
-	gap: 8px;
 	margin: 8px;
+	position: relative;
 
 	& > hr {
 		flex: 1;
 		border-bottom: solid $sep-500 1px;
+		margin: 0 8px;
 	}
 
+	/* visually center text */
 	& > time {
-		/* HACK: visually center text */
 		margin-top: -1px;
+	}
+
+	& > .new {
+		margin-top: -3px;
+
+		&.hidden {
+			/* HACK: this hidden div with hacky styles exists to center the date text */
+			margin-top: 0;
+			margin-left: -8px;
+			padding-left: 8px;
+			height: 0;
+			color: transparent;
+			border-bottom: solid #3fa9c9 1px;
+		}
+	}
+
+	&.unread {
+		color: #3fa9c9;
+
+		& > hr {
+			border-bottom: solid #3fa9c9 1px;
+		}
 	}
 }
 

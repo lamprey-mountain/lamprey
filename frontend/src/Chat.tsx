@@ -369,16 +369,16 @@ export function renderTimeline(
 	for (let i = 0; i < items.length; i++) {
 		const msg = items[i];
 		const prev = items[i - 1] as Message | undefined;
-		if (prev) {
-			const ts_a = get_msg_ts(msg);
-			const ts_b = get_msg_ts(prev);
-			if (ts_a.getDay() !== ts_b.getDay()) {
-				newItems.push({
-					type: "time-split",
-					id: `${msg.id}-timesplit`,
-					date: get_msg_ts(msg),
-				});
-			}
+		const markerTime = prev &&
+			get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
+		const markerUnread = prev?.id === read_marker_id;
+		if (markerTime || markerUnread) {
+			newItems.push({
+				type: "divider",
+				id: `divider-${msg.id}`,
+				date: markerTime ? get_msg_ts(msg) : undefined,
+				unread: markerUnread,
+			});
 		}
 		newItems.push({
 			type: "message",
@@ -386,12 +386,6 @@ export function renderTimeline(
 			message: msg,
 			separate: prev ? shouldSplit(msg, prev) : true,
 		});
-		if (msg.id === read_marker_id && i !== items.length - 1) {
-			newItems.push({
-				type: "unread-marker",
-				id: "unread-marker",
-			});
-		}
 	}
 	if (has_after) {
 		newItems.push({
