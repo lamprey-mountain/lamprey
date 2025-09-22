@@ -167,5 +167,6 @@ impl Diff<Room> for RoomPatch {
             || self.description.changes(&other.description)
             || self.icon.changes(&other.icon)
             || self.public.changes(&other.public)
+            || self.welcome_thread_id.changes(&other.welcome_thread_id)
     }
 }
