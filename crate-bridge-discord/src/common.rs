@@ -42,6 +42,8 @@ pub struct PortalConfig {
     pub lamprey_thread_id: ThreadId,
     pub lamprey_room_id: RoomId,
     pub discord_guild_id: DcGuildId,
+    // TODO: make discord_channel_id the thread id if the target is a thread, and add this field
+    // pub discord_webhook_channel_id: DcChannelId, // the thread's parent channel if it exists
     pub discord_channel_id: DcChannelId,
     pub discord_thread_id: Option<DcChannelId>,
     pub discord_webhook: String,
@@ -98,7 +100,7 @@ impl Globals {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum BridgeMessage {
     LampreyThreadCreate {
         thread_id: ThreadId,

@@ -188,7 +188,6 @@ async fn media_done(
                 .uploads
                 .remove(&media_id)
                 .expect("it was there a few milliseconds ago");
-            trace!("processing upload");
             let filename = match &up.create.source {
                 MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
                 MediaCreateSource::Download { .. } => panic!("can only patch upload"),

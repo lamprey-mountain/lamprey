@@ -98,6 +98,13 @@ impl Portal {
         }
     }
 
+    #[tracing::instrument(
+        skip(self),
+        fields(
+            lamprey_thread_id = %self.config.lamprey_thread_id,
+            discord_channel_id = %self.config.discord_channel_id,
+        )
+    )]
     async fn handle(&mut self, msg: PortalMessage) -> Result<()> {
         match msg {
             PortalMessage::LampreyMessageCreate { message } => {

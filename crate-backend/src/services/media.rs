@@ -184,6 +184,7 @@ impl ServiceMedia {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self, up))]
     pub async fn process_upload(
         &self,
         up: MediaUpload,
@@ -191,6 +192,7 @@ impl ServiceMedia {
         user_id: UserId,
         filename: &str,
     ) -> Result<Media> {
+        debug!("processing upload");
         let tmp = up.temp_file;
         let p = tmp.file_path().to_owned();
         let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;

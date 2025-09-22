@@ -18,7 +18,7 @@ use serenity::{
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{error, info, warn};
+use tracing::{error, info, warn, Instrument};
 
 use crate::{
     common::{BridgeMessage, Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
@@ -283,80 +283,92 @@ impl EventHandler for Handler {
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
-        let chans = guild.channels.values().chain(&guild.threads);
-        for ch in chans {
-            if globals
-                .get_portal_by_discord_channel(ch.id)
-                .await
-                .unwrap()
-                .is_some()
-            {
-                let config = globals
-                    .get_portal_by_discord_channel(ch.id)
-                    .await
-                    .unwrap()
-                    .unwrap();
-                let portal = globals
-                    .portals
-                    .entry(config.lamprey_thread_id)
-                    .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
-
-                let last_id = globals
-                    .last_ids
-                    .iter()
-                    .find(|i| i.discord_channel_id == ch.id)
-                    .map(|i| i.discord_id);
-                let Some(last_id) = last_id else {
-                    continue;
-                };
-                let mut p = MessagePagination::After(last_id);
-                loop {
-                    let msgs = ctx
-                        .http()
-                        .get_messages(ch.id, Some(p), Some(100))
+        async {
+            let chans = guild.channels.values().chain(&guild.threads);
+            for ch in chans {
+                async {
+                    if globals
+                        .get_portal_by_discord_channel(ch.id)
                         .await
-                        .unwrap();
-                    if msgs.is_empty() {
-                        break;
+                        .unwrap()
+                        .is_some()
+                    {
+                        let config = globals
+                            .get_portal_by_discord_channel(ch.id)
+                            .await
+                            .unwrap()
+                            .unwrap();
+                        let portal = globals
+                            .portals
+                            .entry(config.lamprey_thread_id)
+                            .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
+
+                        let last_id = globals
+                            .last_ids
+                            .iter()
+                            .find(|i| i.discord_channel_id == ch.id)
+                            .map(|i| i.discord_id);
+                        let Some(last_id) = last_id else {
+                            return;
+                        };
+                        let mut p = MessagePagination::After(last_id);
+                        loop {
+                            let msgs = ctx
+                                .http()
+                                .get_messages(ch.id, Some(p), Some(100))
+                                .await
+                                .unwrap();
+                            if msgs.is_empty() {
+                                break;
+                            }
+                            info!("discord backfill {} messages", msgs.len());
+                            let last_id = msgs.first().unwrap().id;
+                            for message in msgs.into_iter().rev() {
+                                let _ =
+                                    portal.send(PortalMessage::DiscordMessageCreate { message });
+                            }
+                            p = MessagePagination::After(last_id);
+                        }
+                    } else {
+                        if ch.kind != ChannelType::Text && ch.kind != ChannelType::News {
+                            return;
+                        }
+
+                        let Ok(realms) = globals.get_realms().await else {
+                            return;
+                        };
+
+                        let Some(realm_config) =
+                            realms.iter().find(|c| c.discord_guild_id == guild.id)
+                        else {
+                            return;
+                        };
+
+                        if !realm_config.continuous {
+                            return;
+                        }
+
+                        info!("no portal exists so we'll create one");
+
+                        if let Err(e) = globals
+                            .bridge_chan
+                            .send(BridgeMessage::DiscordChannelCreate {
+                                guild_id: guild.id,
+                                channel_id: ch.id,
+                                channel_name: ch.name.clone(),
+                            })
+                            .await
+                        {
+                            error!("failed to send discord channel create message: {e}");
+                        }
                     }
-                    info!("discord backfill {} messages", msgs.len());
-                    let last_id = msgs.first().unwrap().id;
-                    for message in msgs.into_iter().rev() {
-                        let _ = portal.send(PortalMessage::DiscordMessageCreate { message });
-                    }
-                    p = MessagePagination::After(last_id);
                 }
-            } else {
-                if ch.kind != ChannelType::Text && ch.kind != ChannelType::News {
-                    continue;
-                }
-
-                let Ok(realms) = globals.get_realms().await else {
-                    continue;
-                };
-
-                let Some(realm_config) = realms.iter().find(|c| c.discord_guild_id == guild.id)
-                else {
-                    continue;
-                };
-
-                if !realm_config.continuous {
-                    continue;
-                }
-
-                if let Err(e) = globals
-                    .bridge_chan
-                    .send(BridgeMessage::DiscordChannelCreate {
-                        guild_id: guild.id,
-                        channel_id: ch.id,
-                        channel_name: ch.name.clone(),
-                    })
-                    .await
-                {
-                    error!("failed to send discord channel create message: {e}");
-                }
+                .instrument(tracing::debug_span!("incremental backfill channel", ?ch.id))
+                .await;
             }
         }
+        .instrument(tracing::debug_span!("incremental backfill guild", ?guild.id))
+        .await;
     }
 
     async fn message(&self, ctx: Context, message: Message) {
