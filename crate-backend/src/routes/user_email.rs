@@ -6,8 +6,14 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
+use common::v1::types::util::Changes;
+use common::v1::types::AuditLogEntry;
+use common::v1::types::AuditLogEntryId;
+use common::v1::types::AuditLogEntryType;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::routes::util::AuthWithSession;
+use crate::routes::util::HeaderReason;
 use crate::types::UserIdReq;
 use crate::ServerState;
 
@@ -31,7 +37,8 @@ use super::util::Auth;
 )]
 async fn email_add(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -64,12 +71,28 @@ async fn email_add(
             s.services
                 .email
                 .send(
-                    email_addr,
+                    email_addr.clone(),
                     "Verify your email address".to_string(),
                     format!("Your verification code is: {}", code),
                     None,
                 )
                 .await?;
+
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: target_user_id.into_inner().into(),
+                user_id: auth_user.id,
+                session_id: Some(session.id),
+                reason,
+                ty: AuditLogEntryType::EmailCreate {
+                    email: email_addr,
+                    changes: Changes::new()
+                        .add("is_verified", &false)
+                        .add("is_primary", &false)
+                        .build(),
+                },
+            })
+            .await?;
 
             Ok(StatusCode::CREATED.into_response())
         }
@@ -91,7 +114,8 @@ async fn email_add(
 )]
 async fn email_delete(
     Path((target_user_id_req, email)): Path<(UserIdReq, String)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     // we need to keep email addresses in case we need to tell the suspended user anything
@@ -106,7 +130,19 @@ async fn email_delete(
         return Err(Error::NotFound);
     }
 
-    s.data().user_email_delete(target_user_id, email).await?;
+    s.data()
+        .user_email_delete(target_user_id, email.clone())
+        .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::EmailDelete { email },
+    })
+    .await?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }
@@ -150,7 +186,8 @@ async fn email_list(
 )]
 async fn email_update(
     Path((target_user_id_req, email_addr)): Path<(UserIdReq, String)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<EmailInfoPatch>,
 ) -> Result<impl IntoResponse> {
@@ -163,13 +200,14 @@ async fn email_update(
         return Err(Error::NotFound);
     }
 
-    // You can only set an email as primary if it's verified.
+    let emails = s.data().user_email_list(target_user_id).await?;
+    let email_info = emails
+        .iter()
+        .find(|e| e.email == email_addr)
+        .ok_or(Error::NotFound)?;
+
+    // you can only set an email as primary if it's verified.
     if patch.is_primary == Some(true) {
-        let emails = s.data().user_email_list(target_user_id).await?;
-        let email_info = emails
-            .iter()
-            .find(|e| e.email == email_addr)
-            .ok_or(Error::NotFound)?;
         if !email_info.is_verified {
             return Err(Error::BadRequest(
                 "Email address must be verified to be set as primary.".to_string(),
@@ -178,8 +216,33 @@ async fn email_update(
     }
 
     s.data()
-        .user_email_update(target_user_id, email_addr, patch)
+        .user_email_update(target_user_id, email_addr.clone(), patch)
         .await?;
+
+    let emails_new = s.data().user_email_list(target_user_id).await?;
+    let email_info_new = emails_new
+        .iter()
+        .find(|e| e.email == email_addr)
+        .ok_or(Error::NotFound)?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::EmailUpdate {
+            email: email_addr,
+            changes: Changes::new()
+                .change(
+                    "is_verified",
+                    &email_info.is_primary,
+                    &email_info_new.is_primary,
+                )
+                .build(),
+        },
+    })
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -252,8 +315,9 @@ async fn email_verification_resend(
 )]
 async fn email_verification_finish(
     Path((target_user_id_req, email_addr, code)): Path<(UserIdReq, String, String)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let email_addr: EmailAddr = email_addr.try_into()?;
@@ -266,8 +330,21 @@ async fn email_verification_finish(
     }
 
     s.data()
-        .user_email_verify_use(target_user_id, email_addr, code)
+        .user_email_verify_use(target_user_id, email_addr.clone(), code)
         .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::EmailUpdate {
+            email: email_addr,
+            changes: Changes::new().change("is_verified", &false, &true).build(),
+        },
+    })
+    .await?;
 
     Ok(StatusCode::NO_CONTENT.into_response())
 }

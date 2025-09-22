@@ -106,18 +106,15 @@ async fn user_update(
 #[utoipa::path(
     delete,
     path = "/user/{user_id}",
-    params(
-        ("user_id", description = "User id"),
-    ),
+    params(("user_id", description = "User id")),
     tags = ["user"],
-    responses(
-        (status = NO_CONTENT, description = "success"),
-    )
+    responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_delete(
     Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
@@ -133,7 +130,37 @@ async fn user_delete(
     let srv = s.services();
     srv.users.invalidate(target_user_id).await;
     s.broadcast(MessageSync::UserDelete { id: target_user_id })?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::UserDelete {
+            user_id: target_user_id,
+        },
+    })
+    .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// User undelete (TODO)
+///
+/// Allows undeleting a user provided they haven't been garbage collected yet
+#[utoipa::path(
+    post,
+    path = "/user/{user_id}/undelete",
+    params(("user_id", description = "User id")),
+    tags = ["user"],
+    responses((status = NO_CONTENT, description = "success")),
+)]
+async fn user_undelete(
+    Path(_target_user_id): Path<UserIdReq>,
+    Auth(_auth_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+    HeaderReason(_reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
 }
 
 /// User get
@@ -245,8 +272,21 @@ async fn guest_create(
     srv.sessions.invalidate(session.id).await;
     let updated_session = srv.sessions.get(session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
-        session: updated_session,
+        session: updated_session.clone(),
     })?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: user.id.into_inner().into(),
+        user_id: user.id,
+        session_id: Some(updated_session.id),
+        reason: None,
+        ty: AuditLogEntryType::SessionLogin {
+            user_id: user.id,
+            session_id: updated_session.id,
+        },
+    })
+    .await?;
 
     Ok((StatusCode::CREATED, Json(user)))
 }
@@ -393,8 +433,9 @@ async fn connection_list(
 )]
 async fn connection_revoke(
     Path((target_user_id, app_id)): Path<(UserIdReq, ApplicationId)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
@@ -411,6 +452,17 @@ async fn connection_revoke(
         user_id: target_user_id,
         app_id,
     })?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: target_user_id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::ConnectionDelete {
+            application_id: app_id,
+        },
+    })
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -455,6 +507,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_update))
         .routes(routes!(user_get))
         .routes(routes!(user_delete))
+        .routes(routes!(user_undelete))
         .routes(routes!(user_audit_logs))
         .routes(routes!(user_suspend))
         .routes(routes!(user_unsuspend))

@@ -4,12 +4,13 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, RelationshipPatch, RelationshipType,
-    RelationshipWithUserId, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
+use crate::routes::util::{AuthWithSession, HeaderReason};
 use crate::ServerState;
 
 use super::util::Auth;
@@ -52,8 +53,9 @@ async fn friend_list(
 )]
 async fn friend_add(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
@@ -95,6 +97,17 @@ async fn friend_add(
                 },
             )
             .await?;
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: auth_user.id.into_inner().into(),
+                user_id: auth_user.id,
+                session_id: Some(session.id),
+                reason,
+                ty: AuditLogEntryType::FriendAccept {
+                    user_id: target_user_id,
+                },
+            })
+            .await?;
         }
         (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
         (None, None) => {
@@ -120,6 +133,17 @@ async fn friend_add(
                     relation: Some(Some(RelationshipType::Incoming)),
                 },
             )
+            .await?;
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: auth_user.id.into_inner().into(),
+                user_id: auth_user.id,
+                session_id: Some(session.id),
+                reason,
+                ty: AuditLogEntryType::FriendRequest {
+                    user_id: target_user_id,
+                },
+            })
             .await?;
         }
         (Some(RelationshipType::Friend), Some(RelationshipType::Friend)) => {
@@ -172,8 +196,9 @@ async fn friend_add(
 )]
 async fn friend_remove(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
 
@@ -184,14 +209,28 @@ async fn friend_remove(
         .await?;
 
     match existing.as_ref().and_then(|r| r.relation.as_ref()) {
-        Some(RelationshipType::Friend)
-        | Some(RelationshipType::Incoming)
-        | Some(RelationshipType::Outgoing) => {
+        r @ Some(RelationshipType::Friend)
+        | r @ Some(RelationshipType::Incoming)
+        | r @ Some(RelationshipType::Outgoing) => {
             data.user_relationship_delete(auth_user.id, target_user_id)
                 .await?;
             s.broadcast(MessageSync::RelationshipDelete {
                 user_id: auth_user.id,
             })?;
+
+            if r == Some(&RelationshipType::Friend) {
+                s.audit_log_append(AuditLogEntry {
+                    id: AuditLogEntryId::new(),
+                    room_id: auth_user.id.into_inner().into(),
+                    user_id: auth_user.id,
+                    session_id: Some(session.id),
+                    reason,
+                    ty: AuditLogEntryType::FriendDelete {
+                        user_id: target_user_id,
+                    },
+                })
+                .await?;
+            }
 
             if let Some(r) = data
                 .user_relationship_get(target_user_id, auth_user.id)
@@ -255,8 +294,9 @@ async fn block_list(
 )]
 async fn block_add(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
@@ -293,6 +333,18 @@ async fn block_add(
         relationship: rel,
     })?;
 
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::BlockCreate {
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -308,8 +360,9 @@ async fn block_add(
 )]
 async fn block_remove(
     Path(target_user_id): Path<UserId>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
 
@@ -327,6 +380,18 @@ async fn block_remove(
         s.broadcast(MessageSync::RelationshipDelete {
             user_id: auth_user.id,
         })?;
+
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: auth_user.id.into_inner().into(),
+            user_id: auth_user.id,
+            session_id: Some(session.id),
+            reason,
+            ty: AuditLogEntryType::BlockDelete {
+                user_id: target_user_id,
+            },
+        })
+        .await?;
     }
 
     Ok(StatusCode::NO_CONTENT)

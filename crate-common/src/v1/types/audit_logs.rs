@@ -4,8 +4,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    role::RoleReorderItem, util::Time, AuditLogEntryId, EmojiId, InviteCode, MessageId,
-    MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, UserId,
+    application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
+    AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
+    RoomId, SessionId, ThreadId, UserId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -201,11 +202,6 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
-    // // cant be logged because this isn't yet implemented
-    // MessagePin,
-    // MessageUnpin,
-    // MessageRemove,
-    // MessageRestore,
     UserUpdate {
         changes: Vec<AuditLogChange>,
     },
@@ -219,21 +215,94 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
-    // TODO: impl these events
-    // FriendAdd,
-    // FriendRemove,
-    // BlockAdd,
-    // BlockRemove,
-    // SessionLogin, // SessionCreate doesnt make sense because when sessions are created they aren't linked to any users
-    // SessionUpdate,
-    // SessionDelete,
-    // AuthUpdate,
-    // EmailUpdate,
+    /// friend request sent to another user
+    FriendRequest {
+        user_id: UserId,
+    },
 
-    // // for server audit log, which doesnt exist yet
-    // ServerUpdate,
-    // RoomDelete,
+    /// friend request from another user accepted
+    FriendAccept {
+        user_id: UserId,
+    },
+
+    FriendDelete {
+        user_id: UserId,
+    },
+
+    BlockCreate {
+        user_id: UserId,
+    },
+
+    BlockDelete {
+        user_id: UserId,
+    },
+
+    SessionLogin {
+        user_id: UserId,
+        session_id: SessionId,
+    },
+
+    SessionUpdate {
+        session_id: SessionId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    SessionDelete {
+        session_id: SessionId,
+    },
+
+    /// auth state changed
+    AuthUpdate {
+        changes: Vec<AuditLogChange>,
+    },
+
+    /// user entered sudo mode
+    AuthSudo {
+        session_id: SessionId,
+    },
+
+    ApplicationCreate {
+        application_id: ApplicationId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    ApplicationUpdate {
+        application_id: ApplicationId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    ApplicationDelete {
+        application_id: ApplicationId,
+    },
+
+    EmailCreate {
+        email: EmailAddr,
+        changes: Vec<AuditLogChange>,
+    },
+
+    EmailUpdate {
+        email: EmailAddr,
+        changes: Vec<AuditLogChange>,
+    },
+
+    EmailDelete {
+        email: EmailAddr,
+    },
+
+    ConnectionCreate {
+        application_id: ApplicationId,
+        scopes: Vec<Scope>,
+    },
+
+    ConnectionDelete {
+        application_id: ApplicationId,
+    },
+
     UserRegistered {
+        user_id: UserId,
+    },
+
+    UserDelete {
         user_id: UserId,
     },
 
@@ -245,4 +314,12 @@ pub enum AuditLogEntryType {
     AdminBroadcast {
         changes: Vec<AuditLogChange>,
     },
+    // // TODO: for server audit log; log when routes for these are implemented
+    // ServerUpdate,
+    // RoomDelete,
+    // // TODO: log these once pinning, removing, restoring is implemented
+    // MessagePin,
+    // MessageUnpin,
+    // MessageRemove,
+    // MessageRestore,
 }

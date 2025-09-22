@@ -16,11 +16,14 @@ pub struct AuthRelaxed(pub Session);
 /// extract the client's Session iff it is authenticated
 pub struct AuthWithSession(pub Session, pub User);
 
-/// extract the client's Session iff it is authenticated and return the user_id
+/// extract the client's Session iff it is authenticated and return the user
 pub struct Auth(pub User);
 
-/// extract the client's Session iff it is in sudo mode and return the user_id
+/// extract the client's Session iff it is in sudo mode and return the user
 pub struct AuthSudo(pub User);
+
+/// extract the client's Session iff it is in sudo mode and return the session and user
+pub struct AuthSudoWithSession(pub Session, pub User);
 
 /// extract the X-Reason header
 pub struct HeaderReason(pub Option<String>);
@@ -209,5 +212,24 @@ impl FromRequestParts<Arc<ServerState>> for HeaderPuppetId {
             .and_then(|h| h.to_str().ok())
             .and_then(|h| h.parse().ok());
         Ok(Self(puppet_id))
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for AuthSudoWithSession {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let AuthRelaxed(session) = AuthRelaxed::from_request_parts(parts, s).await?;
+        match session.status {
+            SessionStatus::Unauthorized => Err(Error::UnauthSession),
+            SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
+            SessionStatus::Sudo { user_id, .. } => {
+                let user = s.services().users.get(user_id).await?;
+                Ok(Self(session, user))
+            }
+        }
     }
 }

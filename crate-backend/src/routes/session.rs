@@ -4,16 +4,17 @@ use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::util::Diff;
+use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, Session, SessionCreate, SessionId,
-    SessionPatch, SessionStatus, SessionToken, SessionType, SessionWithToken,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
+    PaginationResponse, Session, SessionCreate, SessionId, SessionPatch, SessionStatus,
+    SessionToken, SessionType, SessionWithToken,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::Auth;
+use crate::routes::util::{Auth, HeaderReason};
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::ServerState;
 
@@ -83,33 +84,50 @@ pub async fn session_list(
     )
 )]
 pub async fn session_update(
-    Path(session_id): Path<SessionIdReq>,
-    AuthRelaxed(session): AuthRelaxed,
+    Path(target_session_id): Path<SessionIdReq>,
+    AuthRelaxed(auth_session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
-    let session_id = match session_id {
-        SessionIdReq::SessionSelf => session.id,
+    let target_session_id = match target_session_id {
+        SessionIdReq::SessionSelf => auth_session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
     let data = s.data();
     let srv = s.services();
-    let target_session = srv.sessions.get(session_id).await?;
-    if !session.can_see(&target_session) {
+    let target_session = srv.sessions.get(target_session_id).await?;
+    if !auth_session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
-    if !json.changes(&session) {
-        return Ok((StatusCode::NOT_MODIFIED, Json(session)));
+    if !json.changes(&auth_session) {
+        return Ok((StatusCode::NOT_MODIFIED, Json(auth_session)));
     }
-    data.session_update(session_id, json).await?;
+    data.session_update(target_session_id, json).await?;
     let srv = s.services();
-    srv.sessions.invalidate(session_id).await;
-    let session = srv.sessions.get(session_id).await?;
+    srv.sessions.invalidate(target_session_id).await;
+    let target_session_new = srv.sessions.get(target_session_id).await?;
     s.broadcast(MessageSync::SessionUpdate {
-        session: session.clone(),
+        session: target_session_new.clone(),
     })?;
-    Ok((StatusCode::OK, Json(session)))
+    if let Some(uid) = target_session_new.user_id() {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: uid.into_inner().into(),
+            user_id: uid,
+            session_id: Some(auth_session.id),
+            reason,
+            ty: AuditLogEntryType::SessionUpdate {
+                session_id: target_session_new.id,
+                changes: Changes::new()
+                    .change("name", &target_session.name, &target_session_new.name)
+                    .build(),
+            },
+        })
+        .await?;
+    }
+    Ok((StatusCode::OK, Json(target_session_new)))
 }
 
 /// Session delete
@@ -125,30 +143,44 @@ pub async fn session_update(
     )
 )]
 pub async fn session_delete(
-    Path(session_id): Path<SessionIdReq>,
-    AuthRelaxed(session): AuthRelaxed,
+    Path(target_session_id): Path<SessionIdReq>,
+    AuthRelaxed(auth_session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    let session_id = match session_id {
-        SessionIdReq::SessionSelf => session.id,
-        SessionIdReq::SessionId(session_id) => session_id,
+    let target_session_id = match target_session_id {
+        SessionIdReq::SessionSelf => auth_session.id,
+        SessionIdReq::SessionId(target_session_id) => target_session_id,
     };
-    if session.status == SessionStatus::Unauthorized && session.id != session_id {
+    if auth_session.status == SessionStatus::Unauthorized && auth_session.id != target_session_id {
         return Err(Error::NotFound);
     }
     let data = s.data();
     let srv = s.services();
-    let target_session = srv.sessions.get(session_id).await?;
-    if !session.can_see(&target_session) {
+    let target_session = srv.sessions.get(target_session_id).await?;
+    if !auth_session.can_see(&target_session) {
         return Err(Error::NotFound);
     }
     // TODO: should i restrict deleting other sessions to sudo mode?
-    data.session_delete(session_id).await?;
-    srv.sessions.invalidate(session_id).await;
+    data.session_delete(target_session_id).await?;
+    srv.sessions.invalidate(target_session_id).await;
     s.broadcast(MessageSync::SessionDelete {
-        id: session_id,
+        id: target_session_id,
         user_id: target_session.user_id(),
     })?;
+    if let Some(uid) = auth_session.user_id() {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: uid.into_inner().into(),
+            user_id: uid,
+            session_id: Some(auth_session.id),
+            reason,
+            ty: AuditLogEntryType::SessionDelete {
+                session_id: target_session_id,
+            },
+        })
+        .await?;
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 

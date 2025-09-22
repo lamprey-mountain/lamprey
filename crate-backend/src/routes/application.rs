@@ -12,15 +12,16 @@ use common::v1::types::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
     },
-    util::{Diff, Time},
-    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
-    ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission, Puppet,
-    PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
+    util::{Changes, Diff, Time},
+    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot,
+    BotAccess, ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission,
+    Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
     SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
 use serde::Deserialize;
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -47,8 +48,9 @@ use crate::error::{Error, Result};
     )
 )]
 async fn app_create(
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ApplicationCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -85,7 +87,24 @@ async fn app_create(
         oauth_confidential: false,
     };
     data.application_insert(app.clone()).await?;
-    Ok(Json(app))
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::ApplicationCreate {
+            application_id: app.id,
+            changes: Changes::new()
+                .add("name", &app.name)
+                .add("description", &app.description)
+                .add("bridge", &app.bridge)
+                .add("public", &app.public)
+                .build(),
+        },
+    })
+    .await?;
+    Ok((StatusCode::CREATED, Json(app)))
 }
 
 /// App list
@@ -147,22 +166,24 @@ async fn app_get(
 )]
 async fn app_patch(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(patch): Json<ApplicationPatch>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     patch.validate()?;
     let data = s.data();
-    let mut app = data.application_get(app_id).await?;
-    if app.owner_id != auth_user.id {
+    let start = data.application_get(app_id).await?;
+    if start.owner_id != auth_user.id {
         return Err(Error::MissingPermissions);
     }
 
-    if !patch.changes(&app) {
+    if !patch.changes(&start) {
         return Err(Error::NotModified);
     }
 
+    let mut app = start.clone();
     app.name = patch.name.unwrap_or(app.name);
     app.description = patch.description.unwrap_or(app.description);
     app.bridge = patch.bridge.unwrap_or(app.bridge);
@@ -171,6 +192,34 @@ async fn app_patch(
     app.oauth_confidential = patch.oauth_confidential.unwrap_or(app.oauth_confidential);
 
     data.application_update(app.clone()).await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::ApplicationUpdate {
+            application_id: app.id,
+            changes: Changes::new()
+                .change("name", &start.name, &app.name)
+                .change("description", &start.description, &app.description)
+                .change("bridge", &start.bridge, &app.bridge)
+                .change("public", &start.public, &app.public)
+                .change(
+                    "oauth_redirect_uris",
+                    &start.oauth_redirect_uris,
+                    &app.oauth_redirect_uris,
+                )
+                .change(
+                    "oauth_confidential",
+                    &start.oauth_confidential,
+                    &app.oauth_confidential,
+                )
+                .build(),
+        },
+    })
+    .await?;
 
     Ok(Json(app))
 }
@@ -186,8 +235,9 @@ async fn app_patch(
 )]
 async fn app_delete(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let data = s.data();
@@ -195,6 +245,17 @@ async fn app_delete(
     if app.owner_id == auth_user.id {
         data.application_delete(app_id).await?;
         data.user_delete(app_id.into_inner().into()).await?;
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: auth_user.id.into_inner().into(),
+            user_id: auth_user.id,
+            session_id: Some(session.id),
+            reason,
+            ty: AuditLogEntryType::ApplicationDelete {
+                application_id: app_id,
+            },
+        })
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -213,6 +274,7 @@ async fn app_create_session(
     Path((app_id,)): Path<(ApplicationId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -239,6 +301,18 @@ async fn app_create_session(
         .await?;
         let session = data.session_get(session.id).await?;
         let session_with_token = SessionWithToken { session, token };
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: auth_user.id.into_inner().into(),
+            user_id: auth_user.id,
+            session_id: Some(session_with_token.session.id),
+            reason,
+            ty: AuditLogEntryType::SessionLogin {
+                user_id: app.id.into_inner().into(),
+                session_id: session_with_token.session.id,
+            },
+        })
+        .await?;
         Ok((StatusCode::CREATED, Json(session_with_token)))
     } else {
         Err(Error::MissingPermissions)
@@ -395,8 +469,9 @@ async fn puppet_ensure(
 )]
 async fn app_rotate_secret(
     Path((app_id,)): Path<(ApplicationId,)>,
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
@@ -405,6 +480,22 @@ async fn app_rotate_secret(
     }
     app.oauth_secret = Some(Uuid::new_v4().to_string());
     data.application_update(app.clone()).await?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::ApplicationUpdate {
+            application_id: app.id,
+            changes: vec![AuditLogChange {
+                key: "oauth_secret".into(),
+                old: Value::Null,
+                new: Value::Null,
+            }],
+        },
+    })
+    .await?;
     Ok(Json(app))
 }
 
@@ -467,9 +558,10 @@ async fn oauth_info(
     )
 )]
 async fn oauth_authorize(
-    Auth(auth_user): Auth,
+    AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
     Query(q): Query<OauthAuthorizeParams>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let app = data.application_get(q.client_id).await?;
@@ -499,6 +591,18 @@ async fn oauth_authorize(
     let scopes: Vec<_> = scopes.into_iter().collect();
     data.connection_create(auth_user.id, app.id, scopes.clone())
         .await?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::ConnectionCreate {
+            application_id: q.client_id,
+            scopes: scopes.clone(),
+        },
+    })
+    .await?;
 
     let code = Uuid::new_v4().to_string();
     data.oauth_auth_code_create(

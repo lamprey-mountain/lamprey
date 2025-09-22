@@ -5,28 +5,19 @@ use axum::extract::Query;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
-use common::v1::types::auth::AuthState;
-use common::v1::types::auth::CaptchaChallenge;
-use common::v1::types::auth::CaptchaResponse;
-use common::v1::types::auth::PasswordExec;
-use common::v1::types::auth::PasswordExecIdent;
-use common::v1::types::auth::PasswordSet;
-use common::v1::types::auth::TotpRecoveryCodes;
-use common::v1::types::auth::TotpState;
-use common::v1::types::auth::TotpStateWithSecret;
-use common::v1::types::auth::TotpVerificationRequest;
-use common::v1::types::auth::WebauthnAuthenticator;
-use common::v1::types::auth::WebauthnChallenge;
-use common::v1::types::auth::WebauthnFinish;
-use common::v1::types::auth::WebauthnPatch;
+use common::v1::types::auth::{
+    AuthState, CaptchaChallenge, CaptchaResponse, PasswordExec, PasswordExecIdent, PasswordSet,
+    TotpRecoveryCodes, TotpState, TotpStateWithSecret, TotpVerificationRequest,
+    WebauthnAuthenticator, WebauthnChallenge, WebauthnFinish, WebauthnPatch,
+};
 use common::v1::types::email::EmailAddr;
-use common::v1::types::util::Time;
-use common::v1::types::MessageSync;
-use common::v1::types::SessionStatus;
-use common::v1::types::UserId;
+use common::v1::types::util::{Changes, Time};
+use common::v1::types::{
+    AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus,
+    UserId,
+};
 use http::StatusCode;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use time::Duration;
 use tracing::debug;
 use url::Url;
@@ -35,6 +26,8 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
+use crate::routes::util::AuthSudoWithSession;
+use crate::routes::util::HeaderReason;
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::ServerState;
@@ -126,7 +119,21 @@ async fn auth_oauth_redirect(
                 .await?;
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
-            s.broadcast(MessageSync::SessionCreate { session })?;
+            s.broadcast(MessageSync::SessionCreate {
+                session: session.clone(),
+            })?;
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: user_id.into_inner().into(),
+                user_id,
+                session_id: Some(session_id),
+                reason: None,
+                ty: AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id,
+                },
+            })
+            .await?;
             Ok(Html(include_str!("../oauth.html")))
         }
         "github" => {
@@ -161,7 +168,21 @@ async fn auth_oauth_redirect(
                 .await?;
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
-            s.broadcast(MessageSync::SessionCreate { session })?;
+            s.broadcast(MessageSync::SessionCreate {
+                session: session.clone(),
+            })?;
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: user_id.into_inner().into(),
+                user_id,
+                session_id: Some(session_id),
+                reason: None,
+                ty: AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id,
+                },
+            })
+            .await?;
             Ok(Html(include_str!("../oauth.html")))
         }
         _ => return Err(Error::Unimplemented),
@@ -181,12 +202,32 @@ async fn auth_oauth_redirect(
 )]
 async fn auth_oauth_delete(
     Path(provider): Path<String>,
-    AuthSudo(auth_user): AuthSudo,
+    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    let start_state = fetch_auth_state(&s, auth_user.id).await?;
     let data = s.data();
     data.auth_oauth_delete(provider, auth_user.id).await?;
-    Ok(())
+    let end_state = fetch_auth_state(&s, auth_user.id).await?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate {
+            changes: Changes::new()
+                .change(
+                    "oauth_providers",
+                    &start_state.oauth_providers,
+                    &end_state.oauth_providers,
+                )
+                .build(),
+        },
+    })
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth email exec
@@ -263,6 +304,7 @@ async fn auth_email_complete(
     Path(email): Path<EmailAddr>,
     AuthRelaxed(session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<AuthEmailComplete>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
@@ -296,10 +338,42 @@ async fn auth_email_complete(
             sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
         },
     };
-    d.session_set_status(session.id, status).await?;
+    d.session_set_status(session.id, status.clone()).await?;
     srv.sessions.invalidate(session.id).await;
     let session = srv.sessions.get(session.id).await?;
-    s.broadcast(MessageSync::SessionCreate { session })?;
+    s.broadcast(MessageSync::SessionCreate {
+        session: session.clone(),
+    })?;
+
+    match purpose {
+        EmailPurpose::Authn => {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: user_id.into_inner().into(),
+                user_id,
+                session_id: Some(session.id),
+                reason,
+                ty: AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id: session.id,
+                },
+            })
+            .await?;
+        }
+        EmailPurpose::Reset => {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id: user_id.into_inner().into(),
+                user_id,
+                session_id: Some(session.id),
+                reason,
+                ty: AuditLogEntryType::AuthSudo {
+                    session_id: session.id,
+                },
+            })
+            .await?;
+        }
+    }
     Ok(())
 }
 
@@ -387,10 +461,14 @@ async fn auth_totp_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_set(
-    AuthSudo(auth_user): AuthSudo,
+    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordSet>,
 ) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let start_has_password = data.auth_password_get(auth_user.id).await?.is_some();
+
     let config = argon2::Config::default();
     let salt = {
         let mut salt = [0u8; 16];
@@ -398,8 +476,26 @@ async fn auth_password_set(
         salt
     };
     let hash = argon2::hash_raw(json.password.as_bytes(), &salt, &config).unwrap();
-    let data = s.data();
     data.auth_password_set(auth_user.id, &hash, &salt).await?;
+
+    let end_has_password = data.auth_password_get(auth_user.id).await?.is_some();
+
+    let mut changes = Vec::new();
+    changes.push(AuditLogChange {
+        key: "has_password".into(),
+        old: serde_json::to_value(start_has_password).unwrap(),
+        new: serde_json::to_value(end_has_password).unwrap(),
+    });
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate { changes },
+    })
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -411,12 +507,33 @@ async fn auth_password_set(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn auth_password_delete(
-    AuthSudo(auth_user): AuthSudo,
+    AuthSudoWithSession(session, auth_user): AuthSudoWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
+    let has_password = data.auth_password_get(auth_user.id).await?.is_some();
+    if !has_password {
+        return Ok(());
+    }
+
     data.auth_password_delete(auth_user.id).await?;
-    Ok(StatusCode::NO_CONTENT)
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::AuthUpdate {
+            changes: Changes::new()
+                .change("has_password", &has_password, &false)
+                .build(),
+        },
+    })
+    .await?;
+
+    Ok(())
 }
 
 /// Auth password exec
@@ -429,6 +546,7 @@ async fn auth_password_delete(
 async fn auth_password_exec(
     AuthRelaxed(session): AuthRelaxed,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<PasswordExec>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
@@ -449,6 +567,18 @@ async fn auth_password_exec(
             .await?;
         let srv = s.services();
         srv.sessions.invalidate(session.id).await;
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: user_id.into_inner().into(),
+            user_id,
+            session_id: Some(session.id),
+            reason,
+            ty: AuditLogEntryType::SessionLogin {
+                user_id,
+                session_id: session.id,
+            },
+        })
+        .await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(Error::NotFound)
@@ -479,10 +609,10 @@ pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthSt
     let password = data.auth_password_get(user_id).await?;
     let auth_state = AuthState {
         has_email: email.iter().any(|e| e.is_verified && e.is_primary),
-        has_totp: false, // TODO
+        has_totp: false, // totp not implemented yet
         has_password: password.is_some(),
         oauth_providers,
-        authenticators: vec![],
+        authenticators: vec![], // webauthn not implemented yet
     };
     Ok(auth_state)
 }
@@ -599,6 +729,7 @@ async fn auth_webauthn_delete(
 async fn auth_sudo(
     AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     s.data()
         .session_set_status(
@@ -610,6 +741,17 @@ async fn auth_sudo(
         )
         .await?;
     s.services().sessions.invalidate(session.id).await;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::AuthSudo {
+            session_id: session.id,
+        },
+    })
+    .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
