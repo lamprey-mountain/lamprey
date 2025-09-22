@@ -290,6 +290,7 @@ async fn message_delete(
     }
     if message.author_id == auth_user.id {
         perms.add(Permission::MessageEdit);
+        perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
