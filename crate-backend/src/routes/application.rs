@@ -322,7 +322,7 @@ async fn app_invite_bot(
     .await?;
 
     srv.rooms
-        .send_welcome_message(json.room_id, auth_user.id)
+        .send_welcome_message(json.room_id, bot_user_id)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
