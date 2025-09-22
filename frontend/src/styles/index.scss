@@ -144,7 +144,8 @@ input[type="submit"] {
 		contain: content;
 		background-color: $bg-300;
 		margin: 8px 0;
-		border: solid 1px $sep-500;
+		border: solid 1px $sep-400;
+		border-radius: 4px;
 		max-width: 800px;
 
 		& > header {
@@ -152,7 +153,6 @@ input[type="submit"] {
 			flex-direction: column;
 			padding: 4px 8px;
 			cursor: pointer;
-			border-bottom: solid 1px $sep-500;
 
 			& > .top {
 				display: flex;
@@ -171,10 +171,13 @@ input[type="submit"] {
 					flex: 1;
 				}
 
-				/* TODO: use actual <time> */
 				& > .time {
-					color: $fg-300;
+					color: $fg-500;
 				}
+			}
+
+			.description {
+				margin-top: 8px;
 			}
 		}
 
@@ -187,6 +190,28 @@ input[type="submit"] {
 		& > footer {
 			cursor: pointer;
 			text-align: center;
+		}
+	}
+
+	& .thread-filter {
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		overflow: hidden;
+
+		& button {
+			border: none;
+
+			&.selected {
+				background: $bg-150;
+			}
+
+			&:hover {
+				background: $bg-200;
+			}
+
+			&.selected:hover {
+				background: $bg-100;
+			}
 		}
 	}
 }

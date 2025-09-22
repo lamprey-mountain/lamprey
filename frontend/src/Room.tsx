@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
@@ -11,6 +11,9 @@ import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./Input.tsx";
 import { handleSubmit } from "./dispatch/submit.ts";
+import { Time } from "./Time.tsx";
+import { flags } from "./flags.ts";
+import { usePermissions } from "./hooks/usePermissions.ts";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
@@ -71,12 +74,12 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const nav = useNavigate();
 	const room_id = () => props.room.id;
 
-	function getThreads() {
+	const getThreads = createMemo(() => {
 		const threads = [...api.threads.cache.values()]
 			.filter((t) => t.room_id === props.room.id && !t.deleted_at);
 		threads.sort((a, b) => a.id < b.id ? 1 : -1);
 		return threads;
-	}
+	});
 
 	function createThread(room_id: string) {
 		ctx.dispatch({
@@ -112,65 +115,96 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	// <div class="date"><Time ts={props.thread.baseEvent.originTs} /></div>
+	const [threadFilter, setThreadFilter] = createSignal("active");
+
+	const user_id = () => api.users.cache.get("@self")!.id;
+	const perms = usePermissions(user_id, room_id, () => undefined);
+
 	return (
 		<div class="room-home">
-			<h2>{props.room.name}</h2>
-			<p>{props.room.description}</p>
-			<button onClick={() => createThread(room_id())}>create thread</button>
-			<br />
-			<button onClick={() => leaveRoom(room_id())}>leave room</button>
-			<br />
-			<br />
-			<QuickCreate room={props.room} />
-			<br />
-			<A href={`/room/${props.room.id}/settings`}>settings</A>
-			<br />
-			<ul>
-				<For
-					each={getThreads()}
+			<div style="display:flex">
+				<div style="flex:1">
+					<h2>{props.room.name}</h2>
+					<p>{props.room.description}</p>
+				</div>
+				<div style="display:flex;flex-direction:column;gap:4px">
+					<button onClick={() => leaveRoom(room_id())}>leave room</button>
+					<A style="padding: 0 4px" href={`/room/${props.room.id}/settings`}>
+						settings
+					</A>
+				</div>
+			</div>
+			<Show when={flags.has("thread_quick_create")}>
+				<br />
+				<QuickCreate room={props.room} />
+				<br />
+			</Show>
+			<div style="display:flex; align-items:center">
+				<h3 style="font-size:1rem; margin-top:8px;flex:1">
+					{getThreads().length} active threads
+				</h3>
+				<div class="thread-filter">
+					<button
+						classList={{ selected: threadFilter() === "active" }}
+						onClick={[setThreadFilter, "active"]}
+					>
+						active
+					</button>
+					<button
+						classList={{ selected: threadFilter() === "archived" }}
+						onClick={[setThreadFilter, "archived"]}
+					>
+						archived
+					</button>
+					<Show when={perms.has("ThreadDelete")}>
+						<button
+							classList={{ selected: threadFilter() === "removed" }}
+							onClick={[setThreadFilter, "removed"]}
+						>
+							removed
+						</button>
+					</Show>
+				</div>
+				<button
+					class="primary"
+					style="margin-left: 8px;border-radius:4px"
+					onClick={() => createThread(room_id())}
 				>
+					create thread
+				</button>
+			</div>
+			<ul>
+				<For each={getThreads()}>
 					{(thread) => (
 						<li>
-							<article class="thread">
+							<article class="thread menu-thread" data-thread-id={thread.id}>
 								<header onClick={() => nav(`/thread/${thread.id}`)}>
 									<div class="top">
 										<div class="icon"></div>
 										<div class="spacer">{thread.name}</div>
 										<div class="time">
-											Created at{" "}
-											{getTimestampFromUUID(thread.id).toDateString()}
+											Created <Time date={getTimestampFromUUID(thread.id)} />
 										</div>
 									</div>
 									<div
 										class="bottom"
 										onClick={() => nav(`/thread/${thread.id}`)}
 									>
-										{thread.message_count} messages &bull; last msg{" "}
-										{getTimestampFromUUID(thread.last_version_id ?? thread.id)
-											.toDateString()}
+										<div class="dim">
+											{thread.message_count} message(s) &bull; last msg{" "}
+											<Time
+												date={getTimestampFromUUID(
+													thread.last_version_id ?? thread.id,
+												)}
+											/>
+										</div>
 										<Show when={thread.description}>
-											<br />
-											{thread.description}
+											<div class="description">
+												{thread.description}
+											</div>
 										</Show>
 									</div>
 								</header>
-								<Show when={true}>
-									<div class="preview">
-										<For each={[]}>
-											{(_msg) => "todo: show message here?"}
-										</For>
-										<details>
-											<summary>json data</summary>
-											<pre>
-												{JSON.stringify(thread, null, 4)}
-											</pre>
-										</details>
-									</div>
-								</Show>
-								<Show when={false}>
-									<footer>message.remaining</footer>
-								</Show>
 							</article>
 						</li>
 					)}
