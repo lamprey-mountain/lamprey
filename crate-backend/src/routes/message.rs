@@ -318,7 +318,7 @@ async fn message_delete(
     data.media_link_delete_all(message_id.into_inner()).await?;
 
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -473,7 +473,7 @@ async fn message_version_delete(
         .get(thread_id, Some(auth_user.id))
         .await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -615,7 +615,7 @@ async fn message_moderate(
     }
 
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,

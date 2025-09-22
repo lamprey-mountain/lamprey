@@ -3,7 +3,9 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{voice::SfuCommand, Media, Message, RoomId, SfuId, ThreadId, UserId};
+use common::v1::types::{
+    voice::SfuCommand, AuditLogEntry, Media, Message, RoomId, SfuId, ThreadId, UserId,
+};
 use common::v1::types::{MessageSync, MessageType};
 use dashmap::DashMap;
 
@@ -100,6 +102,17 @@ impl ServerStateInner {
     pub async fn presign(&self, _media: &mut Media) -> Result<()> {
         // in the past, media was served directly from s3
         // this doesn't do anything, but i'll keep it just in case
+        Ok(())
+    }
+
+    pub async fn audit_log_append(&self, entry: AuditLogEntry) -> Result<()> {
+        self.data().audit_logs_room_append(entry.clone()).await?;
+        self.broadcast_room(
+            entry.room_id,
+            entry.user_id,
+            MessageSync::AuditLogEntryCreate { entry },
+        )
+        .await?;
         Ok(())
     }
 

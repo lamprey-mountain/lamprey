@@ -126,31 +126,30 @@ async fn permission_thread_overwrite(
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
-        s.data()
-            .audit_logs_room_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth_user.id,
-                session_id: None,
-                reason: reason.clone(),
-                ty: AuditLogEntryType::ThreadOverwriteSet {
-                    thread_id,
-                    overwrite_id,
-                    ty: json.ty,
-                    changes: if let Some(existing) = &existing {
-                        Changes::new()
-                            .change("allow", &existing.allow, &json.allow)
-                            .change("deny", &existing.deny, &json.deny)
-                            .build()
-                    } else {
-                        Changes::new()
-                            .add("allow", &json.allow)
-                            .add("deny", &json.deny)
-                            .build()
-                    },
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::ThreadOverwriteSet {
+                thread_id,
+                overwrite_id,
+                ty: json.ty,
+                changes: if let Some(existing) = &existing {
+                    Changes::new()
+                        .change("allow", &existing.allow, &json.allow)
+                        .change("deny", &existing.deny, &json.deny)
+                        .build()
+                } else {
+                    Changes::new()
+                        .add("allow", &json.allow)
+                        .add("deny", &json.deny)
+                        .build()
                 },
-            })
-            .await?;
+            },
+        })
+        .await?;
     }
 
     s.broadcast_thread(
@@ -241,19 +240,18 @@ async fn permission_thread_delete(
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
-        s.data()
-            .audit_logs_room_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: auth_user.id,
-                session_id: None,
-                reason: reason.clone(),
-                ty: AuditLogEntryType::ThreadOverwriteDelete {
-                    thread_id,
-                    overwrite_id,
-                },
-            })
-            .await?;
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::ThreadOverwriteDelete {
+                thread_id,
+                overwrite_id,
+            },
+        })
+        .await?;
     }
 
     s.broadcast_thread(

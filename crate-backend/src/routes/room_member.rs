@@ -264,7 +264,7 @@ async fn room_member_add(
             .add("roles", &res.roles)
     };
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -399,7 +399,7 @@ async fn room_member_update(
         .build();
 
     if !changes.is_empty() {
-        d.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -491,7 +491,7 @@ async fn room_member_delete(
     srv.perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -600,7 +600,7 @@ async fn room_ban_create(
         .await?;
     let member = d.room_member_get(room_id, target_user_id).await?;
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -678,7 +678,7 @@ async fn room_ban_create_bulk(
             .await?;
         let member = d.room_member_get(room_id, target_user_id).await?;
 
-        d.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -738,7 +738,7 @@ async fn room_ban_remove(
     s.services().perms.invalidate_is_mutual(target_user_id);
     let res = d.room_member_get(room_id, target_user_id).await?;
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,

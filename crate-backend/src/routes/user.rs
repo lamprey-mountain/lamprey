@@ -83,7 +83,7 @@ async fn user_update(
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id).await?;
-    data.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
         user_id: auth_user.id,
@@ -291,7 +291,7 @@ async fn user_suspend(
         }),
     )
     .await?;
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: auth_user.id,
@@ -333,7 +333,7 @@ async fn user_unsuspend(
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
     perms.ensure(Permission::MemberBan)?;
     d.user_suspended(target_user_id, None).await?;
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: auth_user.id,

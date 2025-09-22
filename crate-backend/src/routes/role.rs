@@ -82,7 +82,7 @@ async fn role_create(
         .add("is_mentionable", &role.is_mentionable)
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -171,7 +171,7 @@ async fn role_update(
         )
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -229,7 +229,7 @@ async fn role_delete(
     if role.member_count == 0 || query.force {
         d.role_delete(room_id, role_id).await?;
 
-        d.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -366,7 +366,7 @@ async fn role_member_add(
     let msg = MessageSync::RoomMemberUpsert {
         member: member.clone(),
     };
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -425,7 +425,7 @@ async fn role_member_remove(
         member: member.clone(),
     };
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -512,7 +512,7 @@ async fn role_reorder(
 
     d.role_reorder(room_id, body.clone()).await?;
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,

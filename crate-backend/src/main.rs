@@ -164,15 +164,16 @@ async fn main() -> Result<()> {
                 .await?;
             data.room_member_put(SERVER_ROOM_ID, *user_id, None, RoomMemberPut::default())
                 .await?;
-            data.audit_logs_room_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id: SERVER_ROOM_ID,
-                user_id: SERVER_USER_ID,
-                session_id: None,
-                reason: reason.to_owned(),
-                ty: AuditLogEntryType::UserRegistered { user_id: *user_id },
-            })
-            .await?;
+            state
+                .audit_log_append(AuditLogEntry {
+                    id: AuditLogEntryId::new(),
+                    room_id: SERVER_ROOM_ID,
+                    user_id: SERVER_USER_ID,
+                    session_id: None,
+                    reason: reason.to_owned(),
+                    ty: AuditLogEntryType::UserRegistered { user_id: *user_id },
+                })
+                .await?;
             // TODO: invalidate cache
             // right now i'd need to restart backend or it would think the user is still a guest
             info!("registered!");

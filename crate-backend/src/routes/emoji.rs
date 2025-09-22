@@ -74,7 +74,7 @@ async fn emoji_create(
         .add("animated", &json.animated)
         .add("media_id", &json.media_id);
 
-    data.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -160,7 +160,7 @@ async fn emoji_delete(
     data.emoji_delete(emoji_id).await?;
     data.media_link_delete_all(*emoji.id).await?;
 
-    data.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,

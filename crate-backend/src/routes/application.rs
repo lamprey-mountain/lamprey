@@ -309,7 +309,7 @@ async fn app_invite_bot(
     )
     .await?;
 
-    data.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: json.room_id,
         user_id: auth_user.id,

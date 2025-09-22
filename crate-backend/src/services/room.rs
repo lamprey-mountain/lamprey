@@ -74,15 +74,16 @@ impl ServiceRooms {
             .change("public", &start.public, &end.public)
             .build();
 
-        data.audit_logs_room_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id,
-            session_id: None, // TODO: get session id
-            reason,
-            ty: AuditLogEntryType::RoomUpdate { changes },
-        })
-        .await?;
+        self.state
+            .audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id,
+                session_id: None, // TODO: get session id
+                reason,
+                ty: AuditLogEntryType::RoomUpdate { changes },
+            })
+            .await?;
 
         Ok(end)
     }
@@ -104,15 +105,16 @@ impl ServiceRooms {
             .add("public", &room.public)
             .build();
 
-        data.audit_logs_room_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: creator,
-            session_id: None, // TODO: get session id
-            reason: None,     // TODO: get reason
-            ty: AuditLogEntryType::RoomCreate { changes },
-        })
-        .await?;
+        self.state
+            .audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: creator,
+                session_id: None, // TODO: get session id
+                reason: None,     // TODO: get reason
+                ty: AuditLogEntryType::RoomCreate { changes },
+            })
+            .await?;
 
         let role_admin = DbRoleCreate {
             id: RoleId::new(),

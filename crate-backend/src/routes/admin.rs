@@ -56,7 +56,7 @@ async fn admin_whisper(
         .add("embeds", &json.message.embeds)
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: auth_user.id,
@@ -116,7 +116,7 @@ async fn admin_broadcast(
         .add("embeds", &json.message.embeds)
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: auth_user.id,

@@ -101,7 +101,7 @@ async fn thread_create_room(
     let thread_member = data.thread_member_get(thread_id, auth_user.id).await?;
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    data.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -440,7 +440,7 @@ async fn thread_archive(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -504,7 +504,7 @@ async fn thread_unarchive(
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -559,7 +559,7 @@ async fn thread_remove(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -606,7 +606,7 @@ async fn thread_restore(
     srv.threads.invalidate(thread_id).await;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -711,7 +711,7 @@ async fn thread_lock(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -767,7 +767,7 @@ async fn thread_unlock(
     srv.users.disconnect_everyone_from_thread(thread_id)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,

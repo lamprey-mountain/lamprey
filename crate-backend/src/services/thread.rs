@@ -132,26 +132,27 @@ impl ServiceThreads {
         self.invalidate_user(thread_id, user_id).await;
         let thread_new = self.get(thread_id, Some(user_id)).await?;
         if let Some(room_id) = thread_new.room_id {
-            data.audit_logs_room_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id,
-                session_id: None,
-                reason: reason.clone(),
-                ty: AuditLogEntryType::ThreadUpdate {
-                    thread_id,
-                    changes: Changes::new()
-                        .change("name", &thread_old.name, &thread_new.name)
-                        .change(
-                            "description",
-                            &thread_old.description,
-                            &thread_new.description,
-                        )
-                        .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
-                        .build(),
-                },
-            })
-            .await?;
+            self.state
+                .audit_log_append(AuditLogEntry {
+                    id: AuditLogEntryId::new(),
+                    room_id,
+                    user_id,
+                    session_id: None,
+                    reason: reason.clone(),
+                    ty: AuditLogEntryType::ThreadUpdate {
+                        thread_id,
+                        changes: Changes::new()
+                            .change("name", &thread_old.name, &thread_new.name)
+                            .change(
+                                "description",
+                                &thread_old.description,
+                                &thread_new.description,
+                            )
+                            .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
+                            .build(),
+                    },
+                })
+                .await?;
         }
 
         if thread_old.name != thread_new.name {

@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
-    application::Connection, user_status::StatusPatch, util::Time, ApplicationId, InviteTargetId,
-    InviteWithMetadata, Relationship, ThreadMember,
+    application::Connection, user_status::StatusPatch, util::Time, ApplicationId, AuditLogEntry,
+    InviteTargetId, InviteWithMetadata, Relationship, ThreadMember,
 };
 
 use super::{
@@ -295,6 +295,10 @@ pub enum MessageSync {
     ConnectionDelete {
         user_id: UserId,
         app_id: ApplicationId,
+    },
+
+    AuditLogEntryCreate {
+        entry: AuditLogEntry,
     },
 }
 

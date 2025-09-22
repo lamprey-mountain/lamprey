@@ -48,6 +48,7 @@ enum ConnectionState {
 enum AuthCheck {
     Custom(bool),
     Room(RoomId),
+    RoomPerm(RoomId, Permission),
     RoomOrUser(RoomId, UserId),
     ThreadOrUser(ThreadId, UserId),
     User(UserId),
@@ -467,11 +468,18 @@ impl Connection {
             } => AuthCheck::Room(*room_id),
             MessageSync::ConnectionCreate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::ConnectionDelete { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::AuditLogEntryCreate { entry } => {
+                AuthCheck::RoomPerm(entry.room_id, Permission::ViewAuditLog)
+            }
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
                 let perms = self.s.services().perms.for_room(user_id, room_id).await?;
                 perms.has(Permission::View)
+            }
+            (Some(user_id), AuthCheck::RoomPerm(room_id, perm)) => {
+                let perms = self.s.services().perms.for_room(user_id, room_id).await?;
+                perms.has(Permission::View) && perms.has(perm)
             }
             (Some(auth_user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
                 if auth_user_id == target_user_id {

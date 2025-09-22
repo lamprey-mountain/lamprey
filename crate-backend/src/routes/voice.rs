@@ -88,8 +88,7 @@ async fn voice_state_disconnect(
     srv.users.voice_state_remove(&target_user_id);
     let thread = srv.threads.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {
-        let data = s.data();
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,
@@ -156,8 +155,7 @@ async fn voice_state_move(
 
     let thread = srv.threads.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {
-        let data = s.data();
-        data.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: auth_user.id,

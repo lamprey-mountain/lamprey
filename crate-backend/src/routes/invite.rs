@@ -73,7 +73,7 @@ async fn invite_delete(
     let can_delete = auth_user.id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
-        d.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id: match id_target {
                 InviteTargetId::Room { room_id } => room_id,
@@ -242,7 +242,7 @@ async fn invite_use(
                 .await?;
             srv.users.invalidate(user.id).await;
             let updated_user = srv.users.get(user.id).await?;
-            d.audit_logs_room_append(AuditLogEntry {
+            s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id: SERVER_ROOM_ID,
                 user_id: user.id,
@@ -311,7 +311,7 @@ async fn invite_room_create(
         .add("max_uses", &invite.max_uses)
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
@@ -472,7 +472,7 @@ async fn invite_patch(
         InviteTarget::Server => None,
     };
     if let Some(room_id) = room_id {
-        d.audit_logs_room_append(AuditLogEntry {
+        s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
             user_id: user.id,
@@ -535,7 +535,7 @@ async fn invite_server_create(
         .add("max_uses", &invite.max_uses)
         .build();
 
-    d.audit_logs_room_append(AuditLogEntry {
+    s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: SERVER_ROOM_ID,
         user_id: user.id,
