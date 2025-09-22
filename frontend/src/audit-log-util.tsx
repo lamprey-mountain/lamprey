@@ -14,7 +14,6 @@ export function formatChanges(
 	switch (ent.type) {
 		case "MessageDelete":
 		case "MessageVersionDelete":
-		case "MessageDeleteBulk":
 		case "ReactionPurge":
 		case "ThreadOverwriteDelete": {
 			// const thread = api.threads.fetch(() => ent.thread_id);
@@ -24,10 +23,8 @@ export function formatChanges(
 			formatted.push(<li>in {ent.metadata.thread_id}</li>);
 			break;
 		}
-	}
-
-	switch (ent.type) {
 		case "MessageDeleteBulk": {
+			formatted.push(<li>in {ent.metadata.thread_id}</li>);
 			formatted.push(
 				<li>{ent.metadata.message_ids.length} messages were deleted</li>,
 			);
@@ -78,6 +75,18 @@ export function formatChanges(
 			// const bot = api.users.fetch(() => ent.bot_id);
 			// formatted.push(<li>bot {bot()?.name ?? "unknown bot"} was added</li>);
 			formatted.push(<li>bot {ent.metadata.bot_id} was added</li>);
+			break;
+		}
+		case "MemberKick": {
+			formatted.push(<li>kicked user {ent.metadata.user_id}</li>);
+			break;
+		}
+		case "MemberBan": {
+			formatted.push(<li>banned user {ent.metadata.user_id}</li>);
+			break;
+		}
+		case "MemberUnban": {
+			formatted.push(<li>unbanned user {ent.metadata.user_id}</li>);
 			break;
 		}
 	}
