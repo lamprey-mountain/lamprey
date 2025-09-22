@@ -178,22 +178,6 @@ export function MessageView(props: MessageProps) {
 							</span>{" "}
 							renamed the thread to <b>{props.message.name_new}</b>
 						</div>
-						<Show when={props.message.reactions?.length}>
-							<ul class="reactions">
-								<For each={props.message.reactions}>
-									{(r) => (
-										<li
-											classList={{ me: r.self }}
-											onClick={() =>
-												r.self ? reactionAdd(r.key) : reactionDel(r.key)}
-										>
-											<span class="emoji">{r.key.toString()}</span>
-											<span class="count">{r.count}</span>
-										</li>
-									)}
-								</For>
-							</ul>
-						</Show>
 					</div>
 					<Time date={date} animGroup="message-ts" />
 				</article>
