@@ -50,6 +50,11 @@ mod util;
         types::UserIdReq,
         MessageSync,
         PaginationQuery<MessageId>,
+        types::emoji::Emoji,
+        types::emoji::EmojiCustom,
+        types::emoji::EmojiOwner,
+        types::reaction::ReactionKey,
+        types::notifications::InboxThreadsOrder,
     )),
     info(
         title = "api doccery",
