@@ -2,7 +2,7 @@ import type { RoomMember, ThreadMember, User } from "sdk";
 import { useApi } from "./api";
 import { For, Show, type VoidProps } from "solid-js";
 import { Copyable } from "./util";
-import { getThumb } from "./media/util";
+import { getThumbFromId } from "./media/util";
 
 type UserProps = {
 	room_member?: RoomMember;
@@ -94,15 +94,6 @@ type AvatarProps = {
 };
 
 export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
-	const api = useApi();
-
-	function fetchThumb(media_id: string) {
-		const media = api.media.fetchInfo(() => media_id);
-		const m = media();
-		if (!m) return;
-		return getThumb(m, 64);
-	}
-
 	const size = 64;
 	const pad = () => props.pad ?? 4;
 	const totalSize = () => size + pad() * 2;
@@ -147,7 +138,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={fetchThumb(props.user!.avatar!)!}
+						href={getThumbFromId(props.user!.avatar!)!}
 					/>
 				</Show>
 			</g>
@@ -157,15 +148,6 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 };
 
 export const Avatar = (props: VoidProps<AvatarProps>) => {
-	const api = useApi();
-
-	function fetchThumb(media_id: string) {
-		const media = api.media.fetchInfo(() => media_id);
-		const m = media();
-		if (!m) return;
-		return getThumb(m, 64);
-	}
-
 	const size = 64;
 	const pad = () => props.pad ?? 4;
 	const totalSize = () => size + pad() * 2;
@@ -206,7 +188,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={fetchThumb(props.user!.avatar!)!}
+						href={getThumbFromId(props.user!.avatar!)!}
 					/>
 				</Show>
 			</g>
