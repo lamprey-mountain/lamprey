@@ -5,7 +5,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Connection, user_status::StatusPatch, util::Time, ApplicationId, AuditLogEntry,
-    InviteTargetId, InviteWithMetadata, Relationship, ThreadMember,
+    InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
 };
 
 use super::{
@@ -299,6 +299,16 @@ pub enum MessageSync {
 
     AuditLogEntryCreate {
         entry: AuditLogEntry,
+    },
+
+    BanCreate {
+        room_id: RoomId,
+        ban: RoomBan,
+    },
+
+    BanDelete {
+        room_id: RoomId,
+        user_id: UserId,
     },
 }
 

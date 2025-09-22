@@ -471,6 +471,12 @@ impl Connection {
             MessageSync::AuditLogEntryCreate { entry } => {
                 AuthCheck::RoomPerm(entry.room_id, Permission::ViewAuditLog)
             }
+            MessageSync::BanCreate { room_id, .. } => {
+                AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
+            }
+            MessageSync::BanDelete { room_id, .. } => {
+                AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
+            }
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

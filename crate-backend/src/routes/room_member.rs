@@ -594,6 +594,7 @@ async fn room_ban_create(
 
     d.room_ban_create(room_id, target_user_id, reason.clone(), create.expires_at)
         .await?;
+    let ban = d.room_ban_get(room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, room_id).await;
     srv.perms.invalidate_is_mutual(target_user_id);
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave)
@@ -617,6 +618,12 @@ async fn room_ban_create(
         room_id,
         auth_user.id,
         MessageSync::RoomMemberUpsert { member },
+    )
+    .await?;
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
+        MessageSync::BanCreate { room_id, ban },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -755,6 +762,15 @@ async fn room_ban_remove(
         room_id,
         auth_user.id,
         MessageSync::RoomMemberUpsert { member: res },
+    )
+    .await?;
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
+        MessageSync::BanDelete {
+            room_id,
+            user_id: target_user_id,
+        },
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
