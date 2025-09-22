@@ -5,7 +5,7 @@ import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
-import { createEffect, onCleanup } from "solid-js";
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import { getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -53,24 +53,27 @@ export function Input(props: InputProps) {
 
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
+		const room_id = props.thread.room_id;
+		if (!room_id) {
+			return user()?.name;
+		}
+
 		const member = api.room_members.fetch(
-			() => props.thread.room_id!,
+			() => room_id,
 			() => user_id,
 		);
 
 		const m = member();
 		return (m?.membership === "Join" && m.override_name) ?? user()?.name;
 	};
-
 	const fmt = new (Intl as any).ListFormat();
 
-	const getTyping = () => {
-		// TODO: fix types here
+	const typingUsers = createMemo(() => {
 		const user_id = api.users.cache.get("@self")?.id;
 		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
-	};
+	});
 
 	const onSubmit = (text: string) => {
 		ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
@@ -112,10 +115,10 @@ export function Input(props: InputProps) {
 				locked: locked(),
 			}}
 		>
-			<Show when={getTyping().length}>
+			<Show when={typingUsers().length}>
 				<div class="typing">
-					{fmt.format(getTyping().map((i) => getName(i) || "someone"))}{" "}
-					{getTyping().length === 1 ? "is" : "are"} typing
+					{fmt.format(typingUsers().map((i) => getName(i) || "someone"))}{" "}
+					{typingUsers().length === 1 ? "is" : "are"} typing
 				</div>
 			</Show>
 			<Show when={atts()?.length}>
@@ -256,8 +259,12 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
+		const room_id = props.thread.room_id;
+		if (!room_id) {
+			return user()?.name;
+		}
 		const member = api.room_members.fetch(
-			() => props.thread.room_id!,
+			() => room_id,
 			() => user_id,
 		);
 

@@ -173,7 +173,7 @@ export function createApi(
 			} else {
 				const tt = new Map();
 				tt.set(user_id, timeout);
-				typing_timeout.set(thread_id, tt);
+				tt.set(thread_id, tt);
 			}
 		} else if (msg.type === "ThreadAck") {
 			// TODO
