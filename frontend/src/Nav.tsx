@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { A } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
@@ -10,6 +10,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice] = useVoice();
+	const params = useParams();
 
 	// track drag indices
 	const [dragging, setDragging] = createSignal<number | null>(null);
@@ -34,8 +35,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	createEffect(() => {
 		const threads = [...api.threads.cache.values()]
 			.filter((t) =>
-				(props.room_id ? t.room_id === props.room_id : t.room_id === null) &&
-				!t.deleted_at
+				props.room_id ? t.room_id === props.room_id : t.room_id === null
 			);
 		if (props.room_id) {
 			threads.sort((a, b) => a.id < b.id ? 1 : -1);
@@ -118,67 +118,73 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 				<For each={list()}>
 					{(thread, idx) => (
-						<li
-							data-index={idx()}
-							draggable
-							onDragStart={handleDragStart}
-							onDragEnter={handleDragEnter}
-							onDragOver={handleDragOver}
-							onDrop={handleDrop}
-							classList={{
-								dragging: dragging() === idx(),
-								over: target() === idx(),
-								unread: thread.type !== "Voice" && !!thread.is_unread,
-							}}
+						<Show
+							when={(!thread.archived_at && !thread.deleted_at) ||
+								params.thread_id === thread.id}
 						>
-							<ItemThread thread={thread} />
-							<For
-								each={[...api.voiceStates.values()].filter((i) =>
-									i.thread_id === thread.id
-								).sort((a, b) =>
-									Date.parse(a.joined_at) - Date.parse(b.joined_at)
-								)}
-							>
-								{(s) => {
-									const user = api.users.fetch(() => s.user_id);
-									const room_member = props.room_id
-										? api.room_members.fetch(() => props.room_id!, () =>
-											s.user_id)
-										: () =>
-											null;
-									const name = () =>
-										room_member()?.override_name || user()?.name ||
-										"unknown user";
-									// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
-									// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
-									// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
-									// </svg>
-
-									return (
-										<div
-											class="voice-participant menu-user"
-											classList={{
-												speaking:
-													((voice.rtc?.speaking.get(s.user_id)?.flags ?? 0) &
-														1) === 1,
-											}}
-											data-thread-id={s.thread_id}
-											data-user-id={s.user_id}
-										>
-											<Show
-												when={user()?.avatar}
-												fallback={<div class="fallback-avatar"></div>}
-											>
-												<img
-													src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
-												/>
-											</Show>{" "}
-											{name()}
-										</div>
-									);
+							<li
+								data-index={idx()}
+								draggable
+								onDragStart={handleDragStart}
+								onDragEnter={handleDragEnter}
+								onDragOver={handleDragOver}
+								onDrop={handleDrop}
+								classList={{
+									dragging: dragging() === idx(),
+									over: target() === idx(),
+									unread: thread.type !== "Voice" && !!thread.is_unread,
 								}}
-							</For>
-						</li>
+							>
+								<ItemThread thread={thread} />
+								<For
+									each={[...api.voiceStates.values()].filter((i) =>
+										i.thread_id === thread.id
+									).sort((a, b) =>
+										Date.parse(a.joined_at) - Date.parse(b.joined_at)
+									)}
+								>
+									{(s) => {
+										const user = api.users.fetch(() => s.user_id);
+										const room_member = props.room_id
+											? api.room_members.fetch(
+												() => props.room_id!,
+												() => s.user_id,
+											)
+											: () => null;
+										const name = () =>
+											room_member()?.override_name || user()?.name ||
+											"unknown user";
+										// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
+										// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
+										// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
+										// </svg>
+
+										return (
+											<div
+												class="voice-participant menu-user"
+												classList={{
+													speaking:
+														((voice.rtc?.speaking.get(s.user_id)?.flags ?? 0) &
+															1) === 1,
+												}}
+												data-thread-id={s.thread_id}
+												data-user-id={s.user_id}
+											>
+												<Show
+													when={user()?.avatar}
+													fallback={<div class="fallback-avatar"></div>}
+												>
+													<img
+														src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
+													/>
+												</Show>{" "}
+												{name()}
+											</div>
+										);
+									}}
+								</For>
+							</li>
+						</Show>
 					)}
 				</For>
 			</ul>
@@ -193,7 +199,6 @@ const ItemThread = (props: { thread: Thread }) => {
 			href={`/thread/${props.thread.id}`}
 			class="menu-thread"
 			classList={{
-				closed: !!props.thread.archived_at,
 				unread: props.thread.type !== "Voice" && !!props.thread.is_unread,
 			}}
 			data-thread-id={props.thread.id}
