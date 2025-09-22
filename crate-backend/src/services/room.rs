@@ -72,6 +72,11 @@ impl ServiceRooms {
             .change("description", &start.description, &end.description)
             .change("icon", &start.icon, &end.icon)
             .change("public", &start.public, &end.public)
+            .change(
+                "welcome_thread_id",
+                &start.welcome_thread_id,
+                &end.welcome_thread_id,
+            )
             .build();
 
         self.state

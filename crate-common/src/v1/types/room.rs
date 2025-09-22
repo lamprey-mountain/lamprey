@@ -8,15 +8,18 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::NotifsRoom,
-    util::{some_option, Diff},
-    MediaId, Permission, UserId,
+    notifications::NotifsRoom, util::{some_option, Diff}, MediaId, Permission, ThreadId, UserId
 };
 
 use super::{ids::RoomId, util::Time};
 
-/// A room
-// chose this name arbitrarily, maybe should be renamed to something like channel
+/// A room is a collection of members and acls in the form of roles. Each room
+/// has an audit log to log administrative actions.
+///
+/// Default rooms, which most people are concerned with, contain threads, emoji,
+/// and so on for instant messaging.
+// chose this name arbitrarily, maybe should be renamed to something else.
+// discord uses "guild", maybe if i do domain-name-per-room "zone" could work...
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -64,6 +67,9 @@ pub struct Room {
 
     /// anyone can view and join
     pub public: bool,
+
+    /// where member join messages will be sent
+    pub welcome_thread_id: Option<ThreadId>,
     // pub user_config: UserConfigRoom,
 }
 
@@ -115,6 +121,9 @@ pub struct RoomPatch {
 
     pub icon: Option<Option<MediaId>>,
     pub public: Option<bool>,
+
+    /// where member join messages will be sent
+    pub welcome_thread_id: Option<Option<ThreadId>>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]

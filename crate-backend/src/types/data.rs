@@ -21,6 +21,7 @@ pub struct DbRoom {
     pub archived_at: Option<PrimitiveDateTime>,
     pub public: bool,
     pub ty: DbRoomType,
+    pub welcome_thread_id: Option<Uuid>,
 }
 
 pub struct DbRoomCreate {
@@ -60,6 +61,7 @@ impl From<DbRoom> for Room {
             room_type: row.ty.into(),
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
+            welcome_thread_id: row.welcome_thread_id.map(|i| i.into()),
 
             // FIXME: add to db or calculate
             member_count: Default::default(),

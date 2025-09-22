@@ -55,7 +55,8 @@ impl DataRoom for Postgres {
                 room.icon,
                 room.archived_at,
                 room.public,
-                room.owner_id
+                room.owner_id,
+                room.welcome_thread_id
             FROM room
             WHERE id = $1
             "#,
@@ -88,7 +89,8 @@ impl DataRoom for Postgres {
                     room.icon,
                     room.archived_at,
                     room.public,
-                    room.owner_id
+                    room.owner_id,
+                    room.welcome_thread_id
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
@@ -122,7 +124,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, archived_at, public
+            SELECT id, name, description, icon, archived_at, public, welcome_thread_id
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -133,13 +135,14 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_thread_id = $7 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
             patch.description.unwrap_or(room.description),
             patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
             patch.public.unwrap_or(room.public),
+            patch.welcome_thread_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_thread_id),
         )
         .execute(&mut *tx)
         .await?;
@@ -169,7 +172,8 @@ impl DataRoom for Postgres {
                     r.icon,
                     r.archived_at,
                     r.public,
-                    r.owner_id
+                    r.owner_id,
+                    r.welcome_thread_id
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
                 JOIN room r ON rm1.room_id = r.id

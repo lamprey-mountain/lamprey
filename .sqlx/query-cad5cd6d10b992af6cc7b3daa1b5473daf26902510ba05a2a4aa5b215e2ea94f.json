@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, name, description, icon, archived_at, public\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
+  "query": "\n            SELECT id, name, description, icon, archived_at, public, welcome_thread_id\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "public",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "welcome_thread_id",
+        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -45,8 +50,9 @@
       true,
       true,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "0268f7dd1e977bd0fe16f588dc5fed28051ee6b690edd5e9e3c072103f1cd111"
+  "hash": "cad5cd6d10b992af6cc7b3daa1b5473daf26902510ba05a2a4aa5b215e2ea94f"
 }

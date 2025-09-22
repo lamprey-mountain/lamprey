@@ -14,7 +14,10 @@
                 "DefaultMarkdown",
                 "ThreadUpdate",
                 "DefaultTagged",
-                "ThreadRename"
+                "ThreadRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin"
               ]
             }
           }
