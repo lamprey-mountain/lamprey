@@ -353,6 +353,7 @@ impl LampreyHandle {
                     ty: ThreadType::Chat,
                     tags: None,
                     nsfw: false,
+                    recipients: vec![],
                 },
             )
             .await?;

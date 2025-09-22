@@ -4,8 +4,10 @@ use std::time::Duration;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageThreadRename,
-    MessageType, Permission, Thread, ThreadId, ThreadPatch, UserId,
+    MessageType, Permission, Thread, ThreadId, ThreadPatch, ThreadType, User, UserId,
 };
+use futures::stream::FuturesOrdered;
+use futures::StreamExt;
 use moka::future::Cache;
 use time::OffsetDateTime;
 
@@ -18,9 +20,9 @@ use crate::ServerStateInner;
 // then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
-
     cache_thread: Cache<ThreadId, Thread>,
     cache_thread_private: Cache<(ThreadId, UserId), DbThreadPrivate>,
+    cache_thread_recipients: Cache<ThreadId, Vec<User>>,
     typing: Cache<(ThreadId, UserId), OffsetDateTime>,
 }
 
@@ -34,6 +36,10 @@ impl ServiceThreads {
                 .build(),
             cache_thread_private: Cache::builder()
                 .max_capacity(100_000)
+                .support_invalidation_closures()
+                .build(),
+            cache_thread_recipients: Cache::builder()
+                .max_capacity(10_000)
                 .support_invalidation_closures()
                 .build(),
             typing: Cache::builder()
@@ -59,12 +65,45 @@ impl ServiceThreads {
                 )
                 .await
                 .map_err(|err| err.fake_clone())?;
+
+            let recipients = self
+                .cache_thread_recipients
+                .try_get_with(thread_id, async {
+                    if !matches!(thread.ty, ThreadType::Dm | ThreadType::Gdm) {
+                        return Ok(vec![]);
+                    }
+
+                    let members = self
+                        .state
+                        .data()
+                        .thread_member_list(
+                            thread_id,
+                            common::v1::types::PaginationQuery {
+                                from: None,
+                                to: None,
+                                dir: None,
+                                limit: Some(1024),
+                            },
+                        )
+                        .await?;
+                    let data = self.state.data();
+                    let mut futures = FuturesOrdered::new();
+                    for member in members.items {
+                        futures.push_back(data.user_get(member.user_id));
+                    }
+                    let mut users = vec![];
+                    while let Some(user) = futures.next().await {
+                        users.push(user?);
+                    }
+                    Result::Ok(users)
+                })
+                .await
+                .map_err(|err| err.fake_clone())?;
+            let recipients: Vec<_> = recipients.into_iter().filter(|u| u.id != user_id).collect();
+
             thread = Thread {
-                recipient: if let Some(recipient_id) = private_data.recipient_id {
-                    Some(self.state.services().users.get(recipient_id.into()).await?)
-                } else {
-                    None
-                },
+                recipient: recipients.first().cloned(),
+                recipients,
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
                 mention_count: Some(0),            // TODO

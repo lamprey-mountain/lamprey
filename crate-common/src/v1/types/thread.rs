@@ -130,7 +130,12 @@ pub struct Thread {
     pub notifications: Option<NotifsThread>, // TODO: remove
     // pub user_config: UserConfigThread,
     /// for dm threads, this is who the dm is with
+    /// DEPRECATED: use `recipients` instead
+    #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub recipient: Option<User>,
+
+    /// for dm threads, this is who the dm is with
+    pub recipients: Vec<User>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -190,6 +195,7 @@ pub struct ThreadCreate {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
+    // TODO: icons for gdm threads
     // pub icon: Option<Media>,
     /// The type of this thread
     #[serde(default, rename = "type")]
@@ -202,6 +208,11 @@ pub struct ThreadCreate {
     /// not safe for work
     #[serde(default)]
     pub nsfw: bool,
+
+    /// the recipient(s) for this dm/gdm
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 10)))]
+    #[serde(default)]
+    pub recipients: Vec<UserId>,
     // /// the initial message for this thread
     // pub starter_message: MessageCreate,
 }

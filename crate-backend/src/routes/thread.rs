@@ -138,9 +138,9 @@ async fn thread_create_room(
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
-/// Dm thread create (TODO)
+/// Dm thread create
 ///
-/// Create a thread outside of a room, for dms
+/// Create a dm or group dm thread (outside of a room)
 #[utoipa::path(
     post,
     path = "/thread",
@@ -149,14 +149,72 @@ async fn thread_create_room(
         (status = CREATED, body = Thread, description = "Create thread success"),
     )
 )]
-async fn thread_create(
-    Path((_room_id,)): Path<(RoomId,)>,
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<ThreadCreate>,
-) -> Result<()> {
-    todo!()
+async fn dm_thread_create(
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(mut json): Json<ThreadCreate>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    json.validate()?;
+    let srv = s.services();
+    let data = s.data();
+    match json.ty {
+        ThreadType::Dm => {
+            if json.recipients.len() != 1 {
+                return Err(Error::BadStatic(
+                    "dm threads can only be with a single person",
+                ));
+            }
+            let target_user_id = json.recipients.first().unwrap();
+            let (thread, is_new) = srv.users.init_dm(auth_user.id, *target_user_id).await?;
+            s.broadcast(MessageSync::ThreadCreate {
+                thread: thread.clone(),
+            })?;
+            if is_new {
+                return Ok((StatusCode::CREATED, Json(thread)));
+            } else {
+                return Ok((StatusCode::OK, Json(thread)));
+            }
+        }
+        ThreadType::Gdm => {
+            json.recipients.push(auth_user.id);
+        }
+        _ => {
+            return Err(Error::BadStatic(
+                "can only create a dm/gdm thread outside of a room",
+            ))
+        }
+    };
+
+    let thread_id = data
+        .thread_create(DbThreadCreate {
+            room_id: None,
+            creator_id: auth_user.id,
+            name: json.name.clone(),
+            description: json.description.clone(),
+            ty: DbThreadType::Gdm,
+            nsfw: json.nsfw,
+        })
+        .await?;
+
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let mut members = vec![];
+
+    for id in json.recipients {
+        data.thread_member_put(thread_id, id, ThreadMemberPut {})
+            .await?;
+        let thread_member = data.thread_member_get(thread_id, id).await?;
+        members.push(thread_member);
+    }
+
+    s.broadcast(MessageSync::ThreadCreate {
+        thread: thread.clone(),
+    })?;
+    for member in members {
+        s.broadcast(MessageSync::ThreadMemberUpsert { member })?;
+    }
+
+    Ok((StatusCode::CREATED, Json(thread)))
 }
 
 /// Thread get
@@ -790,7 +848,7 @@ async fn thread_unlock(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create_room))
-        .routes(routes!(thread_create))
+        .routes(routes!(dm_thread_create))
         .routes(routes!(thread_get))
         .routes(routes!(thread_list))
         .routes(routes!(thread_list_archived))

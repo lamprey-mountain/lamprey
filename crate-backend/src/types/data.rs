@@ -96,7 +96,6 @@ pub struct DbThreadPrivate {
     pub ty: DbThreadType,
     pub last_read_id: Option<Uuid>,
     pub is_unread: bool,
-    pub recipient_id: Option<Uuid>,
 }
 
 pub struct DbThreadCreate {
@@ -115,6 +114,7 @@ pub enum DbThreadType {
     Forum,
     Voice,
     Dm,
+    Gdm,
 }
 
 impl From<DbThreadType> for ThreadType {
@@ -124,6 +124,7 @@ impl From<DbThreadType> for ThreadType {
             DbThreadType::Forum => ThreadType::Forum,
             DbThreadType::Voice => ThreadType::Voice,
             DbThreadType::Dm => ThreadType::Dm,
+            DbThreadType::Gdm => ThreadType::Gdm,
         }
     }
 }
@@ -153,6 +154,7 @@ impl From<DbThread> for Thread {
             mention_count: None,
             notifications: None,
             recipient: None,
+            recipients: vec![],
 
             // TODO: store or calculate the fields below
             tags: Default::default(),
