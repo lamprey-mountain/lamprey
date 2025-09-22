@@ -104,7 +104,13 @@ export type SignallingMessage =
 		// only sent from client
 		// TODO: move this to a top level event
 		type: "VoiceState";
-		state: { thread_id: string } | null;
+		state: {
+			thread_id: string;
+			self_mute: boolean;
+			self_deaf: boolean;
+			self_video: boolean;
+			self_screen: boolean;
+		} | null;
 	}
 	| {
 		type: "Reconnect";
@@ -113,5 +119,12 @@ export type SignallingMessage =
 export type VoiceState = {
 	user_id: string;
 	thread_id: string;
+	session_id: string | null;
 	joined_at: string;
+	mute: boolean;
+	deaf: boolean;
+	self_mute: boolean;
+	self_deaf: boolean;
+	self_video: boolean;
+	self_screen: boolean;
 };

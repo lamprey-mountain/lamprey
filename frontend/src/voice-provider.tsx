@@ -78,6 +78,15 @@ export const VoiceProvider = (props: ParentProps) => {
 		state.rtc?.sendSpeaking(activity ? 1 : 0);
 	}));
 
+	createEffect(() => {
+		state.rtc?.updateIndicators({
+			self_deaf: state.deafened,
+			self_mute: state.muted,
+			self_video: !state.cameraHidden,
+			self_screen: state.screenshareEnabled,
+		});
+	});
+
 	api.events.on("sync", async (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
 		if (e.type === "VoiceState" && e.user_id === user_id) {

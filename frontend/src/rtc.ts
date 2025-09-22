@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { useApi } from "./api";
-import { SignallingMessage, TrackMetadata } from "sdk";
+import { SignallingMessage, TrackMetadata, VoiceState } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEmitter } from "@solid-primitives/event-bus";
 
@@ -23,6 +23,13 @@ type LocalStream = {
 type Speaking = {
 	flags: number;
 	timeout: NodeJS.Timeout;
+};
+
+type Indicators = {
+	self_mute: boolean;
+	self_deaf: boolean;
+	self_video: boolean;
+	self_screen: boolean;
 };
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -405,7 +412,13 @@ export const createVoiceClient = () => {
 			}
 			send({
 				type: "VoiceState",
-				state: { thread_id },
+				state: {
+					thread_id,
+					self_mute: true,
+					self_deaf: false,
+					self_video: false,
+					self_screen: false,
+				},
 			});
 		},
 		disconnect() {
@@ -456,5 +469,21 @@ export const createVoiceClient = () => {
 		},
 		events,
 		transceivers,
+		updateIndicators(indicators: Indicators) {
+			const existing = api.voiceState();
+			if (!existing) return;
+			const unchanged = existing.self_deaf === indicators.self_deaf &&
+				existing.self_mute === indicators.self_mute &&
+				existing.self_video === indicators.self_video &&
+				existing.self_screen === indicators.self_screen;
+			if (unchanged) return;
+			send({
+				type: "VoiceState",
+				state: {
+					thread_id: existing.thread_id,
+					...indicators,
+				},
+			});
+		},
 	};
 };

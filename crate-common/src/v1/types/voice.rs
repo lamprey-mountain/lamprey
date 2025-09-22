@@ -99,6 +99,10 @@ pub struct VoiceState {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceStateUpdate {
     pub thread_id: ThreadId,
+    pub self_deaf: bool,
+    pub self_mute: bool,
+    pub self_video: bool,
+    pub self_screen: bool,
 }
 
 /// metadata about a track

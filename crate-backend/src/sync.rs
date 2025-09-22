@@ -297,11 +297,10 @@ impl Connection {
                             joined_at: Time::now_utc(),
                             mute: false,
                             deaf: false,
-                            // TODO: propagate from VoiceStateUpdate
-                            self_deaf: false,
-                            self_mute: false,
-                            self_video: false,
-                            self_screen: false,
+                            self_deaf: state.self_deaf,
+                            self_mute: state.self_mute,
+                            self_video: state.self_video,
+                            self_screen: state.self_screen,
                         };
                         if let Some(room_id) = thread.room_id {
                             let rm = self.s.data().room_member_get(room_id, user_id).await?;
