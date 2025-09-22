@@ -72,6 +72,9 @@ export const RouteRoom = (p: RouteSectionProps) => {
 			<Title title={room() ? room()!.name : t("loading")} />
 			<RoomNav />
 			<ThreadNav room_id={p.params.room_id} />
+			<header>
+				<b>home</b>
+			</header>
 			<Show when={room()}>
 				<RoomHome room={room()!} />
 				<Show when={flags.has("room_member_list")}>
