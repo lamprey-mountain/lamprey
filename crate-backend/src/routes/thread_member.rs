@@ -4,8 +4,8 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageSync, PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember,
-    ThreadMemberPut, ThreadMembership, UserId,
+    MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
+    ThreadId, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -103,7 +103,7 @@ pub async fn thread_member_add(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadMemberPut>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -136,18 +136,45 @@ pub async fn thread_member_add(
         .await?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     if start.is_some_and(|s| s == res) {
-        Ok(StatusCode::NOT_MODIFIED.into_response())
-    } else {
+        return Ok(StatusCode::NOT_MODIFIED.into_response());
+    }
+
+    if target_user_id != auth_user.id {
+        let message_id = d
+            .message_create(crate::types::DbMessageCreate {
+                thread_id,
+                attachment_ids: vec![],
+                author_id: auth_user.id,
+                embeds: vec![],
+                message_type: MessageType::MemberAdd(MessageMember {
+                    target_user_id,
+                    actor_user_id: auth_user.id,
+                }),
+                edited_at: None,
+                created_at: None,
+            })
+            .await?;
+        let message = d.message_get(thread_id, message_id, auth_user.id).await?;
+        srv.threads.invalidate(thread_id).await; // message count
         s.broadcast_thread(
             thread_id,
             auth_user.id,
-            MessageSync::ThreadMemberUpsert {
-                member: res.clone(),
+            MessageSync::MessageCreate {
+                message: message.clone(),
             },
         )
         .await?;
-        Ok(Json(res).into_response())
     }
+
+    s.broadcast_thread(
+        thread_id,
+        auth_user.id,
+        MessageSync::ThreadMemberUpsert {
+            member: res.clone(),
+        },
+    )
+    .await?;
+    Ok(Json(res).into_response())
 }
 
 /// Thread member delete (kick/leave)
@@ -166,7 +193,7 @@ pub async fn thread_member_add(
 pub async fn thread_member_delete(
     Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
     Auth(auth_user): Auth,
-    HeaderReason(_reason): HeaderReason,
+    HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -199,16 +226,49 @@ pub async fn thread_member_delete(
     }
     d.thread_member_set_membership(thread_id, target_user_id, ThreadMembership::Leave {})
         .await?;
+    let res = d.thread_member_get(thread_id, target_user_id).await?;
+    if start == res {
+        return Ok(StatusCode::NOT_MODIFIED);
+    }
+
     s.services()
         .perms
         .invalidate_thread(target_user_id, thread_id);
-    let res = d.thread_member_get(thread_id, target_user_id).await?;
+
+    if target_user_id != auth_user.id {
+        let message_id = d
+            .message_create(crate::types::DbMessageCreate {
+                thread_id,
+                attachment_ids: vec![],
+                author_id: auth_user.id,
+                embeds: vec![],
+                message_type: MessageType::MemberRemove(MessageMember {
+                    target_user_id,
+                    actor_user_id: auth_user.id,
+                }),
+                edited_at: None,
+                created_at: None,
+            })
+            .await?;
+        let message = d.message_get(thread_id, message_id, auth_user.id).await?;
+        srv.threads.invalidate(thread_id).await; // message count
+        s.broadcast_thread(
+            thread_id,
+            auth_user.id,
+            MessageSync::MessageCreate {
+                message: message.clone(),
+            },
+        )
+        .await?;
+    }
+
     s.broadcast_thread(
         thread_id,
         auth_user.id,
         MessageSync::ThreadMemberUpsert { member: res },
     )
     .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 

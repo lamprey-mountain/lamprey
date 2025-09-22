@@ -294,7 +294,6 @@ pub struct MessagesMoved {
 pub struct MessageMember {
     pub target_user_id: UserId,
     pub actor_user_id: UserId,
-    pub reason: Option<String>, // remove
 }
 
 /// Following a room and will receive announcement posts from it
