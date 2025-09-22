@@ -308,7 +308,7 @@ async fn thread_list_archived(
 
 /// Room thread list removed
 ///
-/// List removed threads in a room. Requires the `ThreadRemove` permission.
+/// List removed threads in a room. Requires the `ThreadDelete` permission.
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread/removed",
@@ -319,16 +319,23 @@ async fn thread_list_archived(
     )
 )]
 async fn thread_list_removed(
-    Path((_room_id,)): Path<(RoomId,)>,
-    Query(_q): Query<PaginationQuery<ThreadId>>,
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    // let data = s.data();
-    // let perms = s.services().perms.for_room(user_id, room_id).await?;
-    // perms.ensure_view()?;
-    // let mut res = data.thread_list_removed(room_id, q).await?;
-    Err(Error::Unimplemented)
+    Path((room_id,)): Path<(RoomId,)>,
+    Query(q): Query<PaginationQuery<ThreadId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::ThreadDelete)?;
+    let mut res = data.thread_list_removed(room_id, q).await?;
+    let srv = s.services();
+    let mut threads = vec![];
+    for t in &res.items {
+        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
+    }
+    res.items = threads;
+    Ok(Json(res))
 }
 
 /// Room thread reorder (TODO)

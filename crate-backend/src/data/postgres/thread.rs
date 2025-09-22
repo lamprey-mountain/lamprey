@@ -117,6 +117,32 @@ impl DataThread for Postgres {
         )
     }
 
+    async fn thread_list_removed(
+        &self,
+        room_id: RoomId,
+        pagination: PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbThread,
+                "sql/thread_paginate_removed.sql",
+                *room_id,
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NOT NULL"#,
+                room_id.into_inner()
+            ),
+            |i: &Thread| i.id.to_string()
+        )
+    }
+
     async fn thread_get_private(
         &self,
         thread_id: ThreadId,
