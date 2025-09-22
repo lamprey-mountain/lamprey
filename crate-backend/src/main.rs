@@ -91,6 +91,20 @@ impl Modify for NestedTags {
                 "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public", "admin"],
             },
         ]);
+
+        if let Some(tags) = &mut openapi.tags {
+            for tag in tags {
+                tag.extensions
+                    .get_or_insert_with(|| {
+                        utoipa::openapi::extensions::Extensions::builder().build()
+                    })
+                    .insert(
+                        "x-displayName".to_string(),
+                        tag.name.replace("_", " ").into(),
+                    );
+            }
+        }
+
         openapi
             .extensions
             .get_or_insert_default()
