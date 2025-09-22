@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.type as \"ty: DbThreadType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.version_id < last_version_id, true) as \"is_unread!\",\n    m.user_id as \"recipient_id?\"\nfrom thread\nleft join last_id on last_id.thread_id = thread.id\nleft join unread u on u.thread_id = thread.id and u.user_id = $2\nleft join thread_member m on m.thread_id = thread.id and m.user_id <> $2\nwhere thread.id = $1\n",
+  "query": "with last_id as (\n    select thread_id, max(version_id) as last_version_id\n    from message\n    where deleted_at is null\n    group by thread_id\n)\nselect\n    thread.id,\n    thread.type as \"ty: DbThreadType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.version_id < last_version_id, true) as \"is_unread!\"\nfrom thread\nleft join last_id on last_id.thread_id = thread.id\nleft join unread u on u.thread_id = thread.id and u.user_id = $2\nwhere thread.id = $1\n",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,8 @@
                 "DmUnused",
                 "Forum",
                 "Voice",
-                "Dm"
+                "Dm",
+                "Gdm"
               ]
             }
           }
@@ -35,11 +36,6 @@
         "ordinal": 3,
         "name": "is_unread!",
         "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
-        "name": "recipient_id?",
-        "type_info": "Uuid"
       }
     ],
     "parameters": {
@@ -52,9 +48,8 @@
       false,
       false,
       false,
-      null,
-      false
+      null
     ]
   },
-  "hash": "282126d4e7b82dbcc190d640d4aa27933945ed7440364ec9cf3ae822ffbc5a67"
+  "hash": "5cb6518163951b7fdb512e2a60fab60744e9f47ba685280821a75a958a0e0c0e"
 }

@@ -37,13 +37,14 @@ select
     coalesce(member_count.count, 0) as "member_count!",
     last_id.last_version_id as "last_version_id",
     coalesce(permission_overwrites.overwrites, '[]') as "permission_overwrites!"
-from dm
-join thread on dm.thread_id = thread.id
+from thread
+left join dm on dm.thread_id = thread.id
 left join message_count on message_count.thread_id = thread.id
 left join member_count on member_count.thread_id = thread.id
 join last_id on last_id.thread_id = thread.id
 left join permission_overwrites on permission_overwrites.target_id = thread.id
-where (dm.user_a_id = $1 or dm.user_b_id = $1)
-  AND last_id.last_version_id > $2 AND last_id.last_version_id < $3
+where (dm.user_a_id = $1 or dm.user_b_id = $1 or dm.user_a_id is null)
+  and last_id.last_version_id > $2 and last_id.last_version_id < $3
+  and (thread.type = 'Dm' or thread.type = 'Gdm')
 order by (CASE WHEN $4 = 'f' THEN last_id.last_version_id END), last_id.last_version_id DESC
 LIMIT $5

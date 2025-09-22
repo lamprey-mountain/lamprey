@@ -20,7 +20,8 @@
                 "DmUnused",
                 "Forum",
                 "Voice",
-                "Dm"
+                "Dm",
+                "Gdm"
               ]
             }
           }
