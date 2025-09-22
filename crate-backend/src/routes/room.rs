@@ -69,7 +69,6 @@ async fn room_create(
         data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
             .await?;
     }
-    s.broadcast(MessageSync::RoomCreate { room: room.clone() })?;
 
     Ok((StatusCode::CREATED, Json(room)))
 }

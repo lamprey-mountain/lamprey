@@ -3,13 +3,15 @@ use std::sync::Arc;
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Permission, RoleId, Room, RoomCreate,
-    RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageType, Permission,
+    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, UserId,
 };
 use moka::future::Cache;
 
 use crate::error::{Error, Result};
-use crate::types::{DbRoleCreate, DbRoomCreate, MediaLinkType};
+use crate::types::{
+    DbMessageCreate, DbRoleCreate, DbRoomCreate, DbThreadCreate, DbThreadType, MediaLinkType,
+};
 use crate::ServerStateInner;
 
 pub struct ServiceRooms {
@@ -96,30 +98,12 @@ impl ServiceRooms {
     pub async fn create(
         &self,
         create: RoomCreate,
-        creator: UserId,
+        creator_id: UserId,
         extra: DbRoomCreate,
     ) -> Result<Room> {
         let data = self.state.data();
         let mut room = data.room_create(create, extra).await?;
         let room_id = room.id;
-
-        let changes = Changes::new()
-            .add("name", &room.name)
-            .add("description", &room.description)
-            .add("icon", &room.icon)
-            .add("public", &room.public)
-            .build();
-
-        self.state
-            .audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: creator,
-                session_id: None, // TODO: get session id
-                reason: None,     // TODO: get reason
-                ty: AuditLogEntryType::RoomCreate { changes },
-            })
-            .await?;
 
         let role_admin = DbRoleCreate {
             id: RoleId::new(),
@@ -153,13 +137,113 @@ impl ServiceRooms {
         data.role_create(role_everyone, 0).await?;
         data.room_member_put(
             room_id,
-            creator,
+            creator_id,
             Some(RoomMemberOrigin::Creator),
             RoomMemberPut::default(),
         )
         .await?;
-        data.room_set_owner(room_id, creator).await?;
-        room.owner_id = Some(creator);
+        data.room_set_owner(room_id, creator_id).await?;
+        room.owner_id = Some(creator_id);
+
+        let welcome_thread_id = data
+            .thread_create(DbThreadCreate {
+                room_id: Some(room.id.into_inner()),
+                creator_id,
+                name: "general".to_string(),
+                description: None,
+                ty: DbThreadType::Chat,
+                nsfw: false,
+            })
+            .await?;
+        let welcome_thread = data.thread_get(welcome_thread_id).await?;
+
+        data.room_update(
+            room_id,
+            RoomPatch {
+                welcome_thread_id: Some(Some(welcome_thread_id)),
+                name: None,
+                description: None,
+                icon: None,
+                public: None,
+            },
+        )
+        .await?;
+        room.welcome_thread_id = Some(welcome_thread_id);
+
+        let welcome_message_id = data
+            .message_create(DbMessageCreate {
+                thread_id: welcome_thread_id,
+                attachment_ids: vec![],
+                author_id: creator_id,
+                embeds: vec![],
+                message_type: MessageType::MemberJoin,
+                edited_at: None,
+                created_at: None,
+            })
+            .await?;
+        let welcome_message = data
+            .message_get(welcome_thread_id, welcome_message_id, creator_id)
+            .await?;
+
+        self.state
+            .broadcast(MessageSync::RoomCreate { room: room.clone() })?;
+
+        self.state
+            .audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: creator_id,
+                session_id: None, // TODO: get session id
+                reason: None,     // TODO: get reason
+                ty: AuditLogEntryType::RoomCreate {
+                    changes: Changes::new()
+                        .add("name", &room.name)
+                        .add("description", &room.description)
+                        .add("icon", &room.icon)
+                        .add("public", &room.public)
+                        .add("welcome_thread_id", &room.welcome_thread_id)
+                        .build(),
+                },
+            })
+            .await?;
+
+        self.state
+            .broadcast_room(
+                room_id,
+                creator_id,
+                MessageSync::ThreadCreate {
+                    thread: welcome_thread,
+                },
+            )
+            .await?;
+
+        self.state
+            .audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: creator_id,
+                session_id: None, // TODO: get session id
+                reason: None,     // TODO: get reason
+                ty: AuditLogEntryType::ThreadCreate {
+                    thread_id: welcome_thread_id,
+                    changes: Changes::new()
+                        .add("name", &"general")
+                        .add("nsfw", &false)
+                        .build(),
+                },
+            })
+            .await?;
+
+        self.state
+            .broadcast_thread(
+                welcome_thread_id,
+                creator_id,
+                MessageSync::MessageCreate {
+                    message: welcome_message,
+                },
+            )
+            .await?;
+
         Ok(room)
     }
 }
