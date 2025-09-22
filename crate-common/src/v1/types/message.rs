@@ -210,10 +210,10 @@ pub enum MessageType {
     /// (TODO) one or more messages were moved
     MessagesMoved(MessagesMoved),
 
-    /// (TODO) a member was added to the thread or group dm
+    /// a member was added to the thread or group dm
     MemberAdd(MessageMember),
 
-    /// (TODO) a member was removed from the thread or group dm
+    /// a member was removed from the thread or group dm
     MemberRemove(MessageMember),
 
     /// (TODO) a member joined the room
@@ -222,7 +222,7 @@ pub enum MessageType {
     /// (TODO) call ended in a dm/gdm
     Call(MessageCall),
 
-    /// (TODO) this thread was renamed
+    /// this thread was renamed
     ThreadRename(MessageThreadRename),
 
     /// (TODO) someone mentioned this thread
@@ -260,8 +260,11 @@ pub struct MessagePin {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageThreadRename {
-    pub new: String,
-    pub old: String,
+    #[serde(alias = "new")]
+    pub name_new: String,
+
+    #[serde(alias = "old")]
+    pub name_old: String,
 }
 
 /// Information about the pingback

@@ -2545,3 +2545,16 @@ button.big {
 		border: none;
 	}
 }
+
+article.message.oneline {
+	grid-template-columns: 48px 1fr max-content;
+
+	.emojiicon {
+		text-align: right;
+		margin: 0 6px;
+	}
+
+	.author {
+		padding: 0;
+	}
+}

@@ -147,40 +147,58 @@ export function MessageView(props: MessageProps) {
 			props.message.edited_at ?? props.message.created_at ??
 				new Date().toString(),
 		);
-		// if (props.message.type === "ThreadUpdate" && false) {
-		// 	const updates = [];
-		// 	const listFormatter = new Intl.ListFormat();
-		// 	const patch = props.message.patch as any;
-		// 	if (patch) {
-		// 		if (patch.name) updates.push(`set name to ${patch.name}`);
-		// 		if (patch.description) {
-		// 			updates.push(
-		// 				patch.description ? `set description to ${patch.description}` : "",
-		// 			);
-		// 		}
-		// 		if (patch.state) {
-		// 			updates.push(`set state to ${patch.state}`);
-		// 		}
-		// 	} else {
-		// 		console.warn("missing patch", props.message);
-		// 	}
-		// 	return (
-		// 		<>
-		// 			<span></span>
-		// 			<div class="content">
-		// 				<span class="body">
-		// 					<Author message={props.message} thread={thread()} />{" "}
-		// 					updated the thread:{" "}
-		// 					{listFormatter.format(updates) || "did nothing"}
-		// 				</span>
-		// 			</div>
-		// 			<div class="time">
-		// 				<Time date={date} animGroup="message-ts" />
-		// 			</div>
-		// 		</>
-		// 	);
-		// } else if (
-		if (
+		// TODO: replace emoji with actual icons
+		if (props.message.type === "MemberAdd") {
+			// TODO
+		} else if (props.message.type === "MemberRemove") {
+			// TODO
+		} else if (props.message.type === "MemberJoin") {
+			// TODO
+		} else if (props.message.type === "ThreadRename") {
+			return (
+				<article
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
+				>
+					<div class="emojiicon">&#x270F;&#xFE0F;</div>
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author menu-user"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							renamed the thread to <b>{props.message.name_new}</b>
+						</div>
+						<Show when={props.message.reactions?.length}>
+							<ul class="reactions">
+								<For each={props.message.reactions}>
+									{(r) => (
+										<li
+											classList={{ me: r.self }}
+											onClick={() =>
+												r.self ? reactionAdd(r.key) : reactionDel(r.key)}
+										>
+											<span class="emoji">{r.key.toString()}</span>
+											<span class="count">{r.count}</span>
+										</li>
+									)}
+								</For>
+							</ul>
+						</Show>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+				</article>
+			);
+		} else if (
 			props.message.type === "DefaultMarkdown"
 		) {
 			const [arrow_width, set_arrow_width] = createSignal(0);
@@ -219,6 +237,7 @@ export function MessageView(props: MessageProps) {
 							<div
 								class="author menu-user"
 								classList={{ "override-name": !!props.message.override_name }}
+								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
 								<Time date={date} animGroup="message-ts" />
@@ -228,12 +247,7 @@ export function MessageView(props: MessageProps) {
 							<div class="avatar"></div>
 						</Show>
 						<div class="content">
-							<Show when={props.message.type === "DefaultMarkdown"}>
-								<MessageTextMarkdown message={props.message} />
-							</Show>
-							<Show when={props.message.type === "DefaultTagged"}>
-								<MessageTextTagged message={props.message} />
-							</Show>
+							<MessageTextMarkdown message={props.message} />
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.attachments}>
@@ -272,17 +286,13 @@ export function MessageView(props: MessageProps) {
 								class="author sticky menu-user"
 								classList={{ "override-name": !!props.message.override_name }}
 								ref={set_w}
+								data-user-id={props.message.author_id}
 							>
 								<Author message={props.message} thread={thread()} />
 							</div>
 						</div>
 						<div class="content">
-							<Show when={props.message.type === "DefaultMarkdown"}>
-								<MessageTextMarkdown message={props.message} />
-							</Show>
-							<Show when={props.message.type === "DefaultTagged"}>
-								<MessageTextTagged message={props.message} />
-							</Show>
+							<MessageTextMarkdown message={props.message} />
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.attachments}>

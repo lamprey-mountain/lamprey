@@ -14,5 +14,6 @@ pub use common::v1::types::session::*;
 pub use common::v1::types::sync::*;
 pub use common::v1::types::thread::*;
 pub use common::v1::types::user::*;
+pub use common::v1::types::{emoji, notifications, reaction};
 pub use data::*;
 pub use permission::*;

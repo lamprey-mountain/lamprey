@@ -164,8 +164,8 @@ impl ServiceThreads {
                     author_id: user_id,
                     embeds: vec![],
                     message_type: MessageType::ThreadRename(MessageThreadRename {
-                        new: thread_new.name.clone(),
-                        old: thread_old.name,
+                        name_new: thread_new.name.clone(),
+                        name_old: thread_old.name,
                     }),
                     edited_at: None,
                     created_at: None,

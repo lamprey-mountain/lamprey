@@ -183,9 +183,11 @@ export const ChatMain = (props: ChatProps) => {
 
 	// effect to initialize new threads
 	createEffect(on(() => props.thread.id, (thread_id) => {
-		const rid = props.thread.last_read_id ?? props.thread.last_version_id;
+		const last_read_id = props.thread.last_read_id ??
+			props.thread.last_version_id;
 		if (ctx.thread_read_marker_id.has(thread_id)) return;
-		ctx.thread_read_marker_id.set(thread_id, rid);
+		if (!last_read_id) return; // no messages in the thread
+		ctx.thread_read_marker_id.set(thread_id, last_read_id);
 	}));
 
 	// effect to update saved scroll position
