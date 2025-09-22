@@ -436,7 +436,8 @@ function shouldSplit(a: Message, b: Message) {
 }
 
 function shouldSplitInner(a: Message, b: Message) {
-	shouldSplitMemo;
+	if (a.type !== "DefaultMarkdown") return true;
+	if (b.type !== "DefaultMarkdown") return true;
 	if (a.author_id !== b.author_id) return true;
 	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
 	const ts_a = get_msg_ts(a);

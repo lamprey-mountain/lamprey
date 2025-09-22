@@ -1,4 +1,4 @@
-import { getTimestampFromUUID, type Message, type Thread } from "sdk";
+import { getTimestampFromUUID, type Message, type Thread, User } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
 import {
 	createEffect,
@@ -148,12 +148,115 @@ export function MessageView(props: MessageProps) {
 				new Date().toString(),
 		);
 		// TODO: replace emoji with actual icons
+		// FIXME: spacing between MessageDefault and oneline is missing
 		if (props.message.type === "MemberAdd") {
-			// TODO
+			return (
+				<article
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
+				>
+					<div class="emojiicon">&#x1f465;</div>
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author menu-user"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>
+							{" added "}
+							<span
+								class="author menu-user"
+								data-user-id={props.message.target_user_id}
+							>
+								<Show when={thread()}>
+									<Actor
+										user_id={props.message.target_user_id}
+										thread={thread()!}
+									/>
+								</Show>
+							</span>{" "}
+							to the thread
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+				</article>
+			);
 		} else if (props.message.type === "MemberRemove") {
-			// TODO
+			return (
+				<article
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
+				>
+					<div class="emojiicon">&#x1f465;</div>
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author menu-user"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>
+							{" removed "}
+							<span
+								class="author menu-user"
+								data-user-id={props.message.target_user_id}
+							>
+								<Show when={thread()}>
+									<Actor
+										user_id={props.message.target_user_id}
+										thread={thread()!}
+									/>
+								</Show>
+							</span>{" "}
+							from the thread
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+				</article>
+			);
 		} else if (props.message.type === "MemberJoin") {
-			// TODO
+			return (
+				<article
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
+				>
+					<div class="emojiicon">&#x1F44B;</div>
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author menu-user"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							joined the room
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+				</article>
+			);
 		} else if (props.message.type === "ThreadRename") {
 			return (
 				<article
@@ -182,9 +285,7 @@ export function MessageView(props: MessageProps) {
 					<Time date={date} animGroup="message-ts" />
 				</article>
 			);
-		} else if (
-			props.message.type === "DefaultMarkdown"
-		) {
+		} else if (props.message.type === "DefaultMarkdown") {
 			const [arrow_width, set_arrow_width] = createSignal(0);
 			const user = api.users.fetch(() => props.message.author_id);
 			const set_w = (e: HTMLElement) => {
@@ -436,7 +537,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 	const api = useApi();
 	const room_member = props.thread?.room_id
 		? api.room_members.fetch(
-			() => props.thread!.room_id,
+			() => props.thread!.room_id!,
 			() => props.message.author_id,
 		)
 		: () => null;
@@ -479,6 +580,35 @@ function Author(props: { message: Message; thread?: Thread }) {
 			data-user-id={props.message.author_id}
 			use:content
 		>
+			{name()}
+		</span>
+	);
+}
+
+function Actor(props: { user_id: string; thread: Thread }) {
+	const api = useApi();
+	const room_member = props.thread.room_id
+		? api.room_members.fetch(
+			() => props.thread.room_id!,
+			() => props.user_id,
+		)
+		: () => null;
+	const user = api.users.fetch(() => props.user_id);
+
+	function name() {
+		let name;
+
+		const rm = room_member?.();
+		if (rm?.membership === "Join") name ??= rm.override_name;
+
+		const us = user();
+		name ??= us?.name;
+
+		return name;
+	}
+
+	return (
+		<span class="user">
 			{name()}
 		</span>
 	);
