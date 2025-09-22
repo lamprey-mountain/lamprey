@@ -11,7 +11,8 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{debug, error, info};
 
 use crate::{
-    common::{BridgeMessage, Globals, GlobalsTrait},
+    bridge::BridgeMessage,
+    common::{Globals, GlobalsTrait},
     data::Data,
     portal::PortalMessage,
 };
@@ -75,7 +76,6 @@ impl EventHandler for Handle {
                         thread_name: thread.name,
                         discord_guild_id: realm_config.discord_guild_id,
                     })
-                    .await
                 {
                     error!("failed to send lamprey thread create message: {e}");
                 }

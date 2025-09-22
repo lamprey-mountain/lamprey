@@ -21,7 +21,8 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info, warn, Instrument};
 
 use crate::{
-    common::{BridgeMessage, Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
+    bridge::BridgeMessage,
+    common::{Globals, GlobalsTrait, PortalConfig, RealmConfig, WEBHOOK_NAME},
     data::Data,
     portal::{Portal, PortalMessage},
 };
@@ -350,14 +351,14 @@ impl EventHandler for Handler {
 
                         info!("no portal exists so we'll create one");
 
-                        if let Err(e) = globals
-                            .bridge_chan
-                            .send(BridgeMessage::DiscordChannelCreate {
-                                guild_id: guild.id,
-                                channel_id: ch.id,
-                                channel_name: ch.name.clone(),
-                            })
-                            .await
+                        if let Err(e) =
+                            globals
+                                .bridge_chan
+                                .send(BridgeMessage::DiscordChannelCreate {
+                                    guild_id: guild.id,
+                                    channel_id: ch.id,
+                                    channel_name: ch.name.clone(),
+                                })
                         {
                             error!("failed to send discord channel create message: {e}");
                         }
@@ -541,7 +542,6 @@ impl EventHandler for Handler {
                 channel_id: channel.id,
                 channel_name: channel.name.clone(),
             })
-            .await
         {
             error!("failed to send discord channel create message: {e}");
         }

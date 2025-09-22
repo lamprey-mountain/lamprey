@@ -8,6 +8,7 @@ use serde::Deserialize;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::{mpsc, oneshot};
 
+use crate::bridge::BridgeMessage;
 use crate::data::{Data, MessageMetadata};
 use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
@@ -21,7 +22,7 @@ pub struct Globals {
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
-    pub bridge_chan: mpsc::Sender<BridgeMessage>,
+    pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -98,21 +99,6 @@ impl Globals {
             .await?;
         Ok(recv.await?)
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum BridgeMessage {
-    LampreyThreadCreate {
-        thread_id: ThreadId,
-        room_id: RoomId,
-        thread_name: String,
-        discord_guild_id: DcGuildId,
-    },
-    DiscordChannelCreate {
-        guild_id: DcGuildId,
-        channel_id: DcChannelId,
-        channel_name: String,
-    },
 }
 
 pub const WEBHOOK_NAME: &'static str = "bridg";
