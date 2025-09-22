@@ -4,7 +4,8 @@ use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageType, Permission,
-    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, UserId,
+    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
+    ThreadMembership, UserId,
 };
 use moka::future::Cache;
 
@@ -252,6 +253,17 @@ impl ServiceRooms {
                     },
                 )
                 .await?;
+
+            let tm = data.thread_member_get(wti, user_id).await;
+            if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+                data.thread_member_put(wti, user_id, ThreadMemberPut::default())
+                    .await?;
+                let thread_member = data.thread_member_get(wti, user_id).await?;
+                let msg = MessageSync::ThreadMemberUpsert {
+                    member: thread_member,
+                };
+                self.state.broadcast_thread(wti, user_id, msg).await?;
+            }
         }
 
         Ok(())
