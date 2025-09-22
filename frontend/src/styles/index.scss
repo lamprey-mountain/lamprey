@@ -2392,6 +2392,12 @@ button.big {
 		margin: 4px;
 		padding: 4px;
 	}
+
+	& .invite {
+		border: solid #444 1px;
+		margin: 4px;
+		padding: 4px;
+	}
 }
 
 .applications-savebar {
@@ -2518,5 +2524,23 @@ button.big {
 		font-weight: bold;
 		font-size: 0.9rem;
 		color: $fg-500;
+	}
+}
+
+.invite-app {
+	position: fixed;
+	top: 0;
+	left: 0;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	min-width: 128px;
+	max-width: 256px;
+
+	display: flex;
+	flex-direction: column;
+
+	button {
+		border: none;
 	}
 }

@@ -3,14 +3,18 @@ import {
 	createResource,
 	createSignal,
 	For,
+	onCleanup,
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type Application, type Session, type User } from "sdk";
+import { type Application, type User } from "sdk";
 import { useApi } from "../api.tsx";
 import { Copyable } from "../util.tsx";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../context.ts";
+import { useFloating } from "solid-floating-ui";
+import { ReferenceElement, shift } from "@floating-ui/dom";
+import { usePermissions } from "../hooks/usePermissions.ts";
 
 const SessionList = (props: { appId: string }) => {
 	const api = useApi();
@@ -81,20 +85,26 @@ const SessionList = (props: { appId: string }) => {
 	);
 };
 
+// TODO: in create session and rotate oauth token, make the secret Copyable
 export function Applications(_props: VoidProps<{ user: User }>) {
 	const api = useApi();
 
 	async function create() {
-		const name = prompt("name");
-		if (!name) return;
-		await api.client.http.POST("/api/v1/app", {
-			body: {
-				name,
-				bridge: false,
-				public: false,
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "New app name?",
+			cont: async (name) => {
+				if (!name) return;
+				await api.client.http.POST("/api/v1/app", {
+					body: {
+						name,
+						bridge: false,
+						public: false,
+					},
+				});
+				refetch();
 			},
 		});
-		refetch();
 	}
 
 	const [list, { refetch }] = createResource(async () => {
@@ -155,6 +165,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		}
 	};
 
+	const ctx = useCtx();
 	const rotateSecret = async (app_id: string) => {
 		const { data } = await api.client.http.POST(
 			"/api/v1/app/{app_id}/rotate-secret",
@@ -162,23 +173,31 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				params: { path: { app_id } },
 			},
 		);
-		// TODO: show Copyable secret, warn that tokens can only be seen once
+		ctx.dispatch({
+			do: "modal.alert",
+			text: `your secret is ${data?.oauth_secret} (this can only be seen once)`,
+		});
 	};
 
-	const listSessions = async (app_id: string) => {
-		const { data } = await api.client.http.GET("/api/v1/session", {
-			headers: { "x-puppet-id": app_id },
-		});
-		return data;
-	};
-	globalThis.asdf = listSessions;
+	const [inviteApp, setInviteApp] = createSignal<
+		{ app: Application; x: number; y: number }
+	>();
+	const InviteAppClear = () => setInviteApp();
+	document.addEventListener("click", InviteAppClear);
+	onCleanup(() => document.removeEventListener("click", InviteAppClear));
 
 	const createSession = async (app_id: string) => {
-		await api.client.http.POST("/api/v1/app/{app_id}/session", {
-			params: { path: { app_id } },
-			body: { name: "session" },
+		const { data } = await api.client.http.POST(
+			"/api/v1/app/{app_id}/session",
+			{
+				params: { path: { app_id } },
+				body: { name: "session" },
+			},
+		);
+		ctx.dispatch({
+			do: "modal.alert",
+			text: `your secret is ${data?.token} (this can only be seen once)`,
 		});
-		// TODO: show Copyable token, warn that tokens can only be seen once
 	};
 
 	const [search, setSearch] = createSignal("");
@@ -273,7 +292,9 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 														type="text"
 														value={uri}
 														onInput={(e) => {
-															const newUris = [...app.oauth_redirect_uris];
+															const newUris = [
+																...app.oauth_redirect_uris ?? [],
+															];
 															newUris[uriIndex()] = e.currentTarget.value;
 															updateApp(
 																index(),
@@ -284,7 +305,9 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 													/>
 													<button
 														onClick={() => {
-															const newUris = [...app.oauth_redirect_uris];
+															const newUris = [
+																...app.oauth_redirect_uris ?? [],
+															];
 															newUris.splice(uriIndex(), 1);
 															updateApp(
 																index(),
@@ -301,7 +324,10 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 										<li>
 											<button
 												onClick={() => {
-													const newUris = [...app.oauth_redirect_uris, ""];
+													const newUris = [
+														...app.oauth_redirect_uris ?? [],
+														"",
+													];
 													updateApp(index(), "oauth_redirect_uris", newUris);
 												}}
 											>
@@ -319,6 +345,20 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 										create session
 									</button>
 									<SessionList appId={app.id} />
+								</div>
+								<div class="invite">
+									<button
+										onClick={(e) => {
+											e.stopImmediatePropagation();
+											setInviteApp({
+												app,
+												x: e.clientX,
+												y: e.clientY,
+											});
+										}}
+									>
+										add to room
+									</button>
 								</div>
 							</li>
 						);
@@ -338,6 +378,86 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 					</div>
 				</div>
 			</Show>
+			<Show when={inviteApp()}>
+				{(app) => (
+					<InviteToRoom
+						x={app().x}
+						y={app().y}
+						app={app().app}
+					/>
+				)}
+			</Show>
 		</div>
 	);
 }
+
+// TODO: make this an actual context menu?
+const InviteToRoom = (
+	props: { x: number; y: number; app: Application },
+) => {
+	const api = useApi();
+	const rooms = api.rooms.list();
+	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
+	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
+
+	createEffect(() => {
+		setMenuParentRef({
+			getBoundingClientRect: () => ({
+				x: props.x,
+				y: props.y,
+				left: props.x,
+				top: props.y,
+				right: props.x,
+				bottom: props.y,
+				width: 0,
+				height: 0,
+			}),
+		});
+
+		props.x;
+		props.y;
+	});
+
+	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
+		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+		placement: "right-start",
+	});
+
+	const inviteToRoom = (room_id: string) => {
+		api.client.http.POST("/api/v1/app/{app_id}/invite", {
+			params: { path: { app_id: props.app.id } },
+			body: { room_id },
+		});
+	};
+
+	const self_id = () => api.users.cache.get("@self")!.id;
+
+	return (
+		<menu
+			class="invite-app"
+			style={{
+				translate: `${menuFloating.x}px ${menuFloating.y}px`,
+			}}
+			ref={setMenuRef}
+		>
+			<For each={rooms()?.items ?? []} fallback="no rooms?">
+				{(r) => {
+					const perms = usePermissions(
+						self_id,
+						() => r.id,
+						() => undefined,
+					);
+
+					return (
+						<button
+							onClick={[inviteToRoom, r.id]}
+							disabled={!perms.has("BotsAdd")}
+						>
+							{r.name}
+						</button>
+					);
+				}}
+			</For>
+		</menu>
+	);
+};
