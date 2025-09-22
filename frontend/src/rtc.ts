@@ -52,6 +52,7 @@ export const createVoiceClient = () => {
 	const events = createEmitter<{
 		reconnect: { conn: RTCPeerConnection };
 	}>();
+	let ready = false;
 
 	function setup() {
 		conn.addEventListener("connectionstatechange", () => {
@@ -146,6 +147,12 @@ export const createVoiceClient = () => {
 
 		chan.addEventListener("open", () => {
 			console.log("[rtc:vad] speaking channel opened");
+
+			if (chanSpeaking) {
+				console.warn("[rtc:speaking] already have a speaking channel");
+			}
+
+			chanSpeaking = chan;
 		});
 
 		chan.addEventListener("message", (e) => {
@@ -155,12 +162,6 @@ export const createVoiceClient = () => {
 			const timeout = setTimeout(() => speaking.delete(user_id), 10 * 1000);
 			speaking.set(user_id, { flags, timeout });
 		});
-
-		if (chanSpeaking) {
-			console.warn("[rtc:speaking] already have a speaking channel");
-		}
-
-		chanSpeaking = chan;
 	}
 
 	function close() {
@@ -171,6 +172,8 @@ export const createVoiceClient = () => {
 	function reconnect() {
 		conn.close();
 		conn = new RTCPeerConnection(RTC_CONFIG);
+		ready = false;
+		chanSpeaking = undefined;
 		events.emit("reconnect", { conn });
 		setup();
 	}
@@ -233,6 +236,7 @@ export const createVoiceClient = () => {
 		const user_id = api.users.cache.get("@self")?.id;
 		if (!user_id) return;
 		for (const payload of sendQueue) {
+			if (!ready && payload.type !== "VoiceState") return;
 			console.log("[rtc:signal] send", payload.type, payload);
 			ws.send(JSON.stringify({
 				type: "VoiceDispatch",
@@ -258,7 +262,6 @@ export const createVoiceClient = () => {
 				}
 			}
 		} else if (e.type === "VoiceDispatch") {
-			console.log("voice dispatch", api.voiceState(), e);
 			if (!api.voiceState()) return;
 
 			const msg = e.payload as SignallingMessage;
@@ -391,6 +394,9 @@ export const createVoiceClient = () => {
 			} else if (msg.type === "Reconnect") {
 				console.warn("[rtc:signal] fully resetting!");
 				reconnect();
+			} else if (msg.type === "Ready") {
+				ready = true;
+				drainSendQueue();
 			} else {
 				console.warn("[rtc:signal] unknown voice dispatch", msg);
 			}
