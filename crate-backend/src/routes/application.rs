@@ -14,8 +14,8 @@ use common::v1::types::{
     },
     util::{Diff, Time},
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot, BotAccess,
-    ExternalPlatform, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
-    Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
+    ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission, Puppet,
+    PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
     SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use headers::HeaderMapExt;
@@ -321,30 +321,9 @@ async fn app_invite_bot(
     })
     .await?;
 
-    let room = srv.rooms.get(json.room_id, None).await?;
-    if let Some(wti) = room.welcome_thread_id {
-        let message_id = data
-            .message_create(crate::types::DbMessageCreate {
-                thread_id: wti,
-                attachment_ids: vec![],
-                author_id: auth_user.id,
-                embeds: vec![],
-                message_type: MessageType::MemberJoin,
-                edited_at: None,
-                created_at: None,
-            })
-            .await?;
-        let message = data.message_get(wti, message_id, auth_user.id).await?;
-        srv.threads.invalidate(wti).await; // message count
-        s.broadcast_thread(
-            wti,
-            auth_user.id,
-            MessageSync::MessageCreate {
-                message: message.clone(),
-            },
-        )
+    srv.rooms
+        .send_welcome_message(json.room_id, auth_user.id)
         .await?;
-    }
 
     Ok(StatusCode::NO_CONTENT)
 }

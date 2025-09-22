@@ -6,9 +6,9 @@ use axum::{extract::State, Json};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
-    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, MessageType,
-    PaginationQuery, PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut,
-    RoomMembership, SERVER_ROOM_ID,
+    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
+    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut, RoomMembership,
+    SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -280,30 +280,9 @@ async fn invite_use(
         InviteTarget::Thread { room, .. } => room.id,
         InviteTarget::Server => SERVER_ROOM_ID,
     };
-    let room = srv.rooms.get(room_id, None).await?;
-    if let Some(wti) = room.welcome_thread_id {
-        let message_id = d
-            .message_create(crate::types::DbMessageCreate {
-                thread_id: wti,
-                attachment_ids: vec![],
-                author_id: auth_user.id,
-                embeds: vec![],
-                message_type: MessageType::MemberJoin,
-                edited_at: None,
-                created_at: None,
-            })
-            .await?;
-        let message = d.message_get(wti, message_id, auth_user.id).await?;
-        srv.threads.invalidate(wti).await; // message count
-        s.broadcast_thread(
-            wti,
-            auth_user.id,
-            MessageSync::MessageCreate {
-                message: message.clone(),
-            },
-        )
+    srv.rooms
+        .send_welcome_message(room_id, auth_user.id)
         .await?;
-    }
 
     Ok(())
 }

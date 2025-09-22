@@ -170,21 +170,6 @@ impl ServiceRooms {
         .await?;
         room.welcome_thread_id = Some(welcome_thread_id);
 
-        let welcome_message_id = data
-            .message_create(DbMessageCreate {
-                thread_id: welcome_thread_id,
-                attachment_ids: vec![],
-                author_id: creator_id,
-                embeds: vec![],
-                message_type: MessageType::MemberJoin,
-                edited_at: None,
-                created_at: None,
-            })
-            .await?;
-        let welcome_message = data
-            .message_get(welcome_thread_id, welcome_message_id, creator_id)
-            .await?;
-
         self.state
             .broadcast(MessageSync::RoomCreate { room: room.clone() })?;
 
@@ -234,16 +219,41 @@ impl ServiceRooms {
             })
             .await?;
 
-        self.state
-            .broadcast_thread(
-                welcome_thread_id,
-                creator_id,
-                MessageSync::MessageCreate {
-                    message: welcome_message,
-                },
-            )
-            .await?;
+        self.send_welcome_message(room_id, creator_id).await?;
 
         Ok(room)
+    }
+
+    /// sends a MemberJoin message in the default/welcome thread
+    pub async fn send_welcome_message(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        let room = self.get(room_id, None).await?;
+
+        if let Some(wti) = room.welcome_thread_id {
+            let data = self.state.data();
+            let welcome_message_id = data
+                .message_create(DbMessageCreate {
+                    thread_id: wti,
+                    attachment_ids: vec![],
+                    author_id: user_id,
+                    embeds: vec![],
+                    message_type: MessageType::MemberJoin,
+                    edited_at: None,
+                    created_at: None,
+                })
+                .await?;
+            let welcome_message = data.message_get(wti, welcome_message_id, user_id).await?;
+
+            self.state
+                .broadcast_thread(
+                    wti,
+                    user_id,
+                    MessageSync::MessageCreate {
+                        message: welcome_message,
+                    },
+                )
+                .await?;
+        }
+
+        Ok(())
     }
 }
