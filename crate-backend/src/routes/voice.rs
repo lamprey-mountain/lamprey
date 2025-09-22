@@ -85,7 +85,6 @@ async fn voice_state_disconnect(
         user_id: target_user_id,
         state: None,
     });
-    srv.users.voice_state_remove(&target_user_id);
     let thread = srv.threads.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {

@@ -14,7 +14,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
-export type VoiceState = {
+export type VoiceProviderState = {
 	muted: boolean;
 	deafened: boolean;
 	cameraHidden: boolean;
@@ -42,14 +42,14 @@ export type VoiceActions = {
 	toggleDeafened: () => void;
 };
 
-const VoiceCtx = createContext<[VoiceState, VoiceActions]>();
+const VoiceCtx = createContext<[VoiceProviderState, VoiceActions]>();
 
 export const useVoice = () => useContext(VoiceCtx)!;
 
 export const VoiceProvider = (props: ParentProps) => {
 	const api = useApi();
 	const vad = createVoiceActivityDetection();
-	const [state, update] = createStore<VoiceState>({
+	const [state, update] = createStore<VoiceProviderState>({
 		muted: true,
 		deafened: false,
 		cameraHidden: true,
@@ -80,45 +80,58 @@ export const VoiceProvider = (props: ParentProps) => {
 
 	api.events.on("sync", async (e) => {
 		const user_id = api.users.cache.get("@self")!.id;
-		if (
-			e.type === "VoiceState" && e.user_id === user_id && e.state
-		) {
-			const rtc = state.rtc;
-			if (!rtc) return;
+		if (e.type === "VoiceState" && e.user_id === user_id) {
+			if (e.state) {
+				const rtc = state.rtc;
+				if (!rtc) return;
 
-			if (!rtcCreated) {
-				rtc.createStream("user");
-				rtc.createStream("screen");
-				rtc.createStream("music");
-				micTn = rtc.createTransceiver("user", "audio");
-				camTn = rtc.createTransceiver("user", "video");
-				screenAudTn = rtc.createTransceiver("screen", "audio");
-				screenVidTn = rtc.createTransceiver("screen", "video");
-				musicTn = rtc.createTransceiver("music", "audio");
-				rtcCreated = true;
-			}
+				update("threadId", e.state.thread_id);
 
-			// if we have an existing microphone stream, use it
-			if (streamMic && !state.muted) {
-				console.log("[voice] restore microphone stream");
-				const track = streamMic.getAudioTracks()[0];
-				if (track) {
-					await micTn!.sender.replaceTrack(track);
-					micTn!.direction = "sendonly";
+				if (!rtcCreated) {
+					rtc.createStream("user");
+					rtc.createStream("screen");
+					rtc.createStream("music");
+					micTn = rtc.createTransceiver("user", "audio");
+					camTn = rtc.createTransceiver("user", "video");
+					screenAudTn = rtc.createTransceiver("screen", "audio");
+					screenVidTn = rtc.createTransceiver("screen", "video");
+					musicTn = rtc.createTransceiver("music", "audio");
+					rtcCreated = true;
 				}
-			}
 
-			// if we have an existing camera stream, use it
-			if (streamCam && !state.cameraHidden) {
-				console.log("[voice] restore camera stream");
-				const track = streamCam.getVideoTracks()[0];
-				if (track) {
-					await camTn!.sender.replaceTrack(track);
-					camTn!.direction = "sendonly";
+				// if we have an existing microphone stream, use it
+				if (streamMic && !state.muted) {
+					console.log("[voice] restore microphone stream");
+					const track = streamMic.getAudioTracks()[0];
+					if (track) {
+						await micTn!.sender.replaceTrack(track);
+						micTn!.direction = "sendonly";
+					}
 				}
+
+				// if we have an existing camera stream, use it
+				if (streamCam && !state.cameraHidden) {
+					console.log("[voice] restore camera stream");
+					const track = streamCam.getVideoTracks()[0];
+					if (track) {
+						await camTn!.sender.replaceTrack(track);
+						camTn!.direction = "sendonly";
+					}
+				}
+			} else {
+				console.log("[rtc] our voice state was deleted, cleanup");
+				disconnect();
 			}
 		}
 	});
+
+	function disconnect() {
+		state.rtc?.disconnect();
+		state.rtc?.conn.close();
+		update("rtc", null);
+		update("threadId", null);
+		rtcCreated = false;
+	}
 
 	onCleanup(() => {
 		console.log("[rtc] cleanup");
@@ -138,11 +151,7 @@ export const VoiceProvider = (props: ParentProps) => {
 		},
 		disconnect() {
 			console.log("[rtc] disconnect");
-			state.rtc?.disconnect();
-			state.rtc?.conn.close();
-			update("rtc", null);
-			update("threadId", null);
-			rtcCreated = false;
+			disconnect();
 		},
 		toggleMic: async () => {
 			if (!streamMic) {
@@ -278,6 +287,7 @@ export const VoiceProvider = (props: ParentProps) => {
 			}
 		},
 		playMusic: async () => {
+			// TEMP: music playing is for debugging, since its easier than yelling into the microphone every time i want to test webrtc
 			if (!state.rtc || !musicTn) return;
 			const tr = musicTn.sender.track;
 			if (tr) {
