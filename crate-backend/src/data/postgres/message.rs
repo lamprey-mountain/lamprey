@@ -42,9 +42,12 @@ pub struct DbMessage {
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {
     DefaultMarkdown,
-    DefaultTagged, // unused
-    ThreadUpdate,  // unused
+    DefaultTagged, // removed
+    ThreadUpdate,  // removed
     ThreadRename,
+    MemberAdd,
+    MemberRemove,
+    MemberJoin,
 }
 
 impl From<MessageType> for DbMessageType {
@@ -52,6 +55,9 @@ impl From<MessageType> for DbMessageType {
         match value {
             MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
             MessageType::ThreadRename(_) => DbMessageType::ThreadRename,
+            MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
+            MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
+            MessageType::MemberJoin(_) => DbMessageType::MemberJoin,
             _ => todo!(),
         }
     }
@@ -62,7 +68,7 @@ impl From<DbMessage> for Message {
         Message {
             id: row.id,
             message_type: match row.message_type {
-                DbMessageType::DefaultMarkdown | DbMessageType::DefaultTagged => {
+                DbMessageType::DefaultMarkdown => {
                     let attachments: Vec<serde_json::Value> =
                         serde_json::from_value(row.attachments).unwrap_or_default();
                     let embeds: Vec<Embed> = row
@@ -87,8 +93,23 @@ impl From<DbMessage> for Message {
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
                 ),
-                DbMessageType::ThreadUpdate => {
-                    panic!("this is deprecated; no ThreadUpdate messages should exist anymore")
+                DbMessageType::MemberAdd => MessageType::MemberAdd(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::MemberRemove => MessageType::MemberRemove(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::MemberJoin => MessageType::MemberJoin(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                ty => {
+                    panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }
             },
             thread_id: row.thread_id,

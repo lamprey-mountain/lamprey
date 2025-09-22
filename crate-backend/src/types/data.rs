@@ -258,7 +258,6 @@ impl DbMessageCreate {
     pub fn content(&self) -> Option<String> {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.content.clone(),
-            MessageType::ThreadRename(_patch) => None,
             _ => None,
         }
     }
@@ -267,6 +266,9 @@ impl DbMessageCreate {
         match &self.message_type {
             MessageType::DefaultMarkdown(msg) => msg.metadata.clone(),
             MessageType::ThreadRename(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::MemberAdd(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::MemberRemove(patch) => Some(serde_json::to_value(patch).ok()?),
+            MessageType::MemberJoin(patch) => Some(serde_json::to_value(patch).ok()?),
             _ => None,
         }
     }
