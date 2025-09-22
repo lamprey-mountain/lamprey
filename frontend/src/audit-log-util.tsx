@@ -146,6 +146,14 @@ export function formatChanges(
 				formatted.push(
 					<li>{c.new ? "marked as nsfw" : "unmarked as nsfw"}</li>,
 				);
+			} else if (ent.type === "RoomUpdate" && c.key === "icon") {
+				if (c.old && c.new) {
+					formatted.push(<li>changed the icon</li>);
+				} else if (c.old) {
+					formatted.push(<li>removed the icon</li>);
+				} else if (c.new) {
+					formatted.push(<li>added an icon</li>);
+				}
 			} else if (ent.type === "MemberUpdate" && c.key === "roles") {
 				const diff = diffArrays(
 					(c.old ?? []) as Array<string>,
