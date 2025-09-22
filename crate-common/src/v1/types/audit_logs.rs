@@ -138,43 +138,69 @@ pub enum AuditLogEntryType {
         thread_id: ThreadId,
         overwrite_id: Uuid,
     },
+
     MemberKick {
+        // TODO: remove (redundant)
         room_id: RoomId,
         user_id: UserId,
     },
+
+    // TODO: rename to BanCreate
     MemberBan {
+        // TODO: remove (redundant)
         room_id: RoomId,
         user_id: UserId,
     },
+
+    // TODO: rename to BanDelete
     MemberUnban {
+        // TODO: remove (redundant)
         room_id: RoomId,
         user_id: UserId,
     },
+
     MemberUpdate {
+        // TODO: remove (redundant)
         room_id: RoomId,
         user_id: UserId,
         changes: Vec<AuditLogChange>,
     },
+
     MemberDisconnect {
         thread_id: ThreadId,
         user_id: UserId,
     },
+
     MemberMove {
         changes: Vec<AuditLogChange>,
         user_id: UserId,
     },
+
     RoleApply {
         user_id: UserId,
         role_id: RoleId,
     },
+
     RoleUnapply {
         user_id: UserId,
         role_id: RoleId,
     },
+
     BotAdd {
         // TODO: rename to application_id?
         bot_id: UserId,
     },
+
+    ThreadMemberAdd {
+        thread_id: ThreadId,
+        user_id: UserId,
+    },
+
+    ThreadMemberRemove {
+        thread_id: ThreadId,
+        user_id: UserId,
+    },
+
     // // cant be logged because this isn't yet implemented
     // MessagePin,
     // MessageUnpin,

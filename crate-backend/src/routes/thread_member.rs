@@ -4,8 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageMember, MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission,
-    ThreadId, ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageMember, MessageSync, MessageType,
+    PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember, ThreadMemberPut,
+    ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -164,6 +165,21 @@ pub async fn thread_member_add(
             },
         )
         .await?;
+
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason,
+                ty: AuditLogEntryType::ThreadMemberAdd {
+                    thread_id,
+                    user_id: target_user_id,
+                },
+            })
+            .await?;
+        }
     }
 
     s.broadcast_thread(
@@ -260,6 +276,21 @@ pub async fn thread_member_delete(
             },
         )
         .await?;
+
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason,
+                ty: AuditLogEntryType::ThreadMemberRemove {
+                    thread_id,
+                    user_id: target_user_id,
+                },
+            })
+            .await?;
+        }
     }
 
     s.broadcast_thread(
