@@ -159,7 +159,7 @@ async fn room_member_add(
         }
 
         if json.override_name.is_some() && json.override_name != start.override_name {
-            perms.ensure(Permission::MemberManage)?;
+            perms.ensure(Permission::MemberNicknameManage)?;
         }
 
         if let Some(r) = &mut json.roles {
@@ -195,7 +195,7 @@ async fn room_member_add(
         }
 
         if json.override_name.is_some() {
-            perms.ensure(Permission::MemberManage)?;
+            perms.ensure(Permission::MemberNicknameManage)?;
         }
 
         if let Some(r) = &mut json.roles {
@@ -345,7 +345,7 @@ async fn room_member_update(
         .as_ref()
         .is_some_and(|m| m != &start.override_name)
     {
-        perms.ensure(Permission::MemberManage)?;
+        perms.ensure(Permission::MemberNicknameManage)?;
     }
 
     // TODO: run futures concurrently

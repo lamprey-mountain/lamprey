@@ -47,7 +47,7 @@ async fn emoji_create(
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::EmojiAdd)?;
+    perms.ensure(Permission::UnusedEmojiAdd)?;
 
     let data = s.data();
     // FIXME: run this in a transaction
@@ -153,7 +153,7 @@ async fn emoji_delete(
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     if emoji.creator_id == auth_user.id {
-        perms.ensure(Permission::EmojiAdd)?;
+        perms.ensure(Permission::UnusedEmojiAdd)?;
     } else {
         perms.ensure(Permission::EmojiManage)?;
     }

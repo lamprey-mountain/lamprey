@@ -149,7 +149,7 @@ async fn reaction_purge(
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::ReactionClear)?;
+    perms.ensure(Permission::ReactionPurge)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));

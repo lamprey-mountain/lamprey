@@ -353,7 +353,7 @@ async fn app_invite_bot(
 
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, json.room_id).await?;
-    perms.ensure(Permission::BotsAdd)?;
+    perms.ensure(Permission::IntegrationsManage)?;
 
     let bot_user_id: UserId = app.id.into_inner().into();
 

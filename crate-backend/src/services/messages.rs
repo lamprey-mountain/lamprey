@@ -188,9 +188,9 @@ impl ServiceMessages {
             return Err(Error::BadStatic("cant edit that message"));
         }
         if message.author_id == user_id {
-            perms.add(Permission::MessageEdit);
+            perms.add(Permission::UnusedMessageEdit);
         }
-        perms.ensure(Permission::MessageEdit)?;
+        perms.ensure(Permission::UnusedMessageEdit)?;
         if json.content.is_none()
             && json.attachments.as_ref().is_some_and(|a| a.is_empty())
             && json.embeds.as_ref().is_some_and(|a| a.is_empty())

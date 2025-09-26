@@ -3,18 +3,18 @@ use super::Permission;
 /// Which permissions are granted to someone with Admin in a room
 pub const ADMIN_ROOM: &[Permission] = &[
     Permission::Admin,
-    Permission::BotsAdd,
-    Permission::BotsManage,
-    Permission::EmojiAdd,
+    Permission::IntegrationsManage,
+    Permission::IntegrationsManage,
+    Permission::UnusedEmojiAdd,
     Permission::EmojiManage,
     Permission::EmojiUseExternal,
     Permission::InviteCreate,
     Permission::InviteManage,
     Permission::MemberBan,
-    Permission::MemberBanManage,
+    Permission::UnusedMemberBanManage,
     Permission::MemberBridge,
     Permission::MemberKick,
-    Permission::MemberManage,
+    Permission::MemberNicknameManage,
     Permission::MessageCreate,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
@@ -23,14 +23,14 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::MessageAttachments,
     Permission::MessageMove,
     Permission::MessagePin,
-    Permission::ProfileAvatar,
-    Permission::ProfileOverride,
+    Permission::UnusedProfileAvatar,
+    Permission::MemberNickname,
     Permission::ReactionAdd,
-    Permission::ReactionClear,
+    Permission::ReactionPurge,
     Permission::RoleApply,
     Permission::RoleManage,
     Permission::RoomManage,
-    Permission::ServerAdmin,
+    Permission::UnusedServerAdmin,
     Permission::ServerMetrics,
     Permission::ServerOversee,
     Permission::ServerReports,
@@ -38,19 +38,19 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::TagManage,
     Permission::ThreadArchive,
     Permission::ThreadCreateChat,
-    Permission::ThreadCreateDocument,
-    Permission::ThreadCreateEvent,
-    Permission::ThreadCreateForumLinear,
-    Permission::ThreadCreateForumTree,
-    Permission::ThreadCreateTable,
+    Permission::UnusedThreadCreateDocument,
+    Permission::UnusedThreadCreateEvent,
+    Permission::ThreadCreateForum,
+    Permission::UnusedThreadCreateForum2,
+    Permission::UnusedThreadCreateTable,
     Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
-    Permission::ThreadDelete,
+    Permission::ThreadRemove,
     Permission::ThreadEdit,
     Permission::ThreadForward,
     Permission::ThreadLock,
-    Permission::ThreadPin,
+    Permission::ThreadManage,
     Permission::ThreadPublish,
     // Permission::UserDms,      // user perm doesnt apply
     // Permission::UserProfile,  // user perm doesnt apply
@@ -74,18 +74,18 @@ pub const ADMIN_ROOM: &[Permission] = &[
 /// thats what Admin is supposed to do
 pub const ADMIN_THREAD: &[Permission] = &[
     Permission::Admin,
-    Permission::BotsAdd,
-    Permission::BotsManage,
+    Permission::IntegrationsManage,
+    Permission::IntegrationsManage,
     // Permission::EmojiAdd,    // room perm doesnt apply
     // Permission::EmojiManage, // room perm doesnt apply
     Permission::EmojiUseExternal,
     Permission::InviteCreate,
     Permission::InviteManage,
     Permission::MemberBan,
-    Permission::MemberBanManage,
+    Permission::UnusedMemberBanManage,
     Permission::MemberBridge,
     Permission::MemberKick,
-    Permission::MemberManage,
+    Permission::MemberNicknameManage,
     Permission::MessageCreate,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
@@ -95,10 +95,10 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::MessageMove,
     Permission::MessagePin,
     Permission::ReactionAdd,
-    Permission::ProfileAvatar,
-    Permission::ProfileOverride,
+    Permission::UnusedProfileAvatar,
+    Permission::MemberNickname,
     Permission::ReactionAdd,
-    Permission::ReactionClear,
+    Permission::ReactionPurge,
     // Permission::RoleApply,  // room perm doesnt apply
     // Permission::RoleManage, // room perm doesnt apply
     // Permission::RoomEdit,   // room perm doesnt apply
@@ -118,11 +118,11 @@ pub const ADMIN_THREAD: &[Permission] = &[
     // Permission::ThreadCreateVoice,       // room perm doesnt apply
     // Permission::ThreadCreatePublic,      // room perm doesnt apply
     // Permission::ThreadCreatePrivate,     // room perm doesnt apply
-    Permission::ThreadDelete,
+    Permission::ThreadRemove,
     Permission::ThreadEdit,
     Permission::ThreadForward,
     Permission::ThreadLock,
-    Permission::ThreadPin,
+    Permission::ThreadManage,
     Permission::ThreadPublish,
     // Permission::UserDms,      // user perm doesnt apply
     // Permission::UserProfile,  // user perm doesnt apply
@@ -142,8 +142,8 @@ pub const ADMIN_THREAD: &[Permission] = &[
 
 /// Default permissions for everyone in a trusted room (eg. with friends)
 pub const EVERYONE_TRUSTED: &[Permission] = &[
-    Permission::BotsAdd,
-    Permission::EmojiAdd,
+    Permission::IntegrationsManage,
+    Permission::UnusedEmojiAdd,
     Permission::EmojiUseExternal,
     Permission::InviteCreate,
     Permission::MessageCreate,
@@ -153,17 +153,17 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::MessageMove, // maybe?
     Permission::MessagePin,  // maybe?
     Permission::ReactionAdd,
-    Permission::ProfileAvatar,
-    Permission::ProfileOverride,
+    Permission::UnusedProfileAvatar,
+    Permission::MemberNickname,
     Permission::TagApply,
     // Permission::TagManage, // maybe?
     Permission::ThreadArchive, // maybe?
     Permission::ThreadCreateChat,
-    Permission::ThreadCreateDocument,
-    Permission::ThreadCreateEvent,
-    Permission::ThreadCreateForumLinear,
-    Permission::ThreadCreateForumTree,
-    Permission::ThreadCreateTable,
+    Permission::UnusedThreadCreateDocument,
+    Permission::UnusedThreadCreateEvent,
+    Permission::ThreadCreateForum,
+    Permission::UnusedThreadCreateForum2,
+    Permission::UnusedThreadCreateTable,
     Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
@@ -185,15 +185,15 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::MessageEmbeds,
     Permission::MessageAttachments,
     Permission::ReactionAdd,
-    Permission::ProfileAvatar,
-    Permission::ProfileOverride,
+    Permission::UnusedProfileAvatar,
+    Permission::MemberNickname,
     Permission::TagApply, // maybe?
     Permission::ThreadCreateChat,
-    Permission::ThreadCreateDocument,
-    Permission::ThreadCreateEvent,
-    Permission::ThreadCreateForumLinear,
-    Permission::ThreadCreateForumTree,
-    Permission::ThreadCreateTable,
+    Permission::UnusedThreadCreateDocument,
+    Permission::UnusedThreadCreateEvent,
+    Permission::ThreadCreateForum,
+    Permission::UnusedThreadCreateForum2,
+    Permission::UnusedThreadCreateTable,
     Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
@@ -209,22 +209,22 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
 pub const MODERATOR: &[Permission] = &[
     Permission::InviteManage,
     Permission::MemberBan,
-    Permission::MemberBanManage,
+    Permission::UnusedMemberBanManage,
     Permission::MemberKick,
-    Permission::MemberManage,
+    Permission::MemberNicknameManage,
     Permission::MessageDelete,
     Permission::MessageMove,
     Permission::MessagePin, // maybe?
-    Permission::ReactionClear,
+    Permission::ReactionPurge,
     Permission::RoleApply, // maybe?
     Permission::TagApply,
     // Permission::TagManage, // maybe?
     Permission::ThreadArchive,
-    Permission::ThreadDelete,
+    Permission::ThreadRemove,
     Permission::ThreadEdit,
     Permission::ThreadForward, // maybe?
     Permission::ThreadLock,
-    Permission::ThreadPin,    // maybe?
+    Permission::ThreadManage, // maybe?
     Permission::ViewAuditLog, // maybe?
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,

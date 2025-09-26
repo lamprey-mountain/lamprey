@@ -8,9 +8,6 @@ use crate::v1::types::util::deserialize_sorted;
 
 pub mod defaults;
 
-// should i rename Admin to RoomAdmin? it might be confusing to have ThreadAdmin
-// be a different permission though
-// should i split out room, thread, user, and server permissions? yeah.
 /// a permission that lets a user do something
 ///
 /// - unimplemented: the feature this permission refers to does not yet exist
@@ -39,21 +36,10 @@ pub enum Permission {
     /// probably a major footgun. i'd like to remove it, but theres legit purposes for it right now...
     Admin,
 
-    /// can add bots, configure bots they have added, and kick bots they have added
-    // TODO: deprecate/merge with BotsManage
-    BotsAdd,
-
     /// can configure all bots and kick all bots
-    /// implies BotsAdd
-    // TODO: rename to IntegrationsManage? or Tinker
-    BotsManage,
+    IntegrationsManage,
 
-    /// can add emoji and remove emoji they have added
-    // TODO: merge with EmojiManage
-    EmojiAdd,
-
-    /// can remove all emoji
-    /// implies EmojiAdd
+    /// can add and remove emoji
     EmojiManage,
 
     /// can use custom emoji not added to this room
@@ -66,13 +52,8 @@ pub enum Permission {
     /// implies InviteCreate
     InviteManage,
 
-    /// (unimplemented) ban members and unban members they have banned
+    /// ban and unban members
     MemberBan,
-
-    /// (unimplemented) unban any member
-    /// implies MemberBan
-    // TODO: remove, not worth it
-    MemberBanManage,
 
     /// allow adding users with type Puppet and use timestamp massaging
     /// intended for bridge bots
@@ -82,10 +63,8 @@ pub enum Permission {
     /// kick members
     MemberKick,
 
-    /// edit member name
-    // TODO: rename to ~~MemberManageProfile~~ MemberNickname
-    // TODO: add MemberChangeProfile for changing your own nickname/profile
-    MemberManage,
+    /// edit members' nicknames
+    MemberNicknameManage,
 
     /// send attachments
     /// requires MessageCreate
@@ -98,11 +77,6 @@ pub enum Permission {
     /// possible if the message was deleted by its creator (you can only recover
     /// messages deleted by other moderators)
     MessageDelete,
-
-    /// (internal) can edit this message
-    /// requires MessageCreate
-    // TODO: remove (for now?)
-    MessageEdit,
 
     /// send embeds (link previews)
     /// requires MessageCreate
@@ -118,21 +92,15 @@ pub enum Permission {
     /// (unimplemented) pin (and unpin) messages
     MessagePin,
 
-    /// (unimplemented) use custom avatar (otherwise use default avatar)
-    // TODO: merge with MemberChangeProfile
-    ProfileAvatar,
-
-    /// (unimplemented) use a custom name (nickname), description, etc
-    // TODO: merge with MemberChangeProfile
-    ProfileOverride,
+    /// use a custom nickname
+    MemberNickname,
 
     /// add new reactions
     // TODO: can still react with existing reactions
     ReactionAdd,
 
     /// remove all reactions
-    // TODO: rename to ReactionPurge
-    ReactionClear,
+    ReactionPurge,
 
     /// add and remove roles from members
     RoleApply,
@@ -142,12 +110,6 @@ pub enum Permission {
 
     /// edit name, description, really anything else
     RoomManage,
-
-    /// (server) the "root user" permission that allows everything.
-    /// probably shouldn't implement this for the same reasons as Admin
-    /// but i think it is a necessary evil
-    // TODO: remove, Admin works fine here
-    ServerAdmin,
 
     /// (server, unimplemented) can access metrics (prometheus)
     ServerMetrics,
@@ -171,21 +133,8 @@ pub enum Permission {
     /// (unimplemented) can create chat threads
     ThreadCreateChat,
 
-    /// (unimplemented) can create document threads
-    // TODO: remove for now, will re-add when documents are implemented
-    ThreadCreateDocument,
-
-    /// (unimplemented) can create event threads
-    // TODO: remove for now, will re-add when events are implemented
-    ThreadCreateEvent,
-
-    /// (unimplemented) can create forum (linear) threads
-    // TODO: rename to ThreadCreateForum
-    ThreadCreateForumLinear,
-
-    /// (unimplemented) can create forum (tree) threads
-    // TODO: remove
-    ThreadCreateForumTree,
+    /// (unimplemented) can create forum threads
+    ThreadCreateForum,
 
     /// (unimplemented) can create private threads (what is "private"?)
     ThreadCreatePrivate,
@@ -193,20 +142,13 @@ pub enum Permission {
     /// (unimplemented) can create public threads (what is "public"?)
     ThreadCreatePublic,
 
-    /// (unimplemented) can create table threads
-    // TODO: remove for now, will re-add when tables are implemented
-    ThreadCreateTable,
-
-    /// (unimplemented) can create voice threads
+    /// can create voice threads
     ThreadCreateVoice,
 
-    // TODO: add permissions for category threads when they are implemented
-    // TODO: rename to ThreadRemove
-    /// delete (and undelete) threads
-    ThreadDelete,
+    /// remove (and restore) threads
+    ThreadRemove,
 
-    /// change name/description of threads
-    // TODO: possibly rename to ThreadManage
+    /// change name and description of threads
     ThreadEdit,
 
     /// (unimplemented) move threads across rooms
@@ -218,26 +160,11 @@ pub enum Permission {
     ThreadLock,
 
     /// (unimplemented) pin (and unpin) threads
-    // NOTE: this allows moving threads around in general, not really pinning
-    ThreadPin,
+    ThreadManage,
 
     /// (unimplemented) create announcements
     /// requires ThreadCreate*
-    // rename to ThreadCreateAnnouncement?
     ThreadPublish,
-
-    // TODO: remove user permissions for now, they aren't used anywhere
-    /// (user) access dms
-    UserDms,
-
-    /// (user) edit profile (name, description, etc)
-    UserProfile,
-
-    /// (user) manage sessions
-    UserSessions,
-
-    /// (user) set status
-    UserStatus,
 
     /// (internal) can view this thing; see other ViewFoo permissions for things you can set
     // TODO: make this not internal; ie let people restrict who can view what
@@ -255,29 +182,44 @@ pub enum Permission {
     /// connect and listen to voice threads
     VoiceConnect,
 
-    /// (unimplemented) stop someone from listening
+    /// stop someone from listening
     VoiceDeafen,
 
     /// disconnect members from voice threads
     VoiceDisconnect,
 
-    /// (unimplemented) move members between voice threads
+    /// move members between voice threads
     VoiceMove,
 
-    /// (unimplemented) stop someone from talking
+    /// stop someone from talking
     VoiceMute,
 
-    /// (unimplemented) talk louder
+    /// talk louder
     /// requires VoiceSpeak
     VoicePriority,
 
-    /// (unimplemented) talk in voice threads
+    /// talk in voice threads
     /// requires VoiceConnect
     VoiceSpeak,
 
-    /// (unimplemented) stream video and screenshare in voice threads
+    /// stream video and screenshare in voice threads
     /// requires VoiceConnect
     VoiceVideo,
+
+    UnusedBotsAdd,
+    UnusedEmojiAdd,
+    UnusedMemberBanManage,
+    UnusedUserDms,
+    UnusedUserProfile,
+    UnusedUserSessions,
+    UnusedUserStatus,
+    UnusedMessageEdit,
+    UnusedProfileAvatar,
+    UnusedServerAdmin,
+    UnusedThreadCreateForum2,
+    UnusedThreadCreateDocument,
+    UnusedThreadCreateEvent,
+    UnusedThreadCreateTable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

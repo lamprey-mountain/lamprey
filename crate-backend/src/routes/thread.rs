@@ -63,7 +63,7 @@ async fn thread_create_room(
             perms.ensure(Permission::ThreadCreateChat)?;
         }
         ThreadType::Forum => {
-            perms.ensure(Permission::ThreadCreateForumTree)?;
+            perms.ensure(Permission::UnusedThreadCreateForum2)?;
         }
         ThreadType::Voice => {
             perms.ensure(Permission::ThreadCreateVoice)?;
@@ -335,7 +335,7 @@ async fn thread_list_removed(
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::ThreadDelete)?;
+    perms.ensure(Permission::ThreadRemove)?;
     let mut res = data.thread_list_removed(room_id, q).await?;
     let srv = s.services();
     let mut threads = vec![];
@@ -371,7 +371,7 @@ async fn thread_reorder(
     perms.ensure_view()?;
     // let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::ThreadPin)?;
+    perms.ensure(Permission::ThreadEdit)?;
     // let mut res = data.thread_list_removed(room_id, q).await?;
     Err(Error::Unimplemented)
 }
@@ -622,7 +622,7 @@ async fn thread_remove(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ThreadDelete)?;
+    perms.ensure(Permission::ThreadRemove)?;
     let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
@@ -670,7 +670,7 @@ async fn thread_restore(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ThreadDelete)?;
+    perms.ensure(Permission::ThreadRemove)?;
     let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
