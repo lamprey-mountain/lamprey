@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n\t\t\tINSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked)\n\t\t\tVALUES ($1, $2, $3, $4, $5, $6, $7, $8, false)\n        ",
+  "query": "\n\t\t\tINSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit)\n\t\t\tVALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -21,15 +21,18 @@
                 "Forum",
                 "Voice",
                 "Dm",
-                "Gdm"
+                "Gdm",
+                "Category"
               ]
             }
           }
         },
-        "Bool"
+        "Bool",
+        "Int4",
+        "Int4"
       ]
     },
     "nullable": []
   },
-  "hash": "b550fda18b2466f5a1957c2b477af0a7ab064b7447739b0b93c7aae49e332f4e"
+  "hash": "a7087a16aa94b256b47c8a41e2a890778278fb31427a5528eeb18983172bd085"
 }
