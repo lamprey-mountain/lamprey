@@ -377,7 +377,7 @@ export function renderTimeline(
 		if (markerTime || markerUnread) {
 			newItems.push({
 				type: "divider",
-				id: `divider-${msg.id}`,
+				id: `divider-${msg.id}-${markerUnread}`,
 				date: markerTime ? get_msg_ts(msg) : undefined,
 				unread: markerUnread,
 			});
