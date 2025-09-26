@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking},
+    voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking, VoiceState},
     ThreadId, UserId,
 };
 use str0m::{
@@ -56,6 +56,9 @@ pub enum PeerEvent {
 pub enum PeerCommand {
     /// we got a signalling message from the user
     Signalling(SignallingMessage),
+
+    /// user has a new voice state
+    VoiceState(VoiceState),
 
     /// a remote peer created a new track
     MediaAdded(TrackMetadataSfu),

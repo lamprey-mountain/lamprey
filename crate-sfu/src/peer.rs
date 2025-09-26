@@ -18,7 +18,7 @@ use common::v1::types::{
 };
 use str0m::{
     channel::ChannelId,
-    media::{Direction, Mid},
+    media::{Direction, MediaKind, Mid},
     net::{Protocol, Receive},
     Candidate, Event, Input, Output, Rtc, RtcConfig,
 };
@@ -276,6 +276,9 @@ impl Peer {
             PeerCommand::Signalling(cmd) => {
                 self.handle_signalling(cmd).await?;
             }
+            PeerCommand::VoiceState(state) => {
+                self.voice_state = state;
+            }
             PeerCommand::MediaAdded(t) => {
                 debug!("handle media added {t:?}");
 
@@ -368,9 +371,10 @@ impl Peer {
             return;
         };
 
-        // if !track.enabled {
-        //     return;
-        // }
+        if self.voice_state.deafened() && track.kind == MediaKind::Audio {
+            trace!("user is deafened");
+            return;
+        }
 
         let Some(mid) = track.state.mid() else {
             debug!("track has no mid");
@@ -408,9 +412,7 @@ impl Peer {
             SignallingMessage::Want { tracks: _ } => todo!(),
             SignallingMessage::Have { .. } => return Err(Error::HaveServerOnly.into()),
             SignallingMessage::Reconnect => panic!("handled by sfu"),
-            SignallingMessage::VoiceState { state } => {
-                self.voice_state.thread_id = state.unwrap().thread_id;
-            }
+            SignallingMessage::VoiceState { .. } => {}
             SignallingMessage::Ready { .. } => {}
         }
         Ok(())
@@ -523,11 +525,32 @@ impl Peer {
             return Ok(());
         };
 
-        // self.voice_state.self_screen;
-        // self.voice_state.self_video;
-        // self.voice_state.muted();
-        // self.voice_state.deafened();
-        // track.kind == MediaKind::Video;
+        // enforce that user set appropriate flags and has appropriate permissions before forwarding media
+        if self.voice_state.muted() && track.kind == MediaKind::Audio {
+            trace!("user is muted");
+            return Ok(());
+        }
+
+        if !self.permissions.speak && track.kind == MediaKind::Audio {
+            trace!("user is missing speak permission");
+            return Ok(());
+        }
+
+        if !self.permissions.video && track.kind == MediaKind::Video {
+            trace!("user is missing video permission");
+            return Ok(());
+        }
+
+        if !self.voice_state.self_video && track.key == "user" && track.kind == MediaKind::Video {
+            trace!("user is not transmitting self_video");
+            return Ok(());
+        }
+
+        if !self.voice_state.self_screen && track.key == "screen" && track.kind == MediaKind::Video
+        {
+            trace!("user is not transmitting self_screen");
+            return Ok(());
+        }
 
         self.emit(PeerEvent::MediaData(MediaData {
             mid: data.mid,

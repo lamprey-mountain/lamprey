@@ -12,9 +12,11 @@ import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
 import { ReactiveMap } from "@solid-primitives/map";
 import { Copyable } from "./util";
+import { useApi } from "./api";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
+	const api = useApi();
 
 	const [tab, setTab] = createSignal("streams");
 	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
@@ -42,12 +44,17 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 		currentConn?.removeEventListener("connectionstatechange", updateSdps)
 	);
 
+	const voiceStates = createMemo(() => {
+		return [...api.voiceStates.values()].filter(i => i.thread_id === voice.threadId);
+	});
+
 	return (
 		<div class="voice-debug">
 			<header>voice/webrtc debugger</header>
 			<nav>
 				<For
 					each={[
+						{ tab: "states", label: "voice states" },
 						{ tab: "streams", label: "streams" },
 						{ tab: "stats", label: "stats" },
 						{ tab: "sdp-local", label: "local sdp" },
@@ -69,6 +76,24 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			</nav>
 			<main>
 				<Switch>
+					<Match when={tab() === "states"}>
+						<div style="margin: 8px;">
+							<h3>{voiceStates().length} voice states(s)</h3>
+							<br />
+							<For each={voiceStates()}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<pre>{JSON.stringify(s, null, 2)}</pre>
+										</div>
+									);
+								}}
+							</For>
+						</div>
+					</Match>
 					<Match when={tab() === "streams"}>
 						<div style="margin: 8px;">
 							<h3>{voice.rtc?.streams.size} stream(s)</h3>

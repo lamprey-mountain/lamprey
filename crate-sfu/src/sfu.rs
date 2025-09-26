@@ -149,6 +149,7 @@ impl Sfu {
         let peer = self
             .ensure_peer(user_id, peer_send.clone(), &state, &permissions)
             .await?;
+        peer.send(PeerCommand::VoiceState(state.clone())).unwrap();
 
         // broadcast all tracks in a thread to the user
         for track in &self.tracks {
