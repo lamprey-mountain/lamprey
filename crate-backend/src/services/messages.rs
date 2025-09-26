@@ -1,5 +1,7 @@
+use moka::future::Cache;
 use std::future::Future;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
@@ -20,11 +22,17 @@ use crate::{Error, Result, ServerStateInner};
 
 pub struct ServiceMessages {
     state: Arc<ServerStateInner>,
+    pub idempotency_keys: Cache<String, Message>,
 }
 
 impl ServiceMessages {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            idempotency_keys: Cache::builder()
+                .time_to_live(Duration::from_secs(300))
+                .build(),
+        }
     }
 
     fn handle_url_embed(
@@ -60,6 +68,27 @@ impl ServiceMessages {
     }
 
     pub async fn create(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        _reason: Option<String>,
+        nonce: Option<String>,
+        json: MessageCreate,
+    ) -> Result<Message> {
+        if let Some(n) = &nonce {
+            self.idempotency_keys
+                .try_get_with(
+                    n.clone(),
+                    self.create2(thread_id, user_id, _reason, nonce, json),
+                )
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create2(thread_id, user_id, _reason, nonce, json).await
+        }
+    }
+
+    async fn create2(
         &self,
         thread_id: ThreadId,
         user_id: UserId,
