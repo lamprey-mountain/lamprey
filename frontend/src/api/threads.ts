@@ -1,15 +1,7 @@
 import type { Pagination, Thread } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
-import type { Api } from "../api.tsx";
-
-type Listing<T> = {
-	// resource: Resource<Pagination<T>>;
-	pagination: Pagination<T> | null;
-	// mutate: (value: Pagination<T>) => void;
-	// refetch: () => void;
-	prom: Promise<unknown> | null;
-};
+import type { Api, Listing } from "../api.tsx";
 
 export class Threads {
 	api: Api = null as unknown as Api;
@@ -95,21 +87,40 @@ export class Threads {
 			};
 		};
 
-		const [resource, { mutate }] = createResource(
+		const room_id = room_id_signal();
+		const l = this._cachedListings.get(room_id);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._cachedListings.set(room_id, l2);
+
+		const [resource, { mutate, refetch }] = createResource(
 			room_id_signal,
 			async (room_id) => {
 				let l = this._cachedListings.get(room_id)!;
-				if (l?.prom) {
-					await l.prom;
-					return l.pagination!;
-				}
-
 				if (!l) {
 					l = {
+						resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+						refetch: () => {},
+						mutate: () => {},
 						prom: null,
 						pagination: null,
 					};
 					this._cachedListings.set(room_id, l);
+				}
+
+				if (l?.prom) {
+					await l.prom;
+					return l.pagination!;
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
@@ -125,6 +136,10 @@ export class Threads {
 				return res!;
 			},
 		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutators.add(mut);
@@ -172,21 +187,29 @@ export class Threads {
 			};
 		};
 
-		const [resource, { mutate }] = createResource(
+		const room_id = room_id_signal();
+		const l = this._cachedListingsArchived.get(room_id);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._cachedListingsArchived.set(room_id, l2);
+
+		const [resource, { mutate, refetch }] = createResource(
 			room_id_signal,
 			async (room_id) => {
 				let l = this._cachedListingsArchived.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
-				}
-
-				if (!l) {
-					l = {
-						prom: null,
-						pagination: null,
-					};
-					this._cachedListingsArchived.set(room_id, l);
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
@@ -202,6 +225,10 @@ export class Threads {
 				return res!;
 			},
 		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutatorsArchived.add(mut);
@@ -249,21 +276,29 @@ export class Threads {
 			};
 		};
 
-		const [resource, { mutate }] = createResource(
+		const room_id = room_id_signal();
+		const l = this._cachedListingsRemoved.get(room_id);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._cachedListingsRemoved.set(room_id, l2);
+
+		const [resource, { mutate, refetch }] = createResource(
 			room_id_signal,
 			async (room_id) => {
 				let l = this._cachedListingsRemoved.get(room_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
-				}
-
-				if (!l) {
-					l = {
-						prom: null,
-						pagination: null,
-					};
-					this._cachedListingsRemoved.set(room_id, l);
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
@@ -279,6 +314,10 @@ export class Threads {
 				return res!;
 			},
 		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
 
 		const mut = { room_id: room_id_signal(), mutate };
 		this._listingMutatorsRemoved.add(mut);

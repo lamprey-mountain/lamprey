@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 import { A, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
@@ -12,12 +12,13 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	const [voice] = useVoice();
 	const params = useParams();
 
-	// track drag indices
-	const [dragging, setDragging] = createSignal<number | null>(null);
-	const [target, setTarget] = createSignal<number | null>(null);
+	// track drag ids
+	const [dragging, setDragging] = createSignal<string | null>(null);
+	const [target, setTarget] = createSignal<string | null>(null);
 
-	// local list of threads for this room
-	const [list, setList] = createSignal<Thread[]>([]);
+	const [categories, setCategories] = createSignal<
+		Array<{ category: Thread | null; threads: Array<Thread> }>
+	>([]);
 
 	createEffect(() => {
 		if (props.room_id) {
@@ -38,26 +39,77 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				props.room_id ? t.room_id === props.room_id : t.room_id === null
 			);
 		if (props.room_id) {
-			threads.sort((a, b) => a.id < b.id ? 1 : -1);
+			// sort by id
+			threads.sort((a, b) => {
+				if (a.position === null && b.position === null) {
+					return a.id < b.id ? 1 : -1;
+				}
+				if (a.position === null) return 1;
+				if (b.position === null) return -1;
+				return a.position! - b.position!;
+			});
 		} else {
+			// sort by activity in dms list
 			threads.sort((a, b) =>
 				(a.last_version_id ?? "") < (b.last_version_id ?? "") ? 1 : -1
 			);
 		}
-		setList(threads);
+
+		const categories = new Map<string | null, Array<Thread>>();
+		for (const t of threads) {
+			if (t.type === "Category") {
+				const cat = categories.get(t.id) ?? [];
+				categories.set(t.id, cat);
+			} else {
+				const children = categories.get(t.parent_id!) ?? [];
+				children.push(t);
+				categories.set(t.parent_id!, children);
+			}
+		}
+		const list = [...categories.entries()]
+			.map(([cid, ts]) => ({
+				category: cid ? api.threads.cache.get(cid)! : null,
+				threads: ts,
+			}))
+			.sort((a, b) => {
+				// null category comes first
+				if (!a.category) return -1;
+				if (!b.category) return 1;
+
+				// categories with positions come first
+				if (a.category.position === null && b.category.position === null) {
+					// newer categories first
+					return a.category.id < b.category.id ? 1 : -1;
+				}
+				if (a.category.position === null) return 1;
+				if (b.category.position === null) return -1;
+
+				// order by position
+				const p = a.category.position! - b.category.position!;
+				if (p === 0) {
+					// newer categories first
+					return a.category.id < b.category.id ? 1 : -1;
+				}
+
+				return p;
+			});
+		setCategories(list);
 	});
 
-	// helper to get index from the element's data-index
-	const getIndex = (e: DragEvent) =>
-		Number((e.currentTarget as HTMLElement).dataset.index ?? -1);
+	// helper to get thread id from the element's data attribute
+	const getThreadId = (e: DragEvent) =>
+		(e.currentTarget as HTMLElement).dataset.threadId;
 
 	const handleDragStart = (e: DragEvent) => {
-		setDragging(getIndex(e));
+		const id = getThreadId(e);
+		console.log(id);
+		console.log(e.currentTarget);
+		if (id) setDragging(id);
 	};
 
 	const handleDragEnter = (e: DragEvent) => {
 		e.preventDefault();
-		setTarget(getIndex(e));
+		setTarget(getThreadId(e) ?? null);
 	};
 
 	const handleDragOver = (e: DragEvent) => {
@@ -66,16 +118,59 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
-		const from = dragging();
-		const to = target();
-		if (from === null || to === null || from === to) return;
+		const fromId = dragging();
+		const toId = target();
 
-		const updated = [...list()];
-		// splice out the dragged item
-		const [moved] = updated.splice(from, 1);
-		// insert it at the target index
-		updated.splice(to, 0, moved);
-		setList(updated);
+		if (!fromId || !toId || fromId === toId) {
+			setDragging(null);
+			setTarget(null);
+			return;
+		}
+
+		const fromThread = api.threads.cache.get(fromId);
+		const toThread = api.threads.cache.get(toId);
+
+		if (
+			!fromThread || !toThread || fromThread.parent_id !== toThread.parent_id
+		) {
+			setDragging(null);
+			setTarget(null);
+			return;
+		}
+
+		const category = categories().find((c) =>
+			c.category?.id === fromThread.parent_id ||
+			(c.category === null && fromThread.parent_id === null)
+		);
+		if (!category) {
+			setDragging(null);
+			setTarget(null);
+			return;
+		}
+
+		const fromIndex = category.threads.findIndex((t) => t.id === fromId);
+		const toIndex = category.threads.findIndex((t) => t.id === toId);
+
+		const updated = [...category.threads];
+		const [moved] = updated.splice(fromIndex, 1);
+		updated.splice(toIndex, 0, moved);
+		let updatedTarget = false;
+		for (let i = 0; i < updated.length; i++) {
+			if (updated[i].position === null && updatedTarget) break;
+			updated[i].position = i;
+			if (moved.id === updated[i].id) updatedTarget = true;
+		}
+
+		api.client.http.PATCH("/api/v1/room/{room_id}/thread", {
+			params: { path: { room_id: props.room_id! } },
+			body: {
+				threads: updated.map((t) => ({
+					id: t.id,
+					parent_id: t.parent_id,
+					position: t.position,
+				})),
+			},
+		});
 
 		setDragging(null);
 		setTarget(null);
@@ -116,75 +211,87 @@ export const ThreadNav = (props: { room_id?: string }) => {
 					</Show>
 				</Show>
 
-				<For each={list()}>
-					{(thread, idx) => (
-						<Show
-							when={(!thread.archived_at && !thread.deleted_at) ||
-								params.thread_id === thread.id}
-						>
-							<li
-								data-index={idx()}
-								draggable
-								onDragStart={handleDragStart}
-								onDragEnter={handleDragEnter}
-								onDragOver={handleDragOver}
-								onDrop={handleDrop}
-								classList={{
-									dragging: dragging() === idx(),
-									over: target() === idx(),
-									unread: thread.type !== "Voice" && !!thread.is_unread,
-								}}
+				<For each={categories()}>
+					{({ category, threads }) => (
+						<>
+							<Show when={category}>
+								<div class="dim" style="margin-left:8px;margin-top:8px">
+									{category!.name}
+								</div>
+							</Show>
+							<For
+								each={threads}
+								fallback={
+									<div class="dim" style="margin-left: 16px">(no threads)</div>
+								}
 							>
-								<ItemThread thread={thread} />
-								<For
-									each={[...api.voiceStates.values()].filter((i) =>
-										i.thread_id === thread.id
-									).sort((a, b) =>
-										Date.parse(a.joined_at) - Date.parse(b.joined_at)
-									)}
-								>
-									{(s) => {
-										const user = api.users.fetch(() => s.user_id);
-										const room_member = props.room_id
-											? api.room_members.fetch(
-												() => props.room_id!,
-												() => s.user_id,
-											)
-											: () => null;
-										const name = () =>
-											room_member()?.override_name || user()?.name ||
-											"unknown user";
-										// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
-										// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
-										// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
-										// </svg>
+								{(thread, idx) => (
+									<li
+										data-thread-id={thread.id}
+										draggable
+										onDragStart={handleDragStart}
+										onDragEnter={handleDragEnter}
+										onDragOver={handleDragOver}
+										onDrop={handleDrop}
+										classList={{
+											dragging: dragging() === thread.id,
+											over: target() === thread.id,
+											unread: thread.type !== "Voice" && !!thread.is_unread,
+										}}
+									>
+										<ItemThread thread={thread} />
+										<For
+											each={[...api.voiceStates.values()].filter((i) =>
+												i.thread_id === thread.id
+											).sort((a, b) =>
+												Date.parse(a.joined_at) - Date.parse(b.joined_at)
+											)}
+										>
+											{(s) => {
+												const user = api.users.fetch(() => s.user_id);
+												const room_member = props.room_id
+													? api.room_members.fetch(
+														() => props.room_id!,
+														() => s.user_id,
+													)
+													: () => null;
+												const name = () =>
+													room_member()?.override_name || user()?.name ||
+													"unknown user";
+												// <svg viewBox="0 0 32 32" style="height:calc(1em + 4px);margin-right:8px" preserveAspectRatio="none">
+												// 	<line x1={0} y1={0} x2={0} y2={32} stroke-width={4} style="stroke:white"/>
+												// 	<line x1={0} y1={32} x2={32} y2={32} stroke-width={4} style="stroke:white"/>
+												// </svg>
 
-										return (
-											<div
-												class="voice-participant menu-user"
-												classList={{
-													speaking:
-														((voice.rtc?.speaking.get(s.user_id)?.flags ?? 0) &
-															1) === 1,
-												}}
-												data-thread-id={s.thread_id}
-												data-user-id={s.user_id}
-											>
-												<Show
-													when={user()?.avatar}
-													fallback={<div class="fallback-avatar"></div>}
-												>
-													<img
-														src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
-													/>
-												</Show>{" "}
-												{name()}
-											</div>
-										);
-									}}
-								</For>
-							</li>
-						</Show>
+												return (
+													<div
+														class="voice-participant menu-user"
+														classList={{
+															speaking:
+																((voice.rtc?.speaking.get(s.user_id)?.flags ??
+																	0) &
+																	1) === 1,
+														}}
+														data-thread-id={s.thread_id}
+														data-user-id={s.user_id}
+													>
+														<Show
+															when={user()?.avatar}
+															fallback={<div class="fallback-avatar"></div>}
+														>
+															<img
+																src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
+															/>
+														</Show>{" "}
+														{name()}
+													</div>
+												);
+											}}
+										</For>
+									</li>
+								)}
+							</For>
+						</>
 					)}
 				</For>
 			</ul>
