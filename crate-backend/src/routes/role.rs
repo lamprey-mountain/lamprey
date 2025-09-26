@@ -354,7 +354,8 @@ async fn role_member_add(
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
-    if rank <= role.position && room.owner_id != Some(auth_user.id) {
+    let self_apply = role.is_self_applicable && target_user_id == auth_user.id;
+    if rank <= role.position && room.owner_id != Some(auth_user.id) && !self_apply {
         return Err(Error::BadStatic("your rank is too low"));
     }
 
@@ -412,7 +413,8 @@ async fn role_member_remove(
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
     let room = srv.rooms.get(room_id, None).await?;
-    if rank <= role.position && room.owner_id != Some(auth_user.id) {
+    let self_apply = role.is_self_applicable && target_user_id == auth_user.id;
+    if rank <= role.position && room.owner_id != Some(auth_user.id) && !self_apply {
         return Err(Error::BadStatic("your rank is too low"));
     }
 
