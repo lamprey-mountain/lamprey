@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, ThreadMemberPut,
-    ThreadReorder, ThreadType,
+    util::Changes, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
+    ThreadMemberPut, ThreadReorder, ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -570,8 +570,19 @@ async fn thread_archive(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: thread.clone(),
+            },
+        )
+        .await?;
+        s.sushi_sfu
+            .send(SfuCommand::Thread {
+                thread: thread.into(),
+            })
+            .unwrap();
     }
     Ok(StatusCode::NO_CONTENT)
 }

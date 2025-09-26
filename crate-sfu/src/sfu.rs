@@ -4,19 +4,27 @@ use crate::{
 };
 use anyhow::Result;
 use common::v1::types::{
-    voice::{SfuCommand, SfuEvent, VoiceState},
-    SfuId, UserId,
+    voice::{SfuCommand, SfuEvent, SfuPermissions, SfuThread, VoiceState},
+    SfuId, ThreadId, UserId,
 };
 use dashmap::DashMap;
 use std::fmt::Debug;
 use tokio::sync::mpsc::{self, UnboundedSender};
 use tracing::{debug, error, trace, warn};
 
+#[derive(Debug)]
+struct SfuVoiceState {
+    state: VoiceState,
+    permissions: SfuPermissions,
+}
+
 pub struct Sfu {
     peers: DashMap<UserId, UnboundedSender<PeerCommand>>,
-    voice_states: DashMap<UserId, VoiceState>,
+    voice_states: DashMap<UserId, SfuVoiceState>,
     tracks: Vec<TrackMetadataSfu>,
     tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
+    // TODO: cleanup unused threads
+    threads: DashMap<ThreadId, SfuThread>,
     config: Config,
     backend_tx: UnboundedSender<SfuEvent>,
 
@@ -45,6 +53,7 @@ impl Sfu {
             backend_tx,
             tracks_by_user: DashMap::new(),
             sfu_id: None,
+            threads: DashMap::new(),
         }
     }
 
@@ -88,8 +97,16 @@ impl Sfu {
             SfuCommand::Signalling { user_id, inner } => {
                 self.handle_signalling(user_id, inner, peer_send).await?
             }
-            SfuCommand::VoiceState { user_id, state } => {
-                self.handle_voice_state(user_id, state, peer_send).await?
+            SfuCommand::VoiceState {
+                user_id,
+                state,
+                permissions,
+            } => {
+                self.handle_voice_state(user_id, state, permissions, peer_send)
+                    .await?
+            }
+            SfuCommand::Thread { thread } => {
+                self.threads.insert(thread.id, thread);
             }
         }
 
@@ -101,6 +118,7 @@ impl Sfu {
         &self,
         user_id: UserId,
         state: Option<VoiceState>,
+        permissions: SfuPermissions,
         peer_send: UnboundedSender<PeerEventEnvelope>,
     ) -> Result<()> {
         let Some(state) = state else {
@@ -112,7 +130,7 @@ impl Sfu {
             self.emit(SfuEvent::VoiceState {
                 user_id,
                 state: None,
-                old,
+                old: old.map(|o| o.state),
             })
             .await?;
             debug!("remove voice state");
@@ -120,9 +138,17 @@ impl Sfu {
         };
 
         debug!("got voice state {state:?}");
-        let old = self.voice_states.insert(user_id, state.clone());
+        let old = self.voice_states.insert(
+            user_id,
+            SfuVoiceState {
+                state: state.clone(),
+                permissions: permissions.clone(),
+            },
+        );
 
-        let peer = self.ensure_peer(user_id, peer_send.clone(), &state).await?;
+        let peer = self
+            .ensure_peer(user_id, peer_send.clone(), &state, &permissions)
+            .await?;
 
         // broadcast all tracks in a thread to the user
         for track in &self.tracks {
@@ -135,7 +161,7 @@ impl Sfu {
                 continue;
             };
 
-            if state.thread_id != other.thread_id {
+            if state.thread_id != other.state.thread_id {
                 continue;
             }
 
@@ -158,7 +184,7 @@ impl Sfu {
                 continue;
             };
 
-            if state.thread_id != other.thread_id {
+            if state.thread_id != other.state.thread_id {
                 continue;
             }
 
@@ -175,7 +201,7 @@ impl Sfu {
         self.emit(SfuEvent::VoiceState {
             user_id,
             state: Some(state),
-            old,
+            old: old.map(|o| o.state),
         })
         .await?;
 
@@ -204,7 +230,7 @@ impl Sfu {
                 warn!("raw signalling messages should not be sent here");
             }
             SignallingMessage::Reconnect {} => {
-                let Some(voice_state) = self.voice_states.get(&user_id) else {
+                let Some(voice) = self.voice_states.get(&user_id) else {
                     warn!("no voice state for {user_id}");
                     return Ok(());
                 };
@@ -213,17 +239,17 @@ impl Sfu {
                     peer.send(PeerCommand::Kill)?;
                 }
 
-                self.ensure_peer(user_id, peer_send.clone(), &voice_state)
+                self.ensure_peer(user_id, peer_send.clone(), &voice.state, &voice.permissions)
                     .await?;
             }
             _ => {
-                let Some(voice_state) = self.voice_states.get(&user_id) else {
+                let Some(voice) = self.voice_states.get(&user_id) else {
                     warn!("no voice state for {user_id}");
                     return Ok(());
                 };
 
                 let peer = self
-                    .ensure_peer(user_id, peer_send.clone(), &voice_state)
+                    .ensure_peer(user_id, peer_send.clone(), &voice.state, &voice.permissions)
                     .await?;
                 peer.send(PeerCommand::Signalling(msg))?;
             }
@@ -305,7 +331,7 @@ impl Sfu {
     }
 
     async fn handle_want_have(&self, user_id: UserId, user_ids: &[UserId]) -> Result<()> {
-        let (Some(state), Some(peer)) = (self.voice_states.get(&user_id), self.peers.get(&user_id))
+        let (Some(voice), Some(peer)) = (self.voice_states.get(&user_id), self.peers.get(&user_id))
         else {
             warn!("received peer event from dead peer?");
             return Ok(());
@@ -317,7 +343,7 @@ impl Sfu {
                 continue;
             };
 
-            if state.thread_id != other.thread_id {
+            if voice.state.thread_id != other.state.thread_id {
                 continue;
             }
 
@@ -343,12 +369,19 @@ impl Sfu {
         user_id: UserId,
         peer_send: UnboundedSender<PeerEventEnvelope>,
         voice_state: &VoiceState,
+        permissions: &SfuPermissions,
     ) -> Result<UnboundedSender<PeerCommand>> {
         match self.peers.entry(user_id) {
             dashmap::Entry::Occupied(entry) => Ok(entry.get().clone()),
             dashmap::Entry::Vacant(entry) => {
-                let peer_sender =
-                    Peer::spawn(&self.config, peer_send, user_id, voice_state.clone()).await?;
+                let peer_sender = Peer::spawn(
+                    &self.config,
+                    peer_send,
+                    user_id,
+                    voice_state.clone(),
+                    permissions.clone(),
+                )
+                .await?;
                 entry.insert(peer_sender.clone());
                 Ok(peer_sender)
             }
@@ -357,7 +390,7 @@ impl Sfu {
 
     /// send a command to every peer in a thread
     async fn broadcast_thread(&self, user_id: UserId, command: PeerCommand) -> Result<()> {
-        let Some(my_state) = self.voice_states.get(&user_id) else {
+        let Some(my_voice) = self.voice_states.get(&user_id) else {
             warn!("user has no voice state");
             return Ok(());
         };
@@ -367,12 +400,12 @@ impl Sfu {
                 continue;
             }
 
-            let Some(state) = self.voice_states.get(peer.key()) else {
+            let Some(voice) = self.voice_states.get(peer.key()) else {
                 debug!("missing voice state");
                 continue;
             };
 
-            if state.thread_id != my_state.thread_id {
+            if voice.state.thread_id != my_voice.state.thread_id {
                 continue;
             }
 

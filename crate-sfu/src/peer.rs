@@ -5,13 +5,14 @@ use std::{
 };
 
 use crate::{
-    config::Config, signalling::Signalling, Error, MediaData, PeerEvent, SignallingMessage,
-    TrackMetadataServer, TrackMetadataSfu,
+    config::Config, signalling::Signalling, Error, MediaData, PeerEvent, PeerPermissions,
+    SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use common::v1::types::{
     voice::{
-        SessionDescription, Speaking, SpeakingWithoutUserId, TrackId, TrackMetadata, VoiceState,
+        SessionDescription, SfuPermissions, Speaking, SpeakingWithoutUserId, TrackId,
+        TrackMetadata, VoiceState,
     },
     UserId,
 };
@@ -54,6 +55,7 @@ pub struct Peer {
 
     user_id: UserId,
     voice_state: VoiceState,
+    permissions: PeerPermissions,
     commands: UnboundedReceiver<PeerCommand>,
     events: UnboundedSender<PeerEventEnvelope>,
 
@@ -67,6 +69,7 @@ impl Peer {
         sfu_send: UnboundedSender<PeerEventEnvelope>,
         user_id: UserId,
         voice_state: VoiceState,
+        permissions: SfuPermissions,
     ) -> Result<UnboundedSender<PeerCommand>> {
         info!("create new peer {user_id}");
 
@@ -97,6 +100,7 @@ impl Peer {
             outbound: vec![],
             user_id,
             voice_state,
+            permissions: permissions.into(),
             commands: recv,
             events: sfu_send,
             packet_v4: [0; 2000],
@@ -313,6 +317,9 @@ impl Peer {
                     chan.write(false, &serde_json::to_vec(&speaking)?)?;
                 }
             }
+            PeerCommand::Permissions(p) => {
+                self.permissions = p.into();
+            }
         }
 
         Ok(())
@@ -515,6 +522,12 @@ impl Peer {
             debug!("track not open");
             return Ok(());
         };
+
+        // self.voice_state.self_screen;
+        // self.voice_state.self_video;
+        // self.voice_state.muted();
+        // self.voice_state.deafened();
+        // track.kind == MediaKind::Video;
 
         self.emit(PeerEvent::MediaData(MediaData {
             mid: data.mid,

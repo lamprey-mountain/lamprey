@@ -8,7 +8,7 @@ use axum::{
 use common::v1::types::{
     misc::UserIdReq,
     util::Changes,
-    voice::{SfuCommand, VoiceState},
+    voice::{SfuCommand, SfuPermissions, VoiceState},
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationResponse, Permission, ThreadId,
 };
 use serde::Deserialize;
@@ -78,12 +78,18 @@ async fn voice_state_disconnect(
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::VoiceDisconnect)?;
+    let target_perms = srv.perms.for_thread(target_user_id, thread_id).await?;
     let Some(_state) = srv.users.voice_state_get(target_user_id) else {
         return Ok(());
     };
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
+        permissions: SfuPermissions {
+            speak: target_perms.has(Permission::VoiceSpeak),
+            video: target_perms.has(Permission::VoiceVideo),
+            priority: target_perms.has(Permission::VoicePriority),
+        },
     });
     let thread = srv.threads.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {
@@ -147,9 +153,16 @@ async fn voice_state_move(
         thread_id: json.target_id,
         ..old
     };
+
+    let target_perms = srv.perms.for_thread(target_user_id, thread_id).await?;
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
-        state: Some(state.clone()),
+        state: None,
+        permissions: SfuPermissions {
+            speak: target_perms.has(Permission::VoiceSpeak),
+            video: target_perms.has(Permission::VoiceVideo),
+            priority: target_perms.has(Permission::VoicePriority),
+        },
     });
 
     let thread = srv.threads.get(thread_id, None).await?;

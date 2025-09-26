@@ -6,7 +6,7 @@ use common::v1::types;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
 use common::v1::types::util::Time;
-use common::v1::types::voice::{SfuCommand, SignallingMessage, VoiceState};
+use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -307,10 +307,15 @@ impl Connection {
                             state.mute = rm.mute;
                             state.deaf = rm.deaf;
                         }
-                        self.s.alloc_sfu(state.thread_id)?;
+                        self.s.alloc_sfu(state.thread_id).await?;
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: Some(state),
+                            permissions: SfuPermissions {
+                                speak: perms.has(Permission::VoiceSpeak),
+                                video: perms.has(Permission::VoiceVideo),
+                                priority: perms.has(Permission::VoicePriority),
+                            },
                         }) {
                             error!("failed to send to sushi_sfu: {err}");
                         }
@@ -320,6 +325,11 @@ impl Connection {
                         if let Err(err) = self.s.sushi_sfu.send(SfuCommand::VoiceState {
                             user_id,
                             state: None,
+                            permissions: SfuPermissions {
+                                speak: false,
+                                video: false,
+                                priority: false,
+                            },
                         }) {
                             error!("failed to send to sushi_sfu: {err}");
                         }

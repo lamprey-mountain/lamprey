@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
-use common::v1::types::voice::{SfuCommand, VoiceState};
+use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
 use common::v1::types::{MessageSync, Thread, ThreadId, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
@@ -193,6 +193,11 @@ impl ServiceUsers {
                 let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {
                     user_id: s.user_id,
                     state: None,
+                    permissions: SfuPermissions {
+                        speak: false,
+                        video: false,
+                        priority: false,
+                    },
                 });
                 if let Err(err) = r {
                     error!("failed to disconnect user from thread: {err}");

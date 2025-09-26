@@ -71,7 +71,7 @@ impl SfuConnection {
             .await
         {
             error!("Failed to send message to websocket: {:?}", e);
-            self.shutdown();
+            self.shutdown().await;
             return;
         }
 
@@ -97,10 +97,10 @@ impl SfuConnection {
             }
         }
 
-        self.shutdown();
+        self.shutdown().await;
     }
 
-    fn shutdown(&self) {
+    async fn shutdown(&self) {
         // when this sfu gets shut down all clients connected to it need to reconnect
         self.s.sfus.remove(&self.id);
         let mut needs_reconnect = HashSet::new();
@@ -113,7 +113,7 @@ impl SfuConnection {
             }
         });
         for thread_id in &needs_reconnect {
-            if self.s.alloc_sfu(*thread_id).is_err() {
+            if self.s.alloc_sfu(*thread_id).await.is_err() {
                 warn!("no sfu exists");
                 // clients will be told to reconnect anyways to trigger a client error
             }
@@ -166,12 +166,17 @@ impl SfuConnection {
                 let state = self.s.services.users.voice_state_get(*user_id);
                 state.is_some_and(|s| self.is_ours(s.thread_id))
             }
-            SfuCommand::VoiceState { user_id, state } => {
+            SfuCommand::VoiceState {
+                user_id,
+                state,
+                permissions: _,
+            } => {
                 let old = self.s.services.users.voice_state_get(*user_id);
                 let old_is_ours = old.is_some_and(|s| self.is_ours(s.thread_id));
                 let new_is_ours = state.as_ref().is_some_and(|s| self.is_ours(s.thread_id));
                 old_is_ours || new_is_ours
             }
+            SfuCommand::Thread { thread } => self.is_ours(thread.id),
         };
 
         if should_send {

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Time, SessionId, SfuId, UserId};
+use crate::v1::types::{util::Time, SessionId, SfuId, Thread, UserId};
 
 use super::ThreadId;
 
@@ -210,6 +210,16 @@ pub struct SpeakingWithoutUserId {
     pub flags: SpeakingFlags,
 }
 
+impl VoiceState {
+    pub fn muted(&self) -> bool {
+        self.mute || self.self_mute
+    }
+
+    pub fn deafened(&self) -> bool {
+        self.deaf || self.self_deaf
+    }
+}
+
 // ========== EVERYTHING BELOW IS INTERNAL FOR BACKEND/VOICE ==========
 
 /// emitted by backend, handled by the sfu
@@ -230,6 +240,12 @@ pub enum SfuCommand {
     VoiceState {
         user_id: UserId,
         state: Option<VoiceState>,
+        permissions: SfuPermissions,
+    },
+
+    /// upsert thread
+    Thread {
+        thread: SfuThread,
     },
 }
 
@@ -249,6 +265,39 @@ pub enum SfuEvent {
         old: Option<VoiceState>,
         state: Option<VoiceState>,
     },
+}
+
+/// permissions that the sfu needs to know about
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SfuPermissions {
+    /// corresponds to VoiceSpeak
+    pub speak: bool,
+
+    /// corresponds to VoiceVideo
+    pub video: bool,
+
+    /// corresponds to VoicePriority
+    pub priority: bool,
+}
+
+/// thread config that the sfu needs to know about
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SfuThread {
+    pub id: ThreadId,
+    pub name: String,
+    pub bitrate: Option<u64>,
+    pub user_limit: Option<u64>,
+}
+
+impl From<Thread> for SfuThread {
+    fn from(value: Thread) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            bitrate: value.bitrate,
+            user_limit: value.user_limit,
+        }
+    }
 }
 
 #[cfg(feature = "str0m")]

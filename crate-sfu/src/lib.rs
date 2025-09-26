@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
-    voice::{MediaKind, SignallingMessage, Speaking},
+    voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking},
     ThreadId, UserId,
 };
 use str0m::{
@@ -82,6 +82,16 @@ pub enum PeerCommand {
 
     /// a remote peer is speaking
     Speaking(Speaking),
+
+    /// permissions
+    Permissions(SfuPermissions),
+}
+
+#[derive(Debug, Clone)]
+pub struct PeerPermissions {
+    pub speak: bool,
+    pub video: bool,
+    pub priority: bool,
 }
 
 /// a peer event with user_id, so the sfu knows where the event came from
@@ -163,4 +173,14 @@ pub enum Error {
     /// the `Have` message is only sent by the server
     #[error("the `Have` message is only sent by the server")]
     HaveServerOnly,
+}
+
+impl From<SfuPermissions> for PeerPermissions {
+    fn from(value: SfuPermissions) -> Self {
+        Self {
+            speak: value.speak,
+            video: value.video,
+            priority: value.priority,
+        }
+    }
 }
