@@ -907,6 +907,7 @@ async fn oauth_userinfo(
         .into_iter()
         .find(|e| e.is_primary);
     let info = Userinfo {
+        iss: srv.state.config.api_url.clone(),
         sub: user.id,
         email: email.clone().map(|e| e.email),
         email_verified: email.map(|e| e.is_verified).unwrap_or_default(),

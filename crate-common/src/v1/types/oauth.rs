@@ -29,6 +29,9 @@ pub struct Autoconfig {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Userinfo {
+    /// oauth issuer
+    pub iss: Url,
+
     /// user's uuid
     pub sub: UserId,
 
