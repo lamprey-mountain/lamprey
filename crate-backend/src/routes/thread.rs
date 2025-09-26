@@ -68,6 +68,9 @@ async fn thread_create_room(
         ThreadType::Voice => {
             perms.ensure(Permission::ThreadCreateVoice)?;
         }
+        ThreadType::Category => {
+            perms.ensure(Permission::ThreadManage)?;
+        }
         ThreadType::Dm | ThreadType::Gdm => {
             return Err(Error::BadStatic(
                 "can't create a direct message thread in a room",
@@ -84,6 +87,7 @@ async fn thread_create_room(
                 ThreadType::Chat => DbThreadType::Chat,
                 ThreadType::Forum => DbThreadType::Forum,
                 ThreadType::Voice => DbThreadType::Voice,
+                ThreadType::Category => DbThreadType::Category,
                 ThreadType::Dm | ThreadType::Gdm => {
                     // this should be unreachable due to the check above
                     warn!("unreachable: dm/gdm thread creation in room");

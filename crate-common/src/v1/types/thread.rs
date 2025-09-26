@@ -158,6 +158,9 @@ pub enum ThreadType {
     /// call
     Voice,
 
+    /// category for grouping threads together
+    Category,
+
     #[cfg(feature = "feat_thread_type_event")]
     /// event
     // seems surprisingly hard to get right
@@ -175,7 +178,6 @@ pub enum ThreadType {
 
     #[cfg(feature = "feat_thread_type_report")]
     Report,
-    // Category,
     // Calendar,
     // Files,
     // Redex,

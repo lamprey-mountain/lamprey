@@ -115,6 +115,7 @@ pub enum DbThreadType {
     Voice,
     Dm,
     Gdm,
+    Category,
 }
 
 impl From<DbThreadType> for ThreadType {
@@ -125,6 +126,7 @@ impl From<DbThreadType> for ThreadType {
             DbThreadType::Voice => ThreadType::Voice,
             DbThreadType::Dm => ThreadType::Dm,
             DbThreadType::Gdm => ThreadType::Gdm,
+            DbThreadType::Category => ThreadType::Category,
         }
     }
 }

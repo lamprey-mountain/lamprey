@@ -156,10 +156,10 @@ pub enum Permission {
     /// this isnt the same as email forwarding
     ThreadForward,
 
-    /// lock (and unlock) threads
+    /// lock and unlock threads
     ThreadLock,
 
-    /// (unimplemented) pin (and unpin) threads
+    /// reorder and pin threads
     ThreadManage,
 
     /// (unimplemented) create announcements
