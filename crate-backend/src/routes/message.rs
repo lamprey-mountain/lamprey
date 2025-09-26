@@ -299,7 +299,6 @@ async fn message_delete(
         return Err(Error::BadStatic("cant delete that message"));
     }
     if message.author_id == auth_user.id {
-        perms.add(Permission::UnusedMessageEdit);
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;

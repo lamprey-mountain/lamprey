@@ -63,7 +63,7 @@ async fn thread_create_room(
             perms.ensure(Permission::ThreadCreateChat)?;
         }
         ThreadType::Forum => {
-            perms.ensure(Permission::UnusedThreadCreateForum2)?;
+            perms.ensure(Permission::ThreadCreateForum)?;
         }
         ThreadType::Voice => {
             perms.ensure(Permission::ThreadCreateVoice)?;

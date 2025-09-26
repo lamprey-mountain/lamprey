@@ -205,21 +205,6 @@ pub enum Permission {
     /// stream video and screenshare in voice threads
     /// requires VoiceConnect
     VoiceVideo,
-
-    UnusedBotsAdd,
-    UnusedEmojiAdd,
-    UnusedMemberBanManage,
-    UnusedUserDms,
-    UnusedUserProfile,
-    UnusedUserSessions,
-    UnusedUserStatus,
-    UnusedMessageEdit,
-    UnusedProfileAvatar,
-    UnusedServerAdmin,
-    UnusedThreadCreateForum2,
-    UnusedThreadCreateDocument,
-    UnusedThreadCreateEvent,
-    UnusedThreadCreateTable,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

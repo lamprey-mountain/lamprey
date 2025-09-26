@@ -181,16 +181,15 @@ impl ServiceMessages {
         json.validate()?;
         let data = s.data();
         let srv = s.services();
-        let mut perms = s.services().perms.for_thread(user_id, thread_id).await?;
+        let perms = s.services().perms.for_thread(user_id, thread_id).await?;
         perms.ensure_view()?;
         let message = data.message_get(thread_id, message_id, user_id).await?;
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
         }
-        if message.author_id == user_id {
-            perms.add(Permission::UnusedMessageEdit);
+        if message.author_id != user_id {
+            return Err(Error::BadStatic("cant edit other user's message"));
         }
-        perms.ensure(Permission::UnusedMessageEdit)?;
         if json.content.is_none()
             && json.attachments.as_ref().is_some_and(|a| a.is_empty())
             && json.embeds.as_ref().is_some_and(|a| a.is_empty())
