@@ -537,7 +537,8 @@ em {
 	}
 
 	& li {
-		list-style-position: inside;
+		list-style-position: outside;
+		margin-left: 1rem;
 	}
 
 	& ul > li {
@@ -546,6 +547,10 @@ em {
 
 	& ol > li {
 		list-style-type: numbered;
+	}
+
+	& li > * {
+		display: inline;
 	}
 }
 
