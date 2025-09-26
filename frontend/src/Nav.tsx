@@ -102,8 +102,6 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	const handleDragStart = (e: DragEvent) => {
 		const id = getThreadId(e);
-		console.log(id);
-		console.log(e.currentTarget);
 		if (id) setDragging(id);
 	};
 
@@ -120,6 +118,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		e.preventDefault();
 		const fromId = dragging();
 		const toId = target();
+		console.log("handle drop", { fromId, toId });
 
 		if (!fromId || !toId || fromId === toId) {
 			setDragging(null);
@@ -129,46 +128,58 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 		const fromThread = api.threads.cache.get(fromId);
 		const toThread = api.threads.cache.get(toId);
+		console.log("handle drop threads", { fromThread, toThread });
 
-		if (
-			!fromThread || !toThread || fromThread.parent_id !== toThread.parent_id
-		) {
+		if (!fromThread || !toThread) {
 			setDragging(null);
 			setTarget(null);
 			return;
 		}
 
-		const category = categories().find((c) =>
+		const fromCategory = categories().find((c) =>
 			c.category?.id === fromThread.parent_id ||
 			(c.category === null && fromThread.parent_id === null)
 		);
-		if (!category) {
+		const toCategory = categories().find((c) =>
+			c.category?.id === toThread.parent_id ||
+			(c.category === null && toThread.parent_id === null)
+		);
+		console.log("handle drop categories", { fromCategory, toCategory });
+		if (!fromCategory || !toCategory) {
 			setDragging(null);
 			setTarget(null);
 			return;
 		}
 
-		const fromIndex = category.threads.findIndex((t) => t.id === fromId);
-		const toIndex = category.threads.findIndex((t) => t.id === toId);
+		// remove thread from fromCategory, add to toCategory
+		const fromIndex = fromCategory.threads.findIndex((t) => t.id === fromId);
+		const toIndex = toCategory.threads.findIndex((t) => t.id === toId);
+		const updatedFrom = [...fromCategory.threads];
+		const updatedTo = [...toCategory.threads];
+		const [moved] = updatedFrom.splice(fromIndex, 1);
+		if (fromCategory === toCategory) updatedTo.splice(fromIndex, 1);
+		updatedTo.splice(toIndex, 0, moved);
+		moved.parent_id = toThread.parent_id;
+		console.log("handle drop moved", moved);
 
-		const updated = [...category.threads];
-		const [moved] = updated.splice(fromIndex, 1);
-		updated.splice(toIndex, 0, moved);
-		let updatedTarget = false;
-		for (let i = 0; i < updated.length; i++) {
-			if (updated[i].position === null && updatedTarget) break;
-			updated[i].position = i;
-			if (moved.id === updated[i].id) updatedTarget = true;
+		// update positions in toCategory
+		for (let i = 0; i < updatedTo.length; i++) {
+			if (updatedTo[i].position === null && i > fromIndex && i > toIndex) break;
+			console.log(updatedTo[i], i);
+			updatedTo[i].position = i;
 		}
+
+		const body = updatedTo.map((t) => ({
+			id: t.id,
+			parent_id: t.parent_id,
+			position: t.position,
+		}));
+		console.log("handle drop body", body);
 
 		api.client.http.PATCH("/api/v1/room/{room_id}/thread", {
 			params: { path: { room_id: props.room_id! } },
 			body: {
-				threads: updated.map((t) => ({
-					id: t.id,
-					parent_id: t.parent_id,
-					position: t.position,
-				})),
+				threads: body,
 			},
 		});
 
