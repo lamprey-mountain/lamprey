@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::{Path, Query, State},
@@ -350,15 +350,14 @@ async fn thread_list_removed(
     Ok(Json(res))
 }
 
-/// Room thread reorder (TODO)
+/// Room thread reorder
 ///
-/// Reorder the threads in a room. Requires the `ThreadReorder` permission.
+/// Reorder the threads in a room. Requires the `ThreadManage` permission.
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/thread",
     params(("room_id", description = "Room id")),
-    tags = ["thread"],
-    // TODO: tags = ["thread", "badge.perm.ThreadReorder"],
+    tags = ["thread", "badge.perm.ThreadReorder"],
     responses(
         (status = OK, body = (), description = "Reorder threads success"),
     )
@@ -367,17 +366,53 @@ async fn thread_reorder(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<ThreadReorder>,
+    Json(json): Json<ThreadReorder>,
 ) -> Result<()> {
-    // let data = s.data();
+    let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    // let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
-    perms.ensure(Permission::ThreadEdit)?;
-    // let mut res = data.thread_list_removed(room_id, q).await?;
-    Err(Error::Unimplemented)
+
+    let mut threads_old = HashMap::new();
+
+    for thread in &json.threads {
+        let thread_data = srv.threads.get(thread.id, None).await?;
+        threads_old.insert(thread_data.id, thread_data);
+
+        let perms_thread = srv.perms.for_thread(auth_user.id, thread.id).await?;
+        perms_thread.ensure_view()?;
+        perms_thread.ensure(Permission::ThreadManage)?;
+
+        if let Some(Some(parent_id)) = thread.parent_id {
+            let perms_parent = srv.perms.for_thread(auth_user.id, parent_id).await?;
+            perms_parent.ensure_view()?;
+            perms_parent.ensure(Permission::ThreadManage)?;
+
+            let parent_data = srv.threads.get(parent_id, None).await?;
+            if parent_data.ty != ThreadType::Category {
+                return Err(Error::BadStatic(
+                    "threads can only be children of category threads",
+                ));
+            }
+        }
+    }
+
+    data.thread_reorder(json.clone()).await?;
+
+    for thread in &json.threads {
+        srv.threads.invalidate(thread.id).await;
+        let thread_old = threads_old.get(&thread.id);
+        let thread = srv.threads.get(thread.id, None).await?;
+        if let Some(thread_old) = thread_old {
+            if thread.parent_id == thread_old.parent_id && thread.position == thread_old.position {
+                continue;
+            }
+        }
+        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
+            .await?;
+    }
+
+    Ok(())
 }
 
 /// Thread edit

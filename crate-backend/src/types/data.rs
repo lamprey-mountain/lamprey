@@ -88,6 +88,8 @@ pub struct DbThread {
     pub locked: bool,
     pub archived_at: Option<PrimitiveDateTime>,
     pub deleted_at: Option<PrimitiveDateTime>,
+    pub parent_id: Option<Uuid>,
+    pub position: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -149,6 +151,10 @@ impl From<DbThread> for Thread {
             ty: row.ty.into(),
             last_version_id: row.last_version_id.map(|i| i.into()),
             message_count: Some(row.message_count.try_into().expect("count is negative?")),
+            parent_id: row.parent_id.map(|i| i.into()),
+            position: row
+                .position
+                .map(|p| p.try_into().expect("position is negative or overflows?")),
 
             // these fields get filled in later
             is_unread: None,
@@ -160,8 +166,6 @@ impl From<DbThread> for Thread {
 
             // TODO: store or calculate the fields below
             tags: Default::default(),
-            parent_id: None,
-            position: None,
             online_count: 0,
             root_message_count: None,
             bitrate: if row.ty == DbThreadType::Voice {

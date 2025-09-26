@@ -33,6 +33,8 @@ select
     thread.locked,
     thread.archived_at,
     thread.deleted_at,
+    thread.parent_id,
+    thread.position,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     last_id.last_version_id as "last_version_id",

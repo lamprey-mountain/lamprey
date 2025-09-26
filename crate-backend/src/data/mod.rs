@@ -13,6 +13,7 @@ use common::v1::types::{
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
     SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
+    ThreadReorder,
 };
 
 use uuid::Uuid;
@@ -375,6 +376,7 @@ pub trait DataThread {
     async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()>;
     async fn thread_lock(&self, thread_id: ThreadId) -> Result<()>;
     async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()>;
+    async fn thread_reorder(&self, data: ThreadReorder) -> Result<()>;
 }
 
 #[async_trait]

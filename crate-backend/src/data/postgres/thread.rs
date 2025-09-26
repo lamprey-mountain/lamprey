@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::ThreadReorder;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
@@ -57,7 +58,7 @@ impl DataThread for Postgres {
         Ok(thread_id)
     }
 
-    /// get a thread, panics if there are no messages
+    /// get a thread
     async fn thread_get(&self, thread_id: ThreadId) -> Result<Thread> {
         let thread = query_file_as!(DbThread, "sql/thread_get.sql", thread_id.into_inner())
             .fetch_one(&self.pool)
@@ -344,6 +345,45 @@ impl DataThread for Postgres {
         )
         .execute(&mut *tx)
         .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn thread_reorder(&self, data: ThreadReorder) -> Result<()> {
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+
+        for thread in data.threads {
+            let old = query!(
+                r#"SELECT position, parent_id FROM thread WHERE id = $1"#,
+                *thread.id,
+            )
+            .fetch_one(&mut *tx)
+            .await?;
+            let new_position = thread
+                .position
+                .map(|i| i.map(|i| i as i32))
+                .unwrap_or(old.position);
+
+            let new_parent_id = thread
+                .parent_id
+                .map(|i| i.map(|i| *i))
+                .unwrap_or(old.parent_id);
+
+            if new_position != old.position || new_parent_id != old.parent_id {
+                let version_id = ThreadVerId::new();
+                query!(
+                    r#"UPDATE thread SET version_id = $2, position = $3, parent_id = $4 WHERE id = $1"#,
+                    *thread.id,
+                    *version_id,
+                    thread.position.map(|i| i.map(|i| i as i32)).unwrap_or(old.position),
+                    thread.parent_id.map(|i| i.map(|i| *i)).unwrap_or(old.parent_id),
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
         tx.commit().await?;
         Ok(())
     }

@@ -105,7 +105,7 @@ pub struct Thread {
     /// - lower numbers come first (0 is the first thread)
     /// - threads with the same position are tiebroken by id
     /// - threads without a position come last, ordered by newest first
-    pub position: Option<u64>,
+    pub position: Option<u16>,
 
     /// permission overwrites for this thread
     pub permission_overwrites: Vec<PermissionOverwrite>,
@@ -258,7 +258,11 @@ pub struct ThreadReorder {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ThreadReorderItem {
     pub id: ThreadId,
-    pub position: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub position: Option<Option<u16>>,
+
+    #[serde(default, deserialize_with = "some_option")]
     pub parent_id: Option<Option<ThreadId>>,
 }
 
