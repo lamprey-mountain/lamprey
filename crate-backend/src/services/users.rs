@@ -176,6 +176,8 @@ impl ServiceUsers {
                 description: None,
                 ty: DbThreadType::Dm,
                 nsfw: false,
+                bitrate: None,
+                user_limit: None,
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;

@@ -354,6 +354,8 @@ impl LampreyHandle {
                     tags: None,
                     nsfw: false,
                     recipients: None,
+                    bitrate: None,
+                    user_limit: None,
                 },
             )
             .await?;

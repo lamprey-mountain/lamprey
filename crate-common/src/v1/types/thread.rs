@@ -116,10 +116,16 @@ pub struct Thread {
     pub last_version_id: Option<MessageVerId>,
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
+
+    /// bitrate, for voice thread. defaults to 65535 (64Kibps).
+    #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
     pub bitrate: Option<u64>,
+
+    /// maximum number of users who can be in this voice thread
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     pub user_limit: Option<u64>,
 
-    // private
+    // private (TODO: maybe move these into a `private` field with their own struct?)
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
@@ -214,6 +220,12 @@ pub struct ThreadCreate {
     /// the recipient(s) for this dm/gdm
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 10)))]
     pub recipients: Option<Vec<UserId>>,
+
+    #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
+    pub bitrate: Option<u64>,
+
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
+    pub user_limit: Option<u64>,
     // /// the initial message for this thread
     // pub starter_message: MessageCreate,
 }
@@ -240,6 +252,14 @@ pub struct ThreadPatch {
 
     /// not safe for work
     pub nsfw: Option<bool>,
+
+    #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub bitrate: Option<Option<u64>>,
+
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
+    #[serde(default, deserialize_with = "some_option")]
+    pub user_limit: Option<Option<u64>>,
 }
 
 /// reorder some threads
@@ -272,6 +292,8 @@ impl Diff<Thread> for ThreadPatch {
             || self.description.changes(&other.description)
             || self.tags.changes(&other.tags)
             || self.nsfw.changes(&other.nsfw)
+            || self.bitrate.changes(&other.bitrate)
+            || self.user_limit.changes(&other.user_limit)
     }
 }
 
@@ -308,6 +330,16 @@ impl ThreadPatch {
             },
             nsfw: if self.nsfw.changes(&other.nsfw) {
                 self.nsfw
+            } else {
+                None
+            },
+            bitrate: if self.bitrate.changes(&other.bitrate) {
+                self.bitrate
+            } else {
+                None
+            },
+            user_limit: if self.user_limit.changes(&other.user_limit) {
+                self.user_limit
             } else {
                 None
             },

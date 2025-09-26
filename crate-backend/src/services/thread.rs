@@ -164,6 +164,17 @@ impl ServiceThreads {
         if !patch.changes(&thread_old) {
             return Err(Error::NotModified);
         }
+        if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
+            return Err(Error::BadStatic("bitrate is too high"));
+        }
+        if thread_old.ty != ThreadType::Voice && patch.bitrate.is_some() {
+            return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+        }
+        if thread_old.ty != ThreadType::Voice && patch.user_limit.is_some() {
+            return Err(Error::BadStatic(
+                "cannot set user_limit for non voice thread",
+            ));
+        }
 
         // update and refetch
         data.thread_update(thread_id, patch.clone()).await?;
@@ -188,6 +199,8 @@ impl ServiceThreads {
                                 &thread_new.description,
                             )
                             .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
+                            .change("bitrate", &thread_old.bitrate, &thread_new.bitrate)
+                            .change("user_limit", &thread_old.user_limit, &thread_new.user_limit)
                             .build(),
                     },
                 })

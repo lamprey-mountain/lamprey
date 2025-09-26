@@ -154,6 +154,8 @@ impl ServiceRooms {
                 description: None,
                 ty: DbThreadType::Chat,
                 nsfw: false,
+                bitrate: None,
+                user_limit: None,
             })
             .await?;
         let welcome_thread = data.thread_get(welcome_thread_id).await?;

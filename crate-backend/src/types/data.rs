@@ -90,6 +90,8 @@ pub struct DbThread {
     pub deleted_at: Option<PrimitiveDateTime>,
     pub parent_id: Option<Uuid>,
     pub position: Option<i32>,
+    pub bitrate: Option<i32>,
+    pub user_limit: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -107,6 +109,8 @@ pub struct DbThreadCreate {
     pub description: Option<String>,
     pub ty: DbThreadType,
     pub nsfw: bool,
+    pub bitrate: Option<i32>,
+    pub user_limit: Option<i32>,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
@@ -155,6 +159,8 @@ impl From<DbThread> for Thread {
             position: row
                 .position
                 .map(|p| p.try_into().expect("position is negative or overflows?")),
+            bitrate: row.bitrate.map(|i| i as u64),
+            user_limit: row.user_limit.map(|i| i as u64),
 
             // these fields get filled in later
             is_unread: None,
@@ -168,16 +174,6 @@ impl From<DbThread> for Thread {
             tags: Default::default(),
             online_count: 0,
             root_message_count: None,
-            bitrate: if row.ty == DbThreadType::Voice {
-                Some(64000)
-            } else {
-                None
-            },
-            user_limit: if row.ty == DbThreadType::Voice {
-                Some(100)
-            } else {
-                None
-            },
         }
     }
 }

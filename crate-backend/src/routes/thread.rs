@@ -77,6 +77,17 @@ async fn thread_create_room(
             ))
         }
     };
+    if json.bitrate.is_some_and(|b| b > 393216) {
+        return Err(Error::BadStatic("bitrate is too high"));
+    }
+    if json.ty != ThreadType::Voice && json.bitrate.is_some() {
+        return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+    }
+    if json.ty != ThreadType::Voice && json.user_limit.is_some() {
+        return Err(Error::BadStatic(
+            "cannot set user_limit for non voice thread",
+        ));
+    }
     let thread_id = data
         .thread_create(DbThreadCreate {
             room_id: Some(room_id.into_inner()),
@@ -97,6 +108,8 @@ async fn thread_create_room(
                 }
             },
             nsfw: json.nsfw,
+            bitrate: json.bitrate.map(|b| b as i32),
+            user_limit: json.bitrate.map(|u| u as i32),
         })
         .await?;
 
@@ -117,6 +130,8 @@ async fn thread_create_room(
                 .add("name", &thread.name)
                 .add("description", &thread.description)
                 .add("nsfw", &thread.nsfw)
+                .add("user_limit", &thread.user_limit)
+                .add("bitrate", &thread.bitrate)
                 .build(),
         },
     })
@@ -196,6 +211,18 @@ async fn dm_thread_create(
         }
     };
 
+    if json.bitrate.is_some_and(|b| b > 393216) {
+        return Err(Error::BadStatic("bitrate is too high"));
+    }
+    if json.ty != ThreadType::Voice && json.bitrate.is_some() {
+        return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
+    }
+    if json.ty != ThreadType::Voice && json.user_limit.is_some() {
+        return Err(Error::BadStatic(
+            "cannot set user_limit for non voice thread",
+        ));
+    }
+
     let thread_id = data
         .thread_create(DbThreadCreate {
             room_id: None,
@@ -204,6 +231,8 @@ async fn dm_thread_create(
             description: json.description.clone(),
             ty: DbThreadType::Gdm,
             nsfw: json.nsfw,
+            bitrate: json.bitrate.map(|b| b as i32),
+            user_limit: json.bitrate.map(|u| u as i32),
         })
         .await?;
 
