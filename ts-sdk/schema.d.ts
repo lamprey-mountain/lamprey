@@ -1797,10 +1797,10 @@ export interface paths {
 		options?: never;
 		head?: never;
 		/**
-		 * Room thread reorder (TODO)
-		 * @description
+		 * Room thread reorder
+		 * @description <div class="markdown-alert-permission-required">ThreadReorder</div>
 		 *
-		 *     Reorder the threads in a room. Requires the `ThreadReorder` permission.
+		 *     Reorder the threads in a room. Requires the `ThreadManage` permission.
 		 */
 		patch: operations["thread_reorder"];
 		trace?: never;
@@ -1836,7 +1836,7 @@ export interface paths {
 		 * Room thread list removed
 		 * @description
 		 *
-		 *     List removed threads in a room. Requires the `ThreadRemove` permission.
+		 *     List removed threads in a room. Requires the `ThreadDelete` permission.
 		 */
 		get: operations["thread_list_removed"];
 		put?: never;
@@ -2039,12 +2039,12 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Dm thread create (TODO)
+		 * Dm thread create
 		 * @description
 		 *
-		 *     Create a thread outside of a room, for dms
+		 *     Create a dm or group dm thread (outside of a room)
 		 */
-		post: operations["thread_create"];
+		post: operations["dm_thread_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3014,6 +3014,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/undelete": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * User undelete (TODO)
+		 * @description
+		 *
+		 *     Allows undeleting a user provided they haven't been garbage collected yet
+		 */
+		post: operations["user_undelete"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/voice/region": {
 		parameters: {
 			query?: never;
@@ -3406,11 +3428,136 @@ export interface components {
 			/** @enum {string} */
 			type: "UserUnsuspend";
 		} | {
+			/** @description friend request sent to another user */
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "FriendRequest";
+		} | {
+			/** @description friend request from another user accepted */
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "FriendAccept";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "FriendDelete";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "BlockCreate";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "BlockDelete";
+		} | {
+			metadata: {
+				session_id: components["schemas"]["Id"];
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "SessionLogin";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				session_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "SessionUpdate";
+		} | {
+			metadata: {
+				session_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "SessionDelete";
+		} | {
+			/** @description auth state changed */
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "AuthUpdate";
+		} | {
+			/** @description user entered sudo mode */
+			metadata: {
+				session_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "AuthSudo";
+		} | {
+			metadata: {
+				application_id: components["schemas"]["Id"];
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "ApplicationCreate";
+		} | {
+			metadata: {
+				application_id: components["schemas"]["Id"];
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "ApplicationUpdate";
+		} | {
+			metadata: {
+				application_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "ApplicationDelete";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				email: components["schemas"]["EmailAddr"];
+			};
+			/** @enum {string} */
+			type: "EmailCreate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+				email: components["schemas"]["EmailAddr"];
+			};
+			/** @enum {string} */
+			type: "EmailUpdate";
+		} | {
+			metadata: {
+				email: components["schemas"]["EmailAddr"];
+			};
+			/** @enum {string} */
+			type: "EmailDelete";
+		} | {
+			metadata: {
+				application_id: components["schemas"]["Id"];
+				scopes: components["schemas"]["Scope"][];
+			};
+			/** @enum {string} */
+			type: "ConnectionCreate";
+		} | {
+			metadata: {
+				application_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "ConnectionDelete";
+		} | {
 			metadata: {
 				user_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "UserRegistered";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "UserDelete";
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
@@ -3899,7 +4046,6 @@ export interface components {
 		};
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
-			actor_user_id: components["schemas"]["Id"];
 			target_user_id: components["schemas"]["Id"];
 		};
 		MessageMigrate: {
@@ -3942,7 +4088,6 @@ export interface components {
 		MessagePin: {
 			message_id: components["schemas"]["Id"];
 			reason?: string | null;
-			user_id: components["schemas"]["Id"];
 		};
 		MessageSync: {
 			room: components["schemas"]["Room"];
@@ -4172,10 +4317,10 @@ export interface components {
 				/** @enum {string} */
 				type: "MemberRemove";
 			})
-			| (components["schemas"]["MessageMember"] & {
+			| {
 				/** @enum {string} */
 				type: "MemberJoin";
-			})
+			}
 			| (components["schemas"]["MessageCall"] & {
 				/** @enum {string} */
 				type: "Call";
@@ -4556,6 +4701,22 @@ export interface components {
 				 * @description A monotonically increasing id that is updated every time this room is modified.
 				 */
 				version_id: string;
+				welcome_thread_id?: null | components["schemas"]["Id"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_RoomBan: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				/** @description when the ban was created */
+				created_at: components["schemas"]["Time"];
+				expires_at?: null | components["schemas"]["Time"];
+				/** @description the supplied reason why this user should be banned */
+				reason?: string | null;
+				/** @description the user who is banned */
+				user_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -4666,6 +4827,8 @@ export interface components {
 				 */
 				position?: number | null;
 				recipient?: null | components["schemas"]["User"];
+				/** @description for dm threads, this is who the dm is with */
+				recipients: components["schemas"]["User"][];
 				room_id?: null | components["schemas"]["Id"];
 				/** Format: int64 */
 				root_message_count?: number | null;
@@ -4723,34 +4886,28 @@ export interface components {
 		 */
 		Permission:
 			| "Admin"
-			| "BotsAdd"
-			| "BotsManage"
-			| "EmojiAdd"
+			| "IntegrationsManage"
 			| "EmojiManage"
 			| "EmojiUseExternal"
 			| "InviteCreate"
 			| "InviteManage"
 			| "MemberBan"
-			| "MemberBanManage"
 			| "MemberBridge"
 			| "MemberKick"
-			| "MemberManage"
+			| "MemberNicknameManage"
 			| "MessageAttachments"
 			| "MessageCreate"
 			| "MessageDelete"
-			| "MessageEdit"
 			| "MessageEmbeds"
 			| "MessageMassMention"
 			| "MessageMove"
 			| "MessagePin"
-			| "ProfileAvatar"
-			| "ProfileOverride"
+			| "MemberNickname"
 			| "ReactionAdd"
-			| "ReactionClear"
+			| "ReactionPurge"
 			| "RoleApply"
 			| "RoleManage"
 			| "RoomManage"
-			| "ServerAdmin"
 			| "ServerMetrics"
 			| "ServerOversee"
 			| "ServerReports"
@@ -4758,24 +4915,16 @@ export interface components {
 			| "TagManage"
 			| "ThreadArchive"
 			| "ThreadCreateChat"
-			| "ThreadCreateDocument"
-			| "ThreadCreateEvent"
-			| "ThreadCreateForumLinear"
-			| "ThreadCreateForumTree"
+			| "ThreadCreateForum"
 			| "ThreadCreatePrivate"
 			| "ThreadCreatePublic"
-			| "ThreadCreateTable"
 			| "ThreadCreateVoice"
-			| "ThreadDelete"
+			| "ThreadRemove"
 			| "ThreadEdit"
 			| "ThreadForward"
 			| "ThreadLock"
-			| "ThreadPin"
+			| "ThreadManage"
 			| "ThreadPublish"
-			| "UserDms"
-			| "UserProfile"
-			| "UserSessions"
-			| "UserStatus"
 			| "View"
 			| "ViewAuditLog"
 			| "VoiceConnect"
@@ -4956,7 +5105,11 @@ export interface components {
 			position: number;
 			role_id: components["schemas"]["Id"];
 		};
-		/** @description A room */
+		/** @description A room is a collection of members and acls in the form of roles. Each room
+		 *     has an audit log to log administrative actions.
+		 *
+		 *     Default rooms, which most people are concerned with, contain threads, emoji,
+		 *     and so on for instant messaging. */
 		Room: {
 			archived_at?: null | components["schemas"]["Time"];
 			description?: string | null;
@@ -4988,6 +5141,7 @@ export interface components {
 			 * @description A monotonically increasing id that is updated every time this room is modified.
 			 */
 			version_id: string;
+			welcome_thread_id?: null | components["schemas"]["Id"];
 		};
 		/** @description represents a restriction on who can join the room */
 		RoomBan: {
@@ -5117,6 +5271,7 @@ export interface components {
 			icon?: null | components["schemas"]["Id"];
 			name?: string | null;
 			public?: boolean | null;
+			welcome_thread_id?: null | components["schemas"]["Id"];
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server";
@@ -5376,6 +5531,8 @@ export interface components {
 			 */
 			position?: number | null;
 			recipient?: null | components["schemas"]["User"];
+			/** @description for dm threads, this is who the dm is with */
+			recipients: components["schemas"]["User"][];
 			room_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			root_message_count?: number | null;
@@ -5393,6 +5550,8 @@ export interface components {
 			name: string;
 			/** @description not safe for work */
 			nsfw?: boolean;
+			/** @description the recipient(s) for this dm/gdm */
+			recipients?: components["schemas"]["Id"][] | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this thread */
@@ -5428,7 +5587,7 @@ export interface components {
 			position?: number | null;
 		};
 		/** @enum {string} */
-		ThreadType: "Chat" | "Dm" | "Gdm" | "Forum" | "Voice";
+		ThreadType: "Chat" | "Dm" | "Gdm" | "Forum" | "Voice" | "Category";
 		/**
 		 * Format: date-time
 		 * @description A date, time, and timezone. Serialized to rfc3339.
@@ -5627,6 +5786,10 @@ export interface components {
 		};
 		/** @description represents an update that a user would like to make to their voice state */
 		VoiceStateUpdate: {
+			self_deaf: boolean;
+			self_mute: boolean;
+			self_screen: boolean;
+			self_video: boolean;
 			thread_id: components["schemas"]["Id"];
 		};
 		WebauthnAuthenticator: {
@@ -7512,7 +7675,7 @@ export interface operations {
 				};
 				content: {
 					"application/json":
-						components["schemas"]["PaginationResponse_RoomMember"];
+						components["schemas"]["PaginationResponse_RoomBan"];
 				};
 			};
 		};
@@ -7562,7 +7725,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["RoomMember"];
+					"application/json": components["schemas"]["RoomBan"];
 				};
 			};
 		};
@@ -9002,7 +9165,7 @@ export interface operations {
 			};
 		};
 	};
-	thread_create: {
+	dm_thread_create: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -10708,6 +10871,27 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["User"];
 				};
+			};
+		};
+	};
+	user_undelete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description User id */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
