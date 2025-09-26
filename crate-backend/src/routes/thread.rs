@@ -160,12 +160,15 @@ async fn dm_thread_create(
     let data = s.data();
     match json.ty {
         ThreadType::Dm => {
-            if json.recipients.len() != 1 {
+            let Some(recipients) = &json.recipients else {
+                return Err(Error::BadStatic("dm thread is missing recipients"));
+            };
+            if recipients.len() != 1 {
                 return Err(Error::BadStatic(
                     "dm threads can only be with a single person",
                 ));
             }
-            let target_user_id = json.recipients.first().unwrap();
+            let target_user_id = recipients.first().unwrap();
             let (thread, is_new) = srv.users.init_dm(auth_user.id, *target_user_id).await?;
             s.broadcast(MessageSync::ThreadCreate {
                 thread: thread.clone(),
@@ -177,7 +180,10 @@ async fn dm_thread_create(
             }
         }
         ThreadType::Gdm => {
-            json.recipients.push(auth_user.id);
+            let Some(recipients) = &mut json.recipients else {
+                return Err(Error::BadStatic("gdm thread is missing recipients"));
+            };
+            recipients.push(auth_user.id);
         }
         _ => {
             return Err(Error::BadStatic(
@@ -200,11 +206,13 @@ async fn dm_thread_create(
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     let mut members = vec![];
 
-    for id in json.recipients {
-        data.thread_member_put(thread_id, id, ThreadMemberPut {})
-            .await?;
-        let thread_member = data.thread_member_get(thread_id, id).await?;
-        members.push(thread_member);
+    if let Some(recipients) = &json.recipients {
+        for id in recipients {
+            data.thread_member_put(thread_id, *id, ThreadMemberPut {})
+                .await?;
+            let thread_member = data.thread_member_get(thread_id, *id).await?;
+            members.push(thread_member);
+        }
     }
 
     s.broadcast(MessageSync::ThreadCreate {

@@ -211,8 +211,7 @@ pub struct ThreadCreate {
 
     /// the recipient(s) for this dm/gdm
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 10)))]
-    #[serde(default)]
-    pub recipients: Vec<UserId>,
+    pub recipients: Option<Vec<UserId>>,
     // /// the initial message for this thread
     // pub starter_message: MessageCreate,
 }
