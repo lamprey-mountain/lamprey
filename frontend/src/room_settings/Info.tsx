@@ -57,6 +57,23 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
+	const threads = api.threads.list(() => props.room.id);
+	const archiveAllThreads = () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: "really archive everything?",
+			cont(confirmed) {
+				if (!confirmed) return;
+				console.log(threads());
+				for (const thread of threads()?.items ?? []) {
+					ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
+						params: { path: { thread_id: thread.id } },
+					});
+				}
+			},
+		});
+	};
+
 	return (
 		<>
 			<h2>info</h2>
@@ -120,6 +137,13 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<br />
 			<div class="danger">
 				<h3>danger zone</h3>
+				<label>
+					<button onClick={archiveAllThreads}>archive all</button>
+					<span style="margin-left:8px">
+						archive all threads in this room
+					</span>
+				</label>
+				<br />
 				<label>
 					<button onClick={() => alert("todo")}>transfer ownership</button>
 					<span style="margin-left:8px">
