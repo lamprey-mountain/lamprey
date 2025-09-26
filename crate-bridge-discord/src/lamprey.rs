@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, misc::UserIdReq, pagination::PaginationQuery, ApplicationId, Media, MediaCreate,
-    MediaCreateSource, MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId,
-    ThreadType, User, UserId,
+    self, misc::UserIdReq, pagination::PaginationQuery, Media, MediaCreate, MediaCreateSource,
+    MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId, ThreadType, User,
+    UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -20,6 +20,7 @@ use crate::{
 pub struct Lamprey {
     recv: mpsc::Receiver<LampreyMessage>,
     client: Client,
+    globals: Arc<Globals>,
 }
 
 pub enum LampreyMessage {
@@ -122,7 +123,9 @@ impl Lamprey {
         let token = globals.config.lamprey_token.clone();
         let base_url = globals.config.lamprey_base_url.clone();
         let ws_url = globals.config.lamprey_ws_url.clone();
-        let handle = Handle { globals };
+        let handle = Handle {
+            globals: globals.clone(),
+        };
         let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
         client.http = if let Some(base_url) = base_url {
             client.http.with_base_url(base_url.parse().unwrap())
@@ -134,14 +137,18 @@ impl Lamprey {
         } else {
             client.syncer
         };
-        Self { client, recv }
+        Self {
+            client,
+            recv,
+            globals,
+        }
     }
 
     pub async fn connect(mut self) -> Result<()> {
         tokio::spawn(async move {
             while let Some(msg) = self.recv.recv().await {
                 info!("got msg");
-                match handle(msg, &self.client.http).await {
+                match handle(self.globals.clone(), msg, &self.client.http).await {
                     Ok(_) => {}
                     Err(err) => error!("{err}"),
                 };
@@ -153,10 +160,13 @@ impl Lamprey {
     }
 }
 
-async fn handle(msg: LampreyMessage, http: &Http) -> Result<()> {
+async fn handle(globals: Arc<Globals>, msg: LampreyMessage, http: &Http) -> Result<()> {
     match msg {
         LampreyMessage::Handle { response } => {
-            let _ = response.send(LampreyHandle { http: http.clone() });
+            let _ = response.send(LampreyHandle {
+                globals,
+                http: http.clone(),
+            });
         }
     }
     Ok(())
@@ -164,6 +174,7 @@ async fn handle(msg: LampreyMessage, http: &Http) -> Result<()> {
 
 pub struct LampreyHandle {
     http: Http,
+    globals: Arc<Globals>,
 }
 
 impl LampreyHandle {
@@ -283,7 +294,7 @@ impl LampreyHandle {
         room_id: RoomId,
         bot: bool,
     ) -> Result<User> {
-        let app_id: ApplicationId = "01943cc1-62e0-7c0e-bb9b-a4ff42864d69".parse().unwrap();
+        let app_id = self.globals.config.lamprey_application_id;
         let user = self
             .http
             .puppet_ensure(

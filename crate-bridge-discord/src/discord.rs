@@ -599,7 +599,7 @@ impl EventHandler for Handler {
                                 return;
                             };
 
-                            let lamprey_room_id: RoomId = match room_id_str.parse() {
+                            let lamprey_room_id: RoomId = match dbg!(room_id_str).parse() {
                                 Ok(id) => id,
                                 Err(_) => {
                                     send_ephemeral_reply(&ctx, &command, "error: invalid room id")

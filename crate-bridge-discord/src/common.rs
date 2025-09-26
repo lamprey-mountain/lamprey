@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{RoomId, ThreadId};
+use common::v1::types::{ApplicationId, RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
@@ -32,6 +32,7 @@ pub struct Config {
     pub lamprey_base_url: Option<String>,
     pub lamprey_ws_url: Option<String>,
     pub lamprey_cdn_url: Option<String>,
+    pub lamprey_application_id: ApplicationId,
     pub discord_token: String,
     pub otel_trace_endpoint: Option<String>,
     pub rust_log: String,
