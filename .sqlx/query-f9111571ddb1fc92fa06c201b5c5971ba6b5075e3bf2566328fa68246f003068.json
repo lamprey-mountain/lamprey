@@ -6,12 +6,12 @@
       {
         "name": "lamprey_room_id!: String",
         "ordinal": 0,
-        "type_info": "Null"
+        "type_info": "Text"
       },
       {
         "name": "discord_guild_id!: String",
         "ordinal": 1,
-        "type_info": "Null"
+        "type_info": "Integer"
       },
       {
         "name": "continuous",

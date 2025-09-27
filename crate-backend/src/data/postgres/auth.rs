@@ -199,7 +199,7 @@ impl DataAuth for Postgres {
 
     async fn oauth_refresh_token_create(&self, token: String, session_id: SessionId) -> Result<()> {
         sqlx::query!(
-            "INSERT INTO oauth_refresh_token (token, session_id) VALUES ($1, $2)",
+            "INSERT INTO oauth_refresh_token (token, session_id, created_at) VALUES ($1, $2, now())",
             token,
             *session_id,
         )
