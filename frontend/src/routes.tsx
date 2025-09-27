@@ -22,6 +22,7 @@ import { Feed } from "./Feed.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { AdminSettings } from "./AdminSettings.tsx";
+import { Forum } from "./Forum.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -160,6 +161,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 				</Show>
 				<Show when={thread()!.type === "Voice"}>
 					<Voice thread={thread()!} />
+				</Show>
+				<Show when={thread()!.type === "Forum"}>
+					<Forum thread={thread()!} />
 				</Show>
 				<Show
 					when={thread()!.type !== "Voice" && flags.has("thread_member_list")}
