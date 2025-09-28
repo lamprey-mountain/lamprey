@@ -12,3 +12,6 @@ pub const MAX_UNIQUE_REACTIONS: u32 = 20;
 
 /// the maximum number of custom emoji per room. clients should be able to fetch everything in one request.
 pub const MAX_CUSTOM_EMOJI: u32 = 1024;
+
+/// the maximum number of pinned messages per thread. clients should be able to fetch everything in one request.
+pub const MAX_PINNED_MESSAGES: u32 = 1024;

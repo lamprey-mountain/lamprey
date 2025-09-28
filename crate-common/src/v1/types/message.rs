@@ -45,8 +45,9 @@ pub struct Message {
 
     pub mentions: Mentions,
 
-    // pub pinned_at: Option<Time>,
-    // pub pinned_order: Option<u8>,
+    /// exists if this message is pinned
+    pub pinned: Option<Pinned>,
+
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
     pub created_at: Option<Time>,
@@ -55,6 +56,38 @@ pub struct Message {
     pub edited_at: Option<Time>,
     // // drop the is_?
     // pub is_ephemeral: bool,
+}
+
+/// information about a pinned message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Pinned {
+    /// when this was pinned
+    pub time: Time,
+
+    /// the position of this pin. lower numbers come first.
+    pub position: u16,
+}
+
+/// reorder pinned messages
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct PinsReorder {
+    /// the messages to reorder
+    #[serde(default)]
+    #[validate(length(min = 1, max = 1024))]
+    pub messages: Vec<PinsReorderItem>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct PinsReorderItem {
+    pub id: MessageId,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub position: Option<Option<u16>>,
 }
 
 /// who/what this message notified on send

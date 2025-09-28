@@ -6,7 +6,9 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use common::v1::types::{AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection};
+use common::v1::types::{
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection, PinsReorder,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -771,6 +773,199 @@ async fn message_roots(
     Ok(Json(res))
 }
 
+/// Pin create
+///
+/// - Newly pinned messages are pinned to the top (position 0).
+/// - There can be a maximum of 1024 pinned messages.
+#[utoipa::path(
+    put,
+    path = "/thread/{thread_id}/pin/{message_id}",
+    params(
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id")
+    ),
+    tags = [
+        "message",
+        "badge.perm.MessagePin",
+    ],
+    responses(
+        (status = OK, description = "success"),
+    ),
+)]
+async fn message_pin_create(
+    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::MessagePin)?;
+
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+
+    s.data().message_pin_create(thread_id, message_id).await?;
+
+    let message = s
+        .data()
+        .message_get(thread_id, message_id, auth_user.id)
+        .await?;
+
+    s.broadcast_thread(
+        thread_id,
+        auth_user.id,
+        MessageSync::MessageUpdate { message },
+    )
+    .await?;
+
+    Ok(StatusCode::OK)
+}
+
+/// Pin delete
+#[utoipa::path(
+    delete,
+    path = "/thread/{thread_id}/pin/{message_id}",
+    params(
+        ("thread_id", description = "Thread id"),
+        ("message_id", description = "Message id")
+    ),
+    tags = [
+        "message",
+        "badge.perm.MessagePin",
+    ],
+    responses(
+        (status = OK, description = "success"),
+    ),
+)]
+async fn message_pin_delete(
+    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::MessagePin)?;
+
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+
+    s.data().message_pin_delete(thread_id, message_id).await?;
+
+    let message = s
+        .data()
+        .message_get(thread_id, message_id, auth_user.id)
+        .await?;
+
+    s.broadcast_thread(
+        thread_id,
+        auth_user.id,
+        MessageSync::MessageUpdate { message },
+    )
+    .await?;
+
+    Ok(StatusCode::OK)
+}
+
+/// Pin reorder
+#[utoipa::path(
+    patch,
+    path = "/thread/{thread_id}/pin",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = [
+        "message",
+        "badge.perm.MessagePin",
+    ],
+    responses(
+        (status = OK, description = "Reorder pinned messages success"),
+    ),
+)]
+async fn message_pin_reorder(
+    Path((thread_id,)): Path<(ThreadId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<PinsReorder>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    json.validate()?;
+    let srv = s.services();
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::MessagePin)?;
+
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.archived_at.is_some() {
+        return Err(Error::BadStatic("thread is archived"));
+    }
+    if thread.deleted_at.is_some() {
+        return Err(Error::BadStatic("thread is removed"));
+    }
+
+    s.data()
+        .message_pin_reorder(thread_id, json.clone())
+        .await?;
+
+    // broadcast update for all affected messages
+    for item in json.messages {
+        let message = s
+            .data()
+            .message_get(thread_id, item.id, auth_user.id)
+            .await?;
+        s.broadcast_thread(
+            thread_id,
+            auth_user.id,
+            MessageSync::MessageUpdate { message },
+        )
+        .await?;
+    }
+
+    Ok(StatusCode::OK)
+}
+
+/// Message pin list
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/pin",
+    params(
+        PaginationQuery<MessageId>,
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["message"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "List pinned messages success"),
+    ),
+)]
+async fn message_pin_list(
+    Path(thread_id): Path<ThreadId>,
+    Query(q): Query<PaginationQuery<MessageId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
+    perms.ensure_view()?;
+    let mut res = data.message_pin_list(thread_id, auth_user.id, q).await?;
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+    Ok(Json(res))
+}
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
@@ -786,4 +981,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_roots))
         .routes(routes!(message_moderate))
         .routes(routes!(message_migrate))
+        .routes(routes!(message_pin_create))
+        .routes(routes!(message_pin_delete))
+        .routes(routes!(message_pin_reorder))
+        .routes(routes!(message_pin_list))
 }

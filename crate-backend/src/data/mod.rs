@@ -9,7 +9,7 @@ use common::v1::types::user_config::UserConfigGlobal;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
-    MediaPatch, NotificationId, Permission, PermissionOverwriteType, Relationship,
+    MediaPatch, NotificationId, Permission, PermissionOverwriteType, PinsReorder, Relationship,
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
     SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
@@ -325,6 +325,15 @@ pub trait DataMessage {
         user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
+    async fn message_pin_create(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn message_pin_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn message_pin_reorder(&self, thread_id: ThreadId, reorder: PinsReorder) -> Result<()>;
+    async fn message_pin_list(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
 }

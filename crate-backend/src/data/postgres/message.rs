@@ -5,7 +5,8 @@ use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::error::Result;
+use crate::consts::MAX_PINNED_MESSAGES;
+use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
     DbMessageCreate, Message, MessageId, MessageVerId, PaginationDirection, PaginationQuery,
@@ -36,6 +37,7 @@ pub struct DbMessage {
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
     pub removed_at: Option<time::PrimitiveDateTime>,
+    pub pinned: Option<serde_json::Value>,
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -117,6 +119,7 @@ impl From<DbMessage> for Message {
             edited_at: row.edited_at.map(Time::from),
             created_at: row.created_at.map(Time::from),
             removed_at: row.removed_at.map(Time::from),
+            pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
         }
     }
 }
@@ -426,6 +429,134 @@ impl DataMessage for Postgres {
                 rmid,
                 depth as i32
             ),
+            |i: &Message| i.id.to_string()
+        )
+    }
+
+    async fn message_pin_create(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+        let pin_count: i64 = query_scalar!(
+            "select count(*) from message where thread_id = $1 and pinned is not null",
+            *thread_id
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .unwrap_or_default();
+
+        if pin_count >= MAX_PINNED_MESSAGES as i64 {
+            return Err(Error::BadStatic("too many pins"));
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        query!(
+            "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where thread_id = $1 and pinned is not null",
+            *thread_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        let pinned = serde_json::json!({
+            "time": Time::now_utc(),
+            "position": 0,
+        });
+
+        query!(
+            "update message set pinned = $1 where id = $2 and thread_id = $3",
+            pinned,
+            *message_id,
+            *thread_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    async fn message_pin_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+        query!(
+            "update message set pinned = null where id = $1 and thread_id = $2",
+            *message_id,
+            *thread_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn message_pin_reorder(
+        &self,
+        thread_id: ThreadId,
+        reorder: common::v1::types::PinsReorder,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        for item in reorder.messages {
+            if let Some(Some(pos)) = item.position {
+                let old_pinned: Option<serde_json::Value> = query_scalar!(
+                    "select pinned from message where id = $1 and thread_id = $2",
+                    *item.id,
+                    *thread_id
+                )
+                .fetch_one(&mut *tx)
+                .await?;
+
+                let time = if let Some(p) = old_pinned {
+                    p.get("time")
+                        .cloned()
+                        .unwrap_or_else(|| serde_json::to_value(Time::now_utc()).unwrap())
+                } else {
+                    serde_json::to_value(Time::now_utc()).unwrap()
+                };
+
+                let pinned = serde_json::json!({
+                    "time": time,
+                    "position": pos,
+                });
+                query!(
+                    "update message set pinned = $1 where id = $2 and thread_id = $3",
+                    pinned,
+                    *item.id,
+                    *thread_id
+                )
+                .execute(&mut *tx)
+                .await?;
+            } else if let Some(None) = item.position {
+                // unpin
+                query!(
+                    "update message set pinned = null where id = $1 and thread_id = $2",
+                    *item.id,
+                    *thread_id
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn message_pin_list(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_pin_list.sql",
+                *thread_id,
+                *user_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/message_pin_list_count.sql", *thread_id),
             |i: &Message| i.id.to_string()
         )
     }

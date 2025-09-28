@@ -36,4 +36,7 @@ select
 from message as msg
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
-where thread_id = $1 and msg.version_id = $3 and msg.deleted_at is null
+where is_latest and thread_id = $1 and msg.deleted_at is null and msg.pinned is not null
+  and msg.id > $3 AND msg.id < $4
+order by (CASE WHEN $5 = 'f' THEN (msg.pinned->>'position')::int END), (msg.pinned->>'position')::int DESC, (CASE WHEN $5 = 'f' THEN msg.id END), msg.id DESC
+LIMIT $6
