@@ -290,7 +290,7 @@ async fn room_metrics(
     post,
     path = "/room/{room_id}/transfer-ownership",
     params(("room_id", description = "Room id")),
-    tags = ["auth", "badge.sudo"],
+    tags = ["room", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
 async fn room_transfer_ownership(
