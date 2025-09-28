@@ -6,7 +6,7 @@ use axum::{extract::State, Json};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageMember, MessageSync, MessageType,
     PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember, ThreadMemberPut,
-    ThreadMembership, UserId,
+    ThreadMembership, ThreadType, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -122,6 +122,11 @@ pub async fn thread_member_add(
     }
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.ty == ThreadType::Category {
+        return Err(Error::BadStatic(
+            "cannot edit thread member list in category threads",
+        ));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -223,6 +228,11 @@ pub async fn thread_member_delete(
     }
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.ty == ThreadType::Category {
+        return Err(Error::BadStatic(
+            "cannot edit thread member list in category threads",
+        ));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }

@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection, PinsReorder,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection, PinsReorder, ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -57,6 +57,9 @@ async fn message_create(
     let srv = s.services();
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread.ty == ThreadType::Category {
+        return Err(Error::BadStatic("cannot send messages in category threads"));
+    }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
