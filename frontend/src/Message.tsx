@@ -257,6 +257,34 @@ export function MessageView(props: MessageProps) {
 					<Time date={date} animGroup="message-ts" />
 				</article>
 			);
+		} else if (props.message.type === "MessagePinned") {
+			return (
+				<article
+					class="message menu-message oneline"
+					data-message-id={props.message.id}
+					classList={{
+						separate: props.separate,
+						notseparate: !props.separate,
+					}}
+				>
+					<div class="emojiicon">&#x1F4CC;</div>
+					<div class="content">
+						<div
+							class="body markdown"
+							classList={{ local: props.message.is_local }}
+						>
+							<span
+								class="author menu-user"
+								data-user-id={props.message.author_id}
+							>
+								<Author message={props.message} thread={thread()} />
+							</span>{" "}
+							pinned a message
+						</div>
+					</div>
+					<Time date={date} animGroup="message-ts" />
+				</article>
+			);
 		} else if (props.message.type === "ThreadRename") {
 			return (
 				<article
