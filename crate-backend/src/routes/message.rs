@@ -7,7 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationDirection, PinsReorder, ThreadType,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessagePin, MessageType,
+    PaginationDirection, PinsReorder, ThreadMemberPut, ThreadMembership, ThreadType,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
@@ -17,8 +18,8 @@ use validator::Validate;
 use crate::{
     error::Error,
     types::{
-        Message, MessageCreate, MessageId, MessagePatch, MessageSync, MessageVerId,
-        PaginationQuery, PaginationResponse, Permission, ThreadId,
+        DbMessageCreate, Message, MessageCreate, MessageId, MessagePatch, MessageSync,
+        MessageVerId, PaginationQuery, PaginationResponse, Permission, ThreadId,
     },
     ServerState,
 };
@@ -803,6 +804,7 @@ async fn message_pin_create(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
+    let data = s.data();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
@@ -814,10 +816,9 @@ async fn message_pin_create(
         return Err(Error::BadStatic("thread is removed"));
     }
 
-    s.data().message_pin_create(thread_id, message_id).await?;
+    data.message_pin_create(thread_id, message_id).await?;
 
-    let message = s
-        .data()
+    let message = data
         .message_get(thread_id, message_id, auth_user.id)
         .await?;
 
@@ -825,6 +826,46 @@ async fn message_pin_create(
         thread_id,
         auth_user.id,
         MessageSync::MessageUpdate { message },
+    )
+    .await?;
+
+    let notice_message_id = data
+        .message_create(DbMessageCreate {
+            thread_id,
+            attachment_ids: vec![],
+            author_id: auth_user.id,
+            embeds: vec![],
+            message_type: MessageType::MessagePinned(MessagePin {
+                pinned_message_id: message_id,
+            }),
+            edited_at: None,
+            created_at: None,
+        })
+        .await?;
+    let mut notice_message = data
+        .message_get(thread_id, notice_message_id, auth_user.id)
+        .await?;
+
+    let user_id = auth_user.id;
+    let tm = data.thread_member_get(thread_id, user_id).await;
+    if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
+        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+            .await?;
+        let thread_member = data.thread_member_get(thread_id, user_id).await?;
+        let msg = MessageSync::ThreadMemberUpsert {
+            member: thread_member,
+        };
+        s.broadcast_thread(thread_id, user_id, msg).await?;
+    }
+
+    s.presign_message(&mut notice_message).await?;
+    srv.threads.invalidate(thread_id).await; // message count
+    s.broadcast_thread(
+        thread_id,
+        auth_user.id,
+        MessageSync::MessageCreate {
+            message: notice_message,
+        },
     )
     .await?;
 

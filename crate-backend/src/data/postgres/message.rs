@@ -50,6 +50,7 @@ pub enum DbMessageType {
     MemberAdd,
     MemberRemove,
     MemberJoin,
+    MessagePinned,
 }
 
 impl From<MessageType> for DbMessageType {
@@ -60,6 +61,7 @@ impl From<MessageType> for DbMessageType {
             MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
             MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
             MessageType::MemberJoin => DbMessageType::MemberJoin,
+            MessageType::MessagePinned(_) => DbMessageType::MessagePinned,
             _ => todo!(),
         }
     }
@@ -106,6 +108,11 @@ impl From<DbMessage> for Message {
                         .expect("invalid data in db"),
                 ),
                 DbMessageType::MemberJoin => MessageType::MemberJoin,
+                DbMessageType::MessagePinned => MessageType::MessagePinned(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
                 ty => {
                     panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }

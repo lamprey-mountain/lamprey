@@ -233,11 +233,8 @@ pub enum MessageType {
     /// (TODO) a message copied from somewhere else
     Forward(MessageDefaultTagged),
 
-    /// (TODO) a message was pinned
+    /// a message was pinned
     MessagePinned(MessagePin),
-
-    /// (TODO) a message was unpinned
-    MessageUnpinned(MessagePin),
 
     #[cfg(feature = "feat_message_move")]
     /// (TODO) one or more messages were moved
@@ -280,12 +277,11 @@ pub enum MessageType {
     // Nudge,
 }
 
-/// Information about a message being pinned or unpinned
+/// Information about a message being pinned
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessagePin {
-    pub message_id: MessageId,
-    pub reason: Option<String>,
+    pub pinned_message_id: MessageId,
 }
 
 /// Information about a thread being renamed
@@ -511,7 +507,6 @@ impl MessageType {
             #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => true,
             MessageType::MessagePinned(_) => true,
-            MessageType::MessageUnpinned(_) => true,
             MessageType::MemberAdd(_) => false,
             MessageType::MemberRemove(_) => false,
             MessageType::MemberJoin => true,
