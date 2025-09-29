@@ -799,6 +799,7 @@ async fn message_pin_create(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
@@ -827,6 +828,21 @@ async fn message_pin_create(
     )
     .await?;
 
+    if let Some(room_id) = thread.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessagePin {
+                thread_id,
+                message_id,
+            },
+        })
+        .await?;
+    }
+
     Ok(StatusCode::OK)
 }
 
@@ -850,6 +866,7 @@ async fn message_pin_delete(
     Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
@@ -878,6 +895,21 @@ async fn message_pin_delete(
     )
     .await?;
 
+    if let Some(room_id) = thread.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessageUnpin {
+                thread_id,
+                message_id,
+            },
+        })
+        .await?;
+    }
+
     Ok(StatusCode::OK)
 }
 
@@ -900,6 +932,7 @@ async fn message_pin_reorder(
     Path((thread_id,)): Path<(ThreadId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<PinsReorder>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
@@ -931,6 +964,18 @@ async fn message_pin_reorder(
             auth_user.id,
             MessageSync::MessageUpdate { message },
         )
+        .await?;
+    }
+
+    if let Some(room_id) = thread.room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MessagePinReorder { thread_id },
+        })
         .await?;
     }
 

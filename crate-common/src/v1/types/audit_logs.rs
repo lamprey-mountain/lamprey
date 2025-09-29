@@ -322,11 +322,23 @@ pub enum AuditLogEntryType {
     RoomUndelete {
         room_id: RoomId,
     },
+
+    MessagePin {
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
+
+    MessageUnpin {
+        thread_id: ThreadId,
+        message_id: MessageId,
+    },
+
+    MessagePinReorder {
+        thread_id: ThreadId,
+    },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
     // // TODO: log these once pinning, removing, restoring is implemented
-    // MessagePin,
-    // MessageUnpin,
     // MessageRemove,
     // MessageRestore,
 }
