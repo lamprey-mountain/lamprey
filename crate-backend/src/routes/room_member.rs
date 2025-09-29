@@ -475,8 +475,8 @@ async fn room_member_delete(
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Err(Error::NotFound);
     }
+    let room = srv.rooms.get(room_id, None).await?;
     if auth_user.id != target_user_id {
-        let room = srv.rooms.get(room_id, None).await?;
         if room.owner_id != Some(auth_user.id) {
             let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
             let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
@@ -484,6 +484,9 @@ async fn room_member_delete(
                 return Err(Error::BadStatic("your rank is too low"));
             }
         }
+    }
+    if room.owner_id == Some(target_user_id) {
+        return Err(Error::BadStatic("cannot ban room owner"));
     }
     d.room_member_set_membership(room_id, target_user_id, RoomMembership::Leave {})
         .await?;
@@ -589,6 +592,9 @@ async fn room_ban_create(
             if rank <= other_rank {
                 return Err(Error::BadStatic("your rank is too low"));
             }
+        }
+        if room.owner_id == Some(target_user_id) {
+            return Err(Error::BadStatic("cannot ban room owner"));
         }
     }
 
