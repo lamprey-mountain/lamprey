@@ -23,7 +23,8 @@
                 "ThreadRename",
                 "MemberAdd",
                 "MemberRemove",
-                "MemberJoin"
+                "MemberJoin",
+                "MessagePinned"
               ]
             }
           }

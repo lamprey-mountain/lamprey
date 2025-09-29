@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where thread_id = $1 and pinned is not null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e646899046d4023b05dca20d6612db51c46a9ab23bcdeba9adbdff13eeea3270"
+}

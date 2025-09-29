@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update room_member set membership = 'Leave', left_at = now() where room_id = $1 and membership = 'Join'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a87a9635453e2dbaf5e6416f9efe36aa09335c22cef8a98ec12e02e5f4c91085"
+}

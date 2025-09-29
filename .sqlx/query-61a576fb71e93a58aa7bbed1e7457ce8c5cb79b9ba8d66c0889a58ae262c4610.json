@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "with\nreaction_counts as (\n    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $3) as self_reacted\n    from reaction\n    group by message_id, key\n),\nmessage_reaction as (\n    select message_id,\n        json_agg(jsonb_build_object(\n            'key', key,\n            'count', count,\n            'self', self_reacted\n        ) order by pos) as json\n    from reaction_counts\n    group by message_id\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    msg.removed_at,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere thread_id = $1 and msg.id = $2 and msg.deleted_at is null\n  and msg.id > $4 and msg.id < $5\norder by (case when $6 = 'f' then msg.version_id end), msg.version_id desc limit $7\n",
+  "query": "with\nreaction_counts as (\n    select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $2) as self_reacted\n    from reaction\n    group by message_id, key\n),\nmessage_reaction as (\n    select message_id,\n        json_agg(jsonb_build_object(\n            'key', key,\n            'count', count,\n            'self', self_reacted\n        ) order by pos) as json\n    from reaction_counts\n    group by message_id\n)\nselect\n    msg.type as \"message_type: DbMessageType\",\n    msg.id,\n    msg.thread_id, \n    msg.version_id,\n    msg.ordering,\n    msg.content,\n    msg.metadata,\n    msg.reply_id,\n    msg.override_name,\n    msg.author_id,\n    msg.created_at,\n    msg.edited_at,\n    msg.deleted_at,\n    msg.removed_at,\n    msg.pinned,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    msg.embeds as \"embeds\",\n    r.json as \"reactions\"\nfrom message as msg\nleft join att_json on att_json.version_id = msg.version_id\nleft join message_reaction r on r.message_id = msg.id\nwhere is_latest and thread_id = $1 and msg.deleted_at is null\n  and msg.id > $3 AND msg.id < $4\norder by (CASE WHEN $5 = 'f' THEN msg.id END), msg.id DESC LIMIT $6\n",
   "describe": {
     "columns": [
       {
@@ -17,7 +17,8 @@
                 "ThreadRename",
                 "MemberAdd",
                 "MemberRemove",
-                "MemberJoin"
+                "MemberJoin",
+                "MessagePinned"
               ]
             }
           }
@@ -90,23 +91,27 @@
       },
       {
         "ordinal": 14,
+        "name": "pinned",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
         "name": "attachments!",
         "type_info": "Json"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "embeds",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "reactions",
         "type_info": "Json"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid",
         "Uuid",
         "Uuid",
@@ -130,10 +135,11 @@
       true,
       true,
       true,
+      true,
       null,
       true,
       null
     ]
   },
-  "hash": "5772eb8b8efbcf399b67af217ed1809f592ef2eab7dba8f77f0a866e0934db17"
+  "hash": "61a576fb71e93a58aa7bbed1e7457ce8c5cb79b9ba8d66c0889a58ae262c4610"
 }

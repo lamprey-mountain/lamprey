@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update message set pinned = null where id = $1 and thread_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ca8021b5291fc129a0345f8321b29e5d53445042bd87b06e1bcf48646bff0dac"
+}

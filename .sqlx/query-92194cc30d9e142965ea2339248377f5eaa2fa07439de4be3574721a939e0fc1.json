@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update room set deleted_at = now(), version_id = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "92194cc30d9e142965ea2339248377f5eaa2fa07439de4be3574721a939e0fc1"
+}
