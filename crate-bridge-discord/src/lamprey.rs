@@ -40,7 +40,12 @@ impl EventHandler for Handle {
         Ok(())
     }
 
-    async fn sync(&mut self, msg: MessageSync) -> std::result::Result<(), Self::Error> {
+    async fn error(&mut self, err: String) -> Result<()> {
+        error!("lamprey sync error: {err}");
+        Ok(())
+    }
+
+    async fn sync(&mut self, msg: MessageSync) -> Result<()> {
         match msg {
             MessageSync::ThreadCreate { thread } => {
                 info!("chat upsert thread");
