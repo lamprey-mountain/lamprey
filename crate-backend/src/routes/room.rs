@@ -305,7 +305,10 @@ async fn room_transfer_ownership(
     let data = s.data();
     let target_user_id = json.owner_id;
 
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    // ensure that target user is a room member
+    data.room_member_get(room_id, target_user_id).await?;
+
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     let room_start = srv.rooms.get(room_id, Some(auth_user.id)).await?;
     if room_start.owner_id != Some(auth_user.id) {
