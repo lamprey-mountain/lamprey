@@ -40,7 +40,7 @@ pub struct DbUserCreate {
     pub system: bool,
 }
 
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, PartialEq)]
 #[sqlx(type_name = "membership")]
 pub enum DbMembership {
     Join,

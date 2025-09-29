@@ -111,6 +111,10 @@ pub enum MessageSync {
         room: Room,
     },
 
+    RoomDelete {
+        room_id: RoomId,
+    },
+
     ThreadCreate {
         thread: Thread,
     },

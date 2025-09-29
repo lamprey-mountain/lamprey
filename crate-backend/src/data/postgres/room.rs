@@ -5,11 +5,11 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::gen_paginate;
 use crate::types::{
     DbRoom, DbRoomCreate, DbRoomType, PaginationDirection, PaginationQuery, PaginationResponse,
     Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId,
 };
+use crate::{gen_paginate, Error};
 
 use crate::data::DataRoom;
 
@@ -281,5 +281,61 @@ impl DataRoom for Postgres {
         .execute(&self.pool)
         .await?;
         Ok(version_id)
+    }
+
+    async fn room_delete(&self, room_id: RoomId) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        let version_id = RoomVerId::new();
+        query!(
+            r#"update room set deleted_at = now(), version_id = $2 where id = $1"#,
+            *room_id,
+            *version_id
+        )
+        .execute(&mut *tx)
+        .await?;
+        query!(
+            r#"update room_member set membership = 'Leave', left_at = now() where room_id = $1 and membership = 'Join'"#,
+            *room_id,
+        )
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn room_undelete(&self, room_id: RoomId) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        let room_deleted_at =
+            query_scalar!(r#"select deleted_at from room where id = $1"#, *room_id)
+                .fetch_one(&mut *tx)
+                .await?
+                .ok_or(Error::BadStatic("room is not deleted"))?;
+
+        let version_id = RoomVerId::new();
+        query!(
+            r#"update room set deleted_at = null, version_id = $2 where id = $1"#,
+            *room_id,
+            *version_id
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        query!(
+            r#"
+            update room_member
+            set membership = 'Join', left_at = null
+            where room_id = $1
+            and membership = 'Leave'
+            and left_at = $2
+            "#,
+            *room_id,
+            room_deleted_at
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
     }
 }

@@ -314,9 +314,16 @@ pub enum AuditLogEntryType {
     AdminBroadcast {
         changes: Vec<AuditLogChange>,
     },
+
+    RoomDelete {
+        room_id: RoomId,
+    },
+
+    RoomUndelete {
+        room_id: RoomId,
+    },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
-    // RoomDelete,
     // // TODO: log these once pinning, removing, restoring is implemented
     // MessagePin,
     // MessageUnpin,

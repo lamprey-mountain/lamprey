@@ -380,6 +380,7 @@ impl Connection {
         let auth_check = match &msg {
             MessageSync::RoomCreate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomUpdate { room } => AuthCheck::Room(room.id),
+            MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),
             MessageSync::ThreadCreate { thread } => AuthCheck::Thread(thread.id),
             MessageSync::ThreadUpdate { thread } => AuthCheck::Thread(thread.id),
             MessageSync::MessageCreate { message } => AuthCheck::Thread(message.thread_id),

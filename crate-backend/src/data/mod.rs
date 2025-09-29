@@ -85,6 +85,8 @@ pub trait DataRoom {
     async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
     async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics>;
     async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
+    async fn room_delete(&self, room_id: RoomId) -> Result<()>;
+    async fn room_undelete(&self, room_id: RoomId) -> Result<()>;
 }
 
 #[async_trait]

@@ -266,18 +266,33 @@ impl DataRoomMember for Postgres {
         membership: RoomMembership,
     ) -> Result<()> {
         let membership: DbMembership = membership.into();
-        query!(
-            r#"
+        if membership == DbMembership::Join {
+            query!(
+                r#"
             UPDATE room_member
-        	SET membership = $3
+        	SET membership = $3, left_at = null, joined_at = now()
             WHERE room_id = $1 AND user_id = $2
             "#,
-            *room_id,
-            *user_id,
-            membership as _,
-        )
-        .execute(&self.pool)
-        .await?;
+                *room_id,
+                *user_id,
+                membership as _,
+            )
+            .execute(&self.pool)
+            .await?;
+        } else {
+            query!(
+                r#"
+            UPDATE room_member
+        	SET membership = $3, left_at = now(), joined_at = null
+            WHERE room_id = $1 AND user_id = $2
+            "#,
+                *room_id,
+                *user_id,
+                membership as _,
+            )
+            .execute(&self.pool)
+            .await?;
+        }
         Ok(())
     }
 

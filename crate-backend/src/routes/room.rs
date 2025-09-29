@@ -8,8 +8,8 @@ use axum::{
 };
 use axum_extra::TypedHeader;
 use common::v1::types::{
-    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, RoomMetrics, RoomType,
-    UserId, SERVER_ROOM_ID,
+    application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
+    RoomMetrics, RoomType, UserId, SERVER_ROOM_ID,
 };
 use headers::ETag;
 use serde::{Deserialize, Serialize};
@@ -213,6 +213,121 @@ async fn room_edit(
     Ok(Json(room))
 }
 
+/// Room delete
+#[utoipa::path(
+    delete,
+    path = "/room/{room_id}",
+    params(
+        ("room_id", description = "Room id"),
+    ),
+    tags = ["room", "badge.sudo"],
+    responses((status = OK, description = "success")),
+)]
+async fn room_delete(
+    Path((room_id,)): Path<(RoomId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+
+    let room = srv.rooms.get(room_id, None).await?;
+    if room.owner_id != Some(auth_user.id) {
+        return Err(Error::BadStatic("you aren't the room owner"));
+    }
+
+    s.broadcast_room(room_id, auth_user.id, MessageSync::RoomDelete { room_id })
+        .await?;
+
+    data.room_delete(room_id).await?;
+    srv.rooms.invalidate(room_id).await;
+    srv.perms.invalidate_room_all(room_id);
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomDelete { room_id },
+    })
+    .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomDelete { room_id },
+    })
+    .await?;
+
+    Ok(())
+}
+
+/// Room undelete
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/undelete",
+    params(
+        ("room_id", description = "Room id"),
+    ),
+    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    responses((status = OK, description = "success")),
+)]
+async fn room_undelete(
+    Path((room_id,)): Path<(RoomId,)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::Admin)?;
+
+    data.room_undelete(room_id).await?;
+    srv.rooms.invalidate(room_id).await;
+    srv.perms.invalidate_room_all(room_id);
+
+    let room = srv.rooms.get(room_id, None).await?;
+    s.broadcast_room(room_id, auth_user.id, MessageSync::RoomCreate { room })
+        .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomUndelete { room_id },
+    })
+    .await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomUndelete { room_id },
+    })
+    .await?;
+
+    Ok(())
+}
+
 /// Room audit logs
 #[utoipa::path(
     get,
@@ -378,6 +493,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_get))
         .routes(routes!(room_list))
         .routes(routes!(room_edit))
+        .routes(routes!(room_delete))
+        .routes(routes!(room_undelete))
         .routes(routes!(room_audit_logs))
         .routes(routes!(room_ack))
         .routes(routes!(room_metrics))
