@@ -127,13 +127,14 @@ async fn message_context(
     let after = data.message_list(thread_id, auth_user.id, after_q).await?;
     let message = data
         .message_get(thread_id, message_id, auth_user.id)
-        .await?;
+        .await
+        .ok();
     let mut res = ContextResponse {
         items: before
             .items
             .into_iter()
-            .chain([message])
-            .chain(after.items.into_iter())
+            .chain(message)
+            .chain(after.items)
             .collect(),
         total: after.total,
         has_after: after.has_more,
