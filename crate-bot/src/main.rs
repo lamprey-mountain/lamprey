@@ -160,7 +160,6 @@ impl Handle {
                 metadata: None,
                 reply_id: Some(message.id),
                 override_name: None,
-                nonce: None,
                 embeds: vec![],
                 created_at: None,
             };
@@ -277,7 +276,6 @@ impl Handle {
                                 metadata: None,
                                 reply_id: None,
                                 override_name: None,
-                                nonce: None,
                                 embeds: vec![],
                                 created_at: None,
                             };

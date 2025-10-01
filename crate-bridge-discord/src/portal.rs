@@ -476,7 +476,6 @@ impl Portal {
                 .and_then(|m| m.nick)
                 .or(message.author.global_name)
                 .or(Some(message.author.name.clone())),
-            nonce: None,
             embeds: vec![],
             created_at: Some(
                 OffsetDateTime::from_unix_timestamp(message.timestamp.unix_timestamp())

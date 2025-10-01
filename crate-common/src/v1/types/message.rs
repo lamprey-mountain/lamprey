@@ -36,8 +36,7 @@ pub struct Message {
     pub thread_id: ThreadId,
     pub version_id: MessageVerId,
 
-    /// unique string sent by the client to identify this message
-    /// maybe i will replace with a header so nonces can be used everywhere
+    /// unique string sent by the client via idempotency-key to identify this message
     pub nonce: Option<String>,
 
     /// the id of who sent this message
@@ -172,16 +171,6 @@ pub struct MessageCreate {
     #[serde(default)]
     pub override_name: Option<String>,
 
-    /// used so the client can know if the message was sent or not
-    ///
-    /// deprecated: Ideompotency-Key
-    // TODO(#87): actually support Ideompotency-Key
-    // TODO(#246): use this to deduplicate messages
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    #[serde(default)]
-    pub nonce: Option<String>,
-
-    #[cfg(feature = "feat_custom_embeds")]
     #[serde(default)]
     pub embeds: Vec<EmbedCreate>,
 
@@ -223,7 +212,6 @@ pub struct MessagePatch {
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<Option<String>>,
 
-    #[cfg(feature = "feat_custom_embeds")]
     pub embeds: Option<Vec<EmbedCreate>>,
 
     pub edited_at: Option<Time>,

@@ -175,7 +175,7 @@ impl ServiceMessages {
             }
         }
         s.presign_message(&mut message).await?;
-        message.nonce = nonce.or(json.nonce);
+        message.nonce = nonce;
 
         let tm = data.thread_member_get(thread_id, user_id).await;
         if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {

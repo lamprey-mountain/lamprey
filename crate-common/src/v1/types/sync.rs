@@ -38,7 +38,6 @@ pub enum MessageClient {
     /// heartbeat
     Pong,
 
-    #[cfg(feature = "feat_voice")]
     /// send arbitrary data to a voice server
     // NOTE: should i split this into multiple messages? i'll probably keep it how it is currently tbh
     // TODO: handle multiple connections/servers (or find out how to split one connection amongst multiple hosts?)
@@ -249,8 +248,7 @@ pub enum MessageSync {
         room_id: RoomId,
     },
 
-    #[cfg(feature = "feat_voice")]
-    /// receive arbitrary data from a voice server
+    /// receive a signalling message from a voice server
     VoiceDispatch {
         /// who to send this dispatch to
         user_id: UserId,

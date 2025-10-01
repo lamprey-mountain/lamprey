@@ -21,34 +21,6 @@ pub mod chat;
 pub mod forum;
 pub mod voice;
 
-// TODO: remove
-#[cfg(feature = "feat_thread_type_event")]
-pub mod event;
-
-// TODO: remove
-#[cfg(feature = "feat_thread_type_document")]
-pub mod document;
-
-// TODO: remove
-#[cfg(feature = "feat_thread_type_table")]
-pub mod table;
-
-// TODO: remove, will re-add if needed later
-#[cfg(feature = "feat_thread_type_report")]
-pub mod report;
-
-#[cfg(feature = "feat_thread_type_event")]
-use event::{ThreadTypeEventPrivate, ThreadTypeEventPublic};
-
-#[cfg(feature = "feat_thread_type_document")]
-use document::{ThreadTypeDocumentPrivate, ThreadTypeDocumentPublic};
-
-#[cfg(feature = "feat_thread_type_table")]
-use table::{ThreadTypeTablePrivate, ThreadTypeTablePublic};
-
-#[cfg(feature = "feat_thread_type_report")]
-use report::{ThreadTypeReportPrivate, ThreadTypeReportPublic};
-
 /// A thread
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -166,27 +138,6 @@ pub enum ThreadType {
 
     /// category for grouping threads together
     Category,
-
-    #[cfg(feature = "feat_thread_type_event")]
-    /// event
-    // seems surprisingly hard to get right
-    Event,
-
-    #[cfg(feature = "feat_thread_type_document")]
-    /// document
-    // maybe some crdt document/wiki page...?
-    // another far future thing that needs design
-    Document,
-
-    #[cfg(feature = "feat_thread_type_table")]
-    // arbitrary data storage? like a spreadsheet or database table?
-    Table,
-
-    #[cfg(feature = "feat_thread_type_report")]
-    Report,
-    // Calendar,
-    // Files,
-    // Redex,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
