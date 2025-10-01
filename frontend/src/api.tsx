@@ -219,7 +219,6 @@ export function createApi(
 			typing.set(thread_id, new Set([...t, user_id]));
 
 			const timeout = setTimeout(() => {
-				console.log("remove typing");
 				const t = typing.get(thread_id)!;
 				t.delete(user_id);
 				typing.set(thread_id, new Set(t));
@@ -233,7 +232,7 @@ export function createApi(
 			} else {
 				const tt = new Map();
 				tt.set(user_id, timeout);
-				tt.set(thread_id, tt);
+				typing_timeout.set(thread_id, tt);
 			}
 		} else if (msg.type === "ThreadAck") {
 			// TODO
@@ -279,7 +278,8 @@ export function createApi(
 				if (t) {
 					t.delete(m.author_id);
 					typing.set(m.thread_id, new Set(t));
-					clearTimeout(typing_timeout.get(m.thread_id)!.get(m.author_id));
+					const tt = typing_timeout.get(m.thread_id)?.get(m.author_id);
+					if (tt) clearTimeout(tt);
 				}
 			}
 
