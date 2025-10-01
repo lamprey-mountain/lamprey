@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -484,6 +484,74 @@ pub enum InteractionStatus {
 //     Cancelled,
 //     Ratelimit,
 // }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageMigrate {
+    /// which messages to move
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    pub message_ids: Vec<MessageId>,
+
+    /// must be in same room (for now...)
+    pub target_id: ThreadId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageModerate {
+    /// which messages to delete
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    pub delete: Vec<MessageId>,
+
+    /// which messages to remove
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    pub remove: Vec<MessageId>,
+
+    /// which messages to restore
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    pub restore: Vec<MessageId>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RepliesQuery {
+    /// how deeply to fetch replies
+    #[serde(default = "fn_one")]
+    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 8)))]
+    pub depth: u16,
+
+    /// how many replies to fetch per branch
+    pub breadth: Option<u16>,
+}
+
+/// always returns one
+fn fn_one() -> u16 {
+    1
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct ContextQuery {
+    pub to_start: Option<MessageId>,
+    pub to_end: Option<MessageId>,
+    pub limit: Option<u16>,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ContextResponse {
+    pub items: Vec<Message>,
+    pub total: u64,
+    pub has_after: bool,
+    pub has_before: bool,
+}
 
 impl Diff<Message> for MessagePatch {
     fn changes(&self, other: &Message) -> bool {

@@ -7,11 +7,10 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessagePin, MessageType,
-    PaginationDirection, PinsReorder, ThreadMemberPut, ThreadMembership, ThreadType,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
+    MessageMigrate, MessageModerate, MessagePin, MessageType, PaginationDirection, PinsReorder,
+    RepliesQuery, ThreadMemberPut, ThreadMembership, ThreadType,
 };
-use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -79,22 +78,7 @@ async fn message_create(
     Ok((StatusCode::CREATED, Json(message)))
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams)]
-struct ContextQuery {
-    to_start: Option<MessageId>,
-    to_end: Option<MessageId>,
-    limit: Option<u16>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
-struct ContextResponse {
-    items: Vec<Message>,
-    total: u64,
-    has_after: bool,
-    has_before: bool,
-}
-
-/// Message get context
+/// Message context
 ///
 /// More efficient than calling List messages twice
 #[utoipa::path(
@@ -497,44 +481,7 @@ async fn message_version_delete(
     Ok(Json(()))
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageBulkDelete {
-    /// which messages to delete
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    message_ids: Vec<MessageId>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageMigrate {
-    /// which messages to move
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    message_ids: Vec<MessageId>,
-
-    /// must be in same room (for now...)
-    target_id: ThreadId,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Validate)]
-struct MessageModerate {
-    /// which messages to delete
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    delete: Vec<MessageId>,
-
-    /// which messages to remove
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    remove: Vec<MessageId>,
-
-    /// which messages to restore
-    #[serde(default)]
-    #[validate(length(min = 1, max = 128))]
-    restore: Vec<MessageId>,
-}
-
-/// Message moderate (WIP)
+/// Message moderate
 ///
 /// Bulk remove, restore, or delete messages.
 ///
@@ -547,7 +494,6 @@ struct MessageModerate {
 /// - Removing a message hides it from all non-moderators and the sender.
 /// - Removal is reversible via restoration, unlike deletion.
 /// - Removed messages are never garbage collected.
-/// - There is (will be) an endpoint for deleting all removed messages.
 /// - This is a "softer" form of deletion, intended for moderators you don't fully trust.
 ///
 /// Permissions:
@@ -730,23 +676,6 @@ async fn message_migrate(
     Json(_json): Json<MessageMigrate>,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
-}
-
-// TODO: move these structs to common
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
-struct RepliesQuery {
-    /// how deeply to fetch replies
-    #[serde(default = "fn_one")]
-    #[validate(range(min = 1, max = 8))]
-    depth: u16,
-
-    /// how many replies to fetch per branch
-    breadth: Option<u16>,
-}
-
-/// always returns one
-fn fn_one() -> u16 {
-    1
 }
 
 /// Message replies
@@ -1116,6 +1045,7 @@ async fn message_pin_list(
     }
     Ok(Json(res))
 }
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
