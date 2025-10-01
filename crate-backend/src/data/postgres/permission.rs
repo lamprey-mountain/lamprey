@@ -47,6 +47,7 @@ impl DataPermission for Postgres {
         Ok(perms)
     }
 
+    // NOTE: unused
     async fn permission_thread_get(
         &self,
         user_id: UserId,

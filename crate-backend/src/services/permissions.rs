@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
 use moka::future::Cache;
 use uuid::Uuid;
@@ -62,9 +63,76 @@ impl ServicePermissions {
             .map_err(|err| err.fake_clone())
     }
 
-    pub async fn for_thread(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
+    async fn for_thread_inner(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
         let srv = self.state.services();
         let data = self.state.data();
+        let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+        let (mut perms, roles) = if let Some(room_id) = thread.room_id {
+            let room = srv.rooms.get(room_id, None).await?;
+            if room.owner_id == Some(user_id) {
+                let mut p = Permissions::empty();
+                p.add(Permission::View);
+                p.add(Permission::Admin);
+                return Ok(p);
+            }
+
+            let member = data.room_member_get(room_id, user_id).await?;
+            (self.for_room(user_id, room_id).await?, member.roles)
+        } else {
+            data.thread_member_get(thread_id, user_id).await?;
+            let mut p = Permissions::empty();
+            p.add(Permission::View);
+            for a in EVERYONE_TRUSTED {
+                p.add(*a);
+            }
+            (p, vec![])
+        };
+
+        // NOTE: currently there is a max depth of one - this will break if permissions need to be resolved recursively
+        if let Some(parent_id) = thread.parent_id {
+            let parent = srv.threads.get(parent_id, Some(user_id)).await?;
+            for o in parent.permission_overwrites {
+                if o.ty == PermissionOverwriteType::User {
+                    if o.id != *user_id {
+                        continue;
+                    }
+                } else if o.ty == PermissionOverwriteType::Role {
+                    if !roles.contains(&o.id.into()) {
+                        continue;
+                    }
+                }
+                for p in o.allow {
+                    perms.add(p);
+                }
+                for p in o.deny {
+                    perms.remove(p);
+                }
+            }
+        }
+
+        for o in thread.permission_overwrites {
+            if o.ty == PermissionOverwriteType::User {
+                if o.id != *user_id {
+                    continue;
+                }
+            } else if o.ty == PermissionOverwriteType::Role {
+                if !roles.contains(&o.id.into()) {
+                    continue;
+                }
+            }
+            for p in o.allow {
+                perms.add(p);
+            }
+            for p in o.deny {
+                perms.remove(p);
+            }
+        }
+
+        Ok(perms)
+    }
+
+    pub async fn for_thread(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
+        let srv = self.state.services();
         let t = srv.threads.get(thread_id, Some(user_id)).await?;
 
         self.cache_perm_thread
@@ -74,20 +142,7 @@ impl ServicePermissions {
                     t.room_id.unwrap_or_else(|| Uuid::nil().into()),
                     thread_id,
                 ),
-                async {
-                    if let Some(room_id) = t.room_id {
-                        let room = srv.rooms.get(room_id, None).await?;
-                        if room.owner_id == Some(user_id) {
-                            let mut p = Permissions::empty();
-                            p.add(Permission::View);
-                            p.add(Permission::Admin);
-                            return Result::Ok(p);
-                        }
-                    }
-
-                    let perms = data.permission_thread_get(user_id, thread_id).await?;
-                    Result::Ok(perms)
-                },
+                self.for_thread_inner(user_id, thread_id),
             )
             .await
             .map_err(|err| err.fake_clone())

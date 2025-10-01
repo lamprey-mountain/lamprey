@@ -179,7 +179,6 @@ pub struct ThreadCreate {
     pub user_limit: Option<u64>,
     // /// the initial message for this thread
     // pub starter_message: MessageCreate,
-
     pub parent_id: Option<ThreadId>,
 }
 
