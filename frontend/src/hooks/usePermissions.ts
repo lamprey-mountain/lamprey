@@ -1,5 +1,5 @@
 import { createMemo } from "solid-js";
-import type { Permission } from "sdk";
+import type { Permission, PermissionOverwrite } from "sdk";
 import { useApi } from "../api";
 
 export function usePermissions(
@@ -91,12 +91,12 @@ export function usePermissions(
 		if (tid) {
 			console.log("[perms] in thread", tid);
 			const thread = api.threads.fetch(() => tid)();
-			if (thread && thread.permission_overwrites) {
-				const overwrites = thread.permission_overwrites;
 
-				const memberRoleIds = new Set(member.roles);
-				if (everyoneRole) memberRoleIds.add(everyoneRole.id);
+			const memberRoleIds = new Set(member.roles);
+			if (everyoneRole) memberRoleIds.add(everyoneRole.id);
 
+			const applyOverwrites = (overwrites: PermissionOverwrite[] | undefined) => {
+				if (!overwrites) return;
 				const roleOverwrites = overwrites.filter((o) =>
 					o.type === "Role" && memberRoleIds.has(o.id)
 				);
@@ -115,7 +115,15 @@ export function usePermissions(
 					for (const p of userOverwrite.allow) finalPermissions.add(p);
 					for (const p of userOverwrite.deny) finalPermissions.delete(p);
 				}
+			};
+
+			if (thread?.parent_id) {
+				console.log("[perms] has parent thread", thread.parent_id);
+				const parentThread = api.threads.fetch(() => thread.parent_id!)();
+				applyOverwrites(parentThread?.permission_overwrites);
 			}
+
+			applyOverwrites(thread?.permission_overwrites);
 		}
 
 		console.log("[perms] resolved perms", finalPermissions);
