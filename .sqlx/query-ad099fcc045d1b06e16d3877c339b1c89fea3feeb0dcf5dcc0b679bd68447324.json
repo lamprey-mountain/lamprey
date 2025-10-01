@@ -89,7 +89,8 @@
                       "VoiceMute",
                       "VoicePriority",
                       "VoiceSpeak",
-                      "VoiceVideo"
+                      "VoiceVideo",
+                      "MessageRemove"
                     ]
                   }
                 }
@@ -183,7 +184,8 @@
                       "VoiceMute",
                       "VoicePriority",
                       "VoiceSpeak",
-                      "VoiceVideo"
+                      "VoiceVideo",
+                      "MessageRemove"
                     ]
                   }
                 }

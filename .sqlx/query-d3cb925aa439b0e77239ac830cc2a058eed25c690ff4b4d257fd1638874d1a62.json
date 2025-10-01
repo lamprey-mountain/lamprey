@@ -89,7 +89,8 @@
                       "VoiceMute",
                       "VoicePriority",
                       "VoiceSpeak",
-                      "VoiceVideo"
+                      "VoiceVideo",
+                      "MessageRemove"
                     ]
                   }
                 }
