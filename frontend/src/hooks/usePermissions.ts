@@ -95,7 +95,9 @@ export function usePermissions(
 			const memberRoleIds = new Set(member.roles);
 			if (everyoneRole) memberRoleIds.add(everyoneRole.id);
 
-			const applyOverwrites = (overwrites: PermissionOverwrite[] | undefined) => {
+			const applyOverwrites = (
+				overwrites: PermissionOverwrite[] | undefined,
+			) => {
 				if (!overwrites) return;
 				const roleOverwrites = overwrites.filter((o) =>
 					o.type === "Role" && memberRoleIds.has(o.id)

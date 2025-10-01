@@ -15,21 +15,9 @@ export const permissions: Array<Perm> = [
 		group: "dangerous",
 	},
 	{
-		id: "BotsAdd",
-		name: "Add bots",
-		description: "(deprecated) add bots",
-		group: "room",
-	},
-	{
-		id: "BotsManage",
-		name: "Manage bots",
-		description: "Add and remove bots in this room",
-		group: "room",
-	},
-	{
-		id: "EmojiAdd",
-		name: "Add emoji",
-		description: "(deprecated) add emoji and remove emoji you have added",
+		id: "IntegrationsManage",
+		name: "Manage integrations",
+		description: "Can add and remove bots in this room",
 		group: "room",
 	},
 	{
@@ -76,9 +64,15 @@ export const permissions: Array<Perm> = [
 		group: "members",
 	},
 	{
-		id: "MemberManage",
-		name: "Manage members",
-		description: "Can change nicknames. That's pretty much it.",
+		id: "MemberNickname",
+		name: "Change nickname",
+		description: "Can change their own nickname.",
+		group: "members",
+	},
+	{
+		id: "MemberNicknameManage",
+		name: "Manage nicknames",
+		description: "Can change other's nicknames.",
 		group: "members",
 	},
 	{
@@ -122,7 +116,7 @@ export const permissions: Array<Perm> = [
 		group: "messages",
 	},
 	{
-		id: "ReactionClear",
+		id: "ReactionPurge",
 		name: "Purge reactions",
 		description: "Can remove all reactions from a message",
 		group: "messages",
@@ -136,7 +130,8 @@ export const permissions: Array<Perm> = [
 	{
 		id: "RoleManage",
 		name: "Manage roles",
-		description: "Can create, edit, delete, and reorder roles.",
+		description:
+			"Can create, edit, delete, and reorder roles. Can set and remove permission overwrites for threads.",
 		group: "room",
 	},
 	{
@@ -174,7 +169,7 @@ export const permissions: Array<Perm> = [
 		group: "threads",
 	},
 	{
-		id: "ThreadDelete",
+		id: "ThreadRemove",
 		name: "Remove threads",
 		description: "Can remove and restore threads",
 		group: "threads",
@@ -193,9 +188,9 @@ export const permissions: Array<Perm> = [
 		group: "threads",
 	},
 	{
-		id: "ThreadPin",
-		name: "Pin threads",
-		description: "(unimplemented) Can pin threads",
+		id: "ThreadManage",
+		name: "Manage threads",
+		description: "Can reorder threads.",
 		group: "threads",
 	},
 	// { id: "ThreadPublish" },
@@ -287,25 +282,24 @@ export const permissions: Array<Perm> = [
 ];
 
 export const moderatorPermissions: Array<Permission> = [
-	"BotsManage",
-	"EmojiAdd",
+	"IntegrationsManage",
 	"EmojiManage",
 	"InviteManage",
 	"MemberBan",
 	"MemberBridge",
 	"MemberKick",
-	"MemberManage",
+	"MemberNicknameManage",
 	"MessageDelete",
 	"MessageMassMention",
 	"MessagePin",
-	"ReactionClear",
+	"ReactionPurge",
 	"RoleApply",
 	"RoleManage",
 	"RoomManage",
-	"ThreadDelete",
+	"ThreadRemove",
 	"ThreadEdit",
 	"ThreadLock",
-	"ThreadPin",
+	"ThreadManage",
 	"ViewAuditLog",
 	"VoiceDeafen",
 	"VoiceDisconnect",
