@@ -405,83 +405,6 @@ async fn message_version_get(
     Ok(Json(message))
 }
 
-/// Message version delete
-#[utoipa::path(
-    delete,
-    path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",
-    params(
-        ("thread_id", description = "Thread id"),
-        ("message_id", description = "Message id"),
-        ("version_id", description = "Version id"),
-    ),
-    tags = [
-        "message",
-        "badge.perm-opt.MessageDelete",
-    ],
-    responses(
-        (status = NO_CONTENT, description = "delete message success"),
-    )
-)]
-async fn message_version_delete(
-    Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
-    Auth(auth_user): Auth,
-    State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
-) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let data = s.data();
-    let srv = s.services();
-    let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
-    let message = data
-        .message_version_get(thread_id, version_id, auth_user.id)
-        .await?;
-    if !message.message_type.is_deletable() {
-        return Err(Error::BadStatic("cant delete this message type"));
-    }
-    if message.author_id == auth_user.id {
-        perms.add(Permission::MessageDelete);
-    }
-    perms.ensure(Permission::MessageDelete)?;
-
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
-    }
-    if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
-    }
-    if thread.locked {
-        perms.ensure(Permission::ThreadLock)?;
-    }
-
-    data.message_version_delete(thread_id, version_id).await?;
-
-    let thread = s
-        .services()
-        .threads
-        .get(thread_id, Some(auth_user.id))
-        .await?;
-    if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessageVersionDelete {
-                thread_id,
-                message_id: message.id,
-                version_id,
-            },
-        })
-        .await?;
-    }
-
-    s.services().threads.invalidate(thread_id).await; // last version id, message count
-    Ok(Json(()))
-}
-
 /// Message moderate
 ///
 /// Bulk remove, restore, or delete messages.
@@ -1057,7 +980,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_delete))
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
-        .routes(routes!(message_version_delete))
         .routes(routes!(message_replies))
         .routes(routes!(message_roots))
         .routes(routes!(message_moderate))
