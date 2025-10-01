@@ -109,7 +109,8 @@ async fn thread_create_room(
             },
             nsfw: json.nsfw,
             bitrate: json.bitrate.map(|b| b as i32),
-            user_limit: json.bitrate.map(|u| u as i32),
+            user_limit: json.user_limit.map(|u| u as i32),
+            parent_id: json.parent_id.map(|i| *i),
         })
         .await?;
 
@@ -233,6 +234,7 @@ async fn dm_thread_create(
             nsfw: json.nsfw,
             bitrate: json.bitrate.map(|b| b as i32),
             user_limit: json.bitrate.map(|u| u as i32),
+            parent_id: None,
         })
         .await?;
 

@@ -111,6 +111,7 @@ pub struct DbThreadCreate {
     pub nsfw: bool,
     pub bitrate: Option<i32>,
     pub user_limit: Option<i32>,
+    pub parent_id: Option<Uuid>,
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]

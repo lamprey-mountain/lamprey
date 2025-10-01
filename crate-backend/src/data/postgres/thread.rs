@@ -39,8 +39,8 @@ impl DataThread for Postgres {
 
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -52,6 +52,7 @@ impl DataThread for Postgres {
             create.nsfw,
             create.bitrate,
             create.user_limit,
+            create.parent_id,
         )
         .execute(&mut *tx)
         .await?;
