@@ -240,6 +240,10 @@ pub enum MessageSync {
         emoji: EmojiCustom,
     },
 
+    EmojiUpdate {
+        emoji: EmojiCustom,
+    },
+
     EmojiDelete {
         emoji_id: EmojiId,
         room_id: RoomId,

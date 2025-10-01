@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiOwner};
+use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::UserId;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, EmojiId, MessageSync,
@@ -180,30 +180,58 @@ async fn emoji_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// /// Emoji update (TODO(#311))
-// ///
-// /// Edit a custom emoji.
-// #[utoipa::path(
-//     patch,
-//     path = "/room/{room_id}/emoji/{emoji_id}",
-//     params(
-//         ("room_id", description = "Room id"),
-//         ("emoji_id", description = "Emoji id"),
-//     ),
-//     tags = ["emoji"],
-//     responses(
-//         (status = NOT_MODIFIED, description = "not modified"),
-//         (status = OK, body = EmojiCustom, description = "success"),
-//     )
-// )]
-// async fn emoji_update(
-//     Path(_emoji_id): Path<EmojiId>,
-//     Auth(_auth_user_id): Auth,
-//     State(_s): State<Arc<ServerState>>,
-//     Json(_json): Json<EmojiCustomPatch>,
-// ) -> Result<Json<()>> {
-//     Err(Error::Unimplemented)
-// }
+/// Emoji update
+///
+/// Edit a custom emoji.
+#[utoipa::path(
+    patch,
+    path = "/room/{room_id}/emoji/{emoji_id}",
+    params(
+        ("room_id", description = "Room id"),
+        ("emoji_id", description = "Emoji id"),
+    ),
+    tags = ["emoji"],
+    responses(
+        (status = NOT_MODIFIED, description = "not modified"),
+        (status = OK, body = EmojiCustom, description = "success"),
+    )
+)]
+async fn emoji_update(
+    Path((room_id, emoji_id)): Path<(RoomId, EmojiId)>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<EmojiCustomPatch>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let data = s.data();
+    perms.ensure_view()?;
+    perms.ensure(Permission::EmojiManage)?;
+    data.emoji_update(emoji_id, json).await?;
+    let emoji = data.emoji_get(emoji_id).await?;
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::EmojiDelete { emoji_id },
+    })
+    .await?;
+
+    s.broadcast_room(
+        room_id,
+        auth_user.id,
+        MessageSync::EmojiUpdate {
+            emoji: emoji.clone(),
+        },
+    )
+    .await?;
+
+    Ok(Json(emoji))
+}
 
 /// Emoji list
 ///
@@ -306,7 +334,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(emoji_create))
         .routes(routes!(emoji_get))
         .routes(routes!(emoji_delete))
-        // .routes(routes!(emoji_update))
+        .routes(routes!(emoji_update))
         .routes(routes!(emoji_list))
         .routes(routes!(emoji_lookup))
 }

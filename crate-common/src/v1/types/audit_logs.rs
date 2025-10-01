@@ -348,7 +348,4 @@ pub enum AuditLogEntryType {
     },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,
-    // // TODO: log these once pinning, removing, restoring is implemented
-    // MessageRemove,
-    // MessageRestore,
 }

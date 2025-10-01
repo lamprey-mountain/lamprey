@@ -61,6 +61,4 @@ pub struct EmojiCustomCreate {
 pub struct EmojiCustomPatch {
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     pub name: Option<String>,
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    pub owner: Option<EmojiOwner>,
 }

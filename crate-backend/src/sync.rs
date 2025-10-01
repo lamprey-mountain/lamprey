@@ -474,6 +474,10 @@ impl Connection {
                 EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
                 EmojiOwner::User => AuthCheck::User(emoji.creator_id),
             },
+            MessageSync::EmojiUpdate { emoji } => match emoji.owner {
+                EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
+                EmojiOwner::User => AuthCheck::User(emoji.creator_id),
+            },
             MessageSync::EmojiDelete {
                 room_id,
                 emoji_id: _,
