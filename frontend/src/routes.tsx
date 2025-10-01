@@ -60,6 +60,7 @@ export const RoomNav = () => {
 
 export const RouteRoom = (p: RouteSectionProps) => {
 	const { t } = useCtx();
+	const ctx = useCtx();
 	const api = useApi();
 	const room = api.rooms.fetch(() => p.params.room_id);
 	return (
@@ -72,7 +73,10 @@ export const RouteRoom = (p: RouteSectionProps) => {
 			</header>
 			<Show when={room()}>
 				<RoomHome room={room()!} />
-				<Show when={flags.has("room_member_list")}>
+				<Show
+					when={flags.has("room_member_list") &&
+						ctx.userConfig().frontend.showMembers !== false}
+				>
 					<RoomMembers room={room()!} />
 				</Show>
 			</Show>
@@ -124,6 +128,7 @@ export const RouteThreadSettings = (p: RouteSectionProps) => {
 
 export const RouteThread = (p: RouteSectionProps) => {
 	const { t } = useCtx();
+	const ctx = useCtx();
 	const api = useApi();
 	const thread = api.threads.fetch(() => p.params.thread_id);
 	const room = api.rooms.fetch(() => thread()?.room_id!);
@@ -163,7 +168,8 @@ export const RouteThread = (p: RouteSectionProps) => {
 					<Category thread={thread()!} />
 				</Show>
 				<Show
-					when={thread()!.type !== "Voice" && flags.has("thread_member_list")}
+					when={thread()!.type !== "Voice" && flags.has("thread_member_list") &&
+						ctx.userConfig().frontend.showMembers !== false}
 				>
 					<ThreadMembers thread={thread()!} />
 				</Show>

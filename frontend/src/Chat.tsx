@@ -5,6 +5,7 @@ import {
 	on,
 	Show,
 	Switch,
+	useContext,
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
@@ -331,8 +332,20 @@ export const ChatMain = (props: ChatProps) => {
 };
 
 export const ChatHeader = (props: ChatProps) => {
+	const ctx = useCtx();
+	const toggleMembers = () => {
+		const c = ctx.userConfig();
+		ctx.setUserConfig({
+			...c,
+			frontend: {
+				...c.frontend,
+				showMembers: !(c.frontend.showMembers ?? true),
+			},
+		});
+	};
+
 	return (
-		<header class="chat-header">
+		<header class="chat-header" style="display:flex">
 			<b>{props.thread.name}</b>
 			<Show when={props.thread.description}>
 				<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
@@ -342,9 +355,12 @@ export const ChatHeader = (props: ChatProps) => {
 				<Match when={props.thread.deleted_at}>{" (removed)"}</Match>
 				<Match when={props.thread.archived_at}>{" (archived)"}</Match>
 			</Switch>
+			<div style="flex:1"></div>
+			<button onClick={toggleMembers}>members</button>
 		</header>
 	);
 };
+
 type RenderTimelineParams = {
 	items: Array<Message>;
 	read_marker_id: string | null;
