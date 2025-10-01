@@ -1,11 +1,8 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
-import { getTimestampFromUUID } from "sdk";
+import { getTimestampFromUUID, Thread } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { AvatarWithStatus, UserView } from "./User.tsx";
-import { tooltip } from "./Tooltip.tsx";
 import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
@@ -16,64 +13,11 @@ import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 
-export const RoomMembers = (props: { room: RoomT }) => {
-	const api = useApi();
-	const room_id = () => props.room.id;
-	const members = api.room_members.list(room_id);
-
-	return (
-		<ul class="member-list" data-room-id={props.room.id}>
-			<For
-				each={members()?.items.filter((m) => m.membership === "Join")}
-				fallback={
-					<div class="dim" style="text-align: center; margin-top: 8px">
-						no members!
-					</div>
-				}
-			>
-				{(member) => {
-					const user_id = () => member.user_id;
-					const user = api.users.fetch(user_id);
-
-					function name() {
-						let name: string | undefined | null = null;
-						if (member?.membership === "Join") name ??= member.override_name;
-
-						name ??= user()?.name;
-						return name;
-					}
-
-					return tooltip(
-						{
-							placement: "left-start",
-						},
-						<Show when={user()}>
-							<UserView
-								user={user()!}
-								room_member={member}
-							/>
-						</Show>,
-						<li class="menu-user" data-user-id={member.user_id}>
-							<AvatarWithStatus user={user()} />
-							<span class="text">
-								<span class="name">{name()}</span>
-								<Show when={false}>
-									<span class="status-message">asdf</span>
-								</Show>
-							</span>
-						</li>,
-					);
-				}}
-			</For>
-		</ul>
-	);
-};
-
-export const RoomHome = (props: { room: RoomT }) => {
+export const Category = (props: { thread: Thread }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
-	const room_id = () => props.room.id;
+	const room_id = () => props.thread.room_id!;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
@@ -102,7 +46,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 		const items = threadsResource()?.()?.items;
 		if (!items) return [];
 		// sort descending by id
-		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
+		return [...items].filter((t) => t.parent_id === props.thread.id).sort((
+			a,
+			b,
+		) => (a.id < b.id ? 1 : -1));
 	};
 
 	function createThread(room_id: string) {
@@ -121,24 +68,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 		});
 	}
 
-	function leaveRoom(_room_id: string) {
-		ctx.dispatch({
-			do: "modal.confirm",
-			text: "are you sure you want to leave?",
-			cont(confirmed) {
-				if (!confirmed) return;
-				ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
-					params: {
-						path: {
-							room_id: props.room.id,
-							user_id: api.users.cache.get("@self")!.id,
-						},
-					},
-				});
-			},
-		});
-	}
-
 	const user_id = () => api.users.cache.get("@self")?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
@@ -146,26 +75,26 @@ export const RoomHome = (props: { room: RoomT }) => {
 		<div class="room-home">
 			<div style="display:flex">
 				<div style="flex:1">
-					<h2>{props.room.name}</h2>
-					<p>{props.room.description}</p>
+					<h2>{props.thread.name}</h2>
+					<p>{props.thread.description}</p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
-					<button onClick={() => leaveRoom(room_id())}>leave room</button>
-					<A style="padding: 0 4px" href={`/room/${props.room.id}/settings`}>
+					<A
+						style="padding: 0 4px"
+						href={`/thread/${props.thread.id}/settings`}
+					>
 						settings
 					</A>
 				</div>
 			</div>
 			<Show when={flags.has("thread_quick_create")}>
 				<br />
-				<QuickCreate room={props.room} />
+				<QuickCreate thread={props.thread} />
 				<br />
 			</Show>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
-					{threadsResource()?.()?.total ?? getThreads().length} {threadFilter()}
-					{" "}
-					threads
+					{getThreads().length} {threadFilter()} threads
 				</h3>
 				<div class="thread-filter">
 					<button
@@ -241,7 +170,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 
 // NOTE the room id is reused as the thread id for draft messages and attachments
 const QuickCreate = (
-	props: { room: RoomT },
+	props: { thread: Thread },
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
@@ -264,7 +193,7 @@ const QuickCreate = (
 			do: "upload.init",
 			file,
 			local_id,
-			thread_id: props.room.id,
+			thread_id: props.thread.id,
 		});
 	}
 
@@ -274,23 +203,22 @@ const QuickCreate = (
 			"/api/v1/room/{room_id}/thread",
 			{
 				params: {
-					path: { room_id: props.room.id },
+					path: { room_id: props.thread.room_id! },
 				},
-				body: { name: "thread" },
+				body: { name: "thread", parent_id: props.thread.id },
 			},
 		);
 
 		if (!t.data) return;
-		handleSubmit(ctx, t.data.id, text, null as any, api, props.room.id);
+		handleSubmit(ctx, t.data.id, text, null as any, api, props.thread.id);
 		n(`/thread/${t.data.id}`);
 	};
 
 	const onChange = (state: EditorState) => {
-		// reuse room id as the thread id for draft messages
-		ctx.thread_editor_state.set(props.room.id, state);
+		ctx.thread_editor_state.set(props.thread.id, state);
 	};
 
-	const atts = () => ctx.thread_attachments.get(props.room.id);
+	const atts = () => ctx.thread_attachments.get(props.thread.id);
 	return (
 		<div class="message-input quick-create">
 			<div style="margin-bottom: 2px">quick create thread</div>
@@ -304,7 +232,7 @@ const QuickCreate = (
 						<For each={atts()}>
 							{(att) => (
 								<RenderUploadItem
-									thread_id={props.room.id}
+									thread_id={props.thread.id}
 									att={att}
 								/>
 							)}

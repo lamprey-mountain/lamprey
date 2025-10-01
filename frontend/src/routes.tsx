@@ -4,14 +4,7 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ThreadNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import {
-	createEffect,
-	createResource,
-	ErrorBoundary,
-	For,
-	Show,
-	VoidProps,
-} from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain } from "./Chat.tsx";
@@ -23,6 +16,7 @@ import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { AdminSettings } from "./AdminSettings.tsx";
 import { Forum } from "./Forum.tsx";
+import { Category } from "./Category.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -165,6 +159,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 				<Show when={thread()!.type === "Forum"}>
 					<Forum thread={thread()!} />
 				</Show>
+				<Show when={thread()!.type === "Category"}>
+					<Category thread={thread()!} />
+				</Show>
 				<Show
 					when={thread()!.type !== "Voice" && flags.has("thread_member_list")}
 				>
@@ -175,7 +172,6 @@ export const RouteThread = (p: RouteSectionProps) => {
 		</>
 	);
 };
-
 export const RouteHome = () => {
 	const { t } = useCtx();
 	return (

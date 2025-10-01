@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
-import { A, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
@@ -11,6 +11,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	const api = useApi();
 	const [voice] = useVoice();
 	const params = useParams();
+	const nav = useNavigate();
 
 	// track drag ids
 	const [dragging, setDragging] = createSignal<string | null>(null);
@@ -307,6 +308,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 									onDragEnter={handleDragEnter}
 									onDragOver={handleDragOver}
 									onDrop={handleDropCategory}
+									onClick={[nav, `/thread/${category!.id}`]}
 								>
 									{category!.name}
 								</div>
