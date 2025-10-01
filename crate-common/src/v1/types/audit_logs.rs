@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::v1::types::{
     application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
     AuditLogEntryId, EmojiId, InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId,
-    RoomId, SessionId, ThreadId, UserId,
+    RoomId, SessionId, ThreadId, ThreadReorderItem, UserId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -345,6 +345,10 @@ pub enum AuditLogEntryType {
 
     MessagePinReorder {
         thread_id: ThreadId,
+    },
+
+    ThreadReorder {
+        threads: Vec<ThreadReorderItem>,
     },
     // // TODO: for server audit log; log when routes for these are implemented
     // ServerUpdate,

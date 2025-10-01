@@ -401,6 +401,7 @@ async fn thread_reorder(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<ThreadReorder>,
 ) -> Result<()> {
     let data = s.data();
@@ -446,6 +447,18 @@ async fn thread_reorder(
         s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
             .await?;
     }
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::ThreadReorder {
+            threads: json.threads,
+        },
+    })
+    .await?;
 
     Ok(())
 }
