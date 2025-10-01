@@ -56,7 +56,11 @@ async fn thread_create_room(
     json.validate()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    let perms = if let Some(parent_id) = json.parent_id {
+        srv.perms.for_thread(auth_user.id, parent_id).await?
+    } else {
+        srv.perms.for_room(auth_user.id, room_id).await?
+    };
     perms.ensure_view()?;
     match json.ty {
         ThreadType::Chat => {
