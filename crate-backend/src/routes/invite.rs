@@ -207,9 +207,16 @@ async fn invite_use(
     }
     match &invite.invite.target {
         InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
-            if d.room_ban_get(room.id, auth_user.id).await.is_ok() {
-                return Err(Error::BadStatic("banned"));
+            if let Ok(ban) = d.room_ban_get(room.id, auth_user.id).await {
+                if let Some(expires_at) = ban.expires_at {
+                    if expires_at > Time::now_utc() {
+                        return Err(Error::BadStatic("banned"));
+                    }
+                } else {
+                    return Err(Error::BadStatic("banned"));
+                }
             }
+
             let origin = RoomMemberOrigin::Invite {
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,
