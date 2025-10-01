@@ -48,6 +48,9 @@ pub struct Message {
     /// exists if this message is pinned
     pub pinned: Option<Pinned>,
 
+    #[serde(default)]
+    pub reactions: ReactionCounts,
+
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
     pub created_at: Option<Time>,
@@ -412,9 +415,6 @@ pub struct MessageDefaultMarkdown {
     /// deprecated: create new puppets for each bridged user instead
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub override_name: Option<String>,
-
-    #[serde(default)]
-    pub reactions: ReactionCounts,
     // // experimental! don't touch yet.
     // #[cfg(feature = "feat_interaction")]
     // #[cfg_attr(feature = "utoipa", schema(ignore))]

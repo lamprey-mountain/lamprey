@@ -5,7 +5,6 @@ use std::time::Duration;
 use tracing::error;
 
 use common::v1::types::misc::Color;
-use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Diff;
 use common::v1::types::{
     Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync,
@@ -144,7 +143,6 @@ impl ServiceMessages {
             metadata: json.metadata,
             reply_id: json.reply_id,
             override_name: json.override_name,
-            reactions: ReactionCounts::default(),
         });
         let message_id = data
             .message_create(DbMessageCreate {
@@ -284,7 +282,6 @@ impl ServiceMessages {
                         metadata: json.metadata.unwrap_or(msg.metadata),
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
                         override_name: json.override_name.unwrap_or(msg.override_name),
-                        reactions: ReactionCounts::default(),
                     }),
                 ))
             }

@@ -86,10 +86,6 @@ impl From<DbMessage> for Message {
                         reply_id: row.reply_id.map(Into::into),
                         override_name: row.override_name,
                         embeds,
-                        reactions: row
-                            .reactions
-                            .map(|a| serde_json::from_value(a).unwrap())
-                            .unwrap_or_default(),
                     })
                 }
                 DbMessageType::ThreadRename => MessageType::ThreadRename(
@@ -127,6 +123,10 @@ impl From<DbMessage> for Message {
             created_at: row.created_at.map(Time::from),
             removed_at: row.removed_at.map(Time::from),
             pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
+            reactions: row
+                .reactions
+                .map(|a| serde_json::from_value(a).unwrap())
+                .unwrap_or_default(),
         }
     }
 }
