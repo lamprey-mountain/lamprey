@@ -553,8 +553,7 @@ struct MessageModerate {
 /// Permissions:
 /// - `MessageDelete` allows deleting messages and viewing deleted messages.
 /// - `MessageRemove` allows removing/restoring messages and viewing removed messages.
-/// - `Omnescience` (unimplemented) allows viewing deleted and removed messages.
-/// - Users always have `MessageDelete` for their own messages.
+/// - Users can always delete (but not remove) their own messages.
 #[utoipa::path(
     patch,
     path = "/thread/{thread_id}/message",
@@ -562,8 +561,7 @@ struct MessageModerate {
     tags = [
         "message",
         "badge.perm-opt.MessageDelete",
-        // TODO: "badge.perm-opt.MessageRemove",
-        // TODO: "badge.perm-opt.Omnescience",
+        "badge.perm-opt.MessageRemove",
     ],
     responses((status = OK, description = "success")),
 )]
@@ -577,14 +575,7 @@ async fn message_moderate(
     auth_user.ensure_unsuspended()?;
     json.validate()?;
 
-    if !json.remove.is_empty() || !json.restore.is_empty() {
-        return Err(Error::BadStatic(
-            "remove and restore are not implemented yet",
-        ));
-    }
-
-    if json.delete.is_empty() {
-        // nothing to do
+    if json.delete.is_empty() && json.remove.is_empty() && json.restore.is_empty() {
         return Ok(StatusCode::OK);
     }
 
@@ -592,7 +583,6 @@ async fn message_moderate(
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     perms.ensure_view()?;
-    perms.ensure(Permission::MessageDelete)?;
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -605,44 +595,115 @@ async fn message_moderate(
         perms.ensure(Permission::ThreadLock)?;
     }
 
-    // TODO: fix n+1 query
-    for id in &json.delete {
-        let message = data.message_get(thread_id, *id, auth_user.id).await?;
-        if !message.message_type.is_deletable() {
-            return Err(Error::BadStatic("cant delete one of the messages"));
+    if !json.delete.is_empty() {
+        perms.ensure(Permission::MessageDelete)?;
+        // TODO: fix n+1 query
+        for id in &json.delete {
+            let message = data.message_get(thread_id, *id, auth_user.id).await?;
+            if !message.message_type.is_deletable() {
+                return Err(Error::BadStatic("cant delete one of the messages"));
+            }
         }
-    }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    data.message_delete_bulk(thread_id, &json.delete).await?;
-    for id in &json.delete {
-        data.media_link_delete_all(id.into_inner()).await?;
-    }
+        data.message_delete_bulk(thread_id, &json.delete).await?;
+        for id in &json.delete {
+            data.media_link_delete_all(id.into_inner()).await?;
+        }
 
-    if let Some(room_id) = thread.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason: reason.clone(),
-            ty: AuditLogEntryType::MessageDeleteBulk {
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::MessageDeleteBulk {
+                    thread_id,
+                    message_ids: json.delete.clone(),
+                },
+            })
+            .await?;
+        }
+
+        s.broadcast_thread(
+            thread.id,
+            auth_user.id,
+            MessageSync::MessageDeleteBulk {
                 thread_id,
                 message_ids: json.delete.clone(),
             },
-        })
+        )
         .await?;
     }
 
-    s.broadcast_thread(
-        thread.id,
-        auth_user.id,
-        MessageSync::MessageDeleteBulk {
-            thread_id,
-            message_ids: json.delete,
-        },
-    )
-    .await?;
+    if !json.remove.is_empty() {
+        perms.ensure(Permission::MessageRemove)?;
+        // TODO: fix n+1 query
+        for id in &json.remove {
+            let message = data.message_get(thread_id, *id, auth_user.id).await?;
+            if !message.message_type.is_deletable() {
+                return Err(Error::BadStatic("cant remove one of the messages"));
+            }
+        }
+
+        data.message_remove_bulk(thread_id, &json.remove).await?;
+
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::MessageRemove {
+                    thread_id,
+                    message_ids: json.remove.clone(),
+                },
+            })
+            .await?;
+        }
+
+        s.broadcast_thread(
+            thread.id,
+            auth_user.id,
+            MessageSync::MessageRemove {
+                thread_id,
+                message_ids: json.remove.clone(),
+            },
+        )
+        .await?;
+    }
+
+    if !json.restore.is_empty() {
+        perms.ensure(Permission::MessageRemove)?;
+        data.message_restore_bulk(thread_id, &json.restore).await?;
+
+        if let Some(room_id) = thread.room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::MessageRestore {
+                    thread_id,
+                    message_ids: json.restore.clone(),
+                },
+            })
+            .await?;
+        }
+
+        s.broadcast_thread(
+            thread.id,
+            auth_user.id,
+            MessageSync::MessageRestore {
+                thread_id,
+                message_ids: json.restore.clone(),
+            },
+        )
+        .await?;
+    }
+
     srv.threads.invalidate(thread_id).await; // last version id, message count
     Ok(StatusCode::OK)
 }

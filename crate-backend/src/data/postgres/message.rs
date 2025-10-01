@@ -337,6 +337,39 @@ impl DataMessage for Postgres {
         Ok(())
     }
 
+    async fn message_remove_bulk(
+        &self,
+        _thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()> {
+        let now = time::OffsetDateTime::now_utc();
+        let now = time::PrimitiveDateTime::new(now.date(), now.time());
+        let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
+        query!(
+            "UPDATE message SET removed_at = $2 WHERE id = ANY($1)",
+            &ids[..],
+            now,
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn message_restore_bulk(
+        &self,
+        _thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()> {
+        let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
+        query!(
+            "UPDATE message SET removed_at = NULL WHERE id = ANY($1)",
+            &ids[..],
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
     async fn message_version_get(
         &self,
         thread_id: ThreadId,

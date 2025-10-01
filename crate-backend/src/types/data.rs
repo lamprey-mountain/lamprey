@@ -335,6 +335,7 @@ impl_perms!(
     MemberNicknameManage,
     MessageCreate,
     MessageDelete,
+    MessageRemove,
     MessageEmbeds,
     MessageMassMention,
     MessageAttachments,

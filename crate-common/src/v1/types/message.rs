@@ -54,8 +54,13 @@ pub struct Message {
     // pub moved_at: Option<Time>,
     // pub moved_from: Option<(ThreadId, MessageId)>,
     pub created_at: Option<Time>,
+
+    /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
     pub deleted_at: Option<Time>,
+
+    /// removed messages are hidden for non moderators. they are recoverable by moderators
     pub removed_at: Option<Time>,
+
     pub edited_at: Option<Time>,
     // // drop the is_?
     // pub is_ephemeral: bool,

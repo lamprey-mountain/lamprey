@@ -161,8 +161,18 @@ pub enum MessageSync {
         version_id: MessageVerId,
     },
 
-    /// remove multiple messages at once
+    /// delete multiple messages at once
     MessageDeleteBulk {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
+
+    MessageRemove {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
+
+    MessageRestore {
         thread_id: ThreadId,
         message_ids: Vec<MessageId>,
     },

@@ -81,6 +81,16 @@ pub enum AuditLogEntryType {
         message_ids: Vec<MessageId>,
     },
 
+    MessageRemove {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
+
+    MessageRestore {
+        thread_id: ThreadId,
+        message_ids: Vec<MessageId>,
+    },
+
     RoleCreate {
         changes: Vec<AuditLogChange>,
     },

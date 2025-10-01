@@ -302,6 +302,16 @@ pub trait DataMessage {
         thread_id: ThreadId,
         message_ids: &[MessageId],
     ) -> Result<()>;
+    async fn message_remove_bulk(
+        &self,
+        thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()>;
+    async fn message_restore_bulk(
+        &self,
+        thread_id: ThreadId,
+        message_ids: &[MessageId],
+    ) -> Result<()>;
     async fn message_version_get(
         &self,
         thread_id: ThreadId,

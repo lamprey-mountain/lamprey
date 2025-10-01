@@ -73,10 +73,11 @@ pub enum Permission {
     /// send messages
     MessageCreate,
 
-    /// delete (and TODO: undelete) other people's messages; undelete is not
-    /// possible if the message was deleted by its creator (you can only recover
-    /// messages deleted by other moderators)
+    /// delete other people's messages
     MessageDelete,
+
+    /// remove and restore messages
+    MessageRemove,
 
     /// send embeds (link previews)
     /// requires MessageCreate
@@ -89,7 +90,7 @@ pub enum Permission {
     /// (unimplemented) move messages between threads
     MessageMove,
 
-    /// (unimplemented) pin (and unpin) messages
+    /// pin and unpin messages
     MessagePin,
 
     /// use a custom nickname
