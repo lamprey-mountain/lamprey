@@ -206,7 +206,10 @@ export const RouteInvite = (p: RouteSectionProps) => {
 	return (
 		<>
 			<Show when={p.params.code}>
+				<RoomNav />
+				<ThreadNav room_id={p.params.room_id} />
 				<RouteInviteInner code={p.params.code!} />
+				<VoiceTray />
 			</Show>
 		</>
 	);

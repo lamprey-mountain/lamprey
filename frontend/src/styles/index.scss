@@ -2379,7 +2379,7 @@ details[open] > summary {
 }
 
 button.primary {
-	/* border: solid $link-200 1px; */
+	border: solid $link-300 1px;
 	background: $link-300;
 	color: $fg-100;
 
@@ -2770,6 +2770,45 @@ article.message.oneline {
 
 	.item.selected,
 	.item:hover {
+		background: #fff2;
+	}
+}
+
+.invite {
+	display: grid;
+	place-items: center;
+	grid-area: main;
+
+	.box {
+		min-width: 300px;
+		padding: 8px;
+	}
+
+	.info {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		padding-left: 8px;
+		padding-bottom: 4px;
+	}
+
+	.warning {
+		background: oklch(var(--color-yellow) / 0.2);
+		border: solid $color-yellow 1px;
+		padding: 8px;
+		border-radius: 4px;
+	}
+
+	button {
+		border-radius: 4px;
+	}
+}
+
+button.link {
+	border: none;
+	background: none;
+
+	&:hover {
 		background: #fff2;
 	}
 }
