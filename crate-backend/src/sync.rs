@@ -2,11 +2,11 @@ use std::time::Duration;
 use std::{collections::VecDeque, sync::Arc};
 
 use axum::extract::ws::{Message, WebSocket};
-use common::v1::types;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::user_status::Status;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
+use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
     InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
     Session, ThreadId, UserId,
@@ -421,12 +421,16 @@ impl Connection {
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
-                InviteTarget::Server => unreachable!("events aren't emitted for server invites"),
+                InviteTarget::Server => {
+                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
+                }
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
                 InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
-                InviteTarget::Server => unreachable!("events aren't emitted for server invites"),
+                InviteTarget::Server => {
+                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
+                }
             },
             MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
@@ -447,7 +451,9 @@ impl Connection {
             MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
                 InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
-                InviteTargetId::Server => unreachable!("events aren't emitted for server invites"),
+                InviteTargetId::Server => {
+                    AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
+                }
             },
             MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ThreadAck { .. } => todo!(),
