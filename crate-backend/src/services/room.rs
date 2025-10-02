@@ -9,7 +9,7 @@ use common::v1::types::{
 };
 use moka::future::Cache;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::types::{
     DbMessageCreate, DbRoleCreate, DbRoomCreate, DbThreadCreate, DbThreadType, MediaLinkType,
 };
@@ -52,7 +52,7 @@ impl ServiceRooms {
         let data = self.state.data();
         let start = data.room_get(room_id).await?;
         if !patch.changes(&start) {
-            return Err(Error::NotModified);
+            return Ok(start);
         }
 
         if let Some(icon) = &patch.icon {

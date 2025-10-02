@@ -162,7 +162,7 @@ impl ServiceThreads {
 
         // shortcut if it wont modify the thread
         if !patch.changes(&thread_old) {
-            return Err(Error::NotModified);
+            return Ok(thread_old);
         }
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));

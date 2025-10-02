@@ -55,7 +55,7 @@ async fn user_update(
     let srv = s.services();
     let start = srv.users.get(target_user_id).await?;
     if !patch.changes(&start) {
-        return Err(Error::NotModified);
+        return Ok(Json(start));
     }
     if let Some(Some(avatar_media_id)) = patch.avatar {
         let existing = data.media_link_select(avatar_media_id).await?;

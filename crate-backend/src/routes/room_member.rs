@@ -329,10 +329,10 @@ async fn room_member_update(
 
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
-        return Err(Error::NotFound);
+        return Ok(Json(start));
     }
     if !json.changes(&start) {
-        return Err(Error::NotModified);
+        return Ok(Json(start));
     }
     if json.mute.is_some_and(|m| m != start.mute) {
         perms.ensure(Permission::VoiceMute)?;
@@ -422,7 +422,7 @@ async fn room_member_update(
         },
     )
     .await?;
-    Ok(Json(res).into_response())
+    Ok(Json(res))
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]

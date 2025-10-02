@@ -180,7 +180,7 @@ async fn app_patch(
     }
 
     if !patch.changes(&start) {
-        return Err(Error::NotModified);
+        return Ok(Json(start));
     }
 
     let mut app = start.clone();
