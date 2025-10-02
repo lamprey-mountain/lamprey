@@ -27,7 +27,13 @@ import { createSignal } from "solid-js";
 import { useMouseTracking } from "./hooks/useMouseTracking";
 import { flags } from "./flags.ts";
 import { Portal } from "solid-js/web";
-import { Route, Router, type RouteSectionProps } from "@solidjs/router";
+import {
+	Route,
+	Router,
+	type RouteSectionProps,
+	useLocation,
+	useNavigate,
+} from "@solidjs/router";
 import { useFloating } from "solid-floating-ui";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
@@ -225,6 +231,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		});
 	});
 
+	const [recentThreads, setRecentThreads] = createSignal([] as string[]);
+
 	const ctx: ChatCtx = {
 		client,
 		data,
@@ -245,6 +253,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		thread_scroll_pos: new Map(),
 		uploads: new ReactiveMap(),
 
+		recentThreads,
+		setRecentThreads,
+
 		currentMedia,
 		setCurrentMedia,
 
@@ -256,6 +267,15 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 			console.log("scrollToChatList called with position:", pos);
 		},
 	};
+
+	createEffect(() => {
+		const loc = useLocation();
+		const path = loc.pathname.match(/^\/thread\/([^/]+)/);
+		if (!path) return;
+		ctx.setRecentThreads((s) =>
+			[path[1], ...s.filter((i) => i !== path[1])].slice(0, 11)
+		);
+	});
 
 	const dispatch = createDispatcher(ctx, api, update);
 	ctx.dispatch = dispatch;
@@ -331,8 +351,20 @@ export const Root3 = (props: any) => {
 			if (ctx.data.modals.length) {
 				props.dispatch({ do: "modal.close" });
 			}
+		} else if (e.key === "k" && e.ctrlKey) {
+			e.preventDefault();
+			if (ctx.data.modals.length) {
+				props.dispatch({ do: "modal.close" });
+			} else {
+				props.dispatch({ do: "modal.open", modal: { type: "palette" } });
+			}
 		}
 	};
+
+	window.addEventListener("keydown", handleKeypress);
+	onCleanup(() => {
+		window.removeEventListener("keydown", handleKeypress);
+	});
 
 	return (
 		<div
@@ -342,7 +374,6 @@ export const Root3 = (props: any) => {
 					ctx.userConfig().frontend["underline_links"] === "yes",
 			}}
 			onClick={handleClick}
-			onKeyDown={handleKeypress}
 			onContextMenu={handleContextMenu}
 		>
 			{props.children}

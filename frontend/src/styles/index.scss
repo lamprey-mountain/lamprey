@@ -2756,3 +2756,20 @@ article.message.oneline {
 		}
 	}
 }
+
+.palette {
+	input {
+		padding: 2px 4px;
+		margin-bottom: 8px;
+	}
+
+	.item {
+		padding: 2px 4px;
+		border-radius: 2px;
+	}
+
+	.item.selected,
+	.item:hover {
+		background: #fff2;
+	}
+}

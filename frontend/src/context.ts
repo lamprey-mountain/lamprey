@@ -83,6 +83,9 @@ export type Modal =
 	}
 	| {
 		type: "reset_password";
+	}
+	| {
+		type: "palette";
 	};
 
 export type AttachmentCreateT = {
@@ -106,6 +109,9 @@ export type ChatCtx = {
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
 	uploads: ReactiveMap<string, Upload>;
+
+	recentThreads: Accessor<Array<string>>;
+	setRecentThreads: Setter<Array<string>>;
 
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
