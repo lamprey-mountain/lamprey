@@ -248,9 +248,8 @@ impl ServiceMedia {
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
         if let Some(meta) = &meta {
-            if !mime.starts_with("image/") {
-                self.generate_thumbnails(&mut media, meta, &p, &mime)
-                    .await?;
+            if mime.starts_with("video/") || mime.starts_with("audio/") {
+                let _ = self.generate_thumbnails(&mut media, meta, &p, &mime).await;
             }
         }
         debug!("finish generating thumbnails for {}", media_id);
