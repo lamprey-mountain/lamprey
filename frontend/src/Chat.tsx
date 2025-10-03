@@ -1,6 +1,7 @@
 import {
 	createEffect,
 	createRenderEffect,
+	For,
 	Match,
 	on,
 	Show,
@@ -21,6 +22,8 @@ import type { MessageListAnchor } from "./api/messages.ts";
 import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
+import type { ThreadSearch } from "./context.ts";
+import { MessageView } from "./Message.tsx";
 
 type ChatProps = {
 	thread: ThreadT;
@@ -356,8 +359,113 @@ export const ChatHeader = (props: ChatProps) => {
 				<Match when={props.thread.archived_at}>{" (archived)"}</Match>
 			</Switch>
 			<div style="flex:1"></div>
+			<ChatSearch thread={props.thread} />
 			<button onClick={toggleMembers}>members</button>
 		</header>
+	);
+};
+
+export const ChatSearch = (props: { thread: ThreadT }) => {
+	const api = useApi();
+	const ctx = useCtx();
+	const [query, setQuery] = createSignal(
+		ctx.thread_search.get(props.thread.id)?.query ?? "",
+	);
+
+	const handleSubmit = async (e?: SubmitEvent) => {
+		e?.preventDefault();
+		const q = query();
+		if (!q) {
+			ctx.thread_search.delete(props.thread.id);
+			return;
+		}
+		// TODO: debounce on input instead of on submit
+		const existing = ctx.thread_search.get(props.thread.id);
+		ctx.thread_search.set(props.thread.id, {
+			query: q,
+			results: existing?.results ?? null,
+			loading: true,
+		});
+		const res = await api.client.http.POST("/api/v1/search/message", {
+			body: {
+				query: q,
+				thread_id: [props.thread.id],
+			},
+		});
+		if (res.data) {
+			console.log("search set");
+			ctx.thread_search.set(props.thread.id, {
+				query: q,
+				results: res.data,
+				loading: false,
+			});
+		} else {
+			ctx.thread_search.set(props.thread.id, {
+				query: q,
+				results: null,
+				loading: false,
+			});
+		}
+	};
+
+	createEffect(() => {
+		if (!ctx.thread_search.has(props.thread.id)) {
+			setQuery("");
+		}
+	});
+
+	return (
+		<form onSubmit={handleSubmit} class="search-form">
+			<input
+				type="text"
+				placeholder="search"
+				value={query()}
+				onInput={(e) => setQuery(e.currentTarget.value)}
+				onKeyDown={(e) => {
+					if (e.key === "Escape") {
+						ctx.thread_search.delete(props.thread.id);
+					}
+				}}
+			/>
+		</form>
+	);
+};
+
+export const SearchResults = (props: {
+	thread: ThreadT;
+	search: ThreadSearch;
+}) => {
+	const ctx = useCtx();
+
+	const onResultClick = (message_id: string) => {
+		ctx.thread_anchor.set(props.thread.id, {
+			type: "context",
+			limit: 50,
+			message_id: message_id,
+		});
+		ctx.thread_highlight.set(props.thread.id, message_id);
+	};
+
+	return (
+		<aside class="search-results">
+			<header>
+				<Show when={!props.search.loading} fallback={<>Searching...</>}>
+					{props.search.results?.total ?? 0} results
+				</Show>
+				<button onClick={() => ctx.thread_search.delete(props.thread.id)}>
+					Clear
+				</button>
+			</header>
+			<ul>
+				<For each={props.search.results?.items}>
+					{(message) => (
+						<li onClick={() => onResultClick(message.id)}>
+							<MessageView message={message} separate={true} />
+						</li>
+					)}
+				</For>
+			</ul>
+		</aside>
 	);
 };
 

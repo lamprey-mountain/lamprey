@@ -7,8 +7,10 @@ import {
 import type {
 	Client,
 	Media,
+	Message,
 	MessageReady,
 	MessageSync,
+	Pagination,
 	Upload,
 	UserConfig,
 } from "sdk";
@@ -92,6 +94,12 @@ export type AttachmentCreateT = {
 	id: string;
 };
 
+export type ThreadSearch = {
+	query: string;
+	results: Pagination<Message> | null;
+	loading: boolean;
+};
+
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -108,6 +116,7 @@ export type ChatCtx = {
 	thread_read_marker_id: ReactiveMap<string, string>;
 	thread_reply_id: ReactiveMap<string, string>;
 	thread_scroll_pos: Map<string, number>;
+	thread_search: ReactiveMap<string, ThreadSearch>;
 	uploads: ReactiveMap<string, Upload>;
 
 	recentThreads: Accessor<Array<string>>;

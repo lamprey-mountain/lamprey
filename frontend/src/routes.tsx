@@ -7,7 +7,7 @@ import { RoomHome, RoomMembers } from "./Room.tsx";
 import { createEffect, For, Show } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
-import { ChatHeader, ChatMain } from "./Chat.tsx";
+import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
 import { Voice, VoiceTray } from "./Voice.tsx";
@@ -17,10 +17,11 @@ import { RouteInviteInner } from "./Invite.tsx";
 import { AdminSettings } from "./AdminSettings.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
+import type { Thread } from "sdk";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
-	createEffect(() => document.title = props.title ?? "");
+	createEffect(() => (document.title = props.title ?? ""));
 	return undefined;
 };
 
@@ -33,7 +34,9 @@ export const RoomNav = () => {
 			<nav class="nav2">
 				<ul>
 					<li>
-						<A href="/" end>home</A>
+						<A href="/" end>
+							home
+						</A>
 					</li>
 					<For each={rooms()?.items}>
 						{(room) => (
@@ -126,6 +129,28 @@ export const RouteThreadSettings = (p: RouteSectionProps) => {
 	);
 };
 
+const ThreadSidebar = (props: { thread: Thread }) => {
+	const ctx = useCtx();
+	const search = () => ctx.thread_search.get(props.thread.id);
+	const showMembers = () =>
+		props.thread.type !== "Voice" &&
+		flags.has("thread_member_list") &&
+		ctx.userConfig().frontend.showMembers !== false;
+
+	return (
+		<Show
+			when={search()}
+			fallback={
+				<Show when={showMembers()}>
+					<ThreadMembers thread={props.thread} />
+				</Show>
+			}
+		>
+			<SearchResults thread={props.thread} search={search()!} />
+		</Show>
+	);
+};
+
 export const RouteThread = (p: RouteSectionProps) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
@@ -153,7 +178,8 @@ export const RouteThread = (p: RouteSectionProps) => {
 					<ChatHeader thread={thread()!} />
 				</Show>
 				<Show
-					when={thread()!.type === "Chat" || thread()!.type === "Dm" ||
+					when={thread()!.type === "Chat" ||
+						thread()!.type === "Dm" ||
 						thread()!.type === "Gdm"}
 				>
 					<ChatMain thread={thread()!} />
@@ -167,12 +193,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 				<Show when={thread()!.type === "Category"}>
 					<Category thread={thread()!} />
 				</Show>
-				<Show
-					when={thread()!.type !== "Voice" && flags.has("thread_member_list") &&
-						ctx.userConfig().frontend.showMembers !== false}
-				>
-					<ThreadMembers thread={thread()!} />
-				</Show>
+				<ThreadSidebar thread={thread()!} />
 				<VoiceTray />
 			</Show>
 		</>
