@@ -1,8 +1,12 @@
 with
     thread_viewer as (
-        select thread.id from thread
+        select thread.id, thread.room_id from thread
         join room_member on thread.room_id = room_member.room_id
         where room_member.user_id = $1
+        union
+        select thread.id, thread.room_id from thread
+        join thread_member on thread.id = thread_member.thread_id
+        where thread.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
     ),
     reaction_counts as (
         select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted
@@ -45,4 +49,7 @@ left join message_reaction r on r.message_id = msg.id
 where is_latest and msg.deleted_at is null
   and msg.id > $2 AND msg.id < $3
   and content @@ websearch_to_tsquery($6)
+  and (array_length($7::uuid[], 1) is null or thread_viewer.room_id = any($7))
+  and (array_length($8::uuid[], 1) is null or msg.thread_id = any($8))
+  and (array_length($9::uuid[], 1) is null or msg.author_id = any($9))
 order by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5

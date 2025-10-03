@@ -16,3 +16,4 @@ where thread.deleted_at is null and thread.archived_at is null
     thread.name @@ websearch_to_tsquery($2) or
     coalesce(thread.description, '') @@ websearch_to_tsquery($2)
   )
+  and (array_length($3::uuid[], 1) is null or thread.room_id = any($3))

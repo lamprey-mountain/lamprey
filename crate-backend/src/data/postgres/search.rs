@@ -5,6 +5,7 @@ use common::v1::types::{
     UserId,
 };
 use sqlx::{query_file_as, query_file_scalar, Acquire};
+use uuid::Uuid;
 
 use crate::{
     data::{
@@ -30,6 +31,9 @@ impl DataSearch for Postgres {
         paginate: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<MessageId> = paginate.try_into()?;
+        let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
+        let thread_ids: Vec<Uuid> = query.thread_id.iter().map(|id| **id).collect();
+        let user_ids: Vec<Uuid> = query.user_id.iter().map(|id| **id).collect();
         gen_paginate!(
             p,
             self.pool,
@@ -42,8 +46,18 @@ impl DataSearch for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
                 query.query,
+                &room_ids,
+                &thread_ids,
+                &user_ids,
             ),
-            query_file_scalar!("sql/search_message_count.sql", *user_id, query.query,),
+            query_file_scalar!(
+                "sql/search_message_count.sql",
+                *user_id,
+                query.query,
+                &room_ids,
+                &thread_ids,
+                &user_ids,
+            ),
             |i: &Message| i.id.to_string()
         )
     }
@@ -55,6 +69,7 @@ impl DataSearch for Postgres {
         paginate: PaginationQuery<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<ThreadId> = paginate.try_into()?;
+        let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
         gen_paginate!(
             p,
             self.pool,
@@ -67,8 +82,14 @@ impl DataSearch for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
                 query.query,
+                &room_ids,
             ),
-            query_file_scalar!("sql/search_thread_count.sql", *user_id, query.query,),
+            query_file_scalar!(
+                "sql/search_thread_count.sql",
+                *user_id,
+                query.query,
+                &room_ids,
+            ),
             |i: &Thread| i.id.to_string()
         )
     }
