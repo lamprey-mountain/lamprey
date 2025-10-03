@@ -99,7 +99,8 @@ async fn backfill_guild(
         .ok_or(anyhow!("failed to get guild {guild_id} from cache"))?
         .to_owned();
 
-    let all_channels: Vec<_> = guild.channels.values().chain(&guild.threads).collect();
+    let mut all_channels: Vec<_> = guild.channels.values().chain(&guild.threads).collect();
+    all_channels.sort_by_key(|c| c.parent_id.is_some());
 
     for channel in all_channels {
         if !matches!(
@@ -109,6 +110,7 @@ async fn backfill_guild(
                 | ChannelType::PublicThread
                 | ChannelType::PrivateThread
                 | ChannelType::NewsThread
+                | ChannelType::Category
         ) {
             continue;
         }
@@ -134,8 +136,34 @@ async fn backfill_guild(
 
         // create portal
         let ly = globals.lamprey_handle().await?;
+
+        let thread_type = if channel.kind == ChannelType::Category {
+            common::v1::types::ThreadType::Category
+        } else {
+            common::v1::types::ThreadType::Chat
+        };
+
+        let lamprey_parent_id = if let Some(discord_parent_id) = channel.parent_id {
+            if let Ok(Some(parent_portal)) = globals
+                .get_portal_by_discord_channel(discord_parent_id)
+                .await
+            {
+                Some(parent_portal.lamprey_thread_id)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let thread = ly
-            .create_thread(realm_config.lamprey_room_id, channel.name.clone(), None)
+            .create_thread(
+                realm_config.lamprey_room_id,
+                channel.name.clone(),
+                None,
+                thread_type,
+                lamprey_parent_id,
+            )
             .await?;
 
         let (is_thread, parent_id) = if matches!(
@@ -146,25 +174,30 @@ async fn backfill_guild(
         } else {
             (false, Some(channel.id))
         };
-        let Some(webhook_channel_id) = parent_id else {
-            info!("channel {} has no parent, skipping", channel.id);
-            continue;
-        };
 
-        let webhook = discord_create_webhook(
-            globals.clone(),
-            webhook_channel_id,
-            WEBHOOK_NAME.to_string(),
-        )
-        .await?;
+        let webhook_url = if channel.kind != ChannelType::Category {
+            let Some(webhook_channel_id) = parent_id else {
+                info!("channel {} has no parent, skipping", channel.id);
+                continue;
+            };
+            let webhook = discord_create_webhook(
+                globals.clone(),
+                webhook_channel_id,
+                WEBHOOK_NAME.to_string(),
+            )
+            .await?;
+            webhook.url().unwrap().to_string()
+        } else {
+            "".to_string()
+        };
 
         let portal_config = PortalConfig {
             lamprey_thread_id: thread.id,
             lamprey_room_id: realm_config.lamprey_room_id,
             discord_guild_id: guild_id,
-            discord_channel_id: webhook_channel_id,
+            discord_channel_id: parent_id.unwrap_or(channel.id),
             discord_thread_id: if is_thread { Some(channel.id) } else { None },
-            discord_webhook: webhook.url().unwrap().to_string(),
+            discord_webhook: webhook_url,
         };
 
         globals.insert_portal(portal_config.clone()).await?;
@@ -358,6 +391,8 @@ impl EventHandler for Handler {
                                     guild_id: guild.id,
                                     channel_id: ch.id,
                                     channel_name: ch.name.clone(),
+                                    channel_type: ch.kind,
+                                    parent_id: ch.parent_id,
                                 })
                         {
                             error!("failed to send discord channel create message: {e}");
@@ -520,7 +555,10 @@ impl EventHandler for Handler {
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
-        if channel.kind != ChannelType::Text && channel.kind != ChannelType::News {
+        if !matches!(
+            channel.kind,
+            ChannelType::Text | ChannelType::News | ChannelType::Category
+        ) {
             return;
         }
 
@@ -541,6 +579,8 @@ impl EventHandler for Handler {
                 guild_id,
                 channel_id: channel.id,
                 channel_name: channel.name.clone(),
+                channel_type: channel.kind,
+                parent_id: channel.parent_id,
             })
         {
             error!("failed to send discord channel create message: {e}");
@@ -887,6 +927,8 @@ pub enum DiscordMessage {
     ChannelCreate {
         guild_id: GuildId,
         name: String,
+        ty: common::v1::types::ThreadType,
+        parent_id: Option<ChannelId>,
         response: oneshot::Sender<ChannelId>,
     },
     WebhookCreate {
@@ -973,11 +1015,18 @@ impl Discord {
             DiscordMessage::ChannelCreate {
                 guild_id,
                 name,
+                ty,
+                parent_id,
                 response,
             } => {
-                let channel = guild_id
-                    .create_channel(http, CreateChannel::new(name))
-                    .await?;
+                let mut channel = CreateChannel::new(name).kind(match ty {
+                    common::v1::types::ThreadType::Category => ChannelType::Category,
+                    _ => ChannelType::Text,
+                });
+                if let Some(parent_id) = parent_id {
+                    channel = channel.category(parent_id);
+                }
+                let channel = guild_id.create_channel(http, channel).await?;
                 response.send(channel.id).unwrap();
             }
             DiscordMessage::WebhookCreate {
@@ -1007,6 +1056,8 @@ pub async fn discord_create_channel(
     globals: Arc<Globals>,
     guild_id: GuildId,
     name: String,
+    ty: common::v1::types::ThreadType,
+    parent_id: Option<serenity::all::ChannelId>,
 ) -> Result<serenity::all::ChannelId> {
     let (send, recv) = oneshot::channel();
     globals
@@ -1014,6 +1065,8 @@ pub async fn discord_create_channel(
         .send(DiscordMessage::ChannelCreate {
             guild_id,
             name,
+            ty,
+            parent_id,
             response: send,
         })
         .await?;

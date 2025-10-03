@@ -105,9 +105,7 @@ async fn main() -> Result<()> {
                 if let Err(e) = globals
                     .bridge_chan
                     .send(BridgeMessage::LampreyThreadCreate {
-                        thread_id: thread.id,
-                        room_id: realm.lamprey_room_id,
-                        thread_name: thread.name,
+                        thread,
                         discord_guild_id: realm.discord_guild_id,
                     })
                 {

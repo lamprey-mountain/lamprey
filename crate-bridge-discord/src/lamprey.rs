@@ -77,9 +77,7 @@ impl EventHandler for Handle {
                     .globals
                     .bridge_chan
                     .send(BridgeMessage::LampreyThreadCreate {
-                        thread_id: thread.id,
-                        room_id: realm_config.lamprey_room_id,
-                        thread_name: thread.name,
+                        thread,
                         discord_guild_id: realm_config.discord_guild_id,
                     })
                 {
@@ -358,6 +356,8 @@ impl LampreyHandle {
         room_id: RoomId,
         name: String,
         topic: Option<String>,
+        ty: ThreadType,
+        parent_id: Option<ThreadId>,
     ) -> Result<Thread> {
         let res = self
             .http
@@ -366,13 +366,13 @@ impl LampreyHandle {
                 &types::ThreadCreate {
                     name,
                     description: topic,
-                    ty: ThreadType::Chat,
+                    ty,
                     tags: None,
                     nsfw: false,
                     recipients: None,
                     bitrate: None,
                     user_limit: None,
-                    parent_id: None,
+                    parent_id,
                 },
             )
             .await?;
