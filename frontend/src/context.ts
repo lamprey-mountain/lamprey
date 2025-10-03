@@ -98,6 +98,10 @@ export type ThreadSearch = {
 	query: string;
 	results: Pagination<Message> | null;
 	loading: boolean;
+	author?: string;
+	before?: string;
+	after?: string;
+	thread?: string;
 };
 
 export type ChatCtx = {
