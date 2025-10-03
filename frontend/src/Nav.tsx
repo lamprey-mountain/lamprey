@@ -395,6 +395,17 @@ export const ThreadNav = (props: { room_id?: string }) => {
 };
 
 const ItemThread = (props: { thread: Thread }) => {
+	const api = useApi();
+	const name = () => {
+		if (props.thread.type === "Dm") {
+			const user_id = api.users.cache.get("@self")!.id;
+			return props.thread.recipients.find((i) => i.id !== user_id)?.name ??
+				"dm";
+		}
+
+		return props.thread.name;
+	};
+
 	return (
 		<A
 			href={`/thread/${props.thread.id}`}
@@ -404,7 +415,7 @@ const ItemThread = (props: { thread: Thread }) => {
 			}}
 			data-thread-id={props.thread.id}
 		>
-			{props.thread.name}
+			{name()}
 		</A>
 	);
 };
