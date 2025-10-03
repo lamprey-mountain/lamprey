@@ -359,6 +359,12 @@ export const Root3 = (props: any) => {
 			} else {
 				props.dispatch({ do: "modal.open", modal: { type: "palette" } });
 			}
+		} else if (e.key === "f" && e.ctrlKey) {
+			e.preventDefault();
+			const searchInput = document.querySelector(
+				".search-form input",
+			) as HTMLInputElement | null;
+			searchInput?.focus();
 		}
 	};
 

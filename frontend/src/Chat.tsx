@@ -423,7 +423,15 @@ export const ChatSearch = (props: { thread: ThreadT }) => {
 				onInput={(e) => setQuery(e.currentTarget.value)}
 				onKeyDown={(e) => {
 					if (e.key === "Escape") {
-						ctx.thread_search.delete(props.thread.id);
+						if (ctx.thread_search.has(props.thread.id)) {
+							ctx.thread_search.delete(props.thread.id);
+						} else {
+							e.preventDefault();
+							const chatInput = document.querySelector(
+								".chat .ProseMirror",
+							) as HTMLInputElement | null;
+							chatInput?.focus();
+						}
 					}
 				}}
 			/>
