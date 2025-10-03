@@ -4,7 +4,7 @@ use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::Notification;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
-use common::v1::types::search::SearchMessageRequest;
+use common::v1::types::search::{SearchMessageRequest, SearchThreadsRequest};
 use common::v1::types::user_config::UserConfigGlobal;
 use common::v1::types::util::Time;
 use common::v1::types::{
@@ -495,6 +495,12 @@ pub trait DataSearch {
         query: SearchMessageRequest,
         paginate: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+    async fn search_thread(
+        &self,
+        user_id: UserId,
+        query: SearchThreadsRequest,
+        paginate: PaginationQuery<ThreadId>,
+    ) -> Result<PaginationResponse<Thread>>;
 }
 
 #[async_trait]

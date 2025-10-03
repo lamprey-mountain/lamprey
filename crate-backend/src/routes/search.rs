@@ -15,9 +15,6 @@ use crate::{Error, ServerState};
 use super::util::Auth;
 use crate::error::Result;
 
-// maybe consider having one big search endgoint that searches *everything*?
-// or maybe that's too expensive to do, idk
-
 /// Search messages
 #[utoipa::path(
     post,
@@ -42,7 +39,7 @@ pub async fn search_messages(
     Ok(Json(res))
 }
 
-/// Search threads (TODO)
+/// Search threads
 #[utoipa::path(
     post,
     path = "/search/thread",
@@ -52,12 +49,15 @@ pub async fn search_messages(
     )
 )]
 pub async fn search_threads(
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Query(_q): Query<PaginationQuery<ThreadId>>,
-    Json(_json): Json<SearchThreadsRequest>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Query(q): Query<PaginationQuery<ThreadId>>,
+    Json(json): Json<SearchThreadsRequest>,
+) -> Result<impl IntoResponse> {
+    json.validate()?;
+    let data = s.data();
+    let res = data.search_thread(auth_user.id, json, q).await?;
+    Ok(Json(res))
 }
 
 /// Search rooms (TODO)
@@ -69,7 +69,6 @@ pub async fn search_threads(
         (status = OK, body = PaginationResponse<Room>, description = "success"),
     )
 )]
-#[axum::debug_handler]
 pub async fn search_rooms(
     Auth(_user_id): Auth,
     State(_s): State<Arc<ServerState>>,
