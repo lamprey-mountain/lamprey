@@ -22,6 +22,7 @@ import type { MessageListAnchor } from "./api/messages.ts";
 import { getMessageOverrideName, getMsgTs as get_msg_ts } from "./util.tsx";
 import { uuidv7 } from "uuidv7";
 import { Portal } from "solid-js/web";
+import { useNavigate } from "@solidjs/router";
 import type { ThreadSearch } from "./context.ts";
 import { MessageView } from "./Message.tsx";
 
@@ -389,7 +390,6 @@ export const ChatSearch = (props: { thread: ThreadT }) => {
 		const res = await api.client.http.POST("/api/v1/search/message", {
 			body: {
 				query: q,
-				thread_id: [props.thread.id],
 			},
 		});
 		if (res.data) {
@@ -439,19 +439,47 @@ export const ChatSearch = (props: { thread: ThreadT }) => {
 	);
 };
 
+const SearchResultItem = (props: {
+	message: Message;
+	prevMessage?: Message;
+	onResultClick: (message: Message) => void;
+}) => {
+	const api = useApi();
+	const thread = api.threads.fetch(() => props.message.thread_id);
+	const showHeader = () =>
+		!props.prevMessage ||
+		props.prevMessage.thread_id !== props.message.thread_id;
+
+	return (
+		<>
+			<Show when={showHeader() && thread()}>
+				<div style="padding: 4px 12px 0; font-weight: bold; color: var(--text-dim);">
+					#{thread()!.name}
+				</div>
+			</Show>
+			<li onClick={() => props.onResultClick(props.message)}>
+				<MessageView message={props.message} separate={true} />
+			</li>
+		</>
+	);
+};
+
 export const SearchResults = (props: {
 	thread: ThreadT;
 	search: ThreadSearch;
 }) => {
 	const ctx = useCtx();
+	const navigate = useNavigate();
 
-	const onResultClick = (message_id: string) => {
-		ctx.thread_anchor.set(props.thread.id, {
+	const onResultClick = (message: Message) => {
+		navigate(`/thread/${message.thread_id}`);
+		ctx.thread_anchor.set(message.thread_id, {
 			type: "context",
 			limit: 50,
-			message_id: message_id,
+			message_id: message.id,
 		});
-		ctx.thread_highlight.set(props.thread.id, message_id);
+		ctx.thread_highlight.set(message.thread_id, message.id);
+		ctx.thread_search.delete(props.thread.id);
 	};
 
 	return (
@@ -464,15 +492,26 @@ export const SearchResults = (props: {
 					Clear
 				</button>
 			</header>
-			<ul>
-				<For each={props.search.results?.items}>
-					{(message) => (
-						<li onClick={() => onResultClick(message.id)}>
-							<MessageView message={message} separate={true} />
-						</li>
-					)}
-				</For>
-			</ul>
+			<Show when={!props.search.loading}>
+				<ul>
+					<For each={props.search.results?.items}>
+						{(message, index) => {
+							const prev = () => {
+								const i = index();
+								if (i > 0) return props.search.results!.items[i - 1];
+								return undefined;
+							};
+							return (
+								<SearchResultItem
+									message={message}
+									prevMessage={prev()}
+									onResultClick={onResultClick}
+								/>
+							);
+						}}
+					</For>
+				</ul>
+			</Show>
 		</aside>
 	);
 };
