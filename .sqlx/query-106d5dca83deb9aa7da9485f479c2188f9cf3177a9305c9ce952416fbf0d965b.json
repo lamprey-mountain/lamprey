@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n    thread_viewer as (\n        select thread.id, thread.room_id from thread\n        join room_member on thread.room_id = room_member.room_id\n        where room_member.user_id = $1\n        union\n        select thread.id, thread.room_id from thread\n        join thread_member on thread.id = thread_member.thread_id\n        where thread.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'\n    )\nselect count(*)\nfrom message as msg\njoin thread_viewer on msg.thread_id = thread_viewer.id\nwhere is_latest and msg.deleted_at is null\n  and content @@ websearch_to_tsquery($2)\n  and (array_length($3::uuid[], 1) is null or thread_viewer.room_id = any($3))\n  and (array_length($4::uuid[], 1) is null or msg.thread_id = any($4))\n  and (array_length($5::uuid[], 1) is null or msg.author_id = any($5))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "UuidArray",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "106d5dca83deb9aa7da9485f479c2188f9cf3177a9305c9ce952416fbf0d965b"
+}

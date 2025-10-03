@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n    thread_viewer as (\n        select thread.id from thread\n        join room_member on thread.room_id = room_member.room_id\n        where room_member.user_id = $1\n        union\n        select thread.id from thread\n        join thread_member on thread.id = thread_member.thread_id\n        where thread.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'\n    )\nselect count(*)\nfrom thread\njoin thread_viewer on thread.id = thread_viewer.id\nwhere thread.deleted_at is null and thread.archived_at is null\n  and (\n    thread.name @@ websearch_to_tsquery($2) or\n    coalesce(thread.description, '') @@ websearch_to_tsquery($2)\n  )\n  and (array_length($3::uuid[], 1) is null or thread.room_id = any($3))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f9d91631075ce1d55e5dc7f5289f642380c856919aad2b5d04be68f4cfd8a786"
+}
