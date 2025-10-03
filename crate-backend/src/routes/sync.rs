@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use axum::routing::any;
 use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::SinkExt;
-use tracing::{debug, error};
+use tracing::debug;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Error;
@@ -64,8 +64,9 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 }
             }
             Ok(msg) = sushi.recv() => {
-                if let Err(err) = conn.queue_message(msg).await {
-                    error!("{err}");
+                if let Err(_err) = conn.queue_message(msg).await {
+                    // most of the errors that are returned are auth check failures, which we don't need to log
+                    // error!("{err}");
                 }
             }
             _ = tokio::time::sleep_until(timeout.get_instant()) => {

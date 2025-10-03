@@ -207,17 +207,22 @@ impl ServiceMedia {
                 mime: mime.clone(),
                 info: match mime.parse() {
                     Ok(m) => match m.ty().as_str() {
-                        "image" => MediaTrackInfo::Image(types::Image {
-                            height: meta
-                                .as_ref()
-                                .and_then(|m| m.height())
-                                .expect("all images have a height"),
-                            width: meta
-                                .as_ref()
-                                .and_then(|m| m.width())
-                                .expect("all images have a width"),
-                            language: None,
-                        }),
+                        "image" => {
+                            let dims = image::image_dimensions(&p).ok();
+                            MediaTrackInfo::Image(types::Image {
+                                height: dims.as_ref().map(|d| d.1 as u64).unwrap_or_else(|| {
+                                    meta.as_ref()
+                                        .and_then(|m| m.height())
+                                        .expect("all images have a height")
+                                }),
+                                width: dims.as_ref().map(|d| d.0 as u64).unwrap_or_else(|| {
+                                    meta.as_ref()
+                                        .and_then(|m| m.width())
+                                        .expect("all images have a width")
+                                }),
+                                language: None,
+                            })
+                        }
                         // this is quite a bit harder than it looks...
                         "audio" | "video" => MediaTrackInfo::Mixed(types::Mixed {
                             height: meta.as_ref().and_then(|m| m.height()),
