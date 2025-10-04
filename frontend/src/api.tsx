@@ -247,9 +247,13 @@ export function createApi(
 					console.log("Message Create local echo");
 					const idx = r.live.items.findIndex((i) => i.nonce === m.nonce);
 					if (idx !== -1) {
-						r.live.items.splice(idx, 1);
+						r.live.items.splice(idx, 1, m);
+					} else {
+						const id_idx = r.live.items.findIndex((i) => i.id === m.id);
+						if (id_idx === -1) {
+							r.live.items.push(m);
+						}
 					}
-					r.live.items.push(m);
 					is_new = true;
 					is_unread = false;
 				} else {
