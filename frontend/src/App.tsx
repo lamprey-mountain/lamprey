@@ -362,8 +362,8 @@ export const Root3 = (props: any) => {
 		} else if (e.key === "f" && e.ctrlKey) {
 			e.preventDefault();
 			const searchInput = document.querySelector(
-				".search-form input",
-			) as HTMLInputElement | null;
+				".search-input .ProseMirror",
+			) as HTMLElement | null;
 			searchInput?.focus();
 		}
 	};

@@ -43,7 +43,8 @@ export const ImageView = (props: ImageViewProps) => {
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
 				class="image"
-				onClick={() => {
+				onClick={(e) => {
+					e.stopPropagation();
 					ctx.dispatch({
 						do: "modal.open",
 						modal: { type: "media", media: props.media },

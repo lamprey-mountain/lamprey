@@ -1,190 +1,677 @@
 import {
-	type Command,
-	EditorState,
-	Plugin,
-	TextSelection,
-} from "prosemirror-state";
-import {
-	Decoration,
-	type DecorationAttrs,
-	DecorationSet,
-	EditorView,
-} from "prosemirror-view";
-import { DOMParser, Schema } from "prosemirror-model";
-import { history, redo, undo } from "prosemirror-history";
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
+import { useApi } from "./api";
+import { useCtx } from "./context";
+import type { ThreadT } from "./types";
+import type { ThreadSearch } from "./context";
+import { User } from "sdk";
+import { UUID } from "uuidv7";
+import { EditorState, Plugin } from "prosemirror-state";
+import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
+import { Node, Schema } from "prosemirror-model";
 import { keymap } from "prosemirror-keymap";
-import { onCleanup, onMount } from "solid-js";
-
-async function fetchAuthors(query: string) {
-	return Promise.resolve([
-		{ name: "alice", id: "1" },
-		{ name: "bob", id: "2" },
-	].filter((a) => a.name.includes(query)));
-}
-
-async function fetchLocations(query: string) {
-	return Promise.resolve([
-		{ name: "general", id: "10" },
-		{ name: "random", id: "11" },
-	].filter((l) => l.name.includes(query)));
-}
+import { history, redo, undo } from "prosemirror-history";
+import { Portal } from "solid-js/web";
+import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { useFloating } from "solid-floating-ui";
 
 const schema = new Schema({
 	nodes: {
 		doc: {
-			content: "block+",
+			content: "paragraph",
 		},
 		paragraph: {
 			content: "inline*",
 			group: "block",
-			whitespace: "pre",
 			toDOM: () => ["p", 0],
-			parseDOM: [{
-				tag: "p",
-				preserveWhitespace: "full",
-			}],
 		},
 		text: {
 			group: "inline",
-			inline: true,
 		},
-		atom: {
+		author: {
 			group: "inline",
 			inline: true,
 			atom: true,
-			attrs: { type: {}, value: {} },
-			toDOM: (
-				node,
-			) => [
+			attrs: { id: { default: "" }, name: { default: "" } },
+			toDOM: (node) => [
 				"span",
-				{ class: `atom atom-${node.attrs.type}` },
-				`${node.attrs.type}:${node.attrs.value}`,
+				{ class: "filter-author", "data-id": node.attrs.id },
+				`author:${node.attrs.name}`,
 			],
-			parseDOM: [{ tag: "span.atom", getAttrs: (dom) => ({}) }],
+			parseDOM: [
+				{
+					tag: "span.filter-author",
+					getAttrs: (dom: HTMLElement) => ({
+						id: dom.dataset.id,
+						name: dom.textContent?.replace(/^author:/, "") ?? "",
+					}),
+				},
+			],
 		},
-	},
-	marks: {
-		quoted: {
-			toDOM: () => ["span", { class: "quoted" }, 0],
-			parseDOM: [{ tag: "span.quoted" }],
+		thread: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { id: { default: "" }, name: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-thread", "data-id": node.attrs.id },
+				`thread:${node.attrs.name}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-thread",
+					getAttrs: (dom: HTMLElement) => ({
+						id: dom.dataset.id,
+						name: dom.textContent?.replace(/^thread:/, "") ?? "",
+					}),
+				},
+			],
 		},
-		negated: {
-			toDOM: () => ["span", { class: "negated" }, 0],
-			parseDOM: [{ tag: "span.negated" }],
+		before: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { date: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-before" },
+				`before:${node.attrs.date}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-before",
+					getAttrs: (dom: HTMLElement) => ({
+						date: dom.textContent?.replace(/^before:/, "") ?? "",
+					}),
+				},
+			],
+		},
+		after: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { date: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-after" },
+				`after:${node.attrs.date}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-after",
+					getAttrs: (dom: HTMLElement) => ({
+						date: dom.textContent?.replace(/^after:/, "") ?? "",
+					}),
+				},
+			],
 		},
 	},
 });
 
-function highlightPlugin() {
+function serializeToQuery(state: EditorState): string {
+	let query = "";
+	state.doc.forEach((node) => {
+		node.forEach((inlineNode) => {
+			if (inlineNode.isText) {
+				query += inlineNode.text;
+			} else if (inlineNode.type.name === "author") {
+				query += ` author:${inlineNode.attrs.id} `;
+			} else if (inlineNode.type.name === "thread") {
+				query += ` thread:${inlineNode.attrs.id} `;
+			} else if (inlineNode.type.name === "before") {
+				query += ` before:${inlineNode.attrs.date} `;
+			} else if (inlineNode.type.name === "after") {
+				query += ` after:${inlineNode.attrs.date} `;
+			}
+		});
+	});
+	return query.trim().replace(/\s+/g, " ");
+}
+
+function dateToBoundaryUUID(
+	dateString: string,
+	boundary: "start" | "end",
+): string | undefined {
+	try {
+		const date = new Date(dateString);
+		if (isNaN(date.getTime())) return undefined;
+
+		if (boundary === "start") {
+			date.setUTCHours(0, 0, 0, 0);
+			const unixTsMs = date.getTime();
+			return UUID.fromFieldsV7(unixTsMs, 0, 0, 0).toString();
+		} else {
+			// end
+			date.setUTCHours(23, 59, 59, 999);
+			const unixTsMs = date.getTime();
+			const randA = 0xfff;
+			const randBHi = 0x3fffffff;
+			const randBLo = 0xffffffff;
+			return UUID.fromFieldsV7(unixTsMs, randA, randBHi, randBLo).toString();
+		}
+	} catch (e) {
+		console.error("Invalid date for search filter:", e);
+		return undefined;
+	}
+}
+
+function syntaxHighlightingPlugin() {
 	return new Plugin({
 		props: {
 			decorations(state) {
 				const decorations: Decoration[] = [];
-				const text = state.doc.textContent;
+				state.doc.descendants((node, pos) => {
+					if (node.type.name !== "text" && node.isAtom) {
+						decorations.push(
+							Decoration.inline(pos, pos + node.nodeSize, {
+								class: `filter-atom filter-${node.type.name}`,
+							}),
+						);
+						return false;
+					}
 
-				// quoted
-				const quoteRegex = /"([^"]*)"/g;
-				let m;
-				while ((m = quoteRegex.exec(text))) {
-					decorations.push(
-						Decoration.inline(m.index, m.index + m[0].length, {
-							class: "quoted",
-						}),
-					);
-				}
+					if (node.isText) {
+						const text = node.text!;
+						const phraseRegex = /"([^"]*)"/g;
+						let match;
+						while ((match = phraseRegex.exec(text))) {
+							const from = pos + match.index;
+							const to = from + match[0].length;
+							decorations.push(
+								Decoration.inline(from, to, {
+									class: "filter-phrase",
+								}),
+							);
+							decorations.push(
+								Decoration.inline(from, from + 1, { class: "syn" }),
+							);
+							if (match[0].length > 1) {
+								decorations.push(
+									Decoration.inline(to - 1, to, { class: "syn" }),
+								);
+							}
+						}
 
-				// -not
-				const notRegex = /-([^\s]+)/g;
-				while ((m = notRegex.exec(text))) {
-					decorations.push(
-						Decoration.inline(m.index, m.index + m[0].length, {
-							class: "negated",
-						}),
-					);
-				}
-
+						const negationRegex = /(^|\s)-\S+/g;
+						while ((match = negationRegex.exec(text))) {
+							const from = pos + match.index + (match[1]?.length ?? 0);
+							const to = from + match[0].length - (match[1]?.length ?? 0);
+							decorations.push(
+								Decoration.inline(from, to, {
+									class: "filter-negation",
+								}),
+							);
+							decorations.push(
+								Decoration.inline(from, from + 1, { class: "syn" }),
+							);
+						}
+					}
+				});
 				return DecorationSet.create(state.doc, decorations);
 			},
 		},
 	});
 }
 
-function autocompletePlugin() {
+const AutocompleteDropdown = (props: {
+	filter: { type: string; query: string };
+	thread: ThreadT;
+	onSelect: (node: Node) => void;
+	onSelectFilter: (text: string) => void;
+}) => {
+	const api = useApi();
+	const threadMembers = api.thread_members.list(() => props.thread.id);
+	const roomMembers = api.room_members.list(() => props.thread.room_id ?? "");
+	const roomThreads = api.threads.list(() => props.thread.room_id ?? "");
+
+	const authorSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+		const tm = threadMembers()?.items.map((m) => m.user_id) ?? [];
+		const rm = roomMembers()?.items.map((m) => m.user_id) ?? [];
+		const all_user_ids = [...new Set([...tm, ...rm])];
+
+		if (!query) return all_user_ids.slice(0, 10);
+
+		const users = all_user_ids.map((id) => api.users.cache.get(id)).filter(
+			Boolean,
+		) as User[];
+		return users
+			.filter(
+				(u) =>
+					u.name.toLowerCase().includes(query) ||
+					u.id.toLowerCase().includes(query),
+			)
+			.map((u) => u.id)
+			.slice(0, 10);
+	});
+
+	const threadSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+		const threads = roomThreads()?.items ?? [];
+		if (!query) return threads.slice(0, 10);
+		return threads
+			.filter(
+				(t) =>
+					t.name.toLowerCase().includes(query) ||
+					t.id.toLowerCase().includes(query),
+			)
+			.slice(0, 10);
+	});
+
+	const onAuthorSelect = (user_id: string) => {
+		const user = api.users.cache.get(user_id);
+		if (!user) return;
+		const node = schema.nodes.author.create({ id: user.id, name: user.name });
+		props.onSelect(node);
+	};
+
+	const onThreadSelect = (thread: ThreadT) => {
+		const node = schema.nodes.thread.create({
+			id: thread.id,
+			name: thread.name,
+		});
+		props.onSelect(node);
+	};
+
+	const allFilterSuggestions = ["author:", "thread:", "before:", "after:"];
+	const filterSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+		if (!query) return allFilterSuggestions;
+		return allFilterSuggestions.filter((f) => f.toLowerCase().includes(query));
+	});
+
+	const hasSuggestions = createMemo(() => {
+		if (props.filter.type === "author") {
+			return authorSuggestions().length > 0;
+		}
+		if (props.filter.type === "thread") {
+			return threadSuggestions().length > 0;
+		}
+		if (props.filter.type === "filter") {
+			return filterSuggestions().length > 0;
+		}
+		return false;
+	});
+
+	return (
+		<Show when={hasSuggestions()}>
+			<div class="search-autocomplete">
+				<Show when={props.filter.type === "author"}>
+					<ul>
+						<For each={authorSuggestions()}>
+							{(user_id) => {
+								const user = api.users.cache.get(user_id);
+								return (
+									<li
+										onMouseDown={(e) => {
+											e.preventDefault();
+											onAuthorSelect(user_id);
+										}}
+									>
+										<b>{user?.name}</b>
+										<span class="dim">({user_id})</span>
+									</li>
+								);
+							}}
+						</For>
+					</ul>
+				</Show>
+				<Show when={props.filter.type === "thread"}>
+					<ul>
+						<For each={threadSuggestions()}>
+							{(thread) => (
+								<li
+									onMouseDown={(e) => {
+										e.preventDefault();
+										onThreadSelect(thread);
+									}}
+								>
+									<b>{thread.name}</b>
+									<span class="dim">({thread.id})</span>
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+				<Show when={props.filter.type === "filter"}>
+					<ul>
+						<For each={filterSuggestions()}>
+							{(filter) => (
+								<li
+									onMouseDown={(e) => {
+										e.preventDefault();
+										props.onSelectFilter(filter);
+									}}
+								>
+									<b>{filter}</b>
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+			</div>
+		</Show>
+	);
+};
+
+function autocompletePlugin(
+	setFilter: (filter: { type: string; query: string } | null) => void,
+) {
 	return new Plugin({
-		props: {
-			handleTextInput(view, from, to, text) {
-				const before = view.state.doc.textBetween(0, from, " ");
-				if (/\bhas:$/.test(before)) {
-					// suggest fixed types
-					console.log("Autocomplete options:", [
-						"image",
-						"audio",
-						"video",
-						"file",
-					]);
-				} else if (/\bauthor:$/.test(before)) {
-					fetchAuthors("").then((r) => console.log("Author suggestions", r));
-				} else if (/\bin:$/.test(before)) {
-					fetchLocations("").then((r) =>
-						console.log("Location suggestions", r)
-					);
+		state: {
+			init: () => null,
+			apply: (tr, value) => {
+				const { selection } = tr;
+				if (!selection.empty) {
+					setFilter(null);
+					return null;
 				}
-				return false;
+
+				const text = tr.doc.textContent;
+				const cursorPos = selection.from;
+				const textBeforeCursor = text.slice(0, cursorPos);
+
+				const filterMatch = textBeforeCursor.match(/\b(author|thread):(\S*)$/);
+				if (filterMatch) {
+					setFilter({ type: filterMatch[1], query: filterMatch[2] });
+					return null;
+				}
+
+				// Only suggest at the end of a word/input
+				if (text.slice(cursorPos).match(/^\S/)) {
+					setFilter(null);
+					return null;
+				}
+
+				const wordMatch = textBeforeCursor.match(/(\S+)$/);
+				if (wordMatch) {
+					const word = wordMatch[1];
+					if (word.includes(":")) {
+						setFilter(null);
+						return null;
+					}
+					setFilter({ type: "filter", query: word });
+				} else {
+					// Empty or ends with space
+					setFilter({ type: "filter", query: "" });
+				}
+
+				return null;
 			},
 		},
 	});
 }
 
-export const SearchInput = () => {
-	const state = EditorState.create({
-		schema,
-		plugins: [
-			history(),
-			keymap({
-				"Ctrl-z": undo,
-				"Ctrl-Shift-z": redo,
-				"Ctrl-y": redo,
-				"Enter": (state) => {
-					console.log(state.doc.textContent.trim());
-					return true;
-				},
-				"Backspace": (state, dispatch) => {
-					const sel = state.tr.selection;
-					if (sel.empty) {
-						const pos = sel.$anchor.pos - 1;
-						if (pos >= 0) {
-							dispatch?.(state.tr.deleteRange(pos, pos + 1));
-						}
-					} else {
-						dispatch?.(state.tr.deleteSelection());
-					}
-					return true;
-				},
-			}),
-			highlightPlugin(),
-			autocompletePlugin(),
-		],
-	});
+export const SearchInput = (props: { thread: ThreadT }) => {
+	const api = useApi();
+	const ctx = useCtx();
+	let editorRef: HTMLDivElement | undefined;
+	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
+	let view: EditorView;
+	const [activeFilter, setActiveFilter] = createSignal<
+		{
+			type: string;
+			query: string;
+		} | null
+	>(null);
 
-	let editorEl: HTMLDivElement | undefined;
+	const position = useFloating(
+		() => editorRef,
+		dropdownRef,
+		{
+			whileElementsMounted: autoUpdate,
+			middleware: [offset(4), flip()],
+			placement: "bottom-start",
+		},
+	);
+
+	const handleSubmit = async () => {
+		const queryString = serializeToQuery(view.state);
+		if (!queryString) {
+			ctx.thread_search.delete(props.thread.id);
+			return;
+		}
+
+		const parts = queryString.split(/\s+/);
+		const textQueryParts: string[] = [];
+		const filters: Record<string, string[]> = {};
+		const filterRegex = /^(author|thread|before|after):(.+)$/;
+
+		for (const part of parts) {
+			const match = part.match(filterRegex);
+			if (match && match[2]) {
+				const key = match[1];
+				const value = match[2];
+				if (!filters[key]) {
+					filters[key] = [];
+				}
+				filters[key].push(value);
+			} else {
+				textQueryParts.push(part);
+			}
+		}
+		const textQuery = textQueryParts.join(" ");
+
+		const existing = ctx.thread_search.get(props.thread.id);
+		const searchState: ThreadSearch = {
+			query: queryString,
+			results: existing?.results ?? null,
+			loading: true,
+			author: filters.author,
+			before: filters.before?.[0],
+			after: filters.after?.[0],
+			thread: filters.thread,
+		};
+		ctx.thread_search.set(props.thread.id, searchState);
+
+		const body: {
+			query: string;
+			user_id?: string[];
+			thread_id?: string[];
+			room_id?: string[];
+		} = { query: textQuery };
+		const params: { query: { limit: number; from?: string; to?: string } } = {
+			query: { limit: 100 },
+		};
+
+		if (filters.author) body.user_id = filters.author;
+
+		if (props.thread.type === "Dm" || props.thread.type === "Gdm") {
+			body.thread_id = [props.thread.id];
+		} else if (filters.thread) {
+			body.thread_id = filters.thread;
+			if (props.thread.room_id) body.room_id = [props.thread.room_id];
+		} else if (props.thread.room_id) {
+			body.room_id = [props.thread.room_id];
+		} else {
+			body.thread_id = [props.thread.id];
+		}
+
+		if (filters.before?.[0]) {
+			const to_uuid = dateToBoundaryUUID(filters.before[0], "end");
+			if (to_uuid) params.query.to = to_uuid;
+		}
+		if (filters.after?.[0]) {
+			const from_uuid = dateToBoundaryUUID(filters.after[0], "start");
+			if (from_uuid) params.query.from = from_uuid;
+		}
+
+		const res = await api.client.http.POST("/api/v1/search/message", {
+			body,
+			params,
+		});
+		if (res.data) {
+			ctx.thread_search.set(props.thread.id, {
+				...searchState,
+				results: res.data,
+				loading: false,
+			});
+		} else {
+			ctx.thread_search.set(props.thread.id, {
+				...searchState,
+				results: null,
+				loading: false,
+			});
+		}
+	};
+
+	const insertNode = (node: Node) => {
+		const { from } = view.state.selection;
+		const textBefore = view.state.doc.textBetween(0, from, "\0");
+		const filterMatch = textBefore.match(/\b(author|thread):(\S*)$/);
+		if (filterMatch) {
+			const matchText = filterMatch[0];
+			const start = from - matchText.length;
+			const tr = view.state.tr.replaceWith(start, from, node);
+			view.dispatch(tr);
+			view.focus();
+		}
+	};
+
+	const insertFilter = (text: string) => {
+		const { from } = view.state.selection;
+		const textBefore = view.state.doc.textBetween(0, from, " ");
+		const wordMatch = textBefore.match(/(\S+)$/);
+		const start = wordMatch ? from - wordMatch[0].length : from;
+		const tr = view.state.tr.insertText(text, start, from);
+		view.dispatch(tr);
+		view.focus();
+	};
 
 	onMount(() => {
-		const view = new EditorView({ mount: editorEl! }, {
-			domParser: DOMParser.fromSchema(schema),
-			state,
+		const state = EditorState.create({
+			schema,
+			plugins: [
+				history(),
+				keymap({
+					"Ctrl-z": undo,
+					"Ctrl-Shift-z": redo,
+					Enter: () => {
+						handleSubmit();
+						return true;
+					},
+					"Escape": () => {
+						const { state } = view;
+						if (state.doc.textContent.length > 0) {
+							const tr = state.tr.delete(0, state.doc.content.size);
+							view.dispatch(tr);
+							handleSubmit();
+							return true;
+						}
+
+						if (ctx.thread_search.has(props.thread.id)) {
+							ctx.thread_search.delete(props.thread.id);
+						} else {
+							const chatInput = document.querySelector(
+								".chat .ProseMirror",
+							) as HTMLInputElement | null;
+							chatInput?.focus();
+						}
+						return true;
+					},
+				}),
+				syntaxHighlightingPlugin(),
+				autocompletePlugin(setActiveFilter),
+			],
 		});
-		onCleanup(() => view.destroy());
+
+		view = new EditorView(editorRef!, {
+			state,
+			decorations(state) {
+				if (state.doc.firstChild!.firstChild === null) {
+					const placeholder = (
+						<div class="placeholder" role="presentation">
+							search
+						</div>
+					) as HTMLDivElement;
+					return DecorationSet.create(state.doc, [
+						Decoration.widget(0, placeholder),
+					]);
+				}
+				return DecorationSet.empty;
+			},
+			handleDOMEvents: {
+				focus: (view) => {
+					const { state } = view;
+					const { selection } = state;
+					if (!selection.empty) {
+						return false;
+					}
+
+					const text = state.doc.textContent;
+					const cursorPos = selection.from;
+					const textBeforeCursor = text.slice(0, cursorPos);
+
+					const filterMatch = textBeforeCursor.match(
+						/\b(author|thread):(\S*)$/,
+					);
+					if (filterMatch) {
+						setActiveFilter({ type: filterMatch[1], query: filterMatch[2] });
+						return false;
+					}
+
+					// Only suggest at the end of a word/input
+					if (text.slice(cursorPos).match(/^\S/)) {
+						return false;
+					}
+
+					const wordMatch = textBeforeCursor.match(/(\S+)$/);
+					if (wordMatch) {
+						const word = wordMatch[1];
+						if (word.includes(":")) {
+							return false;
+						}
+						setActiveFilter({ type: "filter", query: word });
+					} else {
+						// Empty or ends with space
+						setActiveFilter({ type: "filter", query: "" });
+					}
+					return false;
+				},
+				blur: () => {
+					// Use a small delay to allow click events on the dropdown to register
+					setTimeout(() => setActiveFilter(null), 150);
+					return false;
+				},
+			},
+		});
+
+		onCleanup(() => {
+			view.destroy();
+		});
 	});
 
 	return (
-		<div
-			class="editor"
-			tabindex={0}
-			ref={editorEl!}
-			role="textbox"
-			aria-label="search input"
-			aria-placeholder="search..."
-		>
+		<div class="search-container">
+			<div class="search-input" ref={editorRef!}></div>
+			<Portal>
+				<Show when={activeFilter()}>
+					<div
+						ref={setDropdownRef}
+						class="floating"
+						style={{
+							position: position.strategy,
+							top: `${position.y ?? 0}px`,
+							left: `${position.x ?? 0}px`,
+							width: `${editorRef?.offsetWidth || 0}px`,
+						}}
+					>
+						<AutocompleteDropdown
+							filter={activeFilter()!}
+							thread={props.thread}
+							onSelect={insertNode}
+							onSelectFilter={insertFilter}
+						/>
+					</div>
+				</Show>
+			</Portal>
 		</div>
 	);
 };

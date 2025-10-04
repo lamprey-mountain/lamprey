@@ -7,7 +7,6 @@ import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./Dropdown.tsx";
-import { SearchInput } from "./SearchInput.tsx";
 
 // @ts-ignore
 const packageJson = __VITE_PACKAGE_JSON__;
@@ -26,10 +25,6 @@ export const Debug = () => {
 				<summary>build info</summary>
 				commit {gitCommit} {gitDirty && "(dirty)"}
 				<pre><code>{JSON.stringify(packageJson, null, 4)}</code></pre>
-			</details>
-			<details>
-				<summary>search thing</summary>
-				<SearchInput />
 			</details>
 			<details>
 				<summary>invite json</summary>

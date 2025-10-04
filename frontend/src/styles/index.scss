@@ -2839,10 +2839,46 @@ button.link {
 	}
 }
 
-.search-filters-dropdown {
-	position: absolute;
+.search-container {
+	position: relative;
+	z-index: 1;
+}
+
+.search-autocomplete {
 	background: $bg-100;
 	border: solid $sep-500 1px;
 	padding: 8px;
-	z-index: 1;
+	/* z-index: 1; */
+	/* width: 100%; */
+}
+
+.search-input {
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+	padding: 4px;
+	min-width: 200px;
+	white-space: pre-wrap;
+	caret-color: $fg-400;
+
+	& .placeholder {
+		position: absolute;
+		color: $fg-400;
+	}
+
+	& .syn {
+		color: $fg-500;
+	}
+
+	& .filter-thread {
+		background: $bg-150;
+		padding: 0 2px;
+		border-radius: 2px;
+	}
+
+	& .filter-author {
+		background: $bg-150;
+		padding: 0 2px;
+		margin: 0 2px;
+		border-radius: 2px;
+	}
 }
