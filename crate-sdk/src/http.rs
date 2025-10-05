@@ -104,6 +104,26 @@ impl Http {
             .await?;
         Ok(res)
     }
+
+    pub async fn message_list(
+        &self,
+        thread_id: ThreadId,
+        query: &PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let url = self
+            .base_url
+            .join(&format!("/api/v1/thread/{thread_id}/message"))?;
+        let res = self
+            .client
+            .get(url)
+            .query(query)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
 }
 
 macro_rules! route {

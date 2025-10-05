@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, misc::UserIdReq, pagination::PaginationQuery, user_status, Media, MediaCreate,
-    MediaCreateSource, MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId,
-    ThreadType, User, UserId,
+    self,
+    misc::UserIdReq,
+    pagination::{PaginationQuery, PaginationResponse},
+    user_status, Media, MediaCreate, MediaCreateSource, MessageCreate, MessageId, MessageSync,
+    RoomId, Session, Thread, ThreadId, ThreadType, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -209,6 +211,15 @@ impl LampreyHandle {
         message_id: MessageId,
     ) -> Result<types::Message> {
         let res = self.http.message_get(thread_id, message_id).await?;
+        Ok(res)
+    }
+
+    pub async fn message_list(
+        &self,
+        thread_id: ThreadId,
+        query: &PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<types::Message>> {
+        let res = self.http.message_list(thread_id, query).await?;
         Ok(res)
     }
 

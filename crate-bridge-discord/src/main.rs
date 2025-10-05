@@ -1,3 +1,4 @@
+use ::common::v1::types::{PaginationDirection, PaginationQuery};
 use anyhow::Result;
 use common::{Config, Globals};
 use dashmap::DashMap;
@@ -11,7 +12,10 @@ use tokio::sync::mpsc;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
-use crate::bridge::{Bridge, BridgeMessage};
+use crate::{
+    bridge::{Bridge, BridgeMessage},
+    common::GlobalsTrait,
+};
 
 mod bridge;
 mod common;
@@ -106,8 +110,9 @@ async fn main() -> Result<()> {
     let ch = Lamprey::new(globals.clone(), ch_chan.1);
     Bridge::spawn(globals.clone(), bridge_chan.1);
 
+    let startup_autobridge_globals = globals.clone();
     let startup_autobridge_task = tokio::spawn(async move {
-        let globals = globals.clone();
+        let globals = startup_autobridge_globals;
         for realm in globals.get_realms().await? {
             if !realm.continuous {
                 continue;
@@ -134,7 +139,80 @@ async fn main() -> Result<()> {
         Ok::<(), anyhow::Error>(())
     });
 
-    let _ = tokio::join!(dc.connect(), ch.connect(), startup_autobridge_task);
+    let lamprey_backfill_globals = globals.clone();
+    let lamprey_backfill_task = tokio::spawn(async move {
+        let globals = lamprey_backfill_globals;
+        info!("starting lamprey backfill");
+        let portals = globals.get_portals().await?;
+
+        for portal_config in portals {
+            let globals = globals.clone();
+            tokio::spawn(async move {
+                let res: Result<()> = async {
+                    let ly = globals.lamprey_handle().await?;
+                    let last_id = globals.last_ids.get(&portal_config.lamprey_thread_id);
+                    let from = last_id.map(|m| m.chat_id);
+                    let mut query = PaginationQuery {
+                        from,
+                        to: None,
+                        dir: Some(PaginationDirection::F),
+                        limit: Some(100),
+                    };
+
+                    loop {
+                        let page = ly
+                            .message_list(portal_config.lamprey_thread_id, &query)
+                            .await?;
+                        info!(
+                            "backfilling {} messages for thread {}",
+                            page.items.len(),
+                            portal_config.lamprey_thread_id
+                        );
+
+                        for message in page.items {
+                            globals
+                                .portal_send(
+                                    portal_config.lamprey_thread_id,
+                                    portal::PortalMessage::LampreyMessageCreate { message },
+                                )
+                                .await;
+                        }
+
+                        if !page.has_more {
+                            break;
+                        }
+
+                        if let Some(cursor) = page.cursor {
+                            query.from = Some(cursor.parse()?);
+                        } else {
+                            break;
+                        }
+                    }
+                    Ok(())
+                }
+                .await;
+                if let Err(e) = res {
+                    error!(
+                        "failed to backfill thread {}: {}",
+                        portal_config.lamprey_thread_id, e
+                    );
+                } else {
+                    info!(
+                        "finished backfill for thread {}",
+                        portal_config.lamprey_thread_id
+                    );
+                }
+            });
+        }
+        Ok::<(), anyhow::Error>(())
+    });
+
+    let _ = tokio::join!(
+        dc.connect(),
+        ch.connect(),
+        startup_autobridge_task,
+        lamprey_backfill_task
+    );
 
     Ok(())
 }
