@@ -88,7 +88,7 @@ async fn main() -> Result<()> {
     let presence_globals = globals.clone();
     tokio::spawn(async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(120)).await;
             info!("Re-syncing all user presences");
             for item in presence_globals.presences.iter() {
                 let presence = item.value().clone();
