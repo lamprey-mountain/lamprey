@@ -6,10 +6,10 @@ use common::v1::types::{RoomId, ThreadId};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
-        parse_webhook, ChannelType, CommandDataOptionValue, CommandInteraction, CommandOptionType,
-        CreateChannel, CreateCommand, CreateCommandOption, CreateInteractionResponseMessage,
-        CreateWebhook, EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild,
-        GuildChannel, Http, Interaction, InteractionContext, InteractionResponseFlags,
+        ChannelType, CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateChannel,
+        CreateCommand, CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook,
+        EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild, GuildChannel,
+        GuildMemberUpdateEvent, Http, Interaction, InteractionContext, InteractionResponseFlags,
         MessagePagination, Permissions, Ready, Webhook,
     },
     model::prelude::{
@@ -18,7 +18,7 @@ use serenity::{
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{error, info, warn, Instrument};
+use tracing::{debug, error, info, warn, Instrument};
 
 use crate::{
     bridge::BridgeMessage,
@@ -450,16 +450,15 @@ impl EventHandler for Handler {
         let globals = ctx_data.get::<GlobalsKey>().unwrap();
 
         // ignore bridged messages
-        if let Some(w) = new.and_then(|m| m.webhook_id) {
+        if let Some(w) = new.as_ref().and_then(|m| m.webhook_id) {
             if let Ok(Some(h)) = globals
                 .get_portal_by_discord_channel(event.channel_id)
                 .await
             {
-                let msg_wh_id = parse_webhook(&h.discord_webhook.parse().unwrap())
-                    .unwrap()
-                    .0;
-                if msg_wh_id == w {
-                    return;
+                if let Ok(webhook) = Webhook::from_url(&ctx.http, &h.discord_webhook).await {
+                    if webhook.id == w {
+                        return;
+                    }
                 }
             }
         }
@@ -467,7 +466,10 @@ impl EventHandler for Handler {
         globals
             .portal_send_dc(
                 event.channel_id,
-                PortalMessage::DiscordMessageUpdate { update: event },
+                PortalMessage::DiscordMessageUpdate {
+                    update: event,
+                    new_message: new,
+                },
             )
             .await;
     }
@@ -890,6 +892,63 @@ impl EventHandler for Handler {
             }
             _ => {}
         }
+    }
+
+    async fn guild_member_update(
+        &self,
+        ctx: Context,
+        old_if_available: Option<serenity::model::guild::Member>,
+        new: Option<serenity::model::guild::Member>,
+        _event: GuildMemberUpdateEvent,
+    ) {
+        let Some(new) = new else {
+            return;
+        };
+        info!("discord guild member update");
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap().clone();
+
+        let old_nick = old_if_available.and_then(|m| m.nick);
+        if old_nick == new.nick {
+            return;
+        }
+
+        tokio::spawn(async move {
+            let res: Result<()> = async {
+                let Some(puppet) = globals
+                    .get_puppet("discord", &new.user.id.to_string())
+                    .await?
+                else {
+                    debug!("no puppet found for discord user {}", new.user.id);
+                    return Ok(());
+                };
+
+                let realms = globals.get_realms().await?;
+                let Some(realm) = realms.iter().find(|r| r.discord_guild_id == new.guild_id) else {
+                    debug!("no realm found for guild {}", new.guild_id);
+                    return Ok(());
+                };
+
+                let ly = globals.lamprey_handle().await?;
+
+                let patch = common::v1::types::RoomMemberPatch {
+                    override_name: Some(new.nick.clone()),
+                    override_description: None,
+                    mute: None,
+                    deaf: None,
+                    roles: None,
+                };
+
+                ly.room_member_patch(realm.lamprey_room_id, puppet.id.into(), &patch)
+                    .await?;
+                info!("updated lamprey member nick for {}", new.user.id);
+                Ok(())
+            }
+            .await;
+            if let Err(e) = res {
+                error!("failed to handle guild member update: {e}");
+            }
+        });
     }
 }
 

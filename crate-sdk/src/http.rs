@@ -5,6 +5,7 @@ use common::v1::types::{
     MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, SessionToken, Thread,
     ThreadCreate, ThreadId, ThreadPatch, User, UserId, UserPatch,
 };
+use common::v1::types::{RoomMember, RoomMemberPatch};
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;
@@ -203,6 +204,7 @@ route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reactio
 route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ThreadId));
 route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId));
+route!(patch  "/api/v1/room/{room_id}/member/{user_id}"         => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
 // route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
 route!(patch  "/api/v1/user/{user_id}"                          => user_update(user_id: UserIdReq) -> User, UserPatch);
 route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"         => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);

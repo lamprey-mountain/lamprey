@@ -331,6 +331,19 @@ impl LampreyHandle {
         Ok(res)
     }
 
+    pub async fn room_member_patch(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        patch: &types::RoomMemberPatch,
+    ) -> Result<types::RoomMember> {
+        let res = self
+            .http
+            .room_member_patch(room_id, UserIdReq::UserId(user_id), patch)
+            .await?;
+        Ok(res)
+    }
+
     pub async fn room_threads(&self, room_id: RoomId) -> Result<Vec<Thread>> {
         let mut all_threads = Vec::new();
         let mut query = PaginationQuery::default();

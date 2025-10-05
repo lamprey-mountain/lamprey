@@ -48,6 +48,7 @@ pub enum PortalMessage {
     },
     DiscordMessageUpdate {
         update: DcMessageUpdate,
+        new_message: Option<DcMessage>,
     },
     DiscordMessageDelete {
         message_id: DcMessageId,
@@ -119,8 +120,12 @@ impl Portal {
             PortalMessage::DiscordMessageCreate { message } => {
                 self.handle_discord_message_create(message).await?;
             }
-            PortalMessage::DiscordMessageUpdate { update } => {
-                self.handle_discord_message_update(update).await?;
+            PortalMessage::DiscordMessageUpdate {
+                update,
+                new_message,
+            } => {
+                self.handle_discord_message_update(update, new_message)
+                    .await?;
             }
             PortalMessage::DiscordMessageDelete { message_id } => {
                 self.handle_discord_message_delete(message_id).await?;
@@ -136,6 +141,36 @@ impl Portal {
                 self.handle_discord_typing(user_id).await?;
             }
         }
+        Ok(())
+    }
+
+    async fn sync_discord_member_nick(
+        &self,
+        user_id: serenity::model::id::UserId,
+        nick: Option<String>,
+    ) -> Result<()> {
+        let ly = self.globals.lamprey_handle().await?;
+        let Some(puppet) = self
+            .globals
+            .get_puppet("discord", &user_id.to_string())
+            .await?
+        else {
+            debug!("no puppet for user {}", user_id);
+            return Ok(());
+        };
+
+        let patch = types::RoomMemberPatch {
+            override_name: Some(nick),
+            override_description: None,
+            mute: None,
+            deaf: None,
+            roles: None,
+        };
+
+        ly.room_member_patch(self.room_id(), puppet.id.into(), &patch)
+            .await?;
+        debug!("synced nickname for user {}", user_id);
+
         Ok(())
     }
 
@@ -356,6 +391,10 @@ impl Portal {
     }
 
     async fn handle_discord_message_create(&mut self, message: DcMessage) -> Result<()> {
+        if let Some(member) = &message.member {
+            self.sync_discord_member_nick(message.author.id, member.nick.clone())
+                .await?;
+        }
         let ly = self.globals.lamprey_handle().await?;
         let existing = self.globals.get_message_dc(message.id).await?;
         if existing.is_some() {
@@ -602,7 +641,17 @@ impl Portal {
         Ok(())
     }
 
-    async fn handle_discord_message_update(&mut self, update: DcMessageUpdate) -> Result<()> {
+    async fn handle_discord_message_update(
+        &mut self,
+        update: DcMessageUpdate,
+        new_message: Option<DcMessage>,
+    ) -> Result<()> {
+        if let Some(message) = new_message {
+            if let Some(member) = &message.member {
+                self.sync_discord_member_nick(message.author.id, member.nick.clone())
+                    .await?;
+            }
+        }
         let ly = self.globals.lamprey_handle().await?;
         let existing = self.globals.get_message_dc(update.id).await?;
         let Some(existing) = existing else {
@@ -694,6 +743,10 @@ impl Portal {
     }
 
     async fn handle_discord_reaction_add(&mut self, add_reaction: DcReaction) -> Result<()> {
+        if let (Some(user_id), Some(member)) = (add_reaction.user_id, &add_reaction.member) {
+            self.sync_discord_member_nick(user_id, member.nick.clone())
+                .await?;
+        }
         let ly = self.globals.lamprey_handle().await?;
         let Some(user_id) = add_reaction.user_id else {
             debug!("missing user_id");
@@ -734,6 +787,11 @@ impl Portal {
     }
 
     async fn handle_discord_reaction_remove(&mut self, removed_reaction: DcReaction) -> Result<()> {
+        if let (Some(user_id), Some(member)) = (removed_reaction.user_id, &removed_reaction.member)
+        {
+            self.sync_discord_member_nick(user_id, member.nick.clone())
+                .await?;
+        }
         let ly = self.globals.lamprey_handle().await?;
         let Some(user_id) = removed_reaction.user_id else {
             debug!("missing user_id");
