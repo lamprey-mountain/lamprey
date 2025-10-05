@@ -1528,6 +1528,14 @@ blockquote {
 	&[data-status="Offline"] .indicator {
 		fill: $status-offline;
 	}
+
+	&[data-status="Away"] .indicator {
+		fill: $color-yellow;
+	}
+
+	&[data-status="Busy"] .indicator {
+		fill: $color-red;
+	}
 }
 
 svg.avatar {
