@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use common::v1::types::{ApplicationId, RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
-use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
+use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId, Presence, UserId as DcUserId};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::bridge::BridgeMessage;
@@ -20,6 +20,7 @@ pub struct Globals {
     pub config: Config,
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
     pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
+    pub presences: Arc<DashMap<DcUserId, Presence>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
     pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,

@@ -70,6 +70,7 @@ async fn main() -> Result<()> {
         config,
         portals: Arc::new(DashMap::new()),
         last_ids: Arc::new(DashMap::new()),
+        presences: Arc::new(DashMap::new()),
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
         bridge_chan: bridge_chan.0,
@@ -83,6 +84,23 @@ async fn main() -> Result<()> {
             globals.last_ids.insert(config.lamprey_thread_id, last_id);
         }
     }
+
+    let presence_globals = globals.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+            info!("Re-syncing all user presences");
+            for item in presence_globals.presences.iter() {
+                let presence = item.value().clone();
+                let globals = presence_globals.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = discord::process_presence_update(globals, presence).await {
+                        error!("failed to re-sync presence: {e}");
+                    }
+                });
+            }
+        }
+    });
 
     let dc = Discord::new(globals.clone(), dc_chan.1);
     let ch = Lamprey::new(globals.clone(), ch_chan.1);

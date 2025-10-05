@@ -10,15 +10,16 @@ use serenity::{
         CreateCommand, CreateCommandOption, CreateInteractionResponseMessage, CreateWebhook,
         EditWebhookMessage, EventHandler, ExecuteWebhook, GatewayIntents, Guild, GuildChannel,
         GuildMemberUpdateEvent, Http, Interaction, InteractionContext, InteractionResponseFlags,
-        MessagePagination, Permissions, Ready, Webhook,
+        MessagePagination, Permissions, Presence, Ready, Webhook,
     },
     model::prelude::{
-        ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, Reaction, TypingStartEvent,
+        ActivityType, ChannelId, GuildId, Message, MessageId, MessageUpdateEvent, OnlineStatus,
+        Reaction, TypingStartEvent,
     },
     prelude::*,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error, info, warn, Instrument};
+use tracing::{debug, error, info, trace, warn, Instrument};
 
 use crate::{
     bridge::BridgeMessage,
@@ -26,6 +27,7 @@ use crate::{
     data::Data,
     portal::{Portal, PortalMessage},
 };
+use common::v1::types::user_status::{StatusPatch, StatusText, StatusTypePatch};
 
 struct GlobalsKey;
 
@@ -950,6 +952,64 @@ impl EventHandler for Handler {
             }
         });
     }
+
+    async fn presence_update(&self, ctx: Context, presence: Presence) {
+        info!("discord presence update for user {}", presence.user.id);
+        let ctx_data = ctx.data.read().await;
+        let globals = ctx_data.get::<GlobalsKey>().unwrap().clone();
+
+        globals.presences.insert(presence.user.id, presence.clone());
+
+        tokio::spawn(async move {
+            if let Err(e) = process_presence_update(globals, presence).await {
+                error!("failed to handle presence update: {e}");
+            }
+        });
+    }
+}
+
+pub async fn process_presence_update(globals: Arc<Globals>, presence: Presence) -> Result<()> {
+    let Some(puppet) = globals
+        .get_puppet("discord", &presence.user.id.to_string())
+        .await?
+    else {
+        trace!("no puppet found for discord user {}", presence.user.id);
+        return Ok(());
+    };
+
+    let status = match presence.status {
+        OnlineStatus::Online => Some(StatusTypePatch::Online),
+        OnlineStatus::Idle => Some(StatusTypePatch::Away {}),
+        OnlineStatus::DoNotDisturb => Some(StatusTypePatch::Busy { dnd: true }),
+        OnlineStatus::Invisible | OnlineStatus::Offline => Some(StatusTypePatch::Offline),
+        _ => None,
+    };
+
+    let status_text = presence
+        .activities
+        .iter()
+        .find(|a| a.kind == ActivityType::Custom)
+        .and_then(|a| a.state.clone())
+        .map(|text| {
+            Some(StatusText {
+                text,
+                clear_at: None,
+            })
+        });
+
+    let patch = StatusPatch {
+        status,
+        status_text,
+    };
+
+    if patch.status.is_none() && patch.status_text.is_none() {
+        return Ok(());
+    }
+
+    let ly = globals.lamprey_handle().await?;
+    ly.user_set_status(puppet.id.into(), &patch).await?;
+    info!("updated lamprey presence for {}", presence.user.id);
+    Ok(())
 }
 
 /// discord actor

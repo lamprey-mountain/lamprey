@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use common::v1::types::{
-    self, misc::UserIdReq, pagination::PaginationQuery, Media, MediaCreate, MediaCreateSource,
-    MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId, ThreadType, User,
-    UserId,
+    self, misc::UserIdReq, pagination::PaginationQuery, user_status, Media, MediaCreate,
+    MediaCreateSource, MessageCreate, MessageId, MessageSync, RoomId, Session, Thread, ThreadId,
+    ThreadType, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -329,6 +329,18 @@ impl LampreyHandle {
             .user_update(UserIdReq::UserId(user_id), patch)
             .await?;
         Ok(res)
+    }
+
+    pub async fn user_set_status(
+        &self,
+        user_id: UserId,
+        patch: &user_status::StatusPatch,
+    ) -> Result<()> {
+        self.http
+            .for_puppet(user_id)
+            .user_set_status(UserIdReq::UserId(user_id), patch)
+            .await?;
+        Ok(())
     }
 
     pub async fn room_member_patch(

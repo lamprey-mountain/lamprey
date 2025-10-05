@@ -1,9 +1,9 @@
 use anyhow::Result;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::{
-    media::MediaCreated, misc::UserIdReq, ApplicationId, Media, MediaCreate, MediaId, Message,
-    MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId, SessionToken, Thread,
-    ThreadCreate, ThreadId, ThreadPatch, User, UserId, UserPatch,
+    media::MediaCreated, misc::UserIdReq, user_status::StatusPatch, ApplicationId, Media,
+    MediaCreate, MediaId, Message, MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId,
+    SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch, User, UserId, UserPatch,
 };
 use common::v1::types::{RoomMember, RoomMemberPatch};
 use headers::HeaderMapExt;
@@ -207,4 +207,5 @@ route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_p
 route!(patch  "/api/v1/room/{room_id}/member/{user_id}"         => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
 // route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
 route!(patch  "/api/v1/user/{user_id}"                          => user_update(user_id: UserIdReq) -> User, UserPatch);
+route!(post   "/api/v1/user/{user_id}/status"                   => user_set_status(user_id: UserIdReq), StatusPatch);
 route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"         => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);
