@@ -264,19 +264,22 @@ async fn room_member_add(
             .add("roles", &res.roles)
     };
 
-    s.audit_log_append(AuditLogEntry {
-        id: AuditLogEntryId::new(),
-        room_id,
-        user_id: auth_user.id,
-        session_id: None,
-        reason: reason.clone(),
-        ty: AuditLogEntryType::MemberUpdate {
+    let changes = changes.build();
+    if !changes.is_empty() {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
             room_id,
-            user_id: target_user_id,
-            changes: changes.build(),
-        },
-    })
-    .await?;
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::MemberUpdate {
+                room_id,
+                user_id: target_user_id,
+                changes,
+            },
+        })
+        .await?;
+    }
 
     s.broadcast_room(
         room_id,
