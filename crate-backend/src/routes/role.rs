@@ -346,6 +346,9 @@ async fn role_member_add(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
+    if room_id.into_inner() == role_id.into_inner() {
+        return Err(Error::BadStatic("cannot manually apply the @everyone role"));
+    }
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
@@ -405,6 +408,11 @@ async fn role_member_remove(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
+    if room_id.into_inner() == role_id.into_inner() {
+        return Err(Error::BadStatic(
+            "cannot manually remove the @everyone role",
+        ));
+    }
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
