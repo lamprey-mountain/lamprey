@@ -13,6 +13,7 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::MemberBridge,
     Permission::MemberKick,
     Permission::MemberNicknameManage,
+    Permission::MemberTimeout,
     Permission::MessageCreate,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
@@ -77,6 +78,7 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::MemberBridge,
     Permission::MemberKick,
     Permission::MemberNicknameManage,
+    Permission::MemberTimeout,
     Permission::MessageCreate,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
@@ -190,6 +192,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::MemberBan,
     Permission::MemberKick,
     Permission::MemberNicknameManage,
+    Permission::MemberTimeout,
     Permission::MessageDelete,
     Permission::MessageMove,
     Permission::MessagePin, // maybe?
