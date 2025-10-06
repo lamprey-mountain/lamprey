@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use axum::{
@@ -7,9 +8,11 @@ use axum::{
     Json,
 };
 use common::v1::types::{
+    notifications::{Notification, NotificationReason},
+    util::Time,
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
-    MessageMigrate, MessageModerate, MessagePin, MessageType, PaginationDirection, PinsReorder,
-    RepliesQuery, ThreadMemberPut, ThreadMembership, ThreadType,
+    MessageMigrate, MessageModerate, MessagePin, MessageType, NotificationId, PaginationDirection,
+    PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership, ThreadType,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -71,10 +74,148 @@ async fn message_create(
         perms.ensure(Permission::ThreadLock)?;
     }
 
+    let mentions = json.mentions.clone();
+
     let message = srv
         .messages
         .create(thread_id, auth_user.id, reason, nonce, json)
         .await?;
+
+    let s_clone = s.clone();
+    let message_id = message.id;
+    let author_id = auth_user.id;
+    let room_id = thread.room_id;
+
+    tokio::spawn(async move {
+        let mut notified_users = HashSet::new();
+
+        // Direct mentions
+        for user_id in mentions.users {
+            if user_id == author_id {
+                continue;
+            }
+            if notified_users.insert(user_id) {
+                let notification = Notification {
+                    id: NotificationId::new(),
+                    thread_id,
+                    message_id,
+                    reason: NotificationReason::Mention,
+                    added_at: Time::now_utc(),
+                };
+                if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
+                    tracing::error!(
+                        "Failed to add mention notification for user {}: {}",
+                        user_id,
+                        e
+                    );
+                }
+            }
+        }
+
+        // Bulk mentions
+        if mentions.everyone_room || mentions.everyone_thread {
+            let mut bulk_mention_users = Vec::new();
+            if mentions.everyone_room {
+                if let Some(room_id) = room_id {
+                    let mut after = None;
+                    loop {
+                        match s_clone
+                            .data()
+                            .room_member_list(
+                                room_id,
+                                PaginationQuery {
+                                    from: after,
+                                    limit: Some(1000),
+                                    ..Default::default()
+                                },
+                            )
+                            .await
+                        {
+                            Ok(page) => {
+                                let has_more = page.has_more;
+                                let items = page.items;
+                                if items.is_empty() {
+                                    break;
+                                }
+                                after = Some(items.last().unwrap().user_id.into());
+                                for member in items {
+                                    bulk_mention_users.push(member.user_id);
+                                }
+                                if !has_more {
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Failed to get room members for bulk mention: {}",
+                                    e
+                                );
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else if mentions.everyone_thread {
+                let mut after = None;
+                loop {
+                    match s_clone
+                        .data()
+                        .thread_member_list(
+                            thread_id,
+                            PaginationQuery {
+                                from: after,
+                                limit: Some(1000),
+                                ..Default::default()
+                            },
+                        )
+                        .await
+                    {
+                        Ok(page) => {
+                            let has_more = page.has_more;
+                            let items = page.items;
+                            if items.is_empty() {
+                                break;
+                            }
+                            after = Some(items.last().unwrap().user_id.into());
+                            for member in items {
+                                bulk_mention_users.push(member.user_id);
+                            }
+                            if !has_more {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to get thread members for bulk mention: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            for user_id in bulk_mention_users {
+                if user_id == author_id {
+                    continue;
+                }
+                if notified_users.insert(user_id) {
+                    let notification = Notification {
+                        id: NotificationId::new(),
+                        thread_id,
+                        message_id,
+                        reason: NotificationReason::MentionBulk,
+                        added_at: Time::now_utc(),
+                    };
+                    if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
+                        tracing::error!(
+                            "Failed to add bulk mention notification for user {}: {}",
+                            user_id,
+                            e
+                        );
+                    }
+                }
+            }
+        }
+    });
+
     Ok((StatusCode::CREATED, Json(message)))
 }
 
