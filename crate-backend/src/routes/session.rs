@@ -98,11 +98,27 @@ pub async fn session_update(
     let data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
-    if !auth_session.can_see(&target_session) {
+
+    let mut allowed = auth_session.can_see(&target_session);
+    if !allowed {
+        if let (Some(auth_user_id), Some(target_user_id)) =
+            (auth_session.user_id(), target_session.user_id())
+        {
+            let target_user = srv.users.get(target_user_id).await?;
+            if let Some(bot) = target_user.bot {
+                if bot.owner_id == auth_user_id {
+                    allowed = true;
+                }
+            }
+        }
+    }
+
+    if !allowed {
         return Err(Error::NotFound);
     }
-    if !json.changes(&auth_session) {
-        return Ok((StatusCode::NOT_MODIFIED, Json(auth_session)));
+
+    if !json.changes(&target_session) {
+        return Ok((StatusCode::NOT_MODIFIED, Json(target_session)));
     }
     data.session_update(target_session_id, json).await?;
     let srv = s.services();
@@ -158,9 +174,25 @@ pub async fn session_delete(
     let data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
-    if !auth_session.can_see(&target_session) {
+
+    let mut allowed = auth_session.can_see(&target_session);
+    if !allowed {
+        if let (Some(auth_user_id), Some(target_user_id)) =
+            (auth_session.user_id(), target_session.user_id())
+        {
+            let target_user = srv.users.get(target_user_id).await?;
+            if let Some(bot) = target_user.bot {
+                if bot.owner_id == auth_user_id {
+                    allowed = true;
+                }
+            }
+        }
+    }
+
+    if !allowed {
         return Err(Error::NotFound);
     }
+
     // TODO: should i restrict deleting other sessions to sudo mode?
     data.session_delete(target_session_id).await?;
     srv.sessions.invalidate(target_session_id).await;

@@ -8,7 +8,7 @@ use common::v1::types::util::Diff;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut,
-    RoomMembership, UserId,
+    RoomMemberSearch, RoomMemberSearchResponse, RoomMembership, UserId,
 };
 use common::v1::types::{
     RoleId, RoomBan, RoomBanBulkCreate, RoomBanCreate, RoomMemberOrigin, SERVER_ROOM_ID,
