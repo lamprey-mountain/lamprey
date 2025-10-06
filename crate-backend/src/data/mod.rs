@@ -386,16 +386,19 @@ pub trait DataThread {
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>>;
     async fn thread_list_archived(
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>>;
     async fn thread_list_removed(
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>>;
     async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId>;
     async fn thread_delete(&self, thread_id: ThreadId) -> Result<()>;

@@ -46,5 +46,5 @@ left join message_count on message_count.thread_id = thread.id
 left join member_count on member_count.thread_id = thread.id
 left join last_id on last_id.thread_id = thread.id
 left join permission_overwrites on permission_overwrites.target_id = thread.id
-where room_id = $1 AND thread.id > $2 AND thread.id < $3 and thread.deleted_at is null and thread.archived_at is not null
+where room_id = $1 AND thread.id > $2 AND thread.id < $3 and thread.deleted_at is null and thread.archived_at is not null and ($6::uuid is null or parent_id = $6)
 order by (CASE WHEN $4 = 'f' THEN thread.id END), thread.id DESC LIMIT $5

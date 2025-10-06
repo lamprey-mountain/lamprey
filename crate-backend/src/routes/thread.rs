@@ -12,7 +12,7 @@ use common::v1::types::{
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -293,12 +293,21 @@ async fn thread_get(
     Ok((StatusCode::OK, Json(thread)))
 }
 
+#[derive(Deserialize, ToSchema, IntoParams)]
+struct ThreadListQuery {
+    parent_id: Option<ThreadId>,
+}
+
 /// Room thread list
 // maybe in the future i'll replace this with a more flexible "thread query/search" api
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread",
-    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
+    params(
+        ("room_id", description = "Room id"),
+        ThreadListQuery,
+        PaginationQuery<ThreadId>
+    ),
     tags = ["thread"],
     responses(
         (status = OK, body = PaginationResponse<Thread>, description = "List room threads success"),
@@ -306,14 +315,15 @@ async fn thread_get(
 )]
 async fn thread_list(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<PaginationQuery<ThreadId>>,
+    Query(q): Query<ThreadListQuery>,
+    Query(pagination): Query<PaginationQuery<ThreadId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    let mut res = data.thread_list(room_id, q).await?;
+    let mut res = data.thread_list(room_id, pagination, q.parent_id).await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
@@ -328,7 +338,11 @@ async fn thread_list(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread/archived",
-    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
+    params(
+        ("room_id", description = "Room id"),
+        ThreadListQuery,
+        PaginationQuery<ThreadId>
+    ),
     tags = ["thread"],
     responses(
         (status = OK, body = PaginationResponse<Thread>, description = "List archived room threads success"),
@@ -336,14 +350,17 @@ async fn thread_list(
 )]
 async fn thread_list_archived(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<PaginationQuery<ThreadId>>,
+    Query(q): Query<ThreadListQuery>,
+    Query(pagination): Query<PaginationQuery<ThreadId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
-    let mut res = data.thread_list_archived(room_id, q).await?;
+    let mut res = data
+        .thread_list_archived(room_id, pagination, q.parent_id)
+        .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
@@ -359,7 +376,11 @@ async fn thread_list_archived(
 #[utoipa::path(
     get,
     path = "/room/{room_id}/thread/removed",
-    params(PaginationQuery<ThreadId>, ("room_id", description = "Room id")),
+    params(
+        ("room_id", description = "Room id"),
+        ThreadListQuery,
+        PaginationQuery<ThreadId>
+    ),
     tags = ["thread"],
     responses(
         (status = OK, body = PaginationResponse<Thread>, description = "List removed room threads success"),
@@ -367,7 +388,8 @@ async fn thread_list_archived(
 )]
 async fn thread_list_removed(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<PaginationQuery<ThreadId>>,
+    Query(q): Query<ThreadListQuery>,
+    Query(pagination): Query<PaginationQuery<ThreadId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -375,7 +397,9 @@ async fn thread_list_removed(
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::ThreadRemove)?;
-    let mut res = data.thread_list_removed(room_id, q).await?;
+    let mut res = data
+        .thread_list_removed(room_id, pagination, q.parent_id)
+        .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {

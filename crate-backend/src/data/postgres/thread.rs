@@ -73,6 +73,7 @@ impl DataThread for Postgres {
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
@@ -85,11 +86,13 @@ impl DataThread for Postgres {
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                parent_id.map(|id| *id)
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL"#,
-                room_id.into_inner()
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                room_id.into_inner(),
+                parent_id.map(|id| *id)
             ),
             |i: &Thread| i.id.to_string()
         )
@@ -99,6 +102,7 @@ impl DataThread for Postgres {
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
@@ -111,11 +115,13 @@ impl DataThread for Postgres {
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                parent_id.map(|id| *id)
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL"#,
-                room_id.into_inner()
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                room_id.into_inner(),
+                parent_id.map(|id| *id)
             ),
             |i: &Thread| i.id.to_string()
         )
@@ -125,6 +131,7 @@ impl DataThread for Postgres {
         &self,
         room_id: RoomId,
         pagination: PaginationQuery<ThreadId>,
+        parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
@@ -137,11 +144,13 @@ impl DataThread for Postgres {
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                parent_id.map(|id| *id)
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NOT NULL"#,
-                room_id.into_inner()
+                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                room_id.into_inner(),
+                parent_id.map(|id| *id)
             ),
             |i: &Thread| i.id.to_string()
         )
