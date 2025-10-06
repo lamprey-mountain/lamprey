@@ -221,6 +221,7 @@ impl ServiceThreads {
                     }),
                     edited_at: None,
                     created_at: None,
+                    mentions: Default::default(),
                 })
                 .await?;
             let rename_message = data

@@ -252,6 +252,7 @@ impl ServiceRooms {
                     message_type: MessageType::MemberJoin,
                     edited_at: None,
                     created_at: None,
+                    mentions: Default::default(),
                 })
                 .await?;
             let welcome_message = data.message_get(wti, welcome_message_id, user_id).await?;

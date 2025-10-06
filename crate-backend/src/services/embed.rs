@@ -581,6 +581,7 @@ impl ServiceEmbed {
                 message_type,
                 edited_at: message.edited_at.map(|t| t.into()),
                 created_at: message.created_at.map(|t| t.into()),
+                mentions: message.mentions,
             },
         )
         .await?;

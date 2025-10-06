@@ -158,6 +158,7 @@ impl ServiceMessages {
                 message_type: payload,
                 edited_at: None,
                 created_at: json.created_at.map(|t| t.into()),
+                mentions: json.mentions,
             })
             .await?;
         let message_uuid = message_id.into_inner();
@@ -305,6 +306,7 @@ impl ServiceMessages {
                     message_type: payload,
                     edited_at: json.edited_at.map(|t| t.into()),
                     created_at: message.created_at.map(|t| t.into()),
+                    mentions: message.mentions,
                 },
             )
             .await?;

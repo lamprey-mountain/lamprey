@@ -1,3 +1,4 @@
+use common::v1::types::Mentions;
 use common::v1::types::{
     util::Time, Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet,
     RoleId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
@@ -262,6 +263,7 @@ pub struct DbMessageCreate {
     pub message_type: MessageType,
     pub edited_at: Option<time::PrimitiveDateTime>,
     pub created_at: Option<time::PrimitiveDateTime>,
+    pub mentions: Mentions,
 }
 
 // TODO: move to types?

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
-use common::v1::types::{Embed, Mentions, MessageDefaultMarkdown, MessageType, UserId};
+use common::v1::types::{Embed, MessageDefaultMarkdown, MessageType, UserId};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;
@@ -38,6 +38,7 @@ pub struct DbMessage {
     pub deleted_at: Option<time::PrimitiveDateTime>,
     pub removed_at: Option<time::PrimitiveDateTime>,
     pub pinned: Option<serde_json::Value>,
+    pub mentions: Option<serde_json::Value>,
 }
 
 #[derive(Debug, sqlx::Type)]
@@ -117,7 +118,6 @@ impl From<DbMessage> for Message {
             version_id: row.version_id,
             nonce: None,
             author_id: row.author_id,
-            mentions: Mentions::default(),
             deleted_at: row.deleted_at.map(Time::from),
             edited_at: row.edited_at.map(Time::from),
             created_at: row.created_at.map(Time::from),
@@ -125,6 +125,10 @@ impl From<DbMessage> for Message {
             pinned: row.pinned.and_then(|p| serde_json::from_value(p).ok()),
             reactions: row
                 .reactions
+                .map(|a| serde_json::from_value(a).unwrap())
+                .unwrap_or_default(),
+            mentions: row
+                .mentions
                 .map(|a| serde_json::from_value(a).unwrap())
                 .unwrap_or_default(),
         }
@@ -138,9 +142,10 @@ impl DataMessage for Postgres {
         let message_type: DbMessageType = create.message_type.clone().into();
         let mut tx = self.pool.begin().await?;
         let embeds = serde_json::to_value(create.embeds.clone())?;
+        let mentions = serde_json::to_value(create.mentions.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()))
+    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)
         "#,
             message_id,
             *create.thread_id,
@@ -153,6 +158,7 @@ impl DataMessage for Postgres {
             create.override_name(),
             embeds,
             create.created_at.map(|t| t.assume_utc()),
+            mentions,
         )
         .execute(&mut *tx)
         .await?;

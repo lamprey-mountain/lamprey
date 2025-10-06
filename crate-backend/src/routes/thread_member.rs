@@ -155,6 +155,7 @@ pub async fn thread_member_add(
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
+                mentions: Default::default(),
             })
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;
@@ -268,6 +269,7 @@ pub async fn thread_member_delete(
                 message_type: MessageType::MemberRemove(MessageMember { target_user_id }),
                 edited_at: None,
                 created_at: None,
+                mentions: Default::default(),
             })
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;

@@ -26,7 +26,7 @@ with
 select
     msg.type as "message_type: DbMessageType",
     msg.id,
-    msg.thread_id, 
+    msg.thread_id,
     msg.version_id,
     msg.ordering,
     msg.content,
@@ -39,6 +39,7 @@ select
     msg.deleted_at,
     msg.removed_at,
     msg.pinned,
+    msg.mentions,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"

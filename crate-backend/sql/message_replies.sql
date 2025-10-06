@@ -58,6 +58,7 @@ select
     msg.deleted_at,
     msg.removed_at,
     msg.pinned,
+    msg.mentions,
     coalesce(att_json.attachments, '{}') as "attachments!",
     msg.embeds as "embeds",
     r.json as "reactions"
