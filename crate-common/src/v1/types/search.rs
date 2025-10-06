@@ -52,6 +52,11 @@ pub struct SearchThreadsRequest {
     #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
     pub room_id: Vec<RoomId>,
+
+    /// Only return threads with these parents. Defaults to all threads.
+    #[cfg_attr(feature = "utoipa", schema(ignore))]
+    #[serde(default)]
+    pub parent_id: Vec<ThreadId>,
 }
 
 // TODO(#77): room searching

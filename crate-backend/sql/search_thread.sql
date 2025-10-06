@@ -64,4 +64,5 @@ where thread.deleted_at is null and thread.archived_at is null
     coalesce(thread.description, '') @@ websearch_to_tsquery($6)
   )
   and (array_length($7::uuid[], 1) is null or thread.room_id = any($7))
+  and (array_length($8::uuid[], 1) is null or thread.parent_id = any($8))
 order by (CASE WHEN $4 = 'f' THEN thread.id END), thread.id DESC LIMIT $5

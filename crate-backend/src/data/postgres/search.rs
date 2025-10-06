@@ -70,6 +70,7 @@ impl DataSearch for Postgres {
     ) -> Result<PaginationResponse<Thread>> {
         let p: Pagination<ThreadId> = paginate.try_into()?;
         let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
+        let parent_ids: Vec<Uuid> = query.parent_id.iter().map(|id| **id).collect();
         gen_paginate!(
             p,
             self.pool,
@@ -83,12 +84,14 @@ impl DataSearch for Postgres {
                 (p.limit + 1) as i32,
                 query.query,
                 &room_ids,
+                &parent_ids,
             ),
             query_file_scalar!(
                 "sql/search_thread_count.sql",
                 *user_id,
                 query.query,
                 &room_ids,
+                &parent_ids,
             ),
             |i: &Thread| i.id.to_string()
         )
