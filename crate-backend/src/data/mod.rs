@@ -184,6 +184,12 @@ pub trait DataRoleMember {
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>>;
     async fn role_member_count(&self, role_id: RoleId) -> Result<u64>;
+    async fn role_member_bulk_edit(
+        &self,
+        role_id: RoleId,
+        apply_user_ids: &[UserId],
+        remove_user_ids: &[UserId],
+    ) -> Result<()>;
 }
 
 #[async_trait]

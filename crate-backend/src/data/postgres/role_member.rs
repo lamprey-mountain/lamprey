@@ -115,4 +115,40 @@ impl DataRoleMember for Postgres {
         .await?;
         Ok(total.unwrap_or(0) as u64)
     }
+
+    async fn role_member_bulk_edit(
+        &self,
+        role_id: RoleId,
+        apply_user_ids: &[UserId],
+        remove_user_ids: &[UserId],
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        if !apply_user_ids.is_empty() {
+            let apply_user_ids: Vec<uuid::Uuid> =
+                apply_user_ids.iter().map(|id| id.into_inner()).collect();
+            query!(
+                "INSERT INTO role_member (user_id, role_id) SELECT unnest($1::uuid[]), $2 ON CONFLICT DO NOTHING",
+                &apply_user_ids,
+                role_id.into_inner()
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        if !remove_user_ids.is_empty() {
+            let remove_user_ids: Vec<uuid::Uuid> =
+                remove_user_ids.iter().map(|id| id.into_inner()).collect();
+            query!(
+                "DELETE FROM role_member WHERE role_id = $1 AND user_id = ANY($2::uuid[])",
+                role_id.into_inner(),
+                &remove_user_ids,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
 }

@@ -453,8 +453,7 @@ async fn role_member_remove(
     Ok(Json(member))
 }
 
-/// Role member bulk edit (TODO)
-#[allow(unused)]
+/// Role member bulk edit
 #[utoipa::path(
     patch,
     path = "/room/{room_id}/role/{role_id}/member",
@@ -473,8 +472,94 @@ async fn role_member_bulk_edit(
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(body): Json<RoleMemberBulkPatch>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    body.validate()?;
+
+    if room_id.into_inner() == role_id.into_inner() {
+        return Err(Error::BadStatic(
+            "cannot manually apply or remove the @everyone role",
+        ));
+    }
+
+    let d = s.data();
+    let srv = s.services();
+
+    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::RoleApply)?;
+
+    let role = d.role_select(room_id, role_id).await?;
+    let auth_user_rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if auth_user_rank <= role.position && room.owner_id != Some(auth_user.id) {
+        return Err(Error::BadStatic("your rank is too low"));
+    }
+
+    let all_user_ids: Vec<UserId> = body
+        .apply
+        .iter()
+        .chain(body.remove.iter())
+        .copied()
+        .collect();
+
+    for target_user_id in &body.apply {
+        let member = d.room_member_get(room_id, *target_user_id).await?;
+        if !matches!(member.membership, RoomMembership::Join { .. }) {
+            return Err(Error::NotFound);
+        }
+        let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
+        if auth_user_rank <= target_rank && room.owner_id != Some(auth_user.id) {
+            return Err(Error::BadStatic("your rank is too low to manage this user"));
+        }
+    }
+
+    for target_user_id in &body.remove {
+        let target_rank = srv.perms.get_user_rank(room_id, *target_user_id).await?;
+        if auth_user_rank <= target_rank && room.owner_id != Some(auth_user.id) {
+            return Err(Error::BadStatic("your rank is too low to manage this user"));
+        }
+    }
+
+    d.role_member_bulk_edit(role_id, &body.apply, &body.remove)
+        .await?;
+
+    for user_id in all_user_ids {
+        let member = d.room_member_get(room_id, user_id).await?;
+        let msg = MessageSync::RoomMemberUpsert {
+            member: member.clone(),
+        };
+
+        if body.apply.contains(&user_id) {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::RoleApply { user_id, role_id },
+            })
+            .await?;
+        }
+
+        if body.remove.contains(&user_id) {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::RoleUnapply { user_id, role_id },
+            })
+            .await?;
+        }
+
+        srv.perms.invalidate_room(user_id, room_id).await;
+        s.broadcast_room(room_id, auth_user.id, msg).await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Role reorder
