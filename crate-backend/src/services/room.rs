@@ -103,6 +103,7 @@ impl ServiceRooms {
         extra: DbRoomCreate,
     ) -> Result<Room> {
         let data = self.state.data();
+        let welcome_thread_id = extra.welcome_thread_id;
         let mut room = data.room_create(create, extra).await?;
         let room_id = room.id;
 
@@ -146,20 +147,26 @@ impl ServiceRooms {
         data.room_set_owner(room_id, creator_id).await?;
         room.owner_id = Some(creator_id);
 
-        let welcome_thread_id = data
-            .thread_create(DbThreadCreate {
-                room_id: Some(room.id.into_inner()),
-                creator_id,
-                name: "general".to_string(),
-                description: None,
-                ty: DbThreadType::Chat,
-                nsfw: false,
-                bitrate: None,
-                user_limit: None,
-                parent_id: None,
-            })
-            .await?;
-        let welcome_thread = data.thread_get(welcome_thread_id).await?;
+        let (welcome_thread_id, welcome_thread) = if let Some(thread_id) = welcome_thread_id {
+            (thread_id, None)
+        } else {
+            let welcome_thread_id = data
+                .thread_create(DbThreadCreate {
+                    room_id: Some(room.id.into_inner()),
+                    creator_id,
+                    name: "general".to_string(),
+                    description: None,
+                    ty: DbThreadType::Chat,
+                    nsfw: false,
+                    bitrate: None,
+                    user_limit: None,
+                    parent_id: None,
+                    owner_id: None,
+                })
+                .await?;
+            let welcome_thread = data.thread_get(welcome_thread_id).await?;
+            (welcome_thread_id, Some(welcome_thread))
+        };
 
         data.room_update(
             room_id,
@@ -196,34 +203,36 @@ impl ServiceRooms {
             })
             .await?;
 
-        self.state
-            .broadcast_room(
-                room_id,
-                creator_id,
-                MessageSync::ThreadCreate {
-                    thread: welcome_thread,
-                },
-            )
-            .await?;
+        if let Some(welcome_thread) = welcome_thread {
+            self.state
+                .broadcast_room(
+                    room_id,
+                    creator_id,
+                    MessageSync::ThreadCreate {
+                        thread: welcome_thread,
+                    },
+                )
+                .await?;
 
-        self.state
-            .audit_log_append(AuditLogEntry {
-                id: AuditLogEntryId::new(),
-                room_id,
-                user_id: creator_id,
-                session_id: None, // TODO: get session id
-                reason: None,     // TODO: get reason
-                ty: AuditLogEntryType::ThreadCreate {
-                    thread_id: welcome_thread_id,
-                    changes: Changes::new()
-                        .add("name", &"general")
-                        .add("nsfw", &false)
-                        .build(),
-                },
-            })
-            .await?;
+            self.state
+                .audit_log_append(AuditLogEntry {
+                    id: AuditLogEntryId::new(),
+                    room_id,
+                    user_id: creator_id,
+                    session_id: None, // TODO: get session id
+                    reason: None,     // TODO: get reason
+                    ty: AuditLogEntryType::ThreadCreate {
+                        thread_id: welcome_thread_id,
+                        changes: Changes::new()
+                            .add("name", &"general")
+                            .add("nsfw", &false)
+                            .build(),
+                    },
+                })
+                .await?;
 
-        self.send_welcome_message(room_id, creator_id).await?;
+            self.send_welcome_message(room_id, creator_id).await?;
+        }
 
         Ok(room)
     }

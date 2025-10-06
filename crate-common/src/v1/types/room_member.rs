@@ -167,6 +167,9 @@ pub enum RoomMemberOrigin {
 
     /// this is the room creator
     Creator,
+
+    /// Upgraded from group dm
+    GdmUpgrade,
 }
 
 // in the future, there will be multiple types of bans. right now there are just user bans.

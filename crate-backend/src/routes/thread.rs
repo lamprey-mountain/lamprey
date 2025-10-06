@@ -8,18 +8,21 @@ use axum::{
 };
 use common::v1::types::{
     util::Changes, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
-    ThreadMemberPut, ThreadReorder, ThreadType,
+    Room, RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, ThreadReorder, ThreadType,
+    UserId,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
+use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
+    routes::util::AuthSudo,
     types::{
-        DbThreadCreate, DbThreadType, MessageSync, MessageVerId, Permission, RoomId, Thread,
-        ThreadCreate, ThreadId, ThreadPatch,
+        DbRoomCreate, DbThreadCreate, DbThreadType, MessageSync, MessageVerId, Permission, RoomId,
+        Thread, ThreadCreate, ThreadId, ThreadPatch,
     },
     Error, ServerState,
 };
@@ -115,6 +118,7 @@ async fn thread_create_room(
             bitrate: json.bitrate.map(|b| b as i32),
             user_limit: json.user_limit.map(|u| u as i32),
             parent_id: json.parent_id.map(|i| *i),
+            owner_id: None,
         })
         .await?;
 
@@ -239,6 +243,7 @@ async fn dm_thread_create(
             bitrate: json.bitrate.map(|b| b as i32),
             user_limit: json.bitrate.map(|u| u as i32),
             parent_id: None,
+            owner_id: Some(*auth_user.id),
         })
         .await?;
 
@@ -509,6 +514,11 @@ async fn thread_update(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
+    if json.owner_id.is_some() {
+        return Err(Error::BadStatic(
+            "owner_id cannot be changed via this endpoint; use the transfer-ownership endpoint",
+        ));
+    }
     let thread = s
         .services()
         .threads
@@ -982,6 +992,192 @@ async fn thread_unlock(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Thread upgrade
+///
+/// Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/upgrade",
+    params(("thread_id", description = "Thread id")),
+    tags = ["thread"],
+    responses((status = OK, body = Room, description = "success")),
+)]
+async fn thread_upgrade(
+    Path(thread_id): Path<ThreadId>,
+    Auth(auth_user): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    let srv = s.services();
+    let data = s.data();
+
+    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+
+    if thread.ty != ThreadType::Gdm {
+        return Err(Error::BadStatic("only group dms can be upgraded"));
+    }
+
+    if thread.owner_id != Some(auth_user.id) {
+        return Err(Error::BadStatic("you are not the thread owner"));
+    }
+
+    if thread.room_id.is_some() {
+        return Err(Error::BadStatic("thread is already in a room"));
+    }
+
+    let room = srv
+        .rooms
+        .create(
+            RoomCreate {
+                name: thread.name.clone(),
+                description: thread.description.clone(),
+                icon: None,
+                public: Some(false),
+            },
+            auth_user.id,
+            DbRoomCreate {
+                id: None,
+                ty: RoomType::Default,
+                welcome_thread_id: Some(thread_id),
+            },
+        )
+        .await?;
+
+    let mut members = vec![];
+    let mut after: Option<Uuid> = None;
+    loop {
+        let page = data
+            .thread_member_list(
+                thread_id,
+                PaginationQuery {
+                    limit: Some(100),
+                    from: after.map(|i| i.into()),
+                    ..Default::default()
+                },
+            )
+            .await?;
+
+        if page.items.is_empty() {
+            break;
+        }
+
+        after = Some(*page.items.last().unwrap().user_id);
+
+        let page_len = page.items.len();
+        members.extend(page.items);
+
+        if page_len < 100 {
+            break;
+        }
+    }
+
+    data.thread_upgrade_gdm(thread_id, room.id).await?;
+
+    for member in &members {
+        data.room_member_put(
+            room.id,
+            member.user_id,
+            Some(RoomMemberOrigin::GdmUpgrade),
+            Default::default(),
+        )
+        .await?;
+    }
+
+    srv.threads.invalidate(thread_id).await;
+    let upgraded_thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+
+    s.broadcast(MessageSync::ThreadUpdate {
+        thread: upgraded_thread,
+    })?;
+
+    for member in members {
+        let room_member = data.room_member_get(room.id, member.user_id).await?;
+        s.broadcast_room(
+            room.id,
+            auth_user.id,
+            MessageSync::RoomMemberUpsert {
+                member: room_member,
+            },
+        )
+        .await?;
+    }
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: room.id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::ThreadUpdate {
+            thread_id,
+            changes: Changes::new()
+                .change("type", &thread.ty, &ThreadType::Chat)
+                .change("room_id", &thread.room_id, &Some(room.id))
+                .build(),
+        },
+    })
+    .await?;
+
+    Ok((StatusCode::OK, Json(room)))
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
+struct TransferOwnership {
+    owner_id: UserId,
+}
+
+/// Thread transfer ownership
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/transfer-ownership",
+    params(("thread_id", description = "Thread id")),
+    tags = ["thread", "badge.sudo"],
+    responses((status = OK, description = "success"))
+)]
+async fn thread_transfer_ownership(
+    Path(thread_id): Path<ThreadId>,
+    AuthSudo(auth_user): AuthSudo,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<TransferOwnership>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let target_user_id = json.owner_id;
+
+    // ensure that target user is a thread member
+    s.data()
+        .thread_member_get(thread_id, target_user_id)
+        .await?;
+
+    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    perms.ensure_view()?;
+    let thread_start = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    if thread_start.owner_id != Some(auth_user.id) {
+        return Err(Error::BadStatic("you aren't the thread owner"));
+    }
+
+    let thread = srv
+        .threads
+        .update(
+            auth_user.id,
+            thread_id,
+            ThreadPatch {
+                owner_id: Some(Some(target_user_id)),
+                ..Default::default()
+            },
+            None,
+        )
+        .await?;
+
+    let msg = MessageSync::ThreadUpdate {
+        thread: thread.clone(),
+    };
+    s.broadcast_thread(thread_id, auth_user.id, msg).await?;
+    Ok(Json(thread))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_create_room))
@@ -1000,4 +1196,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(thread_typing))
         .routes(routes!(thread_lock))
         .routes(routes!(thread_unlock))
+        .routes(routes!(thread_upgrade))
+        .routes(routes!(thread_transfer_ownership))
 }

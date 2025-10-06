@@ -39,8 +39,8 @@ impl DataThread for Postgres {
 
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -53,6 +53,7 @@ impl DataThread for Postgres {
             create.bitrate,
             create.user_limit,
             create.parent_id,
+            create.owner_id,
         )
         .execute(&mut *tx)
         .await?;
@@ -188,7 +189,8 @@ impl DataThread for Postgres {
                 description = $4,
                 nsfw = $5,
                 bitrate = $6,
-                user_limit = $7
+                user_limit = $7,
+                owner_id = $8
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -201,6 +203,10 @@ impl DataThread for Postgres {
                 .user_limit
                 .unwrap_or(thread.user_limit)
                 .map(|i| i as i32),
+            patch
+                .owner_id
+                .unwrap_or(thread.owner_id)
+                .map(|i| i.into_inner()),
         )
         .execute(&mut *tx)
         .await?;
@@ -404,6 +410,27 @@ impl DataThread for Postgres {
         }
 
         tx.commit().await?;
+        Ok(())
+    }
+
+    async fn thread_upgrade_gdm(&self, thread_id: ThreadId, room_id: RoomId) -> Result<()> {
+        let version_id = ThreadVerId::new();
+        let ty = DbThreadType::Chat;
+        query!(
+            r#"
+            UPDATE thread SET
+                version_id = $2,
+                room_id = $3,
+                type = $4
+            WHERE id = $1
+            "#,
+            *thread_id,
+            *version_id,
+            *room_id,
+            ty as _,
+        )
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 }

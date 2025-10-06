@@ -30,6 +30,9 @@ pub struct Thread {
     pub room_id: Option<RoomId>,
     pub creator_id: UserId,
 
+    /// owner of the group dm
+    pub owner_id: Option<UserId>,
+
     /// only updates when the thread itself is updated, not the stuff in the thread
     pub version_id: ThreadVerId,
 
@@ -212,6 +215,9 @@ pub struct ThreadPatch {
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     #[serde(default, deserialize_with = "some_option")]
     pub user_limit: Option<Option<u64>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub owner_id: Option<Option<UserId>>,
 }
 
 /// reorder some threads
@@ -246,6 +252,7 @@ impl Diff<Thread> for ThreadPatch {
             || self.nsfw.changes(&other.nsfw)
             || self.bitrate.changes(&other.bitrate)
             || self.user_limit.changes(&other.user_limit)
+            || self.owner_id.changes(&other.owner_id)
     }
 }
 
@@ -292,6 +299,11 @@ impl ThreadPatch {
             },
             user_limit: if self.user_limit.changes(&other.user_limit) {
                 self.user_limit
+            } else {
+                None
+            },
+            owner_id: if self.owner_id.changes(&other.owner_id) {
+                self.owner_id
             } else {
                 None
             },

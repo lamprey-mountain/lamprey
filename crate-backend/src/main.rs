@@ -152,6 +152,7 @@ async fn main() -> Result<()> {
                 DbRoomCreate {
                     id: Some(SERVER_ROOM_ID),
                     ty: RoomType::Server,
+                    welcome_thread_id: None,
                 },
             )
             .await?;

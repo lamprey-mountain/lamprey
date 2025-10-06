@@ -27,6 +27,7 @@ pub struct DbRoom {
 pub struct DbRoomCreate {
     pub id: Option<RoomId>,
     pub ty: RoomType,
+    pub welcome_thread_id: Option<ThreadId>,
 }
 
 pub struct DbUserCreate {
@@ -76,6 +77,7 @@ pub struct DbThread {
     pub id: ThreadId,
     pub room_id: Option<Uuid>,
     pub creator_id: UserId,
+    pub owner_id: Option<Uuid>,
     pub version_id: ThreadVerId,
     pub name: String,
     pub description: Option<String>,
@@ -105,6 +107,7 @@ pub struct DbThreadPrivate {
 pub struct DbThreadCreate {
     pub room_id: Option<Uuid>,
     pub creator_id: UserId,
+    pub owner_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub ty: DbThreadType,
@@ -162,6 +165,7 @@ impl From<DbThread> for Thread {
                 .map(|p| p.try_into().expect("position is negative or overflows?")),
             bitrate: row.bitrate.map(|i| i as u64),
             user_limit: row.user_limit.map(|i| i as u64),
+            owner_id: row.owner_id.map(|i| i.into()),
 
             // these fields get filled in later
             is_unread: None,

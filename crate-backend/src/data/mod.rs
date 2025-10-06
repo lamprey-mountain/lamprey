@@ -408,6 +408,7 @@ pub trait DataThread {
     async fn thread_lock(&self, thread_id: ThreadId) -> Result<()>;
     async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()>;
     async fn thread_reorder(&self, data: ThreadReorder) -> Result<()>;
+    async fn thread_upgrade_gdm(&self, thread_id: ThreadId, room_id: RoomId) -> Result<()>;
 }
 
 #[async_trait]

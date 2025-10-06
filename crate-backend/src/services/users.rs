@@ -198,6 +198,7 @@ impl ServiceUsers {
                 bitrate: None,
                 user_limit: None,
                 parent_id: None,
+                owner_id: None,
             })
             .await?;
         data.dm_put(user_id, other_id, thread_id).await?;

@@ -62,6 +62,7 @@ async fn room_create(
     let extra = DbRoomCreate {
         id: None,
         ty: RoomType::Default,
+        welcome_thread_id: None,
     };
     let room = s.services().rooms.create(json, auth_user.id, extra).await?;
     if let Some(media_id) = icon {
