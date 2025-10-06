@@ -338,6 +338,7 @@ impl_perms!(
     MemberBridge,
     MemberKick,
     MemberNicknameManage,
+    MemberTimeout,
     MessageCreate,
     MessageDelete,
     MessageRemove,

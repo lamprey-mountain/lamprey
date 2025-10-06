@@ -8,11 +8,19 @@ use crate::error::{Error, Result};
 #[derive(Debug, Clone)]
 pub struct Permissions {
     p: HashSet<Permission>,
+    timed_out: bool,
 }
 
 impl Permissions {
     pub fn empty() -> Permissions {
-        Permissions { p: HashSet::new() }
+        Permissions {
+            p: HashSet::new(),
+            timed_out: false,
+        }
+    }
+
+    pub fn set_timed_out(&mut self, timed_out: bool) {
+        self.timed_out = timed_out;
     }
 
     #[inline]
@@ -30,6 +38,9 @@ impl Permissions {
 
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
+        if self.timed_out {
+            return perm == Permission::View || perm == Permission::ViewAuditLog;
+        }
         self.p.contains(&perm)
     }
 
@@ -59,7 +70,10 @@ impl FromIterator<Permission> for Permissions {
             }
             p.insert(i);
         }
-        Permissions { p }
+        Permissions {
+            p,
+            timed_out: false,
+        }
     }
 }
 

@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use common::v1::types::defaults::EVERYONE_TRUSTED;
+use common::v1::types::util::Time;
 use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
+use dashmap::DashMap;
 use moka::future::Cache;
+use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -15,6 +18,7 @@ pub struct ServicePermissions {
     cache_perm_thread: Cache<(UserId, RoomId, ThreadId), Permissions>,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
     cache_user_rank: Cache<(RoomId, UserId), u64>,
+    timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
 }
 
 impl ServicePermissions {
@@ -39,6 +43,36 @@ impl ServicePermissions {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
+            timeout_tasks: DashMap::new(),
+        }
+    }
+
+    pub async fn update_timeout_task(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+        timeout_until: Option<Time>,
+    ) {
+        if let Some(task) = self.timeout_tasks.remove(&(user_id, room_id)) {
+            task.1.abort();
+        }
+
+        if let Some(timeout_until) = timeout_until {
+            if timeout_until > Time::now_utc() {
+                let state = self.state.clone();
+                let handle = tokio::spawn(async move {
+                    let duration = (timeout_until.into_inner() - Time::now_utc().into_inner())
+                        .try_into()
+                        .unwrap_or_default();
+                    tokio::time::sleep(duration).await;
+                    state
+                        .services()
+                        .perms
+                        .invalidate_room(user_id, room_id)
+                        .await;
+                });
+                self.timeout_tasks.insert((user_id, room_id), handle);
+            }
         }
     }
 
@@ -56,7 +90,13 @@ impl ServicePermissions {
                     return Result::Ok(p);
                 }
 
-                let perms = data.permission_room_get(user_id, room_id).await?;
+                let mut perms = data.permission_room_get(user_id, room_id).await?;
+                let member = data.room_member_get(room_id, user_id).await?;
+                if let Some(timeout_until) = member.timeout_until {
+                    if timeout_until > Time::now_utc() {
+                        perms.set_timed_out(true);
+                    }
+                }
                 Result::Ok(perms)
             })
             .await

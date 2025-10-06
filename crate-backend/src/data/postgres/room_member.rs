@@ -28,6 +28,7 @@ pub struct DbRoomMember {
     pub origin: Option<serde_json::Value>,
     pub mute: bool,
     pub deaf: bool,
+    pub timeout_until: Option<time::PrimitiveDateTime>,
 }
 
 pub struct DbRoomBan {
@@ -66,6 +67,7 @@ impl From<DbRoomMember> for RoomMember {
             roles,
             mute: row.mute,
             deaf: row.deaf,
+            timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
 
             // FIXME: only return for moderators
             origin: row
@@ -86,8 +88,8 @@ impl DataRoomMember for Postgres {
     ) -> Result<()> {
         query!(
             r#"
-            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin, mute, deaf)
-            VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8)
+            INSERT INTO room_member (user_id, room_id, membership, override_name, override_description, joined_at, origin, mute, deaf, timeout_until)
+            VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9)
 			ON CONFLICT ON CONSTRAINT room_member_pkey DO UPDATE SET
     			membership = excluded.membership,
                 joined_at = case
@@ -104,6 +106,7 @@ impl DataRoomMember for Postgres {
             origin.and_then(|o| serde_json::to_value(o).ok()),
             put.mute.unwrap_or(false),
             put.deaf.unwrap_or(false),
+            put.timeout_until.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
         )
         .execute(&self.pool)
         .await?;
@@ -150,6 +153,7 @@ impl DataRoomMember for Postgres {
                 	origin,
                     mute,
                     deaf,
+                    timeout_until,
                 	coalesce(r.roles, '{}') as "roles!"
                 FROM room_member m
                 left join r on r.user_id = m.user_id
@@ -189,6 +193,7 @@ impl DataRoomMember for Postgres {
             	origin,
                 mute,
                 deaf,
+                timeout_until,
             	coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             left join r on r.user_id = m.user_id
@@ -228,6 +233,7 @@ impl DataRoomMember for Postgres {
             	origin,
                 mute,
                 deaf,
+                timeout_until,
             	coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             left join r on r.user_id = m.user_id
@@ -241,7 +247,7 @@ impl DataRoomMember for Postgres {
         query!(
             r#"
             UPDATE room_member
-        	SET override_name = $3, override_description = $4, mute = $5, deaf = $6
+        	SET override_name = $3, override_description = $4, mute = $5, deaf = $6, timeout_until = $7
             WHERE room_id = $1 AND user_id = $2 AND membership = 'Join'
         "#,
             *room_id,
@@ -252,6 +258,10 @@ impl DataRoomMember for Postgres {
                 .unwrap_or(item.override_description),
             patch.mute.unwrap_or(item.mute),
             patch.deaf.unwrap_or(item.deaf),
+            patch
+                .timeout_until
+                .map(|t| t.map(|t| PrimitiveDateTime::new(t.date(), t.time())))
+                .unwrap_or(item.timeout_until),
         )
         .execute(&mut *tx)
         .await?;
@@ -458,6 +468,7 @@ impl DataRoomMember for Postgres {
                 origin,
                 mute,
                 deaf,
+                timeout_until,
                 coalesce(r.roles, '{}') as "roles!"
             FROM room_member m
             JOIN usr u ON m.user_id = u.id

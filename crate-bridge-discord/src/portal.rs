@@ -165,6 +165,7 @@ impl Portal {
             mute: None,
             deaf: None,
             roles: None,
+            timeout_until: None,
         };
 
         ly.room_member_patch(self.room_id(), puppet.id.into(), &patch)

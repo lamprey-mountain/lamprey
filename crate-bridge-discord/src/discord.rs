@@ -939,6 +939,7 @@ impl EventHandler for Handler {
                     mute: None,
                     deaf: None,
                     roles: None,
+                    timeout_until: None,
                 };
 
                 ly.room_member_patch(realm.lamprey_room_id, puppet.id.into(), &patch)

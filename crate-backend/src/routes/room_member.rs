@@ -351,6 +351,16 @@ async fn room_member_update(
         perms.ensure(Permission::MemberNicknameManage)?;
     }
 
+    if json.timeout_until.changes(&start.timeout_until) {
+        perms.ensure(Permission::MemberTimeout)?;
+        let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
+        let other_rank = srv.perms.get_user_rank(room_id, target_user_id).await?;
+        let room = srv.rooms.get(room_id, None).await?;
+        if room.owner_id != Some(auth_user.id) && rank <= other_rank {
+            return Err(Error::BadStatic("your rank is too low"));
+        }
+    }
+
     // TODO: run futures concurrently
     if let Some(r) = &mut json.roles {
         r.sort();
@@ -386,7 +396,16 @@ async fn room_member_update(
         }
     }
 
-    d.room_member_patch(room_id, target_user_id, json).await?;
+    d.room_member_patch(room_id, target_user_id, json.clone())
+        .await?;
+    srv.perms.invalidate_room(target_user_id, room_id).await;
+
+    if json.timeout_until.changes(&start.timeout_until) {
+        srv.perms
+            .update_timeout_task(target_user_id, room_id, json.timeout_until.flatten())
+            .await;
+    }
+
     let res = d.room_member_get(room_id, target_user_id).await?;
 
     let changes = Changes::new()
@@ -399,6 +418,7 @@ async fn room_member_update(
         .change("mute", &start.mute, &res.mute)
         .change("deaf", &start.deaf, &res.deaf)
         .change("roles", &start.roles, &res.roles)
+        .change("timeout_until", &start.timeout_until, &res.timeout_until)
         .build();
 
     if !changes.is_empty() {

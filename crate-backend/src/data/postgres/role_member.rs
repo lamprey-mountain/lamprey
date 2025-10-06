@@ -65,6 +65,7 @@ impl DataRoleMember for Postgres {
                 r.origin,
                 r.mute,
                 r.deaf,
+                r.timeout_until,
             	coalesce(ro.roles, '{}') as "roles!"
             FROM role_member AS m
             JOIN role ON role.id = m.role_id

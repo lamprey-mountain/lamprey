@@ -45,9 +45,9 @@ pub struct RoomMember {
 
     /// whether this user is deafened by a moderator
     pub deaf: bool,
-    // TODO(#507): timeouts/mutes
-    // /// temporarily prevent a member from communicating
-    // pub timeout_until: Option<Time>,
+
+    /// temporarily prevent a member from communicating
+    pub timeout_until: Option<Time>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,6 +77,9 @@ pub struct RoomMemberPut {
 
     /// the roles that this member has
     pub roles: Option<Vec<RoleId>>,
+
+    /// temporarily prevent a member from communicating
+    pub timeout_until: Option<Time>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -105,6 +108,10 @@ pub struct RoomMemberPatch {
 
     /// the roles that this member has
     pub roles: Option<Vec<RoleId>>,
+
+    /// temporarily prevent a member from communicating
+    #[serde(default, deserialize_with = "some_option")]
+    pub timeout_until: Option<Option<Time>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -228,5 +235,6 @@ impl Diff<RoomMember> for RoomMemberPatch {
             || self.mute.changes(&other.mute)
             || self.deaf.changes(&other.deaf)
             || self.roles.changes(&other.roles)
+            || self.timeout_until.changes(&other.timeout_until)
     }
 }

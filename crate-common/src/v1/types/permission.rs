@@ -96,6 +96,9 @@ pub enum Permission {
     /// use a custom nickname
     MemberNickname,
 
+    /// timeout members
+    MemberTimeout,
+
     /// add new reactions
     // TODO: can still react with existing reactions
     ReactionAdd,
