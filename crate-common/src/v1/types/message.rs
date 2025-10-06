@@ -104,13 +104,12 @@ pub struct Mentions {
     pub users: Vec<UserId>,
     pub roles: Vec<RoleId>,
     pub threads: Vec<ThreadId>,
-    pub rooms: Vec<ThreadId>,
 
     /// if this mentioned everyone in the room
-    pub all_in_room: bool,
+    pub everyone_room: bool,
 
     /// if this mentioned everyone in the thread
-    pub all_in_thread: bool,
+    pub everyone_thread: bool,
 }
 
 /// data that has been resolved from the ids, provided on request
@@ -176,6 +175,9 @@ pub struct MessageCreate {
 
     /// custom timestamps (timestamp massaging), for bridge bots
     pub created_at: Option<Time>,
+
+    #[serde(default)]
+    pub mentions: Mentions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

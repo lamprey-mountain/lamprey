@@ -447,6 +447,15 @@ pub struct UrlEmbedQueue {
     pub finished_at: Option<PrimitiveDateTime>,
 }
 
+#[derive(Debug, sqlx::FromRow)]
+pub struct DbNotification {
+    pub id: Uuid,
+    pub thread_id: Uuid,
+    pub message_id: Uuid,
+    pub reason: String,
+    pub added_at: PrimitiveDateTime,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessageRef {
     pub message_id: MessageId,

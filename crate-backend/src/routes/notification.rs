@@ -1,63 +1,84 @@
 use std::sync::Arc;
 
 use axum::extract::Query;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::notifications::{
     InboxListParams, InboxThreadsParams, Notification, NotificationCreate, NotificationFlush,
-    NotificationMarkRead,
+    NotificationMarkRead, NotificationReason,
 };
-use common::v1::types::{NotificationId, PaginationQuery, PaginationResponse, Thread, ThreadId};
+use common::v1::types::{
+    util::Time, NotificationId, PaginationQuery, PaginationResponse, Thread, ThreadId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
 use crate::error::Result;
-use crate::{Error, ServerState};
+use crate::ServerState;
 
-/// Inbox get (TODO)
+/// Inbox get
 ///
 /// List notifications
 #[utoipa::path(
     get,
     path = "/inbox",
-    params(PaginationQuery<MessageId>, InboxListParams),
+    params(PaginationQuery<NotificationId>, InboxListParams),
     tags = ["inbox"],
     responses((status = OK, body = PaginationResponse<Notification>, description = "success"))
 )]
 async fn inbox_get(
-    Auth(_auth_user_id): Auth,
-    Query(_pagination): Query<PaginationQuery<NotificationId>>,
-    Query(_params): Query<InboxListParams>,
-    State(_s): State<Arc<ServerState>>,
+    Auth(auth_user): Auth,
+    Query(pagination): Query<PaginationQuery<NotificationId>>,
+    Query(params): Query<InboxListParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let res = s
+        .data()
+        .notification_list(auth_user.id, pagination, params)
+        .await?;
+    Ok(Json(res))
 }
 
-/// Inbox post (TODO)
+/// Inbox post
 ///
 /// Create a reminder for later
 #[utoipa::path(
     post,
     path = "/inbox",
     tags = ["inbox"],
-    responses((status = OK, body = Notification, description = "success"))
+    responses((status = CREATED, body = Notification, description = "success"))
 )]
 async fn inbox_post(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<NotificationCreate>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<NotificationCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, json.thread_id)
+        .await?;
+    perms.ensure_view()?;
+
+    let notif = Notification {
+        id: NotificationId::new(),
+        thread_id: json.thread_id,
+        message_id: json.message_id,
+        reason: NotificationReason::Reminder,
+        added_at: json.added_at.unwrap_or_else(Time::now_utc),
+    };
+
+    s.data()
+        .notification_add(auth_user.id, notif.clone())
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(notif)))
 }
 
-/// Inbox threads (TODO)
+/// Inbox threads
 ///
 /// Get a list of all unread threads
-// should i return messages in each thread? a PaginationResponse of PaginationResponses?
-// maybe, it would save a round trip
-// but what which messages do i return? last messages? new messages since unread marker? some context around the unread marker?
-// this should probably be configurable via query parameter
-// probably won't return messages and will let the client decide how to fetch messages
 #[utoipa::path(
     get,
     path = "/inbox/threads",
@@ -66,16 +87,29 @@ async fn inbox_post(
     responses((status = OK, body = PaginationResponse<Thread>, description = "success"))
 )]
 async fn inbox_threads(
-    Auth(_auth_user_id): Auth,
-    Query(_pagination): Query<PaginationQuery<ThreadId>>,
-    Query(_inbox_params): Query<InboxListParams>,
-    Query(_thread_params): Query<InboxThreadsParams>,
-    State(_s): State<Arc<ServerState>>,
+    Auth(auth_user): Auth,
+    Query(pagination): Query<PaginationQuery<ThreadId>>,
+    Query(inbox_params): Query<InboxListParams>,
+    Query(thread_params): Query<InboxThreadsParams>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let mut res = s
+        .data()
+        .notification_list_threads(auth_user.id, pagination, thread_params, inbox_params)
+        .await?;
+
+    for thread in &mut res.items {
+        *thread = s
+            .services()
+            .threads
+            .get(thread.id, Some(auth_user.id))
+            .await?;
+    }
+
+    Ok(Json(res))
 }
 
-/// Inbox mark read (TODO)
+/// Inbox mark read
 #[utoipa::path(
     post,
     path = "/inbox/mark-read",
@@ -83,14 +117,15 @@ async fn inbox_threads(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_read(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<NotificationMarkRead>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    s.data().notification_mark_read(auth_user.id, json).await?;
+    Ok(StatusCode::OK)
 }
 
-/// Inbox mark unread (TODO)
+/// Inbox mark unread
 #[utoipa::path(
     post,
     path = "/inbox/mark-unread",
@@ -98,14 +133,17 @@ async fn inbox_mark_read(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_mark_unread(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<NotificationMarkRead>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<NotificationMarkRead>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    s.data()
+        .notification_mark_unread(auth_user.id, json)
+        .await?;
+    Ok(StatusCode::OK)
 }
 
-/// Inbox flush (TODO)
+/// Inbox flush
 ///
 /// Deletes read notifications from the inbox
 #[utoipa::path(
@@ -115,11 +153,12 @@ async fn inbox_mark_unread(
     responses((status = OK, body = (), description = "success"))
 )]
 async fn inbox_flush(
-    Auth(_auth_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<NotificationFlush>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<NotificationFlush>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    s.data().notification_flush(auth_user.id, json).await?;
+    Ok(StatusCode::OK)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

@@ -162,6 +162,7 @@ impl Handle {
                 override_name: None,
                 embeds: vec![],
                 created_at: None,
+                mentions: Default::default(),
             };
             self.http.message_create(message.thread_id, &resp).await?;
         }
@@ -278,6 +279,7 @@ impl Handle {
                                 override_name: None,
                                 embeds: vec![],
                                 created_at: None,
+                                mentions: Default::default(),
                             };
                             if let Err(err) = http.message_create(thread_id, &msg).await {
                                 error!("couldn't send message: {err}");

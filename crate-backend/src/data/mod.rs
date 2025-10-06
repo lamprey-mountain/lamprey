@@ -2,7 +2,9 @@ use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scope};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
-use common::v1::types::notifications::Notification;
+use common::v1::types::notifications::{
+    InboxListParams, InboxThreadsParams, Notification, NotificationFlush, NotificationMarkRead,
+};
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::{SearchMessageRequest, SearchThreadsRequest};
 use common::v1::types::user_config::UserConfigGlobal;
@@ -755,5 +757,24 @@ pub trait DataNotification {
         &self,
         user_id: UserId,
         pagination: PaginationQuery<NotificationId>,
+        params: InboxListParams,
     ) -> Result<PaginationResponse<Notification>>;
+    async fn notification_mark_read(
+        &self,
+        user_id: UserId,
+        params: NotificationMarkRead,
+    ) -> Result<()>;
+    async fn notification_mark_unread(
+        &self,
+        user_id: UserId,
+        params: NotificationMarkRead,
+    ) -> Result<()>;
+    async fn notification_flush(&self, user_id: UserId, params: NotificationFlush) -> Result<()>;
+    async fn notification_list_threads(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<ThreadId>,
+        params: InboxThreadsParams,
+        list_params: InboxListParams,
+    ) -> Result<PaginationResponse<Thread>>;
 }

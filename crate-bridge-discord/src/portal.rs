@@ -522,6 +522,7 @@ impl Portal {
                     .unwrap()
                     .into(),
             ),
+            mentions: Default::default(),
         };
         for a in &message.attachments {
             let bytes = a.download().await?;
