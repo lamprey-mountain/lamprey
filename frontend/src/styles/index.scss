@@ -270,6 +270,11 @@ input[type="submit"] {
 				box-shadow: 4px 0 0 -1px inset #cc1856;
 				background-color: #cc185622;
 			}
+
+			&.mentioned {
+				box-shadow: 4px 0 0 -1px inset $link-500;
+				background-color: oklch(var(--color-link-500) / 0.1);
+			}
 		}
 	}
 

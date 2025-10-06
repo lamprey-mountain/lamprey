@@ -28,11 +28,43 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 		case "message": {
 			const ctx = useCtx();
 			const api = useApi();
+			const self = () => api.users.cache.get("@self");
+			const room_member = createMemo(() => {
+				const me = self();
+				if (!me || !thread.room_id) return null;
+				return api.room_members.fetch(() => thread.room_id, () => me.id)();
+			});
+
+			const is_mentioned = () => {
+				const me = self();
+				if (!me) return false;
+				if (item.message.author_id === me.id) return false;
+
+				if (item.message.mentions.users.includes(me.id)) {
+					return true;
+				}
+				if (
+					item.message.mentions.everyone_room ||
+					item.message.mentions.everyone_thread
+				) {
+					return true;
+				}
+				const rm = room_member();
+				if (rm) {
+					for (const role_id of item.message.mentions.roles) {
+						if (rm.roles.some((r) => r.id === role_id)) {
+							return true;
+						}
+					}
+				}
+				return false;
+			};
 			return (
 				<li
 					class="message"
 					classList={{
 						"selected": item.message.id === ctx.thread_reply_id.get(thread.id),
+						"mentioned": is_mentioned(),
 					}}
 				>
 					<MessageView message={item.message} separate={item.separate} />
