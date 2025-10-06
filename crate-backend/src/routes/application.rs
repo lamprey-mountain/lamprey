@@ -147,7 +147,7 @@ async fn app_get(
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
     app.oauth_secret = None;
-    if app.owner_id == auth_user.id || app.public {
+    if app.owner_id == auth_user.id || app.public || *app.id == *auth_user.id {
         Ok(Json(app))
     } else {
         Err(Error::NotFound)
@@ -175,7 +175,7 @@ async fn app_patch(
     patch.validate()?;
     let data = s.data();
     let start = data.application_get(app_id).await?;
-    if start.owner_id != auth_user.id {
+    if start.owner_id != auth_user.id && *start.id != *auth_user.id {
         return Err(Error::MissingPermissions);
     }
 
