@@ -519,19 +519,7 @@ async fn room_member_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[allow(unused)]
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-struct RoomMemberSearch {
-    query: String,
-    limit: Option<u16>,
-}
-
-#[derive(Debug, Serialize, ToSchema, IntoParams)]
-struct RoomMemberSearchResponse {
-    items: Vec<RoomMember>,
-}
-
-/// Room member search (TODO)
+/// Room member search
 #[utoipa::path(
     get,
     path = "/room/{room_id}/member/search",
@@ -545,12 +533,25 @@ struct RoomMemberSearchResponse {
     )
 )]
 async fn room_member_search(
-    Path(_room_id): Path<RoomId>,
-    Query(_search): Query<RoomMemberSearch>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<()> {
-    Err(Error::Unimplemented)
+    Path(room_id): Path<RoomId>,
+    Query(search): Query<RoomMemberSearch>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+
+    // extra permission check to prevent returning the entire list of registered users
+    if room_id == SERVER_ROOM_ID {
+        perms.ensure(Permission::ServerOversee)?;
+    }
+
+    let limit = search.limit.unwrap_or(10).min(100);
+
+    let items = d.room_member_search(room_id, search.query, limit).await?;
+
+    Ok(Json(RoomMemberSearchResponse { items }))
 }
 
 /// Room ban create

@@ -432,4 +432,47 @@ impl DataRoomMember for Postgres {
             |i: &ApplicationId| i.to_string()
         )
     }
+
+    async fn room_member_search(
+        &self,
+        room_id: RoomId,
+        query: String,
+        limit: u16,
+    ) -> Result<Vec<RoomMember>> {
+        let query = format!("%{}%", query);
+        let items = query_as!(
+            DbRoomMember,
+            r#"
+            with r as (
+                select user_id, array_agg(role_id) as roles from role_member
+                join role on role.room_id = $1 and role_member.role_id = role.id
+                group by user_id
+            )
+            SELECT
+                m.room_id,
+                m.user_id,
+                membership as "membership: _",
+                override_name,
+                override_description,
+                joined_at,
+                origin,
+                mute,
+                deaf,
+                coalesce(r.roles, '{}') as "roles!"
+            FROM room_member m
+            JOIN usr u ON m.user_id = u.id
+            left join r on r.user_id = m.user_id
+            WHERE m.room_id = $1 AND m.membership = 'Join' AND (u.name ILIKE $2 OR m.override_name ILIKE $2)
+            ORDER BY u.name
+            LIMIT $3
+            "#,
+            *room_id,
+            query,
+            limit as i64
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(items.into_iter().map(Into::into).collect())
+    }
 }

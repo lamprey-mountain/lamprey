@@ -118,6 +118,13 @@ pub trait DataRoomMember {
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>>;
 
+    async fn room_member_search(
+        &self,
+        room_id: RoomId,
+        query: String,
+        limit: u16,
+    ) -> Result<Vec<RoomMember>>;
+
     async fn room_ban_create(
         &self,
         room_id: RoomId,

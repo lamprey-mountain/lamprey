@@ -203,6 +203,19 @@ pub struct RoomBanBulkCreate {
     pub expires_at: Option<Time>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams, ToSchema))]
+pub struct RoomMemberSearch {
+    pub query: String,
+    pub limit: Option<u16>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomMemberSearchResponse {
+    pub items: Vec<RoomMember>,
+}
+
 impl Diff<RoomMember> for RoomMemberPatch {
     fn changes(&self, other: &RoomMember) -> bool {
         self.override_name.changes(&other.override_name)
