@@ -12,7 +12,7 @@ pub mod time;
 pub use color::{Color, ColorSemantic, ColorThemed};
 pub use time::Time;
 
-use super::{SessionId, UserId};
+use super::{ApplicationId, SessionId, UserId};
 
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(untagged)]
@@ -20,6 +20,14 @@ pub enum UserIdReq {
     #[serde(deserialize_with = "const_self")]
     UserSelf,
     UserId(UserId),
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(untagged)]
+pub enum ApplicationIdReq {
+    #[serde(deserialize_with = "const_self")]
+    AppSelf,
+    ApplicationId(ApplicationId),
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -63,6 +71,15 @@ impl Display for UserIdReq {
         match self {
             UserIdReq::UserSelf => write!(f, "@self"),
             UserIdReq::UserId(user_id) => write!(f, "{user_id}"),
+        }
+    }
+}
+
+impl Display for ApplicationIdReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ApplicationIdReq::AppSelf => write!(f, "@self"),
+            ApplicationIdReq::ApplicationId(app_id) => write!(f, "{app_id}"),
         }
     }
 }

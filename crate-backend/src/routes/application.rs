@@ -8,6 +8,7 @@ use axum::{
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v1::types::{
     application::{Application, ApplicationCreate, ApplicationPatch, Scope},
+    misc::ApplicationIdReq,
     oauth::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeParams, OauthAuthorizeResponse,
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
@@ -140,10 +141,14 @@ async fn app_list(
     )
 )]
 async fn app_get(
-    Path((app_id,)): Path<(ApplicationId,)>,
+    Path((app_id,)): Path<(ApplicationIdReq,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let app_id = match app_id {
+        ApplicationIdReq::AppSelf => (*auth_user.id).into(),
+        ApplicationIdReq::ApplicationId(id) => id,
+    };
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
     app.oauth_secret = None;
@@ -165,12 +170,16 @@ async fn app_get(
     )
 )]
 async fn app_patch(
-    Path((app_id,)): Path<(ApplicationId,)>,
+    Path((app_id,)): Path<(ApplicationIdReq,)>,
     AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(patch): Json<ApplicationPatch>,
 ) -> Result<impl IntoResponse> {
+    let app_id = match app_id {
+        ApplicationIdReq::AppSelf => (*auth_user.id).into(),
+        ApplicationIdReq::ApplicationId(id) => id,
+    };
     auth_user.ensure_unsuspended()?;
     patch.validate()?;
     let data = s.data();
@@ -271,17 +280,21 @@ async fn app_delete(
     )
 )]
 async fn app_create_session(
-    Path((app_id,)): Path<(ApplicationId,)>,
+    Path((app_id,)): Path<(ApplicationIdReq,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<SessionCreate>,
 ) -> Result<impl IntoResponse> {
+    let app_id = match app_id {
+        ApplicationIdReq::AppSelf => (*auth_user.id).into(),
+        ApplicationIdReq::ApplicationId(id) => id,
+    };
     auth_user.ensure_unsuspended()?;
     json.validate()?;
     let data = s.data();
     let app = data.application_get(app_id).await?;
-    if app.owner_id == auth_user.id {
+    if app.owner_id == auth_user.id || *app.id == *auth_user.id {
         let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
         let session = data
             .session_create(DbSessionCreate {
@@ -414,11 +427,15 @@ async fn app_invite_bot(
     )
 )]
 async fn puppet_ensure(
-    Path((app_id, puppet_id)): Path<(ApplicationId, String)>,
+    Path((app_id, puppet_id)): Path<(ApplicationIdReq, String)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<PuppetCreate>,
 ) -> Result<impl IntoResponse> {
+    let app_id = match app_id {
+        ApplicationIdReq::AppSelf => (*auth_user.id).into(),
+        ApplicationIdReq::ApplicationId(id) => id,
+    };
     auth_user.ensure_unsuspended()?;
 
     if *app_id != *auth_user.id {
@@ -468,14 +485,18 @@ async fn puppet_ensure(
     )
 )]
 async fn app_rotate_secret(
-    Path((app_id,)): Path<(ApplicationId,)>,
+    Path((app_id,)): Path<(ApplicationIdReq,)>,
     AuthWithSession(session, auth_user): AuthWithSession,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
+    let app_id = match app_id {
+        ApplicationIdReq::AppSelf => (*auth_user.id).into(),
+        ApplicationIdReq::ApplicationId(id) => id,
+    };
     let data = s.data();
     let mut app = data.application_get(app_id).await?;
-    if app.owner_id != auth_user.id {
+    if app.owner_id != auth_user.id && *app.id != *auth_user.id {
         return Err(Error::MissingPermissions);
     }
     app.oauth_secret = Some(Uuid::new_v4().to_string());
