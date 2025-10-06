@@ -68,7 +68,8 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "MessageRemove"
+                      "MessageRemove",
+                      "MemberTimeout"
                     ]
                   }
                 }

@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE thread SET\n                version_id = $2,\n                room_id = $3,\n                type = $4\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "thread_type",
+            "kind": {
+              "Enum": [
+                "Chat",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "429e6001a576d9e6797af05f6414c5cb8a31282dce63db65604baba024a2816f"
+}

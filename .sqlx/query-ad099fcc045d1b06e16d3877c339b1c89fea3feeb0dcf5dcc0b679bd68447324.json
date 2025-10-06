@@ -90,7 +90,8 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "MessageRemove"
+                      "MessageRemove",
+                      "MemberTimeout"
                     ]
                   }
                 }
@@ -185,7 +186,8 @@
                       "VoicePriority",
                       "VoiceSpeak",
                       "VoiceVideo",
-                      "MessageRemove"
+                      "MessageRemove",
+                      "MemberTimeout"
                     ]
                   }
                 }
