@@ -112,6 +112,64 @@ const schema = new Schema({
 				},
 			],
 		},
+		has: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { value: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-has" },
+				`has:${node.attrs.value}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-has",
+					getAttrs: (dom: HTMLElement) => ({
+						value: dom.textContent?.replace(/^has:/, "") ?? "",
+					}),
+				},
+			],
+		},
+		pinned: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { value: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-pinned" },
+				`pinned:${node.attrs.value}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-pinned",
+					getAttrs: (dom: HTMLElement) => ({
+						value: dom.textContent?.replace(/^pinned:/, "") ?? "",
+					}),
+				},
+			],
+		},
+		mentions: {
+			group: "inline",
+			inline: true,
+			atom: true,
+			attrs: { id: { default: "" }, name: { default: "" } },
+			toDOM: (node) => [
+				"span",
+				{ class: "filter-mentions", "data-id": node.attrs.id },
+				`mentions:${node.attrs.name}`,
+			],
+			parseDOM: [
+				{
+					tag: "span.filter-mentions",
+					getAttrs: (dom: HTMLElement) => ({
+						id: dom.dataset.id,
+						name: dom.textContent?.replace(/^mentions:/, "") ?? "",
+					}),
+				},
+			],
+		},
 	},
 });
 
@@ -129,6 +187,12 @@ function serializeToQuery(state: EditorState): string {
 				query += ` before:${inlineNode.attrs.date} `;
 			} else if (inlineNode.type.name === "after") {
 				query += ` after:${inlineNode.attrs.date} `;
+			} else if (inlineNode.type.name === "has") {
+				query += ` has:${inlineNode.attrs.value} `;
+			} else if (inlineNode.type.name === "pinned") {
+				query += ` pinned:${inlineNode.attrs.value} `;
+			} else if (inlineNode.type.name === "mentions") {
+				query += ` mentions:${inlineNode.attrs.id} `;
 			}
 		});
 	});
@@ -230,6 +294,7 @@ const AutocompleteDropdown = (props: {
 	const threadMembers = api.thread_members.list(() => props.thread.id);
 	const roomMembers = api.room_members.list(() => props.thread.room_id ?? "");
 	const roomThreads = api.threads.list(() => props.thread.room_id ?? "");
+	const roomRoles = api.roles.list(() => props.thread.room_id ?? "");
 
 	const authorSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
@@ -265,6 +330,68 @@ const AutocompleteDropdown = (props: {
 			.slice(0, 10);
 	});
 
+	const hasFilterSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+		const options = [
+			"attachment",
+			"image",
+			"audio",
+			"video",
+			"link",
+			"embed",
+		];
+		if (!query) return options;
+		return options.filter((o) => o.toLowerCase().includes(query));
+	});
+
+	const pinnedSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+		const options = ["true", "false"];
+		if (!query) return options;
+		return options.filter((o) => o.toLowerCase().includes(query));
+	});
+
+	type Mentionable = {
+		id: string;
+		name: string;
+		type: "user" | "role" | "special";
+	};
+	const mentionsSuggestions = createMemo(() => {
+		const query = props.filter.query.toLowerCase();
+
+		const tm = threadMembers()?.items.map((m) => m.user_id) ?? [];
+		const rm = roomMembers()?.items.map((m) => m.user_id) ?? [];
+		const all_user_ids = [...new Set([...tm, ...rm])];
+		const users = (
+			all_user_ids.map((id) => api.users.cache.get(id)).filter(
+				Boolean,
+			) as User[]
+		)
+			.filter(
+				(u) =>
+					u.name.toLowerCase().includes(query) ||
+					u.id.toLowerCase().includes(query),
+			)
+			.map(
+				(u) =>
+					({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable,
+			);
+
+		const roles = (roomRoles()?.items ?? [])
+			.filter((r) => r.name.toLowerCase().includes(query))
+			.map(
+				(r) =>
+					({ id: `role-${r.id}`, name: r.name, type: "role" }) as Mentionable,
+			);
+
+		const special: Mentionable[] = [
+			{ id: "everyone-room", name: "@room", type: "special" },
+			{ id: "everyone-thread", name: "@thread", type: "special" },
+		].filter((s) => s.name.toLowerCase().includes(query));
+
+		return [...users, ...roles, ...special].slice(0, 10);
+	});
+
 	const onAuthorSelect = (user_id: string) => {
 		const user = api.users.cache.get(user_id);
 		if (!user) return;
@@ -280,7 +407,33 @@ const AutocompleteDropdown = (props: {
 		props.onSelect(node);
 	};
 
-	const allFilterSuggestions = ["author:", "thread:", "before:", "after:"];
+	const onHasSelect = (value: string) => {
+		const node = schema.nodes.has.create({ value });
+		props.onSelect(node);
+	};
+
+	const onPinnedSelect = (value: string) => {
+		const node = schema.nodes.pinned.create({ value });
+		props.onSelect(node);
+	};
+
+	const onMentionsSelect = (mentionable: Mentionable) => {
+		const node = schema.nodes.mentions.create({
+			id: mentionable.id,
+			name: mentionable.name,
+		});
+		props.onSelect(node);
+	};
+
+	const allFilterSuggestions = [
+		"author:",
+		"thread:",
+		"before:",
+		"after:",
+		"has:",
+		"pinned:",
+		"mentions:",
+	];
 	const filterSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
 		if (!query) return allFilterSuggestions;
@@ -293,6 +446,15 @@ const AutocompleteDropdown = (props: {
 		}
 		if (props.filter.type === "thread") {
 			return threadSuggestions().length > 0;
+		}
+		if (props.filter.type === "has") {
+			return hasFilterSuggestions().length > 0;
+		}
+		if (props.filter.type === "pinned") {
+			return pinnedSuggestions().length > 0;
+		}
+		if (props.filter.type === "mentions") {
+			return mentionsSuggestions().length > 0;
 		}
 		if (props.filter.type === "filter") {
 			return filterSuggestions().length > 0;
@@ -340,6 +502,55 @@ const AutocompleteDropdown = (props: {
 						</For>
 					</ul>
 				</Show>
+				<Show when={props.filter.type === "has"}>
+					<ul>
+						<For each={hasFilterSuggestions()}>
+							{(value) => (
+								<li
+									onMouseDown={(e) => {
+										e.preventDefault();
+										onHasSelect(value);
+									}}
+								>
+									<b>{value}</b>
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+				<Show when={props.filter.type === "pinned"}>
+					<ul>
+						<For each={pinnedSuggestions()}>
+							{(value) => (
+								<li
+									onMouseDown={(e) => {
+										e.preventDefault();
+										onPinnedSelect(value);
+									}}
+								>
+									<b>{value}</b>
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+				<Show when={props.filter.type === "mentions"}>
+					<ul>
+						<For each={mentionsSuggestions()}>
+							{(mentionable) => (
+								<li
+									onMouseDown={(e) => {
+										e.preventDefault();
+										onMentionsSelect(mentionable);
+									}}
+								>
+									<b>{mentionable.name}</b>
+									<span class="dim">({mentionable.type})</span>
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
 				<Show when={props.filter.type === "filter"}>
 					<ul>
 						<For each={filterSuggestions()}>
@@ -378,7 +589,9 @@ function autocompletePlugin(
 				const cursorPos = selection.from;
 				const textBeforeCursor = text.slice(0, cursorPos);
 
-				const filterMatch = textBeforeCursor.match(/\b(author|thread):(\S*)$/);
+				const filterMatch = textBeforeCursor.match(
+					/\b(author|thread|has|pinned|mentions):(\S*)$/,
+				);
 				if (filterMatch) {
 					setFilter({ type: filterMatch[1], query: filterMatch[2] });
 					return null;
@@ -442,7 +655,8 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 		const parts = queryString.split(/\s+/);
 		const textQueryParts: string[] = [];
 		const filters: Record<string, string[]> = {};
-		const filterRegex = /^(author|thread|before|after):(.+)$/;
+		const filterRegex =
+			/^(author|thread|before|after|has|pinned|mentions):(.+)$/;
 
 		for (const part of parts) {
 			const match = part.match(filterRegex);
@@ -472,11 +686,22 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 		ctx.thread_search.set(props.thread.id, searchState);
 
 		const body: {
-			query: string;
+			query?: string;
 			user_id?: string[];
 			thread_id?: string[];
 			room_id?: string[];
-		} = { query: textQuery };
+			has_attachment?: boolean;
+			has_image?: boolean;
+			has_audio?: boolean;
+			has_video?: boolean;
+			has_link?: boolean;
+			has_embed?: boolean;
+			pinned?: boolean;
+			mentions_users?: string[];
+			mentions_roles?: string[];
+			mentions_everyone_room?: boolean;
+			mentions_everyone_thread?: boolean;
+		} = { query: textQuery || undefined };
 		const params: { query: { limit: number; from?: string; to?: string } } = {
 			query: { limit: 100 },
 		};
@@ -503,6 +728,37 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 			if (from_uuid) params.query.from = from_uuid;
 		}
 
+		if (filters.has) {
+			if (filters.has.includes("attachment")) body.has_attachment = true;
+			if (filters.has.includes("image")) body.has_image = true;
+			if (filters.has.includes("audio")) body.has_audio = true;
+			if (filters.has.includes("video")) body.has_video = true;
+			if (filters.has.includes("link")) body.has_link = true;
+			if (filters.has.includes("embed")) body.has_embed = true;
+		}
+
+		if (filters.pinned?.[0]) {
+			body.pinned = filters.pinned[0] === "true";
+		}
+
+		if (filters.mentions) {
+			const mentions_users: string[] = [];
+			const mentions_roles: string[] = [];
+			for (const mention of filters.mentions) {
+				if (mention.startsWith("user-")) {
+					mentions_users.push(mention.replace("user-", ""));
+				} else if (mention.startsWith("role-")) {
+					mentions_roles.push(mention.replace("role-", ""));
+				} else if (mention === "everyone-room") {
+					body.mentions_everyone_room = true;
+				} else if (mention === "everyone-thread") {
+					body.mentions_everyone_thread = true;
+				}
+			}
+			if (mentions_users.length > 0) body.mentions_users = mentions_users;
+			if (mentions_roles.length > 0) body.mentions_roles = mentions_roles;
+		}
+
 		const res = await api.client.http.POST("/api/v1/search/message", {
 			body,
 			params,
@@ -525,7 +781,9 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 	const insertNode = (node: Node) => {
 		const { from } = view.state.selection;
 		const textBefore = view.state.doc.textBetween(0, from, "\0");
-		const filterMatch = textBefore.match(/\b(author|thread):(\S*)$/);
+		const filterMatch = textBefore.match(
+			/\b(author|thread|has|pinned|mentions):(\S*)$/,
+		);
 		if (filterMatch) {
 			const matchText = filterMatch[0];
 			const start = from - matchText.length;
@@ -610,7 +868,7 @@ export const SearchInput = (props: { thread: ThreadT }) => {
 					const textBeforeCursor = text.slice(0, cursorPos);
 
 					const filterMatch = textBeforeCursor.match(
-						/\b(author|thread):(\S*)$/,
+						/\b(author|thread|has|pinned|mentions):(\S*)$/,
 					);
 					if (filterMatch) {
 						setActiveFilter({ type: filterMatch[1], query: filterMatch[2] });
