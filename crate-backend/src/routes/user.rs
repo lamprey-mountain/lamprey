@@ -120,8 +120,12 @@ async fn user_delete(
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
-    if auth_user.id != target_user_id {
-        return Err(Error::NotFound);
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let is_admin = perms.has(Permission::Admin);
+
+    if auth_user.id != target_user_id && !is_admin {
+        return Err(Error::MissingPermissions);
     }
     let data = s.data();
     data.user_delete(target_user_id).await?;

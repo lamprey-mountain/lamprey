@@ -216,11 +216,14 @@ async fn room_delete(
     let srv = s.services();
     let data = s.data();
 
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    let is_admin = perms.has(Permission::Admin);
+
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
 
     let room = srv.rooms.get(room_id, None).await?;
-    if room.owner_id != Some(auth_user.id) {
+    if room.owner_id != Some(auth_user.id) && !is_admin {
         return Err(Error::BadStatic("you aren't the room owner"));
     }
 
