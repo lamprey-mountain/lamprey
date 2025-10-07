@@ -619,11 +619,12 @@ async fn invite_server_list(
         return Err(Error::BadStatic("Guest users cannot list server invites"));
     }
 
-    // TODO: let users list their own server invites
     let perms = srv.perms.for_room(user.id, SERVER_ROOM_ID).await?;
-    perms.ensure(Permission::InviteManage)?;
-
-    let res = d.invite_list_server(paginate).await?;
+    let res = if perms.has(Permission::InviteManage) {
+        d.invite_list_server(paginate).await?
+    } else {
+        d.invite_list_server_by_creator(user.id, paginate).await?
+    };
     Ok(Json(res))
 }
 
