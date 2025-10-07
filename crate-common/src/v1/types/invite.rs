@@ -84,6 +84,9 @@ pub enum InviteTarget {
 
     /// can register on this server
     Server,
+
+    /// add this user as a friend
+    User { user: User },
 }
 
 /// the type and id of this invite's target
@@ -101,6 +104,10 @@ pub enum InviteTargetId {
     },
 
     Server,
+
+    User {
+        user_id: UserId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

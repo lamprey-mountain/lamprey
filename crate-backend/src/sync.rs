@@ -424,6 +424,7 @@ impl Connection {
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
+                InviteTarget::User { user, .. } => AuthCheck::User(user.id),
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room } => AuthCheck::Room(room.id),
@@ -431,6 +432,7 @@ impl Connection {
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
+                InviteTarget::User { user, .. } => AuthCheck::User(user.id),
             },
             MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
@@ -454,6 +456,7 @@ impl Connection {
                 InviteTargetId::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
+                InviteTargetId::User { user_id, .. } => AuthCheck::User(*user_id),
             },
             MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ThreadAck { .. } => todo!(),

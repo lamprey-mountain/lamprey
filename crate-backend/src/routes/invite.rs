@@ -3,12 +3,13 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RoomId, RoomMemberOrigin, RoomMemberPut, RoomMembership,
-    SERVER_ROOM_ID,
+    PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
+    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -70,6 +71,7 @@ async fn invite_delete(
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
+        InviteTarget::User { user } => (false, InviteTargetId::User { user_id: user.id }),
     };
     let can_delete = auth_user.id == invite.invite.creator_id || has_perm;
     if can_delete {
@@ -80,6 +82,7 @@ async fn invite_delete(
                 InviteTargetId::Room { room_id } => room_id,
                 InviteTargetId::Thread { room_id, .. } => room_id,
                 InviteTargetId::Server => SERVER_ROOM_ID,
+                InviteTargetId::User { user_id } => (*user_id).into(),
             },
             user_id: auth_user.id,
             session_id: None,
@@ -120,6 +123,12 @@ async fn invite_delete(
                     },
                 )
                 .await?;
+            }
+            InviteTargetId::User { .. } => {
+                s.broadcast(MessageSync::InviteDelete {
+                    code,
+                    target: id_target,
+                })?;
             }
         };
     }
@@ -163,6 +172,7 @@ async fn invite_resolve(
             let perms = s.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
             !perms.has(Permission::InviteManage)
         }
+        InviteTarget::User { user: _ } => auth_user.id != invite.invite.creator_id,
     };
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
@@ -279,6 +289,50 @@ async fn invite_use(
             .await?;
             s.broadcast(MessageSync::UserUpdate { user: updated_user })?;
         }
+        InviteTarget::User { user } => {
+            d.user_relationship_edit(
+                auth_user.id,
+                user.id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Friend)),
+                },
+            )
+            .await?;
+            d.user_relationship_edit(
+                user.id,
+                auth_user.id,
+                RelationshipPatch {
+                    note: None,
+                    petname: None,
+                    ignore: None,
+                    relation: Some(Some(RelationshipType::Friend)),
+                },
+            )
+            .await?;
+
+            for (uid, rel) in [
+                (
+                    auth_user.id,
+                    d.user_relationship_get(auth_user.id, user.id).await?,
+                ),
+                (
+                    user.id,
+                    d.user_relationship_get(user.id, auth_user.id).await?,
+                ),
+            ] {
+                if let Some(rel) = rel {
+                    s.broadcast(MessageSync::RelationshipUpsert {
+                        user_id: uid,
+                        relationship: rel,
+                    })?;
+                }
+            }
+
+            // TODO: should i append to user audit logs here?
+        }
     }
     d.invite_incr_use(code).await?;
 
@@ -286,6 +340,7 @@ async fn invite_use(
         InviteTarget::Room { room } => room.id,
         InviteTarget::Thread { room, .. } => room.id,
         InviteTarget::Server => SERVER_ROOM_ID,
+        InviteTarget::User { .. } => return Ok(()),
     };
     srv.rooms
         .send_welcome_message(room_id, auth_user.id)
@@ -479,6 +534,10 @@ async fn invite_patch(
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
+        InviteTarget::User { user: _ } => (
+            user.id == start_invite.invite.creator_id,
+            InviteTargetId::User { user_id: user.id },
+        ),
     };
 
     let can_patch = user.id == start_invite.invite.creator_id || has_perm;
@@ -505,7 +564,8 @@ async fn invite_patch(
     let room_id = match &updated_invite.invite.target {
         InviteTarget::Room { room } => Some(room.id),
         InviteTarget::Thread { room, .. } => Some(room.id),
-        InviteTarget::Server => None,
+        InviteTarget::Server => Some(SERVER_ROOM_ID),
+        InviteTarget::User { user } => Some((*user.id).into()),
     };
     if let Some(room_id) = room_id {
         s.audit_log_append(AuditLogEntry {
@@ -518,9 +578,6 @@ async fn invite_patch(
         })
         .await?;
     }
-
-    // TODO: Check if any actual changes were made and return NOT_MODIFIED if not.
-    // This would require comparing `invite` and `updated_invite`.
 
     s.broadcast(MessageSync::InviteUpdate {
         invite: updated_invite.clone(),
@@ -628,7 +685,7 @@ async fn invite_server_list(
     Ok(Json(res))
 }
 
-/// Invite user create (TODO)
+/// Invite user create
 ///
 /// Creates an invite that adds this user as a friend when used
 #[utoipa::path(
@@ -639,15 +696,64 @@ async fn invite_server_list(
     responses((status = OK, body = Invite, description = "success")),
 )]
 async fn invite_user_create(
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
-    Json(_json): Json<InviteCreate>,
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth_user.ensure_unsuspended()?;
+
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user.id != target_user_id {
+        return Err(Error::NotFound);
+    }
+
+    let d = s.data();
+
+    let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        .chars()
+        .collect();
+    let code = InviteCode(nanoid!(8, &alphabet));
+    d.invite_insert_user(
+        auth_user.id,
+        auth_user.id,
+        code.clone(),
+        json.expires_at,
+        json.max_uses,
+    )
+    .await?;
+    let invite = d.invite_select(code).await?;
+
+    let changes = Changes::new()
+        .add("code", &invite.invite.code)
+        .add("description", &invite.invite.description)
+        .add("expires_at", &invite.invite.expires_at)
+        .add("max_uses", &invite.max_uses)
+        .build();
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::InviteCreate { changes },
+    })
+    .await?;
+
+    s.broadcast(MessageSync::InviteCreate {
+        invite: invite.clone(),
+    })?;
+
+    Ok((StatusCode::CREATED, Json(invite)))
 }
 
-/// Invite user list (TODO)
+/// Invite user list
 #[utoipa::path(
     get,
     path = "/user/{user_id}/invite",
@@ -658,14 +764,50 @@ async fn invite_user_create(
     tags = ["invite"],
     responses(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
-    )
+    ),
 )]
 async fn invite_user_list(
-    Query(_paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(target_user_id): Path<UserIdReq>,
+    Query(paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    if auth_user.id != target_user_id {
+        return Err(Error::NotFound);
+    }
+
+    let d = s.data();
+    let res = d.invite_list_user(target_user_id, paginate).await?;
+
+    let items: Vec<_> = res
+        .items
+        .into_iter()
+        .map(|i| {
+            if i.invite.creator_id != auth_user.id {
+                InviteWithPotentialMetadata::Invite(i.strip_metadata())
+            } else {
+                InviteWithPotentialMetadata::InviteWithMetadata(i)
+            }
+        })
+        .collect();
+    let cursor = items.last().map(|i| match i {
+        InviteWithPotentialMetadata::Invite(invite) => invite.code.0.clone(),
+        InviteWithPotentialMetadata::InviteWithMetadata(invite_with_metadata) => {
+            invite_with_metadata.invite.code.0.clone()
+        }
+    });
+    let res = PaginationResponse {
+        items,
+        total: res.total,
+        has_more: res.has_more,
+        cursor,
+    };
+    Ok(Json(res))
 }
 
 // TODO: consider merging invite_server_* with invite_room_*?

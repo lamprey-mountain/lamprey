@@ -235,7 +235,7 @@ pub trait DataInvite {
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
-        expires_at: Option<common::v1::types::util::Time>,
+        expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()>;
     async fn invite_list_room(
@@ -248,7 +248,7 @@ pub trait DataInvite {
         &self,
         creator_id: UserId,
         code: InviteCode,
-        expires_at: Option<common::v1::types::util::Time>,
+        expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()>;
     async fn invite_list_server(
@@ -262,14 +262,19 @@ pub trait DataInvite {
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>>;
 
-    // TODO: user invites
-    // async fn invite_insert_user(
-    //     &self,
-    //     user_id: UserId,
-    //     creator_id: UserId,
-    //     code: InviteCode,
-    // ) -> Result<InviteWithMetadata>;
-    // async fn invite_list_user(user_id: UserId, paginate: PaginationQuery<InviteCode>) -> Result<PaginationResponse<Invite>>;
+    async fn invite_insert_user(
+        &self,
+        user_id: UserId,
+        creator_id: UserId,
+        code: InviteCode,
+        expires_at: Option<Time>,
+        max_uses: Option<u16>,
+    ) -> Result<()>;
+    async fn invite_list_user(
+        &self,
+        user_id: UserId,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>>;
 
     async fn invite_incr_use(&self, code: InviteCode) -> Result<()>;
     async fn invite_update(
@@ -468,7 +473,7 @@ pub trait DataUser {
     async fn user_set_registered(
         &self,
         user_id: UserId,
-        registered_at: Option<common::v1::types::util::Time>,
+        registered_at: Option<Time>,
         parent_invite: Option<String>,
     ) -> Result<UserVerId>;
     async fn user_suspended(

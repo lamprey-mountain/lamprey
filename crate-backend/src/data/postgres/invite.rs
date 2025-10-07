@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::util::Time;
 use common::v1::types::{
     InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery, PaginationResponse,
     ThreadId,
@@ -20,7 +21,7 @@ impl DataInvite for Postgres {
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
-        expires_at: Option<common::v1::types::util::Time>,
+        expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()> {
         query!(
@@ -43,7 +44,7 @@ impl DataInvite for Postgres {
         &self,
         creator_id: UserId,
         code: InviteCode,
-        expires_at: Option<common::v1::types::util::Time>,
+        expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()> {
         query!(
@@ -90,6 +91,10 @@ impl DataInvite for Postgres {
                 InviteTarget::Thread { room, thread }
             }
             "server" => InviteTarget::Server,
+            "user" => {
+                let user = self.user_get(UserId::from(row.target_id.unwrap())).await?;
+                InviteTarget::User { user }
+            }
             _ => panic!("invalid data in db"),
         };
         let creator = self.user_get(UserId::from(row.creator_id)).await?;
@@ -301,6 +306,102 @@ impl DataInvite for Postgres {
             assert_eq!(row.target_type, "server");
             let target = InviteTarget::Server;
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
+            let creator_id = creator.id;
+            let invite = Invite::new(
+                InviteCode(row.code),
+                target,
+                creator,
+                creator_id,
+                row.created_at.assume_utc().into(),
+                row.expires_at.map(|t| t.assume_utc().into()),
+                row.description,
+                false,
+            );
+            let invite_with_meta = InviteWithMetadata {
+                invite,
+                uses: row.uses.try_into().expect("invalid data in db"),
+                max_uses: row
+                    .max_uses
+                    .map(|n| n.try_into().expect("invalid data in db"))
+                    as Option<u16>,
+            };
+            items.push(invite_with_meta);
+        }
+        if p.dir == PaginationDirection::B {
+            items.reverse();
+        }
+        let cursor = items.last().map(|i| i.invite.code.to_string());
+        Ok(PaginationResponse {
+            items,
+            total: total.unwrap_or(0) as u64,
+            has_more,
+            cursor,
+        })
+    }
+
+    async fn invite_insert_user(
+        &self,
+        user_id: UserId,
+        creator_id: UserId,
+        code: InviteCode,
+        expires_at: Option<Time>,
+        max_uses: Option<u16>,
+    ) -> Result<()> {
+        query!(
+            r#"
+            insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
+            values ('user', $1, $2, $3, $4, $5)
+        "#,
+            *user_id,
+            code.0,
+            *creator_id,
+            expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
+            max_uses.map(|n| n as i32),
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn invite_list_user(
+        &self,
+        user_id: UserId,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>> {
+        let p: Pagination<_> = paginate.try_into()?;
+        let mut conn = self.pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+        let raw = query_as!(
+            DbInvite,
+            r#"
+            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description
+            from invite
+        	WHERE target_type = 'user' AND target_id = $1 AND code > $2 AND code < $3 and deleted_at is null
+        	ORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5
+        "#,
+            *user_id,
+            p.after.to_string(),
+            p.before.to_string(),
+            p.dir.to_string(),
+            (p.limit + 1) as i32
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+        let total = query_scalar!(
+            "SELECT count(*) FROM invite WHERE target_type = 'user' and target_id = $1 and deleted_at is null",
+            *user_id
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        tx.rollback().await?;
+        let has_more = raw.len() > p.limit as usize;
+        let mut items = vec![];
+        for row in raw.into_iter().take(p.limit as usize) {
+            assert_eq!(row.target_type, "user");
+            let creator = self.user_get(UserId::from(row.target_id.unwrap())).await?;
+            let target = InviteTarget::User {
+                user: creator.clone(),
+            };
             let creator_id = creator.id;
             let invite = Invite::new(
                 InviteCode(row.code),
