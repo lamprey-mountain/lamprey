@@ -286,6 +286,12 @@ pub trait DataMedia {
     async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
     async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
     async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
+    async fn media_link_create_exclusive(
+        &self,
+        media_id: MediaId,
+        target_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()>;
 }
 
 #[async_trait]

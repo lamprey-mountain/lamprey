@@ -208,4 +208,53 @@ impl DataMedia for Postgres {
             .await?;
         Ok(())
     }
+
+    async fn media_link_create_exclusive(
+        &self,
+        media_id: MediaId,
+        target_id: Uuid,
+        link_type: MediaLinkType,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        // Lock the media row to serialize access to linking this media
+        query!(
+            "SELECT id FROM media WHERE id = $1 FOR UPDATE",
+            media_id.into_inner()
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(crate::error::Error::NotFound)?; // Ensure media exists
+
+        let links = query_as!(
+            MediaLink,
+            r#"
+    	    SELECT media_id, target_id, link_type as "link_type: _"
+    	    FROM media_link
+    	    WHERE media_id = $1
+        "#,
+            media_id.into_inner(),
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        if !links.is_empty() {
+            return Err(crate::error::Error::BadStatic("media already used"));
+        }
+
+        query!(
+            r#"
+    	    INSERT INTO media_link (media_id, target_id, link_type)
+    	    VALUES ($1, $2, $3)
+        "#,
+            media_id.into_inner(),
+            target_id,
+            link_type as _
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
 }

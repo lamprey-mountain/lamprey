@@ -16,7 +16,6 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
-use crate::types::MediaLinkType;
 use crate::ServerState;
 
 /// Emoji create
@@ -50,7 +49,6 @@ async fn emoji_create(
     perms.ensure(Permission::EmojiManage)?;
 
     let data = s.data();
-    // FIXME: run this in a transaction
     let (media, _) = data.media_select(json.media_id).await?;
     if !matches!(
         media.source.info,
@@ -58,15 +56,9 @@ async fn emoji_create(
     ) {
         return Err(Error::BadStatic("media not an image"));
     }
-    if !data.media_link_select(json.media_id).await?.is_empty() {
-        return Err(Error::BadStatic("media already used"));
-    }
 
-    let media_id = json.media_id;
     let emoji = data
         .emoji_create(auth_user.id, room_id, json.clone())
-        .await?;
-    data.media_link_insert(media_id, *emoji.id, MediaLinkType::CustomEmoji)
         .await?;
 
     let changes = Changes::new()

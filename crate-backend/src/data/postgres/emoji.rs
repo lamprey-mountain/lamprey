@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::consts::MAX_CUSTOM_EMOJI;
 use crate::data::DataEmoji;
 use crate::error::Result;
-use crate::types::{PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId};
+use crate::types::{MediaLinkType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId};
 use crate::{gen_paginate, Error};
 
 use super::{Pagination, Postgres};
@@ -45,13 +45,24 @@ impl DataEmoji for Postgres {
         room_id: RoomId,
         create: EmojiCustomCreate,
     ) -> Result<EmojiCustom> {
-        let mut conn = self.pool.acquire().await?;
-        let emoji_id = Uuid::now_v7();
+        let mut tx = self.pool.begin().await?;
+
+        let links = sqlx::query!(
+            "SELECT media_id FROM media_link WHERE media_id = $1",
+            *create.media_id
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        if !links.is_empty() {
+            return Err(Error::BadStatic("media already used"));
+        }
+
         let count = query_scalar!(
             "SELECT count(*) FROM custom_emoji WHERE room_id = $1",
             *room_id,
         )
-        .fetch_optional(&mut *conn)
+        .fetch_optional(&mut *tx)
         .await?
         .flatten()
         .unwrap_or(0) as u32;
@@ -60,20 +71,38 @@ impl DataEmoji for Postgres {
                 "max number of custom emoji reached (1024)",
             ));
         }
+
+        let emoji_id = EmojiId::new();
+
         query!(
             "
     	    INSERT INTO custom_emoji (id, creator_id ,name, media_id, room_id, animated, owner)
     	    VALUES ($1, $2, $3, $4, $5, false, 'Room')
         ",
-            emoji_id,
+            *emoji_id,
             *creator_id,
             create.name,
             *create.media_id,
             *room_id,
         )
-        .execute(&mut *conn)
+        .execute(&mut *tx)
         .await?;
-        self.emoji_get(emoji_id.into()).await
+
+        query!(
+            r#"
+    	    INSERT INTO media_link (media_id, target_id, link_type)
+    	    VALUES ($1, $2, $3)
+        "#,
+            *create.media_id,
+            *emoji_id,
+            MediaLinkType::CustomEmoji as _
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        self.emoji_get(emoji_id).await
     }
 
     async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {

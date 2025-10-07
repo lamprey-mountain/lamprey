@@ -59,11 +59,6 @@ async fn user_update(
         return Ok(Json(start));
     }
     if let Some(Some(avatar_media_id)) = patch.avatar {
-        let existing = data.media_link_select(avatar_media_id).await?;
-        if !existing.is_empty() {
-            return Err(Error::BadStatic("cant reuse media"));
-        }
-
         let (media, _) = data.media_select(avatar_media_id).await?;
         if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
             return Err(Error::BadStatic(
@@ -72,15 +67,17 @@ async fn user_update(
         }
     }
     data.user_update(target_user_id, patch.clone()).await?;
-    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
-        .await?;
-    if let Some(Some(avatar_media_id)) = patch.avatar {
-        data.media_link_insert(
-            avatar_media_id,
-            target_user_id.into_inner(),
-            MediaLinkType::AvatarUser,
-        )
-        .await?;
+    if let Some(maybe_avatar) = patch.avatar {
+        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
+            .await?;
+        if let Some(avatar_media_id) = maybe_avatar {
+            data.media_link_create_exclusive(
+                avatar_media_id,
+                target_user_id.into_inner(),
+                MediaLinkType::AvatarUser,
+            )
+            .await?;
+        }
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id).await?;
@@ -183,7 +180,7 @@ async fn user_undelete(
     let avatar_media_id = user.avatar;
     if let Some(media_id) = avatar_media_id {
         if data
-            .media_link_insert(
+            .media_link_create_exclusive(
                 media_id,
                 target_user_id.into_inner(),
                 MediaLinkType::AvatarUser,

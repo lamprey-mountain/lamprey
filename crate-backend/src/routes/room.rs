@@ -54,9 +54,6 @@ async fn room_create(
         ) {
             return Err(Error::BadStatic("media not an image"));
         }
-        if !data.media_link_select(media_id).await?.is_empty() {
-            return Err(Error::BadStatic("media already used"));
-        }
     }
 
     let extra = DbRoomCreate {
@@ -67,7 +64,7 @@ async fn room_create(
     let room = s.services().rooms.create(json, auth_user.id, extra).await?;
     if let Some(media_id) = icon {
         let data = s.data();
-        data.media_link_insert(media_id, *room.id, MediaLinkType::AvatarRoom)
+        data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::AvatarRoom)
             .await?;
     }
 
@@ -170,8 +167,7 @@ async fn room_edit(
     perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
 
-    let icon = json.icon;
-    if let Some(Some(media_id)) = icon {
+    if let Some(Some(media_id)) = json.icon {
         let data = s.data();
         let (media, _) = data.media_select(media_id).await?;
         if !matches!(
@@ -180,16 +176,24 @@ async fn room_edit(
         ) {
             return Err(Error::BadStatic("media not an image"));
         }
-        if !data.media_link_select(media_id).await?.is_empty() {
-            return Err(Error::BadStatic("media already used"));
-        }
     }
 
     let room = s
         .services()
         .rooms
-        .update(room_id, auth_user.id, json, reason.clone())
+        .update(room_id, auth_user.id, json.clone(), reason.clone())
         .await?;
+
+    if let Some(maybe_media_id) = json.icon {
+        let data = s.data();
+        data.media_link_delete(room_id.into_inner(), MediaLinkType::AvatarRoom)
+            .await?;
+        if let Some(media_id) = maybe_media_id {
+            data.media_link_create_exclusive(media_id, room_id.into_inner(), MediaLinkType::AvatarRoom)
+                .await?;
+        }
+    }
+
     let msg = MessageSync::RoomUpdate { room: room.clone() };
     s.broadcast_room(room_id, auth_user.id, msg).await?;
     Ok(Json(room))
