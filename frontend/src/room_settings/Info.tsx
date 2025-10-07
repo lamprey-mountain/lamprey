@@ -138,7 +138,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<div class="danger">
 				<h3>danger zone</h3>
 				<label>
-					<button onClick={archiveAllThreads}>archive all</button>
+					<button onClick={archiveAllThreads}>archive all threads</button>
 					<span style="margin-left:8px">
 						archive all threads in this room
 					</span>
@@ -152,9 +152,9 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				</label>
 				<br />
 				<label>
-					<button onClick={() => alert("todo")}>archive</button>
+					<button onClick={() => alert("todo")}>obliterate</button>
 					<span style="margin-left:8px">
-						makes this entirely read-only and hides it in the nav bar
+						delete this room
 					</span>
 				</label>
 				<br />
