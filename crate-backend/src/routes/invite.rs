@@ -627,7 +627,7 @@ async fn invite_server_list(
     Ok(Json(res))
 }
 
-/// Invite user create
+/// Invite user create (TODO)
 ///
 /// Creates an invite that adds this user as a friend when used
 #[utoipa::path(
@@ -646,7 +646,7 @@ async fn invite_user_create(
     Ok(Error::Unimplemented)
 }
 
-/// Invite user list
+/// Invite user list (TODO)
 #[utoipa::path(
     get,
     path = "/user/{user_id}/invite",

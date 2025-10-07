@@ -14,6 +14,7 @@ export class Invites {
 	cache = new ReactiveMap<string, Invite>();
 	_requests = new Map<string, Promise<Invite>>();
 	_cachedListings = new Map<string, Listing<Invite>>();
+	_cachedServerListing: Listing<Invite> | null = null;
 
 	fetch(invite_code_signal: () => string): Resource<Invite> {
 		const [resource, { mutate }] = createResource(
@@ -82,7 +83,7 @@ export class Invites {
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items],
+				items: [...(pagination?.items ?? []), ...data.items],
 			};
 		};
 
@@ -123,6 +124,77 @@ export class Invites {
 		l2.resource = resource;
 		l2.refetch = refetch;
 		l2.mutate = mutate;
+
+		return resource;
+	}
+
+	list_server(): Resource<Pagination<Invite>> {
+		const paginate = async (pagination?: Pagination<Invite>) => {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/server/invite",
+				{
+					params: {
+						query: {
+							dir: "f",
+							limit: 100,
+							from: pagination?.items.at(-1)?.code,
+						},
+					},
+				},
+			);
+
+			if (error) {
+				// TODO: handle unauthenticated
+				console.error(error);
+				throw error;
+			}
+
+			batch(() => {
+				for (const item of data.items) {
+					this.cache.set(item.code, item);
+				}
+			});
+
+			return {
+				...data,
+				items: [...(pagination?.items ?? []), ...data.items],
+			};
+		};
+
+		const l = this._cachedServerListing;
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		this._cachedServerListing = {
+			resource: (() => {}) as unknown as Resource<Pagination<Invite>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+
+		const [resource, { refetch, mutate }] = createResource(async () => {
+			const l = this._cachedServerListing!;
+			if (l?.prom) {
+				await l.prom;
+				return l.pagination!;
+			}
+
+			const prom = l.pagination ? paginate(l.pagination) : paginate();
+			l.prom = prom;
+			const res = await prom;
+			l!.pagination = res;
+			l!.prom = null;
+			return res!;
+		});
+
+		this._cachedServerListing.resource = resource;
+		this._cachedServerListing.refetch = refetch;
+		this._cachedServerListing.mutate = mutate;
 
 		return resource;
 	}

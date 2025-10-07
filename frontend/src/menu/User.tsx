@@ -177,6 +177,45 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
+	const suspend = () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "suspend reason",
+			cont: (reason) => {
+				api.client.http.POST("/api/v1/user/{user_id}/suspend", {
+					params: {
+						path: {
+							user_id: props.user_id,
+						},
+					},
+					headers: {
+						"X-Reason": reason ?? "",
+					},
+					body: {},
+				});
+			},
+		});
+	};
+
+	const unsuspend = () => {
+		ctx.dispatch({
+			do: "modal.prompt",
+			text: "suspend reason",
+			cont: (reason) => {
+				api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
+					params: {
+						path: {
+							user_id: props.user_id,
+						},
+					},
+					headers: {
+						"X-Reason": reason ?? "",
+					},
+				});
+			},
+		});
+	};
+
 	return (
 		<Menu>
 			<Show when={props.thread_id}>

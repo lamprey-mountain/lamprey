@@ -444,28 +444,53 @@ export function createApi(
 						});
 					}
 				}
+			} else if (invite.target.type === "Server") {
+				const l = invites._cachedServerListing;
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						l.mutate({
+							...p,
+							items: [...p.items, invite],
+							total: p.total + 1,
+						});
+					}
+				}
 			}
 		} else if (msg.type === "InviteDelete") {
-			const invite = invites.cache.get(msg.code);
-			if (invite) {
-				if (invite.target.type === "Room") {
-					const room_id = invite.target.room.id;
-					const l = invites._cachedListings.get(room_id);
-					if (l?.pagination) {
-						const p = l.resource.latest;
-						if (p) {
-							const idx = p.items.findIndex((i) => i.code === invite.code);
-							if (idx !== -1) {
-								l.mutate({
-									...p,
-									items: p.items.toSpliced(idx, 1),
-								});
-							}
+			invites.cache.delete(msg.code);
+			if (msg.target.type === "Room") {
+				const room_id = msg.target.room_id;
+				const l = invites._cachedListings.get(room_id);
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						const idx = p.items.findIndex((i) => i.code === msg.code);
+						if (idx !== -1) {
+							l.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1),
+								total: p.total - 1,
+							});
+						}
+					}
+				}
+			} else if (msg.target.type === "Server") {
+				const l = invites._cachedServerListing;
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						const idx = p.items.findIndex((i) => i.code === msg.code);
+						if (idx !== -1) {
+							l.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1),
+								total: p.total - 1,
+							});
 						}
 					}
 				}
 			}
-			invites.cache.delete(msg.code);
 		} else if (msg.type === "BotAdd") {
 			// TODO: maybe do something here?
 		} else if (msg.type === "ReactionCreate") {
@@ -688,6 +713,7 @@ export type Api = {
 	rooms: {
 		fetch: (room_id?: () => string) => Resource<Room>;
 		list: () => Resource<Pagination<Room>>;
+		list_all: () => Resource<Pagination<Room>>;
 		cache: ReactiveMap<string, Room>;
 		markRead: (room_id: string) => Promise<void>;
 	};
@@ -709,6 +735,7 @@ export type Api = {
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;
 		list: (room_id: () => string) => Resource<Pagination<InviteWithMetadata>>;
+		list_server: () => Resource<Pagination<InviteWithMetadata>>;
 		cache: ReactiveMap<string, Invite>;
 	};
 	roles: {
@@ -745,6 +772,7 @@ export type Api = {
 	};
 	users: {
 		fetch: (user_id: () => string) => Resource<UserWithRelationship>;
+		list: () => Resource<Pagination<User>>;
 		cache: ReactiveMap<string, UserWithRelationship>;
 	};
 	messages: {

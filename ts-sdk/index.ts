@@ -13,3 +13,5 @@ export function getTimestampFromUUID(uuid: string): Date {
 	);
 	return new Date(timestamp);
 }
+
+export const SERVER_ROOM_ID = "00000000-0000-7000-0000-736572766572";

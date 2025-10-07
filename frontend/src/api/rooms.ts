@@ -8,6 +8,7 @@ export class Rooms {
 	cache = new ReactiveMap<string, Room>();
 	_requests = new Map<string, Promise<Room>>();
 	_cachedListing: Listing<Room> | null = null;
+	_cachedListingAll: Listing<Room> | null = null;
 
 	fetch(room_id: () => string): Resource<Room> {
 		const [resource, { mutate }] = createResource(room_id, (room_id) => {
@@ -71,7 +72,7 @@ export class Rooms {
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items],
+				items: [...(pagination?.items ?? []), ...data.items],
 			};
 		};
 
@@ -107,6 +108,74 @@ export class Rooms {
 		this._cachedListing.resource = resource;
 		this._cachedListing.refetch = refetch;
 		this._cachedListing.mutate = mutate;
+
+		return resource;
+	}
+
+	list_all(): Resource<Pagination<Room>> {
+		const paginate = async (pagination?: Pagination<Room>) => {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await this.api.client.http.GET("/api/v1/room", {
+				params: {
+					query: {
+						dir: "f",
+						limit: 100,
+						from: pagination?.items.at(-1)?.id,
+					},
+				},
+			});
+
+			if (error) {
+				// TODO: handle unauthenticated
+				console.error(error);
+				throw error;
+			}
+
+			batch(() => {
+				for (const item of data.items) {
+					this.cache.set(item.id, item);
+				}
+			});
+
+			return {
+				...data,
+				items: [...(pagination?.items ?? []), ...data.items],
+			};
+		};
+
+		const l = this._cachedListingAll;
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		this._cachedListingAll = {
+			resource: (() => {}) as unknown as Resource<Pagination<Room>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+
+		const [resource, { refetch, mutate }] = createResource(async () => {
+			const l = this._cachedListingAll!;
+			if (l?.prom) {
+				await l.prom;
+				return l.pagination!;
+			}
+
+			const prom = l.pagination ? paginate(l.pagination) : paginate();
+			l.prom = prom;
+			const res = await prom;
+			l!.pagination = res;
+			l!.prom = null;
+			return res!;
+		});
+
+		this._cachedListingAll.resource = resource;
+		this._cachedListingAll.refetch = refetch;
+		this._cachedListingAll.mutate = mutate;
 
 		return resource;
 	}

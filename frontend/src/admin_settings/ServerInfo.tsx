@@ -1,9 +1,7 @@
-import type { VoidProps } from "solid-js";
-
-export function Info(_props: VoidProps<{}>) {
+export function ServerInfo() {
 	return (
 		<>
-			<h2>info</h2>
+			<h2>Info</h2>
 			<ul>
 				<li>garbage collect media</li>
 				<li>garbage collect cache</li>
@@ -15,30 +13,9 @@ export function Info(_props: VoidProps<{}>) {
 					executed)
 				</li>
 			</ul>
-			<h2>users/rooms/threads/media/applications</h2>
-			<ul>
-				<li>name</li>
-				<li>created</li>
-				<li>topic (room/liread)</li>
-				<li>size (media/room/user)</li>
-				<li>registered (user)</li>
-				<li>last used (user)</li>
-				<li>suspended (user)</li>
-				<li>metrics (room)</li>
-			</ul>
-			<ul>
-				<li>search by name, email, id; sort by last used, created, id, name</li>
-				<li>delete</li>
-				<li>suspend</li>
-				<li>create user</li>
-				<li>view private stuff (email)</li>
-				<li>change password, email, etc</li>
-				<li>grant/revoke permissions (admin, can invite)</li>
-				<li>force register (without invite)</li>
-			</ul>
-			<h2>reports</h2>
+			<h2>Reports</h2>
 			<p>copy report-to-mod system?</p>
-			<h2>configuration</h2>
+			<h2>Configuration</h2>
 			<p>dump config.toml here</p>
 			<p>
 				configure auth sources ("login with xyz" idps). table of name, type
@@ -76,15 +53,11 @@ export function Info(_props: VoidProps<{}>) {
 					<input type="text" />
 				</label>
 			</form>
-			<h2>system notices/audit log</h2>
+			<h2>System Notices</h2>
 			<p>
 				copy forgejo. list notices in a table, id, type, option to select and
-				delete. maybe combine with audit log?
+				delete.
 			</p>
-			<ul>
-				<li>user/room/thread/etc create/update/delete</li>
-				<li>warnings and errors</li>
-			</ul>
 		</>
 	);
 }

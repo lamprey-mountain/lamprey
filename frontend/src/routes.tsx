@@ -1,4 +1,4 @@
-import { A, RouteSectionProps } from "@solidjs/router";
+import { A, Navigate, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
@@ -14,10 +14,9 @@ import { Voice, VoiceTray } from "./Voice.tsx";
 import { Feed } from "./Feed.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
-import { AdminSettings } from "./AdminSettings.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
-import type { Thread } from "sdk";
+import { SERVER_ROOM_ID, type Thread } from "sdk";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -100,15 +99,6 @@ export const RouteRoomSettings = (p: RouteSectionProps) => {
 			<Show when={room()}>
 				<RoomSettings room={room()!} page={p.params.page} />
 			</Show>
-		</>
-	);
-};
-
-export const RouteAdminSettings = (p: RouteSectionProps) => {
-	return (
-		<>
-			<Title title={"admin settings"} />
-			<AdminSettings page={p.params.page} />
 		</>
 	);
 };
