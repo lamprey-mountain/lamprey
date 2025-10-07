@@ -7,7 +7,9 @@ use uuid::Uuid;
 use crate::consts::MAX_CUSTOM_EMOJI;
 use crate::data::DataEmoji;
 use crate::error::Result;
-use crate::types::{MediaLinkType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId};
+use crate::types::{
+    MediaLinkType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
+};
 use crate::{gen_paginate, Error};
 
 use super::{Pagination, Postgres};

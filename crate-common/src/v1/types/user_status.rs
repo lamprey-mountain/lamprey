@@ -123,6 +123,12 @@ impl Status {
     }
 }
 
+impl StatusType {
+    pub fn is_online(&self) -> bool {
+        !matches!(self, StatusType::Offline)
+    }
+}
+
 impl StatusPatch {
     // should keep times? idk
     pub fn apply(self, to: Status) -> Status {

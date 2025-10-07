@@ -56,7 +56,9 @@ impl DataRoom for Postgres {
                 room.archived_at,
                 room.public,
                 room.owner_id,
-                room.welcome_thread_id
+                room.welcome_thread_id,
+                (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
+                (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
             FROM room
             WHERE id = $1
             "#,
@@ -90,7 +92,9 @@ impl DataRoom for Postgres {
                     room.archived_at,
                     room.public,
                     room.owner_id,
-                    room.welcome_thread_id
+                    room.welcome_thread_id,
+                    (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
+                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
@@ -140,7 +144,9 @@ impl DataRoom for Postgres {
                     room.archived_at,
                     room.public,
                     room.owner_id,
-                    room.welcome_thread_id
+                    room.welcome_thread_id,
+                    (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
+                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
                 ORDER BY (CASE WHEN $3 = 'f' THEN room.id END), room.id DESC LIMIT $4
@@ -213,7 +219,9 @@ impl DataRoom for Postgres {
                     r.archived_at,
                     r.public,
                     r.owner_id,
-                    r.welcome_thread_id
+                    r.welcome_thread_id,
+                    (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
+                    (SELECT COUNT(*) FROM thread WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
                 JOIN room r ON rm1.room_id = r.id

@@ -159,4 +159,23 @@ impl DataThreadMember for Postgres {
             |i: &ThreadMember| i.user_id.to_string()
         )
     }
+
+    async fn thread_member_list_all(&self, thread_id: ThreadId) -> Result<Vec<ThreadMember>> {
+        let items = query_as!(
+            DbThreadMember,
+            r#"
+            SELECT
+                thread_id,
+                user_id,
+                membership as "membership: _",
+                joined_at
+            FROM thread_member
+            WHERE thread_id = $1 AND membership = 'Join'
+            "#,
+            *thread_id,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(items.into_iter().map(Into::into).collect())
+    }
 }

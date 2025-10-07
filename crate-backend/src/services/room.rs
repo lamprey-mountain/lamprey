@@ -32,10 +32,30 @@ impl ServiceRooms {
     }
 
     pub async fn get(&self, room_id: RoomId, _user_id: Option<UserId>) -> Result<Room> {
-        self.cache_room
+        let mut room = self
+            .cache_room
             .try_get_with(room_id, self.state.data().room_get(room_id))
             .await
-            .map_err(|err| err.fake_clone())
+            .map_err(|err| err.fake_clone())?;
+
+        let members = self.state.data().room_member_list_all(room_id).await?;
+
+        let mut online_count = 0;
+        for member in members {
+            if self
+                .state
+                .services()
+                .users
+                .status_get(member.user_id)
+                .status
+                .is_online()
+            {
+                online_count += 1;
+            }
+        }
+        room.online_count = online_count;
+
+        Ok(room)
     }
 
     pub async fn invalidate(&self, room_id: RoomId) {

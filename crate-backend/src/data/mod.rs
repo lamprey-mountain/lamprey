@@ -124,6 +124,8 @@ pub trait DataRoomMember {
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>>;
 
+    async fn room_member_list_all(&self, room_id: RoomId) -> Result<Vec<RoomMember>>;
+
     async fn room_member_search(
         &self,
         room_id: RoomId,
@@ -567,6 +569,8 @@ pub trait DataThreadMember {
         thread_id: ThreadId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
+
+    async fn thread_member_list_all(&self, thread_id: ThreadId) -> Result<Vec<ThreadMember>>;
 }
 
 #[async_trait]

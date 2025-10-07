@@ -443,6 +443,38 @@ impl DataRoomMember for Postgres {
         )
     }
 
+    async fn room_member_list_all(&self, room_id: RoomId) -> Result<Vec<RoomMember>> {
+        let items = query_as!(
+            DbRoomMember,
+            r#"
+            with r as (
+                select user_id, array_agg(role_id) as roles from role_member
+                join role on role.room_id = $1 and role_member.role_id = role.id
+                group by user_id
+            )
+            SELECT
+                room_id,
+                m.user_id,
+                membership as "membership: _",
+                override_name,
+                override_description,
+                joined_at,
+                origin,
+                mute,
+                deaf,
+                timeout_until,
+                coalesce(r.roles, '{}') as "roles!"
+            FROM room_member m
+            left join r on r.user_id = m.user_id
+            WHERE room_id = $1 AND membership = 'Join'
+            "#,
+            *room_id,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(items.into_iter().map(Into::into).collect())
+    }
+
     async fn room_member_search(
         &self,
         room_id: RoomId,

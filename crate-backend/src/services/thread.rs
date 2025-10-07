@@ -112,6 +112,23 @@ impl ServiceThreads {
             }
         }
 
+        let members = self.state.data().thread_member_list_all(thread_id).await?;
+
+        let mut online_count = 0;
+        for member in members {
+            if self
+                .state
+                .services()
+                .users
+                .status_get(member.user_id)
+                .status
+                .is_online()
+            {
+                online_count += 1;
+            }
+        }
+        thread.online_count = online_count;
+
         Ok(thread)
     }
 

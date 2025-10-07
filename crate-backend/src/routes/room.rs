@@ -189,8 +189,12 @@ async fn room_edit(
         data.media_link_delete(room_id.into_inner(), MediaLinkType::AvatarRoom)
             .await?;
         if let Some(media_id) = maybe_media_id {
-            data.media_link_create_exclusive(media_id, room_id.into_inner(), MediaLinkType::AvatarRoom)
-                .await?;
+            data.media_link_create_exclusive(
+                media_id,
+                room_id.into_inner(),
+                MediaLinkType::AvatarRoom,
+            )
+            .await?;
         }
     }
 

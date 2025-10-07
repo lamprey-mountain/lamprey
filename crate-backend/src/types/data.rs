@@ -23,6 +23,8 @@ pub struct DbRoom {
     pub public: bool,
     pub ty: DbRoomType,
     pub welcome_thread_id: Option<Uuid>,
+    pub member_count: i64,
+    pub thread_count: i64,
 }
 
 pub struct DbRoomCreate {
@@ -65,10 +67,9 @@ impl From<DbRoom> for Room {
             public: row.public,
             welcome_thread_id: row.welcome_thread_id.map(|i| i.into()),
 
-            // FIXME: add to db or calculate
-            member_count: Default::default(),
+            member_count: row.member_count as u64,
             online_count: Default::default(),
-            thread_count: Default::default(),
+            thread_count: row.thread_count as u64,
         }
     }
 }
