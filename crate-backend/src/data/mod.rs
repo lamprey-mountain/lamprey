@@ -439,6 +439,7 @@ pub trait DataUser {
     async fn user_create(&self, patch: DbUserCreate) -> Result<User>;
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
     async fn user_delete(&self, user_id: UserId) -> Result<()>;
+    async fn user_undelete(&self, user_id: UserId) -> Result<()>;
     async fn user_get(&self, user_id: UserId) -> Result<User>;
     async fn user_list(
         &self,

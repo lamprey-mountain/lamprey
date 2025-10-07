@@ -316,6 +316,10 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
+    UserUndelete {
+        user_id: UserId,
+    },
+
     AdminWhisper {
         user_id: UserId,
         changes: Vec<AuditLogChange>,

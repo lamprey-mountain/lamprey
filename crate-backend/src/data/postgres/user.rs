@@ -137,6 +137,13 @@ impl DataUser for Postgres {
         Ok(())
     }
 
+    async fn user_undelete(&self, user_id: UserId) -> Result<()> {
+        query!("UPDATE usr SET deleted_at = NULL WHERE id = $1", *user_id,)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn user_get(&self, id: UserId) -> Result<User> {
         let row = query_as!(
             DbUser,

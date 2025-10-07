@@ -13,6 +13,7 @@ use common::v1::types::{
 };
 use common::v1::types::{Permission, Suspended, UserListParams, SERVER_ROOM_ID};
 use serde::Deserialize;
+use tracing::warn;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -148,7 +149,7 @@ async fn user_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// User undelete (TODO)
+/// User undelete
 ///
 /// Allows undeleting a user provided they haven't been garbage collected yet
 #[utoipa::path(
@@ -159,12 +160,66 @@ async fn user_delete(
     responses((status = NO_CONTENT, description = "success")),
 )]
 async fn user_undelete(
-    Path(_target_user_id): Path<UserIdReq>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-    HeaderReason(_reason): HeaderReason,
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth_user.ensure_unsuspended()?;
+
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    let srv = s.services();
+    let data = s.data();
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::Admin)?;
+
+    data.user_undelete(target_user_id).await?;
+
+    let user = srv.users.get(target_user_id).await?;
+    let avatar_media_id = user.avatar;
+    if let Some(media_id) = avatar_media_id {
+        if data
+            .media_link_insert(
+                media_id,
+                target_user_id.into_inner(),
+                MediaLinkType::AvatarUser,
+            )
+            .await
+            .is_err()
+        {
+            warn!("failed to re-link avatar for user {}", target_user_id);
+            data.user_update(
+                target_user_id,
+                UserPatch {
+                    avatar: Some(None),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        }
+    }
+
+    srv.users.invalidate(target_user_id).await;
+    let user = srv.users.get(target_user_id).await?;
+    s.broadcast(MessageSync::UserCreate { user: user.clone() })?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user.id,
+        session_id: None,
+        reason,
+        ty: AuditLogEntryType::UserUndelete {
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// User get
