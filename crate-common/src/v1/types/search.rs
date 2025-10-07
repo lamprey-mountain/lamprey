@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{RoomId, ThreadId, UserId};
+use crate::v1::types::{RoleId, RoomId, ThreadId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -18,22 +18,64 @@ pub struct SearchMessageRequest {
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    pub query: String,
-
-    /// Only return messages in these rooms. Defaults to all rooms.
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
+    pub query: Option<String>,
+
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
     /// Only return messages in these threads. Defaults to all threads.
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub thread_id: Vec<ThreadId>,
 
     /// Only return messages from these users. Defaults to all threads.
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub user_id: Vec<UserId>,
+
+    /// Only return messages that have an attachment of any type
+    pub has_attachment: Option<bool>,
+
+    /// Only return messages that have an attachment of type image/*
+    pub has_image: Option<bool>,
+
+    /// Only return messages that have an attachment of type audio/*
+    pub has_audio: Option<bool>,
+
+    /// Only return messages that have an attachment of type video/*
+    pub has_video: Option<bool>,
+
+    /// Only return messages that have a link
+    pub has_link: Option<bool>,
+
+    /// Only return messages that have an embed
+    pub has_embed: Option<bool>,
+
+    /// Only return pinned (or unpinned) messages
+    pub pinned: Option<bool>,
+
+    /// Only return messages that have links from these domains
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub link_hostnames: Vec<String>,
+
+    /// Only return messages that mention these users
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub mentions_users: Vec<UserId>,
+
+    /// Only return messages that mention these roles
+    #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    pub mentions_roles: Vec<RoleId>,
+
+    /// Only return messages that mentions everyone in a room
+    pub mentions_everyone_room: Option<bool>,
+
+    /// Only return messages that mentions everyone in a thread
+    pub mentions_everyone_thread: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,16 +88,17 @@ pub struct SearchThreadsRequest {
         schema(required = false, min_length = 1, max_length = 2048)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    pub query: String,
+    #[serde(default)]
+    pub query: Option<String>,
 
     /// Only return threads in these rooms. Defaults to all rooms.
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub room_id: Vec<RoomId>,
 
     /// Only return threads with these parents. Defaults to all threads.
-    #[cfg_attr(feature = "utoipa", schema(ignore))]
     #[serde(default)]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub parent_id: Vec<ThreadId>,
 }
 

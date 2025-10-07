@@ -13,8 +13,9 @@ from thread
 join thread_viewer on thread.id = thread_viewer.id
 where thread.deleted_at is null and thread.archived_at is null
   and (
-    thread.name @@ websearch_to_tsquery($2) or
-    coalesce(thread.description, '') @@ websearch_to_tsquery($2)
+    $2::text is null or $2 = '' or
+    thread.name @@ websearch_to_tsquery('english', $2) or
+    coalesce(thread.description, '') @@ websearch_to_tsquery('english', $2)
   )
-  and (array_length($3::uuid[], 1) is null or thread.room_id = any($3))
-  and (array_length($4::uuid[], 1) is null or thread.parent_id = any($4))
+  and (cardinality($3::uuid[]) = 0 or thread.room_id = any($3))
+  and (cardinality($4::uuid[]) = 0 or thread.parent_id = any($4))

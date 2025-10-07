@@ -61,9 +61,10 @@ left join permission_overwrites on permission_overwrites.target_id = thread.id
 where thread.deleted_at is null and thread.archived_at is null
   and thread.id > $2 AND thread.id < $3
   and (
-    thread.name @@ websearch_to_tsquery($6) or
-    coalesce(thread.description, '') @@ websearch_to_tsquery($6)
+    $6::text is null or $6 = '' or
+    thread.name @@ websearch_to_tsquery('english', $6) or
+    coalesce(thread.description, '') @@ websearch_to_tsquery('english', $6)
   )
-  and (array_length($7::uuid[], 1) is null or thread.room_id = any($7))
-  and (array_length($8::uuid[], 1) is null or thread.parent_id = any($8))
+  and (cardinality($7::uuid[]) = 0 or thread.room_id = any($7))
+  and (cardinality($8::uuid[]) = 0 or thread.parent_id = any($8))
 order by (CASE WHEN $4 = 'f' THEN thread.id END), thread.id DESC LIMIT $5
