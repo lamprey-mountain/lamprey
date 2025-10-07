@@ -258,7 +258,7 @@ async fn user_get(
     }))
 }
 
-/// User audit logs (TODO)
+/// User audit logs
 #[utoipa::path(
     get,
     path = "/user/{user_id}/audit-logs",
