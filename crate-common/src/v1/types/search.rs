@@ -100,6 +100,12 @@ pub struct SearchThreadsRequest {
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub parent_id: Vec<ThreadId>,
+
+    /// Only return archived (or unarchived) threads
+    pub archived: Option<bool>,
+
+    /// Only return removed (or not removed) threads
+    pub removed: Option<bool>,
 }
 
 // TODO(#77): room searching

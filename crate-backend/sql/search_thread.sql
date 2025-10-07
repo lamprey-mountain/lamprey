@@ -58,7 +58,8 @@ left join message_count on message_count.thread_id = thread.id
 left join member_count on member_count.thread_id = thread.id
 left join last_id on last_id.thread_id = thread.id
 left join permission_overwrites on permission_overwrites.target_id = thread.id
-where thread.deleted_at is null and thread.archived_at is null
+where ($9::boolean is null or (thread.archived_at is not null) = $9)
+  and ($10::boolean is null or (thread.deleted_at is not null) = $10)
   and thread.id > $2 AND thread.id < $3
   and (
     $6::text is null or $6 = '' or

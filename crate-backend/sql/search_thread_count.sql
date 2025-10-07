@@ -11,7 +11,8 @@ with
 select count(*)
 from thread
 join thread_viewer on thread.id = thread_viewer.id
-where thread.deleted_at is null and thread.archived_at is null
+where ($5::boolean is null or (thread.archived_at is not null) = $5)
+  and ($6::boolean is null or (thread.deleted_at is not null) = $6)
   and (
     $2::text is null or $2 = '' or
     thread.name @@ websearch_to_tsquery('english', $2) or

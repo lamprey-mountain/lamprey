@@ -111,6 +111,8 @@ impl DataSearch for Postgres {
                 query.query,
                 &room_ids,
                 &parent_ids,
+                query.archived,
+                query.removed,
             ),
             query_file_scalar!(
                 "sql/search_thread_count.sql",
@@ -118,6 +120,8 @@ impl DataSearch for Postgres {
                 query.query,
                 &room_ids,
                 &parent_ids,
+                query.archived,
+                query.removed,
             ),
             |i: &Thread| i.id.to_string()
         )
