@@ -13,7 +13,7 @@ use common::v1::types::{
 };
 use headers::ETag;
 use serde::{Deserialize, Serialize};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -110,34 +110,10 @@ async fn room_get(
     Ok((TypedHeader(etag), Json(room)).into_response())
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema, IntoParams, Validate)]
-struct RoomListParams {
-    /// what rooms to include. defaults to Default
-    #[serde(default = "default_room_list_includes")]
-    include: Vec<RoomListInclude>,
-}
-
-fn default_room_list_includes() -> Vec<RoomListInclude> {
-    vec![RoomListInclude::Default]
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-enum RoomListInclude {
-    /// include default rooms
-    Default,
-
-    /// include dm rooms
-    Dm,
-
-    /// include rooms you have were kicked or banned from, or left with ?soft=true
-    Removed,
-
-    /// include rooms that were archived
-    Archived,
-}
-
-// TODO: merge with mutual rooms list (listing rooms you're in will become GET /user/@self/room)
 /// Room list
+///
+/// List rooms. If the user is an admin, lists all rooms on the server.
+/// Otherwise, lists rooms the user is a member of.
 #[utoipa::path(
     get,
     path = "/room",
@@ -158,9 +134,14 @@ async fn room_list(
         .perms
         .for_room(user.id, SERVER_ROOM_ID)
         .await?
-        .has(Permission::ServerOversee);
-    let res = data.room_list(user.id, q, is_admin).await?;
-    Ok(Json(res))
+        .has(Permission::Admin);
+
+    if is_admin {
+        let rooms = data.room_list_all(q).await?;
+        Ok(Json(rooms))
+    } else {
+        Err(Error::MissingPermissions)
+    }
 }
 
 /// Room edit

@@ -119,6 +119,46 @@ impl DataRoom for Postgres {
         )
     }
 
+    async fn room_list_all(
+        &self,
+        pagination: PaginationQuery<RoomId>,
+    ) -> Result<PaginationResponse<Room>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRoom,
+                r#"
+                SELECT
+                    room.id,
+                    room.version_id,
+                    room.type as "ty: _",
+                    room.name,
+                    room.description,
+                    room.icon,
+                    room.archived_at,
+                    room.public,
+                    room.owner_id,
+                    room.welcome_thread_id
+                FROM room
+                WHERE room.id > $1 AND room.id < $2
+                ORDER BY (CASE WHEN $3 = 'f' THEN room.id END), room.id DESC LIMIT $4
+                "#,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32,
+            ),
+            query_scalar!(
+                r#"
+                SELECT count(*) FROM room
+                "#,
+            ),
+            |i: &Room| i.id.to_string()
+        )
+    }
+
     async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;

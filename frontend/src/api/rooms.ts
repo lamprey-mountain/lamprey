@@ -44,15 +44,18 @@ export class Rooms {
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
-			const { data, error } = await this.api.client.http.GET("/api/v1/room", {
-				params: {
-					query: {
-						dir: "f",
-						limit: 100,
-						from: pagination?.items.at(-1)?.id,
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/user/@self/room",
+				{
+					params: {
+						query: {
+							dir: "f",
+							limit: 100,
+							from: pagination?.items.at(-1)?.id,
+						},
 					},
 				},
-			});
+			);
 
 			if (error) {
 				// TODO: handle unauthenticated

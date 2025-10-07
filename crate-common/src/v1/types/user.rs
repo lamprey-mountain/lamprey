@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-
 use url::Url;
+
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -355,4 +355,21 @@ impl User {
             Ok(())
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum UserListFilter {
+    Guest,
+    Registered,
+    Bot,
+    Puppet,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[serde(rename_all = "snake_case")]
+pub struct UserListParams {
+    pub filter: Option<UserListFilter>,
 }

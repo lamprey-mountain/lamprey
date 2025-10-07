@@ -9,9 +9,9 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
     MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, SessionStatus, User,
-    UserCreate, UserPatch, UserWithRelationship,
+    UserCreate, UserId, UserPatch, UserWithRelationship,
 };
-use common::v1::types::{Permission, Suspended, SERVER_ROOM_ID};
+use common::v1::types::{Permission, Suspended, UserListParams, SERVER_ROOM_ID};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -502,6 +502,37 @@ async fn user_set_status(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// User list
+///
+/// Admin only. List all users on this server.
+#[utoipa::path(
+    get,
+    path = "/user",
+    tags = ["user", "badge.admin_only"],
+    params(
+        PaginationQuery<UserId>,
+        UserListParams,
+    ),
+    responses(
+        (status = OK, body = PaginationResponse<User>, description = "success"),
+    )
+)]
+async fn user_list(
+    Query(paginate): Query<PaginationQuery<UserId>>,
+    Query(q): Query<UserListParams>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+    let srv = s.services();
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure(Permission::MemberBan)?;
+
+    let data = s.data();
+    let users = data.user_list(paginate, q.filter).await?;
+    Ok(Json(users))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(user_update))
@@ -515,4 +546,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(connection_revoke))
         .routes(routes!(guest_create))
         .routes(routes!(user_set_status))
+        .routes(routes!(user_list))
 }

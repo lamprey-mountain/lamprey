@@ -129,12 +129,15 @@ async fn admin_broadcast(
     let mut from = None;
     loop {
         let users = d
-            .user_list(PaginationQuery {
-                from,
-                to: None,
-                dir: None,
-                limit: Some(1024),
-            })
+            .user_list(
+                PaginationQuery {
+                    from,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+                None,
+            )
             .await?;
         let Some(last) = users.items.last() else {
             break;

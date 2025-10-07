@@ -15,7 +15,7 @@ use common::v1::types::{
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
     SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
-    ThreadReorder,
+    ThreadReorder, UserListFilter,
 };
 
 use uuid::Uuid;
@@ -77,6 +77,10 @@ pub trait DataRoom {
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
         include_server_room: bool,
+    ) -> Result<PaginationResponse<Room>>;
+    async fn room_list_all(
+        &self,
+        pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
     async fn room_list_mutual(
         &self,
@@ -439,6 +443,7 @@ pub trait DataUser {
     async fn user_list(
         &self,
         pagination: PaginationQuery<UserId>,
+        filter: Option<UserListFilter>,
     ) -> Result<PaginationResponse<User>>;
     async fn user_lookup_puppet(
         &self,
