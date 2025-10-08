@@ -386,11 +386,11 @@ async fn message_edit(
         perms.ensure(Permission::ThreadLock)?;
     }
 
-    let (status, message) = srv
+    let (_status, message) = srv
         .messages
         .edit(thread_id, message_id, auth_user.id, reason, json)
         .await?;
-    Ok((status, Json(message)))
+    Ok((StatusCode::OK, Json(message)))
 }
 
 /// Message delete (TEMP?)
