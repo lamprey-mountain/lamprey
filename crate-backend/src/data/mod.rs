@@ -93,6 +93,8 @@ pub trait DataRoom {
     async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
     async fn room_delete(&self, room_id: RoomId) -> Result<()>;
     async fn room_undelete(&self, room_id: RoomId) -> Result<()>;
+    async fn room_quarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
+    async fn room_unquarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
 }
 
 #[async_trait]

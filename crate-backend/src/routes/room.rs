@@ -477,6 +477,110 @@ async fn room_integration_list(
     }))
 }
 
+/// Room quarantine
+#[utoipa::path(
+    post,
+    path = "/room/{room_id}/quarantine",
+    params(("room_id", description = "Room id")),
+    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    responses((status = OK, description = "success"))
+)]
+async fn room_quarantine(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::Admin)?;
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if room.quarantined {
+        return Ok(Json(room));
+    }
+
+    data.room_quarantine(room_id).await?;
+    srv.perms.invalidate_room_all(room_id);
+    srv.rooms.invalidate(room_id).await;
+
+    let updated_room = srv.rooms.get(room_id, None).await?;
+    let msg = MessageSync::RoomUpdate {
+        room: updated_room.clone(),
+    };
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomQuarantine { room_id },
+    })
+    .await?;
+
+    Ok(Json(updated_room))
+}
+
+/// Room unquarantine
+#[utoipa::path(
+    delete,
+    path = "/room/{room_id}/quarantine",
+    params(("room_id", description = "Room id")),
+    tags = ["room", "badge.admin_only", "badge.perm.Admin"],
+    responses((status = OK, description = "success"))
+)]
+async fn room_unquarantine(
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    auth_user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let data = s.data();
+
+    let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+    perms.ensure_view()?;
+    perms.ensure(Permission::Admin)?;
+
+    let room = srv.rooms.get(room_id, None).await?;
+
+    if !room.quarantined {
+        return Ok(Json(room));
+    }
+
+    data.room_unquarantine(room_id).await?;
+    srv.perms.invalidate_room_all(room_id);
+    srv.rooms.invalidate(room_id).await;
+
+    let updated_room = srv.rooms.get(room_id, None).await?;
+    let msg = MessageSync::RoomUpdate {
+        room: updated_room.clone(),
+    };
+    s.broadcast_room(room_id, auth_user.id, msg).await?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: SERVER_ROOM_ID,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::RoomUnquarantine { room_id },
+    })
+    .await?;
+
+    Ok(Json(updated_room))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_create))
@@ -490,4 +594,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_metrics))
         .routes(routes!(room_transfer_ownership))
         .routes(routes!(room_integration_list))
+        .routes(routes!(room_quarantine))
+        .routes(routes!(room_unquarantine))
 }

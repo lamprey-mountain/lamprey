@@ -25,6 +25,7 @@ pub struct DbRoom {
     pub welcome_thread_id: Option<Uuid>,
     pub member_count: i64,
     pub thread_count: i64,
+    pub quarantined: bool,
 }
 
 pub struct DbRoomCreate {
@@ -66,6 +67,7 @@ impl From<DbRoom> for Room {
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
             welcome_thread_id: row.welcome_thread_id.map(|i| i.into()),
+            quarantined: row.quarantined,
 
             member_count: row.member_count as u64,
             online_count: Default::default(),

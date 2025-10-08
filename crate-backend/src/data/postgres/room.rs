@@ -23,8 +23,8 @@ impl DataRoom for Postgres {
         let ty: DbRoomType = extra.ty.into();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, public, type)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    	    INSERT INTO room (id, version_id, name, description, icon, public, type, quarantined)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ",
             room_id,
             room_id,
@@ -33,6 +33,7 @@ impl DataRoom for Postgres {
             create.icon.map(|i| *i),
             create.public.unwrap_or(false),
             ty as _,
+            false,
         )
         .execute(&mut *conn)
         .await?;
@@ -58,7 +59,8 @@ impl DataRoom for Postgres {
                 room.owner_id,
                 room.welcome_thread_id,
                 (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
+                (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                room.quarantined
             FROM room
             WHERE id = $1
             "#,
@@ -94,7 +96,8 @@ impl DataRoom for Postgres {
                     room.owner_id,
                     room.welcome_thread_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
+                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                    room.quarantined
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
@@ -146,7 +149,8 @@ impl DataRoom for Postgres {
                     room.owner_id,
                     room.welcome_thread_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
+                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                    room.quarantined
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
                 ORDER BY (CASE WHEN $3 = 'f' THEN room.id END), room.id DESC LIMIT $4
@@ -170,7 +174,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, archived_at, public, welcome_thread_id
+            SELECT id, name, description, icon, archived_at, public, welcome_thread_id, quarantined
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -220,6 +224,7 @@ impl DataRoom for Postgres {
                     r.public,
                     r.owner_id,
                     r.welcome_thread_id,
+                    r.quarantined,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM thread WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
                 FROM room_member rm1
@@ -385,5 +390,29 @@ impl DataRoom for Postgres {
 
         tx.commit().await?;
         Ok(())
+    }
+
+    async fn room_quarantine(&self, room_id: RoomId) -> Result<RoomVerId> {
+        let version_id = RoomVerId::new();
+        query!(
+            r#"update room set quarantined = true, version_id = $2 where id = $1"#,
+            *room_id,
+            *version_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(version_id)
+    }
+
+    async fn room_unquarantine(&self, room_id: RoomId) -> Result<RoomVerId> {
+        let version_id = RoomVerId::new();
+        query!(
+            r#"update room set quarantined = false, version_id = $2 where id = $1"#,
+            *room_id,
+            *version_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(version_id)
     }
 }

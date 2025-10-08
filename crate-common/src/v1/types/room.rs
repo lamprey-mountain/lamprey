@@ -72,6 +72,9 @@ pub struct Room {
 
     /// where member join messages will be sent
     pub welcome_thread_id: Option<ThreadId>,
+
+    /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
+    pub quarantined: bool,
     // pub user_config: UserConfigRoom,
 }
 

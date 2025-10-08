@@ -337,6 +337,14 @@ pub enum AuditLogEntryType {
         room_id: RoomId,
     },
 
+    RoomQuarantine {
+        room_id: RoomId,
+    },
+
+    RoomUnquarantine {
+        room_id: RoomId,
+    },
+
     MessagePin {
         thread_id: ThreadId,
         message_id: MessageId,
