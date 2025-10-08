@@ -1,8 +1,8 @@
-import { Match, Show, Switch } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
-import { Item, Menu, Separator } from "./Parts.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { useVoice } from "../voice-provider.tsx";
 
 type UserMenuProps = {
@@ -237,6 +237,73 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
+	const roles = api.roles.list(() => props.room_id);
+
+	const RoleSubmenu = () => (
+		<Submenu content="roles">
+			<Show when={roles()} fallback="loading roles...">
+				<For each={roles()?.items?.filter((r) => r.id !== r.room_id) || []}>
+					{(role) => (
+						<Item
+							onClick={(e) => {
+								e.stopPropagation();
+								if (room_member()?.roles.includes(role.id)) {
+									api.client.http.DELETE(
+										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+										{
+											params: {
+												path: {
+													room_id: props.room_id!,
+													role_id: role.id,
+													user_id: props.user_id,
+												},
+											},
+										},
+									);
+								} else {
+									api.client.http.PUT(
+										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
+										{
+											params: {
+												path: {
+													room_id: props.room_id!,
+													role_id: role.id,
+													user_id: props.user_id,
+												},
+											},
+										},
+									);
+								}
+							}}
+						>
+							<div style="display: flex; align-items: start; gap: 8px">
+								<input
+									type="checkbox"
+									checked={room_member()?.roles.includes(role.id)}
+									style="margin-top:4px"
+								/>
+								<div>
+									<div
+										classList={{ has: room_member()?.roles.includes(role.id) }}
+									>
+										{role.name}
+									</div>
+									<div class="dim">{role.description}</div>
+								</div>
+							</div>
+						</Item>
+					)}
+				</For>
+				<Show
+					when={!(roles()?.items?.filter((r) => r.id !== r.room_id)?.length ??
+						0)}
+				>
+					<div>no roles</div>
+				</Show>
+			</Show>
+		</Submenu>
+	);
+
 	return (
 		<Menu>
 			<Show when={!props.admin}>
@@ -287,8 +354,8 @@ export function UserMenu(props: UserMenuProps) {
 				<Show when={false}>
 					<Item>timeout</Item>
 				</Show>
-				<Show when={hasPermission("RoleApply")}>
-					<Item>roles</Item>
+				<Show when={hasPermission("RoleApply") && props.room_id}>
+					<RoleSubmenu />
 				</Show>
 				<Show when={hasPermission("MemberKick") && props.thread_id}>
 					<Item onClick={kickThread}>remove from thread</Item>
@@ -366,7 +433,7 @@ export function UserMenu(props: UserMenuProps) {
 				<Show when={false}>
 					<Item>(un)ignore</Item>
 				</Show>
-				<Item>roles</Item>
+				<RoleSubmenu />
 				<Separator />
 				<Show when={user()?.suspended}>
 					<Item onClick={unsuspendUser}>unsuspend user</Item>
