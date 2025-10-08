@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*)\nFROM inbox\nWHERE user_id = $1\n  AND ($2 OR read_at IS NULL)\n  AND (array_length($3::uuid[], 1) IS NULL OR room_id = ANY($3))\n  AND (array_length($4::uuid[], 1) IS NULL OR thread_id = ANY($4))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "00864651a246b5afe6c12019a9603340043dd731a5c26bfc61ea60d814e30a9e"
+}

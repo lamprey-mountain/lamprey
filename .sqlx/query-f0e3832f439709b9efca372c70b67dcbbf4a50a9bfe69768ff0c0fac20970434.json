@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n                FROM usr\n            \tWHERE id > $1 AND id < $2\n            \t  AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false\n            \tORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                ",
+  "query": "\n                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n                        FROM usr\n                        WHERE id > $1 AND id < $2\n                          AND registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false\n                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                        ",
   "describe": {
     "columns": [
       {
@@ -87,5 +87,5 @@
       true
     ]
   },
-  "hash": "9d44f8e4c82cca13e07feae3745824093e798c93108ed3e53f765e9a4b4a9d5c"
+  "hash": "f0e3832f439709b9efca372c70b67dcbbf4a50a9bfe69768ff0c0fac20970434"
 }

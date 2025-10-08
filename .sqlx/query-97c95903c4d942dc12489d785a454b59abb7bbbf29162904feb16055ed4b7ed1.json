@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM inbox WHERE user_id = $1\n                AND ($2 OR read_at IS NOT NULL)\n                AND ($3::uuid IS NULL OR id <= $3)\n                AND ($4::uuid IS NULL OR id >= $4)\n                AND ($5::uuid[] IS NULL OR message_id = ANY($5))\n                AND ($6::uuid[] IS NULL OR thread_id = ANY($6))\n                AND ($7::uuid[] IS NULL OR room_id = ANY($7))\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Uuid",
+        "Uuid",
+        "UuidArray",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97c95903c4d942dc12489d785a454b59abb7bbbf29162904feb16055ed4b7ed1"
+}

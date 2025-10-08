@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n                        FROM usr\n                        WHERE id > $1 AND id < $2\n                          AND puppet->'owner_id' IS NOT NULL\n                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "avatar",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "puppet",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "bot",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "system",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "registered_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "suspended",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "8d63d1b4c30390caaeb458fc9082c61d167d8671fb344280a36b93cc612087ec"
+}

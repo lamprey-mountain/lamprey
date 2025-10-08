@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM usr WHERE registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6b172a2cb40b30fe07696cbc0af2a944ea9bd247524c4ab79335b27aa0ac5b56"
+}
