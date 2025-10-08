@@ -46,10 +46,15 @@ import { Debug } from "./Debug.tsx";
 import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
-import { MessageMenu, RoomMenu, ThreadMenu, UserMenu } from "./menu/mod.ts";
+import {
+	MessageMenu,
+	RoomMenu,
+	ThreadMenu,
+	UserAdminMenu,
+	UserMenu,
+} from "./menu/mod.ts";
 import {
 	RoomNav,
-	RouteAdminSettings,
 	RouteAuthorize,
 	RouteFeed,
 	RouteHome,
@@ -553,6 +558,7 @@ function Overlay() {
 						user_id={menu.user_id}
 						room_id={menu.room_id}
 						thread_id={menu.thread_id}
+						admin={menu.admin}
 					/>
 				);
 			}

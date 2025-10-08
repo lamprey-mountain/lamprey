@@ -9,6 +9,7 @@ type UserMenuProps = {
 	user_id: string;
 	room_id?: string;
 	thread_id?: string;
+	admin?: boolean;
 };
 
 // the context menu for users
@@ -177,11 +178,12 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
-	const suspend = () => {
+	const suspendUser = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
 			text: "suspend reason",
 			cont: (reason) => {
+				if (!reason) return;
 				api.client.http.POST("/api/v1/user/{user_id}/suspend", {
 					params: {
 						path: {
@@ -189,7 +191,7 @@ export function UserMenu(props: UserMenuProps) {
 						},
 					},
 					headers: {
-						"X-Reason": reason ?? "",
+						"X-Reason": reason,
 					},
 					body: {},
 				});
@@ -197,11 +199,12 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
-	const unsuspend = () => {
+	const unsuspendUser = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
-			text: "suspend reason",
+			text: "unsuspend reason",
 			cont: (reason) => {
+				if (!reason) return;
 				api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
 					params: {
 						path: {
@@ -209,7 +212,25 @@ export function UserMenu(props: UserMenuProps) {
 						},
 					},
 					headers: {
-						"X-Reason": reason ?? "",
+						"X-Reason": reason,
+					},
+				});
+			},
+		});
+	};
+
+	const deleteUser = () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text:
+				"Are you sure you want to delete this user? This action cannot be undone.",
+			cont: (confirmed) => {
+				if (!confirmed) return;
+				api.client.http.DELETE("/api/v1/user/{user_id}", {
+					params: {
+						path: {
+							user_id: props.user_id,
+						},
 					},
 				});
 			},
@@ -218,140 +239,142 @@ export function UserMenu(props: UserMenuProps) {
 
 	return (
 		<Menu>
-			<Show when={props.thread_id}>
-				<Item>mention</Item>
-			</Show>
-			<Show when={user()?.relationship?.relation !== "Block"}>
-				<Item onClick={openDm}>dm</Item>
-			</Show>
-			<Item
-				onClick={() =>
-					user()?.relationship?.relation === "Block"
-						? unblockUser()
-						: blockUser()}
-			>
-				{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
-			</Item>
-			<Show when={false}>
-				<Item>(un)ignore</Item>
-			</Show>
-			<Switch>
-				<Match when={user()?.relationship?.relation === null}>
-					<Item onClick={sendFriendRequest}>add friend</Item>
-				</Match>
-				<Match when={user()?.relationship?.relation === "Friend"}>
-					<Item onClick={removeFriend}>remove friend</Item>
-				</Match>
-				<Match when={user()?.relationship?.relation === "Incoming"}>
-					<Item onClick={sendFriendRequest}>accept friend request</Item>
-				</Match>
-				<Match when={user()?.relationship?.relation === "Outgoing"}>
-					<Item onClick={removeFriend}>cancel friend request</Item>
-				</Match>
-			</Switch>
-			<Separator />
-			<Show when={hasPermission("MemberManage")}>
-				<Item onClick={changeNickname}>change nickname</Item>
-			</Show>
-			<Show when={hasPermission("MemberKick") && canModerate()}>
-				<Item onClick={kickRoom}>kick</Item>
-			</Show>
-			<Show when={hasPermission("MemberBan") && canModerate()}>
-				<Item onClick={ban}>ban</Item>
-			</Show>
-			<Show when={false}>
-				<Item>timeout</Item>
-			</Show>
-			<Show when={hasPermission("RoleApply")}>
-				<Item>roles</Item>
-			</Show>
-			<Show when={hasPermission("MemberKick") && props.thread_id}>
-				<Item onClick={kickThread}>remove from thread</Item>
-			</Show>
-			<Separator />
-			<Show when={props.user_id !== self_id() && connectedToVoice()}>
-				{
-					/*
-TODO: setting volume greater than 1
-<li>
-	<label style="display:block;padding:0 8px;padding-top:8px">
-		<div class="dim">volume</div>
-		<input
-			type="range"
-			min="0"
-			max="150"
-			step="0.01"
-			list="volume-detents"
-			value={voice.userConfig.get(props.user_id)?.volume ?? 100}
-			onInput={(e) =>
-				voice.userConfig.set(props.user_id, {
-					...voice.userConfig.get(props.user_id) ??
-						{ mute: false, mute_video: false, volume: 100 },
-					volume: parseFloat(e.target.value),
-				})}
-		/>
-	</label>
-	// TODO: move this to root
-	<datalist id="volume-detents">
-		<option value="100" />
-	</datalist>
-</li>
-					*/
-				}
-				<li>
-					<label style="display:block;padding:0 8px;padding-top:8px">
-						<div class="dim">volume</div>
-						<input
-							type="range"
-							min="0"
-							max="100"
-							list="volume-detents"
-							value={voice.userConfig.get(props.user_id)?.volume ?? 100}
-							onInput={(e) =>
-								voice.userConfig.set(props.user_id, {
-									...voice.userConfig.get(props.user_id) ??
-										{ mute: false, mute_video: false, volume: 100 },
-									volume: parseFloat(e.target.value),
-								})}
-						/>
-					</label>
-				</li>
+			<Show when={!props.admin}>
+				<Show when={props.thread_id}>
+					<Item>mention</Item>
+				</Show>
+				<Show when={user()?.relationship?.relation !== "Block"}>
+					<Item onClick={openDm}>dm</Item>
+				</Show>
 				<Item
-					onClick={() => {
-						const c = voice.userConfig.get(props.user_id) ??
-							{ mute: false, mute_video: false, volume: 100 };
-						c.mute = !c.mute;
-						voice.userConfig.set(props.user_id, { ...c });
-					}}
+					onClick={() =>
+						user()?.relationship?.relation === "Block"
+							? unblockUser()
+							: blockUser()}
 				>
-					{voice.userConfig.get(props.user_id)?.mute === true
-						? "unmute"
-						: "mute"}
+					{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
 				</Item>
+				<Show when={false}>
+					<Item>(un)ignore</Item>
+				</Show>
+				<Switch>
+					<Match when={user()?.relationship?.relation === null}>
+						<Item onClick={sendFriendRequest}>add friend</Item>
+					</Match>
+					<Match when={user()?.relationship?.relation === "Friend"}>
+						<Item onClick={removeFriend}>remove friend</Item>
+					</Match>
+					<Match when={user()?.relationship?.relation === "Incoming"}>
+						<Item onClick={sendFriendRequest}>accept friend request</Item>
+					</Match>
+					<Match when={user()?.relationship?.relation === "Outgoing"}>
+						<Item onClick={removeFriend}>cancel friend request</Item>
+					</Match>
+				</Switch>
+				<Separator />
+				<Show
+					when={hasPermission("MemberNicknameManage") ||
+						(hasPermission("MemberNickname") && props.user_id === self_id())}
+				>
+					<Item onClick={changeNickname}>change nickname</Item>
+				</Show>
+				<Show when={hasPermission("MemberKick") && canModerate()}>
+					<Item onClick={kickRoom}>kick</Item>
+				</Show>
+				<Show when={hasPermission("MemberBan") && canModerate()}>
+					<Item onClick={ban}>ban</Item>
+				</Show>
+				<Show when={false}>
+					<Item>timeout</Item>
+				</Show>
+				<Show when={hasPermission("RoleApply")}>
+					<Item>roles</Item>
+				</Show>
+				<Show when={hasPermission("MemberKick") && props.thread_id}>
+					<Item onClick={kickThread}>remove from thread</Item>
+				</Show>
+				<Separator />
+				<Show when={props.user_id !== self_id() && connectedToVoice()}>
+					<li>
+						<label style="display:block;padding:0 8px;padding-top:8px">
+							<div class="dim">volume</div>
+							<input
+								type="range"
+								min="0"
+								max="100"
+								list="volume-detents"
+								value={voice.userConfig.get(props.user_id)?.volume ?? 100}
+								onInput={(e) =>
+									voice.userConfig.set(props.user_id, {
+										...voice.userConfig.get(props.user_id) ??
+											{ mute: false, mute_video: false, volume: 100 },
+										volume: parseFloat(e.target.value),
+									})}
+							/>
+						</label>
+					</li>
+					<Item
+						onClick={() => {
+							const c = voice.userConfig.get(props.user_id) ??
+								{ mute: false, mute_video: false, volume: 100 };
+							c.mute = !c.mute;
+							voice.userConfig.set(props.user_id, { ...c });
+						}}
+					>
+						{voice.userConfig.get(props.user_id)?.mute === true
+							? "unmute"
+							: "mute"}
+					</Item>
+				</Show>
+				<Show when={props.user_id === self_id() && connectedToVoice()}>
+					<Item onClick={voiceActions.toggleMic}>
+						{voice.muted ? "unmute" : "mute"}
+					</Item>
+					<Item onClick={voiceActions.toggleDeafened}>
+						{voice.deafened ? "undeafen" : "deafen"}
+					</Item>
+				</Show>
+				<Show when={hasPermission("VoiceMute")}>
+					<Item onClick={mute}>
+						{room_member()?.mute ? "room unmute" : "room mute"}
+					</Item>
+				</Show>
+				<Show when={hasPermission("VoiceDeafen")}>
+					<Item onClick={deafen}>
+						{room_member()?.deaf ? "room undeafen" : "room deafen"}
+					</Item>
+				</Show>
+				<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
+					<Item onClick={disconnect}>disconnect</Item>
+				</Show>
+				<Show when={hasPermission("VoiceMove") && connectedToVoice()}>
+					<Item>move to</Item>
+				</Show>
 			</Show>
-			<Show when={props.user_id === self_id() && connectedToVoice()}>
-				<Item onClick={voiceActions.toggleMic}>
-					{voice.muted ? "unmute" : "mute"}
+			<Show when={props.admin}>
+				<Show when={user()?.relationship?.relation !== "Block"}>
+					<Item onClick={openDm}>dm</Item>
+				</Show>
+				<Item
+					onClick={() =>
+						user()?.relationship?.relation === "Block"
+							? unblockUser()
+							: blockUser()}
+				>
+					{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
 				</Item>
-				<Item onClick={voiceActions.toggleDeafened}>
-					{voice.deafened ? "undeafen" : "deafen"}
-				</Item>
-			</Show>
-			<Show when={hasPermission("VoiceMute")}>
-				<Item onClick={mute}>
-					{room_member()?.mute ? "room unmute" : "room mute"}
-				</Item>
-			</Show>
-			<Show when={hasPermission("VoiceDeafen")}>
-				<Item onClick={deafen}>
-					{room_member()?.deaf ? "room undeafen" : "room deafen"}
-				</Item>
-			</Show>
-			<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
-				<Item onClick={disconnect}>disconnect</Item>
-			</Show>
-			<Show when={hasPermission("VoiceMove") && connectedToVoice()}>
-				<Item>move to</Item>
+				<Show when={false}>
+					<Item>(un)ignore</Item>
+				</Show>
+				<Item>roles</Item>
+				<Separator />
+				<Show when={user()?.suspended}>
+					<Item onClick={unsuspendUser}>unsuspend user</Item>
+				</Show>
+				<Show when={!user()?.suspended}>
+					<Item onClick={suspendUser}>suspend user</Item>
+				</Show>
+				<Item onClick={deleteUser}>delete user</Item>
 			</Show>
 			<Separator />
 			<Item onClick={copyUserId}>copy user id</Item>

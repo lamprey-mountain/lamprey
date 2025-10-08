@@ -3,8 +3,12 @@ import { useApi } from "../api.tsx";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { useCtx } from "../context.ts";
+import { UserAdminMenu } from "../menu/UserAdmin.tsx";
+import { UserMenu } from "../menu/User.tsx";
 
 export function Users() {
+	const ctx = useCtx();
 	const api = useApi();
 	const users = api.users.list();
 
@@ -50,7 +54,21 @@ export function Users() {
 									</Show>
 								</div>
 								<div style="flex:1"></div>
-								<button>options</button>
+								<button
+									onClick={(e) => {
+										queueMicrotask(() => {
+											ctx.setMenu({
+												type: "user",
+												user_id: user.id,
+												x: e.clientX,
+												y: e.clientY,
+												admin: true,
+											});
+										});
+									}}
+								>
+									options
+								</button>
 							</li>
 						)}
 					</For>
