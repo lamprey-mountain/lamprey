@@ -152,6 +152,7 @@ const RoleList = (
 const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const api = useApi();
 	const ctx = useCtx();
+	const [permSearch, setPermSearch] = createSignal("");
 
 	const deleteRole = (role_id: string) => () => {
 		ctx.dispatch({
@@ -185,6 +186,41 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			},
 		});
 	};
+
+	// Filter permissions based on search query
+	const filteredPermissionGroups = createMemo(() => {
+		const searchQuery = permSearch().toLowerCase();
+		const groups = props.room.type === "Default"
+			? ["room", "members", "messages", "threads", "voice", "dangerous"]
+			: [
+				"server",
+				"room",
+				"server members",
+				"messages",
+				"threads",
+				"dangerous",
+			];
+
+		const filtered: Record<
+			string,
+			{ id: string; name: string; description: string }[]
+		> = {};
+
+		for (const group of groups) {
+			const allPerms = permissionGroups.get(group) || [];
+			if (searchQuery) {
+				filtered[group] = allPerms.filter((perm) =>
+					perm.name.toLowerCase().includes(searchQuery) ||
+					perm.description.toLowerCase().includes(searchQuery) ||
+					perm.id.toLowerCase().includes(searchQuery)
+				);
+			} else {
+				filtered[group] = allPerms;
+			}
+		}
+
+		return { groups, filtered };
+	});
 
 	return (
 		<div class="role-edit">
@@ -276,71 +312,71 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					</div>
 				)}
 			</For>
+
+			<div class="perm-search-container">
+				<h3>permissions</h3>
+				<input
+					type="search"
+					placeholder="Search permissions..."
+					value={permSearch()}
+					onInput={(e) => setPermSearch(e.target.value)}
+					class="perm-search-input"
+				/>
+			</div>
+
 			<For
-				each={props.room.type === "Default"
-					? [
-						"room",
-						"members",
-						"messages",
-						"threads",
-						"voice",
-						"dangerous",
-					]
-					: [
-						"server",
-						"room",
-						"server members",
-						"messages",
-						"threads",
-						"dangerous",
-					]}
+				each={filteredPermissionGroups().groups}
 			>
 				{(group) => {
+					const permsForGroup = () =>
+						filteredPermissionGroups().filtered[group];
 					return (
-						<>
-							<h3>{group} permissions</h3>
-							<ul>
-								<For each={permissionGroups.get(group)}>
-									{(perm) => {
-										const perms = () => props.edit.role.permissions ?? [];
-										return (
-											<li>
-												<label>
-													<input
-														type="checkbox"
-														checked={perms().includes(perm.id)}
-														onInput={(e) => {
-															const { checked } = e
-																.target as HTMLInputElement;
-															props.edit.setRole((r) => {
-																const old = (r as Role).permissions;
-																return {
-																	...r,
-																	permissions: checked
-																		? [...old, perm.id]
-																		: old.filter((i) => i !== perm.id),
-																};
-															});
-														}}
-													/>
-													<div>
-														<div class="name">
-															{perm.name}
-														</div>
-														<div
-															class="description"
-															innerHTML={md.parseInline(
-																perm.description ?? "",
-															) as string}
+						<Show when={permsForGroup().length > 0}>
+							<>
+								<h3>{group} permissions</h3>
+								<ul>
+									<For each={permsForGroup()}>
+										{(perm) => {
+											const perms = () => props.edit.role.permissions ?? [];
+											return (
+												<li>
+													<label>
+														<input
+															type="checkbox"
+															checked={perms().includes(perm.id)}
+															onInput={(e) => {
+																const { checked } = e
+																	.target as HTMLInputElement;
+																props.edit.setRole((r) => {
+																	const old = (r as Role).permissions;
+																	return {
+																		...r,
+																		permissions: checked
+																			? [...old, perm.id]
+																			: old.filter((i) => i !== perm.id),
+																	};
+																});
+															}}
 														/>
-													</div>
-												</label>
-											</li>
-										);
-									}}
-								</For>
-							</ul>
-						</>
+														<div>
+															<div class="name">
+																{perm.name}
+															</div>
+															<div
+																class="description"
+																innerHTML={md.parseInline(
+																	perm.description ?? "",
+																) as string}
+															/>
+														</div>
+													</label>
+												</li>
+											);
+										}}
+									</For>
+								</ul>
+							</>
+						</Show>
 					);
 				}}
 			</For>
