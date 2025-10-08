@@ -561,6 +561,14 @@ em {
 	& li > * {
 		display: inline;
 	}
+
+	:is(p, ol, ul) + :is(p, ol, ul) {
+		margin-top: 1em;
+	}
+
+	li + li {
+		margin-top: 4px;
+	}
 }
 
 .modal {
@@ -831,7 +839,8 @@ article.message {
 
 		& > .body {
 			overflow: hidden;
-			max-width: 100%;
+			/* max-width: 100%; */
+			max-width: 60ch;
 
 			&.local {
 				color: $fg-500;
