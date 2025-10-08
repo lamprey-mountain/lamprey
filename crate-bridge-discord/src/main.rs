@@ -91,7 +91,9 @@ async fn main() -> Result<()> {
                 .insert(config.lamprey_thread_id, last_id.chat_id);
         }
 
-        let discord_channel_id = config.discord_thread_id.unwrap_or(config.discord_channel_id);
+        let discord_channel_id = config
+            .discord_thread_id
+            .unwrap_or(config.discord_channel_id);
         if let Some(last_id) = globals.get_last_message_dc(discord_channel_id).await? {
             globals
                 .last_discord_ids

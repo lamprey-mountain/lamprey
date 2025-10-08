@@ -170,7 +170,8 @@ pub trait Data {
         attachment_id: DcAttachmentId,
     ) -> Result<Option<AttachmentMetadata>>;
     async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>>;
-    async fn get_last_message_dc(&self, channel_id: DcChannelId) -> Result<Option<MessageMetadata>>;
+    async fn get_last_message_dc(&self, channel_id: DcChannelId)
+        -> Result<Option<MessageMetadata>>;
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()>;
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()>;
     async fn delete_message(&self, message_id: MessageId) -> Result<()>;
@@ -349,7 +350,10 @@ impl Data for Globals {
         Ok(row.map(|r| r.try_into()).transpose()?)
     }
 
-    async fn get_last_message_dc(&self, channel_id: DcChannelId) -> Result<Option<MessageMetadata>> {
+    async fn get_last_message_dc(
+        &self,
+        channel_id: DcChannelId,
+    ) -> Result<Option<MessageMetadata>> {
         let id = channel_id.to_string();
         let row = query_as!(
             MessageMetadataRow,

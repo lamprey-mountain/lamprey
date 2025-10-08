@@ -12,7 +12,7 @@ use serenity::all::{
 use tokio::sync::{mpsc, oneshot};
 
 use crate::bridge::BridgeMessage;
-use crate::data::{Data, MessageMetadata};
+use crate::data::Data;
 use crate::lamprey::LampreyHandle;
 use crate::portal::{Portal, PortalMessage};
 use crate::{discord::DiscordMessage, lamprey::LampreyMessage};

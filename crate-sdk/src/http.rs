@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::{
     media::MediaCreated, misc::UserIdReq, user_status::StatusPatch, ApplicationId, Media,
@@ -9,6 +9,7 @@ use common::v1::types::{RoomMember, RoomMemberPatch};
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;
+use tracing::error;
 
 const DEFAULT_BASE: &str = "https://chat.celery.eu.org/";
 
@@ -79,7 +80,15 @@ impl Http {
             .await?
             .error_for_status()?;
         match res.status() {
-            StatusCode::OK => Ok(Some(res.json().await?)),
+            StatusCode::OK => {
+                let text = res.text().await?;
+                serde_json::from_str(&text)
+                    .with_context(|| {
+                        error!(response_body = %text, "failed to decode media upload response body");
+                        "failed to decode media upload response body"
+                    })
+                    .map(Some)
+            }
             StatusCode::NO_CONTENT => Ok(None),
             _ => unreachable!("technically reachable with a bad server"),
         }
@@ -93,16 +102,13 @@ impl Http {
         let url = self
             .base_url
             .join(&format!("/api/v1/room/{room_id}/thread"))?;
-        let res = self
-            .client
-            .get(url)
-            .query(query)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
+        let res = self.client.get(url).query(query).send().await?;
+        let res = res.error_for_status()?;
+        let text = res.text().await?;
+        serde_json::from_str(&text).with_context(|| {
+            error!(response_body = %text, "failed to decode response body");
+            "failed to decode response body for thread_list"
+        })
     }
 
     pub async fn message_list(
@@ -113,16 +119,13 @@ impl Http {
         let url = self
             .base_url
             .join(&format!("/api/v1/thread/{thread_id}/message"))?;
-        let res = self
-            .client
-            .get(url)
-            .query(query)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
-        Ok(res)
+        let res = self.client.get(url).query(query).send().await?;
+        let res = res.error_for_status()?;
+        let text = res.text().await?;
+        serde_json::from_str(&text).with_context(|| {
+            error!(response_body = %text, "failed to decode response body");
+            "failed to decode response body for message_list"
+        })
     }
 }
 
@@ -140,11 +143,13 @@ macro_rules! route {
                     .header("content-type", "application/json")
                     .json(body)
                     .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
                     .await?;
-                Ok(res)
+                let res = res.error_for_status()?;
+                let text = res.text().await?;
+                serde_json::from_str(&text).with_context(|| {
+                    error!(response_body = %text, "failed to decode response body");
+                    format!("failed to decode response body for {}", stringify!($name))
+                })
             }
         }
     };
@@ -161,11 +166,13 @@ macro_rules! route {
                     .header("content-type", "application/json")
                     .json(&json!({}))
                     .send()
-                    .await?
-                    .error_for_status()?
-                    .json()
                     .await?;
-                Ok(res)
+                let res = res.error_for_status()?;
+                let text = res.text().await?;
+                serde_json::from_str(&text).with_context(|| {
+                    error!(response_body = %text, "failed to decode response body");
+                    format!("failed to decode response body for {}", stringify!($name))
+                })
             }
         }
     };
@@ -178,13 +185,17 @@ macro_rules! route {
                 body: &$req,
             ) -> Result<()> {
                 let url = self.base_url.join(&format!($url))?;
-                self.client
+                let res = self.client
                     .$method(url)
                     .header("content-type", "application/json")
                     .json(body)
                     .send()
-                    .await?
-                    .error_for_status()?;
+                    .await?;
+                if let Err(e) = res.error_for_status_ref() {
+                    let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                    error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
+                    return Err(anyhow::anyhow!(e).context(text));
+                }
                 Ok(())
             }
         }
@@ -197,13 +208,17 @@ macro_rules! route {
                 $($param: $param_type),*,
             ) -> Result<()> {
                 let url = self.base_url.join(&format!($url))?;
-                self.client
+                let res = self.client
                     .$method(url)
                     .header("content-type", "application/json")
                     .json(&json!({}))
                     .send()
-                    .await?
-                    .error_for_status()?;
+                    .await?;
+                if let Err(e) = res.error_for_status_ref() {
+                    let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                    error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
+                    return Err(anyhow::anyhow!(e).context(text));
+                }
                 Ok(())
             }
         }

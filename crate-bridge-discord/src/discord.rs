@@ -959,7 +959,7 @@ impl EventHandler for Handler {
     }
 
     async fn presence_update(&self, ctx: Context, presence: Presence) {
-        info!("discord presence update for user {}", presence.user.id);
+        debug!("discord presence update for user {}", presence.user.id);
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap().clone();
 
