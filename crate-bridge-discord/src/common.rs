@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{ApplicationId, RoomId, ThreadId};
+use common::v1::types::{ApplicationId, MessageId, RoomId, ThreadId};
 use dashmap::DashMap;
 use serde::Deserialize;
-use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId, Presence, UserId as DcUserId};
+use serenity::all::{
+    ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId, Presence,
+    UserId as DcUserId,
+};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::bridge::BridgeMessage;
@@ -19,7 +22,8 @@ pub struct Globals {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
     pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
-    pub last_ids: Arc<DashMap<ThreadId, MessageMetadata>>,
+    pub last_lamprey_ids: Arc<DashMap<ThreadId, MessageId>>,
+    pub last_discord_ids: Arc<DashMap<DcChannelId, DcMessageId>>,
     pub presences: Arc<DashMap<DcUserId, Presence>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,

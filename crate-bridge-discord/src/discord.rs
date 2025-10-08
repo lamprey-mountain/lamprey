@@ -81,6 +81,10 @@ async fn backfill_channel(
 
         let last_id = msgs.first().unwrap().id;
         for message in msgs.into_iter().rev() {
+            if globals.get_message_dc(message.id).await?.is_some() {
+                debug!("skipping already bridged message: {}", message.id);
+                continue;
+            }
             let _ = portal.send(PortalMessage::DiscordMessageCreate { message });
         }
         p = MessagePagination::After(last_id);
@@ -339,11 +343,7 @@ impl EventHandler for Handler {
                             .entry(config.lamprey_thread_id)
                             .or_insert_with(|| Portal::summon(globals.clone(), config.to_owned()));
 
-                        let last_id = globals
-                            .last_ids
-                            .iter()
-                            .find(|i| i.discord_channel_id == ch.id)
-                            .map(|i| i.discord_id);
+                        let last_id = globals.last_discord_ids.get(&ch.id).map(|v| *v.value());
                         let Some(last_id) = last_id else {
                             return;
                         };
@@ -360,6 +360,10 @@ impl EventHandler for Handler {
                             info!("discord backfill {} messages", msgs.len());
                             let last_id = msgs.first().unwrap().id;
                             for message in msgs.into_iter().rev() {
+                                if globals.get_message_dc(message.id).await.unwrap().is_some() {
+                                    debug!("skipping already bridged message: {}", message.id);
+                                    continue;
+                                }
                                 let _ =
                                     portal.send(PortalMessage::DiscordMessageCreate { message });
                             }

@@ -73,7 +73,8 @@ async fn main() -> Result<()> {
         pool,
         config,
         portals: Arc::new(DashMap::new()),
-        last_ids: Arc::new(DashMap::new()),
+        last_lamprey_ids: Arc::new(DashMap::new()),
+        last_discord_ids: Arc::new(DashMap::new()),
         presences: Arc::new(DashMap::new()),
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
@@ -81,11 +82,20 @@ async fn main() -> Result<()> {
     });
 
     for config in globals.get_portals().await? {
-        let last_id = globals
+        if let Some(last_id) = globals
             .get_last_message_ch(config.lamprey_thread_id)
-            .await?;
-        if let Some(last_id) = last_id {
-            globals.last_ids.insert(config.lamprey_thread_id, last_id);
+            .await?
+        {
+            globals
+                .last_lamprey_ids
+                .insert(config.lamprey_thread_id, last_id.chat_id);
+        }
+
+        let discord_channel_id = config.discord_thread_id.unwrap_or(config.discord_channel_id);
+        if let Some(last_id) = globals.get_last_message_dc(discord_channel_id).await? {
+            globals
+                .last_discord_ids
+                .insert(discord_channel_id, last_id.discord_id);
         }
     }
 
@@ -150,8 +160,10 @@ async fn main() -> Result<()> {
             tokio::spawn(async move {
                 let res: Result<()> = async {
                     let ly = globals.lamprey_handle().await?;
-                    let last_id = globals.last_ids.get(&portal_config.lamprey_thread_id);
-                    let from = last_id.map(|m| m.chat_id);
+                    let from = globals
+                        .last_lamprey_ids
+                        .get(&portal_config.lamprey_thread_id)
+                        .map(|m| *m.value());
                     let mut query = PaginationQuery {
                         from,
                         to: None,
