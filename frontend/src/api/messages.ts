@@ -482,6 +482,24 @@ export class Messages {
 		return data;
 	}
 
+	async pin(thread_id: string, message_id: string) {
+		await this.api.client.http.PUT(
+			"/api/v1/thread/{thread_id}/pin/{message_id}",
+			{
+				params: { path: { thread_id, message_id } },
+			},
+		);
+	}
+
+	async unpin(thread_id: string, message_id: string) {
+		await this.api.client.http.DELETE(
+			"/api/v1/thread/{thread_id}/pin/{message_id}",
+			{
+				params: { path: { thread_id, message_id } },
+			},
+		);
+	}
+
 	/** append a set of data to a range, deduplicating ranges if there are multiple */
 	private mergeAfter(
 		ranges: MessageRanges,

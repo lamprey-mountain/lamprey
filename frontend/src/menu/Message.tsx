@@ -42,6 +42,14 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	}
 
+	const togglePin = () => {
+		if (message()?.pinned) {
+			api.messages.unpin(props.thread_id, props.message_id);
+		} else {
+			api.messages.pin(props.thread_id, props.message_id);
+		}
+	};
+
 	function redact() {
 		ctx.dispatch({
 			do: "modal.confirm",
@@ -72,7 +80,7 @@ export function MessageMenu(props: MessageMenuProps) {
 			<Item onClick={setReply}>reply</Item>
 			<Item>edit</Item>
 			<Item>fork</Item>
-			<Item>pin</Item>
+			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
 			<Item onClick={redact}>redact</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
