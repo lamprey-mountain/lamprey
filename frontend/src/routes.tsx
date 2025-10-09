@@ -148,6 +148,23 @@ export const RouteThread = (p: RouteSectionProps) => {
 	const thread = api.threads.fetch(() => p.params.thread_id);
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
+	createEffect(() => {
+		const { thread_id, message_id } = p.params;
+		if (thread_id && message_id) {
+			ctx.thread_anchor.set(thread_id, {
+				type: "context",
+				limit: 50,
+				message_id: message_id,
+			});
+			ctx.thread_highlight.set(thread_id, message_id);
+		} else if (thread_id) {
+			const current_anchor = ctx.thread_anchor.get(thread_id);
+			if (current_anchor?.type === "context") {
+				ctx.thread_anchor.delete(thread_id);
+			}
+		}
+	});
+
 	// fetch threads to populate sidebar
 	api.threads.list(() => thread()?.room_id!);
 

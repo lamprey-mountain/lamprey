@@ -400,13 +400,7 @@ export const SearchResults = (props: {
 	const navigate = useNavigate();
 
 	const onResultClick = (message: Message) => {
-		navigate(`/thread/${message.thread_id}`);
-		ctx.thread_anchor.set(message.thread_id, {
-			type: "context",
-			limit: 50,
-			message_id: message.id,
-		});
-		ctx.thread_highlight.set(message.thread_id, message.id);
+		navigate(`/thread/${message.thread_id}/message/${message.id}`);
 		ctx.thread_search.delete(props.thread.id);
 	};
 

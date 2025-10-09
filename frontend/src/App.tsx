@@ -89,6 +89,10 @@ const App: Component = () => {
 				component={RouteThreadSettings}
 			/>
 			<Route path="/thread/:thread_id" component={RouteThread} />
+			<Route
+				path="/thread/:thread_id/message/:message_id"
+				component={RouteThread}
+			/>
 			<Route path="/debug" component={Debug} />
 			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />

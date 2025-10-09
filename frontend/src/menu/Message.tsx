@@ -22,6 +22,12 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const copyId = () => navigator.clipboard.writeText(props.message_id);
 
+	const copyLink = () => {
+		const url = new URL(location.origin);
+		url.pathname = `/thread/${props.thread_id}/message/${props.message_id}`;
+		navigator.clipboard.writeText(url.toString());
+	};
+
 	const setReply = () => {
 		ctx.thread_reply_id.set(props.thread_id, props.message_id);
 	};
@@ -83,7 +89,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	return (
 		<Menu>
 			<Item onClick={markUnread}>mark unread</Item>
-			<Item>copy link</Item>
+			<Item onClick={copyLink}>copy link</Item>
 			<Item onClick={setReply}>reply</Item>
 			<Item onClick={edit}>edit</Item>
 			<Item>fork</Item>
