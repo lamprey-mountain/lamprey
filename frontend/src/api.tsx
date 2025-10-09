@@ -428,6 +428,29 @@ export function createApi(
 					});
 				}
 			}
+		} else if (msg.type === "RoleReorder") {
+			const { room_id, roles: reordered } = msg;
+			const l = roles._cachedListings.get(room_id);
+			if (l?.resource.latest) {
+				const p = l.resource.latest;
+				const positions = new Map(
+					reordered.map((i) => [i.role_id, i.position]),
+				);
+				const newItems = p.items.map((i) => {
+					const pos = positions.get(i.id);
+					if (pos) {
+						const newRole = { ...i, position: pos };
+						roles.cache.set(i.id, newRole);
+						return newRole;
+					}
+					return i;
+				});
+				newItems.sort((a, b) => b.position - a.position);
+				l.mutate({
+					...p,
+					items: newItems,
+				});
+			}
 		} else if (msg.type === "InviteCreate") {
 			const { invite } = msg;
 			invites.cache.set(invite.code, invite);

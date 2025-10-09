@@ -13,7 +13,7 @@ import { useCtx } from "../context.ts";
 import type { RoomT } from "../types.ts";
 import type { Pagination, Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
-import { createStore } from "solid-js/store";
+import { createStore, produce } from "solid-js/store";
 import { md } from "../Message.tsx";
 import { moderatorPermissions, permissionGroups } from "../permissions.ts";
 
@@ -31,6 +31,38 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const api = useApi();
 	const roles = api.roles.list(() => props.room.id);
 
+	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
+	const [isOrderDirty, setIsOrderDirty] = createSignal(false);
+
+	createEffect(() => {
+		if (roles()) {
+			const sortedRoles = [...roles()!.items].sort((a, b) =>
+				b.position - a.position
+			);
+			setLocalRoles(sortedRoles);
+		}
+	});
+
+	createEffect(() => {
+		if (!roles()?.items) {
+			return;
+		}
+		const originalSorted = [...roles()!.items].sort((a, b) =>
+			b.position - a.position
+		);
+		if (originalSorted.length !== localRoles.length) {
+			setIsOrderDirty(true);
+			return;
+		}
+		for (let i = 0; i < localRoles.length; i++) {
+			if (localRoles[i].id !== originalSorted[i].id) {
+				setIsOrderDirty(true);
+				return;
+			}
+		}
+		setIsOrderDirty(false);
+	});
+
 	const createRole = () => {
 		ctx.dispatch({
 			do: "modal.prompt",
@@ -43,6 +75,30 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 				});
 			},
 		});
+	};
+
+	const saveOrder = () => {
+		api.client.http.PATCH("/api/v1/room/{room_id}/role", {
+			params: { path: { room_id: props.room.id } },
+			body: {
+				roles: localRoles
+					.map((role, index) => ({ role, index }))
+					.filter(({ role }) => role.id !== role.room_id)
+					.map(({ role, index }) => ({
+						role_id: role.id,
+						position: localRoles.length - index,
+					})),
+			},
+		});
+	};
+
+	const cancelOrder = () => {
+		if (roles()) {
+			const sortedRoles = [...roles()!.items].sort((a, b) =>
+				b.position - a.position
+			);
+			setLocalRoles(sortedRoles);
+		}
 	};
 
 	const [search, setSearch] = createSignal("");
@@ -60,12 +116,24 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 							aria-label="search"
 							onInput={(e) => setSearch(e.target.value)}
 						/>
+						<Show when={isOrderDirty()}>
+							<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
+								<span>order changed</span>
+								<button class="big" onClick={cancelOrder}>cancel</button>
+								<button class="big primary" onClick={saveOrder}>save</button>
+							</div>
+						</Show>
 						<button class="big primary" onClick={createRole}>
 							create role
 						</button>
 					</header>
 					<Show when={roles()} fallback="loading...">
-						<RoleList search={search()} roles={roles()!} edit={edit} />
+						<RoleList
+							search={search()}
+							roles={localRoles}
+							setRoles={setLocalRoles}
+							edit={edit}
+						/>
 					</Show>
 				</div>
 				<Show when={api.roles.cache.has(edit.role.id!)}>
@@ -77,18 +145,88 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 }
 
 const RoleList = (
-	props: { search: string; roles: Pagination<Role>; edit: RoleEditState },
+	props: {
+		search: string;
+		roles: Role[];
+		setRoles: import("solid-js/store").SetStoreFunction<Role[]>;
+		edit: RoleEditState;
+	},
 ) => {
 	const filteredRoles = createMemo(() => {
-		return props.roles!.items.sort((a, b) => b.position - a.position)
-			.filter((i) => i.name.includes(props.search));
+		return props.roles.filter((i) => i.name.includes(props.search));
 	});
+
+	const [dragging, setDragging] = createSignal<string | null>(null);
+	const [target, setTarget] = createSignal<string | null>(null);
+
+	const getRoleId = (e: DragEvent) =>
+		(e.currentTarget as HTMLElement).dataset.roleId;
+
+	const handleDragStart = (e: DragEvent) => {
+		const id = getRoleId(e);
+		if (id) {
+			setDragging(id);
+			e.dataTransfer!.effectAllowed = "move";
+		}
+	};
+
+	const handleDragEnter = (e: DragEvent) => {
+		e.preventDefault();
+		const id = getRoleId(e);
+		if (id) {
+			const role = props.roles.find((r) => r.id === id);
+			if (role?.is_base) {
+				setTarget(null);
+				return;
+			}
+		}
+		setTarget(id ?? null);
+	};
+
+	const handleDragOver = (e: DragEvent) => {
+		e.preventDefault();
+	};
+
+	const handleDrop = (e: DragEvent) => {
+		e.preventDefault();
+		const fromId = dragging();
+		const toId = target();
+
+		setDragging(null);
+		setTarget(null);
+
+		if (!fromId || !toId || fromId === toId) {
+			return;
+		}
+
+		const fromIndex = props.roles.findIndex((r) => r.id === fromId);
+		const toIndex = props.roles.findIndex((r) => r.id === toId);
+
+		if (fromIndex === -1 || toIndex === -1) {
+			return;
+		}
+
+		props.setRoles(produce((roles) => {
+			const [moved] = roles.splice(fromIndex, 1);
+			roles.splice(toIndex, 0, moved);
+		}));
+	};
 
 	return (
 		<ul class="role-list">
 			<For each={filteredRoles()}>
 				{(i) => (
 					<li
+						data-role-id={i.id}
+						draggable={!i.is_base}
+						onDragStart={handleDragStart}
+						onDragEnter={handleDragEnter}
+						onDragOver={handleDragOver}
+						onDrop={handleDrop}
+						classList={{
+							dragging: dragging() === i.id,
+							over: target() === i.id && dragging() !== i.id,
+						}}
 						onClick={() => {
 							if (props.edit.role.id === i.id) {
 								props.edit.setRole({ id: null } as unknown as Role);
