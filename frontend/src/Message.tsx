@@ -26,6 +26,8 @@ import { Time } from "./Time.tsx";
 import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
+import { createEditor } from "./Editor.tsx";
+import { uuidv7 } from "uuidv7";
 
 type MessageProps = {
 	message: MessageT;
@@ -104,6 +106,77 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			<Show when={props.message.id !== props.message.version_id}>
 				<span class="edited" onClick={viewHistory}>(edited)</span>
 			</Show>
+		</div>
+	);
+}
+
+function MessageEditor(
+	props: { message: MessageT & { type: "DefaultMarkdown" } },
+) {
+	const ctx = useCtx();
+	const api = useApi();
+
+	const [draft, setDraft] = createSignal(
+		ctx.thread_edit_drafts.get(props.message.id) ?? props.message.content ??
+			"",
+	);
+
+	const editor = createEditor({ initialContent: draft() });
+
+	const save = async (content: string) => {
+		if (content.trim() === (props.message.content ?? "").trim()) {
+			ctx.editingMessage.delete(props.message.thread_id);
+			return;
+		}
+		if (content.trim().length === 0) {
+			ctx.editingMessage.delete(props.message.thread_id);
+			return;
+		}
+		try {
+			await api.messages.edit(
+				props.message.thread_id,
+				props.message.id,
+				content,
+			);
+		} catch (e) {
+			console.error("failed to edit message", e);
+		}
+		ctx.editingMessage.delete(props.message.thread_id);
+	};
+
+	const cancel = () => {
+		ctx.editingMessage.delete(props.message.thread_id);
+	};
+
+	let containerRef: HTMLDivElement | undefined;
+	onMount(() => {
+		containerRef?.addEventListener(
+			"keydown",
+			(e) => {
+				if (e.key === "Escape") {
+					e.stopPropagation();
+					cancel();
+				}
+			},
+			{ capture: true },
+		);
+		editor.focus();
+	});
+
+	return (
+		<div class="message-editor" ref={containerRef}>
+			<editor.View
+				onSubmit={save}
+				onChange={(state) => {
+					const text = state.doc.textContent;
+					setDraft(text);
+					ctx.thread_edit_drafts.set(props.message.id, text);
+				}}
+			/>
+			<div class="edit-info dim">
+				escape to <button onClick={cancel}>cancel</button> • enter to{" "}
+				<button onClick={() => save(draft())}>save</button>
+			</div>
 		</div>
 	);
 }
@@ -324,6 +397,10 @@ export function MessageView(props: MessageProps) {
 				});
 			};
 			const ctx = useCtx();
+			const isEditing = () => {
+				return ctx.editingMessage.get(props.message.thread_id) ===
+					props.message.id;
+			};
 			const withAvatar = ctx.userConfig().frontend["message_pfps"] === "yes";
 
 			// TODO: this code is getting messy and needs a refactor soon...
@@ -360,7 +437,12 @@ export function MessageView(props: MessageProps) {
 							<div class="avatar"></div>
 						</Show>
 						<div class="content">
-							<MessageTextMarkdown message={props.message} />
+							<Show
+								when={!isEditing()}
+								fallback={<MessageEditor message={props.message} />}
+							>
+								<MessageTextMarkdown message={props.message} />
+							</Show>
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.attachments}>
@@ -405,7 +487,12 @@ export function MessageView(props: MessageProps) {
 							</div>
 						</div>
 						<div class="content">
-							<MessageTextMarkdown message={props.message} />
+							<Show
+								when={!isEditing()}
+								fallback={<MessageEditor message={props.message} />}
+							>
+								<MessageTextMarkdown message={props.message} />
+							</Show>
 							<Show when={props.message.attachments?.length}>
 								<ul class="attachments">
 									<For each={props.message.attachments}>

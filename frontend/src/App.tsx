@@ -208,6 +208,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
+	const editingMessage = new ReactiveMap<string, string>();
 
 	let userConfigLoaded = false;
 	const [userConfig, setUserConfig] = createSignal<UserConfig>(
@@ -257,6 +258,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		thread_scroll_pos: new Map(),
 		thread_search: new ReactiveMap(),
 		uploads: new ReactiveMap(),
+		thread_edit_drafts: new ReactiveMap(),
+
+		editingMessage,
 
 		recentThreads,
 		setRecentThreads,

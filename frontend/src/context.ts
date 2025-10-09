@@ -128,6 +128,9 @@ export type ChatCtx = {
 	thread_scroll_pos: Map<string, number>;
 	thread_search: ReactiveMap<string, ThreadSearch>;
 	uploads: ReactiveMap<string, Upload>;
+	thread_edit_drafts: ReactiveMap<string, string>;
+
+	editingMessage: ReactiveMap<string, string>; // thread_id -> message_id
 
 	recentThreads: Accessor<Array<string>>;
 	setRecentThreads: Setter<Array<string>>;

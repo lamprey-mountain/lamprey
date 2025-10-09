@@ -482,6 +482,54 @@ export class Messages {
 		return data;
 	}
 
+	async edit(thread_id: string, message_id: string, content: string) {
+		const originalMessage = this.cache.get(message_id);
+		if (originalMessage) {
+			const updatedMessage = {
+				...originalMessage,
+				content: content,
+				edited_at: new Date().toISOString(),
+				version_id: uuidv7(), // fake version_id to show (edited)
+				is_local: true,
+			} as Message;
+			this.cache.set(message_id, updatedMessage);
+			const ranges = this.cacheRanges.get(thread_id);
+			if (ranges) {
+				const range = ranges.find(message_id);
+				if (range) {
+					const index = range.items.findIndex((m) => m.id === message_id);
+					if (index !== -1) {
+						range.items[index] = updatedMessage;
+						this._updateMutators(ranges, thread_id);
+					}
+				}
+			}
+		}
+
+		try {
+			const { data, error } = await this.api.client.http.PATCH(
+				"/api/v1/thread/{thread_id}/message/{message_id}",
+				{
+					params: { path: { thread_id, message_id } },
+					body: { content },
+				},
+			);
+			if (error) {
+				throw new Error(error);
+			}
+			return data;
+		} catch (e) {
+			if (originalMessage) {
+				this.cache.set(message_id, originalMessage);
+				const ranges = this.cacheRanges.get(thread_id);
+				if (ranges) {
+					this._updateMutators(ranges, thread_id);
+				}
+			}
+			throw e;
+		}
+	}
+
 	async pin(thread_id: string, message_id: string) {
 		await this.api.client.http.PUT(
 			"/api/v1/thread/{thread_id}/pin/{message_id}",

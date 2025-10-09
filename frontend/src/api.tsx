@@ -815,6 +815,11 @@ export type Api = {
 		) => Resource<Message>;
 		cache: ReactiveMap<string, Message>;
 		cacheRanges: Map<string, MessageRanges>;
+		edit: (
+			thread_id: string,
+			message_id: string,
+			content: string,
+		) => Promise<Message>;
 		pin: (thread_id: string, message_id: string) => Promise<void>;
 		unpin: (thread_id: string, message_id: string) => Promise<void>;
 	};

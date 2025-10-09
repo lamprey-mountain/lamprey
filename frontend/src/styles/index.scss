@@ -510,7 +510,7 @@ a {
 	cursor: pointer;
 	border-radius: 2px;
 
-	&:hover {
+	&:hover, &:focus {
 		background: #fff2;
 	}
 }
@@ -2911,5 +2911,22 @@ button.link {
 	.perm-search-input {
 		padding: 0.25rem 0.5rem;
 		margin-bottom: 0.5rem;
+	}
+}
+
+.edit-info {
+	margin-top: 4px;
+
+	button {
+		color: $link-500;
+		cursor: pointer;
+		border: none;
+		background: none;
+		border-radius: 2px;
+		padding: 0 2px;
+
+		&:hover, &:focus {
+			background: #fff2;
+		}
 	}
 }

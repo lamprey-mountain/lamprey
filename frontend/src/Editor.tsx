@@ -112,7 +112,9 @@ function createWrap(wrap: string): Command {
 	};
 }
 
-type EditorProps = {};
+type EditorProps = {
+	initialContent?: string;
+};
 
 type EditorViewProps = {
 	placeholder?: string;
@@ -122,14 +124,20 @@ type EditorViewProps = {
 	onChange?: (state: EditorState) => void;
 };
 
-export const createEditor = (_opts: EditorProps) => {
+export const createEditor = (opts: EditorProps) => {
 	let editorRef!: HTMLDivElement;
 	let view: EditorView | undefined;
 	let onSubmit!: (content: string) => void | undefined;
 
-	const createState = () =>
-		EditorState.create({
-			// doc: ..., // initial doc here?
+	const createState = () => {
+		let doc;
+		if (opts.initialContent) {
+			const p = document.createElement("p");
+			p.textContent = opts.initialContent;
+			doc = DOMParser.fromSchema(schema).parse(p);
+		}
+		return EditorState.create({
+			doc,
 			schema,
 			plugins: [
 				history(),
@@ -181,6 +189,7 @@ export const createEditor = (_opts: EditorProps) => {
 				}),
 			],
 		});
+	};
 
 	return {
 		setState(state?: EditorState) {

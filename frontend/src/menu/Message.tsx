@@ -71,6 +71,10 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	}
 
+	const edit = () => {
+		ctx.editingMessage.set(props.thread_id, props.message_id);
+	};
+
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
 	return (
@@ -78,7 +82,7 @@ export function MessageMenu(props: MessageMenuProps) {
 			<Item onClick={markUnread}>mark unread</Item>
 			<Item>copy link</Item>
 			<Item onClick={setReply}>reply</Item>
-			<Item>edit</Item>
+			<Item onClick={edit}>edit</Item>
 			<Item>fork</Item>
 			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
 			<Item onClick={redact}>redact</Item>
