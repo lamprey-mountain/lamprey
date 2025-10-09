@@ -100,7 +100,6 @@ export function ThreadMenu(props: { thread_id: string }) {
 					<Item>baz</Item>
 				</Submenu>
 			</Submenu>
-			<Item>pin</Item>
 			<Switch>
 				<Match when={!thread()?.archived_at}>
 					<Item onClick={archiveThread}>archive</Item>
