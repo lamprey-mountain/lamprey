@@ -121,7 +121,59 @@ function MessageEditor(
 			"",
 	);
 
-	const editor = createEditor({ initialContent: draft() });
+	const editor = createEditor({
+		initialContent: draft(),
+		keymap: {
+			ArrowUp: (state) => {
+				if (state.selection.from !== 1) return false;
+
+				const ranges = api.messages.cacheRanges.get(props.message.thread_id);
+				if (!ranges) return false;
+
+				const messages = ranges.live.items;
+				const currentIndex = messages.findIndex((m) =>
+					m.id === props.message.id
+				);
+				if (currentIndex === -1) return false;
+
+				for (let i = currentIndex - 1; i >= 0; i--) {
+					const msg = messages[i];
+					if (msg.type === "DefaultMarkdown") {
+						ctx.editingMessage.set(props.message.thread_id, msg.id);
+						return true;
+					}
+				}
+
+				return false;
+			},
+			ArrowDown: (state) => {
+				console.log("aaa", state.selection.to, state.doc.content.size);
+				if (state.selection.to !== state.doc.content.size - 1) return false;
+
+				const ranges = api.messages.cacheRanges.get(props.message.thread_id);
+				if (!ranges) return false;
+
+				const messages = ranges.live.items;
+				const currentIndex = messages.findIndex((m) =>
+					m.id === props.message.id
+				);
+				if (currentIndex === -1) return false;
+
+				for (let i = currentIndex + 1; i < messages.length; i++) {
+					const msg = messages[i];
+					if (msg.type === "DefaultMarkdown") {
+						ctx.editingMessage.set(props.message.thread_id, msg.id);
+						return true;
+					}
+				}
+
+				// No next message, focus main input
+				ctx.editingMessage.delete(props.message.thread_id);
+				ctx.thread_input_focus.get(props.message.thread_id)?.();
+				return true;
+			},
+		},
+	});
 
 	const save = async (content: string) => {
 		if (content.trim() === (props.message.content ?? "").trim()) {

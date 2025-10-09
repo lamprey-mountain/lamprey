@@ -114,6 +114,7 @@ function createWrap(wrap: string): Command {
 
 type EditorProps = {
 	initialContent?: string;
+	keymap?: { [key: string]: Command };
 };
 
 type EditorViewProps = {
@@ -186,6 +187,7 @@ export const createEditor = (opts: EditorProps) => {
 						}
 						return true;
 					},
+					...opts.keymap,
 				}),
 			],
 		});

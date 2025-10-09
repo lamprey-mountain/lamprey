@@ -5,7 +5,7 @@ import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "./api.tsx";
 import { leading, throttle } from "@solid-primitives/scheduled";
-import { createEffect, createMemo, onCleanup } from "solid-js";
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
 import { getMessageOverrideName } from "./util.tsx";
 import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -89,7 +89,38 @@ export function Input(props: InputProps) {
 		}
 	};
 
-	const editor = createEditor({});
+	const editor = createEditor({
+		keymap: {
+			ArrowUp: (state) => {
+				if (state.doc.textContent.length > 0) {
+					return false; // not empty, do default behavior
+				}
+
+				const ranges = api.messages.cacheRanges.get(props.thread.id);
+				if (!ranges) return false;
+
+				const self_id = api.users.cache.get("@self")?.id;
+				if (!self_id) return false;
+
+				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
+					const msg = ranges.live.items[i];
+					if (msg.author_id === self_id && msg.type === "DefaultMarkdown") {
+						ctx.editingMessage.set(props.thread.id, msg.id);
+						return true; // handled
+					}
+				}
+
+				return false;
+			},
+		},
+	});
+
+	onMount(() => {
+		ctx.thread_input_focus.set(props.thread.id, () => editor.focus());
+		onCleanup(() => {
+			ctx.thread_input_focus.delete(props.thread.id);
+		});
+	});
 
 	createEffect(() => {
 		const state = ctx.thread_editor_state.get(props.thread.id);

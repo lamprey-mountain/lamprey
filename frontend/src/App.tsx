@@ -259,6 +259,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		thread_search: new ReactiveMap(),
 		uploads: new ReactiveMap(),
 		thread_edit_drafts: new ReactiveMap(),
+		thread_input_focus: new Map(),
 
 		editingMessage,
 

@@ -129,6 +129,7 @@ export type ChatCtx = {
 	thread_search: ReactiveMap<string, ThreadSearch>;
 	uploads: ReactiveMap<string, Upload>;
 	thread_edit_drafts: ReactiveMap<string, string>;
+	thread_input_focus: Map<string, () => void>;
 
 	editingMessage: ReactiveMap<string, string>; // thread_id -> message_id
 
