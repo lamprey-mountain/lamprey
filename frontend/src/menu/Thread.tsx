@@ -65,6 +65,14 @@ export function ThreadMenu(props: { thread_id: string }) {
 		});
 	};
 
+	const toggleLock = () => {
+		if (thread()?.locked) {
+			api.threads.unlock(props.thread_id);
+		} else {
+			api.threads.lock(props.thread_id);
+		}
+	};
+
 	const joinOrLeaveThread = () => {
 		if (self_thread_member()?.membership === "Leave") {
 			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
@@ -108,7 +116,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 					<Item onClick={unarchiveThread}>unarchive</Item>
 				</Match>
 			</Switch>
-			<Item>lock</Item>
+			<Item onClick={toggleLock}>{thread()?.locked ? "unlock" : "lock"}</Item>
 			<Item onClick={removeThread}>remove</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>

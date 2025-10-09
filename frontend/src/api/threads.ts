@@ -347,4 +347,16 @@ export class Threads {
 			});
 		}
 	}
+
+	async lock(thread_id: string) {
+		await this.api.client.http.PUT("/api/v1/thread/{thread_id}/lock", {
+			params: { path: { thread_id } },
+		});
+	}
+
+	async unlock(thread_id: string) {
+		await this.api.client.http.DELETE("/api/v1/thread/{thread_id}/lock", {
+			params: { path: { thread_id } },
+		});
+	}
 }

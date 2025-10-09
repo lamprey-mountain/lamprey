@@ -751,6 +751,8 @@ export type Api = {
 			message_id: string | undefined,
 			version_id: string,
 		) => Promise<void>;
+		lock: (thread_id: string) => Promise<void>;
+		unlock: (thread_id: string) => Promise<void>;
 	};
 	dms: {
 		list: () => Resource<Pagination<Thread>>;
