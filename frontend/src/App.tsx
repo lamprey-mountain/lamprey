@@ -208,7 +208,10 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
-	const editingMessage = new ReactiveMap<string, string>();
+	const editingMessage = new ReactiveMap<
+		string,
+		{ message_id: string; selection?: "start" | "end" }
+	>();
 
 	let userConfigLoaded = false;
 	const [userConfig, setUserConfig] = createSignal<UserConfig>(

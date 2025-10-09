@@ -72,7 +72,10 @@ export function MessageMenu(props: MessageMenuProps) {
 	}
 
 	const edit = () => {
-		ctx.editingMessage.set(props.thread_id, props.message_id);
+		ctx.editingMessage.set(props.thread_id, {
+			message_id: props.message_id,
+			selection: "end",
+		});
 	};
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));

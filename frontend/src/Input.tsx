@@ -105,7 +105,10 @@ export function Input(props: InputProps) {
 				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
 					const msg = ranges.live.items[i];
 					if (msg.author_id === self_id && msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.thread.id, msg.id);
+						ctx.editingMessage.set(props.thread.id, {
+							message_id: msg.id,
+							selection: "end",
+						});
 						return true; // handled
 					}
 				}

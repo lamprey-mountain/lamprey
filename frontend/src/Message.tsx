@@ -123,6 +123,8 @@ function MessageEditor(
 
 	const editor = createEditor({
 		initialContent: draft(),
+		initialSelection: ctx.editingMessage.get(props.message.thread_id)
+			?.selection,
 		keymap: {
 			ArrowUp: (state) => {
 				if (state.selection.from !== 1) return false;
@@ -139,7 +141,10 @@ function MessageEditor(
 				for (let i = currentIndex - 1; i >= 0; i--) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.thread_id, msg.id);
+						ctx.editingMessage.set(props.message.thread_id, {
+							message_id: msg.id,
+							selection: "end",
+						});
 						return true;
 					}
 				}
@@ -147,7 +152,6 @@ function MessageEditor(
 				return false;
 			},
 			ArrowDown: (state) => {
-				console.log("aaa", state.selection.to, state.doc.content.size);
 				if (state.selection.to !== state.doc.content.size - 1) return false;
 
 				const ranges = api.messages.cacheRanges.get(props.message.thread_id);
@@ -162,7 +166,10 @@ function MessageEditor(
 				for (let i = currentIndex + 1; i < messages.length; i++) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.thread_id, msg.id);
+						ctx.editingMessage.set(props.message.thread_id, {
+							message_id: msg.id,
+							selection: "start",
+						});
 						return true;
 					}
 				}
@@ -451,7 +458,7 @@ export function MessageView(props: MessageProps) {
 			};
 			const ctx = useCtx();
 			const isEditing = () => {
-				return ctx.editingMessage.get(props.message.thread_id) ===
+				return ctx.editingMessage.get(props.message.thread_id)?.message_id ===
 					props.message.id;
 			};
 			const withAvatar = ctx.userConfig().frontend["message_pfps"] === "yes";

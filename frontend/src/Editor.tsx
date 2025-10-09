@@ -115,6 +115,7 @@ function createWrap(wrap: string): Command {
 type EditorProps = {
 	initialContent?: string;
 	keymap?: { [key: string]: Command };
+	initialSelection?: "start" | "end";
 };
 
 type EditorViewProps = {
@@ -137,8 +138,19 @@ export const createEditor = (opts: EditorProps) => {
 			p.textContent = opts.initialContent;
 			doc = DOMParser.fromSchema(schema).parse(p);
 		}
+
+		let selection;
+		if (doc && opts.initialSelection) {
+			let pos = 1;
+			if (opts.initialSelection === "end") {
+				pos = doc.content.size - 1;
+			}
+			selection = TextSelection.create(doc, pos);
+		}
+
 		return EditorState.create({
 			doc,
+			selection,
 			schema,
 			plugins: [
 				history(),

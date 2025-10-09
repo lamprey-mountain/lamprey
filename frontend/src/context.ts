@@ -131,7 +131,10 @@ export type ChatCtx = {
 	thread_edit_drafts: ReactiveMap<string, string>;
 	thread_input_focus: Map<string, () => void>;
 
-	editingMessage: ReactiveMap<string, string>; // thread_id -> message_id
+	editingMessage: ReactiveMap<
+		string,
+		{ message_id: string; selection?: "start" | "end" }
+	>; // thread_id -> message_id
 
 	recentThreads: Accessor<Array<string>>;
 	setRecentThreads: Setter<Array<string>>;
