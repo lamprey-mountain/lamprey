@@ -198,6 +198,7 @@ function MessageEditor(
 
 	const cancel = () => {
 		ctx.editingMessage.delete(props.message.thread_id);
+		ctx.thread_input_focus.get(props.message.thread_id)?.();
 	};
 
 	let containerRef: HTMLDivElement | undefined;
