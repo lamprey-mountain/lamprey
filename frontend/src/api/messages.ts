@@ -120,6 +120,19 @@ export class Messages {
 	public cache = new ReactiveMap<string, Message>();
 	public cacheRanges = new Map<string, MessageRanges>();
 	public _mutators = new Set<MessageMutator>();
+	public _pinnedListings = new Map<
+		string,
+		{
+			resource: Resource<Pagination<Message>>;
+			refetch: () => void;
+			mutate: (value: Pagination<Message>) => void;
+			prom: Promise<Pagination<Message>> | null;
+			pagination: Pagination<Message> | null;
+		}
+	>();
+	public _pinnedListingMutators = new Set<
+		{ thread_id: string; mutate: (value: Pagination<Message>) => void }
+	>();
 	public api: Api = null as unknown as Api;
 
 	list(
@@ -546,6 +559,95 @@ export class Messages {
 				params: { path: { thread_id, message_id } },
 			},
 		);
+	}
+
+	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {
+		const paginate = async (pagination?: Pagination<Message>) => {
+			if (pagination && !pagination.has_more) return pagination;
+
+			const { data, error } = await this.api.client.http.GET(
+				"/api/v1/thread/{thread_id}/pin",
+				{
+					params: {
+						path: { thread_id: thread_id_signal() },
+						query: {
+							dir: "f",
+							limit: 1024,
+							from: pagination?.items.at(-1)?.id,
+						},
+					},
+				},
+			);
+
+			if (error) {
+				// TODO: handle unauthenticated
+				console.error(error);
+				throw error;
+			}
+
+			batch(() => {
+				for (const item of data.items) {
+					this.cache.set(item.id, item);
+				}
+			});
+
+			return {
+				...data,
+				items: [...pagination?.items ?? [], ...data.items],
+			};
+		};
+
+		const thread_id = thread_id_signal();
+		const l = this._pinnedListings.get(thread_id);
+		if (l) {
+			if (!l.prom) l.refetch();
+			return l.resource;
+		}
+
+		const l2 = {
+			resource: (() => {}) as unknown as Resource<Pagination<Message>>,
+			refetch: () => {},
+			mutate: () => {},
+			prom: null,
+			pagination: null,
+		};
+		this._pinnedListings.set(thread_id, l2);
+
+		const [resource, { mutate, refetch }] = createResource(
+			thread_id_signal,
+			async (thread_id) => {
+				let l = this._pinnedListings.get(thread_id)!;
+				if (l?.prom) {
+					await l.prom;
+					return l.pagination!;
+				}
+
+				const prom = l.pagination ? paginate(l.pagination) : paginate();
+				l.prom = prom;
+				const res = await prom;
+				l!.pagination = res;
+				l!.prom = null;
+
+				for (const mut of this._pinnedListingMutators) {
+					if (mut.thread_id === thread_id) mut.mutate(res);
+				}
+
+				return res!;
+			},
+		);
+
+		l2.resource = resource;
+		l2.refetch = refetch;
+		l2.mutate = mutate;
+
+		const mut = { thread_id: thread_id_signal(), mutate };
+		this._pinnedListingMutators.add(mut);
+
+		createEffect(() => {
+			mut.thread_id = thread_id_signal();
+		});
+
+		return resource;
 	}
 
 	/** append a set of data to a range, deduplicating ranges if there are multiple */

@@ -349,6 +349,13 @@ export const ChatHeader = (props: ChatProps) => {
 		});
 	};
 
+	const isShowingPinned = () =>
+		ctx.thread_pinned_view.get(props.thread.id) ?? false;
+
+	const togglePinned = () => {
+		ctx.thread_pinned_view.set(props.thread.id, !isShowingPinned());
+	};
+
 	return (
 		<header class="chat-header" style="display:flex">
 			<b>{props.thread.name}</b>
@@ -362,7 +369,19 @@ export const ChatHeader = (props: ChatProps) => {
 			</Switch>
 			<div style="flex:1"></div>
 			<SearchInput thread={props.thread} />
-			<button onClick={toggleMembers}>members</button>
+			<button
+				onClick={togglePinned}
+				classList={{ active: isShowingPinned() }}
+				title="Show pinned messages"
+			>
+				pins
+			</button>
+			<button
+				onClick={toggleMembers}
+				title="Show members"
+			>
+				members
+			</button>
 		</header>
 	);
 };

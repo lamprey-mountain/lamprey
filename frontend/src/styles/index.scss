@@ -1569,7 +1569,7 @@ svg.avatar {
 	}
 }
 
-.search-results {
+.search-results, .pinned-messages-list {
 	grid-area: sidebar;
 	padding: 4px 0;
 	width: 320px;

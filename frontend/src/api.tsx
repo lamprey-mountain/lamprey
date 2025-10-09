@@ -809,6 +809,9 @@ export type Api = {
 			thread_id: () => string,
 			anchor: () => MessageListAnchor,
 		) => Resource<MessageRange>;
+		listPinned: (
+			thread_id: () => string,
+		) => Resource<Pagination<Message>>;
 		fetch: (
 			thread_id: () => string,
 			message_id: () => string,

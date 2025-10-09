@@ -17,6 +17,7 @@ import { RouteInviteInner } from "./Invite.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
 import { SERVER_ROOM_ID, type Thread } from "sdk";
+import { PinnedMessages } from "./menu/PinnedMessages.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -126,13 +127,21 @@ const ThreadSidebar = (props: { thread: Thread }) => {
 		props.thread.type !== "Voice" &&
 		flags.has("thread_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
+	const showPinned = () => ctx.thread_pinned_view.get(props.thread.id) ?? false;
 
 	return (
 		<Show
 			when={search()}
 			fallback={
-				<Show when={showMembers()}>
-					<ThreadMembers thread={props.thread} />
+				<Show
+					when={showPinned()}
+					fallback={
+						<Show when={showMembers()}>
+							<ThreadMembers thread={props.thread} />
+						</Show>
+					}
+				>
+					<PinnedMessages thread={props.thread} />
 				</Show>
 			}
 		>
