@@ -279,16 +279,17 @@ async fn room_member_add(
             },
         })
         .await?;
+
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::RoomMemberUpsert {
+                member: res.clone(),
+            },
+        )
+        .await?;
     }
 
-    s.broadcast_room(
-        room_id,
-        auth_user.id,
-        MessageSync::RoomMemberUpsert {
-            member: res.clone(),
-        },
-    )
-    .await?;
     Ok(Json(res))
 }
 
