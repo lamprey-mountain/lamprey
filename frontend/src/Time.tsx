@@ -1,7 +1,7 @@
 import type { VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
 
-function timeAgo(date: Date): string {
+export function timeAgo(date: Date): string {
 	const diff = Date.now() - (+date);
 	const fmt = new Intl.RelativeTimeFormat("en", {
 		style: "long",

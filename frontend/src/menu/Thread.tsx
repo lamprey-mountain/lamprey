@@ -2,7 +2,8 @@ import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { Match, Switch } from "solid-js";
+import { createResource, Match, Show, Switch } from "solid-js";
+import { timeAgo } from "../Time.tsx";
 
 // the context menu for threads
 export function ThreadMenu(props: { thread_id: string }) {
@@ -94,7 +95,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
-			<ThreadNotificationMenu />
+			<ThreadNotificationMenu thread_id={props.thread_id} />
 			<Item onClick={joinOrLeaveThread}>
 				{self_thread_member()?.membership === "Leave" ? "join" : "leave"}
 			</Item>
@@ -125,29 +126,90 @@ export function ThreadMenu(props: { thread_id: string }) {
 	);
 }
 
-function ThreadNotificationMenu() {
+function ThreadNotificationMenu(props: { thread_id: string }) {
+	const api = useApi();
+	const [threadConfig, { mutate }] = createResource(
+		() => props.thread_id,
+		async (thread_id) => {
+			const { data } = await api.client.http.GET(
+				"/api/v1/config/thread/{thread_id}",
+				{
+					params: { path: { thread_id } },
+				},
+			);
+			return data;
+		},
+	);
+
+	const setNotifs = (notifs: Partial<import("sdk").NotifsThread>) => {
+		const current = threadConfig() ?? { notifs: {}, frontend: {} };
+		const newConfig = {
+			...current,
+			notifs: { ...current.notifs, ...notifs },
+		};
+		for (const key in newConfig.notifs) {
+			if (
+				newConfig.notifs[key as keyof typeof newConfig.notifs] === undefined
+			) {
+				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
+			}
+		}
+		mutate(newConfig);
+		api.client.http.PUT("/api/v1/config/thread/{thread_id}", {
+			params: { path: { thread_id: props.thread_id } },
+			body: newConfig,
+		});
+	};
+
+	const setMute = (duration_ms: number | null) => {
+		const expires_at = duration_ms === null
+			? null
+			: new Date(Date.now() + duration_ms).toISOString();
+		setNotifs({ mute: { expires_at } });
+	};
+
+	const unmute = () => setNotifs({ mute: undefined });
+
+	const isMuted = () => {
+		const c = threadConfig();
+		if (!c?.notifs.mute) return false;
+		if (c.notifs.mute.expires_at === null) return true;
+		return Date.parse(c.notifs.mute.expires_at) > Date.now();
+	};
+
+	const fifteen_mins = 15 * 60 * 1000;
+	const three_hours = 3 * 60 * 60 * 1000;
+	const eight_hours = 8 * 60 * 60 * 1000;
+	const one_day = 24 * 60 * 60 * 1000;
+	const one_week = 7 * one_day;
+
 	return (
 		<>
 			<Submenu content={"notifications"}>
-				<Item>
+				<Item
+					onClick={() =>
+						setNotifs({ messages: undefined, mentions: undefined })}
+				>
 					<div>default</div>
 					<div class="subtext">
 						Uses the room's default notification setting.
 					</div>
 				</Item>
-				<Item>
+				<Item onClick={() => setNotifs({ messages: "Notify" })}>
 					<div>everything</div>
 					<div class="subtext">
 						You will be notified of all new messages in this thread.
 					</div>
 				</Item>
-				<Item>
+				<Item onClick={() => setNotifs({ messages: "Watching" })}>
 					<div>watching</div>
 					<div class="subtext">
 						Messages in this thread will show up in your inbox.
 					</div>
 				</Item>
-				<Item>
+				<Item
+					onClick={() => setNotifs({ messages: "Ignore", mentions: "Notify" })}
+				>
 					<div>mentions</div>
 					<div class="subtext">You will only be notified on @mention</div>
 				</Item>
@@ -161,14 +223,30 @@ function ThreadNotificationMenu() {
 					<Item>in 1 week</Item>
 				</Submenu>
 			</Submenu>
-			<Submenu content={"mute"}>
-				<Item>for 15 minutes</Item>
-				<Item>for 3 hours</Item>
-				<Item>for 8 hours</Item>
-				<Item>for 1 day</Item>
-				<Item>for 1 week</Item>
-				<Item>forever</Item>
-			</Submenu>
+			<Show
+				when={isMuted()}
+				fallback={
+					<Submenu content={"mute"} onClick={() => setMute(null)}>
+						<Item onClick={() => setMute(fifteen_mins)}>for 15 minutes</Item>
+						<Item onClick={() => setMute(three_hours)}>for 3 hours</Item>
+						<Item onClick={() => setMute(eight_hours)}>for 8 hours</Item>
+						<Item onClick={() => setMute(one_day)}>for 1 day</Item>
+						<Item onClick={() => setMute(one_week)}>for 1 week</Item>
+						<Item onClick={() => setMute(null)}>forever</Item>
+					</Submenu>
+				}
+			>
+				<Item onClick={unmute}>
+					<div>unmute</div>
+					<Show when={threadConfig()?.notifs.mute?.expires_at}>
+						<div class="subtext">
+							unmutes {timeAgo(
+								new Date(Date.parse(threadConfig()!.notifs.mute!.expires_at!)),
+							)}
+						</div>
+					</Show>
+				</Item>
+			</Show>
 		</>
 	);
 }
