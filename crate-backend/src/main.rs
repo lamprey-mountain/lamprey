@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{extract::DefaultBodyLimit, response::Html, routing::get, Json};
 use clap::Parser;
-use common::v1::types::{util::Time, AuditLogEntry, AuditLogEntryType};
+use common::v1::types::{misc::ApplicationIdReq, util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
@@ -48,6 +48,9 @@ mod util;
         types::Role,
         // utoipa seems to forget to add these types specifically
         types::UserIdReq,
+        ApplicationIdReq,
+        types::UserListParams,
+        types::UserListFilter,
         MessageSync,
         PaginationQuery<MessageId>,
         types::emoji::Emoji,
