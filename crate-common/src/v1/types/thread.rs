@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::notifications::NotifsThread;
+use crate::v1::types::user_config::UserConfigThread;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
 use crate::v1::types::{MessageVerId, TagId, User};
@@ -101,6 +102,7 @@ pub struct Thread {
     pub user_limit: Option<u64>,
 
     // private (TODO: maybe move these into a `private` field with their own struct?)
+    // always populated for users
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
@@ -109,7 +111,8 @@ pub struct Thread {
     // i don't want to hang while counting potentially thousands of messages!
     // pub unread_count: u64,
     pub notifications: Option<NotifsThread>, // TODO: remove
-    // pub user_config: UserConfigThread,
+    pub user_config: Option<UserConfigThread>,
+
     /// for dm threads, this is who the dm is with
     /// DEPRECATED: use `recipients` instead
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
@@ -264,6 +267,7 @@ impl Thread {
             last_read_id: None,
             mention_count: None,
             notifications: None,
+            user_config: None,
             ..self
         }
     }

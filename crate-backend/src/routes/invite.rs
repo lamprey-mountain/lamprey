@@ -263,7 +263,7 @@ async fn invite_use(
         }
         InviteTarget::Server => {
             let srv = s.services();
-            let user = srv.users.get(auth_user.id).await?;
+            let user = srv.users.get(auth_user.id, None).await?;
             if user.registered_at.is_some() {
                 return Err(Error::BadStatic("User is not a guest account"));
             }
@@ -277,7 +277,7 @@ async fn invite_use(
             d.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
                 .await?;
             srv.users.invalidate(user.id).await;
-            let updated_user = srv.users.get(user.id).await?;
+            let updated_user = srv.users.get(user.id, None).await?;
             s.audit_log_append(AuditLogEntry {
                 id: AuditLogEntryId::new(),
                 room_id: SERVER_ROOM_ID,
@@ -605,7 +605,7 @@ async fn invite_server_create(
 
     let d = s.data();
     let srv = s.services();
-    let user = srv.users.get(auth_user.id).await?;
+    let user = srv.users.get(auth_user.id, None).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot create server invites"));
     }
@@ -671,7 +671,7 @@ async fn invite_server_list(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let d = s.data();
-    let user = srv.users.get(user.id).await?;
+    let user = srv.users.get(user.id, None).await?;
     if user.registered_at.is_none() {
         return Err(Error::BadStatic("Guest users cannot list server invites"));
     }

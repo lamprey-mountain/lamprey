@@ -68,10 +68,10 @@ impl From<DbRoom> for Room {
             public: row.public,
             welcome_thread_id: row.welcome_thread_id.map(|i| i.into()),
             quarantined: row.quarantined,
-
             member_count: row.member_count as u64,
             online_count: Default::default(),
             thread_count: row.thread_count as u64,
+            user_config: None,
         }
     }
 }
@@ -178,10 +178,11 @@ impl From<DbThread> for Thread {
             notifications: None,
             recipient: None,
             recipients: vec![],
+            user_config: None,
+            online_count: 0,
 
             // TODO: store or calculate the fields below
             tags: Default::default(),
-            online_count: 0,
             root_message_count: None,
         }
     }

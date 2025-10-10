@@ -78,9 +78,9 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
             SessionStatus::Authorized { user_id } | SessionStatus::Sudo { user_id, .. } => {
                 let HeaderPuppetId(puppet_id) =
                     HeaderPuppetId::from_request_parts(parts, s).await?;
-                let mut user = s.services().users.get(user_id).await?;
+                let mut user = s.services().users.get(user_id, None).await?;
                 if let Some(puppet_id) = puppet_id {
-                    let puppet = s.services().users.get(puppet_id).await?;
+                    let puppet = s.services().users.get(puppet_id, None).await?;
 
                     if let Some(bot) = &puppet.bot {
                         if bot.owner_id == user.id {
@@ -107,16 +107,16 @@ impl FromRequestParts<Arc<ServerState>> for AuthWithSession {
                     Ok(Self(session, puppet))
                 } else {
                     if let Some(puppet) = &user.puppet {
-                        let bot = s.services().users.get(puppet.owner_id).await?;
+                        let bot = s.services().users.get(puppet.owner_id, None).await?;
 
                         if let Some(bot) = &bot.bot {
-                            let owner = s.services().users.get(bot.owner_id).await?;
+                            let owner = s.services().users.get(bot.owner_id, None).await?;
                             user.suspended = owner.suspended;
                         }
 
                         user.suspended = bot.suspended;
                     } else if let Some(bot) = &user.bot {
-                        let owner = s.services().users.get(bot.owner_id).await?;
+                        let owner = s.services().users.get(bot.owner_id, None).await?;
                         user.suspended = owner.suspended;
                     }
 
@@ -151,7 +151,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthSudo {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
             SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
             SessionStatus::Sudo { user_id, .. } => {
-                let user = s.services().users.get(user_id).await?;
+                let user = s.services().users.get(user_id, None).await?;
                 Ok(Self(user))
             }
         }
@@ -227,7 +227,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthSudoWithSession {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
             SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
             SessionStatus::Sudo { user_id, .. } => {
-                let user = s.services().users.get(user_id).await?;
+                let user = s.services().users.get(user_id, None).await?;
                 Ok(Self(session, user))
             }
         }

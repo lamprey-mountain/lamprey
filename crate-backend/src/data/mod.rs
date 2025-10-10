@@ -7,7 +7,9 @@ use common::v1::types::notifications::{
 };
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::search::{SearchMessageRequest, SearchThreadsRequest};
-use common::v1::types::user_config::UserConfigGlobal;
+use common::v1::types::user_config::{
+    UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser,
+};
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
@@ -617,6 +619,39 @@ pub trait DataUserRelationship {
 pub trait DataUserConfig {
     async fn user_config_set(&self, user_id: UserId, config: &UserConfigGlobal) -> Result<()>;
     async fn user_config_get(&self, user_id: UserId) -> Result<UserConfigGlobal>;
+    async fn user_config_room_set(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+        config: &UserConfigRoom,
+    ) -> Result<()>;
+    async fn user_config_room_get(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+    ) -> Result<UserConfigRoom>;
+    async fn user_config_thread_set(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+        config: &UserConfigThread,
+    ) -> Result<()>;
+    async fn user_config_thread_get(
+        &self,
+        user_id: UserId,
+        thread_id: ThreadId,
+    ) -> Result<UserConfigThread>;
+    async fn user_config_user_set(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+        config: &UserConfigUser,
+    ) -> Result<()>;
+    async fn user_config_user_get(
+        &self,
+        user_id: UserId,
+        other_id: UserId,
+    ) -> Result<UserConfigUser>;
 }
 
 #[async_trait]

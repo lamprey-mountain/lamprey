@@ -31,12 +31,21 @@ impl ServiceRooms {
         }
     }
 
-    pub async fn get(&self, room_id: RoomId, _user_id: Option<UserId>) -> Result<Room> {
+    pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let mut room = self
             .cache_room
             .try_get_with(room_id, self.state.data().room_get(room_id))
             .await
             .map_err(|err| err.fake_clone())?;
+
+        if let Some(user_id) = user_id {
+            let user_config = self
+                .state
+                .data()
+                .user_config_room_get(user_id, room_id)
+                .await?;
+            room.user_config = Some(user_config);
+        }
 
         let members = self.state.data().room_member_list_all(room_id).await?;
 

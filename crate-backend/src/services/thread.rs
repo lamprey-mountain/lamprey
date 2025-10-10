@@ -66,15 +66,16 @@ impl ServiceThreads {
                 .await
                 .map_err(|err| err.fake_clone())?;
 
+            let state = self.state.clone();
+            let thread_ty = thread.ty;
             let recipients = self
                 .cache_thread_recipients
-                .try_get_with(thread_id, async {
-                    if !matches!(thread.ty, ThreadType::Dm | ThreadType::Gdm) {
+                .try_get_with(thread_id, async move {
+                    if !matches!(thread_ty, ThreadType::Dm | ThreadType::Gdm) {
                         return Ok(vec![]);
                     }
 
-                    let members = self
-                        .state
+                    let members = state
                         .data()
                         .thread_member_list(
                             thread_id,
@@ -86,10 +87,10 @@ impl ServiceThreads {
                             },
                         )
                         .await?;
-                    let data = self.state.data();
+                    let srv = state.services();
                     let mut futures = FuturesOrdered::new();
                     for member in members.items {
-                        futures.push_back(data.user_get(member.user_id));
+                        futures.push_back(srv.users.get(member.user_id, Some(user_id)));
                     }
                     let mut users = vec![];
                     while let Some(user) = futures.next().await {
@@ -101,6 +102,12 @@ impl ServiceThreads {
                 .map_err(|err| err.fake_clone())?;
             let recipients: Vec<_> = recipients.into_iter().filter(|u| u.id != user_id).collect();
 
+            let user_config = self
+                .state
+                .data()
+                .user_config_thread_get(user_id, thread_id)
+                .await?;
+
             thread = Thread {
                 recipient: recipients.first().cloned(),
                 recipients,
@@ -108,6 +115,7 @@ impl ServiceThreads {
                 last_read_id: private_data.last_read_id.map(Into::into),
                 mention_count: Some(0),            // TODO
                 notifications: Default::default(), // TODO
+                user_config: Some(user_config),
                 ..thread
             }
         }

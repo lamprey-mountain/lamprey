@@ -9,6 +9,7 @@ use validator::Validate;
 
 use crate::v1::types::{
     notifications::NotifsRoom,
+    user_config::UserConfigRoom,
     util::{some_option, Diff},
     MediaId, Permission, ThreadId, UserId,
 };
@@ -22,7 +23,7 @@ use super::{ids::RoomId, util::Time};
 /// and so on for instant messaging.
 // chose this name arbitrarily, maybe should be renamed to something else.
 // discord uses "guild", maybe if i do domain-name-per-room "zone" could work...
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Room {
@@ -75,7 +76,7 @@ pub struct Room {
 
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
-    // pub user_config: UserConfigRoom,
+    pub user_config: Option<UserConfigRoom>,
 }
 
 /// User-specific room data

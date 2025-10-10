@@ -126,12 +126,12 @@ async fn room_member_add(
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure_view()?;
     perms.ensure(Permission::MemberBridge)?;
-    let auth_user = srv.users.get(auth_user.id).await?;
+    let auth_user = srv.users.get(auth_user.id, None).await?;
     let target_user_id = match target_user_id {
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(id) => id,
     };
-    let target_user = srv.users.get(target_user_id).await?;
+    let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
         return Err(Error::BadStatic("can't add that user"));
     };

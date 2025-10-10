@@ -104,7 +104,7 @@ pub async fn session_update(
         if let (Some(auth_user_id), Some(target_user_id)) =
             (auth_session.user_id(), target_session.user_id())
         {
-            let target_user = srv.users.get(target_user_id).await?;
+            let target_user = srv.users.get(target_user_id, None).await?;
             if let Some(bot) = target_user.bot {
                 if bot.owner_id == auth_user_id {
                     allowed = true;
@@ -180,7 +180,7 @@ pub async fn session_delete(
         if let (Some(auth_user_id), Some(target_user_id)) =
             (auth_session.user_id(), target_session.user_id())
         {
-            let target_user = srv.users.get(target_user_id).await?;
+            let target_user = srv.users.get(target_user_id, None).await?;
             if let Some(bot) = target_user.bot {
                 if bot.owner_id == auth_user_id {
                     allowed = true;

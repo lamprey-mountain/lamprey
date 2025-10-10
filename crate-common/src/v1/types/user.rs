@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::error::Error;
+use crate::v1::types::user_config::UserConfigUser;
 use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::MediaId;
@@ -43,7 +44,7 @@ pub struct User {
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
     // pub email: Vec<Email>,
-    // pub user_config: UserConfigRoom,
+    pub user_config: Option<UserConfigUser>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

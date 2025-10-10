@@ -158,7 +158,7 @@ impl Connection {
 
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
-                    let user = srv.users.get(user_id).await?;
+                    let user = srv.users.get(user_id, Some(user_id)).await?;
                     if user.is_suspended() {
                         Some(user)
                     } else {
@@ -241,7 +241,7 @@ impl Connection {
                 };
                 let srv = self.s.services();
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-                let user = srv.users.get(user_id).await?;
+                let user = srv.users.get(user_id, None).await?;
                 user.ensure_unsuspended()?;
                 srv.users
                     .status_set(user_id, status.apply(Status::offline()))
@@ -272,7 +272,7 @@ impl Connection {
                 };
 
                 let srv = self.s.services();
-                let user = srv.users.get(user_id).await?;
+                let user = srv.users.get(user_id, Some(user_id)).await?;
                 user.ensure_unsuspended()?;
 
                 match &payload {
@@ -387,7 +387,10 @@ impl Connection {
             MessageSync::MessageUpdate { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
-            MessageSync::UserConfig { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::UserConfigGlobal { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::UserConfigThread { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberUpsert { member } => {
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }

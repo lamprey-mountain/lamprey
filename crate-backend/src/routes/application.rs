@@ -445,7 +445,7 @@ async fn puppet_ensure(
     let parent_id = Some(auth_user.id);
     let data = s.data();
     let srv = s.services();
-    let parent = srv.users.get(auth_user.id).await?;
+    let parent = srv.users.get(auth_user.id, None).await?;
     if !parent.bot.is_some_and(|b| b.is_bridge) {
         return Err(Error::BadStatic("can't create that user"));
     };
@@ -553,8 +553,8 @@ async fn oauth_info(
     for scope in q.scope.split(' ') {
         scopes.insert(Scope::from_str(scope).map_err(|_| Error::BadStatic("invalid scope"))?);
     }
-    let auth_user = srv.users.get(auth_user.id).await?;
-    let bot_user = srv.users.get(app.id.into_inner().into()).await?;
+    let auth_user = srv.users.get(auth_user.id, None).await?;
+    let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
     let authorized = if let Ok(existing) = data.connection_get(auth_user.id, app.id).await {
         HashSet::from_iter(existing.scopes).is_superset(&scopes)
     } else {
@@ -921,7 +921,7 @@ async fn oauth_userinfo(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let user = srv.users.get(auth_user.id).await?;
+    let user = srv.users.get(auth_user.id, None).await?;
     let email = data
         .user_email_list(auth_user.id)
         .await?

@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
-use axum::extract::{Path, Query};
-use axum::http::StatusCode;
+use axum::extract::{Path, Query, State};
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::Json;
 use common::v1::types::user_status::{Status, StatusPatch};
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     application::Connection, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, SessionStatus, User,
-    UserCreate, UserId, UserPatch, UserWithRelationship,
+    MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
+    User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{Permission, Suspended, UserListParams, SERVER_ROOM_ID};
+use http::StatusCode;
 use serde::Deserialize;
 use tracing::warn;
 use utoipa::ToSchema;
@@ -54,7 +54,7 @@ async fn user_update(
     }
     let data = s.data();
     let srv = s.services();
-    let start = srv.users.get(target_user_id).await?;
+    let start = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     if !patch.changes(&start) {
         return Ok(Json(start));
     }
@@ -80,7 +80,7 @@ async fn user_update(
         }
     }
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
@@ -176,7 +176,7 @@ async fn user_undelete(
 
     data.user_undelete(target_user_id).await?;
 
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     let avatar_media_id = user.avatar;
     if let Some(media_id) = avatar_media_id {
         if data
@@ -201,7 +201,7 @@ async fn user_undelete(
     }
 
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     s.broadcast(MessageSync::UserCreate { user: user.clone() })?;
 
     s.audit_log_append(AuditLogEntry {
@@ -243,7 +243,7 @@ async fn user_get(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     let data = s.data();
     let relationship = data
         .user_relationship_get(auth_user.id, target_user_id)
@@ -253,6 +253,50 @@ async fn user_get(
         inner: user,
         relationship,
     }))
+}
+
+/// User rooms list
+///
+/// List rooms a user is in. If you are not the user, lists mutual rooms.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/room",
+    params(
+        PaginationQuery<RoomId>,
+        ("user_id", description = "user id"),
+    ),
+    tags = ["user"],
+    responses(
+        (status = OK, body = PaginationResponse<Room>, description = "success"),
+    )
+)]
+async fn user_room_list(
+    Path(target_user_id): Path<UserIdReq>,
+    Auth(auth_user): Auth,
+    Query(q): Query<PaginationQuery<RoomId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let target_user_id = match target_user_id {
+        UserIdReq::UserSelf => auth_user.id,
+        UserIdReq::UserId(id) => id,
+    };
+
+    let data = s.data();
+    let srv = s.services();
+    let mut rooms = if auth_user.id == target_user_id {
+        data.room_list(auth_user.id, q, false).await?
+    } else {
+        data.room_list_mutual(auth_user.id, target_user_id, q)
+            .await?
+    };
+
+    let mut new_rooms = vec![];
+    for room in rooms.items {
+        new_rooms.push(srv.rooms.get(room.id, Some(auth_user.id)).await?);
+    }
+    rooms.items = new_rooms;
+
+    Ok(Json(rooms))
 }
 
 /// User audit logs
@@ -400,7 +444,7 @@ async fn user_suspend(
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -441,7 +485,7 @@ async fn user_unsuspend(
     })
     .await?;
     srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id).await?;
+    let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
@@ -596,6 +640,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_delete))
         .routes(routes!(user_undelete))
         .routes(routes!(user_audit_logs))
+        .routes(routes!(user_room_list))
         .routes(routes!(user_suspend))
         .routes(routes!(user_unsuspend))
         .routes(routes!(connection_list))

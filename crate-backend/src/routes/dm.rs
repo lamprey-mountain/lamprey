@@ -4,7 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Room, RoomId, Thread, UserId,
+    MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Thread, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -74,46 +74,6 @@ async fn dm_get(
     Ok(Json(thread))
 }
 
-// TODO: move to routes/user.rs
-/// Mutual rooms list
-///
-/// List rooms both you and the target are in. Calling it on yourself lists
-/// rooms you're in.
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/room",
-    params(
-        PaginationQuery<RoomId>,
-        ("user_id", description = "user id"),
-    ),
-    tags = ["dm"],
-    responses(
-        (status = OK, body = PaginationResponse<Room>, description = "success"),
-    )
-)]
-async fn mutual_room_list(
-    Path(target_user_id): Path<UserIdReq>,
-    Auth(auth_user): Auth,
-    Query(q): Query<PaginationQuery<RoomId>>,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let target_user_id = match target_user_id {
-        UserIdReq::UserSelf => auth_user.id,
-        UserIdReq::UserId(id) => id,
-    };
-
-    let data = s.data();
-    if auth_user.id == target_user_id {
-        let rooms = data.room_list(auth_user.id, q, false).await?;
-        return Ok(Json(rooms));
-    }
-
-    let rooms = data
-        .room_list_mutual(auth_user.id, target_user_id, q)
-        .await?;
-    Ok(Json(rooms))
-}
-
 /// Dm list
 ///
 /// List direct message threads. Ordered by the last message version id, so
@@ -162,6 +122,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(dm_init))
         .routes(routes!(dm_get))
-        .routes(routes!(mutual_room_list))
         .routes(routes!(dm_list))
 }

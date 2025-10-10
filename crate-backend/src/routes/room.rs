@@ -109,8 +109,7 @@ async fn room_get(
 
 /// Room list
 ///
-/// List rooms. If the user is an admin, lists all rooms on the server.
-/// Otherwise, lists rooms the user is a member of.
+/// Lists all rooms on the server.
 #[utoipa::path(
     get,
     path = "/room",
@@ -134,7 +133,14 @@ async fn room_list(
         .has(Permission::Admin);
 
     if is_admin {
-        let rooms = data.room_list_all(q).await?;
+        let mut rooms = data.room_list_all(q).await?;
+
+        let mut new_rooms = vec![];
+        for room in rooms.items {
+            new_rooms.push(srv.rooms.get(room.id, Some(user.id)).await?);
+        }
+        rooms.items = new_rooms;
+
         Ok(Json(rooms))
     } else {
         Err(Error::MissingPermissions)

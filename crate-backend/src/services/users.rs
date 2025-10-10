@@ -43,12 +43,22 @@ impl ServiceUsers {
         }
     }
 
-    pub async fn get(&self, user_id: UserId) -> Result<User> {
+    pub async fn get(&self, user_id: UserId, viewer_id: Option<UserId>) -> Result<User> {
         let mut usr = self
             .cache_users
             .try_get_with(user_id, self.state.data().user_get(user_id))
             .await
             .map_err(|err| err.fake_clone())?;
+
+        if let Some(viewer_id) = viewer_id {
+            usr.user_config = Some(
+                self.state
+                    .data()
+                    .user_config_user_get(viewer_id, user_id)
+                    .await?,
+            );
+        }
+
         let app = self
             .state
             .data()
@@ -135,7 +145,7 @@ impl ServiceUsers {
         }
 
         let srv = self.state.services();
-        let user = srv.users.get(user_id).await?;
+        let user = srv.users.get(user_id, None).await?;
 
         if old.is_none_or(|s| s.status != status) && !skip_broadcast {
             self.state
