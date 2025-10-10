@@ -96,10 +96,16 @@
 #nav li {
 	padding: 0 8px;
 
+	&.dragging {
+		opacity: 0.5;
+	}
+
 	&.unread {
 		font-weight: bold;
 		color: $fg-200;
 		position: relative;
+		padding: 4px;
+		cursor: pointer;
 
 		&::before {
 			position: absolute;
@@ -108,6 +114,10 @@
 			content: "";
 			border-left: solid $sep-500 3px;
 			height: 80%;
+		}
+
+		& + li {
+			border-top: solid $sep-500 1px;
 		}
 	}
 }
@@ -1178,6 +1188,10 @@ summary {
 
 		& .self-applicable {
 			color: $color-green;
+		}
+
+		&.dragging {
+			opacity: 0.5;
 		}
 	}
 

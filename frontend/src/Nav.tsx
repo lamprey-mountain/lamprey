@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
@@ -15,7 +15,11 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	// track drag ids
 	const [dragging, setDragging] = createSignal<string | null>(null);
-	const [target, setTarget] = createSignal<string | null>(null);
+	const [target, setTarget] = createSignal<
+		{ id: string; after: boolean } | null
+	>(
+		null,
+	);
 
 	const [categories, setCategories] = createSignal<
 		Array<{ category: Thread | null; threads: Array<Thread> }>
@@ -97,6 +101,51 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		setCategories(list);
 	});
 
+	const previewedCategories = createMemo(() => {
+		const fromId = dragging();
+		const toId = target()?.id;
+		const after = target()?.after;
+		const cats = categories();
+
+		if (!fromId || !toId || fromId === toId) return cats;
+
+		const fromThread = api.threads.cache.get(fromId);
+		const toThread = api.threads.cache.get(toId);
+		if (!fromThread || !toThread) return cats;
+
+		const newCategories = cats.map((c) => ({
+			category: c.category,
+			threads: [...c.threads],
+		}));
+
+		const fromCat = newCategories.find(
+			(c) => (c.category?.id ?? null) === fromThread.parent_id,
+		);
+		if (!fromCat) return cats;
+		const fromIndex = fromCat.threads.findIndex((t) => t.id === fromId);
+		if (fromIndex === -1) return cats;
+
+		const [moved] = fromCat.threads.splice(fromIndex, 1);
+
+		if (toThread.type === "Category") {
+			const toCat = newCategories.find((c) => c.category?.id === toId);
+			if (!toCat) return cats;
+			if (after) toCat.threads.push(moved);
+			else toCat.threads.unshift(moved);
+		} else {
+			const toCat = newCategories.find(
+				(c) => (c.category?.id ?? null) === toThread.parent_id,
+			);
+			if (!toCat) return cats;
+			let toIndex = toCat.threads.findIndex((t) => t.id === toId);
+			if (toIndex === -1) return cats;
+			if (after) toIndex++;
+			toCat.threads.splice(toIndex, 0, moved);
+		}
+
+		return newCategories;
+	});
+
 	// helper to get thread id from the element's data attribute
 	const getThreadId = (e: DragEvent) =>
 		(e.currentTarget as HTMLElement).dataset.threadId;
@@ -106,76 +155,95 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		if (id) setDragging(id);
 	};
 
-	const handleDragEnter = (e: DragEvent) => {
-		e.preventDefault();
-		setTarget(getThreadId(e) ?? null);
-	};
-
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
+		const id = getThreadId(e);
+		if (!id || id === dragging()) {
+			return;
+		}
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const after = e.clientY > rect.top + rect.height / 2;
+		if (target()?.id !== id || target()?.after !== after) {
+			setTarget({ id, after });
+		}
 	};
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
 		const fromId = dragging();
-		const toId = target();
-		console.log("handle drop", { fromId, toId });
+		const toId = target()?.id;
+		const after = target()?.after;
 
-		if (!fromId || !toId || fromId === toId) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
+		setDragging(null);
+		setTarget(null);
+
+		if (!fromId || !toId || fromId === toId) return;
 
 		const fromThread = api.threads.cache.get(fromId);
 		const toThread = api.threads.cache.get(toId);
-		console.log("handle drop threads", { fromThread, toThread });
+		if (!fromThread || !toThread) return;
 
-		if (!fromThread || !toThread) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
-
-		const fromCategory = categories().find((c) =>
-			c.category?.id === fromThread.parent_id ||
-			(c.category === null && fromThread.parent_id === null)
+		const fromCategory = categories().find(
+			(c) => (c.category?.id ?? null) === fromThread.parent_id,
 		);
-		const toCategory = categories().find((c) =>
-			c.category?.id === toThread.parent_id ||
-			(c.category === null && toThread.parent_id === null)
-		);
-		console.log("handle drop categories", { fromCategory, toCategory });
-		if (!fromCategory || !toCategory) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
+		if (!fromCategory) return;
 
-		// remove thread from fromCategory, add to toCategory
 		const fromIndex = fromCategory.threads.findIndex((t) => t.id === fromId);
-		const toIndex = toCategory.threads.findIndex((t) => t.id === toId);
-		const updatedFrom = [...fromCategory.threads];
-		const updatedTo = [...toCategory.threads];
-		const [moved] = updatedFrom.splice(fromIndex, 1);
-		if (fromCategory === toCategory) updatedTo.splice(fromIndex, 1);
-		updatedTo.splice(toIndex, 0, moved);
-		moved.parent_id = toThread.parent_id;
-		console.log("handle drop moved", moved);
+		if (fromIndex === -1) return;
 
-		// update positions in toCategory
-		for (let i = 0; i < updatedTo.length; i++) {
-			if (updatedTo[i].position === null && i > fromIndex && i > toIndex) break;
-			console.log(updatedTo[i], i);
-			updatedTo[i].position = i;
+		let toCategory;
+		let toIndex;
+		let newParentId;
+
+		if (toThread.type === "Category") {
+			toCategory = categories().find((c) => c.category?.id === toId);
+			if (!toCategory) return;
+			toIndex = after ? toCategory.threads.length : 0;
+			newParentId = toId;
+		} else {
+			toCategory = categories().find(
+				(c) => (c.category?.id ?? null) === toThread.parent_id,
+			);
+			if (!toCategory) return;
+			toIndex = toCategory.threads.findIndex((t) => t.id === toId);
+			if (toIndex === -1) return;
+			if (after) toIndex++;
+			newParentId = toThread.parent_id;
 		}
 
-		const body = updatedTo.map((t) => ({
+		const reordered = [...toCategory.threads];
+		if (fromCategory === toCategory) {
+			if (fromIndex < toIndex) toIndex--;
+			const [moved] = reordered.splice(fromIndex, 1);
+			reordered.splice(toIndex, 0, moved);
+		} else {
+			reordered.splice(toIndex, 0, fromThread);
+		}
+
+		if (
+			fromCategory === toCategory &&
+			JSON.stringify(fromCategory.threads.map((t) => t.id)) ===
+				JSON.stringify(reordered.map((t) => t.id))
+		) {
+			return;
+		}
+
+		const body = reordered.map((t, i) => ({
 			id: t.id,
-			parent_id: t.parent_id,
-			position: t.position,
+			parent_id: newParentId,
+			position: i,
 		}));
-		console.log("handle drop body", body);
+
+		if (fromCategory !== toCategory) {
+			const sourceBody = fromCategory.threads
+				.filter((t) => t.id !== fromId)
+				.map((t, i) => ({
+					id: t.id,
+					parent_id: fromThread.parent_id,
+					position: i,
+				}));
+			body.push(...sourceBody);
+		}
 
 		api.client.http.PATCH("/api/v1/room/{room_id}/thread", {
 			params: { path: { room_id: props.room_id! } },
@@ -183,81 +251,6 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				threads: body,
 			},
 		});
-
-		setDragging(null);
-		setTarget(null);
-	};
-
-	const handleDropCategory = (e: DragEvent) => {
-		e.preventDefault();
-		const fromId = dragging();
-		const toId = target();
-		console.log("handle drop category", { fromId, toId });
-
-		if (!fromId || !toId || fromId === toId) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
-
-		const fromThread = api.threads.cache.get(fromId);
-		const toThread = api.threads.cache.get(toId);
-		console.log("handle drop threads", { fromThread, toThread });
-
-		if (!fromThread || !toThread) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
-
-		const fromCategory = categories().find((c) =>
-			c.category?.id === fromThread.parent_id ||
-			(c.category === null && fromThread.parent_id === null)
-		);
-		const toCategory = categories().find((c) =>
-			c.category?.id === toThread.id ||
-			(c.category === null && toThread.id === null)
-		);
-		console.log("handle drop categories", { fromCategory, toCategory });
-		if (!fromCategory || !toCategory) {
-			setDragging(null);
-			setTarget(null);
-			return;
-		}
-
-		// remove thread from fromCategory, add to toCategory
-		const fromIndex = fromCategory.threads.findIndex((t) => t.id === fromId);
-		const updatedFrom = [...fromCategory.threads];
-		const updatedTo = [...toCategory.threads];
-		const [moved] = updatedFrom.splice(fromIndex, 1);
-		if (fromCategory === toCategory) updatedTo.splice(fromIndex, 1);
-		updatedTo.splice(0, 0, moved);
-		moved.parent_id = toThread.id;
-		console.log("handle drop moved", moved);
-
-		// update positions in toCategory
-		for (let i = 0; i < updatedTo.length; i++) {
-			if (updatedTo[i].position === null && i > fromIndex && i > 0) break;
-			console.log(updatedTo[i], i);
-			updatedTo[i].position = i;
-		}
-
-		const body = updatedTo.map((t) => ({
-			id: t.id,
-			parent_id: t.parent_id,
-			position: t.position,
-		}));
-		console.log("handle drop body", body);
-
-		api.client.http.PATCH("/api/v1/room/{room_id}/thread", {
-			params: { path: { room_id: props.room_id! } },
-			body: {
-				threads: body,
-			},
-		});
-
-		setDragging(null);
-		setTarget(null);
 	};
 
 	return (
@@ -295,7 +288,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 					</Show>
 				</Show>
 
-				<For each={categories()}>
+				<For each={previewedCategories()}>
 					{({ category, threads }) => (
 						<>
 							<Show when={category}>
@@ -303,12 +296,18 @@ export const ThreadNav = (props: { room_id?: string }) => {
 									class="dim"
 									style="margin-left:8px;margin-top:8px"
 									data-thread-id={category!.id}
-									draggable
+									draggable="true"
 									onDragStart={handleDragStart}
-									onDragEnter={handleDragEnter}
 									onDragOver={handleDragOver}
-									onDrop={handleDropCategory}
+									onDrop={handleDrop}
+									onDragEnd={() => {
+										setDragging(null);
+										setTarget(null);
+									}}
 									onClick={[nav, `/thread/${category!.id}`]}
+									classList={{
+										dragging: dragging() === category!.id,
+									}}
 								>
 									{category!.name}
 								</div>
@@ -322,14 +321,16 @@ export const ThreadNav = (props: { room_id?: string }) => {
 								{(thread) => (
 									<li
 										data-thread-id={thread.id}
-										draggable
+										draggable="true"
 										onDragStart={handleDragStart}
-										onDragEnter={handleDragEnter}
 										onDragOver={handleDragOver}
 										onDrop={handleDrop}
+										onDragEnd={() => {
+											setDragging(null);
+											setTarget(null);
+										}}
 										classList={{
 											dragging: dragging() === thread.id,
-											over: target() === thread.id,
 											unread: thread.type !== "Voice" && !!thread.is_unread,
 										}}
 									>

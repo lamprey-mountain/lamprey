@@ -157,7 +157,11 @@ const RoleList = (
 	});
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
-	const [target, setTarget] = createSignal<string | null>(null);
+	const [target, setTarget] = createSignal<
+		{ id: string; after: boolean } | null
+	>(
+		null,
+	);
 
 	const getRoleId = (e: DragEvent) =>
 		(e.currentTarget as HTMLElement).dataset.roleId;
@@ -170,27 +174,29 @@ const RoleList = (
 		}
 	};
 
-	const handleDragEnter = (e: DragEvent) => {
-		e.preventDefault();
-		const id = getRoleId(e);
-		if (id) {
-			const role = props.roles.find((r) => r.id === id);
-			if (role?.is_base) {
-				setTarget(null);
-				return;
-			}
-		}
-		setTarget(id ?? null);
-	};
-
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
+		const id = getRoleId(e);
+		if (!id || id === dragging()) {
+			return;
+		}
+		const role = props.roles.find((r) => r.id === id);
+		if (role?.id === role?.room_id) {
+			setTarget(null);
+			return;
+		}
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const after = e.clientY > rect.top + rect.height / 2;
+		if (target()?.id !== id || target()?.after !== after) {
+			setTarget({ id, after });
+		}
 	};
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
 		const fromId = dragging();
-		const toId = target();
+		const toId = target()?.id;
+		const after = target()?.after;
 
 		setDragging(null);
 		setTarget(null);
@@ -200,32 +206,84 @@ const RoleList = (
 		}
 
 		const fromIndex = props.roles.findIndex((r) => r.id === fromId);
-		const toIndex = props.roles.findIndex((r) => r.id === toId);
+		let toIndex = props.roles.findIndex((r) => r.id === toId);
 
 		if (fromIndex === -1 || toIndex === -1) {
 			return;
 		}
 
-		props.setRoles(produce((roles) => {
-			const [moved] = roles.splice(fromIndex, 1);
-			roles.splice(toIndex, 0, moved);
-		}));
+		const toRole = props.roles[toIndex];
+		if (toRole.id === toRole.room_id) return;
+
+		if (after) toIndex++;
+		if (fromIndex < toIndex) toIndex--;
+
+		const originalIds = props.roles.map((r) => r.id);
+		const reorderedCheck = [...props.roles];
+		const [movedCheck] = reorderedCheck.splice(fromIndex, 1);
+		reorderedCheck.splice(toIndex, 0, movedCheck);
+
+		if (
+			JSON.stringify(originalIds) ===
+				JSON.stringify(reorderedCheck.map((r) => r.id))
+		) {
+			return;
+		}
+
+		props.setRoles(
+			produce((roles) => {
+				const [moved] = roles.splice(fromIndex, 1);
+				roles.splice(toIndex, 0, moved);
+			}),
+		);
 	};
+
+	const previewedRoles = createMemo(() => {
+		const fromId = dragging();
+		const toId = target()?.id;
+		const after = target()?.after;
+		const roles = filteredRoles();
+
+		if (!fromId || !toId || fromId === toId) {
+			return roles;
+		}
+
+		const fromIndex = roles.findIndex((r) => r.id === fromId);
+		let toIndex = roles.findIndex((r) => r.id === toId);
+
+		if (fromIndex === -1 || toIndex === -1) {
+			return roles;
+		}
+
+		const toRole = roles[toIndex];
+		if (toRole.id === toRole.room_id) return roles;
+
+		if (after) toIndex++;
+		if (fromIndex < toIndex) toIndex--;
+
+		const reordered = [...roles];
+		const [moved] = reordered.splice(fromIndex, 1);
+		reordered.splice(toIndex, 0, moved);
+
+		return reordered;
+	});
 
 	return (
 		<ul class="role-list">
-			<For each={filteredRoles()}>
+			<For each={previewedRoles()}>
 				{(i) => (
 					<li
 						data-role-id={i.id}
-						draggable={!i.is_base}
+						draggable={i.id !== i.room_id}
 						onDragStart={handleDragStart}
-						onDragEnter={handleDragEnter}
 						onDragOver={handleDragOver}
 						onDrop={handleDrop}
+						onDragEnd={() => {
+							setDragging(null);
+							setTarget(null);
+						}}
 						classList={{
 							dragging: dragging() === i.id,
-							over: target() === i.id && dragging() !== i.id,
 						}}
 						onClick={() => {
 							if (props.edit.role.id === i.id) {
