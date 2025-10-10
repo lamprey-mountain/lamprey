@@ -338,6 +338,8 @@ export const ChatMain = (props: ChatProps) => {
 
 export const ChatHeader = (props: ChatProps) => {
 	const ctx = useCtx();
+	const api = useApi();
+
 	const toggleMembers = () => {
 		const c = ctx.userConfig();
 		ctx.setUserConfig({
@@ -356,9 +358,19 @@ export const ChatHeader = (props: ChatProps) => {
 		ctx.thread_pinned_view.set(props.thread.id, !isShowingPinned());
 	};
 
+	const name = () => {
+		if (props.thread.type === "Dm") {
+			const user_id = api.users.cache.get("@self")!.id;
+			return props.thread.recipients.find((i) => i.id !== user_id)?.name ??
+				"dm";
+		}
+
+		return props.thread.name;
+	};
+
 	return (
 		<header class="chat-header" style="display:flex">
-			<b>{props.thread.name}</b>
+			<b>{name()}</b>
 			<Show when={props.thread.description}>
 				<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
 				{props.thread.description}

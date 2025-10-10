@@ -178,10 +178,15 @@ export const RouteThread = (p: RouteSectionProps) => {
 	api.threads.list(() => thread()?.room_id!);
 
 	const title = () => {
-		if (!thread()) return t("loading");
-		return room() && thread()?.room_id
-			? `${thread()!.name} - ${room()!.name}`
-			: thread()!.name;
+		const th = thread();
+		if (!th) return t("loading");
+		if (th.type === "Dm") {
+			const user_id = api.users.cache.get("@self")!.id;
+			return th.recipients.find((i) => i.id !== user_id)?.name ??
+				"dm";
+		}
+
+		return room() && th.room_id ? `${th.name} - ${room()!.name}` : th.name;
 	};
 
 	return (
