@@ -19,7 +19,7 @@ import {
 import { type Dispatcher } from "./dispatch/types.ts";
 import { createStore } from "solid-js/store";
 import { createDispatcher } from "./dispatch/mod.ts";
-import { createClient, UserConfig } from "sdk";
+import { createClient, type UserConfig } from "sdk";
 import { createApi, useApi } from "./api.tsx";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -187,7 +187,10 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		},
 	});
 
-	const api = createApi(client, events);
+	const [userConfig, setUserConfig] = createSignal<UserConfig>(
+		loadSavedUserConfig() ?? DEFAULT_USER_CONFIG,
+	);
+	const api = createApi(client, events, { setUserConfig });
 
 	const cs = from(client.state);
 	createEffect(() => {
@@ -218,28 +221,19 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	>();
 
 	let userConfigLoaded = false;
-	const [userConfig, setUserConfig] = createSignal<UserConfig>(
-		loadSavedUserConfig() ?? DEFAULT_USER_CONFIG,
-	);
 
 	(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/user/{user_id}/config",
-			{
-				params: { path: { user_id: "@self" } },
-			},
-		);
-		if (data) setUserConfig(data);
+		const { data } = await api.client.http.GET("/api/v1/config");
+		if (data) setUserConfig(data as UserConfig);
 		userConfigLoaded = true;
 	})();
 
 	createEffect(() => {
-		userConfig();
-		if (!userConfigLoaded) return;
-		localStorage.setItem("user_config", JSON.stringify(userConfig()));
-		api.client.http.PUT("/api/v1/user/{user_id}/config", {
-			params: { path: { user_id: "@self" } },
-			body: userConfig(),
+		const config = userConfig();
+		if (!userConfigLoaded || !config) return;
+		localStorage.setItem("user_config", JSON.stringify(config));
+		api.client.http.PUT("/api/v1/config", {
+			body: config,
 		});
 	});
 

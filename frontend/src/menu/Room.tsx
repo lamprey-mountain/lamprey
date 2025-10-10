@@ -48,7 +48,9 @@ export function RoomMenu(props: { room_id: string }) {
 				mark as read
 			</Item>
 			<Item onClick={copyLink}>copy link</Item>
-			<RoomNotificationMenu room_id={props.room_id} />
+			<Show when={room()}>
+				{(r) => <RoomNotificationMenu room={r()} />}
+			</Show>
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
@@ -68,20 +70,9 @@ export function RoomMenu(props: { room_id: string }) {
 	);
 }
 
-function RoomNotificationMenu(props: { room_id: string }) {
+function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	const api = useApi();
-	const [roomConfig, { mutate }] = createResource(
-		() => props.room_id,
-		async (room_id) => {
-			const { data } = await api.client.http.GET(
-				"/api/v1/config/room/{room_id}",
-				{
-					params: { path: { room_id } },
-				},
-			);
-			return data;
-		},
-	);
+	const roomConfig = () => props.room.user_config;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
 		const current = roomConfig() ?? { notifs: {}, frontend: {} };
@@ -96,9 +87,12 @@ function RoomNotificationMenu(props: { room_id: string }) {
 				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
 			}
 		}
-		mutate(newConfig);
+		api.rooms.cache.set(props.room.id, {
+			...props.room,
+			user_config: newConfig,
+		});
 		api.client.http.PUT("/api/v1/config/room/{room_id}", {
-			params: { path: { room_id: props.room_id } },
+			params: { path: { room_id: props.room.id } },
 			body: newConfig,
 		});
 	};

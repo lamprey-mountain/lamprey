@@ -95,7 +95,9 @@ export function ThreadMenu(props: { thread_id: string }) {
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
-			<ThreadNotificationMenu thread_id={props.thread_id} />
+			<Show when={thread()}>
+				{(t) => <ThreadNotificationMenu thread={t()} />}
+			</Show>
 			<Item onClick={joinOrLeaveThread}>
 				{self_thread_member()?.membership === "Leave" ? "join" : "leave"}
 			</Item>
@@ -126,20 +128,9 @@ export function ThreadMenu(props: { thread_id: string }) {
 	);
 }
 
-function ThreadNotificationMenu(props: { thread_id: string }) {
+function ThreadNotificationMenu(props: { thread: import("sdk").Thread }) {
 	const api = useApi();
-	const [threadConfig, { mutate }] = createResource(
-		() => props.thread_id,
-		async (thread_id) => {
-			const { data } = await api.client.http.GET(
-				"/api/v1/config/thread/{thread_id}",
-				{
-					params: { path: { thread_id } },
-				},
-			);
-			return data;
-		},
-	);
+	const threadConfig = () => props.thread.user_config;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsThread>) => {
 		const current = threadConfig() ?? { notifs: {}, frontend: {} };
@@ -154,9 +145,12 @@ function ThreadNotificationMenu(props: { thread_id: string }) {
 				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
 			}
 		}
-		mutate(newConfig);
+		api.threads.cache.set(props.thread.id, {
+			...props.thread,
+			user_config: newConfig,
+		});
 		api.client.http.PUT("/api/v1/config/thread/{thread_id}", {
-			params: { path: { thread_id: props.thread_id } },
+			params: { path: { thread_id: props.thread.id } },
 			body: newConfig,
 		});
 	};

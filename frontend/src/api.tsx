@@ -31,6 +31,7 @@ import type {
 	Session,
 	Thread,
 	ThreadMember,
+	UserConfig,
 	UserWithRelationship,
 	VoiceState,
 } from "sdk";
@@ -73,6 +74,7 @@ export function createApi(
 		sync: MessageSync;
 		ready: MessageReady;
 	}>,
+	{ setUserConfig }: { setUserConfig: (c: UserConfig) => void },
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
 
@@ -568,6 +570,27 @@ export function createApi(
 			users.cache.set(msg.user.id, msg.user);
 			if (msg.user.id === users.cache.get("@self")?.id) {
 				users.cache.set("@self", msg.user);
+			}
+		} else if (msg.type === "UserConfigGlobal") {
+			if (msg.user_id === session()?.user_id) {
+				setUserConfig(msg.config);
+			}
+		} else if (msg.type === "UserConfigRoom") {
+			if (msg.user_id === session()?.user_id) {
+				const room = rooms.cache.get(msg.room_id);
+				if (room) {
+					rooms.cache.set(msg.room_id, { ...room, user_config: msg.config });
+				}
+			}
+		} else if (msg.type === "UserConfigThread") {
+			if (msg.user_id === session()?.user_id) {
+				const thread = threads.cache.get(msg.thread_id);
+				if (thread) {
+					threads.cache.set(thread.id, {
+						...thread,
+						user_config: msg.config,
+					});
+				}
 			}
 		} else if (msg.type === "UserDelete") {
 			users.cache.delete(msg.id);
