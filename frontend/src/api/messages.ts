@@ -561,6 +561,16 @@ export class Messages {
 		);
 	}
 
+	async reorderPins(
+		thread_id: string,
+		messages: { id: string; position: number }[],
+	) {
+		await this.api.client.http.PATCH("/api/v1/thread/{thread_id}/pin", {
+			params: { path: { thread_id } },
+			body: { messages },
+		});
+	}
+
 	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {
 		const paginate = async (pagination?: Pagination<Message>) => {
 			if (pagination && !pagination.has_more) return pagination;

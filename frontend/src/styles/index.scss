@@ -1594,6 +1594,15 @@ svg.avatar {
 	}
 }
 
+.pinned-messages-list > ul > li {
+	cursor: grab;
+	user-select: none;
+
+	&.dragging {
+		opacity: 0.5;
+	}
+}
+
 .member-list > .menu-user {
 	display: flex;
 	align-items: center;

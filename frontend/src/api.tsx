@@ -825,6 +825,10 @@ export type Api = {
 		) => Promise<Message>;
 		pin: (thread_id: string, message_id: string) => Promise<void>;
 		unpin: (thread_id: string, message_id: string) => Promise<void>;
+		reorderPins: (
+			thread_id: string,
+			messages: { id: string; position: number }[],
+		) => Promise<void>;
 	};
 	media: {
 		fetchInfo: (media_id: () => string) => Resource<Media>;
