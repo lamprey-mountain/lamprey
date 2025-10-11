@@ -238,7 +238,7 @@ impl ServiceRooms {
                     room_id,
                     creator_id,
                     MessageSync::ThreadCreate {
-                        thread: welcome_thread,
+                        thread: Box::new(welcome_thread),
                     },
                 )
                 .await?;

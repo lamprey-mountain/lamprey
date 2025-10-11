@@ -58,7 +58,7 @@ impl From<DbMediaRaw> for Media {
                         | common::v1::types::TrackSource::Downloaded { .. }
                 )
             })
-            .or_else(|| tracks.get(0))
+            .or_else(|| tracks.first())
             .expect("media should always have at least one track")
             .clone();
 

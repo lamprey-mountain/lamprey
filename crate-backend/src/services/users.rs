@@ -164,6 +164,13 @@ impl ServiceUsers {
         }
     }
 
+    pub fn is_online(&self, user_id: UserId) -> bool {
+        self.statuses
+            .get(&user_id)
+            .map(|s| s.status.status.is_online())
+            .unwrap_or(false)
+    }
+
     pub fn voice_state_put(&self, state: VoiceState) {
         self.voice_states.insert(state.user_id, state);
     }

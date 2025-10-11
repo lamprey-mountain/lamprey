@@ -88,12 +88,17 @@ impl DataInvite for Postgres {
                     .await?;
                 let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;
-                InviteTarget::Thread { room, thread }
+                InviteTarget::Thread {
+                    room,
+                    thread: Box::new(thread),
+                }
             }
             "server" => InviteTarget::Server,
             "user" => {
                 let user = self.user_get(UserId::from(row.target_id.unwrap())).await?;
-                InviteTarget::User { user }
+                InviteTarget::User {
+                    user: Box::new(user),
+                }
             }
             _ => panic!("invalid data in db"),
         };
@@ -400,7 +405,7 @@ impl DataInvite for Postgres {
             assert_eq!(row.target_type, "user");
             let creator = self.user_get(UserId::from(row.target_id.unwrap())).await?;
             let target = InviteTarget::User {
-                user: creator.clone(),
+                user: Box::new(creator.clone()),
             };
             let creator_id = creator.id;
             let invite = Invite::new(

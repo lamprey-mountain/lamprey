@@ -170,7 +170,7 @@ impl DataThread for Postgres {
         )
         .fetch_one(&self.pool)
         .await?;
-        Ok(thread_private.into())
+        Ok(thread_private)
     }
 
     async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId> {

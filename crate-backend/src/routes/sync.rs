@@ -64,7 +64,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, mut ws: WebSocket) {
                 }
             }
             Ok(msg) = sushi.recv() => {
-                if let Err(_err) = conn.queue_message(msg).await {
+                if let Err(_err) = conn.queue_message(Box::new(msg)).await {
                     // most of the errors that are returned are auth check failures, which we don't need to log
                     // error!("{err}");
                 }

@@ -264,7 +264,7 @@ impl ServiceThreads {
         }
 
         let msg = MessageSync::ThreadUpdate {
-            thread: thread_new.clone(),
+            thread: Box::new(thread_new.clone()),
         };
         if let Some(room_id) = thread_new.room_id {
             self.state.broadcast_room(room_id, user_id, msg).await?;

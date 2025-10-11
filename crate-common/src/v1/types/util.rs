@@ -69,6 +69,7 @@ where
     Option::<T>::deserialize(deserializer).map(Some)
 }
 
+#[derive(Default)]
 pub struct Changes {
     changes: Vec<AuditLogChange>,
 }

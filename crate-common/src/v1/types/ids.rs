@@ -74,7 +74,7 @@ mod schema {
 
 impl<M: Marker> Clone for Id<M> {
     fn clone(&self) -> Self {
-        self.inner.into()
+        *self
     }
 }
 

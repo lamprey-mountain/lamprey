@@ -150,7 +150,7 @@ async fn thread_create_room(
         room_id,
         auth_user.id,
         MessageSync::ThreadCreate {
-            thread: thread.clone(),
+            thread: Box::new(thread.clone()),
         },
     )
     .await?;
@@ -199,7 +199,7 @@ async fn dm_thread_create(
             let target_user_id = recipients.first().unwrap();
             let (thread, is_new) = srv.users.init_dm(auth_user.id, *target_user_id).await?;
             s.broadcast(MessageSync::ThreadCreate {
-                thread: thread.clone(),
+                thread: Box::new(thread.clone()),
             })?;
             if is_new {
                 return Ok((StatusCode::CREATED, Json(thread)));
@@ -260,7 +260,7 @@ async fn dm_thread_create(
     }
 
     s.broadcast(MessageSync::ThreadCreate {
-        thread: thread.clone(),
+        thread: Box::new(thread.clone()),
     })?;
     for member in members {
         s.broadcast(MessageSync::ThreadMemberUpsert { member })?;
@@ -473,8 +473,14 @@ async fn thread_reorder(
                 continue;
             }
         }
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
 
     s.audit_log_append(AuditLogEntry {
@@ -656,7 +662,7 @@ async fn thread_archive(
             room_id,
             auth_user.id,
             MessageSync::ThreadUpdate {
-                thread: thread.clone(),
+                thread: Box::new(thread.clone()),
             },
         )
         .await?;
@@ -727,8 +733,14 @@ async fn thread_unarchive(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -778,8 +790,14 @@ async fn thread_remove(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -825,8 +843,14 @@ async fn thread_restore(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -930,8 +954,14 @@ async fn thread_lock(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -986,8 +1016,14 @@ async fn thread_unlock(
             },
         })
         .await?;
-        s.broadcast_room(room_id, auth_user.id, MessageSync::ThreadUpdate { thread })
-            .await?;
+        s.broadcast_room(
+            room_id,
+            auth_user.id,
+            MessageSync::ThreadUpdate {
+                thread: Box::new(thread),
+            },
+        )
+        .await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -1088,7 +1124,7 @@ async fn thread_upgrade(
     let upgraded_thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
 
     s.broadcast(MessageSync::ThreadUpdate {
-        thread: upgraded_thread,
+        thread: Box::new(upgraded_thread),
     })?;
 
     for member in members {
@@ -1172,7 +1208,7 @@ async fn thread_transfer_ownership(
         .await?;
 
     let msg = MessageSync::ThreadUpdate {
-        thread: thread.clone(),
+        thread: Box::new(thread.clone()),
     };
     s.broadcast_thread(thread_id, auth_user.id, msg).await?;
     Ok(Json(thread))

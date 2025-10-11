@@ -8,8 +8,8 @@ use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    InviteTarget, InviteTargetId, MessageClient, MessageEnvelope, MessageSync, Permission, RoomId,
-    Session, ThreadId, UserId,
+    InviteTarget, InviteTargetId, MemberListGroup, MemberListGroupId, MemberListOp, MessageClient,
+    MessageEnvelope, MessageSync, Permission, RoomId, Session, ThreadId, UserId,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace};
@@ -35,6 +35,19 @@ pub struct Connection {
     seq_server: u64,
     seq_client: u64,
     id: String,
+    member_list_sub: Option<MemberListSub>,
+}
+
+#[derive(Debug, Clone)]
+struct MemberListSub {
+    target: MemberListTarget,
+    ranges: Vec<(u64, u64)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum MemberListTarget {
+    Room(RoomId),
+    Thread(ThreadId),
 }
 
 #[derive(Debug, Clone)]
@@ -61,11 +74,12 @@ impl Connection {
     pub fn new(s: Arc<ServerState>) -> Self {
         Self {
             state: ConnectionState::Unauthed,
-            s,
             queue: VecDeque::new(),
             seq_server: 0,
             seq_client: 0,
             id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
+            member_list_sub: None,
+            s,
         }
     }
 
@@ -179,7 +193,7 @@ impl Connection {
 
                 let msg = MessageEnvelope {
                     payload: types::MessagePayload::Ready {
-                        user,
+                        user: Box::new(user),
                         session: session.clone(),
                         conn: self.get_id().to_owned(),
                         seq: 0,
@@ -259,6 +273,34 @@ impl Connection {
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 srv.users.status_ping(user_id).await?;
                 *timeout = Timeout::Ping(Instant::now() + HEARTBEAT_TIME);
+            }
+            MessageClient::MemberListSubscribe {
+                room_id,
+                thread_id,
+                ranges,
+            } => {
+                let session = self.state.session().ok_or(Error::MissingAuth)?;
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+                let srv = self.s.services();
+
+                let target = if let Some(room_id) = room_id {
+                    let perms = srv.perms.for_room(user_id, room_id).await?;
+                    perms.ensure_view()?;
+                    MemberListTarget::Room(room_id)
+                } else if let Some(thread_id) = thread_id {
+                    let perms = srv.perms.for_thread(user_id, thread_id).await?;
+                    perms.ensure_view()?;
+                    MemberListTarget::Thread(thread_id)
+                } else {
+                    return Err(Error::BadStatic("room_id or thread_id must be provided"));
+                };
+
+                self.member_list_sub = Some(MemberListSub {
+                    target: target.clone(),
+                    ranges: ranges.clone(),
+                });
+
+                self.resync_member_list().await?;
             }
             MessageClient::VoiceDispatch {
                 user_id: _,
@@ -360,7 +402,7 @@ impl Connection {
     }
 
     #[tracing::instrument(level = "debug", skip(self), fields(id = self.get_id()))]
-    pub async fn queue_message(&mut self, msg: MessageSync) -> Result<()> {
+    pub async fn queue_message(&mut self, msg: Box<MessageSync>) -> Result<()> {
         let mut session = match &self.state {
             ConnectionState::Authenticated { session }
             | ConnectionState::Disconnected { session } => session.clone(),
@@ -377,7 +419,7 @@ impl Connection {
             _ => {}
         }
 
-        let auth_check = match &msg {
+        let auth_check = match &*msg {
             MessageSync::RoomCreate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomUpdate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),
@@ -392,9 +434,23 @@ impl Connection {
             MessageSync::UserConfigThread { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberUpsert { member } => {
+                if self
+                    .member_list_sub
+                    .as_ref()
+                    .is_some_and(|s| s.target == MemberListTarget::Room(member.room_id))
+                {
+                    self.resync_member_list().await?;
+                }
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
             MessageSync::ThreadMemberUpsert { member } => {
+                if self
+                    .member_list_sub
+                    .as_ref()
+                    .is_some_and(|s| s.target == MemberListTarget::Thread(member.thread_id))
+                {
+                    self.resync_member_list().await?;
+                }
                 AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
             }
             MessageSync::SessionCreate {
@@ -505,6 +561,7 @@ impl Connection {
             MessageSync::BanDelete { room_id, .. } => {
                 AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
             }
+            MessageSync::MemberListSync { user_id, .. } => AuthCheck::User(*user_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
@@ -583,12 +640,12 @@ impl Connection {
         if should_send {
             let d = self.s.data();
             let srv = self.s.services();
-            let msg = match msg {
+            let msg = match *msg {
                 MessageSync::ThreadCreate { thread } => MessageSync::ThreadCreate {
-                    thread: srv.threads.get(thread.id, session.user_id()).await?,
+                    thread: Box::new(srv.threads.get(thread.id, session.user_id()).await?),
                 },
                 MessageSync::ThreadUpdate { thread } => MessageSync::ThreadUpdate {
-                    thread: srv.threads.get(thread.id, session.user_id()).await?,
+                    thread: Box::new(srv.threads.get(thread.id, session.user_id()).await?),
                 },
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
                     message: {
@@ -656,7 +713,10 @@ impl Connection {
     fn push_sync(&mut self, sync: MessageSync) {
         let seq = self.seq_server;
         let msg = MessageEnvelope {
-            payload: types::MessagePayload::Sync { data: sync, seq },
+            payload: types::MessagePayload::Sync {
+                data: Box::new(sync),
+                seq,
+            },
         };
         self.push(msg, Some(seq));
         self.seq_server += 1;
@@ -687,6 +747,137 @@ impl Connection {
 
     pub fn get_id(&self) -> &str {
         &self.id
+    }
+
+    pub async fn resync_member_list(&mut self) -> Result<()> {
+        let sub = match &self.member_list_sub {
+            Some(sub) => sub.clone(),
+            None => return Ok(()),
+        };
+
+        let session = self.state.session().ok_or(Error::MissingAuth)?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+        let data = self.s.data();
+
+        let (room_members, thread_members, users) = match &sub.target {
+            MemberListTarget::Room(room_id) => {
+                let members = data.room_member_list_all(*room_id).await?;
+                let user_ids: Vec<_> = members.iter().map(|m| m.user_id).collect();
+                let users = futures::future::try_join_all(
+                    user_ids
+                        .into_iter()
+                        .map(|id| srv.users.get(id, Some(user_id))),
+                )
+                .await?;
+                (Some(members), None, users)
+            }
+            MemberListTarget::Thread(thread_id) => {
+                let members = data.thread_member_list_all(*thread_id).await?;
+                let user_ids: Vec<_> = members.iter().map(|m| m.user_id).collect();
+                let users = futures::future::try_join_all(
+                    user_ids
+                        .into_iter()
+                        .map(|id| srv.users.get(id, Some(user_id))),
+                )
+                .await?;
+                (None, Some(members), users)
+            }
+        };
+
+        // this is a bit cursed
+        let mut members: Vec<(Option<_>, Option<_>, _)> = if let Some(r) = room_members {
+            let mut users_map: std::collections::HashMap<_, _> =
+                users.into_iter().map(|u| (u.id, u)).collect();
+            r.into_iter()
+                .map(|m| (Some(m.clone()), None, users_map.remove(&m.user_id).unwrap()))
+                .collect()
+        } else if let Some(t) = thread_members {
+            let mut users_map: std::collections::HashMap<_, _> =
+                users.into_iter().map(|u| (u.id, u)).collect();
+            t.into_iter()
+                .map(|m| (None, Some(m.clone()), users_map.remove(&m.user_id).unwrap()))
+                .collect()
+        } else {
+            unreachable!()
+        };
+
+        members.sort_by(|(_, _, a), (_, _, b)| {
+            let a_online = srv.users.is_online(a.id);
+            let b_online = srv.users.is_online(b.id);
+            a_online
+                .cmp(&b_online)
+                .reverse()
+                .then_with(|| a.name.cmp(&b.name))
+        });
+
+        let online_count = members
+            .iter()
+            .filter(|(_, _, u)| srv.users.is_online(u.id))
+            .count() as u64;
+        let offline_count = members.len() as u64 - online_count;
+
+        let groups = vec![
+            MemberListGroup {
+                id: MemberListGroupId::Online,
+                count: online_count,
+            },
+            MemberListGroup {
+                id: MemberListGroupId::Offline,
+                count: offline_count,
+            },
+        ];
+
+        let mut ops = vec![];
+
+        for (start, end) in sub.ranges {
+            let end = end.min(members.len() as u64);
+            if start >= end {
+                continue;
+            }
+            let slice = &members[start as usize..end as usize];
+            let mut room_members = Vec::with_capacity(slice.len());
+            let mut thread_members = Vec::with_capacity(slice.len());
+            let mut users = Vec::with_capacity(slice.len());
+            for (rm, tm, u) in slice.iter().cloned() {
+                room_members.push(rm);
+                thread_members.push(tm);
+                users.push(u);
+            }
+
+            ops.push(MemberListOp::Sync {
+                position: start,
+                room_members: if room_members.iter().all(|m| m.is_some()) {
+                    Some(room_members.into_iter().map(|m| m.unwrap()).collect())
+                } else {
+                    None
+                },
+                thread_members: if thread_members.iter().all(|m| m.is_some()) {
+                    Some(thread_members.into_iter().map(|m| m.unwrap()).collect())
+                } else {
+                    None
+                },
+                users,
+            });
+        }
+
+        self.push_sync(MessageSync::MemberListSync {
+            user_id,
+            room_id: if let MemberListTarget::Room(id) = sub.target {
+                Some(id)
+            } else {
+                None
+            },
+            thread_id: if let MemberListTarget::Thread(id) = sub.target {
+                Some(id)
+            } else {
+                None
+            },
+            ops,
+            groups,
+        });
+
+        Ok(())
     }
 }
 

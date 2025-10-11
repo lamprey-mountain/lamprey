@@ -6,9 +6,6 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-#[cfg(feature = "feat_automod")]
-use crate::v1::types::RedexId;
-
 use crate::v1::types::emoji::Emoji;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
@@ -264,10 +261,6 @@ pub enum MessageType {
     // /// (TODO) interact with a bot, uncertain if i'll go this route
     // BotCommand(MessageBotCommand),
 
-    // /// (TODO) implement some sort of automoderator? uncertain
-    // #[cfg(feature = "feat_automod")]
-    // ModerationAuto(MessageModerationAuto),
-
     // /// (TODO) implement a reporting system? uncertain (reports are certain, but reports-as-messages vs as-threads idk)
     // // #[deprecated = "reports will be impl'd as threads"]
     // ModerationReport(MessageModerationReport),
@@ -337,28 +330,6 @@ pub struct MessageRoomFollowed {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageModerationLog {
     pub audit_log_entry: AuditLogEntry,
-}
-
-/// automatic moderation reports
-#[cfg(feature = "feat_automod")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageModerationAuto {
-    pub redex_id: RedexId,
-    pub audit_log_entries: Vec<AuditLog>,
-    pub context: Vec<AutomodContext>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(no_recursion))]
-#[serde(tag = "type", content = "data")]
-pub enum AutomodContext {
-    Message(Message),
-    User(User),
-    ThreadMember(ThreadMember),
-    RoomMember(RoomMember),
-    Thread(Thread),
-    Media(Media),
 }
 
 /// a report that moderators should look at
@@ -575,8 +546,6 @@ impl MessageType {
             MessageType::MemberJoin => true,
             MessageType::ThreadRename(_) => false,
             MessageType::ThreadPingback(_) => true,
-            #[cfg(feature = "feat_automod")]
-            MessageType::ModerationAuto(_) => true,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,

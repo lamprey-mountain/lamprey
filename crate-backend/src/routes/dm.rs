@@ -37,7 +37,7 @@ async fn dm_init(
     let srv = s.services();
     let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
     s.broadcast(MessageSync::ThreadCreate {
-        thread: thread.clone(),
+        thread: Box::new(thread.clone()),
     })?;
     if is_new {
         Ok((StatusCode::CREATED, Json(thread)))

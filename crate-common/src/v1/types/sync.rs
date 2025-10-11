@@ -45,6 +45,16 @@ pub enum MessageClient {
         user_id: UserId,
         payload: SignallingMessage,
     },
+
+    /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
+    MemberListSubscribe {
+        // one of room_id or thread_id must be provided
+        room_id: Option<RoomId>,
+        thread_id: Option<ThreadId>,
+
+        /// the ranges to subscribe to
+        ranges: Vec<(u64, u64)>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,13 +74,12 @@ pub struct MessageEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "op")]
-#[allow(clippy::large_enum_variant)]
 pub enum MessagePayload {
     /// heartbeat
     Ping,
 
     /// data to keep local copy of state in sync with server
-    Sync { data: MessageSync, seq: u64 },
+    Sync { data: Box<MessageSync>, seq: u64 },
 
     /// some kind of error
     Error { error: String },
@@ -78,7 +87,7 @@ pub enum MessagePayload {
     /// successfully connected
     Ready {
         /// current user, null if session is unauthed
-        user: Option<User>,
+        user: Box<Option<User>>,
 
         /// current session
         session: Session,
@@ -100,7 +109,6 @@ pub enum MessagePayload {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(tag = "type")]
-#[allow(clippy::large_enum_variant)]
 pub enum MessageSync {
     RoomCreate {
         room: Room,
@@ -115,11 +123,11 @@ pub enum MessageSync {
     },
 
     ThreadCreate {
-        thread: Thread,
+        thread: Box<Thread>,
     },
 
     ThreadUpdate {
-        thread: Thread,
+        thread: Box<Thread>,
     },
 
     ThreadTyping {
@@ -344,6 +352,71 @@ pub enum MessageSync {
         room_id: RoomId,
         user_id: UserId,
     },
+
+    MemberListSync {
+        /// which user this list sync is for
+        user_id: UserId,
+        room_id: Option<RoomId>,
+        thread_id: Option<ThreadId>,
+        ops: Vec<MemberListOp>,
+        groups: Vec<MemberListGroup>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[serde(tag = "type")]
+pub enum MemberListOp {
+    /// replace a range of members
+    Sync {
+        /// the start of the range
+        position: u64,
+
+        /// only returned if thread is in a room
+        room_members: Option<Vec<RoomMember>>,
+
+        /// only returned if listing members in a thread, not just a room
+        thread_members: Option<Vec<ThreadMember>>,
+
+        users: Vec<User>,
+    },
+
+    /// insert a member
+    Insert {
+        position: u64,
+        room_member: Option<RoomMember>,
+        thread_member: Option<ThreadMember>,
+        user: Box<User>,
+    },
+
+    /// delete a range of one or more members
+    Delete {
+        position: u64,
+        // usually will be 1
+        count: u64,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct MemberListGroup {
+    pub id: MemberListGroupId,
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MemberListGroupId {
+    /// online members without a hoisted role
+    Online,
+
+    /// offline members, including those with a role
+    Offline,
+
+    /// hoisted roles
+    // TODO: implement role hoisting
+    #[serde(untagged)]
+    Role(RoleId),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

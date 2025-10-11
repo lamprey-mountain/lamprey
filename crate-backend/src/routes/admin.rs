@@ -76,7 +76,7 @@ async fn admin_whisper(
     }
 
     s.broadcast(MessageSync::ThreadCreate {
-        thread: thread.clone(),
+        thread: Box::new(thread.clone()),
     })?;
 
     srv.messages
@@ -156,7 +156,7 @@ async fn admin_broadcast(
                 }
 
                 ss.broadcast(MessageSync::ThreadCreate {
-                    thread: thread.clone(),
+                    thread: Box::new(thread.clone()),
                 })?;
 
                 srv.messages

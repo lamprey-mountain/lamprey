@@ -92,7 +92,7 @@ impl DataUser for Postgres {
         )
         .execute(&self.pool)
         .await?;
-        self.user_get(user_id.into()).await
+        self.user_get(user_id).await
     }
 
     async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId> {

@@ -77,7 +77,7 @@ pub enum InviteTarget {
     /// join a room and automatically open/focus on a thread
     Thread {
         room: Room,
-        thread: Thread,
+        thread: Box<Thread>,
         // invites that automatically apply a certain role?
         // roles: Vec<Role>,
     },
@@ -86,7 +86,7 @@ pub enum InviteTarget {
     Server,
 
     /// add this user as a friend
-    User { user: User },
+    User { user: Box<User> },
 }
 
 /// the type and id of this invite's target
