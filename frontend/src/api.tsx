@@ -376,6 +376,16 @@ export function createApi(
 					});
 				}
 			}
+			const list = memberLists.get(m.room_id);
+			if (list) {
+				const newItems = list.items.map((item) => {
+					if (item.user.id === m.user_id) {
+						return { ...item, room_member: m };
+					}
+					return item;
+				});
+				memberLists.set(m.room_id, { ...list, items: newItems });
+			}
 		} else if (msg.type === "ThreadMemberUpsert") {
 			const m = msg.member;
 			const c = thread_members.cache.get(m.thread_id);
@@ -401,6 +411,16 @@ export function createApi(
 						total: p.total + 1,
 					});
 				}
+			}
+			const list = memberLists.get(m.thread_id);
+			if (list) {
+				const newItems = list.items.map((item) => {
+					if (item.user.id === m.user_id) {
+						return { ...item, thread_member: m };
+					}
+					return item;
+				});
+				memberLists.set(m.thread_id, { ...list, items: newItems });
 			}
 		} else if (msg.type === "RoleCreate") {
 			const r = msg.role;
@@ -577,11 +597,47 @@ export function createApi(
 		} else if (msg.type === "EmojiDelete") {
 			// TODO
 		} else if (msg.type === "UserCreate") {
-			users.cache.set(msg.user.id, msg.user);
+			users.cache.set(msg.user.id, {
+				...msg.user,
+				relationship: {
+					note: null,
+					relation: null,
+					petname: null,
+					ignore: null,
+				},
+			} as UserWithRelationship);
 		} else if (msg.type === "UserUpdate") {
-			users.cache.set(msg.user.id, msg.user);
+			const oldUser = users.cache.get(msg.user.id);
+			const updatedUser: UserWithRelationship = {
+				...(oldUser ?? {
+					relationship: {
+						note: null,
+						relation: null,
+						petname: null,
+						ignore: null,
+					},
+				}),
+				...msg.user,
+			};
+			users.cache.set(msg.user.id, updatedUser);
+
 			if (msg.user.id === users.cache.get("@self")?.id) {
-				users.cache.set("@self", msg.user);
+				users.cache.set("@self", updatedUser);
+			}
+
+			for (const [id, list] of memberLists.entries()) {
+				let wasUpdated = false;
+				const newItems = list.items.map((item) => {
+					if (item.user.id === msg.user.id) {
+						wasUpdated = true;
+						return { ...item, user: msg.user };
+					}
+					return item;
+				});
+
+				if (wasUpdated) {
+					memberLists.set(id, { ...list, items: newItems });
+				}
 			}
 		} else if (msg.type === "UserConfigGlobal") {
 			if (msg.user_id === session()?.user_id) {
@@ -623,9 +679,25 @@ export function createApi(
 		} else if (msg.type === "SessionDelete") {
 			// TODO
 		} else if (msg.type === "RelationshipUpsert") {
-			// TODO
+			const { user_id, relationship } = msg;
+			const user = users.cache.get(user_id);
+			if (user) {
+				users.cache.set(user_id, { ...user, relationship });
+			}
 		} else if (msg.type === "RelationshipDelete") {
-			// TODO
+			const { user_id } = msg;
+			const user = users.cache.get(user_id);
+			if (user) {
+				users.cache.set(user_id, {
+					...user,
+					relationship: {
+						note: null,
+						relation: null,
+						petname: null,
+						ignore: null,
+					},
+				});
+			}
 		} else if (msg.type === "VoiceState") {
 			const state = msg.state as VoiceState | null;
 			if (state) {

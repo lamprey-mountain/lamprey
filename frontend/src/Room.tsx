@@ -81,25 +81,33 @@ export const RoomMembers = (props: { room: RoomT }) => {
 						)
 						: (
 							(() => {
-								const member = row.item.room_member!;
-								const user = row.item.user;
+								const member = () =>
+									api.room_members.cache.get(room_id())?.get(
+										row.item.user.id,
+									) ??
+										row.item.room_member;
+								const user = () =>
+									api.users.cache.get(row.item.user.id) ?? row.item.user;
 
 								function name() {
 									let name: string | undefined | null = null;
-									if (member?.membership === "Join") {
-										name ??= member.override_name;
+									if (member()?.membership === "Join") {
+										name ??= member()!.override_name;
 									}
-									name ??= user?.name;
+									name ??= user()?.name;
 									return name;
 								}
 
 								return tooltip(
 									{ placement: "left-start" },
-									<Show when={user}>
-										<UserView user={user!} room_member={member} />
+									<Show when={user()}>
+										<UserView
+											user={user()!}
+											room_member={member() ?? undefined}
+										/>
 									</Show>,
-									<li class="menu-user" data-user-id={member.user_id}>
-										<AvatarWithStatus user={user} />
+									<li class="menu-user" data-user-id={row.item.user.id}>
+										<AvatarWithStatus user={user()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>

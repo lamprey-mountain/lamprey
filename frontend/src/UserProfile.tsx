@@ -1,5 +1,12 @@
 import { RouteSectionProps, useNavigate } from "@solidjs/router";
-import { createResource, For, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createResource,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { useApi } from "./api";
 import { UserView } from "./User";
 import { type UserWithRelationship } from "sdk";
@@ -10,7 +17,7 @@ export function UserProfile(props: RouteSectionProps) {
 	const ctx = useCtx();
 	const nav = useNavigate();
 
-	const [user, { refetch }] = createResource(
+	const [user, { refetch, mutate }] = createResource(
 		() => props.params.user_id,
 		async (userId) => {
 			const { data } = await api.client.http.GET("/api/v1/user/{user_id}", {
@@ -19,6 +26,13 @@ export function UserProfile(props: RouteSectionProps) {
 			return data as UserWithRelationship;
 		},
 	);
+
+	createEffect(() => {
+		const cachedUser = api.users.cache.get(props.params.user_id);
+		if (cachedUser) {
+			mutate(cachedUser);
+		}
+	});
 
 	const relationship = () => user()?.relationship;
 

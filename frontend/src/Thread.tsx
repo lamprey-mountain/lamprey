@@ -71,12 +71,16 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 						)
 						: (
 							(() => {
-								const member = row.item.thread_member!;
-								const user = row.item.user;
+								const member = () =>
+									api.thread_members.cache.get(thread_id())?.get(
+										row.item.user.id,
+									) ?? row.item.thread_member;
+								const user = () =>
+									api.users.cache.get(row.item.user.id) ?? row.item.user;
 								const room_member = props.thread?.room_id
 									? api.room_members.fetch(
 										room_id,
-										() => user.id,
+										() => user()!.id,
 									)
 									: () => null;
 
@@ -86,21 +90,21 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 									if (rm?.membership === "Join") {
 										name ??= rm.override_name;
 									}
-									name ??= user?.name;
+									name ??= user()?.name;
 									return name;
 								}
 
 								return tooltip(
 									{ placement: "left-start" },
-									<Show when={user}>
+									<Show when={user()}>
 										<UserView
-											user={user!}
+											user={user()!}
 											room_member={room_member()}
-											thread_member={member}
+											thread_member={member() ?? undefined}
 										/>
 									</Show>,
-									<li class="menu-user" data-user-id={member.user_id}>
-										<AvatarWithStatus user={user} />
+									<li class="menu-user" data-user-id={row.item.user.id}>
+										<AvatarWithStatus user={user()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>
