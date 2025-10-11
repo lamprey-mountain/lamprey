@@ -15,6 +15,14 @@ export class ThreadMembers {
 	_requests = new Map<string, Map<string, Promise<ThreadMember>>>();
 	_cachedListings = new Map<string, Listing<ThreadMember>>();
 
+	subscribeList(thread_id: string, ranges: [number, number][]) {
+		this.api.client.getWebsocket().send(JSON.stringify({
+			type: "MemberListSubscribe",
+			thread_id,
+			ranges,
+		}));
+	}
+
 	fetch(
 		thread_id: () => string,
 		user_id: () => string,

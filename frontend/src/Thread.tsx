@@ -1,68 +1,115 @@
-import { For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { Thread } from "sdk";
 import { useApi } from "./api.tsx";
 import { tooltip } from "./Tooltip.tsx";
 import { AvatarWithStatus, UserView } from "./User.tsx";
+import { useCtx } from "./context.ts";
+import { ReactiveMap } from "@solid-primitives/map";
 
 export const ThreadMembers = (props: { thread: Thread }) => {
 	const api = useApi();
 	const thread_id = () => props.thread.id;
 	const room_id = () => props.thread.room_id;
-	const members = api.thread_members.list(thread_id);
+	const list = () => api.memberLists.get(thread_id());
+	const [collapsedGroups, setCollapsedGroups] = createSignal(
+		new ReactiveMap<string, boolean>(),
+	);
+
+	const rows = createMemo(() => {
+		const l = list();
+		if (!l) return [];
+		const rows: (
+			| { type: "group"; group: any }
+			| { type: "member"; item: any }
+		)[] = [];
+		let offset = 0;
+		for (const group of l.groups) {
+			if (group.count === 0) continue;
+			const groupId = JSON.stringify(group.id);
+			rows.push({ type: "group", group });
+			if (!collapsedGroups().get(groupId)) {
+				const members = l.items.slice(offset, offset + group.count);
+				for (const member of members) {
+					rows.push({ type: "member", item: member });
+				}
+			}
+			offset += group.count;
+		}
+		return rows;
+	});
+
+	createEffect(() => {
+		api.thread_members.subscribeList(thread_id(), [[0, 199]]);
+	});
+
+	const getGroupName = (group: any) => {
+		if (typeof group.id === "object" && group.id.Role) {
+			const role = api.roles.cache.get(group.id.Role);
+			return role?.name ?? "Role";
+		}
+		return group.id;
+	};
 
 	return (
-		<ul class="member-list" data-thread-id={props.thread.id}>
-			<For
-				each={members()?.items.filter((m) => m.membership === "Join")}
-				fallback={
-					<div class="dim" style="text-align: center; margin-top: 8px">
-						no members!
-					</div>
-				}
-			>
-				{(member) => {
-					const user_id = () => member.user_id;
-					const user = api.users.fetch(user_id);
-					const room_member = props.thread?.room_id
-						? api.room_members.fetch(
-							room_id,
-							user_id,
+		<div class="member-list" data-thread-id={props.thread.id}>
+			<For each={rows()}>
+				{(row) => {
+					return row.type === "group"
+						? (
+							<div
+								class="dim"
+								style="margin-top:4px;margin-left:8px; cursor: pointer;"
+								onClick={() => {
+									const groupId = JSON.stringify(row.group.id);
+									const newMap = new ReactiveMap(collapsedGroups());
+									newMap.set(groupId, !newMap.get(groupId));
+									setCollapsedGroups(newMap);
+								}}
+							>
+								{getGroupName(row.group)} — {row.group.count}
+							</div>
 						)
-						: () => null;
+						: (
+							(() => {
+								const member = row.item.thread_member!;
+								const user = row.item.user;
+								const room_member = props.thread?.room_id
+									? api.room_members.fetch(
+										room_id,
+										() => user.id,
+									)
+									: () => null;
 
-					function name() {
-						let name: string | undefined | null = null;
+								function name() {
+									let name: string | undefined | null = null;
+									const rm = room_member();
+									if (rm?.membership === "Join") {
+										name ??= rm.override_name;
+									}
+									name ??= user?.name;
+									return name;
+								}
 
-						const rm = room_member();
-						if (rm?.membership === "Join") name ??= rm.override_name;
-
-						name ??= user()?.name;
-						return name;
-					}
-
-					return tooltip(
-						{
-							placement: "left-start",
-						},
-						<Show when={user()}>
-							<UserView
-								user={user()}
-								room_member={room_member()}
-								thread_member={member}
-							/>
-						</Show>,
-						<li class="menu-user" data-user-id={member.user_id}>
-							<AvatarWithStatus user={user()} />
-							<span class="text">
-								<span class="name">{name()}</span>
-								<Show when={false}>
-									<span class="status-message">asdf</span>
-								</Show>
-							</span>
-						</li>,
-					);
+								return tooltip(
+									{ placement: "left-start" },
+									<Show when={user}>
+										<UserView
+											user={user!}
+											room_member={room_member()}
+											thread_member={member}
+										/>
+									</Show>,
+									<li class="menu-user" data-user-id={member.user_id}>
+										<AvatarWithStatus user={user} />
+										<span class="text">
+											<span class="name">{name()}</span>
+										</span>
+									</li>,
+								);
+							})()
+						);
 				}}
 			</For>
-		</ul>
+		</div>
 	);
 };

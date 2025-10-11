@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
@@ -15,57 +15,101 @@ import { Time } from "./Time.tsx";
 import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { ReactiveMap } from "@solid-primitives/map";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const api = useApi();
 	const room_id = () => props.room.id;
-	const members = api.room_members.list(room_id);
+	const list = () => api.memberLists.get(room_id());
+	const [collapsedGroups, setCollapsedGroups] = createSignal(
+		new ReactiveMap<string, boolean>(),
+	);
+
+	const rows = createMemo(() => {
+		const l = list();
+		if (!l) return [];
+		const rows: (
+			| { type: "group"; group: any }
+			| { type: "member"; item: any }
+		)[] = [];
+		let offset = 0;
+		for (const group of l.groups) {
+			if (group.count === 0) continue;
+			const groupId = JSON.stringify(group.id);
+			rows.push({ type: "group", group });
+			if (!collapsedGroups().get(groupId)) {
+				const members = l.items.slice(offset, offset + group.count);
+				for (const member of members) {
+					rows.push({ type: "member", item: member });
+				}
+			}
+			offset += group.count;
+		}
+		return rows;
+	});
+
+	createEffect(() => {
+		api.room_members.subscribeList(room_id(), [[0, 199]]);
+	});
+
+	const getGroupName = (group: any) => {
+		if (typeof group.id === "object" && group.id.Role) {
+			const role = api.roles.cache.get(group.id.Role);
+			return role?.name ?? "Role";
+		}
+		return group.id;
+	};
 
 	return (
-		<ul class="member-list" data-room-id={props.room.id}>
-			<For
-				each={members()?.items.filter((m) => m.membership === "Join")}
-				fallback={
-					<div class="dim" style="text-align: center; margin-top: 8px">
-						no members!
-					</div>
-				}
-			>
-				{(member) => {
-					const user_id = () => member.user_id;
-					const user = api.users.fetch(user_id);
+		<div class="member-list" data-room-id={props.room.id}>
+			<For each={rows()}>
+				{(row) => {
+					return row.type === "group"
+						? (
+							<div
+								class="dim"
+								style="margin-top:4px;margin-left:8px; cursor: pointer;"
+								onClick={() => {
+									const groupId = JSON.stringify(row.group.id);
+									const newMap = new ReactiveMap(collapsedGroups());
+									newMap.set(groupId, !newMap.get(groupId));
+									setCollapsedGroups(newMap);
+								}}
+							>
+								{getGroupName(row.group)} — {row.group.count}
+							</div>
+						)
+						: (
+							(() => {
+								const member = row.item.room_member!;
+								const user = row.item.user;
 
-					function name() {
-						let name: string | undefined | null = null;
-						if (member?.membership === "Join") name ??= member.override_name;
+								function name() {
+									let name: string | undefined | null = null;
+									if (member?.membership === "Join") {
+										name ??= member.override_name;
+									}
+									name ??= user?.name;
+									return name;
+								}
 
-						name ??= user()?.name;
-						return name;
-					}
-
-					return tooltip(
-						{
-							placement: "left-start",
-						},
-						<Show when={user()}>
-							<UserView
-								user={user()!}
-								room_member={member}
-							/>
-						</Show>,
-						<li class="menu-user" data-user-id={member.user_id}>
-							<AvatarWithStatus user={user()} />
-							<span class="text">
-								<span class="name">{name()}</span>
-								<Show when={false}>
-									<span class="status-message">asdf</span>
-								</Show>
-							</span>
-						</li>,
-					);
+								return tooltip(
+									{ placement: "left-start" },
+									<Show when={user}>
+										<UserView user={user!} room_member={member} />
+									</Show>,
+									<li class="menu-user" data-user-id={member.user_id}>
+										<AvatarWithStatus user={user} />
+										<span class="text">
+											<span class="name">{name()}</span>
+										</span>
+									</li>,
+								);
+							})()
+						);
 				}}
 			</For>
-		</ul>
+		</div>
 	);
 };
 

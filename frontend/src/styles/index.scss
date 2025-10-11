@@ -1572,7 +1572,7 @@ svg.avatar {
 	overflow-y: auto;
 	border-left: solid $sep-300 1px;
 
-	& > li {
+	& > div {
 		@include truncate;
 	}
 }

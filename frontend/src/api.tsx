@@ -19,6 +19,7 @@ import type {
 	Invite,
 	InviteWithMetadata,
 	Media,
+	MemberListGroup,
 	Message,
 	MessageCreate,
 	MessageReady,
@@ -31,6 +32,7 @@ import type {
 	Session,
 	Thread,
 	ThreadMember,
+	User,
 	UserConfig,
 	UserWithRelationship,
 	VoiceState,
@@ -68,6 +70,15 @@ export function useApi() {
 	return useContext(ApiContext)!;
 }
 
+export type MemberList = {
+	groups: MemberListGroup[];
+	items: {
+		room_member: RoomMember | null;
+		thread_member: ThreadMember | null;
+		user: User;
+	}[];
+};
+
 export function createApi(
 	client: Client,
 	events: Emitter<{
@@ -95,6 +106,7 @@ export function createApi(
 	const dms = new Dms();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
+	const memberLists = new ReactiveMap<string, MemberList>();
 
 	events.on("sync", (msg) => {
 		if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
@@ -676,6 +688,33 @@ export function createApi(
 					});
 				}
 			}
+		} else if (msg.type === "MemberListSync") {
+			const { room_id, thread_id, ops, groups } = msg;
+			const id = room_id ?? thread_id;
+			if (!id) return;
+
+			let list = memberLists.get(id);
+			if (!list) {
+				list = { groups: [], items: [] };
+				memberLists.set(id, list);
+			}
+
+			for (const op of ops) {
+				if (op.type === "Sync") {
+					const items = op.users.map((user, i) => ({
+						user,
+						room_member: op.room_members?.[i] ?? null,
+						thread_member: op.thread_members?.[i] ?? null,
+					}));
+					list.items.splice(op.position, items.length, ...items);
+				} else if (op.type === "Insert") {
+					// TODO
+				} else if (op.type === "Delete") {
+					// TODO
+				}
+			}
+			list.groups = groups;
+			memberLists.set(id, { ...list });
 		} else {
 			console.warn(`unknown event ${msg.type}`, msg);
 		}
@@ -723,6 +762,7 @@ export function createApi(
 		dms,
 		voiceStates,
 		voiceState,
+		memberLists,
 		Provider(props: ParentProps) {
 			return (
 				<ApiContext.Provider value={api}>
@@ -801,6 +841,7 @@ export type Api = {
 		) => Resource<RoomMember>;
 		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
 		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
+		subscribeList: (room_id: string, ranges: [number, number][]) => void;
 	};
 	room_bans: {
 		fetch: (
@@ -817,6 +858,7 @@ export type Api = {
 		) => Resource<ThreadMember>;
 		list: (thread_id: () => string) => Resource<Pagination<ThreadMember>>;
 		cache: ReactiveMap<string, ReactiveMap<string, ThreadMember>>;
+		subscribeList: (thread_id: string, ranges: [number, number][]) => void;
 	};
 	users: {
 		fetch: (user_id: () => string) => Resource<UserWithRelationship>;
@@ -869,6 +911,7 @@ export type Api = {
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;
 	voiceStates: ReactiveMap<string, VoiceState>;
+	memberLists: ReactiveMap<string, MemberList>;
 	tempCreateSession: () => void;
 	client: Client;
 	Provider: Component<ParentProps>;

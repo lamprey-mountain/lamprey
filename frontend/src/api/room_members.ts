@@ -15,6 +15,14 @@ export class RoomMembers {
 	_requests = new Map<string, Map<string, Promise<RoomMember>>>();
 	_cachedListings = new Map<string, Listing<RoomMember>>();
 
+	subscribeList(room_id: string, ranges: [number, number][]) {
+		this.api.client.getWebsocket().send(JSON.stringify({
+			type: "MemberListSubscribe",
+			room_id,
+			ranges,
+		}));
+	}
+
 	fetch(room_id: () => string, user_id: () => string): Resource<RoomMember> {
 		const query = () => ({
 			room_id: room_id(),
