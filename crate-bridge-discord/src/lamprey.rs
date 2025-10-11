@@ -79,7 +79,7 @@ impl EventHandler for Handle {
                     .globals
                     .bridge_chan
                     .send(BridgeMessage::LampreyThreadCreate {
-                        thread,
+                        thread: *thread,
                         discord_guild_id: realm_config.discord_guild_id,
                     })
                 {
