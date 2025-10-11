@@ -708,9 +708,14 @@ export function createApi(
 					}));
 					list.items.splice(op.position, items.length, ...items);
 				} else if (op.type === "Insert") {
-					// TODO
+					const item = {
+						user: op.user,
+						room_member: op.room_member ?? null,
+						thread_member: op.thread_member ?? null,
+					};
+					list.items.splice(op.position, 0, item);
 				} else if (op.type === "Delete") {
-					// TODO
+					list.items.splice(op.position, op.count);
 				}
 			}
 			list.groups = groups;

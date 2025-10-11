@@ -36,6 +36,11 @@ pub struct Connection {
     seq_client: u64,
     id: String,
     member_list_sub: Option<MemberListSub>,
+    member_list_cache: Vec<(
+        Option<types::RoomMember>,
+        Option<types::ThreadMember>,
+        types::User,
+    )>,
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +84,7 @@ impl Connection {
             seq_client: 0,
             id: format!("{}", uuid::Uuid::new_v4().hyphenated()),
             member_list_sub: None,
+            member_list_cache: Vec::new(),
             s,
         }
     }
@@ -295,6 +301,10 @@ impl Connection {
                     return Err(Error::BadStatic("room_id or thread_id must be provided"));
                 };
 
+                if self.member_list_sub.as_ref().map(|s| &s.target) != Some(&target) {
+                    self.member_list_cache.clear();
+                }
+
                 self.member_list_sub = Some(MemberListSub {
                     target: target.clone(),
                     ranges: ranges.clone(),
@@ -439,7 +449,7 @@ impl Connection {
                     .as_ref()
                     .is_some_and(|s| s.target == MemberListTarget::Room(member.room_id))
                 {
-                    self.resync_member_list().await?;
+                    self.diff_sync_member_list().await?;
                 }
                 AuthCheck::RoomOrUser(member.room_id, member.user_id)
             }
@@ -449,7 +459,7 @@ impl Connection {
                     .as_ref()
                     .is_some_and(|s| s.target == MemberListTarget::Thread(member.thread_id))
                 {
-                    self.resync_member_list().await?;
+                    self.diff_sync_member_list().await?;
                 }
                 AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
             }
@@ -749,10 +759,18 @@ impl Connection {
         &self.id
     }
 
-    pub async fn resync_member_list(&mut self) -> Result<()> {
+    async fn get_member_list(
+        &self,
+    ) -> Result<
+        Vec<(
+            Option<types::RoomMember>,
+            Option<types::ThreadMember>,
+            types::User,
+        )>,
+    > {
         let sub = match &self.member_list_sub {
             Some(sub) => sub.clone(),
-            None => return Ok(()),
+            None => return Ok(Vec::new()),
         };
 
         let session = self.state.session().ok_or(Error::MissingAuth)?;
@@ -810,6 +828,134 @@ impl Connection {
                 .reverse()
                 .then_with(|| a.name.cmp(&b.name))
         });
+
+        Ok(members)
+    }
+
+    pub async fn diff_sync_member_list(&mut self) -> Result<()> {
+        let sub = match &self.member_list_sub {
+            Some(sub) => sub.clone(),
+            None => return Ok(()),
+        };
+        let session = self.state.session().ok_or(Error::MissingAuth)?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+
+        let new_members = self.get_member_list().await?;
+
+        let old_ids: Vec<_> = self
+            .member_list_cache
+            .iter()
+            .map(|(_, _, u)| u.id)
+            .collect();
+        let new_ids: Vec<_> = new_members.iter().map(|(_, _, u)| u.id).collect();
+
+        let mut ops = Vec::new();
+
+        if self.member_list_cache.is_empty() {
+            // initial sync, just send sync ops
+        } else {
+            let mut new_idx = 0;
+            let mut consecutive_deletes = 0;
+
+            let diff_result = diff::slice(&old_ids, &new_ids);
+
+            for result in diff_result {
+                match result {
+                    diff::Result::Left(_) => {
+                        consecutive_deletes += 1;
+                    }
+                    diff::Result::Right(user_id) => {
+                        if consecutive_deletes > 0 {
+                            ops.push(MemberListOp::Delete {
+                                position: new_idx,
+                                count: consecutive_deletes,
+                            });
+                            consecutive_deletes = 0;
+                        }
+                        let (room_member, thread_member, user) = new_members
+                            .iter()
+                            .find(|(_, _, u)| u.id == *user_id)
+                            .unwrap()
+                            .clone();
+                        ops.push(MemberListOp::Insert {
+                            position: new_idx,
+                            room_member,
+                            thread_member,
+                            user: Box::new(user),
+                        });
+                        new_idx += 1;
+                    }
+                    diff::Result::Both(_, _) => {
+                        if consecutive_deletes > 0 {
+                            ops.push(MemberListOp::Delete {
+                                position: new_idx,
+                                count: consecutive_deletes,
+                            });
+                            consecutive_deletes = 0;
+                        }
+                        new_idx += 1;
+                    }
+                }
+            }
+
+            if consecutive_deletes > 0 {
+                ops.push(MemberListOp::Delete {
+                    position: new_idx,
+                    count: consecutive_deletes,
+                });
+            }
+        }
+
+        let online_count = new_members
+            .iter()
+            .filter(|(_, _, u)| srv.users.is_online(u.id))
+            .count() as u64;
+        let offline_count = new_members.len() as u64 - online_count;
+
+        let groups = vec![
+            MemberListGroup {
+                id: MemberListGroupId::Online,
+                count: online_count,
+            },
+            MemberListGroup {
+                id: MemberListGroupId::Offline,
+                count: offline_count,
+            },
+        ];
+
+        self.push_sync(MessageSync::MemberListSync {
+            user_id,
+            room_id: if let MemberListTarget::Room(id) = sub.target {
+                Some(id)
+            } else {
+                None
+            },
+            thread_id: if let MemberListTarget::Thread(id) = sub.target {
+                Some(id)
+            } else {
+                None
+            },
+            ops,
+            groups,
+        });
+
+        self.member_list_cache = new_members;
+
+        Ok(())
+    }
+
+    pub async fn resync_member_list(&mut self) -> Result<()> {
+        let sub = match &self.member_list_sub {
+            Some(sub) => sub.clone(),
+            None => return Ok(()),
+        };
+
+        let session = self.state.session().ok_or(Error::MissingAuth)?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.s.services();
+
+        let members = self.get_member_list().await?;
 
         let online_count = members
             .iter()
@@ -876,6 +1022,8 @@ impl Connection {
             ops,
             groups,
         });
+
+        self.member_list_cache = members;
 
         Ok(())
     }
