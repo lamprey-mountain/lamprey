@@ -438,7 +438,21 @@ impl Connection {
             MessageSync::MessageCreate { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::MessageUpdate { message } => AuthCheck::Thread(message.thread_id),
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
-            MessageSync::UserUpdate { user } => AuthCheck::UserMutual(user.id),
+            MessageSync::UserUpdate { user } => {
+                if self.member_list_sub.is_some() {
+                    if let Some((_, _, old_user)) =
+                        self.member_list_cache.iter().find(|(_, _, u)| u.id == user.id)
+                    {
+                        let old_online = old_user.status.status.is_online();
+                        let new_online = user.status.status.is_online();
+
+                        if old_online != new_online {
+                            self.diff_sync_member_list().await?;
+                        }
+                    }
+                }
+                AuthCheck::UserMutual(user.id)
+            }
             MessageSync::UserConfigGlobal { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigThread { user_id, .. } => AuthCheck::User(*user_id),
