@@ -791,30 +791,43 @@ impl Connection {
                 (Some(members), None, users)
             }
             MemberListTarget::Thread(thread_id) => {
-                let members = data.thread_member_list_all(*thread_id).await?;
-                let user_ids: Vec<_> = members.iter().map(|m| m.user_id).collect();
+                let thread = srv.threads.get(*thread_id, Some(user_id)).await?;
+                let thread_members = data.thread_member_list_all(*thread_id).await?;
+                let room_members = if let Some(room_id) = thread.room_id {
+                    Some(data.room_member_list_all(room_id).await?)
+                } else {
+                    None
+                };
+                let user_ids: Vec<_> = thread_members.iter().map(|m| m.user_id).collect();
                 let users = futures::future::try_join_all(
                     user_ids
                         .into_iter()
                         .map(|id| srv.users.get(id, Some(user_id))),
                 )
                 .await?;
-                (None, Some(members), users)
+                (room_members, Some(thread_members), users)
             }
         };
 
         // this is a bit cursed
-        let mut members: Vec<(Option<_>, Option<_>, _)> = if let Some(r) = room_members {
+        let mut members: Vec<(Option<_>, Option<_>, _)> = if let Some(t) = thread_members {
+            let mut users_map: std::collections::HashMap<_, _> =
+                users.into_iter().map(|u| (u.id, u)).collect();
+            t.into_iter()
+                .enumerate()
+                .map(|(idx, m)| {
+                    (
+                        room_members.as_ref().and_then(|m| m.get(idx).cloned()),
+                        Some(m.clone()),
+                        users_map.remove(&m.user_id).unwrap(),
+                    )
+                })
+                .collect()
+        } else if let Some(r) = room_members {
             let mut users_map: std::collections::HashMap<_, _> =
                 users.into_iter().map(|u| (u.id, u)).collect();
             r.into_iter()
                 .map(|m| (Some(m.clone()), None, users_map.remove(&m.user_id).unwrap()))
-                .collect()
-        } else if let Some(t) = thread_members {
-            let mut users_map: std::collections::HashMap<_, _> =
-                users.into_iter().map(|u| (u.id, u)).collect();
-            t.into_iter()
-                .map(|m| (None, Some(m.clone()), users_map.remove(&m.user_id).unwrap()))
                 .collect()
         } else {
             unreachable!()
