@@ -3,7 +3,9 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
-use common::v1::types::{Bot, BotAccess, MessageSync, Thread, ThreadId, ThreadMemberPut};
+use common::v1::types::{
+    Bot, BotAccess, MessageSync, Permission, Thread, ThreadId, ThreadMemberPut,
+};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -57,6 +59,18 @@ impl ServiceUsers {
                     .user_config_user_get(viewer_id, user_id)
                     .await?,
             );
+
+            let perms = self
+                .state
+                .services()
+                .perms
+                .for_room(viewer_id, common::v1::types::SERVER_ROOM_ID)
+                .await?;
+            let is_admin = perms.has(Permission::Admin);
+
+            if viewer_id == user_id || is_admin {
+                usr.emails = Some(self.state.data().user_email_list(user_id).await?);
+            }
         }
 
         let app = self

@@ -13,6 +13,7 @@ use crate::v1::types::user_status::Status;
 use crate::v1::types::util::{some_option, Diff, Time};
 use crate::v1::types::MediaId;
 
+use super::email::EmailInfo;
 use super::user_config::UserConfigGlobal;
 use super::{UserId, UserVerId};
 
@@ -43,7 +44,8 @@ pub struct User {
     pub status: Status,
     pub registered_at: Option<Time>,
     pub deleted_at: Option<Time>,
-    // pub email: Vec<Email>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emails: Option<Vec<EmailInfo>>,
     pub user_config: Option<UserConfigUser>,
 }
 

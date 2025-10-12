@@ -178,11 +178,11 @@ impl Connection {
 
                 let user = if let Some(user_id) = session.user_id() {
                     let srv = self.s.services();
-                    let user = srv.users.get(user_id, Some(user_id)).await?;
+                    let mut user = srv.users.get(user_id, Some(user_id)).await?;
                     if user.is_suspended() {
                         Some(user)
                     } else {
-                        let user = srv
+                        let user_with_new_status = srv
                             .users
                             .status_set(
                                 user_id,
@@ -191,6 +191,7 @@ impl Connection {
                                     .unwrap_or(Status::online()),
                             )
                             .await?;
+                        user.status = user_with_new_status.status;
                         Some(user)
                     }
                 } else {
@@ -440,8 +441,10 @@ impl Connection {
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UserUpdate { user } => {
                 if self.member_list_sub.is_some() {
-                    if let Some((_, _, old_user)) =
-                        self.member_list_cache.iter().find(|(_, _, u)| u.id == user.id)
+                    if let Some((_, _, old_user)) = self
+                        .member_list_cache
+                        .iter()
+                        .find(|(_, _, u)| u.id == user.id)
                     {
                         let old_online = old_user.status.status.is_online();
                         let new_online = user.status.status.is_online();

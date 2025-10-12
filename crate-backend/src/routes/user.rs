@@ -629,7 +629,12 @@ async fn user_list(
     perms.ensure(Permission::MemberBan)?;
 
     let data = s.data();
-    let users = data.user_list(paginate, q.filter).await?;
+    let mut users = data.user_list(paginate, q.filter).await?;
+
+    for user in &mut users.items {
+        user.emails = Some(data.user_email_list(user.id).await?);
+    }
+
     Ok(Json(users))
 }
 
