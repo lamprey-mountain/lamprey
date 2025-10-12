@@ -49,11 +49,12 @@ async fn user_update(
         UserIdReq::UserSelf => auth_user.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
+    let srv = s.services();
     if auth_user.id != target_user_id {
-        return Err(Error::NotFound);
+        let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
+        perms.ensure(Permission::Admin)?;
     }
     let data = s.data();
-    let srv = s.services();
     let start = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     if !patch.changes(&start) {
         return Ok(Json(start));
@@ -81,21 +82,36 @@ async fn user_update(
     }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
+    let changes = Changes::new()
+        .change("name", &start.name, &user.name)
+        .change("description", &start.description, &user.description)
+        .change("avatar", &start.avatar, &user.avatar)
+        .build();
+
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id: target_user_id.into_inner().into(),
         user_id: auth_user.id,
         session_id: Some(session.id),
-        reason,
+        reason: reason.clone(),
         ty: AuditLogEntryType::UserUpdate {
-            changes: Changes::new()
-                .change("name", &start.name, &user.name)
-                .change("description", &start.description, &user.description)
-                .change("avatar", &start.avatar, &user.avatar)
-                .build(),
+            changes: changes.clone(),
         },
     })
     .await?;
+
+    if auth_user.id != target_user_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: SERVER_ROOM_ID,
+            user_id: auth_user.id,
+            session_id: Some(session.id),
+            reason,
+            ty: AuditLogEntryType::UserUpdate { changes },
+        })
+        .await?;
+    }
+
     s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
     Ok(Json(user))
 }
