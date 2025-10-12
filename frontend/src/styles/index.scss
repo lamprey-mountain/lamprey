@@ -1602,6 +1602,23 @@ svg.avatar {
 	}
 }
 
+.voice-chat-sidebar {
+	grid-area: sidebar;
+	width: 320px;
+	background-color: $bg-150;
+	border-left: solid $sep-300 1px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+
+	.chat {
+		grid-area: auto;
+		flex: 1;
+		min-height: 0;
+		background-color: transparent;
+	}
+}
+
 .pinned-messages-list > ul > li {
 	cursor: grab;
 	user-select: none;

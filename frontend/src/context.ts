@@ -128,6 +128,7 @@ export type ChatCtx = {
 	thread_scroll_pos: Map<string, number>;
 	thread_search: ReactiveMap<string, ThreadSearch>;
 	thread_pinned_view: ReactiveMap<string, boolean>; // thread_id -> showing_pinned
+	voice_chat_sidebar_open: ReactiveMap<string, boolean>;
 	uploads: ReactiveMap<string, Upload>;
 	thread_edit_drafts: ReactiveMap<string, string>;
 	thread_input_focus: Map<string, () => void>;

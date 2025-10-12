@@ -128,25 +128,27 @@ const ThreadSidebar = (props: { thread: Thread }) => {
 		flags.has("thread_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
 	const showPinned = () => ctx.thread_pinned_view.get(props.thread.id) ?? false;
+	const showVoiceChat = () =>
+		props.thread.type === "Voice" &&
+		ctx.voice_chat_sidebar_open.get(props.thread.id);
 
 	return (
-		<Show
-			when={search()}
-			fallback={
-				<Show
-					when={showPinned()}
-					fallback={
-						<Show when={showMembers()}>
-							<ThreadMembers thread={props.thread} />
-						</Show>
-					}
-				>
-					<PinnedMessages thread={props.thread} />
-				</Show>
-			}
-		>
-			<SearchResults thread={props.thread} search={search()!} />
-		</Show>
+		<Switch>
+			<Match when={showVoiceChat()}>
+				<div class="voice-chat-sidebar">
+					<ChatMain thread={props.thread} />
+				</div>
+			</Match>
+			<Match when={search()}>
+				<SearchResults thread={props.thread} search={search()!} />
+			</Match>
+			<Match when={showPinned()}>
+				<PinnedMessages thread={props.thread} />
+			</Match>
+			<Match when={showMembers()}>
+				<ThreadMembers thread={props.thread} />
+			</Match>
+		</Switch>
 	);
 };
 

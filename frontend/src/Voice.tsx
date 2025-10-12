@@ -25,11 +25,13 @@ import { flags } from "./flags.ts";
 import { useNavigate } from "@solidjs/router";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 import { createPopup } from "./popup.tsx";
+import { useCtx } from "./context.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice, actions] = useVoice();
+	const ctx = useCtx();
 
 	createEffect(on(() => p.thread.id, (tid) => {
 		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
@@ -81,6 +83,12 @@ export const Voice = (p: { thread: Thread }) => {
 	onCleanup(() => {
 		clearTimeout(controlsTimeout);
 	});
+
+	const isChatOpen = () =>
+		ctx.voice_chat_sidebar_open.get(p.thread.id) ?? false;
+	const toggleChat = () => {
+		ctx.voice_chat_sidebar_open.set(p.thread.id, !isChatOpen());
+	};
 
 	return (
 		<div
@@ -201,6 +209,14 @@ export const Voice = (p: { thread: Thread }) => {
 					<Match when={p.thread.deleted_at}>{" (removed)"}</Match>
 					<Match when={p.thread.archived_at}>{" (archived)"}</Match>
 				</Switch>
+				<div style="flex:1"></div>
+				<button
+					onClick={toggleChat}
+					classList={{ active: isChatOpen() }}
+					title="Show chat"
+				>
+					Chat
+				</button>
 			</header>
 			<div class="bottom">
 				<div class="controls">

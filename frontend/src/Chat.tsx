@@ -336,7 +336,9 @@ export const ChatMain = (props: ChatProps) => {
 	);
 };
 
-export const ChatHeader = (props: ChatProps) => {
+export const ChatHeader = (
+	props: ChatProps & { showMembersButton?: boolean },
+) => {
 	const ctx = useCtx();
 	const api = useApi();
 
@@ -388,12 +390,14 @@ export const ChatHeader = (props: ChatProps) => {
 			>
 				pins
 			</button>
-			<button
-				onClick={toggleMembers}
-				title="Show members"
-			>
-				members
-			</button>
+			<Show when={props.showMembersButton ?? true}>
+				<button
+					onClick={toggleMembers}
+					title="Show members"
+				>
+					members
+				</button>
+			</Show>
 		</header>
 	);
 };
