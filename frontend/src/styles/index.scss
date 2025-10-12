@@ -1632,7 +1632,7 @@ body.resizing {
 		margin: 4px;
 		padding: 4px 0;
 		border-radius: 4px;
-		/* border: solid $sep-300 1px; */
+		border: solid $sep-300 1px;
 	}
 }
 
@@ -2996,5 +2996,21 @@ button.link {
 		&:hover, &:focus {
 			background: #fff2;
 		}
+	}
+}
+
+.edit-history {
+	margin: -15px;
+	margin-top: 16px;
+	min-width: 300px;
+	background: $bg-150;
+	padding: 16px 20px;
+
+	li {
+		background: $bg-200;
+		margin: 4px 0;
+		padding: 4px 0;
+		border-radius: 4px;
+		border: solid $sep-300 1px;
 	}
 }

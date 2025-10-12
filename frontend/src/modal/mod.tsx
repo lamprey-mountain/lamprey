@@ -205,9 +205,8 @@ const ModalMessageEdits = (
 
 	return (
 		<Modal>
-			<h3>edit history</h3>
-			<br />
-			<ul>
+			<h3 style="margin: -8px 6px">edit history</h3>
+			<ul class="edit-history">
 				<For each={edits()?.items ?? []} fallback={"loading"}>
 					{(i, x) => {
 						const prev = edits()?.items[x() - 1];
@@ -220,13 +219,13 @@ const ModalMessageEdits = (
 							}).join("");
 							return (
 								<li>
-									<MessageView message={{ ...i, content }} />
+									<MessageView message={{ ...i, content }} separate />
 								</li>
 							);
 						} else {
 							return (
 								<li>
-									<MessageView message={i} />
+									<MessageView message={i} separate />
 								</li>
 							);
 						}
