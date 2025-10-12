@@ -36,6 +36,7 @@ pub struct User {
     pub description: Option<String>,
 
     pub avatar: Option<MediaId>,
+    pub banner: Option<MediaId>,
     pub bot: Option<Bot>,
     pub system: bool,
     pub puppet: Option<Puppet>,
@@ -176,6 +177,9 @@ pub struct UserPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub avatar: Option<Option<MediaId>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub banner: Option<Option<MediaId>>,
 }
 
 // // TODO: later
@@ -238,6 +242,7 @@ impl Diff<User> for UserPatch {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.avatar.changes(&other.avatar)
+            || self.banner.changes(&other.banner)
     }
 }
 

@@ -430,6 +430,7 @@ pub enum MediaLinkType {
     Message,
     MessageVersion,
     AvatarUser,
+    BannerUser,
     AvatarRoom,
     Embed,
     CustomEmoji,

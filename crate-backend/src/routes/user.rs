@@ -67,6 +67,14 @@ async fn user_update(
             ));
         }
     }
+    if let Some(Some(banner_media_id)) = patch.banner {
+        let (media, _) = data.media_select(banner_media_id).await?;
+        if !matches!(media.source.info, MediaTrackInfo::Image(_)) {
+            return Err(Error::BadStatic(
+                "couldn't link media as banner: not an image",
+            ));
+        }
+    }
     data.user_update(target_user_id, patch.clone()).await?;
     if let Some(maybe_avatar) = patch.avatar {
         data.media_link_delete(target_user_id.into_inner(), MediaLinkType::AvatarUser)
@@ -80,12 +88,25 @@ async fn user_update(
             .await?;
         }
     }
+    if let Some(maybe_banner) = patch.banner {
+        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::BannerUser)
+            .await?;
+        if let Some(banner_media_id) = maybe_banner {
+            data.media_link_create_exclusive(
+                banner_media_id,
+                target_user_id.into_inner(),
+                MediaLinkType::BannerUser,
+            )
+            .await?;
+        }
+    }
     srv.users.invalidate(target_user_id).await;
     let user = srv.users.get(target_user_id, Some(auth_user.id)).await?;
     let changes = Changes::new()
         .change("name", &start.name, &user.name)
         .change("description", &start.description, &user.description)
         .change("avatar", &start.avatar, &user.avatar)
+        .change("banner", &start.banner, &user.banner)
         .build();
 
     s.audit_log_append(AuditLogEntry {

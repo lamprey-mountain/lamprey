@@ -25,6 +25,7 @@ pub struct DbUser {
     pub name: String,
     pub description: Option<String>,
     pub avatar: Option<Uuid>,
+    pub banner: Option<Uuid>,
     pub puppet: Option<Value>,
     pub bot: Option<Value>,
     pub system: bool,
@@ -42,6 +43,7 @@ impl From<DbUser> for User {
             description: row.description,
             status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
+            banner: row.banner.map(Into::into),
             bot: row.bot.and_then(|r| serde_json::from_value(r).ok()),
             puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
             suspended: row
@@ -66,6 +68,7 @@ impl DataUser for Postgres {
             name: patch.name,
             description: patch.description,
             avatar: None,
+            banner: None,
             status: types::user_status::Status::online(),
             bot: patch.bot,
             system: patch.system,
@@ -103,7 +106,7 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+            SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
             FOR UPDATE
             "#,
@@ -114,13 +117,15 @@ impl DataUser for Postgres {
         let user: User = user.into();
         let version_id = UserVerId::new();
         let avatar = patch.avatar.unwrap_or(user.avatar).map(|i| *i);
+        let banner = patch.banner.unwrap_or(user.banner).map(|i| *i);
         query!(
-            "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",
+            "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5, banner = $6 WHERE id = $1",
             *user_id,
             *version_id,
             patch.name.unwrap_or(user.name),
             patch.description.unwrap_or(user.description),
             avatar,
+            banner,
         )
         .execute(&mut *tx)
         .await?;
@@ -152,7 +157,7 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+            SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
             FROM usr WHERE id = $1
         "#,
             *id
@@ -176,7 +181,7 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
                         FROM usr
                         WHERE id > $1 AND id < $2
                           AND registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
@@ -198,7 +203,7 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
                         FROM usr
                         WHERE id > $1 AND id < $2
                           AND registered_at IS NOT NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
@@ -220,7 +225,7 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
                         FROM usr
                         WHERE id > $1 AND id < $2
                           AND bot->'access' IS NOT NULL
@@ -242,7 +247,7 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
                         FROM usr
                         WHERE id > $1 AND id < $2
                           AND puppet->'owner_id' IS NOT NULL
@@ -264,7 +269,7 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended
+                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
                         FROM usr
                         WHERE id > $1 AND id < $2
                           AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
