@@ -56,6 +56,7 @@ import { ThreadMembers } from "./api/thread_members.ts";
 import { MediaInfo } from "./api/media.tsx";
 import { Emoji } from "./api/emoji.ts";
 import { Dms } from "./api/dms.ts";
+import { deepEqual } from "./utils/deepEqual.ts";
 
 export type Json =
 	| number
@@ -85,7 +86,10 @@ export function createApi(
 		sync: MessageSync;
 		ready: MessageReady;
 	}>,
-	{ setUserConfig }: { setUserConfig: (c: UserConfig) => void },
+	{ userConfig, setUserConfig }: {
+		userConfig: Accessor<UserConfig>;
+		setUserConfig: (c: UserConfig) => void;
+	},
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
 
@@ -641,7 +645,9 @@ export function createApi(
 			}
 		} else if (msg.type === "UserConfigGlobal") {
 			if (msg.user_id === session()?.user_id) {
-				setUserConfig(msg.config);
+				if (!deepEqual(userConfig(), msg.config)) {
+					setUserConfig(msg.config);
+				}
 			}
 		} else if (msg.type === "UserConfigRoom") {
 			if (msg.user_id === session()?.user_id) {

@@ -190,7 +190,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	const [userConfig, setUserConfig] = createSignal<UserConfig>(
 		loadSavedUserConfig() ?? DEFAULT_USER_CONFIG,
 	);
-	const api = createApi(client, events, { setUserConfig });
+	const api = createApi(client, events, { userConfig, setUserConfig });
 
 	const cs = from(client.state);
 	createEffect(() => {
