@@ -39,8 +39,8 @@ impl DataThread for Postgres {
 
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12)
+			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13)
         ",
             thread_id.into_inner(),
             thread_id.into_inner(),
@@ -54,6 +54,7 @@ impl DataThread for Postgres {
             create.user_limit,
             create.parent_id,
             create.owner_id,
+            create.icon,
         )
         .execute(&mut *tx)
         .await?;
@@ -190,7 +191,8 @@ impl DataThread for Postgres {
                 nsfw = $5,
                 bitrate = $6,
                 user_limit = $7,
-                owner_id = $8
+                owner_id = $8,
+                icon = $9
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -207,6 +209,7 @@ impl DataThread for Postgres {
                 .owner_id
                 .unwrap_or(thread.owner_id)
                 .map(|i| i.into_inner()),
+            patch.icon.map(|i| i.map(|i| *i)).unwrap_or(thread.icon.map(|i| *i)),
         )
         .execute(&mut *tx)
         .await?;

@@ -191,6 +191,7 @@ impl ServiceRooms {
                     user_limit: None,
                     parent_id: None,
                     owner_id: None,
+                    icon: None,
                 })
                 .await?;
             let welcome_thread = data.thread_get(welcome_thread_id).await?;

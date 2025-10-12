@@ -45,6 +45,7 @@ select
     thread.bitrate,
     thread.user_limit,
     thread.owner_id,
+    thread.icon,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     last_id.last_version_id as "last_version_id",

@@ -14,7 +14,7 @@ use crate::v1::types::notifications::NotifsThread;
 use crate::v1::types::user_config::UserConfigThread;
 use crate::v1::types::util::{some_option, Time};
 use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
-use crate::v1::types::{MessageVerId, TagId, User};
+use crate::v1::types::{MediaId, MessageVerId, TagId, User};
 
 use super::{RoomId, ThreadId, UserId};
 
@@ -118,8 +118,11 @@ pub struct Thread {
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub recipient: Option<User>,
 
-    /// for dm threads, this is who the dm is with
+    /// for dm and gdm threads, this is who the dm is with
     pub recipients: Vec<User>,
+
+    /// for gdm threads, a custom icon
+    pub icon: Option<MediaId>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -160,8 +163,9 @@ pub struct ThreadCreate {
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
-    // TODO: icons for gdm threads
-    // pub icon: Option<Media>,
+
+    pub icon: Option<MediaId>,
+
     /// The type of this thread
     #[serde(default, rename = "type")]
     pub ty: ThreadType,
@@ -203,6 +207,9 @@ pub struct ThreadPatch {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
+
+    #[serde(default, deserialize_with = "some_option")]
+    pub icon: Option<Option<MediaId>>,
 
     /// tags to apply to this thread (overwrite, not append)
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
@@ -251,6 +258,7 @@ impl Diff<Thread> for ThreadPatch {
     fn changes(&self, other: &Thread) -> bool {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
+            || self.icon.changes(&other.icon)
             || self.tags.changes(&other.tags)
             || self.nsfw.changes(&other.nsfw)
             || self.bitrate.changes(&other.bitrate)
@@ -283,6 +291,11 @@ impl ThreadPatch {
             },
             description: if self.description.changes(&other.description) {
                 self.description
+            } else {
+                None
+            },
+            icon: if self.icon.changes(&other.icon) {
+                self.icon
             } else {
                 None
             },

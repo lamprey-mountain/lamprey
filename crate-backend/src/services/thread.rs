@@ -201,6 +201,19 @@ impl ServiceThreads {
             ));
         }
 
+        if let Some(Some(icon)) = patch.icon {
+            if thread_old.ty != ThreadType::Gdm {
+                return Err(Error::BadStatic("only gdm threads can have icons"));
+            }
+            let (media, _) = data.media_select(icon).await?;
+            if !matches!(
+                media.source.info,
+                common::v1::types::MediaTrackInfo::Image(_)
+            ) {
+                return Err(Error::BadStatic("media not an image"));
+            }
+        }
+
         // update and refetch
         data.thread_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
@@ -223,6 +236,7 @@ impl ServiceThreads {
                                 &thread_old.description,
                                 &thread_new.description,
                             )
+                            .change("icon", &thread_old.icon, &thread_new.icon)
                             .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
                             .change("bitrate", &thread_old.bitrate, &thread_new.bitrate)
                             .change("user_limit", &thread_old.user_limit, &thread_new.user_limit)

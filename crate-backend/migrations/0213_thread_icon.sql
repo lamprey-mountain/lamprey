@@ -1,0 +1,1 @@
+ALTER TABLE thread ADD COLUMN icon UUID REFERENCES media(id);

@@ -119,6 +119,7 @@ async fn thread_create_room(
             user_limit: json.user_limit.map(|u| u as i32),
             parent_id: json.parent_id.map(|i| *i),
             owner_id: None,
+            icon: None,
         })
         .await?;
 
@@ -232,12 +233,26 @@ async fn dm_thread_create(
         ));
     }
 
+    if let Some(icon) = json.icon {
+        if json.ty != ThreadType::Gdm {
+            return Err(Error::BadStatic("only gdm threads can have icons"));
+        }
+        let (media, _) = data.media_select(icon).await?;
+        if !matches!(
+            media.source.info,
+            common::v1::types::MediaTrackInfo::Image(_)
+        ) {
+            return Err(Error::BadStatic("media not an image"));
+        }
+    }
+
     let thread_id = data
         .thread_create(DbThreadCreate {
             room_id: None,
             creator_id: auth_user.id,
             name: json.name.clone(),
             description: json.description.clone(),
+            icon: json.icon.map(|i| *i),
             ty: DbThreadType::Gdm,
             nsfw: json.nsfw,
             bitrate: json.bitrate.map(|b| b as i32),
@@ -246,6 +261,11 @@ async fn dm_thread_create(
             owner_id: Some(*auth_user.id),
         })
         .await?;
+
+    if let Some(icon) = json.icon {
+        data.media_link_create_exclusive(icon, *thread_id, crate::types::MediaLinkType::IconThread)
+            .await?;
+    }
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     let mut members = vec![];
@@ -528,8 +548,24 @@ async fn thread_update(
     let thread = s
         .services()
         .threads
-        .update(auth_user.id, thread_id, json, reason)
+        .update(auth_user.id, thread_id, json.clone(), reason)
         .await?;
+
+    if let Some(icon) = json.icon {
+        s.data()
+            .media_link_delete(*thread_id, crate::types::MediaLinkType::IconThread)
+            .await?;
+        if let Some(icon) = icon {
+            s.data()
+                .media_link_create_exclusive(
+                    icon,
+                    *thread_id,
+                    crate::types::MediaLinkType::IconThread,
+                )
+                .await?;
+        }
+    }
+
     Ok(Json(thread))
 }
 
@@ -1068,7 +1104,7 @@ async fn thread_upgrade(
             RoomCreate {
                 name: thread.name.clone(),
                 description: thread.description.clone(),
-                icon: None,
+                icon: thread.icon,
                 public: Some(false),
             },
             auth_user.id,
@@ -1079,6 +1115,13 @@ async fn thread_upgrade(
             },
         )
         .await?;
+
+    if let Some(icon) = thread.icon {
+        data.media_link_delete(*thread_id, crate::types::MediaLinkType::IconThread)
+            .await?;
+        data.media_link_create_exclusive(icon, *room.id, crate::types::MediaLinkType::AvatarRoom)
+            .await?;
+    }
 
     let mut members = vec![];
     let mut after: Option<Uuid> = None;
