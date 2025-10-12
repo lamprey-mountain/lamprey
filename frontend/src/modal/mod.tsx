@@ -212,7 +212,7 @@ const ModalMessageEdits = (
 					{(i, x) => {
 						const prev = edits()?.items[x() - 1];
 						if (prev) {
-							const pages = diffChars(i.content ?? "", prev.content ?? "");
+							const pages = diffChars(prev.content ?? "", i.content ?? "");
 							const content = pages.map((i) => {
 								if (i.added) return `<ins>${i.value}</ins>`;
 								if (i.removed) return `<del>${i.value}</del>`;
