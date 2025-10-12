@@ -1577,13 +1577,42 @@ svg.avatar {
 	}
 }
 
-.search-results, .pinned-messages-list {
+body.resizing {
+	user-select: none;
+	cursor: col-resize;
+}
+
+.resizable-sidebar {
+	position: relative;
 	grid-area: sidebar;
-	padding: 4px 0;
-	width: 320px;
-	background-color: $bg-150;
+	display: flex;
 	border-left: solid $sep-300 1px;
+
+	.resize-handle {
+		position: absolute;
+		top: 0;
+		left: -2px;
+		width: 4px;
+		height: 100%;
+		cursor: col-resize;
+		z-index: 10;
+		transition: background-color 0.2s;
+
+		&:hover {
+			background-color: $link-500;
+		}
+	}
+}
+
+.search-results,
+.pinned-messages-list {
+	padding: 4px 0;
+	background-color: $bg-150;
 	overflow-y: auto;
+	height: 100%;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
 
 	& > header {
 		padding: 2px 8px;
@@ -1591,6 +1620,11 @@ svg.avatar {
 		justify-content: space-between;
 		align-items: center;
 		background: $bg-100;
+	}
+
+	& > ul {
+		flex: 1;
+		overflow-y: auto;
 	}
 
 	& > ul > li {
@@ -1603,13 +1637,12 @@ svg.avatar {
 }
 
 .voice-chat-sidebar {
-	grid-area: sidebar;
-	width: 320px;
 	background-color: $bg-150;
-	border-left: solid $sep-300 1px;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	height: 100%;
+	width: 100%;
 
 	.chat {
 		grid-area: auto;

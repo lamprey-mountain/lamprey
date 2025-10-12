@@ -4,7 +4,7 @@ import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { ThreadNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
-import { createEffect, For, Show } from "solid-js";
+import { createEffect, For, Match, Show, Switch } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
 import { ThreadSettings } from "./ThreadSettings.tsx";
 import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
@@ -18,6 +18,7 @@ import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
 import { SERVER_ROOM_ID, type Thread } from "sdk";
 import { PinnedMessages } from "./menu/PinnedMessages.tsx";
+import { Resizable } from "./Resizable.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -135,15 +136,21 @@ const ThreadSidebar = (props: { thread: Thread }) => {
 	return (
 		<Switch>
 			<Match when={showVoiceChat()}>
-				<div class="voice-chat-sidebar">
-					<ChatMain thread={props.thread} />
-				</div>
+				<Resizable storageKey="voice-chat-sidebar-width" initialWidth={320}>
+					<div class="voice-chat-sidebar">
+						<ChatMain thread={props.thread} />
+					</div>
+				</Resizable>
 			</Match>
 			<Match when={search()}>
-				<SearchResults thread={props.thread} search={search()!} />
+				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
+					<SearchResults thread={props.thread} search={search()!} />
+				</Resizable>
 			</Match>
 			<Match when={showPinned()}>
-				<PinnedMessages thread={props.thread} />
+				<Resizable storageKey="pinned-sidebar-width" initialWidth={320}>
+					<PinnedMessages thread={props.thread} />
+				</Resizable>
 			</Match>
 			<Match when={showMembers()}>
 				<ThreadMembers thread={props.thread} />
