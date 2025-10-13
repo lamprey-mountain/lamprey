@@ -114,6 +114,7 @@ async fn inbox_post(
         message_id: json.message_id,
         reason: NotificationReason::Reminder,
         added_at: json.added_at.unwrap_or_else(Time::now_utc),
+        read_at: None,
     };
 
     s.data()

@@ -92,6 +92,9 @@ pub struct Notification {
 
     /// when this was added to the inbox
     pub added_at: Time,
+
+    /// when this was read
+    pub read_at: Option<Time>,
 }
 
 // in order of precedence

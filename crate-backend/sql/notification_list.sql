@@ -1,4 +1,4 @@
-SELECT id, thread_id as "thread_id!", message_id as "message_id!", reason as "reason!", added_at
+SELECT id, thread_id as "thread_id!", message_id as "message_id!", reason as "reason!", added_at, read_at
 FROM inbox
 WHERE user_id = $1
   AND ($2 OR read_at IS NULL)

@@ -45,6 +45,7 @@ impl From<DbNotification> for Notification {
             message_id: val.message_id.into(),
             reason: notif_reason_parse(&val.reason),
             added_at: val.added_at.into(),
+            read_at: val.read_at.map(|t| t.into()),
         }
     }
 }

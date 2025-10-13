@@ -101,6 +101,7 @@ async fn message_create(
                     message_id,
                     reason: NotificationReason::Mention,
                     added_at: Time::now_utc(),
+                    read_at: None,
                 };
                 if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
                     tracing::error!(
@@ -203,6 +204,7 @@ async fn message_create(
                         message_id,
                         reason: NotificationReason::MentionBulk,
                         added_at: Time::now_utc(),
+                        read_at: None,
                     };
                     if let Err(e) = s_clone.data().notification_add(user_id, notification).await {
                         tracing::error!(

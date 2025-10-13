@@ -465,6 +465,7 @@ pub struct DbNotification {
     pub message_id: Uuid,
     pub reason: String,
     pub added_at: PrimitiveDateTime,
+    pub read_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -409,6 +409,7 @@ impl LampreyHandle {
                     bitrate: None,
                     user_limit: None,
                     parent_id,
+                    icon: None,
                 },
             )
             .await?;

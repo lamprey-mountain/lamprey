@@ -59,18 +59,6 @@ export const Inbox = () => {
 		<div class="inbox">
 			<header>
 				<h2>inbox</h2>
-				<input
-					type="checkbox"
-					onChange={toggleSelectAll}
-					class="select-all-checkbox"
-				/>
-				<Show when={selected().length > 0}>
-					<div class="bulk-actions">
-						<span>{selected().length} selected</span>
-						<button onClick={handleMarkSelectedRead}>Mark as read</button>
-						<button onClick={handleMarkSelectedUnread}>Mark as unread</button>
-					</div>
-				</Show>
 				<div class="spacer" />
 				<div class="filters">
 					<label>
@@ -83,10 +71,27 @@ export const Inbox = () => {
 									include_read: e.currentTarget.checked,
 								})}
 						/>
-						show read
+						include read
 					</label>
 				</div>
 			</header>
+			<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
+				<label>
+					<input
+						type="checkbox"
+						onChange={toggleSelectAll}
+						style="margin-right:8px"
+					/>
+					select all
+				</label>
+				<Show when={selected().length > 0}>
+					<div style="margin-left: 8px">
+						<span>{selected().length} selected</span>
+						<button onClick={handleMarkSelectedRead}>Mark as read</button>
+						<button onClick={handleMarkSelectedUnread}>Mark as unread</button>
+					</div>
+				</Show>
+			</div>
 			<div class="inner">
 				<For each={inboxItems()?.items} fallback={<div>loading...</div>}>
 					{(it) => (
@@ -169,7 +174,7 @@ const NotificationItem = (
 				<div class="spacer"></div>
 				<div class="label">{reasonText()}</div>
 				<Show
-					when={!props.include_read}
+					when={!props.notification.read_at}
 					fallback={
 						<button class="mark-read" onClick={handleMarkUnread}>
 							Mark as unread

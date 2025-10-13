@@ -436,6 +436,7 @@ impl Portal {
                             name: None,
                             description: None,
                             avatar: Some(Some(media.id)),
+                            banner: None,
                         },
                     )
                     .await?;
@@ -448,6 +449,7 @@ impl Portal {
                             name: None,
                             description: None,
                             avatar: Some(None),
+                            banner: None,
                         },
                     )
                     .await?;
@@ -474,6 +476,7 @@ impl Portal {
                         name: None,
                         description: None,
                         avatar: Some(Some(media.id)),
+                        banner: None,
                     },
                 )
                 .await?;
@@ -487,6 +490,7 @@ impl Portal {
                         name: None,
                         description: None,
                         avatar: Some(None),
+                        banner: None,
                     },
                 )
                 .await?;
