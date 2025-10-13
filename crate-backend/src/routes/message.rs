@@ -1114,11 +1114,81 @@ async fn message_pin_list(
     Ok(Json(res))
 }
 
+/// Message list deleted
+///
+/// Paginate deleted messages in a thread
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/message/deleted",
+    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
+    tags = ["message", "badge.perm-opt.MessageDelete"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "success"),
+    )
+)]
+async fn message_list_deleted(
+    Path((thread_id,)): Path<(ThreadId,)>,
+    Query(q): Query<PaginationQuery<MessageId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
+    perms.ensure(Permission::MessageDelete)?;
+    let mut res = data
+        .message_list_deleted(thread_id, auth_user.id, q)
+        .await?;
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+    Ok(Json(res))
+}
+
+/// Message list removed
+///
+/// Paginate removed messages in a thread
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/message/removed",
+    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
+    tags = ["message", "badge.perm-opt.MessageRemove"],
+    responses(
+        (status = OK, body = PaginationResponse<Message>, description = "success"),
+    )
+)]
+async fn message_list_removed(
+    Path((thread_id,)): Path<(ThreadId,)>,
+    Query(q): Query<PaginationQuery<MessageId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let perms = s
+        .services()
+        .perms
+        .for_thread(auth_user.id, thread_id)
+        .await?;
+    perms.ensure(Permission::MessageRemove)?;
+    let mut res = data
+        .message_list_removed(thread_id, auth_user.id, q)
+        .await?;
+    for message in &mut res.items {
+        s.presign_message(message).await?;
+    }
+    Ok(Json(res))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(message_create))
         .routes(routes!(message_get))
         .routes(routes!(message_list))
+        .routes(routes!(message_list_deleted))
+        .routes(routes!(message_list_removed))
         .routes(routes!(message_context))
         .routes(routes!(message_edit))
         .routes(routes!(message_delete))

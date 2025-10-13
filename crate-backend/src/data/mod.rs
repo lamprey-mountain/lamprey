@@ -338,6 +338,18 @@ pub trait DataMessage {
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+    async fn message_list_deleted(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
+    async fn message_list_removed(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
         &self,

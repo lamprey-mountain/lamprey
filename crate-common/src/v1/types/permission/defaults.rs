@@ -15,6 +15,7 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::MemberNicknameManage,
     Permission::MemberTimeout,
     Permission::MessageCreate,
+    Permission::MessageRemove,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
     Permission::MessageEmbeds,
@@ -80,6 +81,7 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::MemberNicknameManage,
     Permission::MemberTimeout,
     Permission::MessageCreate,
+    Permission::MessageRemove,
     Permission::MessageDelete,
     // Permission::MessageEdit, // internal
     Permission::MessageEmbeds,
@@ -196,6 +198,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::MessageDelete,
     Permission::MessageMove,
     Permission::MessagePin, // maybe?
+    Permission::MessageRemove,
     Permission::ReactionPurge,
     Permission::RoleApply, // maybe?
     Permission::TagApply,

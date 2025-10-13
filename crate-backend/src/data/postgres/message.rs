@@ -312,6 +312,56 @@ impl DataMessage for Postgres {
         )
     }
 
+    async fn message_list_deleted(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_paginate_deleted.sql",
+                *thread_id,
+                *user_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/message_count_deleted.sql", thread_id.into_inner()),
+            |i: &Message| i.id.to_string()
+        )
+    }
+
+    async fn message_list_removed(
+        &self,
+        thread_id: ThreadId,
+        user_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_paginate_removed.sql",
+                *thread_id,
+                *user_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/message_count_removed.sql", thread_id.into_inner()),
+            |i: &Message| i.id.to_string()
+        )
+    }
+
     async fn message_delete(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
