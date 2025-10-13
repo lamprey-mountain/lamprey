@@ -356,6 +356,40 @@ export function createApi(
 					});
 				}
 			});
+		} else if (msg.type === "MessageDeleteBulk") {
+			batch(() => {
+				const { thread_id, message_ids } = msg;
+				const ranges = messages.cacheRanges.get(thread_id);
+				if (ranges) {
+					let changed = false;
+					for (const message_id of message_ids) {
+						messages.cache.delete(message_id);
+						const r = ranges.find(message_id);
+						if (r) {
+							const idx = r.items.findIndex((i) => i.id === message_id);
+							if (idx !== -1) {
+								r.items.splice(idx, 1);
+								changed = true;
+							}
+						}
+					}
+					if (changed) {
+						messages._updateMutators(ranges, thread_id);
+					}
+				}
+
+				const t = api.threads.cache.get(thread_id);
+				if (t) {
+					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
+						t.last_version_id;
+					api.threads.cache.set(thread_id, {
+						...t,
+						message_count: t.message_count! - message_ids.length,
+						last_version_id,
+						is_unread: !!t.last_read_id && t.last_read_id < last_version_id,
+					});
+				}
+			});
 		} else if (msg.type === "MessageVersionDelete") {
 			// TODO
 		} else if (msg.type === "RoomMemberUpsert") {
