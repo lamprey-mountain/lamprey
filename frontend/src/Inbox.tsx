@@ -1,9 +1,10 @@
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { useApi } from "./api.tsx";
-import type { Message, Notification } from "sdk";
+import type { Message, Notification, Room, Thread } from "sdk";
 import { A } from "@solidjs/router";
 import { Time } from "./Time.tsx";
 import { MessageView } from "./Message.tsx";
+import type { NotificationPagination } from "./api/inbox.ts";
 
 export const Inbox = () => {
 	const api = useApi();
@@ -17,10 +18,12 @@ export const Inbox = () => {
 
 	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
 		const items = inboxItems()?.items ?? [];
-		return notifIds.map((id) => {
-			const notif = items.find((it) => it.id === id);
-			return notif ? notif.message_id : null;
-		}).filter((id): id is string => !!id);
+		return notifIds
+			.map((id) => {
+				const notif = items.find((it) => it.id === id);
+				return notif ? notif.message_id : null;
+			})
+			.filter((id): id is string => !!id);
 	};
 
 	const handleMarkSelectedRead = async () => {
@@ -89,6 +92,7 @@ export const Inbox = () => {
 					{(it) => (
 						<NotificationItem
 							notification={it}
+							allData={inboxItems()}
 							selected={selected().includes(it.id)}
 							onSelect={toggleSelection}
 							refetch={refetch}
@@ -104,6 +108,7 @@ export const Inbox = () => {
 const NotificationItem = (
 	props: {
 		notification: Notification;
+		allData: NotificationPagination | undefined;
 		selected: boolean;
 		onSelect: (id: string, selected: boolean) => void;
 		refetch: () => void;
@@ -111,15 +116,15 @@ const NotificationItem = (
 	},
 ) => {
 	const api = useApi();
-	const thread = api.threads.fetch(() => props.notification.thread_id);
-	const message = api.messages.fetch(
-		() => props.notification.thread_id,
-		() => props.notification.message_id,
-	);
-	const [room] = createResource(thread, (t) => {
-		if (!t.room_id) return;
-		return api.rooms.fetch(() => t.room_id)();
-	});
+	const thread = () =>
+		props.allData?.threads.find((t) => t.id === props.notification.thread_id);
+	const message = () =>
+		props.allData?.messages.find((m) => m.id === props.notification.message_id);
+	const room = () => {
+		const t = thread();
+		if (!t?.room_id) return;
+		return props.allData?.rooms.find((r) => r.id === t.room_id);
+	};
 
 	const handleMarkRead = async () => {
 		await api.inbox.markRead([props.notification.message_id]);

@@ -1,7 +1,19 @@
-import type { Notification, Pagination } from "sdk";
+import type {
+	InboxListParams,
+	Notification,
+	Pagination,
+	Room,
+	Thread,
+} from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
 import type { Api } from "../api.tsx";
-import type { InboxListParams } from "sdk";
+import type { Message } from "sdk";
+
+export interface NotificationPagination extends Pagination<Notification> {
+	threads: Thread[];
+	messages: Message[];
+	rooms: Room[];
+}
 
 export class Inbox {
 	api: Api = null as unknown as Api;
@@ -9,12 +21,14 @@ export class Inbox {
 
 	list(
 		params: () => InboxListParams,
-	): [Resource<Pagination<Notification>>, { refetch: () => void }] {
+	): [Resource<NotificationPagination>, { refetch: () => void }] {
 		const paginate = async (
 			p: InboxListParams,
 			pagination?: Pagination<Notification>,
 		) => {
-			if (pagination && !pagination.has_more) return pagination;
+			if (pagination && !pagination.has_more) {
+				return pagination as NotificationPagination;
+			}
 
 			const { data, error } = await this.api.client.http.GET("/api/v1/inbox", {
 				params: {
@@ -35,6 +49,15 @@ export class Inbox {
 			batch(() => {
 				for (const item of data.items) {
 					this.cache.set(item.id, item);
+				}
+				for (const thread of data.threads) {
+					this.api.threads.cache.set(thread.id, thread);
+				}
+				for (const message of data.messages) {
+					this.api.messages.cache.set(message.id, message);
+				}
+				for (const room of data.rooms) {
+					this.api.rooms.cache.set(room.id, room);
 				}
 			});
 

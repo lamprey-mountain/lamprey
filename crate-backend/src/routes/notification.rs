@@ -6,11 +6,10 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::notifications::{
     InboxListParams, InboxThreadsParams, Notification, NotificationCreate, NotificationFlush,
-    NotificationMarkRead, NotificationReason,
+    NotificationMarkRead, NotificationPagination, NotificationReason,
 };
-use common::v1::types::{
-    util::Time, NotificationId, PaginationQuery, PaginationResponse, Thread, ThreadId,
-};
+use common::v1::types::PaginationResponse;
+use common::v1::types::{util::Time, NotificationId, PaginationQuery, Thread, ThreadId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -25,7 +24,7 @@ use crate::ServerState;
     path = "/inbox",
     params(PaginationQuery<NotificationId>, InboxListParams),
     tags = ["inbox"],
-    responses((status = OK, body = PaginationResponse<Notification>, description = "success"))
+    responses((status = OK, body = NotificationPagination, description = "success"))
 )]
 async fn inbox_get(
     Auth(auth_user): Auth,
@@ -33,10 +32,58 @@ async fn inbox_get(
     Query(params): Query<InboxListParams>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let res = s
+    let notifications = s
         .data()
         .notification_list(auth_user.id, pagination, params)
         .await?;
+
+    let mut thread_ids = std::collections::HashSet::new();
+    for notif in &notifications.items {
+        thread_ids.insert(notif.thread_id);
+    }
+
+    let srv = s.services();
+
+    let mut threads = Vec::new();
+    for thread_id in thread_ids {
+        if let Ok(thread) = srv.threads.get(thread_id, Some(auth_user.id)).await {
+            threads.push(thread);
+        }
+    }
+
+    let mut room_ids = std::collections::HashSet::new();
+    for thread in &threads {
+        if let Some(room_id) = thread.room_id {
+            room_ids.insert(room_id);
+        }
+    }
+
+    let mut rooms = Vec::new();
+    for room_id in room_ids {
+        if let Ok(room) = srv.rooms.get(room_id, Some(auth_user.id)).await {
+            rooms.push(room);
+        }
+    }
+
+    let mut messages = Vec::new();
+    for notif in &notifications.items {
+        if let Ok(mut message) = s
+            .data()
+            .message_get(notif.thread_id, notif.message_id, auth_user.id)
+            .await
+        {
+            s.presign_message(&mut message).await?;
+            messages.push(message);
+        }
+    }
+
+    let res = NotificationPagination {
+        inner: notifications,
+        threads,
+        messages,
+        rooms,
+    };
+
     Ok(Json(res))
 }
 

@@ -209,7 +209,10 @@ impl DataThread for Postgres {
                 .owner_id
                 .unwrap_or(thread.owner_id)
                 .map(|i| i.into_inner()),
-            patch.icon.map(|i| i.map(|i| *i)).unwrap_or(thread.icon.map(|i| *i)),
+            patch
+                .icon
+                .map(|i| i.map(|i| *i))
+                .unwrap_or(thread.icon.map(|i| *i)),
         )
         .execute(&mut *tx)
         .await?;

@@ -6,7 +6,10 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, MessageId, NotificationId, RoomId, ThreadId};
+use crate::v1::types::{
+    util::Time, Message, MessageId, NotificationId, PaginationResponse, Room, RoomId, Thread,
+    ThreadId,
+};
 
 /// how to handle an event
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -259,4 +262,14 @@ pub enum InboxThreadsOrder {
 
     /// most recently created threads first (order by id desc)
     Oldest,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct NotificationPagination {
+    #[serde(flatten)]
+    pub inner: PaginationResponse<Notification>,
+    pub threads: Vec<Thread>,
+    pub messages: Vec<Message>,
+    pub rooms: Vec<Room>,
 }
