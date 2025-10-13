@@ -10,6 +10,7 @@ use crate::v1::types::{
 
 use super::{
     emoji::EmojiCustom,
+    notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
     role::RoleReorderItem,
     user_config::{UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser},
@@ -360,6 +361,29 @@ pub enum MessageSync {
         thread_id: Option<ThreadId>,
         ops: Vec<MemberListOp>,
         groups: Vec<MemberListGroup>,
+    },
+
+    InboxNotificationCreate {
+        user_id: UserId,
+        notification: Notification,
+    },
+
+    InboxMarkRead {
+        user_id: UserId,
+        #[serde(flatten)]
+        params: NotificationMarkRead,
+    },
+
+    InboxMarkUnread {
+        user_id: UserId,
+        #[serde(flatten)]
+        params: NotificationMarkRead,
+    },
+
+    InboxFlush {
+        user_id: UserId,
+        #[serde(flatten)]
+        params: NotificationFlush,
     },
 }
 

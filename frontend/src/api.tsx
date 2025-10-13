@@ -802,6 +802,31 @@ export function createApi(
 			}
 			list.groups = groups;
 			memberLists.set(id, { ...list });
+		} else if (msg.type === "InboxNotificationCreate") {
+			if (msg.user_id === session()?.user_id) {
+				inbox.cache.set(msg.notification.id, msg.notification);
+				for (const listing of inbox._listings.values()) {
+					listing.refetch();
+				}
+			}
+		} else if (msg.type === "InboxMarkRead") {
+			if (msg.user_id === session()?.user_id) {
+				for (const listing of inbox._listings.values()) {
+					listing.refetch();
+				}
+			}
+		} else if (msg.type === "InboxMarkUnread") {
+			if (msg.user_id === session()?.user_id) {
+				for (const listing of inbox._listings.values()) {
+					listing.refetch();
+				}
+			}
+		} else if (msg.type === "InboxFlush") {
+			if (msg.user_id === session()?.user_id) {
+				for (const listing of inbox._listings.values()) {
+					listing.refetch();
+				}
+			}
 		} else {
 			console.warn(`unknown event ${msg.type}`, msg);
 		}

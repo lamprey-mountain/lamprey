@@ -589,6 +589,10 @@ impl Connection {
                 AuthCheck::RoomPerm(*room_id, Permission::MemberBan)
             }
             MessageSync::MemberListSync { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::InboxNotificationCreate { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::InboxMarkUnread { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::InboxFlush { user_id, .. } => AuthCheck::User(*user_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {

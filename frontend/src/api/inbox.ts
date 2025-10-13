@@ -5,7 +5,13 @@ import type {
 	Room,
 	Thread,
 } from "sdk";
-import { batch, createResource, type Resource } from "solid-js";
+import {
+	batch,
+	createEffect,
+	createResource,
+	onCleanup,
+	type Resource,
+} from "solid-js";
 import type { Api } from "../api.tsx";
 import type { Message } from "sdk";
 
@@ -18,6 +24,7 @@ export interface NotificationPagination extends Pagination<Notification> {
 export class Inbox {
 	api: Api = null as unknown as Api;
 	cache = new Map<string, Notification>();
+	_listings = new Map<string, { refetch: () => void }>();
 
 	list(
 		params: () => InboxListParams,
@@ -74,6 +81,14 @@ export class Inbox {
 				return await paginate(p);
 			},
 		);
+
+		createEffect(() => {
+			const key = JSON.stringify(params());
+			this._listings.set(key, { refetch });
+			onCleanup(() => {
+				this._listings.delete(key);
+			});
+		});
 
 		return [resource, { refetch }];
 	}
