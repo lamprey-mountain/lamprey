@@ -1,221 +1,191 @@
-import { For, Match, Switch } from "solid-js";
-
-// start with just mention and reminder for now
-const inboxItems = [
-	{ type: "mention" },
-	{ type: "mention" },
-	{ type: "reply" },
-	{ type: "new_thread" },
-	{ type: "unread" },
-	{ type: "mention" },
-	{ type: "reminder" },
-	{ type: "mention" },
-	{ type: "mention" },
-	{ type: "friend_request_received" },
-	{ type: "dm_request" },
-	{ type: "mention" },
-	{ type: "mention" },
-	{ type: "mention" },
-	{ type: "friend_request_accepted" },
-];
+import { createResource, createSignal, For, Show } from "solid-js";
+import { useApi } from "./api.tsx";
+import type { Message, Notification } from "sdk";
+import { A } from "@solidjs/router";
+import { Time } from "./Time.tsx";
+import { MessageView } from "./Message.tsx";
 
 export const Inbox = () => {
+	const api = useApi();
+	const [params, setParams] = createSignal({
+		include_read: false,
+		room_id: [],
+		thread_id: [],
+	});
+	const [inboxItems, { refetch }] = api.inbox.list(params);
+	const [selected, setSelected] = createSignal<string[]>([]);
+
+	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
+		const items = inboxItems()?.items ?? [];
+		return notifIds.map((id) => {
+			const notif = items.find((it) => it.id === id);
+			return notif ? notif.message_id : null;
+		}).filter((id): id is string => !!id);
+	};
+
+	const handleMarkSelectedRead = async () => {
+		if (selected().length === 0) return;
+		await api.inbox.markRead(getMessageIdsFromNotifIds(selected()));
+		setSelected([]);
+		refetch();
+	};
+
+	const handleMarkSelectedUnread = async () => {
+		if (selected().length === 0) return;
+		await api.inbox.markUnread(getMessageIdsFromNotifIds(selected()));
+		setSelected([]);
+		refetch();
+	};
+
+	const toggleSelection = (notifId: string, isSelected: boolean) => {
+		setSelected((s) =>
+			isSelected ? [...s, notifId] : s.filter((id) => id !== notifId)
+		);
+	};
+
+	const toggleSelectAll = (e: Event) => {
+		const checked = (e.currentTarget as HTMLInputElement).checked;
+		if (checked) {
+			setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
+		} else {
+			setSelected([]);
+		}
+	};
+
 	return (
-		<div class="inbox" style="">
-			<h2>inbox</h2>
-			<p>filter by room, show reminders</p>
+		<div class="inbox">
+			<header>
+				<h2>inbox</h2>
+				<input
+					type="checkbox"
+					onChange={toggleSelectAll}
+					class="select-all-checkbox"
+				/>
+				<Show when={selected().length > 0}>
+					<div class="bulk-actions">
+						<span>{selected().length} selected</span>
+						<button onClick={handleMarkSelectedRead}>Mark as read</button>
+						<button onClick={handleMarkSelectedUnread}>Mark as unread</button>
+					</div>
+				</Show>
+				<div class="spacer" />
+				<div class="filters">
+					<label>
+						<input
+							type="checkbox"
+							checked={params().include_read}
+							onChange={(e) =>
+								setParams({
+									...params(),
+									include_read: e.currentTarget.checked,
+								})}
+						/>
+						show read
+					</label>
+				</div>
+			</header>
 			<div class="inner">
-				<For each={inboxItems}>
-					{(it) => {
-						return (
-							<article class="notification" data-type={it.type}>
-								<header>
-									<Switch>
-										<Match when={it.type === "friend_request_received"}>
-											new friend?
-										</Match>
-										<Match when={it.type === "friend_request_accepted"}>
-											new friend!
-										</Match>
-										<Match when={true}>room name &gt; thread name</Match>
-									</Switch>{" "}
-									&bull; some time ago
-									<div class="spacer"></div>
-									<div class="label">{it.type}</div>
-								</header>
-								<Switch>
-									<Match when={it.type === "mention"}>
-										<NotificationMention />
-									</Match>
-									<Match when={it.type === "reply"}>
-										<NotificationReply />
-									</Match>
-									<Match when={it.type === "new_thread"}>
-										<NotificationNewThread />
-									</Match>
-									<Match when={it.type === "unread"}>
-										<NotificationUnreadThread />
-									</Match>
-									<Match when={it.type === "reminder"}>
-										<NotificationReminder />
-									</Match>
-									<Match when={it.type === "friend_request_received"}>
-										<NotificationFriendRequestRecieved />
-									</Match>
-									<Match when={it.type === "dm_request"}>
-										<NotificationDmRequest />
-									</Match>
-									<Match when={it.type === "friend_request_accepted"}>
-										<NotificationFriendRequestAccepted />
-									</Match>
-								</Switch>
-							</article>
-						);
-					}}
+				<For each={inboxItems()?.items} fallback={<div>loading...</div>}>
+					{(it) => (
+						<NotificationItem
+							notification={it}
+							selected={selected().includes(it.id)}
+							onSelect={toggleSelection}
+							refetch={refetch}
+							include_read={params().include_read}
+						/>
+					)}
 				</For>
 			</div>
 		</div>
 	);
 };
 
-const NotificationReminder = () => {
+const NotificationItem = (
+	props: {
+		notification: Notification;
+		selected: boolean;
+		onSelect: (id: string, selected: boolean) => void;
+		refetch: () => void;
+		include_read: boolean;
+	},
+) => {
+	const api = useApi();
+	const thread = api.threads.fetch(() => props.notification.thread_id);
+	const message = api.messages.fetch(
+		() => props.notification.thread_id,
+		() => props.notification.message_id,
+	);
+	const [room] = createResource(thread, (t) => {
+		if (!t.room_id) return;
+		return api.rooms.fetch(() => t.room_id)();
+	});
+
+	const handleMarkRead = async () => {
+		await api.inbox.markRead([props.notification.message_id]);
+		props.refetch();
+	};
+
+	const handleMarkUnread = async () => {
+		await api.inbox.markUnread([props.notification.message_id]);
+		props.refetch();
+	};
+
+	const reasonText = () => {
+		switch (props.notification.reason) {
+			case "Mention":
+				return "Mention";
+			case "MentionBulk":
+				return "Room Mention";
+			case "Reminder":
+				return "Reminder";
+			case "Reply":
+				return "Reply";
+		}
+	};
+
 	return (
-		<div style="padding:8px">
-			message, mention, etc
-			<br />
-			if theres just a few messages, show them all here
-			<br />
-			<button>jump</button>
-			<button>close</button>
-		</div>
+		<article class="notification" data-type={props.notification.reason}>
+			<header>
+				<input
+					type="checkbox"
+					class="notification-checkbox"
+					checked={props.selected}
+					onChange={(e) =>
+						props.onSelect(props.notification.id, e.currentTarget.checked)}
+				/>
+				<Show when={room()}>
+					<A href={`/room/${room()!.id}`}>{room()!.name}</A>
+					&nbsp;&gt;&nbsp;
+				</Show>
+				<A href={`/thread/${thread()?.id}`}>{thread()?.name ?? "..."}</A>
+				&nbsp;&bull;&nbsp;
+				<Time date={new Date(props.notification.added_at)} />
+				<div class="spacer"></div>
+				<div class="label">{reasonText()}</div>
+				<Show
+					when={!props.include_read}
+					fallback={
+						<button class="mark-read" onClick={handleMarkUnread}>
+							Mark as unread
+						</button>
+					}
+				>
+					<button class="mark-read" onClick={handleMarkRead}>
+						Mark as read
+					</button>
+				</Show>
+			</header>
+			<div class="notification-content">
+				<A
+					class="body-link"
+					href={`/thread/${thread()?.id}/message/${message()?.id}`}
+				>
+					<Show when={message()}>
+						<MessageView message={message() as Message} separate={true} />
+					</Show>
+				</A>
+			</div>
+		</article>
 	);
 };
-
-const NotificationUnreadThread = () => {
-	return (
-		<div style="padding:8px">
-			message, mention, etc
-			<br />
-			if theres just a few messages, show them all here
-			<br />
-			<button>jump</button>
-			<button>close</button>
-		</div>
-	);
-};
-
-const NotificationNewThread = () => {
-	return (
-		<div style="padding:8px">
-			message, mention, etc
-			<br />
-			if theres just a few messages, show them all here
-			<br />
-			<button>jump</button>
-			<button>close</button>
-		</div>
-	);
-};
-
-const NotificationReply = () => {
-	return (
-		<div style="padding:8px">
-			message, mention, etc
-			<br />
-			if theres just a few messages, show them all here
-			<br />
-			<button>jump</button>
-			<button>close</button>
-		</div>
-	);
-};
-
-const NotificationMention = () => {
-	return (
-		<div style="padding:8px">
-			message, mention, etc
-			<br />
-			if theres just a few messages, show them all here
-			<br />
-			<button>jump</button>
-			<button>close</button>
-		</div>
-	);
-};
-
-const NotificationFriendRequestAccepted = () => {
-	return (
-		<div style="padding:8px">
-			show user profile
-			<br />
-			<button>send dm</button>
-			<button>hide notification</button>
-		</div>
-	);
-};
-
-const NotificationFriendRequestRecieved = () => {
-	return (
-		<div style="padding:8px">
-			show user profile
-			<br />
-			<button>accept</button>
-			<button>reject</button>
-			<button>hide notification</button>
-		</div>
-	);
-};
-
-const NotificationDmRequest = () => {
-	return (
-		<div style="padding:8px">
-			show user profile
-			<br />
-			<button>accept</button>
-			<button>reject</button>
-			<button>hide notification</button>
-		</div>
-	);
-};
-
-/*
-notification types
-
-- dm_request (merge with new_thread?)
-- friend_request_received
-- friend_request_accepted
-- mention
-- new_thread
-- reminder
-- reply
-- unread
-
-notification behavior
-
-- merge (new_thread, mention, reply, unread) -> unread if messages are near each other
-	- how does this interact with unread marker/mark as read? i dont want to mark as unread then have stuff show up in the inbox
-	- maybe separate unreads/inbox tabs
-- show all of a thread's unread messages in inbox if unread count < ~30
-- try to show full message group if possible
-- automatically mark notifications as read as you scroll through them (in inbox or thread)
-- option to delete ("close") individual notifications
-- option to include read notifications
-- option to include future reminders
-- option to filter by room
-- accepting friend/dm request also deletes the notification
-
-where should the timestamp go? for messages its redundant
-
-messages
-type Notification = { id, thread_id, messages: Array<message>, flags }
-flags contain reply, mention, new_thread
-
-reminder
-type Notification = { id, thread_id, message_id, reason? }
-
-friend request
-type Notification = { id, user_id }
-
-dm request
-type Notification = { id, user_id, thread_id }
-*/

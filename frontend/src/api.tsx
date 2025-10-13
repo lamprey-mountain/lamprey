@@ -16,6 +16,7 @@ import type {
 	AuditLogEntry,
 	Client,
 	EmojiCustom,
+	InboxListParams,
 	Invite,
 	InviteWithMetadata,
 	Media,
@@ -24,6 +25,7 @@ import type {
 	MessageCreate,
 	MessageReady,
 	MessageSync,
+	Notification,
 	Pagination,
 	Role,
 	Room,
@@ -57,6 +59,7 @@ import { MediaInfo } from "./api/media.tsx";
 import { Emoji } from "./api/emoji.ts";
 import { Dms } from "./api/dms.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
+import { Inbox } from "./api/inbox.ts";
 
 export type Json =
 	| number
@@ -108,6 +111,7 @@ export function createApi(
 	const audit_logs = new AuditLogs();
 	const emoji = new Emoji();
 	const dms = new Dms();
+	const inbox = new Inbox();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
 	const memberLists = new ReactiveMap<string, MemberList>();
@@ -843,6 +847,7 @@ export function createApi(
 		client,
 		emoji,
 		dms,
+		inbox,
 		voiceStates,
 		voiceState,
 		memberLists,
@@ -869,6 +874,7 @@ export function createApi(
 	media.api = api;
 	emoji.api = api;
 	dms.api = api;
+	inbox.api = api;
 
 	console.log("provider created", api);
 	return api;
@@ -903,6 +909,7 @@ export type Api = {
 	dms: {
 		list: () => Resource<Pagination<Thread>>;
 	};
+	inbox: Inbox;
 	invites: {
 		fetch: (invite_code: () => string) => Resource<Invite>;
 		list: (room_id: () => string) => Resource<Pagination<InviteWithMetadata>>;
