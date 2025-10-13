@@ -249,6 +249,12 @@ export function MessageView(props: MessageProps) {
 	const inSelectMode = () =>
 		ctx.selectMode.get(props.message.thread_id) ?? false;
 
+	const onMouseDown = (e: MouseEvent) => {
+		if (inSelectMode() && e.shiftKey) {
+			e.preventDefault();
+		}
+	};
+
 	const handleClick = (e: MouseEvent) => {
 		if (!inSelectMode()) return;
 		e.preventDefault();
@@ -331,6 +337,7 @@ export function MessageView(props: MessageProps) {
 						notseparate: !props.separate,
 					}}
 					onClick={handleClick}
+					onMouseDown={onMouseDown}
 				>
 					<div class="emojiicon">&#x1f465;</div>
 					<div class="content">
@@ -518,6 +525,7 @@ export function MessageView(props: MessageProps) {
 						notseparate: !props.separate,
 					}}
 					onClick={handleClick}
+					onMouseDown={onMouseDown}
 				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
