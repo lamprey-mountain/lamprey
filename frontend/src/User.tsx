@@ -195,3 +195,49 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 		</svg>
 	);
 };
+
+export const ThreadIcon = (
+	props: { id: string; icon?: string | null; pad?: number },
+) => {
+	const pad = () => props.pad ?? 4;
+	const size = 64;
+	const totalSize = () => size + pad() * 2;
+	return (
+		<svg
+			class="avatar"
+			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
+			role="img"
+			style={{ "--pad": `${pad()}px` }}
+		>
+			<mask id="thread-icon-mask">
+				<rect
+					rx="6"
+					width={size}
+					height={size}
+					x={pad()}
+					y={pad()}
+					fill="white"
+				/>
+			</mask>
+			<g mask="url(#thread-icon-mask)">
+				<rect
+					width={size}
+					height={size}
+					x={pad()}
+					y={pad()}
+					fill={props.icon ? "oklch(var(--color-bg3))" : getColor(props.id)}
+				/>
+				<Show when={props.icon}>
+					<image
+						preserveAspectRatio="xMidYMid slice"
+						width={size}
+						height={size}
+						x={pad()}
+						y={pad()}
+						href={getThumbFromId(props.icon!, 64)!}
+					/>
+				</Show>
+			</g>
+		</svg>
+	);
+};

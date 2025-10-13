@@ -1,10 +1,20 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "./config.tsx";
+import { Avatar, AvatarWithStatus, getColor, ThreadIcon } from "./User.tsx";
+import { getThumbFromId } from "./media/util.tsx";
 
 export const ThreadNav = (props: { room_id?: string }) => {
 	const config = useConfig();
@@ -370,14 +380,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 														data-thread-id={s.thread_id}
 														data-user-id={s.user_id}
 													>
-														<Show
-															when={user()?.avatar}
-															fallback={<div class="fallback-avatar"></div>}
-														>
-															<img
-																src={`${config.cdn_url}/thumb/${user()?.avatar}?size=64`}
-															/>
-														</Show>{" "}
+														<Avatar user={user()} />
 														{name()}
 													</div>
 												);
@@ -397,11 +400,17 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 const ItemThread = (props: { thread: Thread }) => {
 	const api = useApi();
+	const otherUser = createMemo(() => {
+		if (props.thread.type === "Dm") {
+			const selfId = api.users.cache.get("@self")!.id;
+			return props.thread.recipients.find((i) => i.id !== selfId);
+		}
+		return undefined;
+	});
+
 	const name = () => {
 		if (props.thread.type === "Dm") {
-			const user_id = api.users.cache.get("@self")!.id;
-			return props.thread.recipients.find((i) => i.id !== user_id)?.name ??
-				"dm";
+			return otherUser()?.name ?? "dm";
 		}
 
 		return props.thread.name;
@@ -416,7 +425,28 @@ const ItemThread = (props: { thread: Thread }) => {
 			}}
 			data-thread-id={props.thread.id}
 		>
-			{name()}
+			<Switch>
+				<Match when={props.thread.type === "Dm" && otherUser()}>
+					<AvatarWithStatus user={otherUser()} />
+				</Match>
+				<Match when={props.thread.type === "Gdm"}>
+					<ThreadIcon id={props.thread.id} icon={props.thread.icon} />
+				</Match>
+			</Switch>
+			<div>
+				<div
+					style={{
+						"text-overflow": "ellipsis",
+						overflow: "hidden",
+						"white-space": "nowrap",
+					}}
+				>
+					{name()}
+				</div>
+				<Show when={otherUser()?.status.text}>
+					{(t) => <div class="dim">{t()}</div>}
+				</Show>
+			</div>
 		</A>
 	);
 };
