@@ -633,7 +633,7 @@ async fn user_set_status(
 
     let srv = s.services();
     srv.users
-        .status_set(target_user_id, json.apply(Status::offline()))
+        .status_set_manual(target_user_id, json.apply(Status::offline()))
         .await?;
 
     Ok(StatusCode::NO_CONTENT)

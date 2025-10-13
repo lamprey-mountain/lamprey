@@ -122,6 +122,15 @@ impl ServiceUsers {
         self.status_set_inner(user_id, status, false).await
     }
 
+    /// set the status for a user, with a longer expiration
+    ///
+    /// this is for manual status updates, not presence-based ones
+    #[tracing::instrument(level = "trace", skip(self))]
+    pub async fn status_set_manual(&self, user_id: UserId, status: Status) -> Result<User> {
+        self.status_set_inner_expire(user_id, status, false, Duration::from_secs(60 * 5))
+            .await
+    }
+
     #[tracing::instrument(level = "trace", skip(self))]
     async fn status_set_inner(
         &self,
@@ -129,9 +138,21 @@ impl ServiceUsers {
         status: Status,
         skip_broadcast: bool,
     ) -> Result<User> {
+        self.status_set_inner_expire(user_id, status, skip_broadcast, STATUS_EXPIRE)
+            .await
+    }
+
+    #[tracing::instrument(level = "trace", skip(self))]
+    async fn status_set_inner_expire(
+        &self,
+        user_id: UserId,
+        status: Status,
+        skip_broadcast: bool,
+        expire: Duration,
+    ) -> Result<User> {
         let s = self.state.clone();
         let handle = tokio::spawn(async move {
-            tokio::time::sleep(STATUS_EXPIRE).await;
+            tokio::time::sleep(expire).await;
             let had = s.services().users.statuses.remove(&user_id);
             debug!(
                 "expire status for {user_id}, had {:?}",
