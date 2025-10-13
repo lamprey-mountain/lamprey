@@ -91,12 +91,14 @@ impl ServicePermissions {
                 }
 
                 let mut perms = data.permission_room_get(user_id, room_id).await?;
-                let member = data.room_member_get(room_id, user_id).await?;
-                if let Some(timeout_until) = member.timeout_until {
-                    if timeout_until > Time::now_utc() {
-                        perms.set_timed_out(true);
+                if let Ok(member) = data.room_member_get(room_id, user_id).await {
+                    if let Some(timeout_until) = member.timeout_until {
+                        if timeout_until > Time::now_utc() {
+                            perms.set_timed_out(true);
+                        }
                     }
                 }
+
                 Result::Ok(perms)
             })
             .await
