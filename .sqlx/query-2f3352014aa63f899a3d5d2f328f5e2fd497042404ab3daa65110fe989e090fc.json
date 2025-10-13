@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n                        FROM usr\n                        WHERE id > $1 AND id < $2\n                          AND bot->'access' IS NOT NULL\n                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                        ",
+  "query": "\n            SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended\n            FROM usr WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -35,41 +35,43 @@
       },
       {
         "ordinal": 6,
+        "name": "banner",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
         "name": "puppet",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "bot",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "registered_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "deleted_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "suspended",
         "type_info": "Jsonb"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Int8"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -81,11 +83,12 @@
       true,
       true,
       true,
+      true,
       false,
       true,
       true,
       true
     ]
   },
-  "hash": "784f134aa52d29206908d736bae38e0775b763d25aef076fe156eaae19ed90d9"
+  "hash": "2f3352014aa63f899a3d5d2f328f5e2fd497042404ab3daa65110fe989e090fc"
 }

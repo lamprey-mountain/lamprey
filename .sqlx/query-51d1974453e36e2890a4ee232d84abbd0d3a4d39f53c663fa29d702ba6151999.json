@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                        SELECT id, version_id, parent_id, name, description, avatar, puppet, bot, system, registered_at, deleted_at, suspended\n                        FROM usr\n                        WHERE id > $1 AND id < $2\n                          AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false\n                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                        ",
+  "query": "\n                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended\n                        FROM usr\n                        WHERE id > $1 AND id < $2\n                          AND registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false\n                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4\n                        ",
   "describe": {
     "columns": [
       {
@@ -35,31 +35,36 @@
       },
       {
         "ordinal": 6,
+        "name": "banner",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
         "name": "puppet",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "bot",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "registered_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "deleted_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "suspended",
         "type_info": "Jsonb"
       }
@@ -81,11 +86,12 @@
       true,
       true,
       true,
+      true,
       false,
       true,
       true,
       true
     ]
   },
-  "hash": "143d411355afdcaa6708a2b90279dd8a52a15650cb3e2512d081e5cfa0ce5521"
+  "hash": "51d1974453e36e2890a4ee232d84abbd0d3a4d39f53c663fa29d702ba6151999"
 }

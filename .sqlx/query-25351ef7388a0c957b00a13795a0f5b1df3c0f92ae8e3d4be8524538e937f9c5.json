@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "select count(*) from message where thread_id = $1 and is_latest\n",
+  "query": "select count(*) from message where thread_id = $1 and is_latest and deleted_at is null",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "2f796b5ab554ca1340a24d3c39df06e86cea6be69ca19d305182cdfcd0d2df95"
+  "hash": "25351ef7388a0c957b00a13795a0f5b1df3c0f92ae8e3d4be8524538e937f9c5"
 }

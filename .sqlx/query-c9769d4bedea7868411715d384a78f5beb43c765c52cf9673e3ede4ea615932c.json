@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5 WHERE id = $1",
+  "query": "UPDATE usr SET version_id = $2, name = $3, description = $4, avatar = $5, banner = $6 WHERE id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -9,10 +9,11 @@
         "Uuid",
         "Text",
         "Text",
+        "Uuid",
         "Uuid"
       ]
     },
     "nullable": []
   },
-  "hash": "473564e988c8ba302b602ad75b0eb0c391b6b4e0cb1e0bb641554ad6971f97be"
+  "hash": "c9769d4bedea7868411715d384a78f5beb43c765c52cf9673e3ede4ea615932c"
 }

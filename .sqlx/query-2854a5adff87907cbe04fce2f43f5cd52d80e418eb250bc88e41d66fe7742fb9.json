@@ -17,7 +17,9 @@
                 "AvatarUser",
                 "Embed",
                 "CustomEmoji",
-                "AvatarRoom"
+                "AvatarRoom",
+                "BannerUser",
+                "IconThread"
               ]
             }
           }
