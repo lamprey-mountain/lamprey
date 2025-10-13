@@ -336,11 +336,59 @@ export const ChatMain = (props: ChatProps) => {
 	);
 };
 
+import { usePermissions } from "./hooks/usePermissions.ts";
+
 export const ChatHeader = (
 	props: ChatProps & { showMembersButton?: boolean },
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
+
+	const selected = () => ctx.selectedMessages.get(props.thread.id) ?? [];
+	const inSelectMode = () => ctx.selectMode.get(props.thread.id) ?? false;
+
+	const { has: hasPermission } = usePermissions(
+		() => api.users.cache.get("@self")!.id,
+		() => props.thread.room_id,
+		() => props.thread.id,
+	);
+	const canDelete = () => hasPermission("MessageDelete");
+	const canRemove = () => hasPermission("MessageRemove");
+
+	const exitSelectMode = () => {
+		ctx.selectMode.set(props.thread.id, false);
+		ctx.selectedMessages.set(props.thread.id, []);
+	};
+
+	const deleteSelected = () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: `Are you sure you want to delete ${selected().length} messages?`,
+			cont: (confirmed) => {
+				if (!confirmed) return;
+				api.client.http.PATCH("/api/v1/thread/{thread_id}/message", {
+					params: { path: { thread_id: props.thread.id } },
+					body: { delete: selected() },
+				});
+				exitSelectMode();
+			},
+		});
+	};
+
+	const removeSelected = () => {
+		ctx.dispatch({
+			do: "modal.confirm",
+			text: `Are you sure you want to remove ${selected().length} messages?`,
+			cont: (confirmed) => {
+				if (!confirmed) return;
+				api.client.http.PATCH("/api/v1/thread/{thread_id}/message", {
+					params: { path: { thread_id: props.thread.id } },
+					body: { remove: selected() },
+				});
+				exitSelectMode();
+			},
+		});
+	};
 
 	const toggleMembers = () => {
 		const c = ctx.userConfig();
@@ -371,34 +419,53 @@ export const ChatHeader = (
 	};
 
 	return (
-		<header class="chat-header" style="display:flex">
-			<b>{name()}</b>
-			<Show when={props.thread.description}>
-				<span class="dim" style="white-space:pre;font-size:1em">{"  -  "}</span>
-				{props.thread.description}
-			</Show>
-			<Switch>
-				<Match when={props.thread.deleted_at}>{" (removed)"}</Match>
-				<Match when={props.thread.archived_at}>{" (archived)"}</Match>
-			</Switch>
-			<div style="flex:1"></div>
-			<SearchInput thread={props.thread} />
-			<button
-				onClick={togglePinned}
-				classList={{ active: isShowingPinned() }}
-				title="Show pinned messages"
-			>
-				pins
-			</button>
-			<Show when={props.showMembersButton ?? true}>
-				<button
-					onClick={toggleMembers}
-					title="Show members"
-				>
-					members
-				</button>
-			</Show>
-		</header>
+		<Show
+			when={inSelectMode()}
+			fallback={
+				<header class="chat-header" style="display:flex">
+					<b>{name()}</b>
+					<Show when={props.thread.description}>
+						<span class="dim" style="white-space:pre;font-size:1em">
+							{"  -  "}
+						</span>
+						{props.thread.description}
+					</Show>
+					<Switch>
+						<Match when={props.thread.deleted_at}>{" (removed)"}</Match>
+						<Match when={props.thread.archived_at}>{" (archived)"}</Match>
+					</Switch>
+					<div style="flex:1"></div>
+					<SearchInput thread={props.thread} />
+					<button
+						onClick={togglePinned}
+						classList={{ active: isShowingPinned() }}
+						title="Show pinned messages"
+					>
+						pins
+					</button>
+					<Show when={props.showMembersButton ?? true}>
+						<button
+							onClick={toggleMembers}
+							title="Show members"
+						>
+							members
+						</button>
+					</Show>
+				</header>
+			}
+		>
+			<header class="chat-header select-mode-header" style="display:flex">
+				<span>{selected().length} selected</span>
+				<div style="flex:1"></div>
+				<Show when={canDelete()}>
+					<button onClick={deleteSelected}>Delete</button>
+				</Show>
+				<Show when={canRemove()}>
+					<button onClick={removeSelected}>Remove</button>
+				</Show>
+				<button onClick={exitSelectMode}>Cancel</button>
+			</header>
+		</Show>
 	);
 };
 

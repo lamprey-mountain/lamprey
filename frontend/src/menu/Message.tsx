@@ -84,6 +84,11 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	};
 
+	const selectMessage = () => {
+		ctx.selectMode.set(props.thread_id, true);
+		ctx.selectedMessages.set(props.thread_id, [props.message_id]);
+	};
+
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
 
 	return (
@@ -92,8 +97,8 @@ export function MessageMenu(props: MessageMenuProps) {
 			<Item onClick={copyLink}>copy link</Item>
 			<Item onClick={setReply}>reply</Item>
 			<Item onClick={edit}>edit</Item>
-			<Item>fork</Item>
 			<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
+			<Item onClick={selectMessage}>select</Item>
 			<Item onClick={redact}>redact</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>

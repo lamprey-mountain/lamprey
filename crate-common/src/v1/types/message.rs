@@ -465,17 +465,17 @@ pub struct MessageMigrate {
 pub struct MessageModerate {
     /// which messages to delete
     #[serde(default)]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub delete: Vec<MessageId>,
 
     /// which messages to remove
     #[serde(default)]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub remove: Vec<MessageId>,
 
     /// which messages to restore
     #[serde(default)]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub restore: Vec<MessageId>,
 }
 

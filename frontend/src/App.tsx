@@ -279,8 +279,10 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 			// TODO: Implement actual scroll logic if needed
 			console.log("scrollToChatList called with position:", pos);
 		},
-	};
 
+		selectMode: new ReactiveMap(),
+		selectedMessages: new ReactiveMap(),
+	};
 	createEffect(() => {
 		const loc = useLocation();
 		const path = loc.pathname.match(/^\/thread\/([^/]+)/);

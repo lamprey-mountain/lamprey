@@ -59,12 +59,17 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				}
 				return false;
 			};
+			const isSelected = () => {
+				const selected = ctx.selectedMessages.get(thread.id);
+				return selected?.includes(item.message.id) ?? false;
+			};
 			return (
 				<li
 					class="message"
 					classList={{
-						"selected": item.message.id === ctx.thread_reply_id.get(thread.id),
-						"mentioned": is_mentioned(),
+						selected: item.message.id === ctx.thread_reply_id.get(thread.id),
+						"message-selected": isSelected(),
+						mentioned: is_mentioned(),
 					}}
 				>
 					<MessageView message={item.message} separate={item.separate} />

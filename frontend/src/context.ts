@@ -148,8 +148,10 @@ export type ChatCtx = {
 	setUserConfig: Setter<UserConfig>;
 
 	scrollToChatList: (pos: number) => void;
-};
 
+	selectMode: ReactiveMap<string, boolean>; // thread_id -> boolean
+	selectedMessages: ReactiveMap<string, string[]>; // thread_id -> message_id[]
+};
 export type MediaCtx = {
 	media: Media;
 	element: HTMLMediaElement;

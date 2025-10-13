@@ -3037,3 +3037,13 @@ button.link {
 		border: solid $sep-300 1px;
 	}
 }
+
+.chat-header.select-mode-header {
+	background-color: $bg-400;
+	gap: 8px;
+}
+
+.chat > .list > li.message-selected {
+	background-color: oklch(var(--color-blue) / 0.3);
+	box-shadow: 4px 0 0 -1px inset oklch(var(--color-blue));
+}

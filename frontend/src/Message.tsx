@@ -243,7 +243,46 @@ function MessageEditor(
 
 export function MessageView(props: MessageProps) {
 	const api = useApi();
+	const ctx = useCtx();
 	const thread = api.threads.fetch(() => props.message.thread_id);
+
+	const inSelectMode = () =>
+		ctx.selectMode.get(props.message.thread_id) ?? false;
+
+	const handleClick = (e: MouseEvent) => {
+		if (!inSelectMode()) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const thread_id = props.message.thread_id;
+		const message_id = props.message.id;
+		const selected = ctx.selectedMessages.get(thread_id) ?? [];
+
+		if (e.shiftKey && selected.length > 0) {
+			const lastSelected = selected[selected.length - 1];
+			const messages = api.messages.cacheRanges.get(thread_id)?.live.items ??
+				[];
+			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
+			const currentIndex = messages.findIndex((m) => m.id === message_id);
+
+			if (lastIndex !== -1 && currentIndex !== -1) {
+				const start = Math.min(lastIndex, currentIndex);
+				const end = Math.max(lastIndex, currentIndex);
+				const rangeIds = messages.slice(start, end + 1).map((m) => m.id);
+				const newSelected = [...new Set([...selected, ...rangeIds])];
+				ctx.selectedMessages.set(thread_id, newSelected);
+			}
+		} else {
+			if (selected.includes(message_id)) {
+				ctx.selectedMessages.set(
+					thread_id,
+					selected.filter((id) => id !== message_id),
+				);
+			} else {
+				ctx.selectedMessages.set(thread_id, [...selected, message_id]);
+			}
+		}
+	};
 
 	function reactionAdd(key: string) {
 		api.client.http.PUT(
@@ -291,6 +330,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<div class="emojiicon">&#x1f465;</div>
 					<div class="content">
@@ -331,6 +371,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<div class="emojiicon">&#x1f465;</div>
 					<div class="content">
@@ -371,6 +412,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<div class="emojiicon">&#x1F44B;</div>
 					<div class="content">
@@ -399,6 +441,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<div class="emojiicon">&#x1F4CC;</div>
 					<div class="content">
@@ -427,6 +470,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<div class="emojiicon">&#x270F;&#xFE0F;</div>
 					<div class="content">
@@ -473,6 +517,7 @@ export function MessageView(props: MessageProps) {
 						separate: props.separate,
 						notseparate: !props.separate,
 					}}
+					onClick={handleClick}
 				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
@@ -589,12 +634,15 @@ export function MessageView(props: MessageProps) {
 				</article>
 			);
 		} else {
-			<article
-				class="message menu-message"
-				data-message-id={props.message.id}
-			>
-				unknown message: {props.message.type}
-			</article>;
+			return (
+				<article
+					class="message menu-message"
+					data-message-id={props.message.id}
+					onClick={handleClick}
+				>
+					unknown message: {props.message.type}
+				</article>
+			);
 		}
 	}
 
