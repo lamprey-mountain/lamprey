@@ -29,12 +29,17 @@ export class Users {
 				return data;
 			})();
 
-			createEffect(() => {
-				mutate(this.cache.get(user_id));
-			});
-
 			this.requests.set(user_id, req);
 			return req;
+		});
+
+		createEffect(() => {
+			const id = user_id();
+			if (!id) return;
+			const user = this.cache.get(id);
+			if (user) {
+				mutate(user);
+			}
 		});
 
 		return resource;

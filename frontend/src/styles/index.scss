@@ -3088,3 +3088,12 @@ button.link {
 	background-color: oklch(var(--color-blue) / 0.3);
 	box-shadow: 4px 0 0 -1px inset oklch(var(--color-blue));
 }
+
+.user-profile-page {
+	grid-area: main;
+	padding: 8px;
+
+	& > .user-profile {
+		box-shadow: none;
+	}
+}

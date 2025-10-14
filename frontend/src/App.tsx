@@ -66,6 +66,7 @@ import {
 	RouteRoomSettings,
 	RouteThread,
 	RouteThreadSettings,
+	RouteUser,
 } from "./routes.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { UserProfile } from "./UserProfile.tsx";
@@ -101,7 +102,7 @@ const App: Component = () => {
 			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />
 			<Route path="/verify-email" component={RouteVerifyEmail} />
-			<Route path="/user/:user_id" component={UserProfile} />
+			<Route path="/user/:user_id" component={RouteUser} />
 			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>

@@ -19,6 +19,7 @@ import { Category } from "./Category.tsx";
 import { SERVER_ROOM_ID, type Thread } from "sdk";
 import { PinnedMessages } from "./menu/PinnedMessages.tsx";
 import { Resizable } from "./Resizable.tsx";
+import { UserProfile } from "./UserProfile.tsx";
 export { RouteAuthorize } from "./Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -262,6 +263,26 @@ export const RouteInvite = (p: RouteSectionProps) => {
 				<RouteInviteInner code={p.params.code!} />
 				<VoiceTray />
 			</Show>
+		</>
+	);
+};
+
+export const RouteUser = (p: RouteSectionProps) => {
+	const api = useApi();
+	const user = api.users.fetch(() => p.params.user_id);
+
+	return (
+		<>
+			<Title title={user()?.name ?? "loading..."} />
+			<RoomNav />
+			<ThreadNav />
+			<header class="chat-header">
+				<b>{user()?.name}</b>
+			</header>
+			<Show when={user()}>
+				<UserProfile user={user()!} />
+			</Show>
+			<VoiceTray />
 		</>
 	);
 };

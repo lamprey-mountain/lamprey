@@ -1,11 +1,20 @@
-import type { Role, RoomMember, ThreadMember, User, UserConfigUser } from "sdk";
+import type {
+	Role,
+	RoomMember,
+	ThreadMember,
+	User,
+	UserConfigUser,
+	UserWithRelationship,
+} from "sdk";
 import { useApi } from "./api";
 import {
 	createEffect,
 	createSignal,
 	For,
+	Match,
 	onCleanup,
 	Show,
+	Switch,
 	type VoidProps,
 } from "solid-js";
 import { Copyable } from "./util";
@@ -19,11 +28,12 @@ import {
 	shift,
 } from "@floating-ui/dom";
 import { usePermissions } from "./hooks/usePermissions.ts";
+import { useNavigate } from "@solidjs/router";
 
 type UserProps = {
 	room_member?: RoomMember;
 	thread_member?: ThreadMember;
-	user: User;
+	user: UserWithRelationship;
 };
 
 const EditRoles = (
@@ -113,7 +123,7 @@ const EditRoles = (
 	const getRoles = () =>
 		(roles()?.items ?? []).filter((r) => r.id !== props.room_id);
 
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const self_id = () => api.users.cache.get("@self")?.id;
 
 	const { permissions } = usePermissions(
 		self_id,
@@ -157,8 +167,9 @@ const EditRoles = (
 export function UserView(props: UserProps) {
 	const api = useApi();
 	const ctx = useCtx();
+	const nav = useNavigate();
 
-	const self_id = () => api.users.cache.get("@self")!.id;
+	const self_id = () => api.users.cache.get("@self")?.id;
 	const { has: hasPermission } = usePermissions(
 		self_id,
 		() => props.room_member?.room_id,
@@ -193,10 +204,22 @@ export function UserView(props: UserProps) {
 		});
 	};
 
-	const openDm = () => {
-		api.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
+	const removeFriend = async () => {
+		await api.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user.id } },
 		});
+	};
+
+	const openDm = async () => {
+		const { data } = await api.client.http.POST(
+			"/api/v1/user/@self/dm/{target_id}",
+			{
+				params: { path: { target_id: props.user.id } },
+			},
+		);
+		if (data) {
+			nav(`/thread/${data.id}`);
+		}
 	};
 
 	const userConfig = () => props.user.user_config;
@@ -275,14 +298,27 @@ export function UserView(props: UserProps) {
 					id: <Copyable>{props.user.id}</Copyable>
 				</div>
 				<div class="actions">
-					<button onClick={sendFriendRequest}>Add Friend</button>
+					<Switch>
+						<Match when={props.user.relationship?.relation === "Friend"}>
+							<button onClick={removeFriend}>Remove Friend</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Outgoing"}>
+							<button onClick={removeFriend}>Cancel Request</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Incoming"}>
+							<button onClick={sendFriendRequest}>Accept Friend</button>
+						</Match>
+						<Match when={!props.user.relationship?.relation}>
+							<button onClick={sendFriendRequest}>Add Friend</button>
+						</Match>
+					</Switch>
 					<button onClick={openDm}>Message</button>
 					<button onClick={openUserMenu}>menu</button>
 				</div>
 
 				<Show when={props.user.description}>
 					<div class="description">
-						<h3>About Me</h3>
+						<h3 class="dim">About Me</h3>
 						<div class="markdown">
 							<p>{props.user.description}</p>
 						</div>

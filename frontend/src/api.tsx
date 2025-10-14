@@ -736,16 +736,16 @@ export function createApi(
 		} else if (msg.type === "SessionDelete") {
 			// TODO
 		} else if (msg.type === "RelationshipUpsert") {
-			const { user_id, relationship } = msg;
-			const user = users.cache.get(user_id);
+			const { target_user_id, relationship } = msg;
+			const user = users.cache.get(target_user_id);
 			if (user) {
-				users.cache.set(user_id, { ...user, relationship });
+				users.cache.set(target_user_id, { ...user, relationship });
 			}
 		} else if (msg.type === "RelationshipDelete") {
-			const { user_id } = msg;
-			const user = users.cache.get(user_id);
+			const { target_user_id } = msg;
+			const user = users.cache.get(target_user_id);
 			if (user) {
-				users.cache.set(user_id, {
+				users.cache.set(target_user_id, {
 					...user,
 					relationship: {
 						note: null,
