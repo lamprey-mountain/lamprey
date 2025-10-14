@@ -1,0 +1,2 @@
+ALTER TABLE puppet ADD COLUMN ext_banner TEXT;
+ALTER TABLE puppet ADD COLUMN banner TEXT;

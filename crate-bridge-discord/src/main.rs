@@ -76,6 +76,7 @@ async fn main() -> Result<()> {
         last_lamprey_ids: Arc::new(DashMap::new()),
         last_discord_ids: Arc::new(DashMap::new()),
         presences: Arc::new(DashMap::new()),
+        discord_user_cache: Arc::new(DashMap::new()),
         dc_chan: dc_chan.0,
         ch_chan: ch_chan.0,
         bridge_chan: bridge_chan.0,

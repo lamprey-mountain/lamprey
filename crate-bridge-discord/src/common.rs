@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -7,7 +8,7 @@ use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{
     ChannelId as DcChannelId, GuildId as DcGuildId, MessageId as DcMessageId, Presence,
-    UserId as DcUserId,
+    User as DcUser, UserId as DcUserId,
 };
 use tokio::sync::{mpsc, oneshot};
 
@@ -18,6 +19,12 @@ use crate::portal::{Portal, PortalMessage};
 use crate::{discord::DiscordMessage, lamprey::LampreyMessage};
 
 #[derive(Clone)]
+pub struct UserCacheEntry {
+    pub user: DcUser,
+    pub fetched_at: Instant,
+}
+
+#[derive(Clone)]
 pub struct Globals {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
@@ -25,6 +32,7 @@ pub struct Globals {
     pub last_lamprey_ids: Arc<DashMap<ThreadId, MessageId>>,
     pub last_discord_ids: Arc<DashMap<DcChannelId, DcMessageId>>,
     pub presences: Arc<DashMap<DcUserId, Presence>>,
+    pub discord_user_cache: Arc<DashMap<DcUserId, UserCacheEntry>>,
     pub dc_chan: mpsc::Sender<DiscordMessage>,
     pub ch_chan: mpsc::Sender<LampreyMessage>,
     pub bridge_chan: mpsc::UnboundedSender<BridgeMessage>,

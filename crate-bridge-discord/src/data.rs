@@ -77,8 +77,10 @@ pub struct Puppet {
     pub ext_platform: String,
     pub ext_id: String,
     pub ext_avatar: Option<String>,
+    pub ext_banner: Option<String>,
     pub name: String,
     pub avatar: Option<String>,
+    pub banner: Option<String>,
     // TODO: remove Option
     pub bot: Option<bool>,
 }
@@ -385,7 +387,7 @@ impl Data for Globals {
         let row = query_as!(
             Puppet,
             r#"
-            SELECT id AS "id!: Uuid", ext_platform, ext_id, ext_avatar, name, avatar, bot
+            SELECT id AS "id!: Uuid", ext_platform, ext_id, ext_avatar, ext_banner, name, avatar, banner, bot
             FROM puppet WHERE ext_platform = ? AND ext_id = ?
             "#,
             ext_platform,
@@ -399,15 +401,17 @@ impl Data for Globals {
     async fn insert_puppet(&self, data: Puppet) -> Result<()> {
         query!(
             r#"
-            INSERT OR REPLACE INTO puppet (id, ext_platform, ext_id, ext_avatar, name, avatar, bot)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO puppet (id, ext_platform, ext_id, ext_avatar, ext_banner, name, avatar, banner, bot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             data.id,
             data.ext_platform,
             data.ext_id,
             data.ext_avatar,
+            data.ext_banner,
             data.name,
             data.avatar,
+            data.banner,
             data.bot,
         )
         .execute(&self.pool)

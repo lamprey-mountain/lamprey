@@ -7,6 +7,7 @@ use crate::data::{AttachmentMetadata, Data, MessageMetadata, Puppet};
 use crate::discord::DiscordMessage;
 
 use anyhow::Result;
+use common::v1::types::util::Diff;
 use common::v1::types::{self, media::MediaRef, EmbedCreate, Message, MessageId, RoomId, ThreadId};
 use reqwest::Url;
 use serenity::all::{
@@ -411,53 +412,21 @@ impl Portal {
                 message.author.bot,
             )
             .await?;
-        debug!("created puppet");
+        debug!("ensured puppet");
         let user_id = puppet.id;
-        let p = self
+
+        let db_puppet = self
             .globals
             .get_puppet("discord", &message.author.id.to_string())
             .await?;
-        if let Some(p) = p {
-            if p.ext_avatar != message.author.avatar_url() {
-                if let Some(url) = message.author.avatar_url() {
-                    info!("set user pfp for {}", user_id);
-                    let name = if url.ends_with(".gif") {
-                        "avatar.gif"
-                    } else {
-                        "avatar.png"
-                    };
-                    let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                    let media = ly
-                        .media_upload(name.to_owned(), bytes.to_vec(), user_id)
-                        .await?;
-                    ly.user_update(
-                        user_id,
-                        &types::UserPatch {
-                            name: None,
-                            description: None,
-                            avatar: Some(Some(media.id)),
-                            banner: None,
-                        },
-                    )
-                    .await?;
-                    puppet.avatar = Some(media.id);
-                } else {
-                    info!("remove user pfp for {}", user_id);
-                    ly.user_update(
-                        user_id,
-                        &types::UserPatch {
-                            name: None,
-                            description: None,
-                            avatar: Some(None),
-                            banner: None,
-                        },
-                    )
-                    .await?;
-                    puppet.avatar = None;
-                }
-            }
-        } else if message.author.avatar_url().is_some() {
-            if let Some(url) = message.author.avatar_url() {
+
+        let mut user_patch = types::UserPatch::default();
+
+        // Avatar
+        let current_ext_avatar = db_puppet.as_ref().and_then(|p| p.ext_avatar.as_deref());
+        let new_ext_avatar = message.author.avatar_url();
+        if current_ext_avatar != new_ext_avatar.as_deref() {
+            if let Some(url) = new_ext_avatar {
                 info!("set user pfp for {}", user_id);
                 let name = if url.ends_with(".gif") {
                     "avatar.gif"
@@ -465,46 +434,56 @@ impl Portal {
                     "avatar.png"
                 };
                 let bytes = reqwest::get(url).await?.error_for_status()?.bytes().await?;
-                info!("set user pfp download");
                 let media = ly
                     .media_upload(name.to_owned(), bytes.to_vec(), user_id)
                     .await?;
-                info!("set user pfp upload");
-                ly.user_update(
-                    user_id,
-                    &types::UserPatch {
-                        name: None,
-                        description: None,
-                        avatar: Some(Some(media.id)),
-                        banner: None,
-                    },
-                )
-                .await?;
-                info!("set user pfp patch");
-                puppet.avatar = Some(media.id);
+                user_patch.avatar = Some(Some(media.id));
             } else {
                 info!("remove user pfp for {}", user_id);
-                ly.user_update(
-                    user_id,
-                    &types::UserPatch {
-                        name: None,
-                        description: None,
-                        avatar: Some(None),
-                        banner: None,
-                    },
-                )
-                .await?;
-                puppet.avatar = None;
+                user_patch.avatar = Some(None);
             }
         }
+
+        // Banner
+        let current_ext_banner = db_puppet.as_ref().and_then(|p| p.ext_banner.as_deref());
+        let new_ext_banner = message.author.banner_url();
+        if current_ext_banner != new_ext_banner.as_deref() {
+            if let Some(url) = new_ext_banner {
+                info!("set user banner for {}", user_id);
+                let name = if url.ends_with(".gif") {
+                    "banner.gif"
+                } else {
+                    "banner.png"
+                };
+                let bytes = reqwest::get(&url)
+                    .await?
+                    .error_for_status()?
+                    .bytes()
+                    .await?;
+                let media = ly
+                    .media_upload(name.to_owned(), bytes.to_vec(), user_id)
+                    .await?;
+                user_patch.banner = Some(Some(media.id));
+            } else {
+                info!("remove user banner for {}", user_id);
+                user_patch.banner = Some(None);
+            }
+        }
+
+        if user_patch.changes(&puppet) {
+            puppet = ly.user_update(user_id, &user_patch).await?;
+        }
+
         self.globals
             .insert_puppet(Puppet {
                 id: *user_id,
                 ext_platform: "discord".to_owned(),
                 ext_id: message.author.id.to_string(),
                 ext_avatar: message.author.avatar_url(),
+                ext_banner: message.author.banner_url(),
                 name: puppet.name,
                 avatar: puppet.avatar.map(|a| a.to_string()),
+                banner: puppet.banner.map(|b| b.to_string()),
                 bot: Some(puppet.bot.is_some()),
             })
             .await?;
