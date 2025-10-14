@@ -161,24 +161,26 @@ async fn friend_add(
         _ => unreachable!("invalid data in database?"),
     }
 
-    for (uid, rel) in [
-        (
-            auth_user.id,
-            data.user_relationship_get(auth_user.id, target_user_id)
-                .await?,
-        ),
-        (
+    if let Some(rel) = data
+        .user_relationship_get(auth_user.id, target_user_id)
+        .await?
+    {
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: auth_user.id,
             target_user_id,
-            data.user_relationship_get(target_user_id, auth_user.id)
-                .await?,
-        ),
-    ] {
-        if let Some(rel) = rel {
-            s.broadcast(MessageSync::RelationshipUpsert {
-                user_id: uid,
-                relationship: rel,
-            })?;
-        }
+            relationship: rel,
+        })?;
+    }
+
+    if let Some(rel) = data
+        .user_relationship_get(target_user_id, auth_user.id)
+        .await?
+    {
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: target_user_id,
+            target_user_id: auth_user.id,
+            relationship: rel,
+        })?;
     }
 
     Ok(StatusCode::NO_CONTENT)
@@ -216,6 +218,7 @@ async fn friend_remove(
                 .await?;
             s.broadcast(MessageSync::RelationshipDelete {
                 user_id: auth_user.id,
+                target_user_id,
             })?;
 
             if r == Some(&RelationshipType::Friend) {
@@ -244,7 +247,8 @@ async fn friend_remove(
                             .await?;
 
                         s.broadcast(MessageSync::RelationshipDelete {
-                            user_id: auth_user.id,
+                            user_id: target_user_id,
+                            target_user_id: auth_user.id,
                         })?;
                     }
                     _ => {}
@@ -316,11 +320,17 @@ async fn block_add(
         .user_relationship_get(target_user_id, auth_user.id)
         .await?;
     if !matches!(
-        reverse.and_then(|r| r.relation),
-        Some(RelationshipType::Block)
+        reverse.as_ref().and_then(|r| r.relation.as_ref()),
+        Some(&RelationshipType::Block)
     ) {
-        data.user_relationship_delete(target_user_id, auth_user.id)
-            .await?;
+        if reverse.is_some() {
+            data.user_relationship_delete(target_user_id, auth_user.id)
+                .await?;
+            s.broadcast(MessageSync::RelationshipDelete {
+                user_id: target_user_id,
+                target_user_id: auth_user.id,
+            })?;
+        }
     }
 
     let rel = data
@@ -330,6 +340,7 @@ async fn block_add(
 
     s.broadcast(MessageSync::RelationshipUpsert {
         user_id: auth_user.id,
+        target_user_id,
         relationship: rel,
     })?;
 
@@ -379,6 +390,7 @@ async fn block_remove(
 
         s.broadcast(MessageSync::RelationshipDelete {
             user_id: auth_user.id,
+            target_user_id,
         })?;
 
         s.audit_log_append(AuditLogEntry {

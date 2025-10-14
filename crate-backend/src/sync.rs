@@ -547,7 +547,7 @@ impl Connection {
             MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ThreadAck { .. } => todo!(),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::RelationshipDelete { user_id } => AuthCheck::User(*user_id),
+            MessageSync::RelationshipDelete { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::ReactionCreate { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
             MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),

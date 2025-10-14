@@ -323,11 +323,13 @@ pub enum MessageSync {
 
     RelationshipUpsert {
         user_id: UserId,
+        target_user_id: UserId,
         relationship: Relationship,
     },
 
     RelationshipDelete {
         user_id: UserId,
+        target_user_id: UserId,
     },
 
     ConnectionCreate {

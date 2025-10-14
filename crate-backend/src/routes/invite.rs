@@ -313,22 +313,20 @@ async fn invite_use(
             )
             .await?;
 
-            for (uid, rel) in [
-                (
-                    auth_user.id,
-                    d.user_relationship_get(auth_user.id, user.id).await?,
-                ),
-                (
-                    user.id,
-                    d.user_relationship_get(user.id, auth_user.id).await?,
-                ),
-            ] {
-                if let Some(rel) = rel {
-                    s.broadcast(MessageSync::RelationshipUpsert {
-                        user_id: uid,
-                        relationship: rel,
-                    })?;
-                }
+            if let Some(rel) = d.user_relationship_get(auth_user.id, user.id).await? {
+                s.broadcast(MessageSync::RelationshipUpsert {
+                    user_id: auth_user.id,
+                    target_user_id: user.id,
+                    relationship: rel,
+                })?;
+            }
+
+            if let Some(rel) = d.user_relationship_get(user.id, auth_user.id).await? {
+                s.broadcast(MessageSync::RelationshipUpsert {
+                    user_id: user.id,
+                    target_user_id: auth_user.id,
+                    relationship: rel,
+                })?;
             }
 
             // TODO: should i append to user audit logs here?
