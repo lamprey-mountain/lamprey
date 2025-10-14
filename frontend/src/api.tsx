@@ -704,6 +704,16 @@ export function createApi(
 					});
 				}
 			}
+		} else if (msg.type === "UserConfigUser") {
+			if (msg.user_id === session()?.user_id) {
+				const user = users.cache.get(msg.target_user_id);
+				if (user) {
+					users.cache.set(msg.target_user_id, {
+						...user,
+						user_config: msg.config,
+					});
+				}
+			}
 		} else if (msg.type === "UserDelete") {
 			users.cache.delete(msg.id);
 		} else if (msg.type === "SessionCreate") {

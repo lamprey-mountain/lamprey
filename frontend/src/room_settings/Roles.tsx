@@ -289,7 +289,7 @@ const RoleList = (
 							if (props.edit.role.id === i.id) {
 								props.edit.setRole({ id: null } as unknown as Role);
 							} else {
-								props.edit.setRole(structuredClone(i));
+								props.edit.setRole(JSON.parse(JSON.stringify(i)));
 								props.edit.setName(i.name);
 								props.edit.setDesc(i.description || undefined);
 							}

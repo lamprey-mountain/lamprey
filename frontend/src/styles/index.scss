@@ -947,39 +947,82 @@ article.message {
 	z-index: 1;
 }
 
-.tooltip .user,
-.user-profile .user {
-	min-width: 200px;
+.user-profile {
+	/* padding: 8px; */
+	margin: -7px;
 
-	display: grid;
-	grid-template-columns: 64px auto;
-	/* grid-template-rows: 64px; */
-	grid-template-rows: auto;
-	/* grid-template-areas: "avatar name" "info info"; */
-	grid-template-areas: "avatar info";
-	gap: 8px;
-
-	/* & > .name { */
-	/* grid-area: name; */
-	/* } */
-
-	& .name {
-		/* grid-area: name; */
-		font-weight: bold;
+	.banner {
+		height: 96px;
+		background-color: $bg-150;
+		background-size: cover;
+		background-position: center;
 	}
 
-	& > .avatar {
-		grid-area: avatar;
-		height: 64px;
+	.header {
+		display: flex;
+		padding: 0 16px;
+		gap: 16px;
+
+		.avatar {
+			height: 80px;
+			width: 80px;
+			margin-top: -48px;
+		}
+
+		.name-area {
+			flex: 1;
+		}
+
+		.name {
+			font-size: 1.5rem;
+			font-weight: bold;
+		}
 	}
 
-	& > .info {
-		grid-area: info;
-	}
+	.body {
+		padding: 16px;
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
 
-	& h3 {
-		font-size: 1em;
-		font-weight: bold;
+		h3 {
+			font-weight: bold;
+			margin-bottom: 8px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.actions {
+			display: flex;
+			gap: 8px;
+
+			button {
+				border: solid $sep-500 1px;
+				margin-right: 4px;
+			}
+		}
+
+		.roles ul {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+
+		.roles li {
+			background-color: $bg-300;
+			padding: 4px 8px;
+			border-radius: 4px;
+		}
+
+		.note textarea {
+			width: 100%;
+			min-height: 80px;
+			background-color: $bg-100;
+			border: solid 1px $sep-500;
+			padding: 8px;
+			resize: vertical;
+		}
 	}
 }
 
@@ -1014,6 +1057,43 @@ summary {
 	filter: invert(0.9);
 }
 
+.edit-roles {
+	position: fixed;
+	top: 0;
+	left: 0;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	min-width: 128px;
+	max-width: 256px;
+	z-index: 10;
+
+	& label {
+		display: flex;
+		gap: 2px;
+		cursor: pointer;
+		padding: 2px 0;
+
+		&:hover {
+			background: $bg-200;
+		}
+
+		input[type="checkbox"] {
+			align-self: flex-start;
+			margin: 4px;
+		}
+
+		& .has {
+			font-weight: bold;
+		}
+
+		&.disabled {
+			cursor: not-allowed;
+			color: $fg-500;
+		}
+	}
+}
+
 .room-settings-members {
 	& header {
 		display: flex;
@@ -1025,42 +1105,6 @@ summary {
 
 		& .joined {
 			width: 96px;
-		}
-	}
-
-	& .edit-roles {
-		position: fixed;
-		top: 0;
-		left: 0;
-		background-color: $bg-300;
-		border: solid 1px $sep-500;
-		box-shadow: 2px 2px 8px $bg-100;
-		min-width: 128px;
-		max-width: 256px;
-
-		& label {
-			display: flex;
-			gap: 2px;
-			cursor: pointer;
-			padding: 2px 0;
-
-			&:hover {
-				background: $bg-200;
-			}
-
-			input[type="checkbox"] {
-				align-self: flex-start;
-				margin: 4px;
-			}
-
-			& .has {
-				font-weight: bold;
-			}
-
-			&.disabled {
-				cursor: not-allowed;
-				color: $fg-500;
-			}
 		}
 	}
 
@@ -2369,15 +2413,6 @@ textarea,
 input[type="text"] {
 	border: solid $sep-500 1px;
 	background: $bg-300;
-}
-
-.user-profile {
-	padding: 8px;
-
-	button {
-		border: solid $sep-500 1px;
-		margin-right: 4px;
-	}
 }
 
 .blocked-users-list {
