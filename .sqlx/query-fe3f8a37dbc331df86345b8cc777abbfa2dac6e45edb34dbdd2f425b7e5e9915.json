@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT OR REPLACE INTO puppet (id, ext_platform, ext_id, ext_avatar, ext_banner, name, avatar, banner, bot)\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "fe3f8a37dbc331df86345b8cc777abbfa2dac6e45edb34dbdd2f425b7e5e9915"
+}
