@@ -348,7 +348,7 @@ export const ChatHeader = (
 	const inSelectMode = () => ctx.selectMode.get(props.thread.id) ?? false;
 
 	const { has: hasPermission } = usePermissions(
-		() => api.users.cache.get("@self")!.id,
+		() => api.users.cache.get("@self")?.id,
 		() => props.thread.room_id,
 		() => props.thread.id,
 	);
@@ -410,7 +410,7 @@ export const ChatHeader = (
 
 	const name = () => {
 		if (props.thread.type === "Dm") {
-			const user_id = api.users.cache.get("@self")!.id;
+			const user_id = api.users.cache.get("@self")?.id;
 			return props.thread.recipients.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}
