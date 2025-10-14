@@ -14,13 +14,26 @@ export class ThreadMembers {
 	cache = new ReactiveMap<string, ReactiveMap<string, ThreadMember>>();
 	_requests = new Map<string, Map<string, Promise<ThreadMember>>>();
 	_cachedListings = new Map<string, Listing<ThreadMember>>();
+	_queuedSubscriptions = new Map<string, [number, number][]>();
 
 	subscribeList(thread_id: string, ranges: [number, number][]) {
+		if (this.api.clientState() !== "ready") {
+			this._queuedSubscriptions.set(thread_id, ranges);
+			return;
+		}
 		this.api.client.getWebsocket().send(JSON.stringify({
 			type: "MemberListSubscribe",
 			thread_id,
 			ranges,
 		}));
+	}
+
+	processQueuedSubscriptions() {
+		if (this.api.clientState() !== "ready") return;
+		for (const [thread_id, ranges] of this._queuedSubscriptions.entries()) {
+			this.subscribeList(thread_id, ranges);
+		}
+		this._queuedSubscriptions.clear();
 	}
 
 	fetch(

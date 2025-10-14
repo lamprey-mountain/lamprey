@@ -14,13 +14,26 @@ export class RoomMembers {
 	cache = new ReactiveMap<string, ReactiveMap<string, RoomMember>>();
 	_requests = new Map<string, Map<string, Promise<RoomMember>>>();
 	_cachedListings = new Map<string, Listing<RoomMember>>();
+	_queuedSubscriptions = new Map<string, [number, number][]>();
 
 	subscribeList(room_id: string, ranges: [number, number][]) {
+		if (this.api.clientState() !== "ready") {
+			this._queuedSubscriptions.set(room_id, ranges);
+			return;
+		}
 		this.api.client.getWebsocket().send(JSON.stringify({
 			type: "MemberListSubscribe",
 			room_id,
 			ranges,
 		}));
+	}
+
+	processQueuedSubscriptions() {
+		if (this.api.clientState() !== "ready") return;
+		for (const [room_id, ranges] of this._queuedSubscriptions.entries()) {
+			this.subscribeList(room_id, ranges);
+		}
+		this._queuedSubscriptions.clear();
 	}
 
 	fetch(room_id: () => string, user_id: () => string): Resource<RoomMember> {

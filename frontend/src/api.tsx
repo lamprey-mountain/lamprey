@@ -15,6 +15,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import type {
 	AuditLogEntry,
 	Client,
+	ClientState,
 	EmojiCustom,
 	InboxListParams,
 	Invite,
@@ -95,6 +96,8 @@ export function createApi(
 	},
 ) {
 	const [session, setSession] = createSignal<Session | null>(null);
+	const [clientState, setClientState] = createSignal<ClientState>("stopped");
+	client.state.subscribe(setClientState);
 
 	const rooms = new Rooms();
 	const threads = new Threads();
@@ -882,6 +885,8 @@ export function createApi(
 			users.cache.set(msg.user.id, msg.user);
 		}
 		setSession(msg.session);
+		room_members.processQueuedSubscriptions();
+		thread_members.processQueuedSubscriptions();
 	});
 
 	async function tempCreateSession() {
@@ -914,6 +919,7 @@ export function createApi(
 		audit_logs,
 		tempCreateSession,
 		client,
+		clientState,
 		emoji,
 		dms,
 		inbox,
@@ -1073,6 +1079,7 @@ export type Api = {
 	memberLists: ReactiveMap<string, MemberList>;
 	tempCreateSession: () => void;
 	client: Client;
+	clientState: Accessor<ClientState>;
 	Provider: Component<ParentProps>;
 
 	events: Emitter<{
