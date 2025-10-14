@@ -10,9 +10,14 @@ import {
 } from "solid-js";
 import { Copyable } from "./util";
 import { getThumbFromId } from "./media/util";
+import { createStore } from "solid-js/store";
 import { useCtx } from "./context.ts";
-import { useFloating } from "solid-floating-ui";
-import { type ReferenceElement, shift } from "@floating-ui/dom";
+import {
+	autoUpdate,
+	computePosition,
+	type ReferenceElement,
+	shift,
+} from "@floating-ui/dom";
 import { usePermissions } from "./hooks/usePermissions.ts";
 
 type UserProps = {
@@ -32,6 +37,11 @@ const EditRoles = (
 	);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
+	const [menuFloating, setMenuFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
 
 	createEffect(() => {
 		setMenuParentRef({
@@ -46,14 +56,25 @@ const EditRoles = (
 				height: 0,
 			}),
 		});
-
-		props.x;
-		props.y;
 	});
 
-	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
-		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-		placement: "right-start",
+	createEffect(() => {
+		const reference = menuParentRef();
+		const floating = menuRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: "right-start",
+				}).then(({ x, y, strategy }) => {
+					setMenuFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
 	});
 
 	const handleChecked =
@@ -155,12 +176,14 @@ export function UserView(props: UserProps) {
 	}
 
 	const openUserMenu = (e: MouseEvent) => {
-		ctx.setMenu({
-			type: "user",
-			user_id: props.user.id,
-			room_id: props.room_member?.room_id,
-			x: e.clientX,
-			y: e.clientY,
+		queueMicrotask(() => {
+			ctx.setMenu({
+				type: "user",
+				user_id: props.user.id,
+				room_id: props.room_member?.room_id,
+				x: e.clientX,
+				y: e.clientY,
+			});
 		});
 	};
 
@@ -221,7 +244,13 @@ export function UserView(props: UserProps) {
 	onCleanup(() => document.removeEventListener("click", editRolesClear));
 
 	return (
-		<div class="user-profile">
+		<div
+			class="user-profile"
+			onClick={(e) => {
+				e.stopPropagation();
+				ctx.setMenu(null);
+			}}
+		>
 			<div
 				class="banner"
 				style={{

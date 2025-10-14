@@ -948,8 +948,12 @@ article.message {
 }
 
 .user-profile {
-	/* padding: 8px; */
-	margin: -7px;
+	background-color: $bg-200;
+	box-shadow: 4px 4px 8px #111f;
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+	overflow: hidden;
+	width: 320px;
 
 	.banner {
 		height: 96px;
@@ -971,11 +975,13 @@ article.message {
 
 		.name-area {
 			flex: 1;
+			@include truncate;
 		}
 
 		.name {
 			font-size: 1.5rem;
 			font-weight: bold;
+			@include truncate;
 		}
 	}
 

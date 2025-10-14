@@ -4,8 +4,7 @@ import { useCtx } from "./context.ts";
 import { getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import { AvatarWithStatus, UserView } from "./User.tsx";
-import { tooltip } from "./Tooltip.tsx";
+import { AvatarWithStatus } from "./User.tsx";
 import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
@@ -89,6 +88,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 								const user = () =>
 									api.users.cache.get(row.item.user.id) ?? row.item.user;
 
+								const ctx = useCtx();
 								function name() {
 									let name: string | undefined | null = null;
 									if (member()?.membership === "Join") {
@@ -98,20 +98,30 @@ export const RoomMembers = (props: { room: RoomT }) => {
 									return name;
 								}
 
-								return tooltip(
-									{ placement: "left-start" },
-									<Show when={user()}>
-										<UserView
-											user={user()!}
-											room_member={member() ?? undefined}
-										/>
-									</Show>,
-									<li class="menu-user" data-user-id={row.item.user.id}>
+								return (
+									<li
+										class="menu-user"
+										data-user-id={row.item.user.id}
+										onClick={(e) => {
+											e.stopPropagation();
+											const currentTarget = e.currentTarget as HTMLElement;
+											if (ctx.userView()?.ref === currentTarget) {
+												ctx.setUserView(null);
+											} else {
+												ctx.setUserView({
+													user_id: user()!.id,
+													room_id: props.room.id,
+													ref: currentTarget,
+													source: "member-list",
+												});
+											}
+										}}
+									>
 										<AvatarWithStatus user={user()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>
-									</li>,
+									</li>
 								);
 							})()
 						);

@@ -1,8 +1,7 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { Thread } from "sdk";
 import { useApi } from "./api.tsx";
-import { tooltip } from "./Tooltip.tsx";
-import { AvatarWithStatus, UserView } from "./User.tsx";
+import { AvatarWithStatus } from "./User.tsx";
 import { useCtx } from "./context.ts";
 import { ReactiveMap } from "@solid-primitives/map";
 
@@ -83,6 +82,7 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 										() => user()!.id,
 									)
 									: () => null;
+								const ctx = useCtx();
 
 								function name() {
 									let name: string | undefined | null = null;
@@ -94,21 +94,31 @@ export const ThreadMembers = (props: { thread: Thread }) => {
 									return name;
 								}
 
-								return tooltip(
-									{ placement: "left-start" },
-									<Show when={user()}>
-										<UserView
-											user={user()!}
-											room_member={room_member()}
-											thread_member={member() ?? undefined}
-										/>
-									</Show>,
-									<li class="menu-user" data-user-id={row.item.user.id}>
+								return (
+									<li
+										class="menu-user"
+										data-user-id={row.item.user.id}
+										onClick={(e) => {
+											e.stopPropagation();
+											const currentTarget = e.currentTarget as HTMLElement;
+											if (ctx.userView()?.ref === currentTarget) {
+												ctx.setUserView(null);
+											} else {
+												ctx.setUserView({
+													user_id: user()!.id,
+													room_id: room_id(),
+													thread_id: thread_id(),
+													ref: currentTarget,
+													source: "member-list",
+												});
+											}
+										}}
+									>
 										<AvatarWithStatus user={user()} />
 										<span class="text">
 											<span class="name">{name()}</span>
 										</span>
-									</li>,
+									</li>
 								);
 							})()
 						);

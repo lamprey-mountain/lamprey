@@ -1,6 +1,7 @@
 import {
 	type Component,
 	createEffect,
+	createMemo,
 	For,
 	from,
 	onCleanup,
@@ -15,6 +16,7 @@ import {
 	type MediaCtx,
 	type Menu,
 	useCtx,
+	type UserViewData,
 } from "./context.ts";
 import { type Dispatcher } from "./dispatch/types.ts";
 import { createStore } from "solid-js/store";
@@ -34,11 +36,12 @@ import {
 	useLocation,
 	useNavigate,
 } from "@solidjs/router";
-import { useFloating } from "solid-floating-ui";
 import { UserSettings } from "./UserSettings.tsx";
 import { getModal } from "./modal/mod.tsx";
 import {
+	autoUpdate,
 	type ClientRectObject,
+	computePosition,
 	type ReferenceElement,
 	shift,
 } from "@floating-ui/dom";
@@ -71,6 +74,7 @@ import { Inbox } from "./Inbox.tsx";
 import { ThreadNav } from "./Nav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
+import { UserView } from "./User.tsx";
 
 const App: Component = () => {
 	return (
@@ -215,6 +219,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
+	const [userView, setUserView] = createSignal<UserViewData | null>(null);
 	const editingMessage = new ReactiveMap<
 		string,
 		{ message_id: string; selection?: "start" | "end" }
@@ -250,6 +255,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		events,
 		menu,
 		setMenu,
+		userView,
+		setUserView,
 		thread_anchor: new ReactiveMap(),
 		thread_attachments: new ReactiveMap(),
 		thread_editor_state: new Map(),
@@ -342,6 +349,7 @@ export const Root3 = (props: any) => {
 
 	const handleClick = (e: MouseEvent) => {
 		props.setMenu(null);
+		ctx.setUserView(null);
 		if (!e.isTrusted) return;
 		// const target = e.target as HTMLElement;
 		// if (target.matches("a[download]")) {
@@ -515,13 +523,61 @@ function RouteNotFound() {
 
 function Overlay() {
 	const ctx = useCtx();
-	console.log(ctx);
+	const api = useApi();
 
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
-	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
-		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-		placement: "right-start",
+	const [menuFloating, setMenuFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+
+	createEffect(() => {
+		const reference = menuParentRef();
+		const floating = menuRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: "right-start",
+				}).then(({ x, y, strategy }) => {
+					setMenuFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
+	});
+
+	const [userViewRef, setUserViewRef] = createSignal<HTMLElement>();
+	const [userViewFloating, setUserViewFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+
+	createEffect(() => {
+		const reference = ctx.userView()?.ref;
+		const floating = userViewRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: ctx.userView()?.source === "message"
+						? "right-start"
+						: "left-start",
+				}).then(({ x, y, strategy }) => {
+					setUserViewFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
 	});
 
 	createEffect(() => {
@@ -575,6 +631,19 @@ function Overlay() {
 		}
 	}
 
+	const userViewData = createMemo(() => {
+		const uv = ctx.userView();
+		if (!uv) return null;
+		const user = api.users.fetch(() => uv.user_id);
+		const room_member = uv.room_id
+			? api.room_members.fetch(() => uv.room_id!, () => uv.user_id)
+			: () => null;
+		const thread_member = uv.thread_id
+			? api.thread_members.fetch(() => uv.thread_id!, () => uv.user_id)
+			: () => null;
+		return { user, room_member, thread_member };
+	});
+
 	return (
 		<>
 			<For each={ctx.data.modals}>
@@ -586,11 +655,32 @@ function Overlay() {
 						ref={setMenuRef}
 						class="inner"
 						style={{
+							position: menuFloating.strategy,
+							top: "0px",
+							left: "0px",
 							translate: `${menuFloating.x}px ${menuFloating.y}px`,
 						}}
 					>
 						{getMenu(ctx.menu()!)}
 					</div>
+				</div>
+			</Show>
+			<Show when={userViewData()?.user()}>
+				<div
+					ref={setUserViewRef}
+					style={{
+						position: userViewFloating.strategy,
+						top: "0px",
+						left: "0px",
+						translate: `${userViewFloating.x}px ${userViewFloating.y}px`,
+						"z-index": 100,
+					}}
+				>
+					<UserView
+						user={userViewData()!.user()!}
+						room_member={userViewData()!.room_member() ?? undefined}
+						thread_member={userViewData()!.thread_member() ?? undefined}
+					/>
 				</div>
 			</Show>
 		</>

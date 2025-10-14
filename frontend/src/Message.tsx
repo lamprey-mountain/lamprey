@@ -23,7 +23,6 @@ import {
 import { flags } from "./flags.ts";
 import { type MediaProps } from "./media/util.tsx";
 import { Time } from "./Time.tsx";
-import { createTooltip, tooltip } from "./Tooltip.tsx";
 import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { createEditor } from "./Editor.tsx";
@@ -766,6 +765,7 @@ export function AttachmentView(props: MediaProps) {
 
 function Author(props: { message: Message; thread?: Thread }) {
 	const api = useApi();
+	const ctx = useCtx();
 	const room_member = props.thread?.room_id
 		? api.room_members.fetch(
 			() => props.thread!.room_id!,
@@ -791,25 +791,26 @@ function Author(props: { message: Message; thread?: Thread }) {
 		return name;
 	}
 
-	const { content } = createTooltip({
-		// animGroup: "users",
-		placement: "right-start",
-		interactive: true,
-		tip: () => (
-			<UserView
-				user={user()}
-				room_member={room_member()}
-				thread_member={thread_member()}
-			/>
-		),
-	});
-
 	return (
 		<span
 			class="user"
 			classList={{ "override-name": !!props.message.override_name }}
 			data-user-id={props.message.author_id}
-			use:content
+			onClick={(e) => {
+				e.stopPropagation();
+				const currentTarget = e.currentTarget as HTMLElement;
+				if (ctx.userView()?.ref === currentTarget) {
+					ctx.setUserView(null);
+				} else {
+					ctx.setUserView({
+						user_id: props.message.author_id,
+						room_id: props.thread?.room_id,
+						thread_id: props.message.thread_id,
+						ref: currentTarget,
+						source: "message",
+					});
+				}
+			}}
 		>
 			{name()}
 		</span>

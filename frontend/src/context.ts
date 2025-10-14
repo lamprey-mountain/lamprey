@@ -110,6 +110,14 @@ export type ThreadSearch = {
 	thread?: string[];
 };
 
+export type UserViewData = {
+	user_id: string;
+	room_id?: string;
+	thread_id?: string;
+	ref: HTMLElement;
+	source?: "member-list" | "message";
+};
+
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -119,6 +127,8 @@ export type ChatCtx = {
 	events: Emitter<Events>;
 	menu: Accessor<Menu | null>;
 	setMenu: Setter<Menu | null>;
+	userView: Accessor<UserViewData | null>;
+	setUserView: Setter<UserViewData | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;
 	thread_attachments: ReactiveMap<string, Array<Attachment>>;
 	thread_editor_state: Map<string, EditorState>;
