@@ -19,13 +19,13 @@ import iconExit from "./assets/exit.png";
 import { useApi } from "./api.tsx";
 import { ToggleIcon } from "./ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
-import { getColor } from "./User.tsx";
 import { useConfig } from "./config.tsx";
 import { flags } from "./flags.ts";
 import { useNavigate } from "@solidjs/router";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
+import { getColor } from "./colors.ts";
 
 export const Voice = (p: { thread: Thread }) => {
 	const config = useConfig();

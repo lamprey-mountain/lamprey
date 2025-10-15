@@ -13,7 +13,7 @@ import type { Thread } from "sdk";
 import { flags } from "./flags.ts";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "./config.tsx";
-import { Avatar, AvatarWithStatus, getColor, ThreadIcon } from "./User.tsx";
+import { Avatar, AvatarWithStatus, ThreadIcon } from "./User.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 
 export const ThreadNav = (props: { room_id?: string }) => {
