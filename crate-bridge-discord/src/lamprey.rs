@@ -376,7 +376,7 @@ impl LampreyHandle {
             debug!("threads: {res:?}");
             all_threads.extend(res.items);
             if let Some(cursor) = res.cursor {
-                query.from = Some(cursor.parse().unwrap());
+                query.from = Some(cursor.parse()?);
             } else {
                 break;
             }

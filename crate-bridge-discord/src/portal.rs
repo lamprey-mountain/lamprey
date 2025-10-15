@@ -531,10 +531,10 @@ impl Portal {
             {
                 let filename = Url::from_str(url)?
                     .path_segments()
-                    .unwrap()
-                    .last()
-                    .unwrap()
-                    .to_owned();
+                    .and_then(|s| s.last())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_owned())
+                    .unwrap_or_else(|| "file.bin".to_owned());
                 let bytes = reqwest::get(url).await?.bytes().await?;
                 let media = ly
                     .media_upload(filename.to_owned(), bytes.into(), user_id)
@@ -551,10 +551,10 @@ impl Portal {
                 media: if let Some(url) = emb.image.as_ref().and_then(|i| i.proxy_url.as_deref()) {
                     let filename = Url::from_str(url)?
                         .path_segments()
-                        .unwrap()
-                        .last()
-                        .unwrap()
-                        .to_owned();
+                        .and_then(|s| s.last())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_owned())
+                        .unwrap_or_else(|| "file.bin".to_owned());
                     let bytes = reqwest::get(url).await?.bytes().await?;
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)
@@ -568,10 +568,10 @@ impl Portal {
                 {
                     let filename = Url::from_str(url)?
                         .path_segments()
-                        .unwrap()
-                        .last()
-                        .unwrap()
-                        .to_owned();
+                        .and_then(|s| s.last())
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.to_owned())
+                        .unwrap_or_else(|| "file.bin".to_owned());
                     let bytes = reqwest::get(url).await?.bytes().await?;
                     let media = ly
                         .media_upload(filename.to_owned(), bytes.into(), user_id)

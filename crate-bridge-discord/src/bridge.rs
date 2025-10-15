@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serenity::all::{ChannelId as DcChannelId, GuildId as DcGuildId};
 use tokio::sync::mpsc;
 use tracing::{error, info};
@@ -100,14 +100,18 @@ impl Bridge {
                         "bridge".to_string(),
                     )
                     .await?;
-                    webhook.url().unwrap().to_string()
+                    webhook
+                        .url()
+                        .map_err(|_| anyhow!("created webhook has no url"))?
                 } else {
                     "".to_string()
                 };
 
                 let portal = PortalConfig {
                     lamprey_thread_id: thread.id,
-                    lamprey_room_id: thread.room_id.unwrap(),
+                    lamprey_room_id: thread
+                        .room_id
+                        .ok_or_else(|| anyhow!("lamprey thread {} has no room id", thread.id))?,
                     discord_guild_id,
                     discord_channel_id: channel_id,
                     discord_thread_id: None,
@@ -195,7 +199,9 @@ impl Bridge {
                         "bridge".to_string(),
                     )
                     .await?;
-                    webhook.url().unwrap().to_string()
+                    webhook
+                        .url()
+                        .map_err(|_| anyhow!("created webhook has no url"))?
                 } else {
                     "".to_string()
                 };
