@@ -351,7 +351,7 @@ async fn room_audit_logs(
     Ok(Json(logs))
 }
 
-/// Room ack (TODO)
+/// Room ack
 ///
 /// Mark all threads in a room as read.
 #[utoipa::path(
@@ -366,11 +366,26 @@ async fn room_audit_logs(
     )
 )]
 async fn room_ack(
-    Path(_room_id): Path<RoomId>,
-    Auth(_user_id): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    let data = s.data();
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure_view()?;
+
+    let updated_unreads = data.unread_put_all_in_room(auth_user.id, room_id).await?;
+
+    for (thread_id, message_id, version_id) in updated_unreads {
+        s.broadcast(MessageSync::ThreadAck {
+            user_id: auth_user.id,
+            thread_id,
+            message_id,
+            version_id,
+        })?;
+    }
+
+    Ok(Json(()))
 }
 
 /// Room metrics

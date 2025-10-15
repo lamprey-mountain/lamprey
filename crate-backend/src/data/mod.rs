@@ -467,6 +467,11 @@ pub trait DataUnread {
         message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()>;
+    async fn unread_put_all_in_room(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+    ) -> Result<Vec<(ThreadId, MessageId, MessageVerId)>>;
 }
 
 #[async_trait]

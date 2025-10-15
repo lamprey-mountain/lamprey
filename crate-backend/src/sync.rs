@@ -545,7 +545,7 @@ impl Connection {
                 InviteTargetId::User { user_id, .. } => AuthCheck::User(*user_id),
             },
             MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ThreadAck { .. } => todo!(),
+            MessageSync::ThreadAck { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipDelete { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::ReactionCreate { thread_id, .. } => AuthCheck::Thread(*thread_id),

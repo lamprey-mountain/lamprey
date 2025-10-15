@@ -139,6 +139,7 @@ pub enum MessageSync {
 
     /// read receipt update
     ThreadAck {
+        user_id: UserId,
         thread_id: ThreadId,
         message_id: MessageId,
         version_id: MessageVerId,

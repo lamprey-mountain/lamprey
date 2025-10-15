@@ -571,10 +571,10 @@ async fn thread_update(
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct AckReq {
-    /// The last read message id. Will be resolved from version_id if empty.
+    /// The last read message id. Will be resolved from version_id if empty. (maybe remove later?)
     message_id: Option<MessageId>,
 
-    /// The last read id in this thread. Currently unused, may be deprecated later?
+    /// The last read id in this thread.
     version_id: MessageVerId,
 }
 
