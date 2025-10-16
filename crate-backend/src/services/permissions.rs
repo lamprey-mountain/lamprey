@@ -132,10 +132,31 @@ impl ServicePermissions {
             (p, vec![])
         };
 
-        // NOTE: currently there is a max depth of one - this will break if permissions need to be resolved recursively
-        if let Some(parent_id) = thread.parent_id {
-            let parent = srv.threads.get(parent_id, Some(user_id)).await?;
-            for o in parent.permission_overwrites {
+        // admins always have full permissions and ignore overwrites
+        if !perms.has(Permission::Admin) {
+            // NOTE: currently there is a max depth of one - this will break if permissions need to be resolved recursively
+            if let Some(parent_id) = thread.parent_id {
+                let parent = srv.threads.get(parent_id, Some(user_id)).await?;
+                for o in parent.permission_overwrites {
+                    if o.ty == PermissionOverwriteType::User {
+                        if o.id != *user_id {
+                            continue;
+                        }
+                    } else if o.ty == PermissionOverwriteType::Role {
+                        if !roles.contains(&o.id.into()) {
+                            continue;
+                        }
+                    }
+                    for p in o.allow {
+                        perms.add(p);
+                    }
+                    for p in o.deny {
+                        perms.remove(p);
+                    }
+                }
+            }
+
+            for o in thread.permission_overwrites {
                 if o.ty == PermissionOverwriteType::User {
                     if o.id != *user_id {
                         continue;
@@ -151,24 +172,6 @@ impl ServicePermissions {
                 for p in o.deny {
                     perms.remove(p);
                 }
-            }
-        }
-
-        for o in thread.permission_overwrites {
-            if o.ty == PermissionOverwriteType::User {
-                if o.id != *user_id {
-                    continue;
-                }
-            } else if o.ty == PermissionOverwriteType::Role {
-                if !roles.contains(&o.id.into()) {
-                    continue;
-                }
-            }
-            for p in o.allow {
-                perms.add(p);
-            }
-            for p in o.deny {
-                perms.remove(p);
             }
         }
 
