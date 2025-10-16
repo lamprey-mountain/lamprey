@@ -193,6 +193,12 @@ export const permissions: Array<Perm> = [
 		description: "Can reorder threads.",
 		group: "threads",
 	},
+	{
+		id: "ViewThread",
+		name: "View thread",
+		description: "Can view threads.",
+		group: "threads",
+	},
 	// { id: "ThreadPublish" },
 	{
 		id: "ViewAuditLog",

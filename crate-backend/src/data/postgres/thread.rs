@@ -74,6 +74,7 @@ impl DataThread for Postgres {
     async fn thread_list(
         &self,
         room_id: RoomId,
+        user_id: UserId,
         pagination: PaginationQuery<ThreadId>,
         parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
@@ -89,7 +90,8 @@ impl DataThread for Postgres {
                 p.before.into_inner(),
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
-                parent_id.map(|id| *id)
+                parent_id.map(|id| *id),
+                *user_id
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
@@ -103,6 +105,7 @@ impl DataThread for Postgres {
     async fn thread_list_archived(
         &self,
         room_id: RoomId,
+        user_id: UserId,
         pagination: PaginationQuery<ThreadId>,
         parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
@@ -118,7 +121,8 @@ impl DataThread for Postgres {
                 p.before.into_inner(),
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
-                parent_id.map(|id| *id)
+                parent_id.map(|id| *id),
+                *user_id
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
@@ -132,6 +136,7 @@ impl DataThread for Postgres {
     async fn thread_list_removed(
         &self,
         room_id: RoomId,
+        user_id: UserId,
         pagination: PaginationQuery<ThreadId>,
         parent_id: Option<ThreadId>,
     ) -> Result<PaginationResponse<Thread>> {
@@ -147,7 +152,8 @@ impl DataThread for Postgres {
                 p.before.into_inner(),
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
-                parent_id.map(|id| *id)
+                parent_id.map(|id| *id),
+                *user_id,
             ),
             query_scalar!(
                 r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
