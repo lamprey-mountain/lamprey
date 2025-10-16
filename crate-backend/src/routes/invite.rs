@@ -372,7 +372,6 @@ async fn invite_room_create(
 
     let d = s.data();
     let perms = s.services.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::InviteCreate)?;
 
     if room_id == SERVER_ROOM_ID {
@@ -451,7 +450,7 @@ async fn invite_room_list(
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services.perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+
     let res = d.invite_list_room(room_id, paginate).await?;
     let items: Vec<_> = res
         .items

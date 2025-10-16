@@ -89,8 +89,7 @@ async fn room_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_room(user.id, room_id).await?;
     let room = srv.rooms.get(room_id, Some(user.id)).await?;
 
     // TODO: use typedheader once the empty if-none-match bug is fixed
@@ -170,7 +169,6 @@ async fn room_edit(
     auth_user.ensure_unsuspended()?;
     json.validate()?;
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoomManage)?;
 
     if let Some(Some(media_id)) = json.icon {
@@ -290,7 +288,6 @@ async fn room_undelete(
     let data = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::Admin)?;
 
     data.room_undelete(room_id).await?;
@@ -345,7 +342,6 @@ async fn room_audit_logs(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::ViewAuditLog)?;
     let logs = data.audit_logs_room_fetch(room_id, paginate).await?;
     Ok(Json(logs))
@@ -371,8 +367,7 @@ async fn room_ack(
     State(s): State<Arc<ServerState>>,
 ) -> Result<Json<()>> {
     let data = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
 
     let updated_unreads = data.unread_put_all_in_room(auth_user.id, room_id).await?;
 
@@ -405,7 +400,6 @@ async fn room_metrics(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::ViewAuditLog)?;
     let metrics = data.room_metrics(room_id).await?;
     Ok(Json(metrics))
@@ -434,8 +428,7 @@ async fn room_transfer_ownership(
     // ensure that target user is a room member
     data.room_member_get(room_id, target_user_id).await?;
 
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
     let room_start = srv.rooms.get(room_id, Some(auth_user.id)).await?;
     if room_start.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you aren't the room owner"));
@@ -473,8 +466,7 @@ async fn room_integration_list(
     Query(q): Query<PaginationQuery<ApplicationId>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
     let data = s.data();
     let ids = data.room_bot_list(room_id, q).await?;
     let mut integrations = vec![];
@@ -518,7 +510,6 @@ async fn room_quarantine(
     let data = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::Admin)?;
 
     let room = srv.rooms.get(room_id, None).await?;
@@ -570,7 +561,7 @@ async fn room_unquarantine(
     let data = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
-    perms.ensure_view()?;
+
     perms.ensure(Permission::Admin)?;
 
     let room = srv.rooms.get(room_id, None).await?;

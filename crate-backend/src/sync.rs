@@ -217,7 +217,7 @@ impl Connection {
                     let typing_states = srv.threads.typing_list();
                     for (thread_id, typing_user_id, until) in typing_states {
                         if let Ok(perms) = srv.perms.for_thread(user_id, thread_id).await {
-                            if perms.has(Permission::View) {
+                            if perms.has(Permission::ViewThread) {
                                 self.push_sync(MessageSync::ThreadTyping {
                                     thread_id,
                                     user_id: typing_user_id,
@@ -235,7 +235,7 @@ impl Connection {
                         {
                             let is_ours = self.state.session().and_then(|s| s.user_id())
                                 == Some(voice_state.user_id);
-                            if perms.has(Permission::View) || is_ours {
+                            if perms.has(Permission::ViewThread) || is_ours {
                                 let mut voice_state = voice_state.clone();
                                 if !is_ours {
                                     voice_state.session_id = None;
@@ -291,12 +291,11 @@ impl Connection {
                 let srv = self.s.services();
 
                 let target = if let Some(room_id) = room_id {
-                    let perms = srv.perms.for_room(user_id, room_id).await?;
-                    perms.ensure_view()?;
+                    let _perms = srv.perms.for_room(user_id, room_id).await?;
                     MemberListTarget::Room(room_id)
                 } else if let Some(thread_id) = thread_id {
                     let perms = srv.perms.for_thread(user_id, thread_id).await?;
-                    perms.ensure_view()?;
+                    perms.ensure(Permission::ViewThread)?;
                     MemberListTarget::Thread(thread_id)
                 } else {
                     return Err(Error::BadStatic("room_id or thread_id must be provided"));
@@ -331,7 +330,7 @@ impl Connection {
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
                         let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
-                        perms.ensure_view()?;
+                        perms.ensure(Permission::ViewThread)?;
                         perms.ensure(Permission::VoiceConnect)?;
                         let thread = srv.threads.get(state.thread_id, Some(user_id)).await?;
                         if thread.archived_at.is_some() {
@@ -596,24 +595,24 @@ impl Connection {
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
-                let perms = self.s.services().perms.for_room(user_id, room_id).await?;
-                perms.has(Permission::View)
+                let _perms = self.s.services().perms.for_room(user_id, room_id).await?;
+                true
             }
             (Some(user_id), AuthCheck::RoomPerm(room_id, perm)) => {
                 let perms = self.s.services().perms.for_room(user_id, room_id).await?;
-                perms.has(Permission::View) && perms.has(perm)
+                perms.has(perm)
             }
             (Some(auth_user_id), AuthCheck::RoomOrUser(room_id, target_user_id)) => {
                 if auth_user_id == target_user_id {
                     true
                 } else {
-                    let perms = self
+                    let _perms = self
                         .s
                         .services()
                         .perms
                         .for_room(auth_user_id, room_id)
                         .await?;
-                    perms.has(Permission::View)
+                    true
                 }
             }
             (Some(user_id), AuthCheck::Thread(thread_id)) => {
@@ -623,7 +622,7 @@ impl Connection {
                     .perms
                     .for_thread(user_id, thread_id)
                     .await?;
-                perms.has(Permission::View)
+                perms.has(Permission::ViewThread)
             }
             (Some(user_id), AuthCheck::EitherThread(thread_id_0, thread_id_1)) => {
                 let perms0 = self
@@ -638,7 +637,7 @@ impl Connection {
                     .perms
                     .for_thread(user_id, thread_id_1)
                     .await?;
-                perms0.has(Permission::View) || perms1.has(Permission::View)
+                perms0.has(Permission::ViewThread) || perms1.has(Permission::ViewThread)
             }
             (Some(auth_user_id), AuthCheck::ThreadOrUser(thread_id, target_user_id)) => {
                 if auth_user_id == target_user_id {
@@ -650,7 +649,7 @@ impl Connection {
                         .perms
                         .for_thread(auth_user_id, thread_id)
                         .await?;
-                    perms.has(Permission::View)
+                    perms.has(Permission::ViewThread)
                 }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
@@ -723,7 +722,7 @@ impl Connection {
                             .perms
                             .for_thread(user_id, s.thread_id)
                             .await?;
-                        if !perms.has(Permission::View) {
+                        if !perms.has(Permission::ViewThread) {
                             state = None;
                         }
                     }

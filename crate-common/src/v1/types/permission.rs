@@ -9,13 +9,6 @@ use crate::v1::types::util::deserialize_sorted;
 pub mod defaults;
 
 /// a permission that lets a user do something
-///
-/// - unimplemented: the feature this permission refers to does not yet exist
-/// - internal: this is calculated by the server and cannot be manually added
-/// - user: this is a permission granted to user sessions/bots, not threads/rooms
-/// - server: this is a permission granted to server tokens
-///
-/// thread permissions are combined with and (you need both permissions)
 #[derive(
     Debug,
     Hash,
@@ -170,15 +163,8 @@ pub enum Permission {
     /// requires ThreadCreate*
     ThreadPublish,
 
-    /// (internal) can view this thing; see other ViewFoo permissions for things you can set
-    // TODO: make this not internal; ie let people restrict who can view what
-    //
-    // steps:
-    // - remove View
-    // - remove ensure_view
-    // - enforce current view logic in perms.for_{room_thread}
-    // - add ViewThread (view all threads/view this room)
-    View,
+    /// Can view threads in a room.
+    ViewThread,
 
     /// view audit log
     ViewAuditLog,

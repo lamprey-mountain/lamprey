@@ -44,7 +44,7 @@ async fn voice_state_get(
     };
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let state = srv.users.voice_state_get(target_user_id);
     Ok(Json(state))
 }
@@ -76,7 +76,7 @@ async fn voice_state_disconnect(
     };
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::VoiceDisconnect)?;
     let target_perms = srv.perms.for_thread(target_user_id, thread_id).await?;
     let Some(_state) = srv.users.voice_state_get(target_user_id) else {
@@ -137,13 +137,13 @@ async fn voice_state_move(
     };
     let srv = s.services();
     let perms_source = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms_source.ensure_view()?;
+    perms_source.ensure(Permission::ViewThread)?;
     perms_source.ensure(Permission::VoiceMove)?;
     let perms_target = srv.perms.for_thread(auth_user.id, json.target_id).await?;
-    perms_target.ensure_view()?;
+    perms_target.ensure(Permission::ViewThread)?;
     perms_target.ensure(Permission::VoiceMove)?;
-    let perms_user = srv.perms.for_thread(target_user_id, json.target_id).await?;
-    perms_user.ensure_view()?;
+    let _perms_user = srv.perms.for_thread(target_user_id, json.target_id).await?;
+    perms_target.ensure(Permission::ViewThread)?;
 
     let Some(old) = srv.users.voice_state_get(target_user_id) else {
         return Err(Error::BadStatic("not connected to any thread"));
@@ -209,7 +209,7 @@ async fn voice_state_list(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let states: Vec<_> = srv
         .users
         .voice_states_list()

@@ -9,7 +9,9 @@ use common::v1::types::notifications::{
     NotificationMarkRead, NotificationPagination, NotificationReason,
 };
 use common::v1::types::PaginationResponse;
-use common::v1::types::{util::Time, NotificationId, PaginationQuery, Thread, ThreadId};
+use common::v1::types::{
+    util::Time, NotificationId, PaginationQuery, Permission, Thread, ThreadId,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -106,7 +108,7 @@ async fn inbox_post(
         .perms
         .for_thread(auth_user.id, json.thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
 
     let notif = Notification {
         id: NotificationId::new(),

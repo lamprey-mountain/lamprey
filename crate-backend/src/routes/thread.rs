@@ -64,7 +64,7 @@ async fn thread_create_room(
     } else {
         srv.perms.for_room(auth_user.id, room_id).await?
     };
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     match json.ty {
         ThreadType::Chat => {
             perms.ensure(Permission::ThreadCreateChat)?;
@@ -309,7 +309,7 @@ async fn thread_get(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let thread = s
         .services()
         .threads
@@ -346,8 +346,7 @@ async fn thread_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     let mut res = data.thread_list(room_id, pagination, q.parent_id).await?;
     let srv = s.services();
     let mut threads = vec![];
@@ -381,8 +380,7 @@ async fn thread_list_archived(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     let mut res = data
         .thread_list_archived(room_id, pagination, q.parent_id)
         .await?;
@@ -420,7 +418,6 @@ async fn thread_list_removed(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::ThreadRemove)?;
     let mut res = data
         .thread_list_removed(room_id, pagination, q.parent_id)
@@ -455,8 +452,7 @@ async fn thread_reorder(
 ) -> Result<()> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
 
     let mut threads_old = HashMap::new();
 
@@ -465,12 +461,12 @@ async fn thread_reorder(
         threads_old.insert(thread_data.id, thread_data);
 
         let perms_thread = srv.perms.for_thread(auth_user.id, thread.id).await?;
-        perms_thread.ensure_view()?;
+        perms_thread.ensure(Permission::ViewThread)?;
         perms_thread.ensure(Permission::ThreadManage)?;
 
         if let Some(Some(parent_id)) = thread.parent_id {
             let perms_parent = srv.perms.for_thread(auth_user.id, parent_id).await?;
-            perms_parent.ensure_view()?;
+            perms_thread.ensure(Permission::ViewThread)?;
             perms_parent.ensure(Permission::ThreadManage)?;
 
             let parent_data = srv.threads.get(parent_id, None).await?;
@@ -613,7 +609,7 @@ async fn thread_ack(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
         message_id
@@ -913,7 +909,7 @@ async fn thread_typing(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::MessageCreate)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -963,7 +959,7 @@ async fn thread_lock(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -1025,7 +1021,7 @@ async fn thread_unlock(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -1230,8 +1226,7 @@ async fn thread_transfer_ownership(
         .thread_member_get(thread_id, target_user_id)
         .await?;
 
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
     let thread_start = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread_start.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you aren't the thread owner"));

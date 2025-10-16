@@ -38,7 +38,7 @@ async fn permission_thread_overwrite(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::RoleManage)?;
     let thread = srv.threads.get(thread_id, None).await?;
     if thread.archived_at.is_some() {
@@ -183,7 +183,7 @@ async fn permission_thread_delete(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::RoleManage)?;
 
     let thread = srv.threads.get(thread_id, None).await?;

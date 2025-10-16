@@ -167,7 +167,7 @@ impl ServiceThreads {
             .perms
             .for_thread(user_id, thread_id)
             .await?;
-        perms.ensure_view()?;
+        perms.ensure(Permission::ViewThread)?;
         let data = self.state.data();
         let srv = self.state.services();
         let thread_old = srv.threads.get(thread_id, None).await?;

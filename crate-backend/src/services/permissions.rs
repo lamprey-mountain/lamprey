@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::Permissions;
-use crate::ServerStateInner;
+use crate::{Error, ServerStateInner};
 
 pub struct ServicePermissions {
     state: Arc<ServerStateInner>,
@@ -85,7 +85,7 @@ impl ServicePermissions {
                 let room = srv.rooms.get(room_id, None).await?;
                 if room.owner_id == Some(user_id) {
                     let mut p = Permissions::empty();
-                    p.add(Permission::View);
+                    p.add(Permission::ViewThread);
                     p.add(Permission::Admin);
                     return Result::Ok(p);
                 }
@@ -97,6 +97,8 @@ impl ServicePermissions {
                             perms.set_timed_out(true);
                         }
                     }
+                } else {
+                    return Result::Err(Error::NotFound);
                 }
 
                 Result::Ok(perms)
@@ -113,7 +115,7 @@ impl ServicePermissions {
             let room = srv.rooms.get(room_id, None).await?;
             if room.owner_id == Some(user_id) {
                 let mut p = Permissions::empty();
-                p.add(Permission::View);
+                p.add(Permission::ViewThread);
                 p.add(Permission::Admin);
                 return Ok(p);
             }
@@ -123,7 +125,7 @@ impl ServicePermissions {
         } else {
             data.thread_member_get(thread_id, user_id).await?;
             let mut p = Permissions::empty();
-            p.add(Permission::View);
+            p.add(Permission::ViewThread);
             for a in EVERYONE_TRUSTED {
                 p.add(*a);
             }

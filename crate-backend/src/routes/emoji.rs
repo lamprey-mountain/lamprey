@@ -45,7 +45,6 @@ async fn emoji_create(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::EmojiManage)?;
 
     let data = s.data();
@@ -143,7 +142,6 @@ async fn emoji_delete(
     let data = s.data();
     let emoji = data.emoji_get(emoji_id).await?;
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::EmojiManage)?;
     data.emoji_delete(emoji_id).await?;
     data.media_link_delete_all(*emoji.id).await?;
@@ -199,7 +197,6 @@ async fn emoji_update(
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
     let data = s.data();
-    perms.ensure_view()?;
     perms.ensure(Permission::EmojiManage)?;
     data.emoji_update(emoji_id, json).await?;
     let emoji = data.emoji_get(emoji_id).await?;
@@ -248,8 +245,8 @@ async fn emoji_list(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = srv.perms.for_room(user.id, room_id).await?;
+
     let emoji = data.emoji_list(room_id, q).await?;
     Ok(Json(emoji))
 }

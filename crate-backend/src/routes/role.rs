@@ -44,7 +44,6 @@ async fn role_create(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
 
     for p in &json.permissions {
@@ -124,7 +123,6 @@ async fn role_update(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let start_role = d.role_select(room_id, role_id).await?;
     if !json.changes(&start_role) {
@@ -218,7 +216,6 @@ async fn role_delete(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
@@ -267,8 +264,7 @@ async fn role_get(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(user.id, room_id).await?;
     let role = d.role_select(room_id, role_id).await?;
     Ok(Json(role))
 }
@@ -293,8 +289,7 @@ async fn role_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(user.id, room_id).await?;
     let res = d.role_list(room_id, paginate).await?;
     Ok(Json(res))
 }
@@ -319,8 +314,7 @@ async fn role_member_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s.services().perms.for_room(user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(user.id, room_id).await?;
     let res = d.role_member_list(role_id, paginate).await?;
     Ok(Json(res))
 }
@@ -352,7 +346,6 @@ async fn role_member_add(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
@@ -416,7 +409,6 @@ async fn role_member_remove(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
     let role = d.role_select(room_id, role_id).await?;
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
@@ -486,7 +478,6 @@ async fn role_member_bulk_edit(
     let srv = s.services();
 
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleApply)?;
 
     let role = d.role_select(room_id, role_id).await?;
@@ -585,7 +576,6 @@ async fn role_reorder(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::RoleManage)?;
 
     let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;

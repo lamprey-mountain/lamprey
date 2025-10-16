@@ -379,7 +379,7 @@ impl_perms!(
     ThreadLock,
     ThreadManage,
     ThreadPublish,
-    View,
+    ViewThread,
     ViewAuditLog,
     VoiceConnect,
     VoiceDeafen,

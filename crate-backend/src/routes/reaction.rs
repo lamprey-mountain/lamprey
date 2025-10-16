@@ -42,7 +42,7 @@ async fn reaction_add(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::ReactionAdd)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -95,7 +95,7 @@ async fn reaction_remove(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::ReactionAdd)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -148,7 +148,7 @@ async fn reaction_purge(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     perms.ensure(Permission::ReactionPurge)?;
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -216,7 +216,7 @@ async fn reaction_list(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let list = data.reaction_list(thread_id, message_id, key, q).await?;
     Ok(Json(list))
 }

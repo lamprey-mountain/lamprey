@@ -46,7 +46,6 @@ async fn room_member_list(
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
 
     // extra permission check to prevent returning the entire list of registered users
     if room_id == SERVER_ROOM_ID {
@@ -80,8 +79,7 @@ async fn room_member_get(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
+    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     let res = d.room_member_get(room_id, target_user_id).await?;
     if res.membership == RoomMembership::Join {
         Ok(Json(res))
@@ -124,7 +122,6 @@ async fn room_member_add(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::MemberBridge)?;
     let auth_user = srv.users.get(auth_user.id, None).await?;
     let target_user_id = match target_user_id {
@@ -327,10 +324,8 @@ async fn room_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let srv = s.services();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
-
+    let srv = s.services();
     let start = d.room_member_get(room_id, target_user_id).await?;
     if !matches!(start.membership, RoomMembership::Join { .. }) {
         return Ok(Json(start));
@@ -488,7 +483,6 @@ async fn room_member_delete(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
@@ -561,7 +555,6 @@ async fn room_member_search(
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
 
     // extra permission check to prevent returning the entire list of registered users
     if room_id == SERVER_ROOM_ID {
@@ -831,7 +824,6 @@ async fn room_ban_get(
     };
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_get(room_id, target_user_id).await?;
     Ok(Json(res))
@@ -858,7 +850,6 @@ async fn room_ban_list(
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure_view()?;
     perms.ensure(Permission::MemberBan)?;
     let res = d.room_ban_list(room_id, paginate).await?;
     let cursor = res.items.last().map(|i| i.user_id.to_string());

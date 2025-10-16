@@ -17,7 +17,6 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::MessageCreate,
     Permission::MessageRemove,
     Permission::MessageDelete,
-    // Permission::MessageEdit, // internal
     Permission::MessageEmbeds,
     Permission::MessageMassMention,
     Permission::MessageAttachments,
@@ -46,11 +45,7 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::ThreadLock,
     Permission::ThreadManage,
     Permission::ThreadPublish,
-    // Permission::UserDms,      // user perm doesnt apply
-    // Permission::UserProfile,  // user perm doesnt apply
-    // Permission::UserSessions, // user perm doesnt apply
-    // Permission::UserStatus,   // user perm doesnt apply
-    // Permission::View, // internal
+    Permission::ViewThread,
     Permission::ViewAuditLog,
     Permission::VoiceConnect,
     Permission::VoiceDeafen,
@@ -70,8 +65,6 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::Admin,
     Permission::IntegrationsManage,
     Permission::IntegrationsManage,
-    // Permission::EmojiAdd,    // room perm doesnt apply
-    // Permission::EmojiManage, // room perm doesnt apply
     Permission::EmojiUseExternal,
     Permission::InviteCreate,
     Permission::InviteManage,
@@ -83,7 +76,6 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::MessageCreate,
     Permission::MessageRemove,
     Permission::MessageDelete,
-    // Permission::MessageEdit, // internal
     Permission::MessageEmbeds,
     Permission::MessageMassMention,
     Permission::MessageAttachments,
@@ -93,37 +85,15 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::MemberNickname,
     Permission::ReactionAdd,
     Permission::ReactionPurge,
-    // Permission::RoleApply,  // room perm doesnt apply
-    // Permission::RoleManage, // room perm doesnt apply
-    // Permission::RoomEdit,   // room perm doesnt apply
-    // Permission::ServerAdmin,   // server perm doesnt apply
-    // Permission::ServerMetrics, // server perm doesnt apply
-    // Permission::ServerOversee, // server perm doesnt apply
-    // Permission::ServerReports, // server perm doesnt apply
     Permission::TagApply,
-    // Permission::TagManage, // room perm doesnt apply
     Permission::ThreadArchive,
-    // Permission::ThreadCreateChat,        // room perm doesnt apply
-    // Permission::ThreadCreateDocument,    // room perm doesnt apply
-    // Permission::ThreadCreateEvent,       // room perm doesnt apply
-    // Permission::ThreadCreateForumLinear, // room perm doesnt apply
-    // Permission::ThreadCreateForumTree,   // room perm doesnt apply
-    // Permission::ThreadCreateTable,       // room perm doesnt apply
-    // Permission::ThreadCreateVoice,       // room perm doesnt apply
-    // Permission::ThreadCreatePublic,      // room perm doesnt apply
-    // Permission::ThreadCreatePrivate,     // room perm doesnt apply
     Permission::ThreadRemove,
     Permission::ThreadEdit,
     Permission::ThreadForward,
     Permission::ThreadLock,
     Permission::ThreadManage,
     Permission::ThreadPublish,
-    // Permission::UserDms,      // user perm doesnt apply
-    // Permission::UserProfile,  // user perm doesnt apply
-    // Permission::UserSessions, // user perm doesnt apply
-    // Permission::UserStatus,   // user perm doesnt apply
-    // Permission::View, // internal
-    // Permission::ViewAuditLog, // room perm doesnt apply
+    Permission::ViewThread,
     Permission::VoiceConnect,
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,
@@ -157,6 +127,7 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::ThreadCreatePrivate,
     Permission::ThreadEdit,    // maybe?
     Permission::ThreadForward, // maybe?
+    Permission::ViewThread,
     // Permission::ThreadPin, // maybe?
     // Permission::ThreadPublish, // maybe?
     Permission::ViewAuditLog, // maybe?
@@ -182,6 +153,7 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::ThreadCreatePrivate,
     Permission::ThreadEdit,    // maybe?
     Permission::ThreadForward, // maybe?
+    Permission::ViewThread,
     // Permission::ViewAuditLog, // maybe?
     Permission::VoiceConnect,
     Permission::VoiceSpeak,
@@ -209,6 +181,7 @@ pub const MODERATOR: &[Permission] = &[
     Permission::ThreadForward, // maybe?
     Permission::ThreadLock,
     Permission::ThreadManage, // maybe?
+    Permission::ViewThread,
     Permission::ViewAuditLog, // maybe?
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,

@@ -249,7 +249,7 @@ async fn message_context(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let limit = q.limit.unwrap_or(10);
     if limit > 1024 {
         return Err(Error::BadStatic("limit too big"));
@@ -313,7 +313,7 @@ async fn message_list(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut res = data.message_list(thread_id, auth_user.id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -345,7 +345,7 @@ async fn message_get(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut message = data
         .message_get(thread_id, message_id, auth_user.id)
         .await?;
@@ -425,7 +425,7 @@ async fn message_delete(
     let data = s.data();
     let srv = s.services();
     let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let message = data
         .message_get(thread_id, message_id, auth_user.id)
         .await?;
@@ -505,7 +505,7 @@ async fn message_version_list(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut res = data
         .message_version_list(thread_id, message_id, auth_user.id, q)
         .await?;
@@ -540,7 +540,7 @@ async fn message_version_get(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut message = data
         .message_version_get(thread_id, version_id, auth_user.id)
         .await?;
@@ -595,7 +595,7 @@ async fn message_moderate(
     let data = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
 
     let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
@@ -773,7 +773,7 @@ async fn message_replies(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut res = data
         .message_replies(
             thread_id,
@@ -817,7 +817,7 @@ async fn message_roots(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut res = data
         .message_replies(
             thread_id,
@@ -1106,7 +1106,7 @@ async fn message_pin_list(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let mut res = data.message_pin_list(thread_id, auth_user.id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;

@@ -39,7 +39,7 @@ impl Permissions {
     #[inline]
     pub fn has(&self, perm: Permission) -> bool {
         if self.timed_out {
-            return perm == Permission::View || perm == Permission::ViewAuditLog;
+            return perm == Permission::ViewThread || perm == Permission::ViewAuditLog;
         }
         self.p.contains(&perm)
     }
@@ -48,15 +48,10 @@ impl Permissions {
         if self.has(perm) {
             Ok(())
         } else {
+            if perm == Permission::ViewThread {
+                return Err(Error::NotFound);
+            }
             Err(Error::MissingPermissions)
-        }
-    }
-
-    pub fn ensure_view(&self) -> Result<()> {
-        if self.has(Permission::View) {
-            Ok(())
-        } else {
-            Err(Error::NotFound)
         }
     }
 }

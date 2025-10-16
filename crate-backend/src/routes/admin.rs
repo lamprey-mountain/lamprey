@@ -47,7 +47,7 @@ async fn admin_whisper(
     let d = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
-    perms.ensure_view()?;
+
     perms.ensure(Permission::Admin)?;
 
     let changes = Changes::new()
@@ -107,7 +107,7 @@ async fn admin_broadcast(
     let d = s.data();
 
     let perms = srv.perms.for_room(auth_user.id, SERVER_ROOM_ID).await?;
-    perms.ensure_view()?;
+
     perms.ensure(Permission::Admin)?;
 
     let changes = Changes::new()

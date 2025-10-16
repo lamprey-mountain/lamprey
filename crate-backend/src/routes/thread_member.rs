@@ -43,7 +43,7 @@ pub async fn thread_member_list(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let res = d.thread_member_list(thread_id, paginate).await?;
     Ok(Json(res))
 }
@@ -76,7 +76,7 @@ pub async fn thread_member_get(
         .perms
         .for_thread(auth_user.id, thread_id)
         .await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     // TODO: return `Ban`s
     if !matches!(res.membership, ThreadMembership::Join { .. }) {
@@ -116,7 +116,7 @@ pub async fn thread_member_add(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
@@ -223,7 +223,7 @@ pub async fn thread_member_delete(
     let d = s.data();
     let srv = s.services();
     let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure_view()?;
+    perms.ensure(Permission::ViewThread)?;
     if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }

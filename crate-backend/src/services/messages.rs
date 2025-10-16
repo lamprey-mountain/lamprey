@@ -100,7 +100,7 @@ impl ServiceMessages {
         let data = s.data();
         let srv = s.services();
         let perms = srv.perms.for_thread(user_id, thread_id).await?;
-        perms.ensure_view()?;
+        perms.ensure(Permission::ViewThread)?;
         perms.ensure(Permission::MessageCreate)?;
         if !json.attachments.is_empty() {
             perms.ensure(Permission::MessageAttachments)?;
@@ -112,7 +112,7 @@ impl ServiceMessages {
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
                 let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure_view()?;
+                owner_perms.ensure(Permission::ViewThread)?;
                 owner_perms.ensure(Permission::MemberBridge)?;
             } else {
                 return Err(Error::BadStatic("not a puppet"));
@@ -210,7 +210,7 @@ impl ServiceMessages {
         let data = s.data();
         let srv = s.services();
         let perms = s.services().perms.for_thread(user_id, thread_id).await?;
-        perms.ensure_view()?;
+        perms.ensure(Permission::ViewThread)?;
         let message = data.message_get(thread_id, message_id, user_id).await?;
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
@@ -236,7 +236,7 @@ impl ServiceMessages {
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
                 let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure_view()?;
+                owner_perms.ensure(Permission::ViewThread)?;
                 owner_perms.ensure(Permission::MemberBridge)?;
             } else {
                 return Err(Error::BadStatic("not a puppet"));
