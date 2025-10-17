@@ -427,8 +427,7 @@ impl DataRoomMember for Postgres {
             query_scalar!(
                 r#"
                 SELECT user_id FROM room_member
-                JOIN usr ON usr.id = user_id
-                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND usr.bot->'access' IS NOT NULL
+                WHERE room_id = $1 AND user_id > $2 AND user_id < $3 AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)
                 ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC
                 LIMIT $5
                 "#,
@@ -438,7 +437,7 @@ impl DataRoomMember for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_scalar!("SELECT count(*) FROM room_ban WHERE room_id = $1", *room_id),
+            query_scalar!("SELECT count(*) FROM room_member WHERE room_id = $1 AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)", *room_id),
             |i: &ApplicationId| i.to_string()
         )
     }
