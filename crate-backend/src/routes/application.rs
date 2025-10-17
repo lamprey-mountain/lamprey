@@ -14,9 +14,9 @@ use common::v1::types::{
         OauthIntrospectResponse, OauthTokenRequest, OauthTokenResponse, Userinfo,
     },
     util::{Changes, Diff, Time},
-    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Bot,
-    BotAccess, ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission,
-    Puppet, PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
+    ApplicationId, AuditLogChange, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
+    ExternalPlatform, MessageSync, PaginationQuery, PaginationResponse, Permission, Puppet,
+    PuppetCreate, RoomId, RoomMemberOrigin, RoomMemberPut, SessionCreate, SessionStatus,
     SessionToken, SessionType, SessionWithToken, User, UserId,
 };
 use headers::HeaderMapExt;
@@ -62,15 +62,6 @@ async fn app_create(
             parent_id: Some(auth_user.id),
             name: json.name.clone(),
             description: json.description.clone(),
-            bot: Some(Bot {
-                owner_id: auth_user.id,
-                access: if json.public {
-                    return Err(Error::Unimplemented);
-                } else {
-                    BotAccess::Private
-                },
-                is_bridge: json.bridge,
-            }),
             puppet: None,
             registered_at: Some(Time::now_utc()),
             system: false,
@@ -460,7 +451,6 @@ async fn puppet_ensure(
             parent_id,
             name: json.name,
             description: json.description,
-            bot: None,
             puppet: Some(Puppet {
                 owner_id: auth_user.id,
                 external_platform: ExternalPlatform::Discord,

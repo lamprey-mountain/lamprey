@@ -27,15 +27,35 @@ pub struct DbUser {
     pub avatar: Option<Uuid>,
     pub banner: Option<Uuid>,
     pub puppet: Option<Value>,
-    pub bot: Option<Value>,
     pub system: bool,
     pub suspended: Option<Value>,
     pub registered_at: Option<time::PrimitiveDateTime>,
     pub deleted_at: Option<time::PrimitiveDateTime>,
+    pub app_owner_id: Option<Uuid>,
+    pub app_bridge: Option<bool>,
+    pub app_public: Option<bool>,
 }
 
 impl From<DbUser> for User {
     fn from(row: DbUser) -> Self {
+        let bot = if let (Some(owner_id), Some(bridge), Some(public)) =
+            (row.app_owner_id, row.app_bridge, row.app_public)
+        {
+            Some(types::Bot {
+                owner_id: owner_id.into(),
+                access: if public {
+                    types::BotAccess::Public {
+                        is_discoverable: false,
+                    }
+                } else {
+                    types::BotAccess::Private
+                },
+                is_bridge: bridge,
+            })
+        } else {
+            None
+        };
+
         User {
             id: row.id,
             version_id: row.version_id,
@@ -44,7 +64,7 @@ impl From<DbUser> for User {
             status: types::user_status::Status::offline(),
             avatar: row.avatar.map(Into::into),
             banner: row.banner.map(Into::into),
-            bot: row.bot.and_then(|r| serde_json::from_value(r).ok()),
+            bot,
             puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
             suspended: row
                 .suspended
@@ -70,7 +90,7 @@ impl DataUser for Postgres {
             avatar: None,
             banner: None,
             status: types::user_status::Status::online(),
-            bot: patch.bot,
+            bot: None,
             system: patch.system,
             puppet: patch.puppet,
             suspended: None,
@@ -81,8 +101,8 @@ impl DataUser for Postgres {
         };
         query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, bot, suspended, can_fork, registered_at)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, puppet, suspended, can_fork, registered_at, system)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10)
         "#,
             *user.id,
             *user.version_id,
@@ -91,9 +111,9 @@ impl DataUser for Postgres {
             user.description,
             user.avatar.map(|i| *i),
             serde_json::to_value(user.puppet)?,
-            serde_json::to_value(user.bot)?,
             serde_json::to_value(user.suspended)?,
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
+            user.system,
         )
         .execute(&self.pool)
         .await?;
@@ -106,9 +126,12 @@ impl DataUser for Postgres {
         let user = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-            FROM usr WHERE id = $1
-            FOR UPDATE
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+            FROM usr u
+            LEFT JOIN application a ON u.id = a.id
+            WHERE u.id = $1
+            FOR UPDATE OF u
             "#,
             *user_id
         )
@@ -157,9 +180,12 @@ impl DataUser for Postgres {
         let row = query_as!(
             DbUser,
             r#"
-            SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-            FROM usr WHERE id = $1
-        "#,
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+            FROM usr u
+            LEFT JOIN application a ON u.id = a.id
+            WHERE u.id = $1
+            "#,
             *id
         )
         .fetch_one(&self.pool)
@@ -181,18 +207,20 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-                        FROM usr
-                        WHERE id > $1 AND id < $2
-                          AND registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
-                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                        FROM usr u
+                        LEFT JOIN application a ON u.id = a.id
+                        WHERE u.id > $1 AND u.id < $2
+                          AND u.registered_at IS NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
                         *p.before,
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr WHERE registered_at IS NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE u.registered_at IS NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -203,18 +231,20 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-                        FROM usr
-                        WHERE id > $1 AND id < $2
-                          AND registered_at IS NOT NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
-                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                        FROM usr u
+                        LEFT JOIN application a ON u.id = a.id
+                        WHERE u.id > $1 AND u.id < $2
+                          AND u.registered_at IS NOT NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
                         *p.before,
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr WHERE registered_at IS NOT NULL AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE u.registered_at IS NOT NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -225,18 +255,19 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-                        FROM usr
-                        WHERE id > $1 AND id < $2
-                          AND bot->'access' IS NOT NULL
-                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                        FROM usr u
+                        JOIN application a ON u.id = a.id
+                        WHERE u.id > $1 AND u.id < $2
+                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
                         *p.before,
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr WHERE bot->'access' IS NOT NULL"),
+                    query_scalar!("SELECT count(*) FROM usr u JOIN application a ON u.id = a.id"),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -247,11 +278,13 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-                        FROM usr
-                        WHERE id > $1 AND id < $2
-                          AND puppet->'owner_id' IS NOT NULL
-                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                        FROM usr u
+                        LEFT JOIN application a ON u.id = a.id
+                        WHERE u.id > $1 AND u.id < $2
+                          AND u.puppet->'owner_id' IS NOT NULL
+                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
                         *p.before,
@@ -269,18 +302,20 @@ impl DataUser for Postgres {
                     query_as!(
                         DbUser,
                         r#"
-                        SELECT id, version_id, parent_id, name, description, avatar, banner, puppet, bot, system, registered_at, deleted_at, suspended
-                        FROM usr
-                        WHERE id > $1 AND id < $2
-                          AND bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false
-                        ORDER BY (CASE WHEN $3 = 'f' THEN id END), id DESC LIMIT $4
+                        SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                        FROM usr u
+                        LEFT JOIN application a ON u.id = a.id
+                        WHERE u.id > $1 AND u.id < $2
+                          AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
+                        ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
                         *p.after,
                         *p.before,
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr WHERE bot->'access' IS NULL AND puppet->'owner_id' IS NULL AND system = false"),
+                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN application a ON u.id = a.id WHERE a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false"),
                     |i: &User| i.id.to_string()
                 )
             }

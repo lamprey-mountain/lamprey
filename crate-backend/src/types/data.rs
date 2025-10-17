@@ -1,8 +1,8 @@
 use common::v1::types::Mentions;
 use common::v1::types::{
-    util::Time, Bot, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet,
-    RoleId, Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken,
-    SessionType, Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
+    util::Time, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, RoleId,
+    Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, SessionType,
+    Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -39,7 +39,6 @@ pub struct DbUserCreate {
     pub parent_id: Option<UserId>,
     pub name: String,
     pub description: Option<String>,
-    pub bot: Option<Bot>,
     pub puppet: Option<Puppet>,
     pub registered_at: Option<Time>,
     pub system: bool,

@@ -135,7 +135,6 @@ async fn main() -> Result<()> {
             parent_id: None,
             name: "root".to_string(),
             description: None,
-            bot: None,
             puppet: None,
             registered_at: Some(Time::now_utc()),
             system: true,

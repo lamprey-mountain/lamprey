@@ -397,7 +397,6 @@ async fn guest_create(
             parent_id: None,
             name: create.name,
             description: create.description,
-            bot: None,
             puppet: None,
             registered_at: None,
             system: false,
