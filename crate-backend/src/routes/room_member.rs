@@ -862,6 +862,31 @@ async fn room_ban_list(
     Ok(Json(res))
 }
 
+/// Room ban search (TODO)
+#[utoipa::path(
+    get,
+    path = "/room/{room_id}/ban/search",
+    params(
+        PaginationQuery<UserId>,
+        ("room_id" = RoomId, description = "Room id"),
+    ),
+    tags = ["room_member", "badge.perm.MemberBan"],
+    responses(
+        (status = OK, body = PaginationResponse<RoomBan>, description = "success"),
+    )
+)]
+async fn room_ban_search(
+    Path(room_id): Path<RoomId>,
+    Query(_search): Query<RoomMemberSearch>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let d = s.data();
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::MemberBan)?;
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(room_member_list))
@@ -875,4 +900,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(room_ban_remove))
         .routes(routes!(room_ban_get))
         .routes(routes!(room_ban_list))
+        .routes(routes!(room_ban_search))
 }

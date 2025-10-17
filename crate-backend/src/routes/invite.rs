@@ -9,7 +9,7 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
-    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
+    RoomMemberPut, RoomMembership, ThreadId, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -478,6 +478,54 @@ async fn invite_room_list(
     Ok(Json(res))
 }
 
+/// Invite thread create
+///
+/// Create an invite that goes to a thread
+#[utoipa::path(
+    post,
+    path = "/thread/{thread_id}/invite",
+    params(
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["invite", "badge.perm.InviteCreate"],
+    responses(
+        (status = OK, body = Invite, description = "success"),
+    )
+)]
+async fn invite_thread_create(
+    Path(_thread_id): Path<ThreadId>,
+    Auth(_auth_user): Auth,
+    HeaderReason(_reason): HeaderReason,
+    State(_s): State<Arc<ServerState>>,
+    Json(_json): Json<InviteCreate>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
+/// Invite thread list
+///
+/// List invites that go to a thread
+#[utoipa::path(
+    get,
+    path = "/thread/{thread_id}/invite",
+    params(
+        PaginationQuery<InviteCode>,
+        ("thread_id", description = "Thread id"),
+    ),
+    tags = ["invite"],
+    responses(
+        (status = OK, body = PaginationResponse<Invite>, description = "success"),
+    )
+)]
+async fn invite_thread_list(
+    Path(_thread_id): Path<ThreadId>,
+    Query(_paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(_user): Auth,
+    State(_s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    Ok(Error::Unimplemented)
+}
+
 /// Invite patch
 ///
 /// Edit an invite
@@ -816,6 +864,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(invite_use))
         .routes(routes!(invite_room_create))
         .routes(routes!(invite_room_list))
+        .routes(routes!(invite_thread_create))
+        .routes(routes!(invite_thread_list))
         .routes(routes!(invite_server_create))
         .routes(routes!(invite_server_list))
         .routes(routes!(invite_user_create))
