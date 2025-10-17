@@ -80,7 +80,7 @@
                       "ThreadLock",
                       "ThreadManage",
                       "ThreadPublish",
-                      "View",
+                      "ViewThread",
                       "ViewAuditLog",
                       "VoiceConnect",
                       "VoiceDeafen",

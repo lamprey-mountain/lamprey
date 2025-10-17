@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH last_messages AS (\n    SELECT DISTINCT ON (thread_id)\n        thread_id,\n        id AS message_id,\n        version_id\n    FROM message\n    WHERE thread_id IN (\n        SELECT id FROM thread WHERE room_id = $2 AND deleted_at IS NULL AND archived_at IS NULL\n    ) AND deleted_at IS NULL\n    ORDER BY thread_id, id DESC\n),\nupdated_unreads AS (\n    INSERT INTO unread (user_id, thread_id, message_id, version_id)\n    SELECT\n        $1,\n        lm.thread_id,\n        lm.message_id,\n        lm.version_id\n    FROM last_messages lm\n    ON CONFLICT (user_id, thread_id) DO UPDATE SET\n        message_id = excluded.message_id,\n        version_id = excluded.version_id\n    RETURNING thread_id, message_id, version_id\n)\nSELECT thread_id, message_id, version_id FROM updated_unreads\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "thread_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "message_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "version_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9ee050fd94b678285cf4701d1f06edd245a3c24d80f1e5a3b8034c11327645f3"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            WITH perms AS (\n                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission\n                FROM room_member AS m\n                JOIN role_member AS r ON r.user_id = m.user_id\n                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id\n                UNION\n                SELECT m.room_id, m.user_id, unnest(role.permissions) as permission\n                FROM room_member AS m\n                JOIN role ON role.id = m.room_id\n                UNION\n                SELECT room_id, user_id, 'View' AS permission\n                FROM room_member\n            )\n            SELECT permission as \"permission!: DbPermission\"\n            FROM perms\n            WHERE user_id = $1 AND room_id = $2\n        ",
+  "query": "\n            WITH perms AS (\n                SELECT m.room_id, m.user_id, unnest(role.permissions) AS permission\n                FROM room_member AS m\n                JOIN role_member AS r ON r.user_id = m.user_id\n                JOIN role ON r.role_id = role.id AND role.room_id = m.room_id\n                UNION\n                SELECT m.room_id, m.user_id, unnest(role.permissions) as permission\n                FROM room_member AS m\n                JOIN role ON role.id = m.room_id\n            )\n            SELECT permission as \"permission!: DbPermission\"\n            FROM perms\n            WHERE user_id = $1 AND room_id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -51,7 +51,7 @@
                 "ThreadLock",
                 "ThreadManage",
                 "ThreadPublish",
-                "View",
+                "ViewThread",
                 "ViewAuditLog",
                 "VoiceConnect",
                 "VoiceDeafen",
@@ -79,5 +79,5 @@
       null
     ]
   },
-  "hash": "c963cb253030edea2379bde2ea9c56d8b08c90c3e66717c520b19bcac265f335"
+  "hash": "f54cb00292c916699cafd69a35b6c32bca994466e8bac54f34c646588bbda876"
 }
