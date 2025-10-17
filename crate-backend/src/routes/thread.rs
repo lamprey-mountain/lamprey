@@ -347,7 +347,9 @@ async fn thread_list(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    let mut res = data.thread_list(room_id, auth_user.id, pagination, q.parent_id).await?;
+    let mut res = data
+        .thread_list(room_id, auth_user.id, pagination, q.parent_id)
+        .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {

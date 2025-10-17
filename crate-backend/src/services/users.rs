@@ -65,8 +65,8 @@ impl ServiceUsers {
                 .services()
                 .perms
                 .for_room(viewer_id, common::v1::types::SERVER_ROOM_ID)
-                .await?;
-            let is_admin = perms.has(Permission::Admin);
+                .await;
+            let is_admin = perms.is_ok_and(|p| p.has(Permission::Admin));
 
             if viewer_id == user_id || is_admin {
                 usr.emails = Some(self.state.data().user_email_list(user_id).await?);
