@@ -1,4 +1,9 @@
-use std::{net::IpAddr, path::PathBuf, time::Instant};
+use std::{
+    net::{IpAddr, SocketAddr, ToSocketAddrs},
+    path::PathBuf,
+    time::Instant,
+};
+use stunclient::StunClient;
 use systemstat::{Platform, System};
 use tokio::time;
 
@@ -68,10 +73,20 @@ impl Player {
         debug!("init webrtc");
         let mut rtc = Rtc::new();
 
-        let addr = select_host_address_ipv4()?;
-        let sock = UdpSocket::bind(format!("{addr}:0")).await?;
-        let candidate = Candidate::host(sock.local_addr()?, "udp")?;
-        debug!("listen on {}", sock.local_addr().unwrap());
+        let local_addr: SocketAddr = "0.0.0.0:0".parse()?;
+        let stun_addr = "stun.l.google.com:19302"
+            .to_socket_addrs()?
+            .filter(|x| x.is_ipv4())
+            .next()
+            .unwrap();
+        let sock = UdpSocket::bind(local_addr).await?;
+        let c = StunClient::new(stun_addr);
+        let f = c.query_external_address_async(&sock);
+        let addr = f.await.unwrap();
+
+        let candidate = Candidate::host(addr, "udp")?;
+        debug!("listen on {}", sock.local_addr()?);
+        debug!("public addr {}", addr);
         rtc.add_local_candidate(candidate);
 
         debug!("rtc ready");
