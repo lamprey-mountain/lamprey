@@ -100,17 +100,15 @@ export const VoiceProvider = (props: ParentProps) => {
 					rtc.createStream("user");
 					rtc.createStream("screen");
 					rtc.createStream("music");
-					micTn = rtc.createTransceiver("user", "audio");
-					camTn = rtc.createTransceiver("user", "video");
-					screenAudTn = rtc.createTransceiver("screen", "audio");
-					screenVidTn = rtc.createTransceiver("screen", "video");
-					musicTn = rtc.createTransceiver("music", "audio");
 					rtcCreated = true;
 				}
 
 				// if we have an existing microphone stream, use it
 				if (streamMic && !state.muted) {
 					console.log("[voice] restore microphone stream");
+					if (!micTn) {
+						micTn = rtc.createTransceiver("user", "audio");
+					}
 					const track = streamMic.getAudioTracks()[0];
 					if (track) {
 						await micTn!.sender.replaceTrack(track);
@@ -121,6 +119,9 @@ export const VoiceProvider = (props: ParentProps) => {
 				// if we have an existing camera stream, use it
 				if (streamCam && !state.cameraHidden) {
 					console.log("[voice] restore camera stream");
+					if (!camTn) {
+						camTn = rtc.createTransceiver("user", "video");
+					}
 					const track = streamCam.getVideoTracks()[0];
 					if (track) {
 						await camTn!.sender.replaceTrack(track);
@@ -173,7 +174,10 @@ export const VoiceProvider = (props: ParentProps) => {
 					console.log("[voice] got microphone stream", stream);
 					streamMic = stream;
 					update("muted", false);
-					if (state.rtc && micTn) {
+					if (state.rtc) {
+						if (!micTn) {
+							micTn = state.rtc.createTransceiver("user", "audio");
+						}
 						console.log("[voice] got microphone stream", stream);
 						const track = streamMic.getAudioTracks()[0];
 						if (track) {
@@ -193,7 +197,10 @@ export const VoiceProvider = (props: ParentProps) => {
 					console.warn("[voice] couldn't get microphone stream");
 				}
 			} else {
-				if (state.rtc && micTn) {
+				if (state.rtc) {
+					if (!micTn) {
+						micTn = state.rtc.createTransceiver("user", "audio");
+					}
 					const tr = micTn.sender.track;
 					if (tr) {
 						console.log("[voice] toggle microphone track enabled");
@@ -230,7 +237,10 @@ export const VoiceProvider = (props: ParentProps) => {
 					console.log("[voice] got camera stream", stream);
 					streamCam = stream;
 					update("cameraHidden", false);
-					if (state.rtc && camTn) {
+					if (state.rtc) {
+						if (!camTn) {
+							camTn = state.rtc.createTransceiver("user", "video");
+						}
 						console.log("[voice] got camera stream", stream);
 						const track = streamCam.getVideoTracks()[0];
 						if (track) {
@@ -242,7 +252,10 @@ export const VoiceProvider = (props: ParentProps) => {
 					console.warn("[voice] couldn't get camera stream");
 				}
 			} else {
-				if (state.rtc && camTn) {
+				if (state.rtc) {
+					if (!camTn) {
+						camTn = state.rtc.createTransceiver("user", "video");
+					}
 					const tr = camTn.sender.track;
 					if (tr) {
 						console.log("[voice] toggle camera track enabled");
@@ -269,7 +282,13 @@ export const VoiceProvider = (props: ParentProps) => {
 			}
 		},
 		toggleScreen: async () => {
-			if (!state.rtc || !screenVidTn || !screenAudTn) return;
+			if (!state.rtc) return;
+			if (!screenVidTn) {
+				screenVidTn = state.rtc.createTransceiver("screen", "video");
+			}
+			if (!screenAudTn) {
+				screenAudTn = state.rtc.createTransceiver("screen", "audio");
+			}
 			const tr = screenVidTn.sender.track;
 			if (tr) {
 				tr.enabled = !tr.enabled;
@@ -297,7 +316,10 @@ export const VoiceProvider = (props: ParentProps) => {
 		},
 		playMusic: async () => {
 			// TEMP: music playing is for debugging, since its easier than yelling into the microphone every time i want to test webrtc
-			if (!state.rtc || !musicTn) return;
+			if (!state.rtc) return;
+			if (!musicTn) {
+				musicTn = state.rtc.createTransceiver("music", "audio");
+			}
 			const tr = musicTn.sender.track;
 			if (tr) {
 				tr.enabled = !tr.enabled;
