@@ -7,6 +7,7 @@ use crate::ServerState;
 mod admin;
 mod application;
 mod auth;
+mod automod;
 mod debug;
 mod dm;
 mod emoji;
@@ -26,7 +27,6 @@ mod room_member;
 mod search;
 mod session;
 mod sync;
-mod tag;
 mod thread;
 mod thread_member;
 mod user;
@@ -34,12 +34,14 @@ mod user_config;
 mod user_email;
 mod util;
 mod voice;
+mod webhook;
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(admin::routes())
         .merge(application::routes())
         .merge(auth::routes())
+        .merge(automod::routes())
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(emoji::routes())
@@ -59,11 +61,11 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(search::routes())
         .merge(session::routes())
         .merge(sync::routes())
-        .merge(tag::routes())
         .merge(thread::routes())
         .merge(thread_member::routes())
         .merge(user::routes())
         .merge(user_config::routes())
         .merge(user_email::routes())
         .merge(voice::routes())
+        .merge(webhook::routes())
 }

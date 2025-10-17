@@ -1,5 +1,5 @@
 // TEMP: suppress warnings before i remove everything
-#![allow(deprecated)]
+// #![allow(deprecated)]
 
 // TODO(#242): make serde optional
 // maybe merge util and misc?
@@ -9,6 +9,7 @@
 pub mod application;
 pub mod audit_logs;
 pub mod auth;
+pub mod automod;
 pub mod email;
 pub mod embed;
 pub mod emoji;
@@ -25,8 +26,6 @@ pub mod pagination;
 pub mod permission;
 pub mod profile;
 pub mod reaction;
-pub mod util;
-// pub mod redex;
 pub mod role;
 pub mod room;
 pub mod room_member;
@@ -40,8 +39,10 @@ pub mod thread_member;
 pub mod user;
 pub mod user_config;
 pub mod user_status;
+pub mod util;
 pub mod visibility;
 pub mod voice;
+pub mod webhook;
 
 pub use media::{
     Audio, Image, Media, MediaCreate, MediaCreateSource, MediaPatch, MediaTrack, MediaTrackInfo,

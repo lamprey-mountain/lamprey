@@ -8,9 +8,6 @@ use validator::Validate;
 
 use crate::v1::types::{misc::Color, util::some_option, Room, RoomId, TagId, TagVerId, Thread};
 
-// hmm, should i be able to apply tags to other tags?
-// tagception!
-
 /// a tag that can be applied to things
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

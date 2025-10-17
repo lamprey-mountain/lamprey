@@ -207,6 +207,8 @@ genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
 genid!(Application, "00000000-0000-0000-0000-0application");
 genid!(Notification, "00000000-0000-0000-0000-notification");
 genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
+genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
+genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
 
 pub const SERVER_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),

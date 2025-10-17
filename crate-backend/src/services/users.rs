@@ -3,9 +3,7 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
-use common::v1::types::{
-    Bot, BotAccess, MessageSync, Permission, Thread, ThreadId, ThreadMemberPut,
-};
+use common::v1::types::{MessageSync, Permission, Thread, ThreadId, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -73,25 +71,6 @@ impl ServiceUsers {
             }
         }
 
-        let app = self
-            .state
-            .data()
-            .application_get(user_id.into_inner().into())
-            .await
-            .ok();
-        if let Some(app) = app {
-            usr.bot = Some(Bot {
-                owner_id: app.owner_id,
-                access: if app.public {
-                    BotAccess::Public {
-                        is_discoverable: false,
-                    }
-                } else {
-                    BotAccess::Private
-                },
-                is_bridge: app.bridge,
-            });
-        }
         let status = self.status_get(user_id);
         usr.status = status;
         Ok(usr)
