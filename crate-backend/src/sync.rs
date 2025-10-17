@@ -503,17 +503,18 @@ impl Connection {
             }
             MessageSync::RoleCreate { role } => AuthCheck::Room(role.room_id),
             MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
+            // FIXME(#612): only return invite events to creator and members with InviteManage
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
-                InviteTarget::Room { room } => AuthCheck::Room(room.id),
-                InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Room { room, thread: _ } => AuthCheck::Room(room.id),
+                InviteTarget::Gdm { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
                 InviteTarget::User { user, .. } => AuthCheck::User(user.id),
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
-                InviteTarget::Room { room } => AuthCheck::Room(room.id),
-                InviteTarget::Thread { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Room { room, .. } => AuthCheck::Room(room.id),
+                InviteTarget::Gdm { thread, .. } => AuthCheck::Thread(thread.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
@@ -536,8 +537,8 @@ impl Connection {
             MessageSync::RoleDelete { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {
-                InviteTargetId::Room { room_id } => AuthCheck::Room(*room_id),
-                InviteTargetId::Thread { thread_id, .. } => AuthCheck::Thread(*thread_id),
+                InviteTargetId::Room { room_id, .. } => AuthCheck::Room(*room_id),
+                InviteTargetId::Gdm { thread_id, .. } => AuthCheck::Thread(*thread_id),
                 InviteTargetId::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }

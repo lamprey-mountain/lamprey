@@ -44,22 +44,24 @@ async fn invite_delete(
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
     let (has_perm, id_target) = match invite.invite.target {
-        InviteTarget::Room { room } => (
+        InviteTarget::Room { room, thread } => (
             s.services()
                 .perms
                 .for_room(auth_user.id, room.id)
                 .await?
                 .has(Permission::InviteManage),
-            InviteTargetId::Room { room_id: room.id },
+            InviteTargetId::Room {
+                room_id: room.id,
+                thread_id: thread.map(|t| t.id),
+            },
         ),
-        InviteTarget::Thread { room, thread } => (
+        InviteTarget::Gdm { thread } => (
             s.services()
                 .perms
                 .for_thread(auth_user.id, thread.id)
                 .await?
                 .has(Permission::InviteManage),
-            InviteTargetId::Thread {
-                room_id: room.id,
+            InviteTargetId::Gdm {
                 thread_id: thread.id,
             },
         ),
@@ -76,22 +78,25 @@ async fn invite_delete(
     let can_delete = auth_user.id == invite.invite.creator_id || has_perm;
     if can_delete {
         d.invite_delete(code.clone()).await?;
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id: match id_target {
-                InviteTargetId::Room { room_id } => room_id,
-                InviteTargetId::Thread { room_id, .. } => room_id,
-                InviteTargetId::Server => SERVER_ROOM_ID,
-                InviteTargetId::User { user_id } => (*user_id).into(),
-            },
-            user_id: auth_user.id,
-            session_id: None,
-            reason: reason.clone(),
-            ty: AuditLogEntryType::InviteDelete { code: code.clone() },
-        })
-        .await?;
+        let room_id = match id_target {
+            InviteTargetId::Room { room_id, .. } => Some(room_id),
+            InviteTargetId::Gdm { .. } => None,
+            InviteTargetId::Server => Some(SERVER_ROOM_ID),
+            InviteTargetId::User { user_id } => Some((*user_id).into()),
+        };
+        if let Some(room_id) = room_id {
+            s.audit_log_append(AuditLogEntry {
+                id: AuditLogEntryId::new(),
+                room_id,
+                user_id: auth_user.id,
+                session_id: None,
+                reason: reason.clone(),
+                ty: AuditLogEntryType::InviteDelete { code: code.clone() },
+            })
+            .await?;
+        }
         match id_target {
-            InviteTargetId::Room { room_id } => {
+            InviteTargetId::Room { room_id, .. } => {
                 s.broadcast_room(
                     room_id,
                     auth_user.id,
@@ -102,7 +107,7 @@ async fn invite_delete(
                 )
                 .await?;
             }
-            InviteTargetId::Thread { thread_id, .. } => {
+            InviteTargetId::Gdm { thread_id } => {
                 s.broadcast_thread(
                     thread_id,
                     auth_user.id,
@@ -160,11 +165,11 @@ async fn invite_resolve(
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
-        InviteTarget::Room { room } => {
+        InviteTarget::Room { room, .. } => {
             let perms = s.perms.for_room(auth_user.id, room.id).await?;
             !perms.has(Permission::InviteManage)
         }
-        InviteTarget::Thread { room: _, thread } => {
+        InviteTarget::Gdm { thread } => {
             let perms = s.perms.for_thread(auth_user.id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
@@ -216,7 +221,7 @@ async fn invite_use(
         return Err(Error::NotFound);
     }
     match &invite.invite.target {
-        InviteTarget::Thread { room, .. } | InviteTarget::Room { room } => {
+        InviteTarget::Room { room, .. } => {
             if let Ok(ban) = d.room_ban_get(room.id, auth_user.id).await {
                 if let Some(expires_at) = ban.expires_at {
                     if expires_at > Time::now_utc() {
@@ -261,6 +266,7 @@ async fn invite_use(
             )
             .await?;
         }
+        InviteTarget::Gdm { .. } => todo!(),
         InviteTarget::Server => {
             let srv = s.services();
             let user = srv.users.get(auth_user.id, None).await?;
@@ -334,9 +340,10 @@ async fn invite_use(
     }
     d.invite_incr_use(code).await?;
 
+    // TODO: send welcome message to gdm
     let room_id = match &invite.invite.target {
-        InviteTarget::Room { room } => room.id,
-        InviteTarget::Thread { room, .. } => room.id,
+        InviteTarget::Room { room, .. } => room.id,
+        InviteTarget::Gdm { .. } => return Ok(()),
         InviteTarget::Server => SERVER_ROOM_ID,
         InviteTarget::User { .. } => return Ok(()),
     };
@@ -543,7 +550,7 @@ async fn invite_thread_list(
 )]
 async fn invite_patch(
     Path(code): Path<InviteCode>,
-    Auth(user): Auth,
+    Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
     Json(patch): Json<InvitePatch>,
@@ -552,40 +559,44 @@ async fn invite_patch(
     let start_invite = d.invite_select(code.clone()).await?;
 
     let (has_perm, _id_target) = match start_invite.invite.target {
-        InviteTarget::Room { room } => (
+        InviteTarget::Room { room, thread } => (
             s.services()
                 .perms
-                .for_room(user.id, room.id)
+                .for_room(auth_user.id, room.id)
                 .await?
                 .has(Permission::InviteManage),
-            InviteTargetId::Room { room_id: room.id },
-        ),
-        InviteTarget::Thread { room, thread } => (
-            s.services()
-                .perms
-                .for_thread(user.id, thread.id)
-                .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Thread {
+            InviteTargetId::Room {
                 room_id: room.id,
+                thread_id: thread.map(|t| t.id),
+            },
+        ),
+        InviteTarget::Gdm { thread } => (
+            s.services()
+                .perms
+                .for_thread(auth_user.id, thread.id)
+                .await?
+                .has(Permission::InviteManage),
+            InviteTargetId::Gdm {
                 thread_id: thread.id,
             },
         ),
         InviteTarget::Server => (
             s.services()
                 .perms
-                .for_room(user.id, SERVER_ROOM_ID)
+                .for_room(auth_user.id, SERVER_ROOM_ID)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Server,
         ),
         InviteTarget::User { user: _ } => (
-            user.id == start_invite.invite.creator_id,
-            InviteTargetId::User { user_id: user.id },
+            auth_user.id == start_invite.invite.creator_id,
+            InviteTargetId::User {
+                user_id: auth_user.id,
+            },
         ),
     };
 
-    let can_patch = user.id == start_invite.invite.creator_id || has_perm;
+    let can_patch = auth_user.id == start_invite.invite.creator_id || has_perm;
     if !can_patch {
         return Err(Error::MissingPermissions);
     }
@@ -607,8 +618,8 @@ async fn invite_patch(
         .build();
 
     let room_id = match &updated_invite.invite.target {
-        InviteTarget::Room { room } => Some(room.id),
-        InviteTarget::Thread { room, .. } => Some(room.id),
+        InviteTarget::Room { room, .. } => Some(room.id),
+        InviteTarget::Gdm { .. } => None,
         InviteTarget::Server => Some(SERVER_ROOM_ID),
         InviteTarget::User { user } => Some((*user.id).into()),
     };
@@ -616,7 +627,7 @@ async fn invite_patch(
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
-            user_id: user.id,
+            user_id: auth_user.id,
             session_id: None,
             reason,
             ty: AuditLogEntryType::InviteUpdate { changes },

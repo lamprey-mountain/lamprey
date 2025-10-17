@@ -79,7 +79,7 @@ impl DataInvite for Postgres {
         let target = match row.target_type.as_str() {
             "room" => {
                 let room = self.room_get(RoomId::from(row.target_id.unwrap())).await?;
-                InviteTarget::Room { room }
+                InviteTarget::Room { room, thread: None }
             }
             "thread" => {
                 // FIXME: get thread via services
@@ -88,9 +88,9 @@ impl DataInvite for Postgres {
                     .await?;
                 let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;
-                InviteTarget::Thread {
+                InviteTarget::Room {
                     room,
-                    thread: Box::new(thread),
+                    thread: Some(Box::new(thread)),
                 }
             }
             "server" => InviteTarget::Server,
@@ -172,7 +172,11 @@ impl DataInvite for Postgres {
         for row in raw.into_iter().take(p.limit as usize) {
             assert_eq!(row.target_type, "room");
             assert_eq!(row.target_id, Some(*room_id));
-            let target = InviteTarget::Room { room: room.clone() };
+            // FIXME: return thread in InviteTarget
+            let target = InviteTarget::Room {
+                room: room.clone(),
+                thread: None,
+            };
             let creator = self.user_get(UserId::from(row.creator_id)).await?;
             let creator_id = creator.id;
             let invite = Invite::new(
