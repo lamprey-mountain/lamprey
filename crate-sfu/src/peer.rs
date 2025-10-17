@@ -436,7 +436,29 @@ impl Peer {
 
     /// handle an sdp offer from the peer
     fn handle_offer(&mut self, sdp: SessionDescription, tracks: Vec<TrackMetadata>) -> Result<()> {
-        let answer = self.signalling.handle_offer(&mut self.rtc, sdp)?;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            self.signalling.handle_offer(&mut self.rtc, sdp)
+        }));
+
+        let answer = match result {
+            Ok(Ok(answer)) => answer,
+            Ok(Err(e)) => {
+                error!("Error handling offer: {}", e);
+                return Err(e);
+            }
+            Err(e) => {
+                let panic_msg = if let Some(s) = e.downcast_ref::<String>() {
+                    s.clone()
+                } else if let Some(s) = e.downcast_ref::<&str>() {
+                    s.to_string()
+                } else {
+                    "Unknown panic payload".to_string()
+                };
+                error!("Panic handling offer: {}. Disconnecting peer.", panic_msg);
+                self.rtc.disconnect();
+                return Ok(());
+            }
+        };
 
         // renegotiate outbound tracks
         for track in &mut self.outbound {
