@@ -68,13 +68,25 @@ async fn email_add(
                 .user_email_verify_create(target_user_id, email_addr.clone())
                 .await?;
 
+            let query = url::form_urlencoded::Serializer::new(String::new())
+                .append_pair("email", email_addr.as_ref())
+                .append_pair("code", &code)
+                .finish();
+            let verification_link = format!("{}/verify-email?{}", s.config.html_url, query);
+
             s.services
                 .email
                 .send(
                     email_addr.clone(),
                     "Verify your email address".to_string(),
-                    format!("Your verification code is: {}", code),
-                    None,
+                    format!(
+                        "Your verification code is: {}. You can also click this link: {}",
+                        code, verification_link
+                    ),
+                    Some(format!(
+                        "Your verification code is: <strong>{}</strong>. <br> You can also click this link: <a href=\"{}\">{}</a>",
+                        code, &verification_link, &verification_link
+                    )),
                 )
                 .await?;
 
@@ -288,13 +300,25 @@ async fn email_verification_resend(
         .user_email_verify_create(target_user_id, email_addr.clone())
         .await?;
 
+    let query = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("email", email_addr.as_ref())
+        .append_pair("code", &code)
+        .finish();
+    let verification_link = format!("{}/verify-email?{}", s.config.html_url, query);
+
     s.services
         .email
         .send(
             email_addr,
             "Verify your email address".to_string(),
-            format!("Your verification code is: {}", code),
-            None,
+            format!(
+                "Your verification code is: {}. You can also click this link: {}",
+                code, verification_link
+            ),
+            Some(format!(
+                "Your verification code is: <strong>{}</strong>. <br> You can also click this link: <a href=\"{}\">{}</a>",
+                code, &verification_link, &verification_link
+            )),
         )
         .await?;
 
