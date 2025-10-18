@@ -5,10 +5,11 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     application::Connection, user_status::StatusPatch, util::Time, ApplicationId, AuditLogEntry,
-    InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
+    CalendarEventId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
 };
 
 use super::{
+    calendar::CalendarEvent,
     emoji::EmojiCustom,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
@@ -387,6 +388,19 @@ pub enum MessageSync {
         user_id: UserId,
         #[serde(flatten)]
         params: NotificationFlush,
+    },
+
+    CalendarEventCreate {
+        event: CalendarEvent,
+    },
+
+    CalendarEventUpdate {
+        event: CalendarEvent,
+    },
+
+    CalendarEventDelete {
+        thread_id: ThreadId,
+        event_id: CalendarEventId,
     },
 }
 

@@ -78,6 +78,7 @@ async fn thread_create_room(
         ThreadType::Category => {
             perms.ensure(Permission::ThreadManage)?;
         }
+        ThreadType::Calendar => return Err(Error::BadStatic("not yet implemented")),
         ThreadType::Dm | ThreadType::Gdm => {
             return Err(Error::BadStatic(
                 "can't create a direct message thread in a room",
@@ -106,6 +107,7 @@ async fn thread_create_room(
                 ThreadType::Forum => DbThreadType::Forum,
                 ThreadType::Voice => DbThreadType::Voice,
                 ThreadType::Category => DbThreadType::Category,
+                ThreadType::Calendar => return Err(Error::BadStatic("not yet implemented")),
                 ThreadType::Dm | ThreadType::Gdm => {
                     // this should be unreachable due to the check above
                     warn!("unreachable: dm/gdm thread creation in room");

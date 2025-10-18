@@ -10,6 +10,7 @@ pub mod application;
 pub mod audit_logs;
 pub mod auth;
 pub mod automod;
+pub mod calendar;
 pub mod email;
 pub mod embed;
 pub mod emoji;

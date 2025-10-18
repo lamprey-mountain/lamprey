@@ -119,7 +119,7 @@ impl Modify for NestedTags {
             {
                 "name": "misc",
                 "description": "random other routes that i dont have anywhere to put yet",
-                "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public", "admin", "webhook", "automod"],
+                "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public", "admin", "webhook", "automod", "calendar"],
             },
         ]);
 

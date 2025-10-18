@@ -209,6 +209,7 @@ genid!(Notification, "00000000-0000-0000-0000-notification");
 genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
+genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 
 pub const SERVER_USER_ID: UserId = Id {
     inner: uuid!("00000000-0000-7000-0000-0000726f6f74"),

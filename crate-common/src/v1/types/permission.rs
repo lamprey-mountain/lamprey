@@ -195,6 +195,8 @@ pub enum Permission {
     /// stream video and screenshare in voice threads
     /// requires VoiceConnect
     VoiceVideo,
+    // /// can manage calendar events
+    // CalendarEventManage,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

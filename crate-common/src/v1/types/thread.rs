@@ -147,6 +147,9 @@ pub enum ThreadType {
 
     /// category for grouping threads together
     Category,
+
+    /// a calendar
+    Calendar,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
