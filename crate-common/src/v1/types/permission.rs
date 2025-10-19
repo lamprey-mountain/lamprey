@@ -127,7 +127,7 @@ pub enum Permission {
     /// can change channel names and topics
     ChannelEdit,
 
-    /// can create, remove, and archive channels
+    /// can create, remove, and archive channels. can also list all channels.
     ChannelManage,
 
     /// (unimplemented) can create private threads
@@ -136,7 +136,7 @@ pub enum Permission {
     /// (unimplemented) can create public threads
     ThreadCreatePublic,
 
-    /// remove and archive threads, and move threads between channels
+    /// remove and archive threads, and move threads between channels. can also view all threads.
     ThreadManage,
 
     /// change name and description of threads
