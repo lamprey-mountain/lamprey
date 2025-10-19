@@ -156,6 +156,7 @@ async fn channel_create_room(
         reason: reason.clone(),
         ty: AuditLogEntryType::ChannelCreate {
             channel_id,
+            channel_type: channel.ty,
             changes: Changes::new()
                 .add("name", &channel.name)
                 .add("description", &channel.description)
@@ -678,18 +679,18 @@ async fn channel_archive(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    if auth_user.id != thread_before.creator_id {
+    if auth_user.id != chan_before.creator_id {
         perms.ensure(Permission::ChannelManage)?;
     }
-    if thread_before.deleted_at.is_some() {
+    if chan_before.deleted_at.is_some() {
         return Err(Error::BadStatic("channel is removed"));
     }
-    if thread_before.locked {
+    if chan_before.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    if thread_before.archived_at.is_some() {
+    if chan_before.archived_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
 
@@ -706,8 +707,9 @@ async fn channel_archive(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change("archived_at", &thread_before.archived_at, &chan.archived_at)
+                    .change("archived_at", &chan_before.archived_at, &chan.archived_at)
                     .build(),
             },
         })
@@ -751,24 +753,24 @@ async fn channel_unarchive(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    if auth_user.id != thread_before.creator_id {
+    if auth_user.id != chan_before.creator_id {
         perms.ensure(Permission::ChannelManage)?;
     }
-    if thread_before.deleted_at.is_some() {
+    if chan_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread_before.locked {
+    if chan_before.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    if thread_before.archived_at.is_none() {
+    if chan_before.archived_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.channel_unarchive(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -777,12 +779,9 @@ async fn channel_unarchive(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change(
-                        "archived_at",
-                        &thread_before.archived_at,
-                        &thread.archived_at,
-                    )
+                    .change("archived_at", &chan_before.archived_at, &chan.archived_at)
                     .build(),
             },
         })
@@ -791,7 +790,7 @@ async fn channel_unarchive(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -818,15 +817,15 @@ async fn channel_remove(
     let srv = s.services();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ChannelManage)?;
-    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if thread_before.deleted_at.is_some() {
+    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if chan_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.channel_delete(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
     srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -835,8 +834,9 @@ async fn channel_remove(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
+                    .change("deleted_at", &chan_before.deleted_at, &chan.deleted_at)
                     .build(),
             },
         })
@@ -845,7 +845,7 @@ async fn channel_remove(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -872,14 +872,14 @@ async fn channel_restore(
     let data = s.data();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ChannelManage)?;
-    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if thread_before.deleted_at.is_none() {
+    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if chan_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.channel_undelete(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -888,8 +888,9 @@ async fn channel_restore(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
+                    .change("deleted_at", &chan_before.deleted_at, &chan.deleted_at)
                     .build(),
             },
         })
@@ -898,7 +899,7 @@ async fn channel_restore(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -974,7 +975,7 @@ async fn channel_lock(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.channels.get(channel_id, None).await?;
+    let chan_before = srv.channels.get(channel_id, None).await?;
     let perms = s
         .services()
         .perms
@@ -982,17 +983,17 @@ async fn channel_lock(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ThreadLock)?;
-    if thread_before.deleted_at.is_some() {
+    if chan_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if thread_before.locked {
+    if chan_before.locked {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.channel_lock(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
     srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -1001,8 +1002,9 @@ async fn channel_lock(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change("locked", &thread_before.locked, &thread.locked)
+                    .change("locked", &chan_before.locked, &chan.locked)
                     .build(),
             },
         })
@@ -1011,7 +1013,7 @@ async fn channel_lock(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -1036,7 +1038,7 @@ async fn channel_unlock(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.channels.get(channel_id, None).await?;
+    let chan_before = srv.channels.get(channel_id, None).await?;
     let perms = s
         .services()
         .perms
@@ -1044,17 +1046,17 @@ async fn channel_unlock(
         .await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ThreadLock)?;
-    if thread_before.deleted_at.is_some() {
+    if chan_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }
-    if !thread_before.locked {
+    if !chan_before.locked {
         return Ok(StatusCode::NO_CONTENT);
     }
     data.channel_unlock(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
     srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -1063,8 +1065,9 @@ async fn channel_unlock(
             reason,
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
+                channel_type: chan.ty,
                 changes: Changes::new()
-                    .change("locked", &thread_before.locked, &thread.locked)
+                    .change("locked", &chan_before.locked, &chan.locked)
                     .build(),
             },
         })
@@ -1073,7 +1076,7 @@ async fn channel_unlock(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -1101,17 +1104,17 @@ async fn channel_upgrade(
     let srv = s.services();
     let data = s.data();
 
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
-    if thread.ty != ChannelType::Gdm {
+    if chan.ty != ChannelType::Gdm {
         return Err(Error::BadStatic("only group dms can be upgraded"));
     }
 
-    if thread.owner_id != Some(auth_user.id) {
+    if chan.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you are not the thread owner"));
     }
 
-    if thread.room_id.is_some() {
+    if chan.room_id.is_some() {
         return Err(Error::BadStatic("thread is already in a room"));
     }
 
@@ -1119,9 +1122,9 @@ async fn channel_upgrade(
         .rooms
         .create(
             RoomCreate {
-                name: thread.name.clone(),
-                description: thread.description.clone(),
-                icon: thread.icon,
+                name: chan.name.clone(),
+                description: chan.description.clone(),
+                icon: chan.icon,
                 public: Some(false),
             },
             auth_user.id,
@@ -1133,7 +1136,7 @@ async fn channel_upgrade(
         )
         .await?;
 
-    if let Some(icon) = thread.icon {
+    if let Some(icon) = chan.icon {
         data.media_link_delete(*channel_id, crate::types::MediaLinkType::IconThread)
             .await?;
         data.media_link_create_exclusive(icon, *room.id, crate::types::MediaLinkType::AvatarRoom)
@@ -1207,9 +1210,10 @@ async fn channel_upgrade(
         reason,
         ty: AuditLogEntryType::ChannelUpdate {
             channel_id,
+            channel_type: ChannelType::Text,
             changes: Changes::new()
-                .change("type", &thread.ty, &ChannelType::Text)
-                .change("room_id", &thread.room_id, &Some(room.id))
+                .change("type", &chan.ty, &ChannelType::Text)
+                .change("room_id", &chan.room_id, &Some(room.id))
                 .build(),
         },
     })

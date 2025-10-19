@@ -3,9 +3,9 @@ use std::sync::Arc;
 use common::v1::types::defaults::{EVERYONE_TRUSTED, MODERATOR};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageType, Permission,
-    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
-    ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelType, MessageSync, MessageType,
+    Permission, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
+    ThreadMemberPut, ThreadMembership, UserId,
 };
 use moka::future::Cache;
 
@@ -253,6 +253,7 @@ impl ServiceRooms {
                     reason: None,     // TODO: get reason
                     ty: AuditLogEntryType::ChannelCreate {
                         channel_id: welcome_channel_id,
+                        channel_type: ChannelType::Text,
                         changes: Changes::new()
                             .add("name", &"general")
                             .add("nsfw", &false)
