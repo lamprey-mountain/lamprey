@@ -322,7 +322,10 @@ impl ChannelType {
     }
 
     pub fn has_members(&self) -> bool {
-        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::Gdm)
+        matches!(
+            self,
+            ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::Gdm
+        )
     }
 
     pub fn has_text(&self) -> bool {

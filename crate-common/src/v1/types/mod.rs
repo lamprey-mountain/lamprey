@@ -11,6 +11,7 @@ pub mod audit_logs;
 pub mod auth;
 pub mod automod;
 pub mod calendar;
+pub mod channel;
 pub mod email;
 pub mod embed;
 pub mod emoji;
@@ -35,7 +36,6 @@ pub mod session;
 pub mod sync;
 pub mod tag;
 pub mod text;
-pub mod channel;
 pub mod thread_member;
 pub mod user;
 pub mod user_config;
@@ -52,6 +52,7 @@ pub use media::{
 
 // TODO: probably should stop exporting *everything*
 pub use audit_logs::*;
+pub use channel::*;
 pub use embed::*;
 pub use ids::*;
 pub use invite::*;
@@ -63,6 +64,5 @@ pub use room::*;
 pub use room_member::*;
 pub use session::*;
 pub use sync::*;
-pub use channel::*;
 pub use thread_member::*;
 pub use user::*;

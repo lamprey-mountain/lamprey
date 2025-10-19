@@ -593,8 +593,8 @@ impl Connection {
             MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkUnread { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxFlush { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::CalendarEventCreate { event } => AuthCheck::Channel(event.thread_id),
-            MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.thread_id),
+            MessageSync::CalendarEventCreate { event } => AuthCheck::Channel(event.channel_id),
+            MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
         };
         let should_send = match (session.user_id(), auth_check) {

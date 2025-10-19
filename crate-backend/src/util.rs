@@ -104,22 +104,27 @@ impl Modify for NestedTags {
             {
                 "name": "room",
                 "description": "working with rooms",
-                "tags": ["room", "room_member", "role", "emoji", "tag"],
+                "tags": ["room", "room_member", "role", "emoji", "tag", "automod"],
             },
             {
                 "name": "channel",
                 "description": "working with channels",
-                "tags": ["channel", "thread_member", "message", "reaction", "voice"],
+                "tags": ["channel", "thread_member", "message", "reaction", "voice", "calendar"],
             },
             {
                 "name": "user",
                 "description": "working with users",
-                "tags": ["user", "user_email", "user_config", "relationship", "dm"],
+                "tags": ["user", "user_email", "user_config", "relationship", "dm", "inbox"],
             },
             {
-                "name": "misc",
-                "description": "random other routes that i dont have anywhere to put yet",
-                "tags": ["debug", "invite", "media", "moderation", "inbox", "sync", "search", "application", "public", "admin", "webhook", "automod", "calendar"],
+                "name": "integrations",
+                "description": "working with third party services",
+                "tags": ["application", "webhook"],
+            },
+            {
+                "name": "other",
+                "description": "the rest of the routes",
+                "tags": ["debug", "invite", "media", "moderation", "sync", "search", "public", "admin"],
             },
         ]);
 

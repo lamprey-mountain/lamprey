@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scope};
+use common::v1::types::calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::{
@@ -12,13 +13,13 @@ use common::v1::types::user_config::{
 };
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryId, Channel, ChannelId, ChannelPatch,
-    ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
-    NotificationId, Permission, PermissionOverwriteType, PinsReorder, Relationship,
-    RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
-    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
-    SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
-    UserListFilter,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, CalendarEventId, Channel, ChannelId,
+    ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
+    MediaPatch, NotificationId, PaginationQuery, PaginationResponse, Permission,
+    PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch, RelationshipWithUserId,
+    Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
+    RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken, Suspended,
+    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter,
 };
 
 use uuid::Uuid;
@@ -27,9 +28,9 @@ use crate::error::Result;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
     DbSessionCreate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
-    MediaLinkType, Message, MessageId, MessageRef, MessageVerId, PaginationQuery,
-    PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    MediaLinkType, Message, MessageId, MessageRef, MessageVerId, Permissions, RoleId, RolePatch,
+    RoleVerId, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, Session, SessionId, UrlEmbedQueue,
+    User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -58,6 +59,7 @@ pub trait Data:
     + DataApplication
     + DataConnection
     + DataEmoji
+    + DataCalendar
     + DataEmbed
     + DataUserEmail
     + DataEmailQueue
@@ -866,4 +868,37 @@ pub trait DataNotification {
         params: InboxChannelsParams,
         list_params: InboxListParams,
     ) -> Result<PaginationResponse<Channel>>;
+}
+
+#[async_trait]
+pub trait DataCalendar {
+    async fn calendar_event_create(
+        &self,
+        create: CalendarEventCreate,
+        channel_id: ChannelId,
+        creator_id: UserId,
+    ) -> Result<CalendarEvent>;
+    async fn calendar_event_get(&self, event_id: CalendarEventId) -> Result<CalendarEvent>;
+    async fn calendar_event_list(
+        &self,
+        channel_id: ChannelId,
+        pagination: PaginationQuery<CalendarEventId>,
+    ) -> Result<PaginationResponse<CalendarEvent>>;
+    async fn calendar_event_update(
+        &self,
+        event_id: CalendarEventId,
+        patch: CalendarEventPatch,
+    ) -> Result<CalendarEvent>;
+    async fn calendar_event_delete(&self, event_id: CalendarEventId) -> Result<()>;
+    async fn calendar_event_rsvp_put(
+        &self,
+        event_id: CalendarEventId,
+        user_id: UserId,
+    ) -> Result<()>;
+    async fn calendar_event_rsvp_delete(
+        &self,
+        event_id: CalendarEventId,
+        user_id: UserId,
+    ) -> Result<()>;
+    async fn calendar_event_rsvp_list(&self, event_id: CalendarEventId) -> Result<Vec<UserId>>;
 }

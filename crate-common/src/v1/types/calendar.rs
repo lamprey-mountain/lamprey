@@ -16,8 +16,8 @@ use super::util::Time;
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarEvent {
     pub id: CalendarEventId,
-    pub thread_id: ChannelId,
-    pub creator_id: UserId,
+    pub channel_id: ChannelId,
+    pub creator_id: Option<UserId>,
     #[cfg_attr(feature = "utoipa", schema(max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(max = 64)))]
     pub title: String,
@@ -68,7 +68,7 @@ pub struct CalendarEventPatch {
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
     pub location: Option<Option<String>>,
     pub url: Option<Option<Url>>,
-    pub thread_id: Option<ChannelId>,
+    pub channel_id: Option<ChannelId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
