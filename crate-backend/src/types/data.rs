@@ -123,7 +123,7 @@ pub struct DbChannelCreate {
 }
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
-#[sqlx(type_name = "thread_type")]
+#[sqlx(type_name = "channel_type")]
 pub enum DbChannelType {
     Text,
     Forum,
