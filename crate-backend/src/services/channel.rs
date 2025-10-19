@@ -12,7 +12,7 @@ use moka::future::Cache;
 use time::OffsetDateTime;
 
 use crate::error::{Error, Result};
-use crate::types::{DbMessageCreate, DbChannelPrivate};
+use crate::types::{DbChannelPrivate, DbMessageCreate};
 use crate::ServerStateInner;
 
 // TODO: split caches more
@@ -266,7 +266,7 @@ impl ServiceThreads {
                 .message_get(thread_id, rename_message_id, user_id)
                 .await?;
             self.state
-                .broadcast_thread(
+                .broadcast_channel(
                     thread_id,
                     user_id,
                     MessageSync::MessageCreate {

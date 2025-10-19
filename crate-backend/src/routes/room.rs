@@ -349,7 +349,7 @@ async fn room_audit_logs(
 
 /// Room ack
 ///
-/// Mark all threads in a room as read.
+/// Mark all channels in a room as read.
 #[utoipa::path(
     put,
     path = "/room/{room_id}/ack",

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use common::v1::types::{ChannelId, RoomId};
+use common::v1::types::{ChannelId as LyChannelId, RoomId};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
@@ -682,7 +682,7 @@ impl EventHandler for Handler {
                                 }
                             };
 
-                            let lamprey_thread_id: ChannelId = match thread_id_str.parse() {
+                            let lamprey_thread_id: LyChannelId = match thread_id_str.parse() {
                                 Ok(id) => id,
                                 Err(_) => {
                                     send_ephemeral_reply(

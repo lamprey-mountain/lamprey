@@ -76,7 +76,7 @@ async fn dm_get(
 
 /// Dm list
 ///
-/// List direct message threads. Ordered by the last message version id, so
+/// List direct message channels. Ordered by the last message version id, so
 /// recently active dms come first.
 #[utoipa::path(
     get,

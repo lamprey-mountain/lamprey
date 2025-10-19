@@ -162,7 +162,7 @@ pub async fn thread_member_add(
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;
         srv.channels.invalidate(thread_id).await; // message count
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread_id,
             auth_user.id,
             MessageSync::MessageCreate {
@@ -187,7 +187,7 @@ pub async fn thread_member_add(
         }
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         thread_id,
         auth_user.id,
         MessageSync::ThreadMemberUpsert {
@@ -276,7 +276,7 @@ pub async fn thread_member_delete(
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;
         srv.channels.invalidate(thread_id).await; // message count
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread_id,
             auth_user.id,
             MessageSync::MessageCreate {
@@ -301,7 +301,7 @@ pub async fn thread_member_delete(
         }
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         thread_id,
         auth_user.id,
         MessageSync::ThreadMemberUpsert { member: res },

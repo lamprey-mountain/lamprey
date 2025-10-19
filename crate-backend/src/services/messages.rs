@@ -186,14 +186,14 @@ impl ServiceMessages {
             let msg = MessageSync::ThreadMemberUpsert {
                 member: thread_member,
             };
-            s.broadcast_thread(thread_id, user_id, msg).await?;
+            s.broadcast_channel(thread_id, user_id, msg).await?;
         }
 
         let msg = MessageSync::MessageCreate {
             message: message.clone(),
         };
         srv.channels.invalidate(thread_id).await; // message count
-        s.broadcast_thread(thread_id, user_id, msg).await?;
+        s.broadcast_channel(thread_id, user_id, msg).await?;
         Ok(message)
     }
 
@@ -338,7 +338,7 @@ impl ServiceMessages {
         }
 
         s.presign_message(&mut message).await?;
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread_id,
             user_id,
             MessageSync::MessageUpdate {

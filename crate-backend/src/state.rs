@@ -76,7 +76,7 @@ impl ServerStateInner {
         Ok(())
     }
 
-    pub async fn broadcast_thread(
+    pub async fn broadcast_channel(
         &self,
         _thread_id: ChannelId,
         _user_id: UserId,

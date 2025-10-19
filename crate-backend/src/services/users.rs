@@ -10,7 +10,7 @@ use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
-use crate::types::{DbChannelType, DbChannelCreate};
+use crate::types::{DbChannelCreate, DbChannelType};
 use crate::{Error, Result, ServerStateInner};
 
 // currently relies on sync heartbeat time

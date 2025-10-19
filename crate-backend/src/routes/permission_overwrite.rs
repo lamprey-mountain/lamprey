@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync,
-    Permission, PermissionOverwrite, PermissionOverwriteSet, PermissionOverwriteType,
+    Permission, PermissionOverwriteSet, PermissionOverwriteType,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -17,18 +17,18 @@ use super::util::Auth;
 use crate::error::{Error, Result};
 use crate::ServerState;
 
-/// Thread permission overwrite
+/// Permission overwrite
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/permission/{overwrite_id}",
+    path = "/channel/{channel_id}/permission/{overwrite_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["thread", "badge.perm.RoleManage"],
+    tags = ["channel", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn permission_thread_overwrite(
+async fn permission_overwrite(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
@@ -40,18 +40,18 @@ async fn permission_thread_overwrite(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
-    let thread = srv.channels.get(channel_id, None).await?;
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+    let channel = srv.channels.get(channel_id, None).await?;
+    if channel.archived_at.is_some() {
+        return Err(Error::BadStatic("channel is archived"));
     }
-    if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+    if channel.deleted_at.is_some() {
+        return Err(Error::BadStatic("channel is removed"));
     }
-    if thread.locked {
+    if channel.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
 
-    if let Some(room_id) = thread.room_id {
+    if let Some(room_id) = channel.room_id {
         let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
         let other_rank = match json.ty {
             PermissionOverwriteType::Role => {
@@ -70,18 +70,18 @@ async fn permission_thread_overwrite(
         }
     } else {
         return Err(Error::BadStatic(
-            "cannot set overwrites for threads outside of rooms (eg. direct messages)",
+            "cannot set overwrites for channels outside of rooms (eg. direct messages)",
         ));
     }
 
     // you can't grant/unset/deny permissions you do not have, and if someone else already set them you can't edit them
-    let existing = thread
+    let existing = channel
         .permission_overwrites
         .iter()
         .find(|o| o.ty == json.ty && o.id == overwrite_id);
 
     if existing.is_none()
-        && thread.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
+        && channel.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
     {
         return Err(Error::BadRequest(format!(
             "too many permission overwrites (max {})",
@@ -123,9 +123,9 @@ async fn permission_thread_overwrite(
         )
         .await?;
     srv.channels.invalidate(channel_id).await;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
-    if let Some(room_id) = thread.room_id {
+    if let Some(room_id) = channel.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -152,29 +152,29 @@ async fn permission_thread_overwrite(
         .await?;
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ChannelUpdate {
-            channel: Box::new(thread),
+            channel: Box::new(channel),
         },
     )
     .await?;
     Ok(())
 }
 
-/// Thread permission delete
+/// Permission delete
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/permission/{overwrite_id}",
+    path = "/channel/{channel_id}/permission/{overwrite_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("overwrite_id", description = "Role or user id"),
     ),
-    tags = ["thread", "badge.perm.RoleManage"],
+    tags = ["channel", "badge.perm.RoleManage"],
     responses((status = NO_CONTENT, description = "success"))
 )]
-async fn permission_thread_delete(
+async fn permission_delete(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
@@ -186,23 +186,23 @@ async fn permission_thread_delete(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
 
-    let thread = srv.channels.get(channel_id, None).await?;
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
+    let channel = srv.channels.get(channel_id, None).await?;
+    if channel.archived_at.is_some() {
+        return Err(Error::BadStatic("channel is archived"));
     }
-    if thread.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+    if channel.deleted_at.is_some() {
+        return Err(Error::BadStatic("channel is removed"));
     }
-    if thread.locked {
+    if channel.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
 
-    if let Some(existing) = thread
+    if let Some(existing) = channel
         .permission_overwrites
         .iter()
         .find(|o| o.id == overwrite_id)
     {
-        if let Some(room_id) = thread.room_id {
+        if let Some(room_id) = channel.room_id {
             let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
             let other_rank = match existing.ty {
                 PermissionOverwriteType::Role => {
@@ -221,7 +221,7 @@ async fn permission_thread_delete(
             }
         } else {
             return Err(Error::BadStatic(
-                "cannot set overwrites for threads outside of rooms (eg. direct messages)",
+                "cannot set overwrites for channels outside of rooms (eg. direct messages)",
             ));
         }
 
@@ -239,9 +239,9 @@ async fn permission_thread_delete(
         .permission_overwrite_delete(channel_id, overwrite_id)
         .await?;
     srv.channels.invalidate(channel_id).await;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
-    if let Some(room_id) = thread.room_id {
+    if let Some(room_id) = channel.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -256,64 +256,19 @@ async fn permission_thread_delete(
         .await?;
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ChannelUpdate {
-            channel: Box::new(thread),
+            channel: Box::new(channel),
         },
     )
     .await?;
     Ok(())
 }
 
-/// Tag permission override upsert (TODO)
-///
-/// Upsert a tag permission override
-#[utoipa::path(
-    put,
-    path = "/room/{room_id}/tag/{tag_id}/permission/{overwrite_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("tag_id", description = "Tag id"),
-        ("overwrite_id", description = "Role or user id"),
-    ),
-    tags = ["tag"],
-    responses((status = OK, body = PermissionOverwrite, description = "success"))
-)]
-async fn permission_tag_overwrite(
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<PermissionOverwrite>,
-) -> Result<Json<PermissionOverwrite>> {
-    Err(Error::Unimplemented)
-}
-
-/// Tag permission override delete (TODO)
-///
-/// Delete a tag permission override
-#[utoipa::path(
-    delete,
-    path = "/room/{room_id}/tag/{tag_id}/permission/{overwrite_id}",
-    params(
-        ("room_id", description = "Room id"),
-        ("tag_id", description = "Tag id"),
-        ("overwrite_id", description = "Role or user id"),
-    ),
-    tags = ["tag"],
-    responses((status = NO_CONTENT, description = "success"))
-)]
-async fn permission_tag_delete(
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(permission_thread_overwrite))
-        .routes(routes!(permission_thread_delete))
-        .routes(routes!(permission_tag_overwrite))
-        .routes(routes!(permission_tag_delete))
+        .routes(routes!(permission_overwrite))
+        .routes(routes!(permission_delete))
 }

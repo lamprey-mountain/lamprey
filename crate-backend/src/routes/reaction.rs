@@ -22,7 +22,7 @@ use crate::{Error, ServerState};
     put,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
         ("key", description = "Reaction key"),
     ),
@@ -56,7 +56,7 @@ async fn reaction_add(
     }
     data.reaction_put(auth_user.id, channel_id, message_id, key.clone())
         .await?;
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ReactionCreate {
@@ -77,7 +77,7 @@ async fn reaction_add(
     delete,
     path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
         ("key", description = "Reaction key"),
     ),
@@ -109,7 +109,7 @@ async fn reaction_remove(
     }
     data.reaction_delete(auth_user.id, channel_id, message_id, key.clone())
         .await?;
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ReactionDelete {
@@ -130,7 +130,7 @@ async fn reaction_remove(
     delete,
     path = "/channel/{channel_id}/message/{message_id}/reaction",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
     ),
     tags = ["reaction", "badge.perm.ReactionClear"],
@@ -178,7 +178,7 @@ async fn reaction_purge(
         .await?;
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ReactionPurge {
@@ -198,7 +198,7 @@ async fn reaction_purge(
     path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
         PaginationQuery<UserId>,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
         ("message_id", description = "Message id"),
         ("key", description = "Reaction key"),
     ),

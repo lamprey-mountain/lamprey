@@ -9,6 +9,7 @@ mod application;
 mod auth;
 mod automod;
 mod calendar;
+mod channel;
 mod debug;
 mod dm;
 mod emoji;
@@ -28,7 +29,6 @@ mod room_member;
 mod search;
 mod session;
 mod sync;
-mod thread;
 mod thread_member;
 mod user;
 mod user_config;
@@ -63,7 +63,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .merge(search::routes())
         .merge(session::routes())
         .merge(sync::routes())
-        .merge(thread::routes())
+        .merge(channel::routes())
         .merge(thread_member::routes())
         .merge(user::routes())
         .merge(user_config::routes())

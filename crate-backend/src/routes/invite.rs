@@ -108,7 +108,7 @@ async fn invite_delete(
                 .await?;
             }
             InviteTargetId::Gdm { thread_id } => {
-                s.broadcast_thread(
+                s.broadcast_channel(
                     thread_id,
                     auth_user.id,
                     MessageSync::InviteDelete {
@@ -499,7 +499,7 @@ async fn invite_room_list(
         (status = OK, body = Invite, description = "success"),
     )
 )]
-async fn invite_thread_create(
+async fn invite_channel_create(
     Path(_thread_id): Path<ChannelId>,
     Auth(_auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
@@ -524,7 +524,7 @@ async fn invite_thread_create(
         (status = OK, body = PaginationResponse<Invite>, description = "success"),
     )
 )]
-async fn invite_thread_list(
+async fn invite_channel_list(
     Path(_thread_id): Path<ChannelId>,
     Query(_paginate): Query<PaginationQuery<InviteCode>>,
     Auth(_user): Auth,
@@ -875,8 +875,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(invite_use))
         .routes(routes!(invite_room_create))
         .routes(routes!(invite_room_list))
-        .routes(routes!(invite_thread_create))
-        .routes(routes!(invite_thread_list))
+        .routes(routes!(invite_channel_create))
+        .routes(routes!(invite_channel_list))
         .routes(routes!(invite_server_create))
         .routes(routes!(invite_server_list))
         .routes(routes!(invite_user_create))

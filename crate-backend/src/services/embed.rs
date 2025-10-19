@@ -592,7 +592,7 @@ impl ServiceEmbed {
         if message.version_id == mref.version_id {
             state.presign_message(&mut message).await?;
             state
-                .broadcast_thread(
+                .broadcast_channel(
                     mref.thread_id,
                     user_id,
                     MessageSync::MessageUpdate { message },

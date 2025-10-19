@@ -470,7 +470,7 @@ async fn message_delete(
         .await?;
     }
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         thread.id,
         auth_user.id,
         MessageSync::MessageDelete {
@@ -642,7 +642,7 @@ async fn message_moderate(
             .await?;
         }
 
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread.id,
             auth_user.id,
             MessageSync::MessageDeleteBulk {
@@ -680,7 +680,7 @@ async fn message_moderate(
             .await?;
         }
 
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread.id,
             auth_user.id,
             MessageSync::MessageRemove {
@@ -710,7 +710,7 @@ async fn message_moderate(
             .await?;
         }
 
-        s.broadcast_thread(
+        s.broadcast_channel(
             thread.id,
             auth_user.id,
             MessageSync::MessageRestore {
@@ -883,7 +883,7 @@ async fn message_pin_create(
         .message_get(channel_id, message_id, auth_user.id)
         .await?;
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::MessageUpdate { message },
@@ -917,12 +917,12 @@ async fn message_pin_create(
         let msg = MessageSync::ThreadMemberUpsert {
             member: thread_member,
         };
-        s.broadcast_thread(channel_id, user_id, msg).await?;
+        s.broadcast_channel(channel_id, user_id, msg).await?;
     }
 
     s.presign_message(&mut notice_message).await?;
     srv.channels.invalidate(channel_id).await; // message count
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::MessageCreate {
@@ -991,7 +991,7 @@ async fn message_pin_delete(
         .message_get(channel_id, message_id, auth_user.id)
         .await?;
 
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::MessageUpdate { message },
@@ -1062,7 +1062,7 @@ async fn message_pin_reorder(
             .data()
             .message_get(channel_id, item.id, auth_user.id)
             .await?;
-        s.broadcast_thread(
+        s.broadcast_channel(
             channel_id,
             auth_user.id,
             MessageSync::MessageUpdate { message },

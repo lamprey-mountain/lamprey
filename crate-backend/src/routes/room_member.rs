@@ -881,7 +881,7 @@ async fn room_ban_search(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let _d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
     Ok(Error::Unimplemented)

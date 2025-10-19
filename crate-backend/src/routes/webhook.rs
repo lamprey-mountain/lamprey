@@ -18,8 +18,8 @@ use crate::{
 /// Webhook create (TODO)
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/webhook",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/webhook",
+    params(("channel_id", description = "channel id")),
     tags = ["webhook"],
     responses(
         (status = CREATED, body = Webhook, description = "Create webhook success"),
@@ -37,8 +37,8 @@ async fn create_webhook(
 /// Webhook list thread (TODO)
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/webhook",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/webhook",
+    params(("channel_id", description = "channel id")),
     tags = ["webhook"],
     responses(
         (status = OK, body = Vec<Webhook>, description = "List webhooks success"),

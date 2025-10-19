@@ -16,19 +16,19 @@ async fn public_rooms() -> Result<()> {
     Err(Error::Unimplemented)
 }
 
-/// Public threads list (TODO)
+/// Public channels list (TODO)
 #[utoipa::path(
     get,
-    path = "/public/threads",
+    path = "/public/channels",
     tags = ["public"],
     responses((status = OK, body = (), description = "ok"))
 )]
-async fn public_threads() -> Result<()> {
+async fn public_channels() -> Result<()> {
     Err(Error::Unimplemented)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(public_rooms))
-        .routes(routes!(public_threads))
+        .routes(routes!(public_channels))
 }

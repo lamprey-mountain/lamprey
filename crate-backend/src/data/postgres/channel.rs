@@ -5,8 +5,8 @@ use tracing::info;
 
 use crate::error::Result;
 use crate::types::{
-    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelType, DbChannelCreate,
-    DbChannelPrivate, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
+    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCreate, DbChannelPrivate,
+    DbChannelType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
 use crate::{gen_paginate, Error};
 

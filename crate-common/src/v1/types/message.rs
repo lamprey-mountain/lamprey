@@ -13,14 +13,12 @@ use crate::v1::types::util::some_option;
 use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
 use crate::v1::types::RoomId;
-use crate::v1::types::{
-    AuditLogEntry, Channel, Embed, Role, RoleId, Room, RoomMember, ThreadMember, UserId,
-};
+use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
 
 use super::EmbedCreate;
 use super::{
     media::{Media, MediaRef},
-    ChannelId, MessageId, MessageVerId, User,
+    ChannelId, MessageId, MessageVerId,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

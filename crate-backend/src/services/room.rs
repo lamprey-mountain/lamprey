@@ -11,7 +11,7 @@ use moka::future::Cache;
 
 use crate::error::Result;
 use crate::types::{
-    DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, DbChannelCreate, MediaLinkType,
+    DbChannelCreate, DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, MediaLinkType,
 };
 use crate::ServerStateInner;
 
@@ -288,7 +288,7 @@ impl ServiceRooms {
             let welcome_message = data.message_get(wti, welcome_message_id, user_id).await?;
 
             self.state
-                .broadcast_thread(
+                .broadcast_channel(
                     wti,
                     user_id,
                     MessageSync::MessageCreate {
@@ -305,7 +305,7 @@ impl ServiceRooms {
                 let msg = MessageSync::ThreadMemberUpsert {
                     member: thread_member,
                 };
-                self.state.broadcast_thread(wti, user_id, msg).await?;
+                self.state.broadcast_channel(wti, user_id, msg).await?;
             }
         }
 

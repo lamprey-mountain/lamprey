@@ -432,6 +432,7 @@ pub enum MediaLinkType {
     MessageVersion,
     AvatarUser,
     BannerUser,
+    // TODO: rename to IconChannel
     IconThread,
     AvatarRoom,
     Embed,

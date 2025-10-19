@@ -105,7 +105,6 @@ impl EventHandler for Handle {
                     .await;
             }
             MessageSync::MessageDelete {
-                room_id: _,
                 channel_id: thread_id,
                 message_id,
             } => {

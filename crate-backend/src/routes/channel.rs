@@ -21,8 +21,8 @@ use validator::Validate;
 use crate::{
     routes::util::AuthSudo,
     types::{
-        Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelType, DbRoomCreate,
-        DbChannelCreate, MessageSync, MessageVerId, Permission, RoomId,
+        Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelCreate, DbChannelType,
+        DbRoomCreate, MessageSync, MessageVerId, Permission, RoomId,
     },
     Error, ServerState,
 };
@@ -31,21 +31,20 @@ use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
-// TODO: rename **everything** from thread to channel
 // TODO: rename to channel.rs and move thread-specific routes into thread.rs
 
-/// Room thread create
+/// Room channel create
 ///
-/// Create a thread in a room
+/// Create a channel in a room
 #[utoipa::path(
     post,
-    path = "/room/{room_id}/thread",
+    path = "/room/{room_id}/channel",
     params(("room_id", description = "Room id")),
     tags = [
-        "thread",
-        "badge.perm-opt.ThreadCreateChat",
-        "badge.perm-opt.ThreadCreateForumTree",
-        "badge.perm-opt.ThreadCreateVoice",
+        "channel",
+        "badge.perm-opt.ChannelManage",
+        "badge.perm-opt.ThreadCreatePublic",
+        "badge.perm-opt.ThreadCreatePrivate",
     ],
     responses(
         (status = CREATED, body = Channel, description = "Create thread success"),
@@ -157,7 +156,7 @@ async fn channel_create_room(
         },
     )
     .await?;
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel.id,
         auth_user.id,
         MessageSync::ThreadMemberUpsert {
@@ -299,7 +298,7 @@ async fn channel_create_dm(
 #[utoipa::path(
     get,
     path = "/channel/{thread_id}",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel"],
     responses(
         (status = OK, body = Channel, description = "Get thread success"),
@@ -325,7 +324,7 @@ async fn channel_get(
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
-struct ThreadListQuery {
+struct ChannelListQuery {
     parent_id: Option<ChannelId>,
 }
 
@@ -335,17 +334,17 @@ struct ThreadListQuery {
     path = "/room/{room_id}/channel",
     params(
         ("room_id", description = "Room id"),
-        ThreadListQuery,
-        PaginationQuery<ThreadId>
+        ChannelListQuery,
+        PaginationQuery<channelId>
     ),
     tags = ["channel"],
     responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List room threads success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "List room channels success"),
     )
 )]
 async fn channel_list(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ThreadListQuery>,
+    Query(q): Query<ChannelListQuery>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -365,23 +364,23 @@ async fn channel_list(
     Ok(Json(res))
 }
 
-/// Room thread list archived
+/// Room channel list archived
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/thread/archived",
+    path = "/room/{room_id}/channel/archived",
     params(
         ("room_id", description = "Room id"),
-        ThreadListQuery,
-        PaginationQuery<ThreadId>
+        ChannelListQuery,
+        PaginationQuery<channelId>
     ),
     tags = ["channel"],
     responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List archived room threads success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "List archived room channels success"),
     )
 )]
 async fn channel_list_archived(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ThreadListQuery>,
+    Query(q): Query<ChannelListQuery>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -400,7 +399,7 @@ async fn channel_list_archived(
     Ok(Json(res))
 }
 
-/// Room thread list removed
+/// Room channel list removed
 ///
 /// List removed threads in a room. Requires the `ThreadDelete` permission.
 #[utoipa::path(
@@ -408,8 +407,8 @@ async fn channel_list_archived(
     path = "/room/{room_id}/thread/removed",
     params(
         ("room_id", description = "Room id"),
-        ThreadListQuery,
-        PaginationQuery<ThreadId>
+        ChannelListQuery,
+        PaginationQuery<channelId>
     ),
     tags = ["channel"],
     responses(
@@ -418,14 +417,14 @@ async fn channel_list_archived(
 )]
 async fn channel_list_removed(
     Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ThreadListQuery>,
+    Query(q): Query<ChannelListQuery>,
     Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure(Permission::ThreadManage)?;
+    perms.ensure(Permission::ChannelManage)?;
     let mut res = data
         .channel_list_removed(room_id, auth_user.id, pagination, q.parent_id)
         .await?;
@@ -438,16 +437,16 @@ async fn channel_list_removed(
     Ok(Json(res))
 }
 
-/// Room thread reorder
+/// Room channel reorder
 ///
-/// Reorder the threads in a room. Requires the `ThreadManage` permission.
+/// Reorder the channels in a room. Requires the `ChannelManage` permission.
 #[utoipa::path(
     patch,
-    path = "/room/{room_id}/thread",
+    path = "/room/{room_id}/channel",
     params(("room_id", description = "Room id")),
-    tags = ["channel", "badge.perm.ThreadReorder"],
+    tags = ["channel", "badge.perm.ChannelManage"],
     responses(
-        (status = OK, body = (), description = "Reorder threads success"),
+        (status = OK, body = (), description = "Reorder channels success"),
     )
 )]
 async fn channel_reorder(
@@ -461,25 +460,25 @@ async fn channel_reorder(
     let srv = s.services();
     let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
 
-    let mut threads_old = HashMap::new();
+    let mut channels_old = HashMap::new();
 
-    for thread in &json.channels {
-        let thread_data = srv.channels.get(thread.id, None).await?;
-        threads_old.insert(thread_data.id, thread_data);
+    for channel in &json.channels {
+        let channel_data = srv.channels.get(channel.id, None).await?;
+        channels_old.insert(channel_data.id, channel_data);
 
-        let perms_thread = srv.perms.for_channel(auth_user.id, thread.id).await?;
-        perms_thread.ensure(Permission::ViewChannel)?;
-        perms_thread.ensure(Permission::ThreadManage)?;
+        let perms_chan = srv.perms.for_channel(auth_user.id, channel.id).await?;
+        perms_chan.ensure(Permission::ViewChannel)?;
+        perms_chan.ensure(Permission::ChannelManage)?;
 
-        if let Some(Some(parent_id)) = thread.parent_id {
+        if let Some(Some(parent_id)) = channel.parent_id {
             let perms_parent = srv.perms.for_channel(auth_user.id, parent_id).await?;
-            perms_thread.ensure(Permission::ViewChannel)?;
-            perms_parent.ensure(Permission::ThreadManage)?;
+            perms_chan.ensure(Permission::ViewChannel)?;
+            perms_parent.ensure(Permission::ChannelManage)?;
 
             let parent_data = srv.channels.get(parent_id, None).await?;
             if parent_data.ty != ChannelType::Category {
                 return Err(Error::BadStatic(
-                    "threads can only be children of category threads",
+                    "channels can only be children of category channels",
                 ));
             }
         }
@@ -487,12 +486,12 @@ async fn channel_reorder(
 
     data.channel_reorder(json.clone()).await?;
 
-    for thread in &json.channels {
-        srv.channels.invalidate(thread.id).await;
-        let thread_old = threads_old.get(&thread.id);
-        let thread = srv.channels.get(thread.id, None).await?;
-        if let Some(thread_old) = thread_old {
-            if thread.parent_id == thread_old.parent_id && thread.position == thread_old.position {
+    for chan in &json.channels {
+        srv.channels.invalidate(chan.id).await;
+        let chan_old = channels_old.get(&chan.id);
+        let chan = srv.channels.get(chan.id, None).await?;
+        if let Some(thread_old) = chan_old {
+            if chan.parent_id == thread_old.parent_id && chan.position == thread_old.position {
                 continue;
             }
         }
@@ -500,7 +499,7 @@ async fn channel_reorder(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread),
+                channel: Box::new(chan),
             },
         )
         .await?;
@@ -524,18 +523,18 @@ async fn channel_reorder(
 /// Channel edit
 #[utoipa::path(
     patch,
-    path = "/channel/{thread_id}",
+    path = "/channel/{channel_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm-opt.ThreadEdit"],
+    tags = ["channel", "badge.perm-opt.ChannelEdit", "badge.perm-opt.ThreadEdit"],
     responses(
         (status = OK, body = Channel, description = "edit message success"),
         (status = NOT_MODIFIED, body = Channel, description = "no change"),
     )
 )]
 async fn channel_update(
-    Path(thread_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -548,28 +547,28 @@ async fn channel_update(
             "owner_id cannot be changed via this endpoint; use the transfer-ownership endpoint",
         ));
     }
-    let thread = s
+    let chan = s
         .services()
         .channels
-        .update(auth_user.id, thread_id, json.clone(), reason)
+        .update(auth_user.id, channel_id, json.clone(), reason)
         .await?;
 
     if let Some(icon) = json.icon {
         s.data()
-            .media_link_delete(*thread_id, crate::types::MediaLinkType::IconThread)
+            .media_link_delete(*channel_id, crate::types::MediaLinkType::IconThread)
             .await?;
         if let Some(icon) = icon {
             s.data()
                 .media_link_create_exclusive(
                     icon,
-                    *thread_id,
+                    *channel_id,
                     crate::types::MediaLinkType::IconThread,
                 )
                 .await?;
         }
     }
 
-    Ok(Json(thread))
+    Ok(Json(chan))
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -577,7 +576,7 @@ struct AckReq {
     /// The last read message id. Will be resolved from version_id if empty. (maybe remove later?)
     message_id: Option<MessageId>,
 
-    /// The last read id in this thread.
+    /// The last read id in this channel.
     version_id: MessageVerId,
 }
 
@@ -586,18 +585,18 @@ struct AckRes {
     /// The last read message id
     message_id: MessageId,
 
-    /// The last read id in this thread. Currently unused, may be deprecated later?.
+    /// The last read id in this channel. Currently unused, may be deprecated later?.
     version_id: MessageVerId,
 }
 
 /// Channel ack
 ///
-/// Mark a thread as read (or unread).
+/// Mark a channel as read (or unread).
 #[utoipa::path(
     put,
-    path = "/channel/{thread_id}/ack",
+    path = "/channel/{channel_id}/ack",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
     ),
     tags = ["channel"],
     responses(
@@ -605,7 +604,7 @@ struct AckRes {
     )
 )]
 async fn channel_ack(
-    Path(thread_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
@@ -614,22 +613,22 @@ async fn channel_ack(
     let perms = s
         .services()
         .perms
-        .for_channel(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::ViewChannel)?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
         message_id
     } else {
-        data.message_version_get(thread_id, version_id, auth_user.id)
+        data.message_version_get(channel_id, version_id, auth_user.id)
             .await?
             .id
     };
-    data.unread_put(auth_user.id, thread_id, message_id, version_id)
+    data.unread_put(auth_user.id, channel_id, message_id, version_id)
         .await?;
     s.services()
         .channels
-        .invalidate_user(thread_id, auth_user.id)
+        .invalidate_user(channel_id, auth_user.id)
         .await;
     Ok(Json(AckRes {
         message_id,
@@ -640,11 +639,11 @@ async fn channel_ack(
 /// Channel archive
 #[utoipa::path(
     put,
-    path = "/channel/{thread_id}/archive",
+    path = "/channel/{channel_id}/archive",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm-opt.ThreadArchive"],
+    tags = ["channel", "badge.perm-opt.ChannelManage", "badge.perm-opt.ThreadArchive"],
     responses(
         (status = OK, body = Channel, description = "success"),
         (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
@@ -665,7 +664,7 @@ async fn channel_archive(
         perms.ensure(Permission::ChannelManage)?;
     }
     if thread_before.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
+        return Err(Error::BadStatic("channel is removed"));
     }
     if thread_before.locked {
         perms.ensure(Permission::ThreadLock)?;
@@ -677,8 +676,8 @@ async fn channel_archive(
     data.channel_archive(channel_id).await?;
     srv.channels.invalidate(channel_id).await;
     srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = thread.room_id {
+    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if let Some(room_id) = chan.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
             room_id,
@@ -688,11 +687,7 @@ async fn channel_archive(
             ty: AuditLogEntryType::ChannelUpdate {
                 channel_id,
                 changes: Changes::new()
-                    .change(
-                        "archived_at",
-                        &thread_before.archived_at,
-                        &thread.archived_at,
-                    )
+                    .change("archived_at", &thread_before.archived_at, &chan.archived_at)
                     .build(),
             },
         })
@@ -701,13 +696,13 @@ async fn channel_archive(
             room_id,
             auth_user.id,
             MessageSync::ChannelUpdate {
-                channel: Box::new(thread.clone()),
+                channel: Box::new(chan.clone()),
             },
         )
         .await?;
         s.sushi_sfu
             .send(SfuCommand::Thread {
-                thread: thread.into(),
+                thread: chan.into(),
             })
             .unwrap();
     }
@@ -717,11 +712,11 @@ async fn channel_archive(
 /// Channel unarchive
 #[utoipa::path(
     delete,
-    path = "/channel/{thread_id}/archive",
+    path = "/channel/{channel_id}/archive",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
     ),
-    tags = ["channel", "badge.perm-opt.ThreadArchive"],
+    tags = ["channel", "badge.perm-opt.ThreadManage", "badge.perm-opt.ChannelManage"],
     responses(
         (status = OK, body = Channel, description = "success"),
         (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
@@ -787,8 +782,8 @@ async fn channel_unarchive(
 /// Channel remove
 #[utoipa::path(
     put,
-    path = "/channel/{thread_id}/remove",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/remove",
+    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
@@ -842,7 +837,7 @@ async fn channel_remove(
 #[utoipa::path(
     delete,
     path = "/channel/{thread_id}/remove",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
@@ -856,7 +851,7 @@ async fn channel_restore(
     let srv = s.services();
     let data = s.data();
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    perms.ensure(Permission::ThreadManage)?;
+    perms.ensure(Permission::ChannelManage)?;
     let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
@@ -898,7 +893,7 @@ async fn channel_restore(
     method(post),
     path = "/channel/{thread_id}/typing",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "channel id"),
     ),
     tags = ["channel", "badge.perm.MessageCreate"],
     responses(
@@ -929,7 +924,7 @@ async fn channel_typing(
     srv.channels
         .typing_set(channel_id, auth_user.id, until)
         .await;
-    s.broadcast_thread(
+    s.broadcast_channel(
         channel_id,
         auth_user.id,
         MessageSync::ChannelTyping {
@@ -946,7 +941,7 @@ async fn channel_typing(
 #[utoipa::path(
     put,
     path = "/channel/{thread_id}/lock",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
@@ -1008,7 +1003,7 @@ async fn channel_lock(
 #[utoipa::path(
     delete,
     path = "/channel/{thread_id}/lock",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
@@ -1072,7 +1067,7 @@ async fn channel_unlock(
 #[utoipa::path(
     post,
     path = "/channel/{thread_id}/upgrade",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel"],
     responses((status = OK, body = Room, description = "success")),
 )]
@@ -1212,7 +1207,7 @@ struct TransferOwnership {
 #[utoipa::path(
     post,
     path = "/channel/{thread_id}/transfer-ownership",
-    params(("thread_id", description = "Thread id")),
+    params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
@@ -1254,7 +1249,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_thread(thread_id, auth_user.id, msg).await?;
+    s.broadcast_channel(thread_id, auth_user.id, msg).await?;
     Ok(Json(thread))
 }
 

@@ -1,8 +1,6 @@
 use async_trait::async_trait;
-use common::v1::types::{
-    defaults::EVERYONE_TRUSTED, ChannelId, Permission, PermissionOverwriteType, RoomId, UserId,
-};
-use sqlx::{query_scalar, types::Json};
+use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, RoomId, UserId};
+use sqlx::query_scalar;
 use uuid::Uuid;
 
 use crate::{

@@ -13,50 +13,6 @@ use super::util::Auth;
 use crate::error::Result;
 use crate::ServerState;
 
-/// User config set
-///
-/// Set user config
-#[utoipa::path(
-    put,
-    path = "/user/{user_id}/config",
-    params(("user_id", description = "User id")),
-    tags = ["user"],
-    responses((status = OK, body = UserConfigGlobal, description = "success")),
-)]
-#[deprecated]
-async fn user_config_set(
-    Auth(auth_user): Auth,
-    State(s): State<Arc<ServerState>>,
-    Json(json): Json<UserConfigGlobal>,
-) -> Result<impl IntoResponse> {
-    s.data().user_config_set(auth_user.id, &json).await?;
-    // FIXME: limit max size for config
-    s.broadcast(MessageSync::UserConfigGlobal {
-        user_id: auth_user.id,
-        config: json.clone(),
-    })?;
-    Ok(Json(json))
-}
-
-/// User config get
-///
-/// Get user config
-#[utoipa::path(
-    get,
-    path = "/user/{user_id}/config",
-    params(("user_id", description = "User id")),
-    tags = ["user"],
-    responses((status = OK, body = UserConfigGlobal, description = "success")),
-)]
-#[deprecated]
-async fn user_config_get(
-    Auth(auth_user): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let config = s.data().user_config_get(auth_user.id).await?;
-    Ok(Json(config))
-}
-
 /// User config global put
 #[utoipa::path(
     put,
@@ -223,8 +179,6 @@ async fn user_config_user_get(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(user_config_set))
-        .routes(routes!(user_config_get))
         .routes(routes!(user_config_global_put))
         .routes(routes!(user_config_room_put))
         .routes(routes!(user_config_channel_put))

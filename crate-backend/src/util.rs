@@ -107,9 +107,9 @@ impl Modify for NestedTags {
                 "tags": ["room", "room_member", "role", "emoji", "tag"],
             },
             {
-                "name": "thread",
-                "description": "working with threads",
-                "tags": ["thread", "thread_member", "message", "reaction", "voice"],
+                "name": "channel",
+                "description": "working with channels",
+                "tags": ["channel", "thread_member", "message", "reaction", "voice"],
             },
             {
                 "name": "user",
