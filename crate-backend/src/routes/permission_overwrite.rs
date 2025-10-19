@@ -41,6 +41,11 @@ async fn permission_overwrite(
     perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
     let channel = srv.channels.get(channel_id, None).await?;
+    if channel.ty.is_thread() {
+        return Err(Error::BadStatic(
+            "cant set permission overwrites on threads",
+        ));
+    }
     if channel.archived_at.is_some() {
         return Err(Error::BadStatic("channel is archived"));
     }
