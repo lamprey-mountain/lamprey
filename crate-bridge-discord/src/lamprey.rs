@@ -396,7 +396,7 @@ impl LampreyHandle {
     ) -> Result<Channel> {
         let res = self
             .http
-            .thread_create(
+            .channel_create(
                 room_id,
                 &types::ChannelCreate {
                     name,

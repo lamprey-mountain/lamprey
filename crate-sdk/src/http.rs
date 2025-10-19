@@ -226,21 +226,21 @@ macro_rules! route {
 }
 
 // FIXME: 304 not modified (see room_member.rs)
-route!(get    "/api/v1/media/{media_id}"                        => media_info_get(media_id: MediaId) -> Media);
-route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Channel, ChannelCreate);
-route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ChannelId) -> Channel, ChannelPatch);
-route!(post   "/api/v1/media"                                   => media_create() -> MediaCreated, MediaCreate);
-route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delete(thread_id: ChannelId, message_id: MessageId));
-route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
-route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ChannelId, message_id: MessageId) -> Message);
-route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ChannelId) -> Message, MessageCreate);
-route!(put    "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_react(thread_id: ChannelId, message_id: MessageId, reaction: String));
-route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_unreact(thread_id: ChannelId, message_id: MessageId, reaction: String));
-route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ChannelId));
-route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
-route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId));
-route!(patch  "/api/v1/room/{room_id}/member/{user_id}"         => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
-// route!(post   "/api/v1/user"                                    => user_create() -> User, UserCreate);
-route!(patch  "/api/v1/user/{user_id}"                          => user_update(user_id: UserIdReq) -> User, UserPatch);
-route!(post   "/api/v1/user/{user_id}/status"                   => user_set_status(user_id: UserIdReq), StatusPatch);
-route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"         => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);
+route!(get    "/api/v1/media/{media_id}"                          => media_info_get(media_id: MediaId) -> Media);
+route!(post   "/api/v1/room/{room_id}/channel"                    => channel_create(room_id: RoomId) -> Channel, ChannelCreate);
+route!(patch  "/api/v1/channel/{channel_id}"                      => channel_update(channel_id: ChannelId) -> Channel, ChannelPatch);
+route!(post   "/api/v1/media"                                     => media_create() -> MediaCreated, MediaCreate);
+route!(delete "/api/v1/channel/{channel_id}/message/{message_id}" => message_delete(channel_id: ChannelId, message_id: MessageId));
+route!(patch  "/api/v1/channel/{channel_id}/message/{message_id}" => message_update(channel_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
+route!(get    "/api/v1/channel/{channel_id}/message/{message_id}" => message_get(channel_id: ChannelId, message_id: MessageId) -> Message);
+route!(post   "/api/v1/channel/{channel_id}/message"              => message_create(channel_id: ChannelId) -> Message, MessageCreate);
+route!(put    "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}" => message_react(channel_id: ChannelId, message_id: MessageId, reaction: String));
+route!(delete "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}" => message_unreact(channel_id: ChannelId, message_id: MessageId, reaction: String));
+route!(post   "/api/v1/channel/{channel_id}/typing"               => typing_start(channel_id: ChannelId));
+route!(get    "/api/v1/user/{user_id}"                            => user_get(user_id: UserId) -> User);
+route!(put    "/api/v1/room/{room_id}/member/{user_id}"           => room_member_put(room_id: RoomId, user_id: UserId));
+route!(patch  "/api/v1/room/{room_id}/member/{user_id}"           => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
+// route!(post   "/api/v1/user"                                      => user_create() -> User, UserCreate);
+route!(patch  "/api/v1/user/{user_id}"                            => user_update(user_id: UserIdReq) -> User, UserPatch);
+route!(post   "/api/v1/user/{user_id}/status"                     => user_set_status(user_id: UserIdReq), StatusPatch);
+route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"           => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);
