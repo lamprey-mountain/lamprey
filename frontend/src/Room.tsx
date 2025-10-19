@@ -173,7 +173,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 			text: "name?",
 			cont(name) {
 				if (!name) return;
-				ctx.client.http.POST("/api/v1/room/{room_id}/thread", {
+				ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
 					params: {
 						path: { room_id },
 					},
@@ -333,7 +333,7 @@ const QuickCreate = (
 	const onSubmit = async (text: string) => {
 		if (!text) return;
 		const t = await ctx.client.http.POST(
-			"/api/v1/room/{room_id}/thread",
+			"/api/v1/room/{room_id}/channel",
 			{
 				params: {
 					path: { room_id: props.room.id },

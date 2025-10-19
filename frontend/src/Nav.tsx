@@ -255,10 +255,10 @@ export const ThreadNav = (props: { room_id?: string }) => {
 			body.push(...sourceBody);
 		}
 
-		api.client.http.PATCH("/api/v1/room/{room_id}/thread", {
+		api.client.http.PATCH("/api/v1/room/{room_id}/channel", {
 			params: { path: { room_id: props.room_id! } },
 			body: {
-				threads: body,
+				channels: body,
 			},
 		});
 	};

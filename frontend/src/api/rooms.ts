@@ -185,7 +185,7 @@ export class Rooms {
 		let from: string | undefined = undefined;
 		while (has_more) {
 			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/room/{room_id}/thread",
+				"/api/v1/room/{room_id}/channel",
 				{
 					params: {
 						path: { room_id },
