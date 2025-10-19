@@ -4,9 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, MessageMember,
-    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember,
-    ThreadMemberPut, ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageMember, MessageSync,
+    MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut,
+    ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -18,7 +18,7 @@ use crate::ServerState;
 use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
-// TODO: move routes into thread.rs
+// TODO: rename to channel members
 
 /// Thread member list
 #[utoipa::path(
@@ -124,10 +124,8 @@ pub async fn thread_member_add(
     }
 
     let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
-    if thread.ty == ChannelType::Category {
-        return Err(Error::BadStatic(
-            "cannot edit thread member list in category threads",
-        ));
+    if !thread.ty.has_members() {
+        return Err(Error::BadStatic("cannot edit thread member list"));
     }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
@@ -231,10 +229,8 @@ pub async fn thread_member_delete(
     }
 
     let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
-    if thread.ty == ChannelType::Category {
-        return Err(Error::BadStatic(
-            "cannot edit thread member list in category threads",
-        ));
+    if !thread.ty.has_members() {
+        return Err(Error::BadStatic("cannot edit thread member list"));
     }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));

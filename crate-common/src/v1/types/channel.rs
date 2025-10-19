@@ -320,4 +320,24 @@ impl ChannelType {
     pub fn is_thread(&self) -> bool {
         matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate)
     }
+
+    pub fn has_members(&self) -> bool {
+        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::Gdm)
+    }
+
+    pub fn has_text(&self) -> bool {
+        matches!(
+            self,
+            ChannelType::ThreadPublic
+                | ChannelType::ThreadPrivate
+                | ChannelType::Text
+                | ChannelType::Dm
+                | ChannelType::Gdm
+                | ChannelType::Voice
+        )
+    }
+
+    pub fn has_voice(&self) -> bool {
+        matches!(self, ChannelType::Voice)
+    }
 }

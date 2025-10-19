@@ -10,7 +10,7 @@ use axum::{
 use common::v1::types::{
     notifications::{Notification, NotificationReason},
     util::Time,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelType, ContextQuery, ContextResponse,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
     MessageMigrate, MessageModerate, MessagePin, MessageType, NotificationId, PaginationDirection,
     PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership,
 };
@@ -60,8 +60,8 @@ async fn message_create(
     let srv = s.services();
 
     let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if thread.ty == ChannelType::Category {
-        return Err(Error::BadStatic("cannot send messages in category threads"));
+    if !thread.ty.has_text() {
+        return Err(Error::BadStatic("cannot send messages in this thread"));
     }
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));

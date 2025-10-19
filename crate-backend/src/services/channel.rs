@@ -187,13 +187,14 @@ impl ServiceThreads {
         if !patch.changes(&chan_old) {
             return Ok(chan_old);
         }
+
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if chan_old.ty != ChannelType::Voice && patch.bitrate.is_some() {
+        if !chan_old.ty.has_voice() && patch.bitrate.is_some() {
             return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
         }
-        if chan_old.ty != ChannelType::Voice && patch.user_limit.is_some() {
+        if !chan_old.ty.has_voice() && patch.user_limit.is_some() {
             return Err(Error::BadStatic(
                 "cannot set user_limit for non voice thread",
             ));
