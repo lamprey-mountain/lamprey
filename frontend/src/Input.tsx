@@ -44,9 +44,9 @@ export function Input(props: InputProps) {
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
 
 	const sendTyping = leading(throttle, () => {
-		ctx.client.http.POST("/api/v1/thread/{thread_id}/typing", {
+		ctx.client.http.POST("/api/v1/channel/{channel_id}/typing", {
 			params: {
-				path: { thread_id: props.thread.id },
+				path: { channel_id: props.thread.id },
 			},
 		});
 	}, 8000);

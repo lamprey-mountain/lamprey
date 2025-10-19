@@ -371,14 +371,13 @@ export class Messages {
 		const local: Message = {
 			type: MessageType.DefaultMarkdown,
 			id,
-			thread_id,
+			channel_id: thread_id,
 			version_id: id,
 			override_name: null,
 			reply_id: null,
 			content: null,
 			author_id: this.api.users.cache.get("@self")!.id,
 			metadata: null,
-			ordering: 0,
 			...body,
 			nonce: id,
 			is_local: true,
@@ -391,10 +390,10 @@ export class Messages {
 		}
 
 		const { data, error } = await this.api.client.http.POST(
-			"/api/v1/thread/{thread_id}/message",
+			"/api/v1/channel/{channel_id}/message",
 			{
 				params: {
-					path: { thread_id },
+					path: { channel_id: thread_id },
 				},
 				body: {
 					...body,
@@ -424,10 +423,10 @@ export class Messages {
 				const m = this.cache.get(message_id);
 				if (m) return m;
 				const { data, error } = await this.api.client.http.GET(
-					"/api/v1/thread/{thread_id}/message/{message_id}",
+					"/api/v1/channel/{channel_id}/message/{message_id}",
 					{
 						params: {
-							path: { thread_id, message_id },
+							path: { channel_id: thread_id, message_id },
 						},
 					},
 				);
@@ -459,10 +458,10 @@ export class Messages {
 
 	private async fetchList(thread_id: string, query: PaginationQuery) {
 		const { data, error } = await this.api.client.http.GET(
-			"/api/v1/thread/{thread_id}/message",
+			"/api/v1/channel/{channel_id}/message",
 			{
 				params: {
-					path: { thread_id },
+					path: { channel_id: thread_id },
 					query,
 				},
 			},
@@ -480,10 +479,10 @@ export class Messages {
 		limit: number,
 	) {
 		const { data, error } = await this.api.client.http.GET(
-			"/api/v1/thread/{thread_id}/context/{message_id}",
+			"/api/v1/channel/{channel_id}/context/{message_id}",
 			{
 				params: {
-					path: { thread_id, message_id },
+					path: { channel_id: thread_id, message_id },
 					query: { limit },
 				},
 			},
@@ -521,9 +520,9 @@ export class Messages {
 
 		try {
 			const { data, error } = await this.api.client.http.PATCH(
-				"/api/v1/thread/{thread_id}/message/{message_id}",
+				"/api/v1/channel/{channel_id}/message/{message_id}",
 				{
-					params: { path: { thread_id, message_id } },
+					params: { path: { channel_id: thread_id, message_id } },
 					body: { content },
 				},
 			);
@@ -545,18 +544,18 @@ export class Messages {
 
 	async pin(thread_id: string, message_id: string) {
 		await this.api.client.http.PUT(
-			"/api/v1/thread/{thread_id}/pin/{message_id}",
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
 			{
-				params: { path: { thread_id, message_id } },
+				params: { path: { channel_id: thread_id, message_id } },
 			},
 		);
 	}
 
 	async unpin(thread_id: string, message_id: string) {
 		await this.api.client.http.DELETE(
-			"/api/v1/thread/{thread_id}/pin/{message_id}",
+			"/api/v1/channel/{channel_id}/pin/{message_id}",
 			{
-				params: { path: { thread_id, message_id } },
+				params: { path: { channel_id: thread_id, message_id } },
 			},
 		);
 	}
@@ -565,8 +564,8 @@ export class Messages {
 		thread_id: string,
 		messages: { id: string; position: number }[],
 	) {
-		await this.api.client.http.PATCH("/api/v1/thread/{thread_id}/pin", {
-			params: { path: { thread_id } },
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
+			params: { path: { channel_id: thread_id } },
 			body: { messages },
 		});
 	}
@@ -576,10 +575,10 @@ export class Messages {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
-				"/api/v1/thread/{thread_id}/pin",
+				"/api/v1/channel/{channel_id}/pin",
 				{
 					params: {
-						path: { thread_id: thread_id_signal() },
+						path: { channel_id: thread_id_signal() },
 						query: {
 							dir: "f",
 							limit: 1024,

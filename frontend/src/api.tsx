@@ -140,26 +140,26 @@ export function createApi(
 					});
 				}
 			}
-		} else if (msg.type === "ThreadCreate") {
-			const { thread } = msg;
-			threads.cache.set(thread.id, thread);
-			if (thread.room_id) {
-				const l = threads._cachedListings.get(thread.room_id);
+		} else if (msg.type === "ChannelCreate") {
+			const { channel } = msg;
+			threads.cache.set(channel.id, channel);
+			if (channel.room_id) {
+				const l = threads._cachedListings.get(channel.room_id);
 				if (l?.pagination) {
 					const p = l.pagination;
 					for (const mut of threads._listingMutators) {
-						if (mut.room_id === thread.room_id) {
+						if (mut.room_id === channel.room_id) {
 							mut.mutate({
 								...p,
-								items: [...p.items, thread],
+								items: [...p.items, channel],
 								total: p.total + 1,
 							});
 						}
 					}
 				}
 			}
-		} else if (msg.type === "ThreadUpdate") {
-			const { thread } = msg;
+		} else if (msg.type === "ChannelUpdate") {
+			const { channel: thread } = msg;
 			const old_thread = threads.cache.get(thread.id);
 			threads.cache.set(thread.id, thread);
 
@@ -238,8 +238,8 @@ export function createApi(
 					}
 				}
 			}
-		} else if (msg.type === "ThreadTyping") {
-			const { thread_id, user_id, until } = msg;
+		} else if (msg.type === "ChannelTyping") {
+			const { channel_id: thread_id, user_id, until } = msg;
 			const t = typing.get(thread_id) ?? new Set();
 			typing.set(thread_id, new Set([...t, user_id]));
 
@@ -259,11 +259,11 @@ export function createApi(
 				tt.set(user_id, timeout);
 				typing_timeout.set(thread_id, tt);
 			}
-		} else if (msg.type === "ThreadAck") {
+		} else if (msg.type === "ChannelAck") {
 			// TODO
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message;
-			const r = messages.cacheRanges.get(m.thread_id);
+			const r = messages.cacheRanges.get(m.channel_id);
 			let is_new = false;
 			let is_unread = true;
 			if (r) {
@@ -288,13 +288,13 @@ export function createApi(
 				}
 				batch(() => {
 					messages.cache.set(m.id, m);
-					messages._updateMutators(r, m.thread_id);
+					messages._updateMutators(r, m.channel_id);
 				});
 			}
 
-			const t = api.threads.cache.get(m.thread_id);
+			const t = api.threads.cache.get(m.channel_id);
 			if (t) {
-				api.threads.cache.set(m.thread_id, {
+				api.threads.cache.set(m.channel_id, {
 					...t,
 					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
 					last_version_id: m.version_id,
@@ -303,11 +303,11 @@ export function createApi(
 			}
 
 			{
-				const t = typing.get(m.thread_id);
+				const t = typing.get(m.channel_id);
 				if (t) {
 					t.delete(m.author_id);
-					typing.set(m.thread_id, new Set(t));
-					const tt = typing_timeout.get(m.thread_id)?.get(m.author_id);
+					typing.set(m.channel_id, new Set(t));
+					const tt = typing_timeout.get(m.channel_id)?.get(m.author_id);
 					if (tt) clearTimeout(tt);
 				}
 			}
@@ -319,7 +319,7 @@ export function createApi(
 			}
 		} else if (msg.type === "MessageUpdate") {
 			const m = msg.message;
-			const r = messages.cacheRanges.get(m.thread_id);
+			const r = messages.cacheRanges.get(m.channel_id);
 			if (r) {
 				const idx = r.live.items.findIndex((i) => i.id === m.id);
 				if (idx !== -1) {
@@ -328,12 +328,12 @@ export function createApi(
 				}
 				batch(() => {
 					messages.cache.set(m.id, m);
-					messages._updateMutators(r, m.thread_id);
+					messages._updateMutators(r, m.channel_id);
 				});
 			}
 		} else if (msg.type === "MessageDelete") {
 			batch(() => {
-				const { message_id, thread_id } = msg;
+				const { message_id, channel_id: thread_id } = msg;
 				const ranges = messages.cacheRanges.get(thread_id);
 				const r = ranges?.find(message_id);
 				if (ranges && r) {
@@ -346,12 +346,12 @@ export function createApi(
 						messages._updateMutators(ranges, thread_id);
 					});
 				}
-				const t = api.threads.cache.get(msg.thread_id);
+				const t = api.threads.cache.get(msg.channel_id);
 				if (t) {
 					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
 						t.last_version_id;
 					console.log({ last_version_id });
-					api.threads.cache.set(msg.thread_id, {
+					api.threads.cache.set(msg.channel_id, {
 						...t,
 						message_count: t.message_count! - 1,
 						last_version_id,
@@ -361,7 +361,7 @@ export function createApi(
 			});
 		} else if (msg.type === "MessageDeleteBulk") {
 			batch(() => {
-				const { thread_id, message_ids } = msg;
+				const { channel_id: thread_id, message_ids } = msg;
 				const ranges = messages.cacheRanges.get(thread_id);
 				if (ranges) {
 					let changed = false;
@@ -596,7 +596,7 @@ export function createApi(
 		} else if (msg.type === "BotAdd") {
 			// TODO: maybe do something here?
 		} else if (msg.type === "ReactionCreate") {
-			const { message_id, thread_id, user_id, key } = msg;
+			const { message_id, channel_id: thread_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
 				const reactions = message.reactions ?? [];
@@ -616,7 +616,7 @@ export function createApi(
 				messages.cache.set(message_id, { ...message, reactions });
 			}
 		} else if (msg.type === "ReactionDelete") {
-			const { message_id, thread_id, user_id, key } = msg;
+			const { message_id, channel_id: thread_id, user_id, key } = msg;
 			const message = messages.cache.get(message_id);
 			if (message) {
 				const reactions = message.reactions ?? [];
@@ -697,9 +697,9 @@ export function createApi(
 					rooms.cache.set(msg.room_id, { ...room, user_config: msg.config });
 				}
 			}
-		} else if (msg.type === "UserConfigThread") {
+		} else if (msg.type === "UserConfigChannel") {
 			if (msg.user_id === session()?.user_id) {
-				const thread = threads.cache.get(msg.thread_id);
+				const thread = threads.cache.get(msg.channel_id);
 				if (thread) {
 					threads.cache.set(thread.id, {
 						...thread,
@@ -818,7 +818,7 @@ export function createApi(
 				}
 			}
 		} else if (msg.type === "MemberListSync") {
-			const { room_id, thread_id, ops, groups } = msg;
+			const { room_id, channel_id: thread_id, ops, groups } = msg;
 			const id = room_id ?? thread_id;
 			if (!id) return;
 

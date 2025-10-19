@@ -209,7 +209,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 					<ChatHeader thread={thread()!} />
 				</Show>
 				<Show
-					when={thread()!.type === "Chat" ||
+					when={thread()!.type === "Text" ||
 						thread()!.type === "Dm" ||
 						thread()!.type === "Gdm"}
 				>
