@@ -181,7 +181,6 @@ impl From<DbChannel> for Channel {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
-            recipient: None,
             recipients: vec![],
             user_config: None,
             online_count: 0,

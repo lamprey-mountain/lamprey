@@ -5,8 +5,9 @@ use uuid::Uuid;
 
 use crate::v1::types::{
     application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
-    AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem, EmojiId, InviteCode,
-    MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId, UserId,
+    AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem, ChannelType, EmojiId,
+    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId,
+    UserId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -57,11 +58,13 @@ pub enum AuditLogEntryType {
 
     ChannelCreate {
         channel_id: ChannelId,
+        channel_type: ChannelType,
         changes: Vec<AuditLogChange>,
     },
 
     ChannelUpdate {
         channel_id: ChannelId,
+        channel_type: ChannelType,
         changes: Vec<AuditLogChange>,
     },
 

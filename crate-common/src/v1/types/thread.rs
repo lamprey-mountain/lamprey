@@ -1,10 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-// TODO: remove
-pub use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
-pub use forum::ThreadTypeForumTreePublic as ThreadTypeForumPublic;
-pub use ThreadTypeChatPrivate as ThreadTypeForumPrivate;
-
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
@@ -17,10 +12,6 @@ use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageVerId, TagId, User};
 
 use super::{ChannelId, RoomId, UserId};
-
-pub mod chat;
-pub mod forum;
-pub mod voice;
 
 /// A channel
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,17 +93,7 @@ pub struct Channel {
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
-    // being able to have an exact unread count would be nice, but would be hard
-    // to implement efficiently. if someone marks a very old message as unread,
-    // i don't want to hang while counting potentially thousands of messages!
-    // pub unread_count: u64,
     pub user_config: Option<UserConfigChannel>,
-
-    /// for dm channels, this is who the dm is with
-    /// DEPRECATED: use `recipients` instead
-    // TODO: remove
-    #[cfg_attr(feature = "utoipa", schema(deprecated))]
-    pub recipient: Option<User>,
 
     /// for dm and gdm channels, this is who the dm is with
     pub recipients: Vec<User>,

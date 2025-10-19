@@ -109,7 +109,6 @@ impl ServiceThreads {
                 .await?;
 
             thread = Channel {
-                recipient: recipients.first().cloned(),
                 recipients,
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
@@ -169,39 +168,39 @@ impl ServiceThreads {
         perms.ensure(Permission::ViewChannel)?;
         let data = self.state.data();
         let srv = self.state.services();
-        let thread_old = srv.channels.get(thread_id, None).await?;
-        if thread_old.archived_at.is_some() {
+        let chan_old = srv.channels.get(thread_id, None).await?;
+        if chan_old.archived_at.is_some() {
             return Err(Error::BadStatic("thread is archived"));
         }
-        if thread_old.deleted_at.is_some() {
+        if chan_old.deleted_at.is_some() {
             return Err(Error::BadStatic("thread is removed"));
         }
-        if thread_old.locked {
+        if chan_old.locked {
             perms.ensure(Permission::ThreadLock)?;
         }
-        if thread_old.creator_id == user_id {
+        if chan_old.creator_id == user_id {
             perms.add(Permission::ThreadEdit);
         }
         perms.ensure(Permission::ThreadEdit)?;
 
         // shortcut if it wont modify the thread
-        if !patch.changes(&thread_old) {
-            return Ok(thread_old);
+        if !patch.changes(&chan_old) {
+            return Ok(chan_old);
         }
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if thread_old.ty != ChannelType::Voice && patch.bitrate.is_some() {
+        if chan_old.ty != ChannelType::Voice && patch.bitrate.is_some() {
             return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
         }
-        if thread_old.ty != ChannelType::Voice && patch.user_limit.is_some() {
+        if chan_old.ty != ChannelType::Voice && patch.user_limit.is_some() {
             return Err(Error::BadStatic(
                 "cannot set user_limit for non voice thread",
             ));
         }
 
         if let Some(Some(icon)) = patch.icon {
-            if thread_old.ty != ChannelType::Gdm {
+            if chan_old.ty != ChannelType::Gdm {
                 return Err(Error::BadStatic("only gdm threads can have icons"));
             }
             let (media, _) = data.media_select(icon).await?;
@@ -217,8 +216,8 @@ impl ServiceThreads {
         data.channel_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, user_id).await;
-        let thread_new = self.get(thread_id, Some(user_id)).await?;
-        if let Some(room_id) = thread_new.room_id {
+        let chan_new = self.get(thread_id, Some(user_id)).await?;
+        if let Some(room_id) = chan_new.room_id {
             self.state
                 .audit_log_append(AuditLogEntry {
                     id: AuditLogEntryId::new(),
@@ -228,25 +227,22 @@ impl ServiceThreads {
                     reason: reason.clone(),
                     ty: AuditLogEntryType::ChannelUpdate {
                         channel_id: thread_id,
+                        channel_type: chan_new.ty,
                         changes: Changes::new()
-                            .change("name", &thread_old.name, &thread_new.name)
-                            .change(
-                                "description",
-                                &thread_old.description,
-                                &thread_new.description,
-                            )
-                            .change("icon", &thread_old.icon, &thread_new.icon)
-                            .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
-                            .change("bitrate", &thread_old.bitrate, &thread_new.bitrate)
-                            .change("user_limit", &thread_old.user_limit, &thread_new.user_limit)
-                            .change("type", &thread_old.ty, &thread_new.ty)
+                            .change("name", &chan_old.name, &chan_new.name)
+                            .change("description", &chan_old.description, &chan_new.description)
+                            .change("icon", &chan_old.icon, &chan_new.icon)
+                            .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
+                            .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
+                            .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
+                            .change("type", &chan_old.ty, &chan_new.ty)
                             .build(),
                     },
                 })
                 .await?;
         }
 
-        if thread_old.name != thread_new.name {
+        if chan_old.name != chan_new.name {
             // send thread renamed message to thread
             let rename_message_id = data
                 .message_create(DbMessageCreate {
@@ -255,8 +251,8 @@ impl ServiceThreads {
                     author_id: user_id,
                     embeds: vec![],
                     message_type: MessageType::ThreadRename(MessageThreadRename {
-                        name_new: thread_new.name.clone(),
-                        name_old: thread_old.name,
+                        name_new: chan_new.name.clone(),
+                        name_old: chan_old.name,
                     }),
                     edited_at: None,
                     created_at: None,
@@ -278,13 +274,13 @@ impl ServiceThreads {
         }
 
         let msg = MessageSync::ChannelUpdate {
-            channel: Box::new(thread_new.clone()),
+            channel: Box::new(chan_new.clone()),
         };
-        if let Some(room_id) = thread_new.room_id {
+        if let Some(room_id) = chan_new.room_id {
             self.state.broadcast_room(room_id, user_id, msg).await?;
         }
 
-        Ok(thread_new)
+        Ok(chan_new)
     }
 
     pub async fn typing_set(&self, thread_id: ChannelId, user_id: UserId, until: OffsetDateTime) {
