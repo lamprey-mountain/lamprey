@@ -541,6 +541,744 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/calendar/event": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event list all
+		 * @description
+		 *
+		 *     List all events the current user can see
+		 */
+		get: operations["calendar_event_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{thread_id}/event": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event list
+		 * @description
+		 */
+		get: operations["calendar_thread_event_list"];
+		put?: never;
+		/**
+		 * Calendar event create
+		 * @description
+		 */
+		post: operations["calendar_thread_event_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event get
+		 * @description
+		 */
+		get: operations["calendar_thread_event_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Calendar event delete
+		 * @description
+		 */
+		delete: operations["calendar_thread_event_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Calendar event update
+		 * @description
+		 */
+		patch: operations["calendar_thread_event_update"];
+		trace?: never;
+	};
+	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}/rsvp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar rsvp list
+		 * @description
+		 */
+		get: operations["calendar_thread_event_rsvp_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}/rsvp/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar rsvp get
+		 * @description
+		 */
+		get: operations["calendar_thread_event_rsvp_get"];
+		/**
+		 * Calendar rsvp create
+		 * @description
+		 */
+		put: operations["calendar_thread_event_rsvp_update"];
+		post?: never;
+		/**
+		 * Calendar rsvp delete
+		 * @description
+		 */
+		delete: operations["calendar_thread_event_rsvp_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Channel create dm
+		 * @description
+		 *
+		 *     Create a dm or group dm thread (outside of a room)
+		 */
+		post: operations["channel_create_dm"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Channel get
+		 * @description
+		 */
+		get: operations["channel_get"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Channel edit
+		 * @description <div class="markdown-alert-permission-optional">ChannelEdit</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadEdit</div>
+		 */
+		patch: operations["channel_update"];
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/ack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Channel ack
+		 * @description
+		 *
+		 *     Mark a channel as read (or unread).
+		 */
+		put: operations["channel_ack"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/archive": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Channel archive
+		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadArchive</div>
+		 */
+		put: operations["channel_archive"];
+		post?: never;
+		/**
+		 * Channel unarchive
+		 * @description <div class="markdown-alert-permission-optional">ThreadManage</div>
+		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 */
+		delete: operations["channel_unarchive"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/context/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message context
+		 * @description
+		 *
+		 *     More efficient than calling List messages twice
+		 */
+		get: operations["message_context"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/lock": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Channel lock
+		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
+		 */
+		put: operations["channel_lock"];
+		post?: never;
+		/**
+		 * Channel unlock
+		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
+		 */
+		delete: operations["channel_unlock"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Messages list
+		 * @description
+		 *
+		 *     Paginate messages in a thread
+		 */
+		get: operations["message_list"];
+		put?: never;
+		/**
+		 * Message create
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
+		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
+		 *     <div class="markdown-alert-permission-optional">MemberBridge</div>
+		 *
+		 *     Send a message to a channel
+		 */
+		post: operations["message_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Message moderate
+		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
+		 *     <div class="markdown-alert-permission-optional">MessageRemove</div>
+		 *
+		 *     Bulk remove, restore, or delete messages.
+		 *
+		 *     Deleting a message:
+		 *     - Deleted messages remain visible to moderators (and sender, although there's no ui for this).
+		 *     - Deleted messages cannot be restored by moderators (ask your local server admin if needed).
+		 *     - Deleted messages are garbage collected after 7 days.
+		 *
+		 *     Removing a message:
+		 *     - Removing a message hides it from all non-moderators and the sender.
+		 *     - Removal is reversible via restoration, unlike deletion.
+		 *     - Removed messages are never garbage collected.
+		 *     - This is a "softer" form of deletion, intended for moderators you don't fully trust.
+		 *
+		 *     Permissions:
+		 *     - `MessageDelete` allows deleting messages and viewing deleted messages.
+		 *     - `MessageRemove` allows removing/restoring messages and viewing removed messages.
+		 *     - Users can always delete (but not remove) their own messages.
+		 */
+		patch: operations["message_moderate"];
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/deleted": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message list deleted
+		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
+		 *
+		 *     Paginate deleted messages in a thread
+		 */
+		get: operations["message_list_deleted"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/removed": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message list removed
+		 * @description <div class="markdown-alert-permission-optional">MessageRemove</div>
+		 *
+		 *     Paginate removed messages in a thread
+		 */
+		get: operations["message_list_removed"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message get
+		 * @description
+		 */
+		get: operations["message_get"];
+		put?: never;
+		post?: never;
+		/**
+		 * Message delete (TEMP?)
+		 * @description
+		 *
+		 *     Note that this endpoint allows deleting your own messages, while message
+		 *     moderate always requires the full permission
+		 */
+		delete: operations["message_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Message edit
+		 * @description
+		 */
+		patch: operations["message_edit"];
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/{message_id}/reaction": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Reaction purge
+		 * @description <div class="markdown-alert-permission-required">ReactionClear</div>
+		 *
+		 *     Remove all reactions from a message.
+		 */
+		delete: operations["reaction_purge"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{key}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Reaction list
+		 * @description
+		 *
+		 *     List message reactions for a specific emoji.
+		 */
+		get: operations["reaction_list"];
+		/**
+		 * Reaction add
+		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
+		 *
+		 *     Add a reaction to a message.
+		 */
+		put: operations["reaction_add"];
+		post?: never;
+		/**
+		 * Reaction remove
+		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
+		 *
+		 *     Remove a reaction from a message.
+		 */
+		delete: operations["reaction_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/{message_id}/version": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message version list
+		 * @description
+		 */
+		get: operations["message_version_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/message/{message_id}/version/{version_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message version get
+		 * @description
+		 */
+		get: operations["message_version_get"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/migrate": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Message move (TODO)
+		 * @description <div class="markdown-alert-permission-required">MessageMove</div>
+		 *
+		 *     Move messages from one thread to another. Requires `MessageMove` in both the
+		 *     source and target thread.
+		 */
+		post: operations["message_move"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/permission/{overwrite_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Permission overwrite
+		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
+		 */
+		put: operations["permission_overwrite"];
+		post?: never;
+		/**
+		 * Permission delete
+		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
+		 */
+		delete: operations["permission_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/pin": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message pin list
+		 * @description
+		 */
+		get: operations["message_pin_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Pin reorder
+		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
+		 */
+		patch: operations["message_pin_reorder"];
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/pin/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Pin create
+		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
+		 *
+		 *     - Newly pinned messages are pinned to the top (position 0).
+		 *     - There can be a maximum of 1024 pinned messages.
+		 */
+		put: operations["message_pin_create"];
+		post?: never;
+		/**
+		 * Pin delete
+		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
+		 */
+		delete: operations["message_pin_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/remove": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Channel remove
+		 * @description <div class="markdown-alert-permission-required">ThreadDelete</div>
+		 */
+		put: operations["channel_remove"];
+		post?: never;
+		/**
+		 * Channel restore
+		 * @description <div class="markdown-alert-permission-required">ThreadDelete</div>
+		 */
+		delete: operations["channel_restore"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/reply": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message roots
+		 * @description
+		 */
+		get: operations["message_roots"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/reply/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Message replies
+		 * @description
+		 */
+		get: operations["message_replies"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/transfer-ownership": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Channel transfer ownership
+		 * @description
+		 */
+		post: operations["channel_transfer_ownership"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/typing": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Channel trigger typing indicator
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *
+		 *     Send a typing notification to a thread
+		 */
+		post: operations["channel_typing"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/upgrade": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Channel upgrade
+		 * @description
+		 *
+		 *     Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
+		 */
+		post: operations["channel_upgrade"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/webhook": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Webhook list thread (TODO)
+		 * @description
+		 */
+		get: operations["list_webhooks_thread"];
+		put?: never;
+		/**
+		 * Webhook create (TODO)
+		 * @description
+		 */
+		post: operations["create_webhook"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/config": {
 		parameters: {
 			query?: never;
@@ -558,6 +1296,26 @@ export interface paths {
 		 * @description
 		 */
 		put: operations["user_config_global_put"];
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/config/channel/{channel_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * User config channel get
+		 * @description
+		 */
+		get: operations["user_config_channel_get"];
+		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -596,16 +1354,12 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
+		get?: never;
 		/**
-		 * User config thread get
+		 * User config channel put
 		 * @description
 		 */
-		get: operations["user_config_thread_get"];
-		/**
-		 * User config thread put
-		 * @description
-		 */
-		put: operations["user_config_thread_put"];
+		put: operations["user_config_channel_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -795,6 +1549,28 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/inbox/channels": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Inbox channels
+		 * @description
+		 *
+		 *     Get a list of all unread channel
+		 */
+		get: operations["inbox_channels"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/inbox/flush": {
 		parameters: {
 			query?: never;
@@ -851,28 +1627,6 @@ export interface paths {
 		 * @description
 		 */
 		post: operations["inbox_mark_unread"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/inbox/threads": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Inbox threads
-		 * @description
-		 *
-		 *     Get a list of all unread threads
-		 */
-		get: operations["inbox_threads"];
-		put?: never;
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1142,6 +1896,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/public/channels": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Public channels list (TODO)
+		 * @description
+		 */
+		get: operations["public_channels"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/public/rooms": {
 		parameters: {
 			query?: never;
@@ -1154,26 +1928,6 @@ export interface paths {
 		 * @description
 		 */
 		get: operations["public_rooms"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/public/threads": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Public threads list (TODO)
-		 * @description
-		 */
-		get: operations["public_threads"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1245,10 +1999,10 @@ export interface paths {
 		};
 		get?: never;
 		/**
-		 * Room ack (TODO)
+		 * Room ack
 		 * @description
 		 *
-		 *     Mark all threads in a room as read.
+		 *     Mark all channels in a room as read.
 		 */
 		put: operations["room_ack"];
 		post?: never;
@@ -1278,6 +2032,58 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/automod": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Automod rule list (TODO)
+		 * @description
+		 */
+		get: operations["list_rules"];
+		put?: never;
+		/**
+		 * Automod rule create (TODO)
+		 * @description
+		 */
+		post: operations["create_rule"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/automod/{rule_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Automod rule get (TODO)
+		 * @description
+		 */
+		get: operations["get_rule"];
+		put?: never;
+		post?: never;
+		/**
+		 * Automod rule delete (TODO)
+		 * @description
+		 */
+		delete: operations["delete_rule"];
+		options?: never;
+		head?: never;
+		/**
+		 * Automod rule update (TODO)
+		 * @description
+		 */
+		patch: operations["update_rule"];
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/ban": {
 		parameters: {
 			query?: never;
@@ -1296,6 +2102,26 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 */
 		post: operations["room_ban_create_bulk"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/ban/search": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room ban search (TODO)
+		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
+		 */
+		get: operations["room_ban_search"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1325,6 +2151,60 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 */
 		delete: operations["room_ban_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/channel": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room channel list
+		 * @description
+		 */
+		get: operations["channel_list"];
+		put?: never;
+		/**
+		 * Room channel create
+		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
+		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
+		 *
+		 *     Create a channel in a room
+		 */
+		post: operations["channel_create_room"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Room channel reorder
+		 * @description <div class="markdown-alert-permission-required">ChannelManage</div>
+		 *
+		 *     Reorder the channels in a room. Requires the `ChannelManage` permission.
+		 */
+		patch: operations["channel_reorder"];
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/channel/archived": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Room channel list archived
+		 * @description
+		 */
+		get: operations["channel_list_archived"];
+		put?: never;
+		post?: never;
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1695,172 +2575,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/room/{room_id}/tag": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Tag list room (TODO)
-		 * @description
-		 *
-		 *     List tags in a room
-		 */
-		get: operations["tag_list"];
-		put?: never;
-		/**
-		 * Tag create (TODO)
-		 * @description
-		 */
-		post: operations["tag_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/tag/{tag_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Tag get (TODO)
-		 * @description
-		 */
-		get: operations["tag_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Tag delete (TODO)
-		 * @description
-		 */
-		delete: operations["tag_delete"];
-		options?: never;
-		head?: never;
-		/**
-		 * Tag patch (TODO)
-		 * @description
-		 */
-		patch: operations["tag_patch"];
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/tag/{tag_id}/permission/{overwrite_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Tag permission override upsert (TODO)
-		 * @description
-		 *
-		 *     Upsert a tag permission override
-		 */
-		put: operations["permission_tag_overwrite"];
-		post?: never;
-		/**
-		 * Tag permission override delete (TODO)
-		 * @description
-		 *
-		 *     Delete a tag permission override
-		 */
-		delete: operations["permission_tag_delete"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/tag/{tag_id}/tag/{tag_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Tag tag apply (TODO)
-		 * @description
-		 *
-		 *     Apply a tag to a tag
-		 *
-		 *     If tag a is tagged with tag b then any taggable tagged with tag a is implicitly tagged with tag b
-		 */
-		put: operations["tag_tag_apply"];
-		post?: never;
-		/**
-		 * Tag tag unapply (TODO)
-		 * @description
-		 *
-		 *     Unapply a tag from a tag
-		 */
-		delete: operations["tag_tag_unapply"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/thread": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Room thread list
-		 * @description
-		 */
-		get: operations["thread_list"];
-		put?: never;
-		/**
-		 * Room thread create
-		 * @description <div class="markdown-alert-permission-optional">ThreadCreateChat</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadCreateForumTree</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadCreateVoice</div>
-		 *
-		 *     Create a thread in a room
-		 */
-		post: operations["thread_create_room"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Room thread reorder
-		 * @description <div class="markdown-alert-permission-required">ThreadReorder</div>
-		 *
-		 *     Reorder the threads in a room. Requires the `ThreadManage` permission.
-		 */
-		patch: operations["thread_reorder"];
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/thread/archived": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Room thread list archived
-		 * @description
-		 */
-		get: operations["thread_list_archived"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/room/{room_id}/thread/removed": {
 		parameters: {
 			query?: never;
@@ -1869,12 +2583,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room thread list removed
+		 * Room channel list removed
 		 * @description
 		 *
 		 *     List removed threads in a room. Requires the `ThreadDelete` permission.
 		 */
-		get: operations["thread_list_removed"];
+		get: operations["channel_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1923,6 +2637,46 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/webhook": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Webhook list room (TODO)
+		 * @description
+		 */
+		get: operations["list_webhooks_room"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/search/channels": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Search channels
+		 * @description
+		 */
+		post: operations["search_channels"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/search/message": {
 		parameters: {
 			query?: never;
@@ -1957,26 +2711,6 @@ export interface paths {
 		 * @description
 		 */
 		post: operations["search_rooms"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/search/thread": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Search threads
-		 * @description
-		 */
-		post: operations["search_threads"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2085,139 +2819,29 @@ export interface paths {
 		patch: operations["session_update"];
 		trace?: never;
 	};
-	"/api/v1/thread": {
+	"/api/v1/thread/{thread_id}/invite": {
 		parameters: {
 			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
-		put?: never;
 		/**
-		 * Dm thread create
+		 * Invite thread list
 		 * @description
 		 *
-		 *     Create a dm or group dm thread (outside of a room)
+		 *     List invites that go to a thread
 		 */
-		post: operations["dm_thread_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Thread get
-		 * @description
-		 */
-		get: operations["thread_get"];
+		get: operations["invite_channel_list"];
 		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
 		/**
-		 * Thread edit
-		 * @description <div class="markdown-alert-permission-optional">ThreadEdit</div>
-		 */
-		patch: operations["thread_update"];
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/ack": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Thread ack
-		 * @description
+		 * Invite thread create
+		 * @description <div class="markdown-alert-permission-required">InviteCreate</div>
 		 *
-		 *     Mark a thread as read (or unread).
+		 *     Create an invite that goes to a thread
 		 */
-		put: operations["thread_ack"];
-		post?: never;
+		post: operations["invite_channel_create"];
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/archive": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Thread archive
-		 * @description <div class="markdown-alert-permission-optional">ThreadArchive</div>
-		 */
-		put: operations["thread_archive"];
-		post?: never;
-		/**
-		 * Thread unarchive
-		 * @description <div class="markdown-alert-permission-optional">ThreadArchive</div>
-		 */
-		delete: operations["thread_unarchive"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/context/{message_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message context
-		 * @description
-		 *
-		 *     More efficient than calling List messages twice
-		 */
-		get: operations["message_context"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/lock": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Thread lock
-		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
-		 */
-		put: operations["thread_lock"];
-		post?: never;
-		/**
-		 * Thread unlock
-		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
-		 */
-		delete: operations["thread_unlock"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2262,445 +2886,10 @@ export interface paths {
 		put: operations["thread_member_add"];
 		post?: never;
 		/**
-		 * Thread member delete (kick/leave)
+		 * Thread member delete
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 */
 		delete: operations["thread_member_delete"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Messages list
-		 * @description
-		 *
-		 *     Paginate messages in a thread
-		 */
-		get: operations["message_list"];
-		put?: never;
-		/**
-		 * Message create
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
-		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
-		 *     <div class="markdown-alert-permission-optional">MemberBridge</div>
-		 *
-		 *     Send a message to a thread
-		 */
-		post: operations["message_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Message moderate
-		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
-		 *     <div class="markdown-alert-permission-optional">MessageRemove</div>
-		 *
-		 *     Bulk remove, restore, or delete messages.
-		 *
-		 *     Deleting a message:
-		 *     - Deleted messages remain visible to moderators (and sender, although there's no ui for this).
-		 *     - Deleted messages cannot be restored by moderators (ask your local server admin if needed).
-		 *     - Deleted messages are garbage collected after 7 days.
-		 *
-		 *     Removing a message:
-		 *     - Removing a message hides it from all non-moderators and the sender.
-		 *     - Removal is reversible via restoration, unlike deletion.
-		 *     - Removed messages are never garbage collected.
-		 *     - This is a "softer" form of deletion, intended for moderators you don't fully trust.
-		 *
-		 *     Permissions:
-		 *     - `MessageDelete` allows deleting messages and viewing deleted messages.
-		 *     - `MessageRemove` allows removing/restoring messages and viewing removed messages.
-		 *     - Users can always delete (but not remove) their own messages.
-		 */
-		patch: operations["message_moderate"];
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message/{message_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message get
-		 * @description
-		 */
-		get: operations["message_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Message delete (TEMP?)
-		 * @description
-		 *
-		 *     Note that this endpoint allows deleting your own messages, while message
-		 *     moderate always requires the full permission
-		 */
-		delete: operations["message_delete"];
-		options?: never;
-		head?: never;
-		/**
-		 * Message edit
-		 * @description
-		 */
-		patch: operations["message_edit"];
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message/{message_id}/reaction": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/**
-		 * Reaction purge
-		 * @description <div class="markdown-alert-permission-required">ReactionClear</div>
-		 *
-		 *     Remove all reactions from a message.
-		 */
-		delete: operations["reaction_purge"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message/{message_id}/reaction/{key}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Reaction list
-		 * @description
-		 *
-		 *     List message reactions for a specific emoji.
-		 */
-		get: operations["reaction_list"];
-		/**
-		 * Reaction add
-		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
-		 *
-		 *     Add a reaction to a message.
-		 */
-		put: operations["reaction_add"];
-		post?: never;
-		/**
-		 * Reaction remove
-		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
-		 *
-		 *     Remove a reaction from a message.
-		 */
-		delete: operations["reaction_remove"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message/{message_id}/version": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message version list
-		 * @description
-		 */
-		get: operations["message_version_list"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/message/{message_id}/version/{version_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message version get
-		 * @description
-		 */
-		get: operations["message_version_get"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/migrate": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Message move (TODO)
-		 * @description <div class="markdown-alert-permission-required">MessageMove</div>
-		 *
-		 *     Move messages from one thread to another. Requires `MessageMove` in both the
-		 *     source and target thread.
-		 */
-		post: operations["message_migrate"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/permission/{overwrite_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Thread permission overwrite
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 */
-		put: operations["permission_thread_overwrite"];
-		post?: never;
-		/**
-		 * Thread permission delete
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 */
-		delete: operations["permission_thread_delete"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/pin": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message pin list
-		 * @description
-		 */
-		get: operations["message_pin_list"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		/**
-		 * Pin reorder
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 */
-		patch: operations["message_pin_reorder"];
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/pin/{message_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Pin create
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *
-		 *     - Newly pinned messages are pinned to the top (position 0).
-		 *     - There can be a maximum of 1024 pinned messages.
-		 */
-		put: operations["message_pin_create"];
-		post?: never;
-		/**
-		 * Pin delete
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 */
-		delete: operations["message_pin_delete"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/remove": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Thread remove
-		 * @description <div class="markdown-alert-permission-required">ThreadDelete</div>
-		 */
-		put: operations["thread_remove"];
-		post?: never;
-		/**
-		 * Thread restore
-		 * @description <div class="markdown-alert-permission-required">ThreadDelete</div>
-		 */
-		delete: operations["thread_restore"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/reply": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message roots
-		 * @description
-		 */
-		get: operations["message_roots"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/reply/{message_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Message replies
-		 * @description
-		 */
-		get: operations["message_replies"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/tag/{tag_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Tag thread apply (TODO)
-		 * @description
-		 *
-		 *     Apply a tag to a thread. For bulk applying tags, consider editing the thread's tags field directly.
-		 */
-		put: operations["tag_thread_apply"];
-		post?: never;
-		/**
-		 * Tag thread unapply (TODO)
-		 * @description
-		 *
-		 *     Unapply a tag from a thread. For bulk removing tags, consider editing the thread's tags field directly.
-		 */
-		delete: operations["tag_thread_unapply"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/transfer-ownership": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Thread transfer ownership
-		 * @description
-		 */
-		post: operations["thread_transfer_ownership"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/typing": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Thread trigger typing indicator
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *
-		 *     Send a typing notification to a thread
-		 */
-		post: operations["thread_typing"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/thread/{thread_id}/upgrade": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Thread upgrade
-		 * @description
-		 *
-		 *     Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
-		 */
-		post: operations["thread_upgrade"];
-		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2884,36 +3073,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/user/{user_id}/config": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * User config get
-		 * @deprecated
-		 * @description
-		 *
-		 *     Get user config
-		 */
-		get: operations["user_config_get"];
-		/**
-		 * User config set
-		 * @deprecated
-		 * @description
-		 *
-		 *     Set user config
-		 */
-		put: operations["user_config_set"];
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/user/{user_id}/connection": {
 		parameters: {
 			query?: never;
@@ -2965,7 +3124,7 @@ export interface paths {
 		 * Dm list
 		 * @description
 		 *
-		 *     List direct message threads. Ordered by the last message version id, so
+		 *     List direct message channels. Ordered by the last message version id, so
 		 *     recently active dms come first.
 		 */
 		get: operations["dm_list"];
@@ -3287,13 +3446,133 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/webhook/{webhook_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Webhook get (TODO)
+		 * @description
+		 */
+		get: operations["get_webhook"];
+		put?: never;
+		post?: never;
+		/**
+		 * Webhook delete (TODO)
+		 * @description
+		 */
+		delete: operations["delete_webhook"];
+		options?: never;
+		head?: never;
+		/**
+		 * Webhook update (TODO)
+		 * @description
+		 */
+		patch: operations["update_webhook"];
+		trace?: never;
+	};
+	"/api/v1/webhook/{webhook_id}/{token}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Webhook get with token (TODO)
+		 * @description
+		 */
+		get: operations["get_webhook_with_token"];
+		put?: never;
+		/**
+		 * Webhook execute (TODO)
+		 * @description
+		 */
+		post: operations["execute_webhook"];
+		/**
+		 * Webhook delete with token (TODO)
+		 * @description
+		 */
+		delete: operations["delete_webhook_with_token"];
+		options?: never;
+		head?: never;
+		/**
+		 * Webhook update with token (TODO)
+		 * @description
+		 */
+		patch: operations["update_webhook_with_token"];
+		trace?: never;
+	};
+	"/api/v1/webhook/{webhook_id}/{token}/discord": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Webhook execute discord (TODO)
+		 * @description
+		 */
+		post: operations["execute_webhook_discord"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/webhook/{webhook_id}/{token}/github": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Webhook execute github (TODO)
+		 * @description
+		 */
+		post: operations["execute_webhook_github"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/webhook/{webhook_id}/{token}/slack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Webhook execute slack (TODO)
+		 * @description
+		 */
+		post: operations["execute_webhook_slack"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 }
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
 		AckReq: {
 			message_id?: null | components["schemas"]["Id"];
-			/** @description The last read id in this thread. Currently unused, may be deprecated later? */
+			/** @description The last read id in this channel. */
 			version_id: components["schemas"]["Id"];
 		};
 		AdminBroadcast: {
@@ -3380,50 +3659,52 @@ export interface components {
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
-				thread_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				channel_type: components["schemas"]["ChannelType"];
 			};
 			/** @enum {string} */
-			type: "ThreadCreate";
+			type: "ChannelCreate";
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
-				thread_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				channel_type: components["schemas"]["ChannelType"];
 			};
 			/** @enum {string} */
-			type: "ThreadUpdate";
+			type: "ChannelUpdate";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_id: components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageDelete";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_id: components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
 				version_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageVersionDelete";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_ids: components["schemas"]["Id"][];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageDeleteBulk";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_ids: components["schemas"]["Id"][];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageRemove";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_ids: components["schemas"]["Id"][];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageRestore";
@@ -3472,8 +3753,8 @@ export interface components {
 		} | {
 			/** @description remove all reactions */
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_id: components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "ReactionPurge";
@@ -3498,21 +3779,21 @@ export interface components {
 		} | {
 			metadata: {
 				changes: components["schemas"]["AuditLogChange"][];
+				channel_id: components["schemas"]["Id"];
 				/** Format: uuid */
 				overwrite_id: string;
-				thread_id: components["schemas"]["Id"];
 				type: components["schemas"]["PermissionOverwriteType"];
 			};
 			/** @enum {string} */
-			type: "ThreadOverwriteSet";
+			type: "PermissionOverwriteSet";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				/** Format: uuid */
 				overwrite_id: string;
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
-			type: "ThreadOverwriteDelete";
+			type: "PermissionOverwriteDelete";
 		} | {
 			metadata: {
 				room_id: components["schemas"]["Id"];
@@ -3544,7 +3825,7 @@ export interface components {
 			type: "MemberUpdate";
 		} | {
 			metadata: {
-				thread_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
 				user_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
@@ -3785,30 +4066,49 @@ export interface components {
 			type: "RoomUnquarantine";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_id: components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessagePin";
 		} | {
 			metadata: {
+				channel_id: components["schemas"]["Id"];
 				message_id: components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessageUnpin";
 		} | {
 			metadata: {
-				thread_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
 			};
 			/** @enum {string} */
 			type: "MessagePinReorder";
 		} | {
 			metadata: {
-				threads: components["schemas"]["ThreadReorderItem"][];
+				channels: components["schemas"]["ChannelReorderItem"][];
 			};
 			/** @enum {string} */
-			type: "ThreadReorder";
+			type: "ChannelReorder";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "CalendarEventCreate";
+		} | {
+			metadata: {
+				changes: components["schemas"]["AuditLogChange"][];
+			};
+			/** @enum {string} */
+			type: "CalendarEventUpdate";
+		} | {
+			metadata: {
+				event_id: components["schemas"]["Id"];
+				title: string;
+			};
+			/** @enum {string} */
+			type: "CalendarEventDelete";
 		};
 		AuthEmailComplete: {
 			code: string;
@@ -3843,6 +4143,64 @@ export interface components {
 			/** Format: uri */
 			userinfo_endpoint: string;
 		};
+		AutomodAction: {
+			/** @enum {string} */
+			type: "Block";
+		} | {
+			/**
+			 * Format: int64
+			 * @description in milliseconds
+			 */
+			duration: number;
+			/** @enum {string} */
+			type: "Timeout";
+		} | {
+			/** @enum {string} */
+			type: "Remove";
+		} | {
+			thread_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "SendAlert";
+		} | {
+			reaction: components["schemas"]["ReactionKey"];
+			/** @enum {string} */
+			type: "React";
+		};
+		AutomodRule: {
+			actions: components["schemas"]["AutomodAction"][];
+			enabled: boolean;
+			except_roles: components["schemas"]["Id"][];
+			except_threads: components["schemas"]["Id"][];
+			id: components["schemas"]["Id"];
+			name: string;
+			room_id: components["schemas"]["Id"];
+			trigger: components["schemas"]["AutomodTrigger"];
+		};
+		AutomodRuleCreate: {
+			actions: components["schemas"]["AutomodAction"][];
+			except_roles?: components["schemas"]["Id"][];
+			except_threads?: components["schemas"]["Id"][];
+			name: string;
+			trigger: components["schemas"]["AutomodTrigger"];
+		};
+		AutomodRuleUpdate: {
+			actions?: components["schemas"]["AutomodAction"][] | null;
+			enabled?: boolean | null;
+			except_roles?: components["schemas"]["Id"][] | null;
+			except_threads?: components["schemas"]["Id"][] | null;
+			name?: string | null;
+			trigger?: null | components["schemas"]["AutomodTrigger"];
+		};
+		AutomodTrigger: {
+			allow: string[];
+			deny: string[];
+			/** @enum {string} */
+			type: "MessageRegex";
+		} | {
+			/** @enum {string} */
+			type: "MessageKeywords";
+			words: string[];
+		};
 		/** @description a special type of bot designed to represent a user on another platform */
 		Bot: {
 			/** @description who can use the bot */
@@ -3859,12 +4217,166 @@ export interface components {
 				is_discoverable: boolean;
 			};
 		};
+		CalendarEvent: {
+			creator_id: components["schemas"]["Id"];
+			description?: string | null;
+			end: components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			location?: string | null;
+			recurrence: components["schemas"]["Recurrence"][];
+			start: components["schemas"]["Time"];
+			thread_id: components["schemas"]["Id"];
+			timezone?: string | null;
+			title: string;
+			/** Format: uri */
+			url?: string | null;
+		};
+		CalendarEventCreate: {
+			description?: string | null;
+			end: components["schemas"]["Time"];
+			location?: string | null;
+			recurrence: components["schemas"]["Recurrence"][];
+			start: components["schemas"]["Time"];
+			timezone?: string | null;
+			title: string;
+			/** Format: uri */
+			url?: string | null;
+		};
+		CalendarEventPatch: {
+			description?: string | null;
+			location?: string | null;
+			thread_id?: null | components["schemas"]["Id"];
+			title?: string | null;
+			/** Format: uri */
+			url?: string | null;
+		};
 		CaptchaChallenge: {
 			code: string;
 		};
 		CaptchaResponse: {
 			code: string;
 		};
+		/** @description A channel */
+		Channel: {
+			archived_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+			 */
+			bitrate?: number | null;
+			creator_id: components["schemas"]["Id"];
+			deleted_at?: null | components["schemas"]["Time"];
+			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			is_unread?: boolean | null;
+			last_read_id?: null | components["schemas"]["Id"];
+			last_version_id?: null | components["schemas"]["Id"];
+			/** @description a locked channel can only be interacted with (sending messages,
+			 *     (un)archiving, etc) by people with the `ThreadLock` permission */
+			locked: boolean;
+			/**
+			 * Format: int64
+			 * @description number of people in this room
+			 */
+			member_count: number;
+			/** Format: int64 */
+			mention_count?: number | null;
+			/** Format: int64 */
+			message_count?: number | null;
+			name: string;
+			/** @description not safe for work */
+			nsfw: boolean;
+			/**
+			 * Format: int64
+			 * @description number of people who are online in this room
+			 */
+			online_count: number;
+			owner_id?: null | components["schemas"]["Id"];
+			parent_id?: null | components["schemas"]["Id"];
+			/** @description permission overwrites for this channel */
+			permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+			/**
+			 * Format: int32
+			 * @description the position of this channel in the navbar
+			 *
+			 *     - lower numbers come first (0 is the first channel)
+			 *     - channels with the same position are tiebroken by id
+			 *     - channels without a position come last, ordered by newest first
+			 */
+			position?: number | null;
+			/** @description for dm and gdm channels, this is who the dm is with */
+			recipients: components["schemas"]["User"][];
+			room_id?: null | components["schemas"]["Id"];
+			/** Format: int64 */
+			root_message_count?: number | null;
+			/** @description tags that are applied to this thread */
+			tags: components["schemas"]["Id"][];
+			/** @description type specific data for this channel */
+			type: components["schemas"]["ChannelType"];
+			user_config?: null | components["schemas"]["UserConfigChannel"];
+			/**
+			 * Format: int64
+			 * @description maximum number of users who can be in this voice channel
+			 */
+			user_limit?: number | null;
+			/** @description only updates when the channel itself is updated, not the stuff in the channel */
+			version_id: components["schemas"]["Id"];
+		};
+		ChannelCreate: {
+			/** Format: int64 */
+			bitrate?: number | null;
+			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
+			name: string;
+			/** @description not safe for work */
+			nsfw?: boolean;
+			parent_id?: null | components["schemas"]["Id"];
+			/** @description the recipient(s) for this dm/gdm */
+			recipients?: components["schemas"]["Id"][] | null;
+			/** @description tags to apply to this thread (overwrite, not append) */
+			tags?: components["schemas"]["Id"][] | null;
+			/** @description The type of this channel */
+			type?: components["schemas"]["ChannelType"];
+			/** Format: int64 */
+			user_limit?: number | null;
+		};
+		ChannelPatch: {
+			/** Format: int64 */
+			bitrate?: number | null;
+			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
+			name?: string | null;
+			/** @description not safe for work */
+			nsfw?: boolean | null;
+			owner_id?: null | components["schemas"]["Id"];
+			/** @description tags to apply to this thread (overwrite, not append) */
+			tags?: components["schemas"]["Id"][] | null;
+			/** Format: int64 */
+			user_limit?: number | null;
+		};
+		/** @description reorder some channels */
+		ChannelReorder: {
+			/** @description the channels to reorder */
+			channels?: components["schemas"]["ChannelReorderItem"][];
+		};
+		ChannelReorderItem: {
+			id: components["schemas"]["Id"];
+			parent_id?: null | components["schemas"]["Id"];
+			/** Format: int32 */
+			position?: number | null;
+		};
+		/** @enum {string} */
+		ChannelType:
+			| "Text"
+			| "ThreadPublic"
+			| "ThreadPrivate"
+			| "Dm"
+			| "Gdm"
+			| "Forum"
+			| "Voice"
+			| "Category"
+			| "Calendar";
 		/** @description a color */
 		Color: string;
 		/** @description an application that is authorized to a user */
@@ -3880,6 +4392,7 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		Cron: string;
 		/**
 		 * Format: email
 		 * @description an email address
@@ -4006,7 +4519,7 @@ export interface components {
 			width: number;
 		};
 		/** @enum {string} */
-		InboxThreadsOrder: "activity" | "inactivity" | "newest" | "oldest";
+		InboxChannelsOrder: "activity" | "inactivity" | "newest" | "oldest";
 		/** @description an application that is authorized to a room */
 		Integration: {
 			application: components["schemas"]["Application"];
@@ -4057,13 +4570,13 @@ export interface components {
 		/** @description where this invite leads */
 		InviteTarget: {
 			room: components["schemas"]["Room"];
+			thread?: null | components["schemas"]["Channel"];
 			/** @enum {string} */
 			type: "Room";
 		} | {
-			room: components["schemas"]["Room"];
-			thread: components["schemas"]["Thread"];
+			thread: components["schemas"]["Channel"];
 			/** @enum {string} */
-			type: "Thread";
+			type: "Gdm";
 		} | {
 			/** @enum {string} */
 			type: "Server";
@@ -4075,13 +4588,13 @@ export interface components {
 		/** @description the type and id of this invite's target */
 		InviteTargetId: {
 			room_id: components["schemas"]["Id"];
+			thread_id?: null | components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Room";
 		} | {
-			room_id: components["schemas"]["Id"];
 			thread_id: components["schemas"]["Id"];
 			/** @enum {string} */
-			type: "Thread";
+			type: "Gdm";
 		} | {
 			/** @enum {string} */
 			type: "Server";
@@ -4208,12 +4721,47 @@ export interface components {
 				/** @enum {string} */
 				type: "Other";
 			};
+		MemberListGroup: {
+			/** Format: int64 */
+			count: number;
+			id: components["schemas"]["MemberListGroupId"];
+		};
+		MemberListGroupId: "Online" | "Offline" | {
+			/** @description hoisted roles */
+			Role: components["schemas"]["Id"];
+		};
+		MemberListOp: {
+			/**
+			 * Format: int64
+			 * @description the start of the range
+			 */
+			position: number;
+			/** @description only returned if channel is in a room */
+			room_members?: components["schemas"]["RoomMember"][] | null;
+			/** @description only returned if listing members in a thread */
+			thread_members?: components["schemas"]["ThreadMember"][] | null;
+			/** @enum {string} */
+			type: "Sync";
+			users: components["schemas"]["User"][];
+		} | {
+			/** Format: int64 */
+			position: number;
+			room_member?: null | components["schemas"]["RoomMember"];
+			thread_member?: null | components["schemas"]["ThreadMember"];
+			/** @enum {string} */
+			type: "Insert";
+			user: components["schemas"]["User"];
+		} | {
+			/** Format: int64 */
+			count: number;
+			/** Format: int64 */
+			position: number;
+			/** @enum {string} */
+			type: "Delete";
+		};
 		/** @description who/what this message notified on send */
 		Mentions: {
-			/** @description if this mentioned everyone in the room */
-			everyone_room: boolean;
-			/** @description if this mentioned everyone in the thread */
-			everyone_thread: boolean;
+			everyone?: boolean;
 			roles: components["schemas"]["Id"][];
 			threads: components["schemas"]["Id"][];
 			users: components["schemas"]["Id"][];
@@ -4221,6 +4769,7 @@ export interface components {
 		Message: components["schemas"]["MessageType"] & {
 			/** @description the id of who sent this message */
 			author_id: components["schemas"]["Id"];
+			channel_id: components["schemas"]["Id"];
 			created_at?: null | components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
 			edited_at?: null | components["schemas"]["Time"];
@@ -4231,7 +4780,6 @@ export interface components {
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
 			removed_at?: null | components["schemas"]["Time"];
-			thread_id: components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
 		MessageCall: {
@@ -4330,242 +4878,341 @@ export interface components {
 		MessagePin: {
 			pinned_message_id: components["schemas"]["Id"];
 		};
-		MessageSync: {
-			room: components["schemas"]["Room"];
-			/** @enum {string} */
-			type: "RoomCreate";
-		} | {
-			room: components["schemas"]["Room"];
-			/** @enum {string} */
-			type: "RoomUpdate";
-		} | {
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "RoomDelete";
-		} | {
-			thread: components["schemas"]["Thread"];
-			/** @enum {string} */
-			type: "ThreadCreate";
-		} | {
-			thread: components["schemas"]["Thread"];
-			/** @enum {string} */
-			type: "ThreadUpdate";
-		} | {
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ThreadTyping";
-			until: components["schemas"]["Time"];
-			user_id: components["schemas"]["Id"];
-		} | {
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ThreadAck";
-			version_id: components["schemas"]["Id"];
-		} | {
-			message: components["schemas"]["Message"];
-			/** @enum {string} */
-			type: "MessageCreate";
-		} | {
-			message: components["schemas"]["Message"];
-			/** @enum {string} */
-			type: "MessageUpdate";
-		} | {
-			message_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageDelete";
-		} | {
-			message_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageVersionDelete";
-			version_id: components["schemas"]["Id"];
-		} | {
-			message_ids: components["schemas"]["Id"][];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageDeleteBulk";
-		} | {
-			message_ids: components["schemas"]["Id"][];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageRemove";
-		} | {
-			message_ids: components["schemas"]["Id"][];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageRestore";
-		} | {
-			member: components["schemas"]["RoomMember"];
-			/** @enum {string} */
-			type: "RoomMemberUpsert";
-		} | {
-			member: components["schemas"]["ThreadMember"];
-			/** @enum {string} */
-			type: "ThreadMemberUpsert";
-		} | {
-			role: components["schemas"]["Role"];
-			/** @enum {string} */
-			type: "RoleCreate";
-		} | {
-			role: components["schemas"]["Role"];
-			/** @enum {string} */
-			type: "RoleUpdate";
-		} | {
-			role_id: components["schemas"]["Id"];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "RoleDelete";
-		} | {
-			roles: components["schemas"]["RoleReorderItem"][];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "RoleReorder";
-		} | {
-			invite: components["schemas"]["InviteWithMetadata"];
-			/** @enum {string} */
-			type: "InviteCreate";
-		} | {
-			invite: components["schemas"]["InviteWithMetadata"];
-			/** @enum {string} */
-			type: "InviteUpdate";
-		} | {
-			code: components["schemas"]["InviteCode"];
-			target: components["schemas"]["InviteTargetId"];
-			/** @enum {string} */
-			type: "InviteDelete";
-		} | {
-			key: components["schemas"]["ReactionKey"];
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionCreate";
-			user_id: components["schemas"]["Id"];
-		} | {
-			key: components["schemas"]["ReactionKey"];
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionDelete";
-			user_id: components["schemas"]["Id"];
-		} | {
-			message_id: components["schemas"]["Id"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ReactionPurge";
-		} | {
-			emoji: components["schemas"]["EmojiCustom"];
-			/** @enum {string} */
-			type: "EmojiCreate";
-		} | {
-			emoji: components["schemas"]["EmojiCustom"];
-			/** @enum {string} */
-			type: "EmojiUpdate";
-		} | {
-			emoji_id: components["schemas"]["Id"];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "EmojiDelete";
-		} | {
-			payload: components["schemas"]["SignallingMessage"];
-			/** @enum {string} */
-			type: "VoiceDispatch";
-			/** @description who to send this dispatch to */
-			user_id: components["schemas"]["Id"];
-		} | {
-			state?: null | components["schemas"]["VoiceState"];
-			/** @enum {string} */
-			type: "VoiceState";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			type: "UserCreate";
-			user: components["schemas"]["User"];
-		} | {
-			/** @enum {string} */
-			type: "UserUpdate";
-			user: components["schemas"]["User"];
-		} | {
-			config: components["schemas"]["UserConfigGlobal"];
-			/** @enum {string} */
-			type: "UserConfigGlobal";
-			user_id: components["schemas"]["Id"];
-		} | {
-			config: components["schemas"]["UserConfigRoom"];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "UserConfigRoom";
-			user_id: components["schemas"]["Id"];
-		} | {
-			config: components["schemas"]["UserConfigThread"];
-			thread_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "UserConfigThread";
-			user_id: components["schemas"]["Id"];
-		} | {
-			config: components["schemas"]["UserConfigUser"];
-			target_user_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "UserConfigUser";
-			user_id: components["schemas"]["Id"];
-		} | {
-			id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "UserDelete";
-		} | {
-			session: components["schemas"]["Session"];
-			/** @enum {string} */
-			type: "SessionCreate";
-		} | {
-			session: components["schemas"]["Session"];
-			/** @enum {string} */
-			type: "SessionUpdate";
-		} | {
-			id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "SessionDelete";
-			user_id?: null | components["schemas"]["Id"];
-		} | {
-			relationship: components["schemas"]["Relationship"];
-			/** @enum {string} */
-			type: "RelationshipUpsert";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			type: "RelationshipDelete";
-			user_id: components["schemas"]["Id"];
-		} | {
-			connection: components["schemas"]["Connection"];
-			/** @enum {string} */
-			type: "ConnectionCreate";
-			user_id: components["schemas"]["Id"];
-		} | {
-			app_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ConnectionDelete";
-			user_id: components["schemas"]["Id"];
-		} | {
-			entry: components["schemas"]["AuditLogEntry"];
-			/** @enum {string} */
-			type: "AuditLogEntryCreate";
-		} | {
-			ban: components["schemas"]["RoomBan"];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "BanCreate";
-		} | {
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "BanDelete";
-			user_id: components["schemas"]["Id"];
-		};
+		MessageSync:
+			| {
+				room: components["schemas"]["Room"];
+				/** @enum {string} */
+				type: "RoomCreate";
+			}
+			| {
+				room: components["schemas"]["Room"];
+				/** @enum {string} */
+				type: "RoomUpdate";
+			}
+			| {
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "RoomDelete";
+			}
+			| {
+				channel: components["schemas"]["Channel"];
+				/** @enum {string} */
+				type: "ChannelCreate";
+			}
+			| {
+				channel: components["schemas"]["Channel"];
+				/** @enum {string} */
+				type: "ChannelUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ChannelTyping";
+				until: components["schemas"]["Time"];
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ChannelAck";
+				user_id: components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
+			}
+			| {
+				message: components["schemas"]["Message"];
+				/** @enum {string} */
+				type: "MessageCreate";
+			}
+			| {
+				message: components["schemas"]["Message"];
+				/** @enum {string} */
+				type: "MessageUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "MessageDelete";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "MessageVersionDelete";
+				version_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_ids: components["schemas"]["Id"][];
+				/** @enum {string} */
+				type: "MessageDeleteBulk";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_ids: components["schemas"]["Id"][];
+				/** @enum {string} */
+				type: "MessageRemove";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_ids: components["schemas"]["Id"][];
+				/** @enum {string} */
+				type: "MessageRestore";
+			}
+			| {
+				member: components["schemas"]["RoomMember"];
+				/** @enum {string} */
+				type: "RoomMemberUpsert";
+			}
+			| {
+				member: components["schemas"]["ThreadMember"];
+				/** @enum {string} */
+				type: "ThreadMemberUpsert";
+			}
+			| {
+				role: components["schemas"]["Role"];
+				/** @enum {string} */
+				type: "RoleCreate";
+			}
+			| {
+				role: components["schemas"]["Role"];
+				/** @enum {string} */
+				type: "RoleUpdate";
+			}
+			| {
+				role_id: components["schemas"]["Id"];
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "RoleDelete";
+			}
+			| {
+				roles: components["schemas"]["RoleReorderItem"][];
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "RoleReorder";
+			}
+			| {
+				invite: components["schemas"]["InviteWithMetadata"];
+				/** @enum {string} */
+				type: "InviteCreate";
+			}
+			| {
+				invite: components["schemas"]["InviteWithMetadata"];
+				/** @enum {string} */
+				type: "InviteUpdate";
+			}
+			| {
+				code: components["schemas"]["InviteCode"];
+				target: components["schemas"]["InviteTargetId"];
+				/** @enum {string} */
+				type: "InviteDelete";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				key: components["schemas"]["ReactionKey"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ReactionCreate";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				key: components["schemas"]["ReactionKey"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ReactionDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				message_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ReactionPurge";
+			}
+			| {
+				emoji: components["schemas"]["EmojiCustom"];
+				/** @enum {string} */
+				type: "EmojiCreate";
+			}
+			| {
+				emoji: components["schemas"]["EmojiCustom"];
+				/** @enum {string} */
+				type: "EmojiUpdate";
+			}
+			| {
+				emoji_id: components["schemas"]["Id"];
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "EmojiDelete";
+			}
+			| {
+				payload: components["schemas"]["SignallingMessage"];
+				/** @enum {string} */
+				type: "VoiceDispatch";
+				/** @description who to send this dispatch to */
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				state?: null | components["schemas"]["VoiceState"];
+				/** @enum {string} */
+				type: "VoiceState";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				/** @enum {string} */
+				type: "UserCreate";
+				user: components["schemas"]["User"];
+			}
+			| {
+				/** @enum {string} */
+				type: "UserUpdate";
+				user: components["schemas"]["User"];
+			}
+			| {
+				config: components["schemas"]["UserConfigGlobal"];
+				/** @enum {string} */
+				type: "UserConfigGlobal";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				config: components["schemas"]["UserConfigRoom"];
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "UserConfigRoom";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				config: components["schemas"]["UserConfigChannel"];
+				/** @enum {string} */
+				type: "UserConfigChannel";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				config: components["schemas"]["UserConfigUser"];
+				target_user_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "UserConfigUser";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "UserDelete";
+			}
+			| {
+				session: components["schemas"]["Session"];
+				/** @enum {string} */
+				type: "SessionCreate";
+			}
+			| {
+				session: components["schemas"]["Session"];
+				/** @enum {string} */
+				type: "SessionUpdate";
+			}
+			| {
+				id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "SessionDelete";
+				user_id?: null | components["schemas"]["Id"];
+			}
+			| {
+				relationship: components["schemas"]["Relationship"];
+				target_user_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "RelationshipUpsert";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				target_user_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "RelationshipDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				connection: components["schemas"]["Connection"];
+				/** @enum {string} */
+				type: "ConnectionCreate";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				app_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "ConnectionDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				entry: components["schemas"]["AuditLogEntry"];
+				/** @enum {string} */
+				type: "AuditLogEntryCreate";
+			}
+			| {
+				ban: components["schemas"]["RoomBan"];
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "BanCreate";
+			}
+			| {
+				room_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "BanDelete";
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				channel_id?: null | components["schemas"]["Id"];
+				groups: components["schemas"]["MemberListGroup"][];
+				ops: components["schemas"]["MemberListOp"][];
+				room_id?: null | components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "MemberListSync";
+				/** @description which user this list sync is for */
+				user_id: components["schemas"]["Id"];
+			}
+			| {
+				notification: components["schemas"]["Notification"];
+				/** @enum {string} */
+				type: "InboxNotificationCreate";
+				user_id: components["schemas"]["Id"];
+			}
+			| (components["schemas"]["NotificationMarkRead"] & {
+				user_id: components["schemas"]["Id"];
+			} & {
+				/** @enum {string} */
+				type: "InboxMarkRead";
+			})
+			| (components["schemas"]["NotificationMarkRead"] & {
+				user_id: components["schemas"]["Id"];
+			} & {
+				/** @enum {string} */
+				type: "InboxMarkUnread";
+			})
+			| (components["schemas"]["NotificationFlush"] & {
+				user_id: components["schemas"]["Id"];
+			} & {
+				/** @enum {string} */
+				type: "InboxFlush";
+			})
+			| {
+				event: components["schemas"]["CalendarEvent"];
+				/** @enum {string} */
+				type: "CalendarEventCreate";
+			}
+			| {
+				event: components["schemas"]["CalendarEvent"];
+				/** @enum {string} */
+				type: "CalendarEventUpdate";
+			}
+			| {
+				channel_id: components["schemas"]["Id"];
+				event_id: components["schemas"]["Id"];
+				/** @enum {string} */
+				type: "CalendarEventDelete";
+			};
 		/** @description Information about the pingback */
 		MessageThreadPingback: {
+			source_channel_id: components["schemas"]["Id"];
 			source_room_id: components["schemas"]["Id"];
-			source_thread_id: components["schemas"]["Id"];
 			source_user_id: components["schemas"]["Id"];
 		};
 		/** @description Information about a thread being renamed */
@@ -4635,48 +5282,63 @@ export interface components {
 		Notification: {
 			/** @description when this was added to the inbox */
 			added_at: components["schemas"]["Time"];
+			/** @description the channel this message was sent in */
+			channel_id: components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
 			/** @description the id of the message that was sent */
 			message_id: components["schemas"]["Id"];
+			read_at?: null | components["schemas"]["Time"];
 			/** @description why this was created */
 			reason: components["schemas"]["NotificationReason"];
-			/** @description the thread this message was sent in */
-			thread_id: components["schemas"]["Id"];
 		};
 		NotificationCreate: {
 			added_at?: null | components["schemas"]["Time"];
+			/** @description the channel this message was sent in */
+			channel_id: components["schemas"]["Id"];
 			/** @description the id of the message that was sent */
 			message_id: components["schemas"]["Id"];
-			/** @description the thread this message was sent in */
-			thread_id: components["schemas"]["Id"];
 		};
 		NotificationFlush: {
 			after?: null | components["schemas"]["Id"];
 			before?: null | components["schemas"]["Id"];
+			/** @description restrict to just these channels */
+			channel_ids?: components["schemas"]["Id"][] | null;
 			/** @description also include unread notifications */
 			include_unread?: boolean;
 			/** @description restrict to just these messages */
 			message_ids?: components["schemas"]["Id"][] | null;
 			/** @description restrict to just these rooms */
 			room_ids?: components["schemas"]["Id"][] | null;
-			/** @description restrict to just these threads */
-			thread_ids?: components["schemas"]["Id"][] | null;
 		};
 		NotificationMarkRead: {
+			/** @description mark everything in these threads as read */
+			channel_ids?: components["schemas"]["Id"][];
 			/** @description mark everything as read */
 			everything?: boolean;
 			/** @description mark these messages as read */
 			message_ids?: components["schemas"]["Id"][];
 			/** @description mark everything in these rooms as read */
 			room_ids?: components["schemas"]["Id"][];
-			/** @description mark everything in these threads as read */
-			thread_ids?: components["schemas"]["Id"][];
 		};
+		NotificationPagination:
+			& components["schemas"]["PaginationResponse_Notification"]
+			& {
+				channels: components["schemas"]["Channel"][];
+				messages: components["schemas"]["Message"][];
+				rooms: components["schemas"]["Room"][];
+			};
 		/**
 		 * @description what caused this notification to be created
 		 * @enum {string}
 		 */
 		NotificationReason: "Reminder" | "Mention" | "MentionBulk" | "Reply";
+		/** @description notification config for a channel */
+		NotifsChannel: {
+			mentions?: null | components["schemas"]["NotifAction"];
+			messages?: null | components["schemas"]["NotifAction"];
+			mute?: null | components["schemas"]["Mute"];
+			threads?: null | components["schemas"]["NotifAction"];
+		};
 		/** @description notification config for a user (works globally) */
 		NotifsGlobal: {
 			mentions: components["schemas"]["NotifAction"];
@@ -4693,12 +5355,6 @@ export interface components {
 			messages?: null | components["schemas"]["NotifAction"];
 			mute?: null | components["schemas"]["Mute"];
 			threads?: null | components["schemas"]["NotifAction"];
-		};
-		/** @description notification config for a thread */
-		NotifsThread: {
-			mentions?: null | components["schemas"]["NotifAction"];
-			messages?: null | components["schemas"]["NotifAction"];
-			mute?: null | components["schemas"]["Mute"];
 		};
 		OauthAuthorizeInfo: {
 			application: components["schemas"]["Application"];
@@ -4802,6 +5458,94 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
+		PaginationResponse_AutomodRule: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				actions: components["schemas"]["AutomodAction"][];
+				enabled: boolean;
+				except_roles: components["schemas"]["Id"][];
+				except_threads: components["schemas"]["Id"][];
+				id: components["schemas"]["Id"];
+				name: string;
+				room_id: components["schemas"]["Id"];
+				trigger: components["schemas"]["AutomodTrigger"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
+		PaginationResponse_Channel: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				archived_at?: null | components["schemas"]["Time"];
+				/**
+				 * Format: int64
+				 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+				 */
+				bitrate?: number | null;
+				creator_id: components["schemas"]["Id"];
+				deleted_at?: null | components["schemas"]["Time"];
+				description?: string | null;
+				icon?: null | components["schemas"]["Id"];
+				id: components["schemas"]["Id"];
+				is_unread?: boolean | null;
+				last_read_id?: null | components["schemas"]["Id"];
+				last_version_id?: null | components["schemas"]["Id"];
+				/** @description a locked channel can only be interacted with (sending messages,
+				 *     (un)archiving, etc) by people with the `ThreadLock` permission */
+				locked: boolean;
+				/**
+				 * Format: int64
+				 * @description number of people in this room
+				 */
+				member_count: number;
+				/** Format: int64 */
+				mention_count?: number | null;
+				/** Format: int64 */
+				message_count?: number | null;
+				name: string;
+				/** @description not safe for work */
+				nsfw: boolean;
+				/**
+				 * Format: int64
+				 * @description number of people who are online in this room
+				 */
+				online_count: number;
+				owner_id?: null | components["schemas"]["Id"];
+				parent_id?: null | components["schemas"]["Id"];
+				/** @description permission overwrites for this channel */
+				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+				/**
+				 * Format: int32
+				 * @description the position of this channel in the navbar
+				 *
+				 *     - lower numbers come first (0 is the first channel)
+				 *     - channels with the same position are tiebroken by id
+				 *     - channels without a position come last, ordered by newest first
+				 */
+				position?: number | null;
+				/** @description for dm and gdm channels, this is who the dm is with */
+				recipients: components["schemas"]["User"][];
+				room_id?: null | components["schemas"]["Id"];
+				/** Format: int64 */
+				root_message_count?: number | null;
+				/** @description tags that are applied to this thread */
+				tags: components["schemas"]["Id"][];
+				/** @description type specific data for this channel */
+				type: components["schemas"]["ChannelType"];
+				user_config?: null | components["schemas"]["UserConfigChannel"];
+				/**
+				 * Format: int64
+				 * @description maximum number of users who can be in this voice channel
+				 */
+				user_limit?: number | null;
+				/** @description only updates when the channel itself is updated, not the stuff in the channel */
+				version_id: components["schemas"]["Id"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
 		PaginationResponse_Connection: {
 			cursor?: string | null;
 			has_more: boolean;
@@ -4867,6 +5611,7 @@ export interface components {
 			items: (components["schemas"]["MessageType"] & {
 				/** @description the id of who sent this message */
 				author_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
 				created_at?: null | components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
 				edited_at?: null | components["schemas"]["Time"];
@@ -4877,7 +5622,6 @@ export interface components {
 				pinned?: null | components["schemas"]["Pinned"];
 				reactions?: components["schemas"]["ReactionCounts"];
 				removed_at?: null | components["schemas"]["Time"];
-				thread_id: components["schemas"]["Id"];
 				version_id: components["schemas"]["Id"];
 			})[];
 			/** Format: int64 */
@@ -4889,13 +5633,14 @@ export interface components {
 			items: {
 				/** @description when this was added to the inbox */
 				added_at: components["schemas"]["Time"];
+				/** @description the channel this message was sent in */
+				channel_id: components["schemas"]["Id"];
 				id: components["schemas"]["Id"];
 				/** @description the id of the message that was sent */
 				message_id: components["schemas"]["Id"];
+				read_at?: null | components["schemas"]["Time"];
 				/** @description why this was created */
 				reason: components["schemas"]["NotificationReason"];
-				/** @description the thread this message was sent in */
-				thread_id: components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -4946,6 +5691,11 @@ export interface components {
 			has_more: boolean;
 			items: {
 				archived_at?: null | components["schemas"]["Time"];
+				/**
+				 * Format: int64
+				 * @description number of active channels
+				 */
+				channel_count: number;
 				description?: string | null;
 				icon?: null | components["schemas"]["Id"];
 				/** @description A unique identifier for this room */
@@ -4966,11 +5716,6 @@ export interface components {
 				public: boolean;
 				/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 				quarantined: boolean;
-				/**
-				 * Format: int64
-				 * @description number of active threads
-				 */
-				thread_count: number;
 				type: components["schemas"]["RoomType"];
 				user_config?: null | components["schemas"]["UserConfigRoom"];
 				/**
@@ -4978,7 +5723,7 @@ export interface components {
 				 * @description A monotonically increasing id that is updated every time this room is modified.
 				 */
 				version_id: string;
-				welcome_thread_id?: null | components["schemas"]["Id"];
+				welcome_channel_id?: null | components["schemas"]["Id"];
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -5039,97 +5784,6 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		PaginationResponse_Tag: {
-			cursor?: string | null;
-			has_more: boolean;
-			items: {
-				color?: null | components["schemas"]["Color"];
-				description?: string | null;
-				id: components["schemas"]["Id"];
-				/** @description whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists. */
-				is_archived: boolean;
-				name: string;
-				room_id: components["schemas"]["Id"];
-				version_id: components["schemas"]["Id"];
-			}[];
-			/** Format: int64 */
-			total: number;
-		};
-		PaginationResponse_Thread: {
-			cursor?: string | null;
-			has_more: boolean;
-			items: {
-				archived_at?: null | components["schemas"]["Time"];
-				/**
-				 * Format: int64
-				 * @description bitrate, for voice thread. defaults to 65535 (64Kibps).
-				 */
-				bitrate?: number | null;
-				creator_id: components["schemas"]["Id"];
-				deleted_at?: null | components["schemas"]["Time"];
-				description?: string | null;
-				id: components["schemas"]["Id"];
-				is_unread?: boolean | null;
-				last_read_id?: null | components["schemas"]["Id"];
-				last_version_id?: null | components["schemas"]["Id"];
-				/** @description a locked thread can only be interacted with (sending messages,
-				 *     (un)archiving, etc) by people with the `ThreadLock` permission */
-				locked: boolean;
-				/**
-				 * Format: int64
-				 * @description number of people in this room
-				 *     does not not update with ThreadSync
-				 */
-				member_count: number;
-				/** Format: int64 */
-				mention_count?: number | null;
-				/** Format: int64 */
-				message_count?: number | null;
-				name: string;
-				notifications?: null | components["schemas"]["NotifsThread"];
-				/** @description not safe for work */
-				nsfw: boolean;
-				/**
-				 * Format: int64
-				 * @description number of people who are online in this room
-				 *     does not not update with ThreadSync
-				 */
-				online_count: number;
-				owner_id?: null | components["schemas"]["Id"];
-				parent_id?: null | components["schemas"]["Id"];
-				/** @description permission overwrites for this thread */
-				permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-				/**
-				 * Format: int32
-				 * @description the position of this thread in the navbar
-				 *
-				 *     - lower numbers come first (0 is the first thread)
-				 *     - threads with the same position are tiebroken by id
-				 *     - threads without a position come last, ordered by newest first
-				 */
-				position?: number | null;
-				recipient?: null | components["schemas"]["User"];
-				/** @description for dm threads, this is who the dm is with */
-				recipients: components["schemas"]["User"][];
-				room_id?: null | components["schemas"]["Id"];
-				/** Format: int64 */
-				root_message_count?: number | null;
-				/** @description tags that are applied to this thread */
-				tags: components["schemas"]["Id"][];
-				/** @description type specific data for this thread */
-				type: components["schemas"]["ThreadType"];
-				user_config?: null | components["schemas"]["UserConfigThread"];
-				/**
-				 * Format: int64
-				 * @description maximum number of users who can be in this voice thread
-				 */
-				user_limit?: number | null;
-				/** @description only updates when the thread itself is updated, not the stuff in the thread */
-				version_id: components["schemas"]["Id"];
-			}[];
-			/** Format: int64 */
-			total: number;
-		};
 		PaginationResponse_ThreadMember: {
 			cursor?: string | null;
 			has_more: boolean;
@@ -5148,9 +5802,11 @@ export interface components {
 			has_more: boolean;
 			items: {
 				avatar?: null | components["schemas"]["Id"];
+				banner?: null | components["schemas"]["Id"];
 				bot?: null | components["schemas"]["Bot"];
 				deleted_at?: null | components["schemas"]["Time"];
 				description?: string | null;
+				emails?: components["schemas"]["EmailInfo"][] | null;
 				id: components["schemas"]["Id"];
 				name: string;
 				puppet?: null | components["schemas"]["Puppet"];
@@ -5182,13 +5838,6 @@ export interface components {
 		};
 		/**
 		 * @description a permission that lets a user do something
-		 *
-		 *     - unimplemented: the feature this permission refers to does not yet exist
-		 *     - internal: this is calculated by the server and cannot be manually added
-		 *     - user: this is a permission granted to user sessions/bots, not threads/rooms
-		 *     - server: this is a permission granted to server tokens
-		 *
-		 *     thread permissions are combined with and (you need both permissions)
 		 * @enum {string}
 		 */
 		Permission:
@@ -5222,19 +5871,14 @@ export interface components {
 			| "ServerReports"
 			| "TagApply"
 			| "TagManage"
-			| "ThreadArchive"
-			| "ThreadCreateChat"
-			| "ThreadCreateForum"
+			| "ChannelEdit"
+			| "ChannelManage"
 			| "ThreadCreatePrivate"
 			| "ThreadCreatePublic"
-			| "ThreadCreateVoice"
-			| "ThreadRemove"
-			| "ThreadEdit"
-			| "ThreadForward"
-			| "ThreadLock"
 			| "ThreadManage"
-			| "ThreadPublish"
-			| "View"
+			| "ThreadEdit"
+			| "ThreadLock"
+			| "ViewChannel"
 			| "ViewAuditLog"
 			| "VoiceConnect"
 			| "VoiceDeafen"
@@ -5243,7 +5887,8 @@ export interface components {
 			| "VoiceMute"
 			| "VoicePriority"
 			| "VoiceSpeak"
-			| "VoiceVideo";
+			| "VoiceVideo"
+			| "CalendarEventManage";
 		PermissionOverwrite: {
 			/** @description extra permissions allowed here */
 			allow: components["schemas"]["Permission"][];
@@ -5325,6 +5970,23 @@ export interface components {
 		ReactionListItem: {
 			user_id: components["schemas"]["Id"];
 		};
+		Recurrence:
+			| {
+				/** Format: int32 */
+				count?: number | null;
+				cron: components["schemas"]["Cron"];
+				/** @enum {string} */
+				type: "Rule";
+				until?: null | components["schemas"]["Time"];
+			}
+			| (components["schemas"]["Time"][] & {
+				/** @enum {string} */
+				type: "Include";
+			})
+			| (components["schemas"]["Time"][] & {
+				/** @enum {string} */
+				type: "Exclude";
+			});
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			/** @description whatever you want to write */
 			note?: string | null;
@@ -5441,6 +6103,11 @@ export interface components {
 		 *     and so on for instant messaging. */
 		Room: {
 			archived_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of active channels
+			 */
+			channel_count: number;
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
 			/** @description A unique identifier for this room */
@@ -5461,11 +6128,6 @@ export interface components {
 			public: boolean;
 			/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 			quarantined: boolean;
-			/**
-			 * Format: int64
-			 * @description number of active threads
-			 */
-			thread_count: number;
 			type: components["schemas"]["RoomType"];
 			user_config?: null | components["schemas"]["UserConfigRoom"];
 			/**
@@ -5473,7 +6135,7 @@ export interface components {
 			 * @description A monotonically increasing id that is updated every time this room is modified.
 			 */
 			version_id: string;
-			welcome_thread_id?: null | components["schemas"]["Id"];
+			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
 		/** @description represents a restriction on who can join the room */
 		RoomBan: {
@@ -5574,9 +6236,14 @@ export interface components {
 		RoomMetrics: {
 			/**
 			 * Format: int64
-			 * @description Number of active threads in this room (excluding archived or removed ones).
+			 * @description Number of active channels in this room (excluding archived or removed ones).
 			 */
-			active_thread_count: number;
+			active_channel_count: number;
+			/**
+			 * Format: int64
+			 * @description Total number of channels in this room (including archived or removed ones).
+			 */
+			channel_count: number;
 			/**
 			 * Format: int64
 			 * @description Total number of attachments from messages in this room.
@@ -5597,11 +6264,6 @@ export interface components {
 			 * @description Total number of messages across all active threads in this room (excluding removed messages).
 			 */
 			message_count: number;
-			/**
-			 * Format: int64
-			 * @description Total number of threads in this room (including archived or removed ones).
-			 */
-			thread_count: number;
 		};
 		/** @description An update to a room */
 		RoomPatch: {
@@ -5609,7 +6271,7 @@ export interface components {
 			icon?: null | components["schemas"]["Id"];
 			name?: string | null;
 			public?: boolean | null;
-			welcome_thread_id?: null | components["schemas"]["Id"];
+			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server";
@@ -5620,6 +6282,18 @@ export interface components {
 		 * @enum {string}
 		 */
 		Scope: "identify" | "full" | "auth";
+		SearchChannelsRequest: {
+			/** @description Only return archived (or unarchived) threads */
+			archived?: boolean | null;
+			/** @description Only return threads with these parents. Defaults to all threads. */
+			parent_id?: components["schemas"]["Id"][];
+			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
+			query?: string | null;
+			/** @description Only return removed (or not removed) threads */
+			removed?: boolean | null;
+			/** @description Only return threads in these rooms. Defaults to all rooms. */
+			room_id?: components["schemas"]["Id"][];
+		};
 		SearchMessageRequest: {
 			/** @description Only return messages that have an attachment of any type */
 			has_attachment?: boolean | null;
@@ -5635,10 +6309,8 @@ export interface components {
 			has_video?: boolean | null;
 			/** @description Only return messages that have links from these domains */
 			link_hostnames?: string[];
-			/** @description Only return messages that mentions everyone in a room */
-			mentions_everyone_room?: boolean | null;
-			/** @description Only return messages that mentions everyone in a thread */
-			mentions_everyone_thread?: boolean | null;
+			/** @description Only return messages that mentions everyone */
+			mentions_everyone?: boolean | null;
 			/** @description Only return messages that mention these roles */
 			mentions_roles?: components["schemas"]["Id"][];
 			/** @description Only return messages that mention these users */
@@ -5656,18 +6328,6 @@ export interface components {
 		SearchRoomsRequest: {
 			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
 			query?: string;
-		};
-		SearchThreadsRequest: {
-			/** @description Only return archived (or unarchived) threads */
-			archived?: boolean | null;
-			/** @description Only return threads with these parents. Defaults to all threads. */
-			parent_id?: components["schemas"]["Id"][];
-			/** @description The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function. */
-			query?: string | null;
-			/** @description Only return removed (or not removed) threads */
-			removed?: boolean | null;
-			/** @description Only return threads in these rooms. Defaults to all rooms. */
-			room_id?: components["schemas"]["Id"][];
 		};
 		ServerVersion: {
 			debug: boolean;
@@ -5813,120 +6473,9 @@ export interface components {
 			expires_at?: null | components["schemas"]["Time"];
 			reason?: string | null;
 		};
-		/** @description a tag that can be applied to things */
-		Tag: {
-			color?: null | components["schemas"]["Color"];
-			description?: string | null;
-			id: components["schemas"]["Id"];
-			/** @description whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists. */
-			is_archived: boolean;
-			name: string;
-			room_id: components["schemas"]["Id"];
-			version_id: components["schemas"]["Id"];
-		};
-		TagCreate: {
-			color?: null | components["schemas"]["Color"];
-			description?: string | null;
-			name: string;
-			room_id: components["schemas"]["Id"];
-		};
-		TagPatch: {
-			color?: null | components["schemas"]["Color"];
-			description?: string | null;
-			/** @description whether this tag is archived. cant be applied to any new threads or appear in pickers but still exists. */
-			is_archived?: boolean | null;
-			name?: string | null;
-		};
 		/** @description metadata for text */
 		Text: {
 			language?: null | components["schemas"]["Language"];
-		};
-		/** @description A thread */
-		Thread: {
-			archived_at?: null | components["schemas"]["Time"];
-			/**
-			 * Format: int64
-			 * @description bitrate, for voice thread. defaults to 65535 (64Kibps).
-			 */
-			bitrate?: number | null;
-			creator_id: components["schemas"]["Id"];
-			deleted_at?: null | components["schemas"]["Time"];
-			description?: string | null;
-			id: components["schemas"]["Id"];
-			is_unread?: boolean | null;
-			last_read_id?: null | components["schemas"]["Id"];
-			last_version_id?: null | components["schemas"]["Id"];
-			/** @description a locked thread can only be interacted with (sending messages,
-			 *     (un)archiving, etc) by people with the `ThreadLock` permission */
-			locked: boolean;
-			/**
-			 * Format: int64
-			 * @description number of people in this room
-			 *     does not not update with ThreadSync
-			 */
-			member_count: number;
-			/** Format: int64 */
-			mention_count?: number | null;
-			/** Format: int64 */
-			message_count?: number | null;
-			name: string;
-			notifications?: null | components["schemas"]["NotifsThread"];
-			/** @description not safe for work */
-			nsfw: boolean;
-			/**
-			 * Format: int64
-			 * @description number of people who are online in this room
-			 *     does not not update with ThreadSync
-			 */
-			online_count: number;
-			owner_id?: null | components["schemas"]["Id"];
-			parent_id?: null | components["schemas"]["Id"];
-			/** @description permission overwrites for this thread */
-			permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-			/**
-			 * Format: int32
-			 * @description the position of this thread in the navbar
-			 *
-			 *     - lower numbers come first (0 is the first thread)
-			 *     - threads with the same position are tiebroken by id
-			 *     - threads without a position come last, ordered by newest first
-			 */
-			position?: number | null;
-			recipient?: null | components["schemas"]["User"];
-			/** @description for dm threads, this is who the dm is with */
-			recipients: components["schemas"]["User"][];
-			room_id?: null | components["schemas"]["Id"];
-			/** Format: int64 */
-			root_message_count?: number | null;
-			/** @description tags that are applied to this thread */
-			tags: components["schemas"]["Id"][];
-			/** @description type specific data for this thread */
-			type: components["schemas"]["ThreadType"];
-			user_config?: null | components["schemas"]["UserConfigThread"];
-			/**
-			 * Format: int64
-			 * @description maximum number of users who can be in this voice thread
-			 */
-			user_limit?: number | null;
-			/** @description only updates when the thread itself is updated, not the stuff in the thread */
-			version_id: components["schemas"]["Id"];
-		};
-		ThreadCreate: {
-			/** Format: int64 */
-			bitrate?: number | null;
-			description?: string | null;
-			name: string;
-			/** @description not safe for work */
-			nsfw?: boolean;
-			parent_id?: null | components["schemas"]["Id"];
-			/** @description the recipient(s) for this dm/gdm */
-			recipients?: components["schemas"]["Id"][] | null;
-			/** @description tags to apply to this thread (overwrite, not append) */
-			tags?: components["schemas"]["Id"][] | null;
-			/** @description The type of this thread */
-			type?: components["schemas"]["ThreadType"];
-			/** Format: int64 */
-			user_limit?: number | null;
 		};
 		ThreadMember: {
 			/** @description When this member joined the thread */
@@ -5938,32 +6487,6 @@ export interface components {
 		ThreadMemberPut: Record<string, never>;
 		/** @enum {string} */
 		ThreadMembership: "Join" | "Leave";
-		ThreadPatch: {
-			/** Format: int64 */
-			bitrate?: number | null;
-			description?: string | null;
-			name?: string | null;
-			/** @description not safe for work */
-			nsfw?: boolean | null;
-			owner_id?: null | components["schemas"]["Id"];
-			/** @description tags to apply to this thread (overwrite, not append) */
-			tags?: components["schemas"]["Id"][] | null;
-			/** Format: int64 */
-			user_limit?: number | null;
-		};
-		/** @description reorder some threads */
-		ThreadReorder: {
-			/** @description the threads to reorder */
-			threads?: components["schemas"]["ThreadReorderItem"][];
-		};
-		ThreadReorderItem: {
-			id: components["schemas"]["Id"];
-			parent_id?: null | components["schemas"]["Id"];
-			/** Format: int32 */
-			position?: number | null;
-		};
-		/** @enum {string} */
-		ThreadType: "Chat" | "Dm" | "Gdm" | "Forum" | "Voice" | "Category";
 		/**
 		 * Format: date-time
 		 * @description A date, time, and timezone. Serialized to rfc3339.
@@ -6030,9 +6553,11 @@ export interface components {
 		};
 		User: {
 			avatar?: null | components["schemas"]["Id"];
+			banner?: null | components["schemas"]["Id"];
 			bot?: null | components["schemas"]["Bot"];
 			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
+			emails?: components["schemas"]["EmailInfo"][] | null;
 			id: components["schemas"]["Id"];
 			name: string;
 			puppet?: null | components["schemas"]["Puppet"];
@@ -6042,6 +6567,15 @@ export interface components {
 			system: boolean;
 			user_config?: null | components["schemas"]["UserConfigUser"];
 			version_id: components["schemas"]["Id"];
+		};
+		/** @description configuration for a user in a thread */
+		UserConfigChannel: {
+			/** @description config specific to frontend */
+			frontend: {
+				[key: string]: unknown;
+			};
+			/** @description thread notification config */
+			notifs: components["schemas"]["NotifsChannel"];
 		};
 		/** @description configuration for a user */
 		UserConfigGlobal: {
@@ -6060,15 +6594,6 @@ export interface components {
 			};
 			/** @description room notification config */
 			notifs: components["schemas"]["NotifsRoom"];
-		};
-		/** @description configuration for a user in a thread */
-		UserConfigThread: {
-			/** @description config specific to frontend */
-			frontend: {
-				[key: string]: unknown;
-			};
-			/** @description thread notification config */
-			notifs: components["schemas"]["NotifsThread"];
 		};
 		/** @description configuration for a user for another user */
 		UserConfigUser: {
@@ -6091,6 +6616,7 @@ export interface components {
 		};
 		UserPatch: {
 			avatar?: null | components["schemas"]["Id"];
+			banner?: null | components["schemas"]["Id"];
 			description?: string | null;
 			name?: string | null;
 		};
@@ -6197,6 +6723,24 @@ export interface components {
 		};
 		WebauthnPatch: {
 			name?: string | null;
+		};
+		Webhook: {
+			avatar?: null | components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			name: string;
+			room_id?: null | components["schemas"]["Id"];
+			thread_id: components["schemas"]["Id"];
+			token?: string | null;
+		};
+		WebhookCreate: {
+			avatar?: null | components["schemas"]["Id"];
+			name: string;
+		};
+		WebhookUpdate: {
+			avatar?: null | components["schemas"]["Id"];
+			name?: string | null;
+			rotate_token?: boolean;
+			thread_id?: null | components["schemas"]["Id"];
 		};
 	};
 	responses: never;
@@ -6948,6 +7492,1286 @@ export interface operations {
 			};
 		};
 	};
+	calendar_event_list: {
+		parameters: {
+			query?: {
+				from?: null | components["schemas"]["Id"];
+				to?: null | components["schemas"]["Id"];
+				limit?: number | null;
+				from_time?: string | null;
+				to_time?: string | null;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventCreate"];
+			};
+		};
+		responses: {
+			/** @description Create calendar event success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_thread_event_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_thread_event_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventPatch"];
+			};
+		};
+		responses: {
+			/** @description Update calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_thread_event_rsvp_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_rsvp_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_rsvp_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_thread_event_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Thread id */
+				thread_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_create_dm: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelCreate"];
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	channel_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get thread success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	channel_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelPatch"];
+			};
+		};
+		responses: {
+			/** @description edit message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+			/** @description no change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	channel_ack: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AckReq"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_archive: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+			/** @description didn't change anything */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	channel_unarchive: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+			/** @description didn't change anything */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	message_context: {
+		parameters: {
+			query?: {
+				to_start?: null | components["schemas"]["Id"];
+				to_end?: null | components["schemas"]["Id"];
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["ContextResponse"];
+				};
+			};
+		};
+	};
+	channel_lock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_unlock: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageCreate"];
+			};
+		};
+		responses: {
+			/** @description Create message success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
+			};
+		};
+	};
+	message_moderate: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageModerate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_list_deleted: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_list_removed: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
+			};
+		};
+	};
+	message_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description delete message success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessagePatch"];
+			};
+		};
+		responses: {
+			/** @description edit message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
+			};
+			/** @description no change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_purge: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+				/** @description Reaction key */
+				key: components["schemas"]["ReactionKey"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_ReactionListItem"];
+				};
+			};
+		};
+	};
+	reaction_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+				/** @description Reaction key */
+				key: components["schemas"]["ReactionKey"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description new reaction created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+				/** @description Reaction key */
+				key: components["schemas"]["ReactionKey"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_version_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_version_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+				/** @description Version id */
+				version_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Message"];
+				};
+			};
+		};
+	};
+	message_move: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MessageMigrate"];
+			};
+		};
+		responses: {
+			/** @description move success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	permission_overwrite: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Role or user id */
+				overwrite_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PermissionOverwriteSet"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	permission_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Role or user id */
+				overwrite_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_pin_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List pinned messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_pin_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["PinsReorder"];
+			};
+		};
+		responses: {
+			/** @description Reorder pinned messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_pin_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_pin_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_restore: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_roots: {
+		parameters: {
+			query?: {
+				/** @description how deeply to fetch replies */
+				depth?: number;
+				/** @description how many replies to fetch per branch */
+				breadth?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	message_replies: {
+		parameters: {
+			query?: {
+				/** @description how deeply to fetch replies */
+				depth?: number;
+				/** @description how many replies to fetch per branch */
+				breadth?: number | null;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Message id */
+				message_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	channel_transfer_ownership: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["TransferOwnership"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_typing: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_upgrade: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Room"];
+				};
+			};
+		};
+	};
+	list_webhooks_thread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List webhooks success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"][];
+				};
+			};
+		};
+	};
+	create_webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["WebhookCreate"];
+			};
+		};
+		responses: {
+			/** @description Create webhook success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"];
+				};
+			};
+		};
+	};
 	user_config_global_get: {
 		parameters: {
 			query?: never;
@@ -6988,6 +8812,29 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["UserConfigGlobal"];
+				};
+			};
+		};
+	};
+	user_config_channel_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["UserConfigChannel"];
 				};
 			};
 		};
@@ -7042,30 +8889,7 @@ export interface operations {
 			};
 		};
 	};
-	user_config_thread_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["UserConfigThread"];
-				};
-			};
-		};
-	};
-	user_config_thread_put: {
+	user_config_channel_put: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7077,7 +8901,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["UserConfigThread"];
+				"application/json": components["schemas"]["UserConfigChannel"];
 			};
 		};
 		responses: {
@@ -7087,7 +8911,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["UserConfigThread"];
+					"application/json": components["schemas"]["UserConfigChannel"];
 				};
 			};
 		};
@@ -7279,8 +9103,8 @@ export interface operations {
 				limit?: number;
 				/** @description only include notifications from these rooms */
 				room_id?: components["schemas"]["Id"][];
-				/** @description only include notifications from these threads */
-				thread_id?: components["schemas"]["Id"][];
+				/** @description only include notifications from these channels */
+				channel_id?: components["schemas"]["Id"][];
 				/** @description include messages marked as read too */
 				include_read?: boolean;
 			};
@@ -7296,8 +9120,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Notification"];
+					"application/json": components["schemas"]["NotificationPagination"];
 				};
 			};
 		};
@@ -7322,6 +9145,40 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["Notification"];
+				};
+			};
+		};
+	};
+	inbox_channels: {
+		parameters: {
+			query: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+				/** @description only include notifications from these rooms */
+				room_id?: components["schemas"]["Id"][];
+				/** @description only include notifications from these channels */
+				channel_id?: components["schemas"]["Id"][];
+				/** @description include messages marked as read too */
+				include_read?: boolean;
+				/** @description the order to return inbox channels in */
+				order: components["schemas"]["InboxChannelsOrder"];
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
@@ -7394,40 +9251,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": unknown;
-				};
-			};
-		};
-	};
-	inbox_threads: {
-		parameters: {
-			query: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-				/** @description only include notifications from these rooms */
-				room_id?: components["schemas"]["Id"][];
-				/** @description only include notifications from these threads */
-				thread_id?: components["schemas"]["Id"][];
-				/** @description include messages marked as read too */
-				include_read?: boolean;
-				/** @description the order to return inbox threads in */
-				order: components["schemas"]["InboxThreadsOrder"];
-			};
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
 				};
 			};
 		};
@@ -7841,7 +9664,7 @@ export interface operations {
 			};
 		};
 	};
-	public_rooms: {
+	public_channels: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7861,7 +9684,7 @@ export interface operations {
 			};
 		};
 	};
-	public_threads: {
+	public_rooms: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -8053,6 +9876,134 @@ export interface operations {
 			};
 		};
 	};
+	list_rules: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List automod rules success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_AutomodRule"];
+				};
+			};
+		};
+	};
+	create_rule: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AutomodRuleCreate"];
+			};
+		};
+		responses: {
+			/** @description Create automod rule success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AutomodRule"];
+				};
+			};
+		};
+	};
+	get_rule: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description Rule id */
+				rule_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get automod rule success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AutomodRule"];
+				};
+			};
+		};
+	};
+	delete_rule: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description Rule id */
+				rule_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete automod rule success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	update_rule: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+				/** @description Rule id */
+				rule_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AutomodRuleUpdate"];
+			};
+		};
+		responses: {
+			/** @description Update automod rule success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AutomodRule"];
+				};
+			};
+		};
+	};
 	room_ban_list: {
 		parameters: {
 			query?: {
@@ -8104,6 +10055,34 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	room_ban_search: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				from: string;
+				to: string;
+				dir: "b" | "f";
+				limit: number;
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RoomBan"];
+				};
 			};
 		};
 	};
@@ -8179,6 +10158,120 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	channel_list: {
+		parameters: {
+			query?: {
+				parent_id?: null | components["schemas"]["Id"];
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List room channels success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
+				};
+			};
+		};
+	};
+	channel_create_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelCreate"];
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Channel"];
+				};
+			};
+		};
+	};
+	channel_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["ChannelReorder"];
+			};
+		};
+		responses: {
+			/** @description Reorder channels success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": unknown;
+				};
+			};
+		};
+	};
+	channel_list_archived: {
+		parameters: {
+			query?: {
+				parent_id?: null | components["schemas"]["Id"];
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List archived room channels success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
+				};
 			};
 		};
 	};
@@ -8942,380 +11035,7 @@ export interface operations {
 			};
 		};
 	};
-	tag_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PaginationResponse_Tag"];
-				};
-			};
-		};
-	};
-	tag_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TagCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-		};
-	};
-	tag_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-		};
-	};
-	tag_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-				/** @description Tag id */
-				tag_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TagPatch"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Tag"];
-				};
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	permission_tag_overwrite: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-				/** @description Tag id */
-				tag_id: string;
-				/** @description Role or user id */
-				overwrite_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PermissionOverwrite"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["PermissionOverwrite"];
-				};
-			};
-		};
-	};
-	permission_tag_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: string;
-				/** @description Tag id */
-				tag_id: string;
-				/** @description Role or user id */
-				overwrite_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_tag_apply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target tag id */
-				target_id: string;
-				/** @description Tag id of tag to tag tag with */
-				with_id: string;
-				room_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_tag_unapply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Target tag id */
-				target_id: string;
-				/** @description Tag id of tag to tag tag with */
-				with_id: string;
-				room_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_list: {
-		parameters: {
-			query?: {
-				parent_id?: null | components["schemas"]["Id"];
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List room threads success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
-				};
-			};
-		};
-	};
-	thread_create_room: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ThreadCreate"];
-			};
-		};
-		responses: {
-			/** @description Create thread success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_reorder: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ThreadReorder"];
-			};
-		};
-		responses: {
-			/** @description Reorder threads success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": unknown;
-				};
-			};
-		};
-	};
-	thread_list_archived: {
-		parameters: {
-			query?: {
-				parent_id?: null | components["schemas"]["Id"];
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List archived room threads success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
-				};
-			};
-		};
-	};
-	thread_list_removed: {
+	channel_list_removed: {
 		parameters: {
 			query?: {
 				parent_id?: null | components["schemas"]["Id"];
@@ -9340,7 +11060,7 @@ export interface operations {
 				};
 				content: {
 					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
+						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
@@ -9391,6 +11111,54 @@ export interface operations {
 			};
 		};
 	};
+	list_webhooks_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List webhooks success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"][];
+				};
+			};
+		};
+	};
+	search_channels: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SearchChannelsRequest"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
+				};
+			};
+		};
+	};
 	search_messages: {
 		parameters: {
 			query?: never;
@@ -9436,31 +11204,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["PaginationResponse_Room"];
-				};
-			};
-		};
-	};
-	search_threads: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["SearchThreadsRequest"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
 				};
 			};
 		};
@@ -9669,208 +11412,36 @@ export interface operations {
 			};
 		};
 	};
-	dm_thread_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ThreadCreate"];
-			};
-		};
-		responses: {
-			/** @description Create thread success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Get thread success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["ThreadPatch"];
-			};
-		};
-		responses: {
-			/** @description edit message success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-			/** @description no change */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_ack: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["AckReq"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_archive: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	thread_unarchive: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Thread"];
-				};
-			};
-		};
-	};
-	message_context: {
+	invite_channel_list: {
 		parameters: {
 			query?: {
-				to_start?: null | components["schemas"]["Id"];
-				to_end?: null | components["schemas"]["Id"];
-				limit?: number | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
 			};
 			header?: never;
 			path: {
 				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
+				thread_id: string;
 			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** @description List thread messages success */
+			/** @description success */
 			200: {
 				headers: {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["ContextResponse"];
+					"application/json":
+						components["schemas"]["PaginationResponse_Invite"];
 				};
 			};
 		};
 	};
-	thread_lock: {
+	invite_channel_create: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -9880,35 +11451,20 @@ export interface operations {
 			};
 			cookie?: never;
 		};
-		requestBody?: never;
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["InviteCreate"];
+			};
+		};
 		responses: {
 			/** @description success */
-			204: {
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
-			};
-		};
-	};
-	thread_unlock: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
+				content: {
+					"application/json": components["schemas"]["Invite"];
 				};
-				content?: never;
 			};
 		};
 	};
@@ -10022,748 +11578,6 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
-			};
-		};
-	};
-	message_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List thread messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
-				};
-			};
-		};
-	};
-	message_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessageCreate"];
-			};
-		};
-		responses: {
-			/** @description Create message success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Message"];
-				};
-			};
-		};
-	};
-	message_moderate: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessageModerate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List thread messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Message"];
-				};
-			};
-		};
-	};
-	message_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description delete message success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_edit: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessagePatch"];
-			};
-		};
-		responses: {
-			/** @description edit message success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Message"];
-				};
-			};
-			/** @description no change */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	reaction_purge: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	reaction_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_ReactionListItem"];
-				};
-			};
-		};
-	};
-	reaction_add: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description already exists */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description new reaction created */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	reaction_remove: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-				/** @description Reaction key */
-				key: components["schemas"]["ReactionKey"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_version_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
-				};
-			};
-		};
-	};
-	message_version_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-				/** @description Version id */
-				version_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Message"];
-				};
-			};
-		};
-	};
-	message_migrate: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MessageMigrate"];
-			};
-		};
-		responses: {
-			/** @description move success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	permission_thread_overwrite: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Role or user id */
-				overwrite_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PermissionOverwriteSet"];
-			};
-		};
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	permission_thread_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Role or user id */
-				overwrite_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_pin_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List pinned messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
-				};
-			};
-		};
-	};
-	message_pin_reorder: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["PinsReorder"];
-			};
-		};
-		responses: {
-			/** @description Reorder pinned messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_pin_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_pin_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_remove: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_restore: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	message_roots: {
-		parameters: {
-			query?: {
-				/** @description how deeply to fetch replies */
-				depth?: number;
-				/** @description how many replies to fetch per branch */
-				breadth?: number | null;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List thread messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
-				};
-			};
-		};
-	};
-	message_replies: {
-		parameters: {
-			query?: {
-				/** @description how deeply to fetch replies */
-				depth?: number;
-				/** @description how many replies to fetch per branch */
-				breadth?: number | null;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Message id */
-				message_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List thread messages success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Message"];
-				};
-			};
-		};
-	};
-	tag_thread_apply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Tag id */
-				tag_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	tag_thread_unapply: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Tag id */
-				tag_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description not modified */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_transfer_ownership: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["TransferOwnership"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_typing: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	thread_upgrade: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Room"];
-				};
 			};
 		};
 	};
@@ -11057,56 +11871,6 @@ export interface operations {
 			};
 		};
 	};
-	user_config_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["UserConfigGlobal"];
-				};
-			};
-		};
-	};
-	user_config_set: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description User id */
-				user_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["UserConfigGlobal"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["UserConfigGlobal"];
-				};
-			};
-		};
-	};
 	connection_list: {
 		parameters: {
 			query?: {
@@ -11183,7 +11947,7 @@ export interface operations {
 				};
 				content: {
 					"application/json":
-						components["schemas"]["PaginationResponse_Thread"];
+						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
@@ -11665,6 +12429,246 @@ export interface operations {
 				content: {
 					"application/json": unknown;
 				};
+			};
+		};
+	};
+	get_webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get webhook success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"];
+				};
+			};
+		};
+	};
+	delete_webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	update_webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["WebhookUpdate"];
+			};
+		};
+		responses: {
+			/** @description Update webhook success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"];
+				};
+			};
+		};
+	};
+	get_webhook_with_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get webhook success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"];
+				};
+			};
+		};
+	};
+	execute_webhook: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Execute webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	delete_webhook_with_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	update_webhook_with_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["WebhookUpdate"];
+			};
+		};
+		responses: {
+			/** @description Update webhook success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Webhook"];
+				};
+			};
+		};
+	};
+	execute_webhook_discord: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Execute webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	execute_webhook_github: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Execute webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	execute_webhook_slack: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Webhook id */
+				webhook_id: components["schemas"]["Id"];
+				/** @description Webhook token */
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Execute webhook success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
