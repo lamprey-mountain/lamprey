@@ -14,13 +14,13 @@ use crate::v1::types::util::Diff;
 use crate::v1::types::util::Time;
 use crate::v1::types::RoomId;
 use crate::v1::types::{
-    AuditLogEntry, Embed, Role, RoleId, Room, RoomMember, Thread, ThreadMember, UserId,
+    AuditLogEntry, Channel, Embed, Role, RoleId, Room, RoomMember, ThreadMember, UserId,
 };
 
 use super::EmbedCreate;
 use super::{
     media::{Media, MediaRef},
-    MessageId, MessageVerId, ThreadId, User,
+    ChannelId, MessageId, MessageVerId, User,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ pub struct Message {
     #[serde(flatten)]
     pub message_type: MessageType,
     pub id: MessageId,
-    pub thread_id: ThreadId,
+    pub channel_id: ChannelId,
     pub version_id: MessageVerId,
 
     /// unique string sent by the client via idempotency-key to identify this message
@@ -100,39 +100,11 @@ pub struct PinsReorderItem {
 pub struct Mentions {
     pub users: Vec<UserId>,
     pub roles: Vec<RoleId>,
-    pub threads: Vec<ThreadId>,
+    pub threads: Vec<ChannelId>,
 
-    /// if this mentioned everyone in the room
-    pub everyone_room: bool,
-
-    /// if this mentioned everyone in the thread
-    pub everyone_thread: bool,
+    #[serde(default)]
+    pub everyone: bool,
 }
-
-/// data that has been resolved from the ids, provided on request
-// maybe don't put it in messages, this could be useful elsewhere
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Resolved {
-    pub users: Vec<User>,
-    pub room_members: Vec<RoomMember>,
-    pub thread_members: Vec<ThreadMember>,
-    pub roles: Vec<Role>,
-    pub rooms: Vec<Room>,
-    pub threads: Vec<Thread>,
-    pub messages: Vec<Message>,
-    // pub emoji: Vec<Emoji>,
-}
-
-// /// resolve the final profile details for a user (after overrides)
-// #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct ResolvedProfile {
-//     id: UserId,
-//     name: String,
-//     description: Option<String>,
-//     avatar: Option<MediaId>,
-// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -291,7 +263,7 @@ pub struct MessageThreadRename {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageThreadPingback {
     pub source_room_id: RoomId,
-    pub source_thread_id: ThreadId,
+    pub source_channel_id: ChannelId,
     pub source_user_id: UserId,
 }
 
@@ -305,8 +277,8 @@ pub struct MessagesMoved {
     // do messages keep their ids when being moved?
     pub start_id: MessageId,
     pub end_id: MessageId,
-    pub source_id: ThreadId,
-    pub target_id: ThreadId,
+    pub source_id: ChannelId,
+    pub target_id: ChannelId,
     pub reason: Option<String>,
 }
 
@@ -321,7 +293,7 @@ pub struct MessageMember {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageRoomFollowed {
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub reason: Option<String>,
 }
 
@@ -456,7 +428,7 @@ pub struct MessageMigrate {
     pub message_ids: Vec<MessageId>,
 
     /// must be in same room (for now...)
-    pub target_id: ThreadId,
+    pub target_id: ChannelId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

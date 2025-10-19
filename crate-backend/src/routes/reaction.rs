@@ -5,8 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, ThreadId, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageId, MessageSync,
+    PaginationQuery, PaginationResponse, Permission, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -20,7 +20,7 @@ use crate::{Error, ServerState};
 /// Add a reaction to a message.
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/message/{message_id}/reaction/{key}",
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id"),
@@ -33,7 +33,7 @@ use crate::{Error, ServerState};
     )
 )]
 async fn reaction_add(
-    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
     Auth(auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -41,10 +41,10 @@ async fn reaction_add(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -54,13 +54,13 @@ async fn reaction_add(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_put(auth_user.id, thread_id, message_id, key.clone())
+    data.reaction_put(auth_user.id, channel_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::ReactionCreate {
-            thread_id,
+            channel_id,
             user_id: auth_user.id,
             message_id,
             key,
@@ -75,7 +75,7 @@ async fn reaction_add(
 /// Remove a reaction from a message.
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/message/{message_id}/reaction/{key}",
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id"),
@@ -87,17 +87,17 @@ async fn reaction_add(
     )
 )]
 async fn reaction_remove(
-    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionAdd)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -107,13 +107,13 @@ async fn reaction_remove(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_delete(auth_user.id, thread_id, message_id, key.clone())
+    data.reaction_delete(auth_user.id, channel_id, message_id, key.clone())
         .await?;
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::ReactionDelete {
-            thread_id,
+            channel_id,
             user_id: auth_user.id,
             message_id,
             key,
@@ -128,7 +128,7 @@ async fn reaction_remove(
 /// Remove all reactions from a message.
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/message/{message_id}/reaction",
+    path = "/channel/{channel_id}/message/{message_id}/reaction",
     params(
         ("thread_id", description = "Thread id"),
         ("message_id", description = "Message id"),
@@ -139,7 +139,7 @@ async fn reaction_remove(
     )
 )]
 async fn reaction_purge(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -147,10 +147,10 @@ async fn reaction_purge(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ReactionPurge)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -160,9 +160,9 @@ async fn reaction_purge(
     if thread.locked {
         perms.ensure(Permission::ThreadLock)?;
     }
-    data.reaction_purge(thread_id, message_id).await?;
+    data.reaction_purge(channel_id, message_id).await?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -171,7 +171,7 @@ async fn reaction_purge(
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::ReactionPurge {
-                thread_id,
+                channel_id,
                 message_id,
             },
         })
@@ -179,10 +179,10 @@ async fn reaction_purge(
     }
 
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::ReactionPurge {
-            thread_id,
+            channel_id,
             message_id,
         },
     )
@@ -195,7 +195,7 @@ async fn reaction_purge(
 /// List message reactions for a specific emoji.
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/{message_id}/reaction/{key}",
+    path = "/channel/{channel_id}/message/{message_id}/reaction/{key}",
     params(
         PaginationQuery<UserId>,
         ("thread_id", description = "Thread id"),
@@ -208,16 +208,16 @@ async fn reaction_purge(
     )
 )]
 async fn reaction_list(
-    Path((thread_id, message_id, key)): Path<(ThreadId, MessageId, ReactionKey)>,
+    Path((channel_id, message_id, key)): Path<(ChannelId, MessageId, ReactionKey)>,
     Auth(auth_user): Auth,
     Query(q): Query<PaginationQuery<UserId>>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
-    let list = data.reaction_list(thread_id, message_id, key, q).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let list = data.reaction_list(channel_id, message_id, key, q).await?;
     Ok(Json(list))
 }
 

@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use common::v1::types::{
     voice::{SfuCommand, SfuEvent, SfuPermissions, SfuThread, VoiceState},
-    SfuId, ThreadId, UserId,
+    ChannelId, SfuId, UserId,
 };
 use dashmap::DashMap;
 use std::fmt::Debug;
@@ -24,7 +24,7 @@ pub struct Sfu {
     tracks: Vec<TrackMetadataSfu>,
     tracks_by_user: DashMap<UserId, Vec<TrackMetadataServer>>,
     // TODO: cleanup unused threads
-    threads: DashMap<ThreadId, SfuThread>,
+    threads: DashMap<ChannelId, SfuThread>,
     config: Config,
     backend_tx: UnboundedSender<SfuEvent>,
 

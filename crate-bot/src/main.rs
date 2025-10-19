@@ -164,7 +164,7 @@ impl Handle {
                 created_at: None,
                 mentions: Default::default(),
             };
-            self.http.message_create(message.thread_id, &resp).await?;
+            self.http.message_create(message.channel_id, &resp).await?;
         }
 
         Ok(())
@@ -250,7 +250,7 @@ impl Handle {
         {
             let self_control = self.control.clone();
             let user_id = user.id;
-            let thread_id = message.thread_id;
+            let thread_id = message.channel_id;
             let http = self.http.clone();
             let player = self.player.clone();
             tokio::spawn(async move {

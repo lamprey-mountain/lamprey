@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    PaginationDirection, PaginationQuery, PaginationResponse, ThreadId, ThreadMember,
+    ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadMember,
     ThreadMemberPut, ThreadMembership, UserId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
@@ -17,7 +17,7 @@ use super::Postgres;
 
 pub struct DbThreadMember {
     pub user_id: Uuid,
-    pub thread_id: Uuid,
+    pub channel_id: Uuid,
     pub membership: DbMembership,
     pub joined_at: time::PrimitiveDateTime,
 }
@@ -26,7 +26,7 @@ impl From<DbThreadMember> for ThreadMember {
     fn from(row: DbThreadMember) -> Self {
         Self {
             user_id: row.user_id.into(),
-            thread_id: row.thread_id.into(),
+            thread_id: row.channel_id.into(),
             membership: match row.membership {
                 DbMembership::Join => ThreadMembership::Join,
                 DbMembership::Leave => ThreadMembership::Leave,
@@ -41,13 +41,13 @@ impl From<DbThreadMember> for ThreadMember {
 impl DataThreadMember for Postgres {
     async fn thread_member_put(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         _put: ThreadMemberPut,
     ) -> Result<()> {
         query!(
             r#"
-            INSERT INTO thread_member (user_id, thread_id, membership, joined_at)
+            INSERT INTO thread_member (user_id, channel_id, membership, joined_at)
             VALUES ($1, $2, $3, now())
 			ON CONFLICT ON CONSTRAINT thread_member_pkey DO UPDATE SET
     			membership = excluded.membership,
@@ -58,7 +58,7 @@ impl DataThreadMember for Postgres {
                 end
             "#,
             *user_id,
-            *thread_id,
+            *channel_id,
             DbMembership::Join as _,
         )
         .execute(&self.pool)
@@ -69,7 +69,7 @@ impl DataThreadMember for Postgres {
 
     async fn thread_member_set_membership(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         membership: ThreadMembership,
     ) -> Result<()> {
@@ -78,9 +78,9 @@ impl DataThreadMember for Postgres {
             r#"
             UPDATE thread_member
         	SET membership = $3
-            WHERE thread_id = $1 AND user_id = $2
+            WHERE channel_id = $1 AND user_id = $2
             "#,
-            *thread_id,
+            *channel_id,
             *user_id,
             membership as _,
         )
@@ -89,10 +89,10 @@ impl DataThreadMember for Postgres {
         Ok(())
     }
 
-    async fn thread_member_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()> {
+    async fn thread_member_delete(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
         query!(
-            "DELETE FROM thread_member WHERE thread_id = $1 AND user_id = $2",
-            *thread_id,
+            "DELETE FROM thread_member WHERE channel_id = $1 AND user_id = $2",
+            *channel_id,
             *user_id,
         )
         .execute(&self.pool)
@@ -103,21 +103,21 @@ impl DataThreadMember for Postgres {
 
     async fn thread_member_get(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<ThreadMember> {
         let item = query_as!(
             DbThreadMember,
             r#"
         	SELECT
-            	thread_id,
+            	channel_id,
             	user_id,
             	membership as "membership: _",
             	joined_at
             FROM thread_member
-            WHERE thread_id = $1 AND user_id = $2
+            WHERE channel_id = $1 AND user_id = $2
         "#,
-            *thread_id,
+            *channel_id,
             *user_id,
         )
         .fetch_one(&self.pool)
@@ -127,7 +127,7 @@ impl DataThreadMember for Postgres {
 
     async fn thread_member_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>> {
         let p: Pagination<_> = pagination.try_into()?;
@@ -138,41 +138,41 @@ impl DataThreadMember for Postgres {
                 DbThreadMember,
                 r#"
             	SELECT
-                	thread_id,
+                	channel_id,
                 	user_id,
                 	membership as "membership: _",
                 	joined_at
                 FROM thread_member
-            	WHERE thread_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'
+            	WHERE channel_id = $1 AND user_id > $2 AND user_id < $3 AND membership = 'Join'
             	ORDER BY (CASE WHEN $4 = 'f' THEN user_id END), user_id DESC LIMIT $5
                 "#,
-                *thread_id,
+                *channel_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                "SELECT count(*) FROM thread_member WHERE thread_id = $1 AND membership = 'Join'",
-                *thread_id
+                "SELECT count(*) FROM thread_member WHERE channel_id = $1 AND membership = 'Join'",
+                *channel_id
             ),
             |i: &ThreadMember| i.user_id.to_string()
         )
     }
 
-    async fn thread_member_list_all(&self, thread_id: ThreadId) -> Result<Vec<ThreadMember>> {
+    async fn thread_member_list_all(&self, channel_id: ChannelId) -> Result<Vec<ThreadMember>> {
         let items = query_as!(
             DbThreadMember,
             r#"
             SELECT
-                thread_id,
+                channel_id,
                 user_id,
                 membership as "membership: _",
                 joined_at
             FROM thread_member
-            WHERE thread_id = $1 AND membership = 'Join'
+            WHERE channel_id = $1 AND membership = 'Join'
             "#,
-            *thread_id,
+            *channel_id,
         )
         .fetch_all(&self.pool)
         .await?;

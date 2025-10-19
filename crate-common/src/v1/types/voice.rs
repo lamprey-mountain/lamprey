@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Time, SessionId, SfuId, Thread, UserId};
+use crate::v1::types::{util::Time, Channel, SessionId, SfuId, UserId};
 
-use super::ThreadId;
+use super::ChannelId;
 
 /// webrtc session description
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,7 +69,7 @@ pub struct VoiceState {
     pub user_id: UserId,
 
     /// the thread this user is connected to
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
 
     /// the session that's being used to connect to this voice thread
     /// this is only be returned for the user this state belongs to
@@ -98,7 +98,7 @@ pub struct VoiceState {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceStateUpdate {
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub self_deaf: bool,
     pub self_mute: bool,
     pub self_video: bool,
@@ -149,7 +149,7 @@ pub enum SignallingMessage {
 
     /// mapping of media ids to streams. sent by server only
     Have {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         tracks: Vec<TrackMetadata>,
     },
@@ -283,14 +283,14 @@ pub struct SfuPermissions {
 /// thread config that the sfu needs to know about
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SfuThread {
-    pub id: ThreadId,
+    pub id: ChannelId,
     pub name: String,
     pub bitrate: Option<u64>,
     pub user_limit: Option<u64>,
 }
 
-impl From<Thread> for SfuThread {
-    fn from(value: Thread) -> Self {
+impl From<Channel> for SfuThread {
+    fn from(value: Channel) -> Self {
         Self {
             id: value.id,
             name: value.name,

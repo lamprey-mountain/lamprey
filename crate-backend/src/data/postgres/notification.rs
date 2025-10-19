@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use common::v1::types::{
     notifications::{
-        InboxListParams, InboxThreadsParams, Notification, NotificationFlush, NotificationMarkRead,
-        NotificationReason,
+        InboxChannelsParams, InboxListParams, Notification, NotificationFlush,
+        NotificationMarkRead, NotificationReason,
     },
-    NotificationId, PaginationDirection, PaginationQuery, PaginationResponse, Thread,
+    Channel, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use uuid::Uuid;
@@ -13,7 +13,7 @@ use crate::{
     data::DataNotification,
     error::Result,
     gen_paginate,
-    types::{DbNotification, DbThread, DbThreadType, ThreadId, UserId},
+    types::{ChannelId, DbChannel, DbChannelType, DbNotification, UserId},
 };
 
 use super::Postgres;
@@ -41,7 +41,7 @@ impl From<DbNotification> for Notification {
     fn from(val: DbNotification) -> Self {
         Notification {
             id: val.id.into(),
-            thread_id: val.thread_id.into(),
+            channel_id: val.channel_id.into(),
             message_id: val.message_id.into(),
             reason: notif_reason_parse(&val.reason),
             added_at: val.added_at.into(),
@@ -55,19 +55,19 @@ impl DataNotification for Postgres {
     async fn notification_add(&self, user_id: UserId, notif: Notification) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let room_id: Option<Uuid> = query_scalar!(
-            "SELECT room_id FROM thread WHERE id = $1",
-            notif.thread_id.into_inner()
+            "SELECT room_id FROM channel WHERE id = $1",
+            notif.channel_id.into_inner()
         )
         .fetch_one(&mut *conn)
         .await?;
 
         let added_at = time::PrimitiveDateTime::new(notif.added_at.date(), notif.added_at.time());
         query!(
-            "INSERT INTO inbox (id, user_id, room_id, thread_id, message_id, reason, added_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            "INSERT INTO inbox (id, user_id, room_id, channel_id, message_id, reason, added_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             notif.id.into_inner(),
             user_id.into_inner(),
             room_id,
-            notif.thread_id.into_inner(),
+            notif.channel_id.into_inner(),
             notif.message_id.into_inner(),
             notif_reason_str(notif.reason),
             added_at,
@@ -98,7 +98,7 @@ impl DataNotification for Postgres {
         let p: super::Pagination<_> = pagination.try_into()?;
 
         let room_ids: Vec<Uuid> = params.room_id.iter().map(|id| id.into_inner()).collect();
-        let thread_ids: Vec<Uuid> = params.thread_id.iter().map(|id| id.into_inner()).collect();
+        let channel_ids: Vec<Uuid> = params.channel_id.iter().map(|id| id.into_inner()).collect();
 
         gen_paginate!(
             p,
@@ -109,7 +109,7 @@ impl DataNotification for Postgres {
                 user_id.into_inner(),
                 params.include_read,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
@@ -120,7 +120,7 @@ impl DataNotification for Postgres {
                 user_id.into_inner(),
                 params.include_read,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
             ),
             |i: &Notification| i.id.to_string()
         )
@@ -140,7 +140,7 @@ impl DataNotification for Postgres {
             .execute(&mut *conn)
             .await?;
         } else if !params.message_ids.is_empty()
-            || !params.thread_ids.is_empty()
+            || !params.channel_ids.is_empty()
             || !params.room_ids.is_empty()
         {
             let message_ids: Vec<Uuid> = params
@@ -148,19 +148,22 @@ impl DataNotification for Postgres {
                 .iter()
                 .map(|id| id.into_inner())
                 .collect();
-            let thread_ids: Vec<Uuid> =
-                params.thread_ids.iter().map(|id| id.into_inner()).collect();
+            let channel_ids: Vec<Uuid> = params
+                .channel_ids
+                .iter()
+                .map(|id| id.into_inner())
+                .collect();
             let room_ids: Vec<Uuid> = params.room_ids.iter().map(|id| id.into_inner()).collect();
 
             query!(
                 "UPDATE inbox SET read_at = now() WHERE user_id = $1 AND (
                     (array_length($2::uuid[], 1) IS NOT NULL AND message_id = ANY($2)) OR
-                    (array_length($3::uuid[], 1) IS NOT NULL AND thread_id = ANY($3)) OR
+                    (array_length($3::uuid[], 1) IS NOT NULL AND channel_id = ANY($3)) OR
                     (array_length($4::uuid[], 1) IS NOT NULL AND room_id = ANY($4))
                 )",
                 user_id.into_inner(),
                 &message_ids,
-                &thread_ids,
+                &channel_ids,
                 &room_ids,
             )
             .execute(&mut *conn)
@@ -183,7 +186,7 @@ impl DataNotification for Postgres {
             .execute(&mut *conn)
             .await?;
         } else if !params.message_ids.is_empty()
-            || !params.thread_ids.is_empty()
+            || !params.channel_ids.is_empty()
             || !params.room_ids.is_empty()
         {
             let message_ids: Vec<Uuid> = params
@@ -191,19 +194,22 @@ impl DataNotification for Postgres {
                 .iter()
                 .map(|id| id.into_inner())
                 .collect();
-            let thread_ids: Vec<Uuid> =
-                params.thread_ids.iter().map(|id| id.into_inner()).collect();
+            let channel_ids: Vec<Uuid> = params
+                .channel_ids
+                .iter()
+                .map(|id| id.into_inner())
+                .collect();
             let room_ids: Vec<Uuid> = params.room_ids.iter().map(|id| id.into_inner()).collect();
 
             query!(
                 "UPDATE inbox SET read_at = NULL WHERE user_id = $1 AND (
                     (array_length($2::uuid[], 1) IS NOT NULL AND message_id = ANY($2)) OR
-                    (array_length($3::uuid[], 1) IS NOT NULL AND thread_id = ANY($3)) OR
+                    (array_length($3::uuid[], 1) IS NOT NULL AND channel_id = ANY($3)) OR
                     (array_length($4::uuid[], 1) IS NOT NULL AND room_id = ANY($4))
                 )",
                 user_id.into_inner(),
                 &message_ids,
-                &thread_ids,
+                &channel_ids,
                 &room_ids,
             )
             .execute(&mut *conn)
@@ -217,8 +223,8 @@ impl DataNotification for Postgres {
         let message_ids: Option<Vec<Uuid>> = params
             .message_ids
             .map(|ids| ids.iter().map(|id| id.into_inner()).collect());
-        let thread_ids: Option<Vec<Uuid>> = params
-            .thread_ids
+        let channel_ids: Option<Vec<Uuid>> = params
+            .channel_ids
             .map(|ids| ids.iter().map(|id| id.into_inner()).collect());
         let room_ids: Option<Vec<Uuid>> = params
             .room_ids
@@ -230,7 +236,7 @@ impl DataNotification for Postgres {
                 AND ($3::uuid IS NULL OR id <= $3)
                 AND ($4::uuid IS NULL OR id >= $4)
                 AND ($5::uuid[] IS NULL OR message_id = ANY($5))
-                AND ($6::uuid[] IS NULL OR thread_id = ANY($6))
+                AND ($6::uuid[] IS NULL OR channel_id = ANY($6))
                 AND ($7::uuid[] IS NULL OR room_id = ANY($7))
             ",
             user_id.into_inner(),
@@ -238,7 +244,7 @@ impl DataNotification for Postgres {
             params.before.map(|id| id.into_inner()),
             params.after.map(|id| id.into_inner()),
             message_ids.as_deref(),
-            thread_ids.as_deref(),
+            channel_ids.as_deref(),
             room_ids.as_deref(),
         )
         .execute(&mut *conn)
@@ -247,13 +253,13 @@ impl DataNotification for Postgres {
         Ok(())
     }
 
-    async fn notification_list_threads(
+    async fn notification_list_channels(
         &self,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        _params: InboxThreadsParams,
+        pagination: PaginationQuery<ChannelId>,
+        _params: InboxChannelsParams,
         list_params: InboxListParams,
-    ) -> Result<PaginationResponse<Thread>> {
+    ) -> Result<PaginationResponse<Channel>> {
         let p: super::Pagination<_> = pagination.try_into()?;
 
         let room_ids: Vec<Uuid> = list_params
@@ -261,8 +267,8 @@ impl DataNotification for Postgres {
             .iter()
             .map(|id| id.into_inner())
             .collect();
-        let thread_ids: Vec<Uuid> = list_params
-            .thread_id
+        let channel_ids: Vec<Uuid> = list_params
+            .channel_id
             .iter()
             .map(|id| id.into_inner())
             .collect();
@@ -271,12 +277,12 @@ impl DataNotification for Postgres {
             p,
             self.pool,
             query_file_as!(
-                DbThread,
+                DbChannel,
                 "sql/notification_list_threads.sql",
                 user_id.into_inner(),
                 list_params.include_read,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
                 p.after.into_inner(),
                 p.before.into_inner(),
                 p.dir.to_string(),
@@ -287,9 +293,9 @@ impl DataNotification for Postgres {
                 user_id.into_inner(),
                 list_params.include_read,
                 &room_ids,
-                &thread_ids,
+                &channel_ids,
             ),
-            |i: &Thread| i.id.to_string()
+            |i: &Channel| i.id.to_string()
         )
     }
 }

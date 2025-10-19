@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, MessageThreadRename,
-    MessageType, Permission, Thread, ThreadId, ThreadPatch, ThreadType, User, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, ChannelPatch,
+    ChannelType, MessageSync, MessageThreadRename, MessageType, Permission, User, UserId,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -12,7 +12,7 @@ use moka::future::Cache;
 use time::OffsetDateTime;
 
 use crate::error::{Error, Result};
-use crate::types::{DbMessageCreate, DbThreadPrivate};
+use crate::types::{DbMessageCreate, DbChannelPrivate};
 use crate::ServerStateInner;
 
 // TODO: split caches more
@@ -20,10 +20,10 @@ use crate::ServerStateInner;
 // then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceThreads {
     state: Arc<ServerStateInner>,
-    cache_thread: Cache<ThreadId, Thread>,
-    cache_thread_private: Cache<(ThreadId, UserId), DbThreadPrivate>,
-    cache_thread_recipients: Cache<ThreadId, Vec<User>>,
-    typing: Cache<(ThreadId, UserId), OffsetDateTime>,
+    cache_thread: Cache<ChannelId, Channel>,
+    cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
+    cache_thread_recipients: Cache<ChannelId, Vec<User>>,
+    typing: Cache<(ChannelId, UserId), OffsetDateTime>,
 }
 
 impl ServiceThreads {
@@ -49,10 +49,10 @@ impl ServiceThreads {
         }
     }
 
-    pub async fn get(&self, thread_id: ThreadId, user_id: Option<UserId>) -> Result<Thread> {
+    pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
         let mut thread = self
             .cache_thread
-            .try_get_with(thread_id, self.state.data().thread_get(thread_id))
+            .try_get_with(channel_id, self.state.data().channel_get(channel_id))
             .await
             .map_err(|err| err.fake_clone())?;
 
@@ -60,8 +60,8 @@ impl ServiceThreads {
             let private_data = self
                 .cache_thread_private
                 .try_get_with(
-                    (thread_id, user_id),
-                    self.state.data().thread_get_private(thread_id, user_id),
+                    (channel_id, user_id),
+                    self.state.data().channel_get_private(channel_id, user_id),
                 )
                 .await
                 .map_err(|err| err.fake_clone())?;
@@ -70,15 +70,15 @@ impl ServiceThreads {
             let thread_ty = thread.ty;
             let recipients = self
                 .cache_thread_recipients
-                .try_get_with(thread_id, async move {
-                    if !matches!(thread_ty, ThreadType::Dm | ThreadType::Gdm) {
+                .try_get_with(channel_id, async move {
+                    if !matches!(thread_ty, ChannelType::Dm | ChannelType::Gdm) {
                         return Ok(vec![]);
                     }
 
                     let members = state
                         .data()
                         .thread_member_list(
-                            thread_id,
+                            channel_id,
                             common::v1::types::PaginationQuery {
                                 from: None,
                                 to: None,
@@ -105,22 +105,21 @@ impl ServiceThreads {
             let user_config = self
                 .state
                 .data()
-                .user_config_thread_get(user_id, thread_id)
+                .user_config_channel_get(user_id, channel_id)
                 .await?;
 
-            thread = Thread {
+            thread = Channel {
                 recipient: recipients.first().cloned(),
                 recipients,
                 is_unread: Some(private_data.is_unread),
                 last_read_id: private_data.last_read_id.map(Into::into),
-                mention_count: Some(0),            // TODO
-                notifications: Default::default(), // TODO
+                mention_count: Some(0), // TODO
                 user_config: Some(user_config),
                 ..thread
             }
         }
 
-        let members = self.state.data().thread_member_list_all(thread_id).await?;
+        let members = self.state.data().thread_member_list_all(channel_id).await?;
 
         let mut online_count = 0;
         for member in members {
@@ -140,14 +139,14 @@ impl ServiceThreads {
         Ok(thread)
     }
 
-    pub async fn invalidate(&self, thread_id: ThreadId) {
+    pub async fn invalidate(&self, thread_id: ChannelId) {
         self.cache_thread.invalidate(&thread_id).await;
         self.cache_thread_private
             .invalidate_entries_if(move |(t, _), _| *t == thread_id)
             .expect("failed to invalidate");
     }
 
-    pub async fn invalidate_user(&self, thread_id: ThreadId, user_id: UserId) {
+    pub async fn invalidate_user(&self, thread_id: ChannelId, user_id: UserId) {
         self.cache_thread_private
             .invalidate(&(thread_id, user_id))
             .await
@@ -156,21 +155,21 @@ impl ServiceThreads {
     pub async fn update(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
-        patch: ThreadPatch,
+        thread_id: ChannelId,
+        patch: ChannelPatch,
         reason: Option<String>,
-    ) -> Result<Thread> {
+    ) -> Result<Channel> {
         // check update perms
         let mut perms = self
             .state
             .services()
             .perms
-            .for_thread(user_id, thread_id)
+            .for_channel(user_id, thread_id)
             .await?;
-        perms.ensure(Permission::ViewThread)?;
+        perms.ensure(Permission::ViewChannel)?;
         let data = self.state.data();
         let srv = self.state.services();
-        let thread_old = srv.threads.get(thread_id, None).await?;
+        let thread_old = srv.channels.get(thread_id, None).await?;
         if thread_old.archived_at.is_some() {
             return Err(Error::BadStatic("thread is archived"));
         }
@@ -192,17 +191,17 @@ impl ServiceThreads {
         if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
-        if thread_old.ty != ThreadType::Voice && patch.bitrate.is_some() {
+        if thread_old.ty != ChannelType::Voice && patch.bitrate.is_some() {
             return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
         }
-        if thread_old.ty != ThreadType::Voice && patch.user_limit.is_some() {
+        if thread_old.ty != ChannelType::Voice && patch.user_limit.is_some() {
             return Err(Error::BadStatic(
                 "cannot set user_limit for non voice thread",
             ));
         }
 
         if let Some(Some(icon)) = patch.icon {
-            if thread_old.ty != ThreadType::Gdm {
+            if thread_old.ty != ChannelType::Gdm {
                 return Err(Error::BadStatic("only gdm threads can have icons"));
             }
             let (media, _) = data.media_select(icon).await?;
@@ -215,7 +214,7 @@ impl ServiceThreads {
         }
 
         // update and refetch
-        data.thread_update(thread_id, patch.clone()).await?;
+        data.channel_update(thread_id, patch.clone()).await?;
         self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, user_id).await;
         let thread_new = self.get(thread_id, Some(user_id)).await?;
@@ -227,8 +226,8 @@ impl ServiceThreads {
                     user_id,
                     session_id: None,
                     reason: reason.clone(),
-                    ty: AuditLogEntryType::ThreadUpdate {
-                        thread_id,
+                    ty: AuditLogEntryType::ChannelUpdate {
+                        channel_id: thread_id,
                         changes: Changes::new()
                             .change("name", &thread_old.name, &thread_new.name)
                             .change(
@@ -250,7 +249,7 @@ impl ServiceThreads {
             // send thread renamed message to thread
             let rename_message_id = data
                 .message_create(DbMessageCreate {
-                    thread_id,
+                    channel_id: thread_id,
                     attachment_ids: vec![],
                     author_id: user_id,
                     embeds: vec![],
@@ -277,8 +276,8 @@ impl ServiceThreads {
                 .await?;
         }
 
-        let msg = MessageSync::ThreadUpdate {
-            thread: Box::new(thread_new.clone()),
+        let msg = MessageSync::ChannelUpdate {
+            channel: Box::new(thread_new.clone()),
         };
         if let Some(room_id) = thread_new.room_id {
             self.state.broadcast_room(room_id, user_id, msg).await?;
@@ -287,11 +286,11 @@ impl ServiceThreads {
         Ok(thread_new)
     }
 
-    pub async fn typing_set(&self, thread_id: ThreadId, user_id: UserId, until: OffsetDateTime) {
+    pub async fn typing_set(&self, thread_id: ChannelId, user_id: UserId, until: OffsetDateTime) {
         self.typing.insert((thread_id, user_id), until).await;
     }
 
-    pub fn typing_list(&self) -> Vec<(ThreadId, UserId, OffsetDateTime)> {
+    pub fn typing_list(&self) -> Vec<(ChannelId, UserId, OffsetDateTime)> {
         self.typing
             .iter()
             .map(|(key, until)| (key.0, key.1, until))

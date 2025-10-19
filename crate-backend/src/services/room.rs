@@ -11,7 +11,7 @@ use moka::future::Cache;
 
 use crate::error::Result;
 use crate::types::{
-    DbMessageCreate, DbRoleCreate, DbRoomCreate, DbThreadCreate, DbThreadType, MediaLinkType,
+    DbChannelType, DbMessageCreate, DbRoleCreate, DbRoomCreate, DbChannelCreate, MediaLinkType,
 };
 use crate::ServerStateInner;
 
@@ -105,9 +105,9 @@ impl ServiceRooms {
             .change("icon", &start.icon, &end.icon)
             .change("public", &start.public, &end.public)
             .change(
-                "welcome_thread_id",
-                &start.welcome_thread_id,
-                &end.welcome_thread_id,
+                "welcome_channel_id",
+                &start.welcome_channel_id,
+                &end.welcome_channel_id,
             )
             .build();
 
@@ -132,7 +132,7 @@ impl ServiceRooms {
         extra: DbRoomCreate,
     ) -> Result<Room> {
         let data = self.state.data();
-        let welcome_thread_id = extra.welcome_thread_id;
+        let welcome_channel_id = extra.welcome_channel_id;
         let mut room = data.room_create(create, extra).await?;
         let room_id = room.id;
 
@@ -176,16 +176,16 @@ impl ServiceRooms {
         data.room_set_owner(room_id, creator_id).await?;
         room.owner_id = Some(creator_id);
 
-        let (welcome_thread_id, welcome_thread) = if let Some(thread_id) = welcome_thread_id {
-            (thread_id, None)
+        let (welcome_channel_id, welcome_channel) = if let Some(channel_id) = welcome_channel_id {
+            (channel_id, None)
         } else {
-            let welcome_thread_id = data
-                .thread_create(DbThreadCreate {
+            let welcome_channel_id = data
+                .channel_create(DbChannelCreate {
                     room_id: Some(room.id.into_inner()),
                     creator_id,
                     name: "general".to_string(),
                     description: None,
-                    ty: DbThreadType::Chat,
+                    ty: DbChannelType::Text,
                     nsfw: false,
                     bitrate: None,
                     user_limit: None,
@@ -194,14 +194,14 @@ impl ServiceRooms {
                     icon: None,
                 })
                 .await?;
-            let welcome_thread = data.thread_get(welcome_thread_id).await?;
-            (welcome_thread_id, Some(welcome_thread))
+            let welcome_channel = data.channel_get(welcome_channel_id).await?;
+            (welcome_channel_id, Some(welcome_channel))
         };
 
         data.room_update(
             room_id,
             RoomPatch {
-                welcome_thread_id: Some(Some(welcome_thread_id)),
+                welcome_channel_id: Some(Some(welcome_channel_id)),
                 name: None,
                 description: None,
                 icon: None,
@@ -209,7 +209,7 @@ impl ServiceRooms {
             },
         )
         .await?;
-        room.welcome_thread_id = Some(welcome_thread_id);
+        room.welcome_channel_id = Some(welcome_channel_id);
 
         self.state
             .broadcast(MessageSync::RoomCreate { room: room.clone() })?;
@@ -227,19 +227,19 @@ impl ServiceRooms {
                         .add("description", &room.description)
                         .add("icon", &room.icon)
                         .add("public", &room.public)
-                        .add("welcome_thread_id", &room.welcome_thread_id)
+                        .add("welcome_channel_id", &room.welcome_channel_id)
                         .build(),
                 },
             })
             .await?;
 
-        if let Some(welcome_thread) = welcome_thread {
+        if let Some(welcome_thread) = welcome_channel {
             self.state
                 .broadcast_room(
                     room_id,
                     creator_id,
-                    MessageSync::ThreadCreate {
-                        thread: Box::new(welcome_thread),
+                    MessageSync::ChannelCreate {
+                        channel: Box::new(welcome_thread),
                     },
                 )
                 .await?;
@@ -251,8 +251,8 @@ impl ServiceRooms {
                     user_id: creator_id,
                     session_id: None, // TODO: get session id
                     reason: None,     // TODO: get reason
-                    ty: AuditLogEntryType::ThreadCreate {
-                        thread_id: welcome_thread_id,
+                    ty: AuditLogEntryType::ChannelCreate {
+                        channel_id: welcome_channel_id,
                         changes: Changes::new()
                             .add("name", &"general")
                             .add("nsfw", &false)
@@ -271,11 +271,11 @@ impl ServiceRooms {
     pub async fn send_welcome_message(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
         let room = self.get(room_id, None).await?;
 
-        if let Some(wti) = room.welcome_thread_id {
+        if let Some(wti) = room.welcome_channel_id {
             let data = self.state.data();
             let welcome_message_id = data
                 .message_create(DbMessageCreate {
-                    thread_id: wti,
+                    channel_id: wti,
                     attachment_ids: vec![],
                     author_id: user_id,
                     embeds: vec![],

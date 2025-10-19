@@ -9,14 +9,14 @@ use validator::Validate;
 use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::UserId;
 
-use super::ThreadId;
+use super::ChannelId;
 
 // NOTE: maybe i could merge the room_member and thread_member types?
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ThreadMember {
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub user_id: UserId,
 
     pub membership: ThreadMembership,

@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{CalendarEventId, ThreadId, UserId};
+use crate::v1::types::{CalendarEventId, ChannelId, UserId};
 
 use super::util::Time;
 
@@ -16,7 +16,7 @@ use super::util::Time;
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CalendarEvent {
     pub id: CalendarEventId,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub creator_id: UserId,
     #[cfg_attr(feature = "utoipa", schema(max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(max = 64)))]
@@ -68,7 +68,7 @@ pub struct CalendarEventPatch {
     #[cfg_attr(feature = "validator", validate(length(max = 512)))]
     pub location: Option<Option<String>>,
     pub url: Option<Option<Url>>,
-    pub thread_id: Option<ThreadId>,
+    pub thread_id: Option<ChannelId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

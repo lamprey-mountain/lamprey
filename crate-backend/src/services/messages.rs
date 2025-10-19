@@ -7,8 +7,8 @@ use tracing::error;
 use common::v1::types::misc::Color;
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch, MessageSync,
-    MessageType, Permission, ThreadId, ThreadMembership,
+    ChannelId, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch,
+    MessageSync, MessageType, Permission, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -50,7 +50,7 @@ impl ServiceMessages {
                         .embed
                         .queue(
                             Some(crate::types::MessageRef {
-                                thread_id: message.thread_id,
+                                thread_id: message.channel_id,
                                 message_id: message.id,
                                 version_id: message.version_id,
                             }),
@@ -68,7 +68,7 @@ impl ServiceMessages {
 
     pub async fn create(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         _reason: Option<String>,
         nonce: Option<String>,
@@ -89,7 +89,7 @@ impl ServiceMessages {
 
     async fn create2(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         _reason: Option<String>,
         nonce: Option<String>,
@@ -99,8 +99,8 @@ impl ServiceMessages {
         let s = &self.state;
         let data = s.data();
         let srv = s.services();
-        let perms = srv.perms.for_thread(user_id, thread_id).await?;
-        perms.ensure(Permission::ViewThread)?;
+        let perms = srv.perms.for_channel(user_id, thread_id).await?;
+        perms.ensure(Permission::ViewChannel)?;
         perms.ensure(Permission::MessageCreate)?;
         if !json.attachments.is_empty() {
             perms.ensure(Permission::MessageAttachments)?;
@@ -111,8 +111,8 @@ impl ServiceMessages {
         if json.created_at.is_some() {
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
-                let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure(Permission::ViewThread)?;
+                let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
+                owner_perms.ensure(Permission::ViewChannel)?;
                 owner_perms.ensure(Permission::MemberBridge)?;
             } else {
                 return Err(Error::BadStatic("not a puppet"));
@@ -146,7 +146,7 @@ impl ServiceMessages {
         });
         let message_id = data
             .message_create(DbMessageCreate {
-                thread_id,
+                channel_id: thread_id,
                 attachment_ids: attachment_ids.clone(),
                 author_id: user_id,
                 embeds: json
@@ -192,14 +192,14 @@ impl ServiceMessages {
         let msg = MessageSync::MessageCreate {
             message: message.clone(),
         };
-        srv.threads.invalidate(thread_id).await; // message count
+        srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_thread(thread_id, user_id, msg).await?;
         Ok(message)
     }
 
     pub async fn edit(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         _reason: Option<String>,
@@ -209,8 +209,8 @@ impl ServiceMessages {
         json.validate()?;
         let data = s.data();
         let srv = s.services();
-        let perms = s.services().perms.for_thread(user_id, thread_id).await?;
-        perms.ensure(Permission::ViewThread)?;
+        let perms = s.services().perms.for_channel(user_id, thread_id).await?;
+        perms.ensure(Permission::ViewChannel)?;
         let message = data.message_get(thread_id, message_id, user_id).await?;
         if !message.message_type.is_editable() {
             return Err(Error::BadStatic("cant edit that message"));
@@ -235,8 +235,8 @@ impl ServiceMessages {
         if json.edited_at.is_some() {
             let usr = data.user_get(user_id).await?;
             if let Some(puppet) = usr.puppet {
-                let owner_perms = srv.perms.for_thread(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure(Permission::ViewThread)?;
+                let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
+                owner_perms.ensure(Permission::ViewChannel)?;
                 owner_perms.ensure(Permission::MemberBridge)?;
             } else {
                 return Err(Error::BadStatic("not a puppet"));
@@ -293,7 +293,7 @@ impl ServiceMessages {
                 thread_id,
                 message_id,
                 DbMessageCreate {
-                    thread_id,
+                    channel_id: thread_id,
                     attachment_ids: attachment_ids.clone(),
                     author_id: user_id,
                     embeds: json
@@ -346,7 +346,7 @@ impl ServiceMessages {
             },
         )
         .await?;
-        s.services().threads.invalidate(thread_id).await; // last version id
+        s.services().channels.invalidate(thread_id).await; // last version id
         Ok((StatusCode::CREATED, message))
     }
 }

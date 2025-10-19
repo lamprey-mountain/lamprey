@@ -4,9 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageMember, MessageSync, MessageType,
-    PaginationQuery, PaginationResponse, Permission, ThreadId, ThreadMember, ThreadMemberPut,
-    ThreadMembership, ThreadType, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, MessageMember,
+    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember,
+    ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -18,13 +18,15 @@ use crate::ServerState;
 use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
+// TODO: move routes into thread.rs
+
 /// Thread member list
 #[utoipa::path(
     get,
     path = "/thread/{thread_id}/member",
     params(
         PaginationQuery<UserId>,
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
     ),
     tags = ["thread_member"],
     responses(
@@ -32,7 +34,7 @@ use crate::error::{Error, Result};
     )
 )]
 pub async fn thread_member_list(
-    Path(thread_id): Path<ThreadId>,
+    Path(thread_id): Path<ChannelId>,
     Query(paginate): Query<PaginationQuery<UserId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -41,9 +43,9 @@ pub async fn thread_member_list(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, thread_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let res = d.thread_member_list(thread_id, paginate).await?;
     Ok(Json(res))
 }
@@ -53,7 +55,7 @@ pub async fn thread_member_list(
     get,
     path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
     tags = ["thread_member"],
@@ -62,7 +64,7 @@ pub async fn thread_member_list(
     )
 )]
 pub async fn thread_member_get(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -74,9 +76,9 @@ pub async fn thread_member_get(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, thread_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let res = d.thread_member_get(thread_id, target_user_id).await?;
     // TODO: return `Ban`s
     if !matches!(res.membership, ThreadMembership::Join { .. }) {
@@ -91,7 +93,7 @@ pub async fn thread_member_get(
     put,
     path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
     tags = ["thread_member", "badge.perm-opt.MemberKick"],
@@ -101,7 +103,7 @@ pub async fn thread_member_get(
     )
 )]
 pub async fn thread_member_add(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -115,14 +117,14 @@ pub async fn thread_member_add(
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    if thread.ty == ThreadType::Category {
+    let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    if thread.ty == ChannelType::Category {
         return Err(Error::BadStatic(
             "cannot edit thread member list in category threads",
         ));
@@ -148,7 +150,7 @@ pub async fn thread_member_add(
     if target_user_id != auth_user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
-                thread_id,
+                channel_id: thread_id,
                 attachment_ids: vec![],
                 author_id: auth_user.id,
                 embeds: vec![],
@@ -159,7 +161,7 @@ pub async fn thread_member_add(
             })
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;
-        srv.threads.invalidate(thread_id).await; // message count
+        srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_thread(
             thread_id,
             auth_user.id,
@@ -196,12 +198,12 @@ pub async fn thread_member_add(
     Ok(Json(res).into_response())
 }
 
-/// Thread member delete (kick/leave)
+/// Thread member delete
 #[utoipa::path(
     delete,
     path = "/thread/{thread_id}/member/{user_id}",
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
     tags = ["thread_member", "badge.perm-opt.MemberKick"],
@@ -210,7 +212,7 @@ pub async fn thread_member_add(
     )
 )]
 pub async fn thread_member_delete(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -222,14 +224,14 @@ pub async fn thread_member_delete(
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     if target_user_id != auth_user.id {
         perms.ensure(Permission::MemberKick)?;
     }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    if thread.ty == ThreadType::Category {
+    let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    if thread.ty == ChannelType::Category {
         return Err(Error::BadStatic(
             "cannot edit thread member list in category threads",
         ));
@@ -262,7 +264,7 @@ pub async fn thread_member_delete(
     if target_user_id != auth_user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
-                thread_id,
+                channel_id: thread_id,
                 attachment_ids: vec![],
                 author_id: auth_user.id,
                 embeds: vec![],
@@ -273,7 +275,7 @@ pub async fn thread_member_delete(
             })
             .await?;
         let message = d.message_get(thread_id, message_id, auth_user.id).await?;
-        srv.threads.invalidate(thread_id).await; // message count
+        srv.channels.invalidate(thread_id).await; // message count
         s.broadcast_thread(
             thread_id,
             auth_user.id,

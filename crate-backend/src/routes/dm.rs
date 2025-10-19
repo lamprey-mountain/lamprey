@@ -4,7 +4,7 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    MessageSync, MessageVerId, PaginationQuery, PaginationResponse, Thread, UserId,
+    Channel, MessageSync, MessageVerId, PaginationQuery, PaginationResponse, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -36,8 +36,8 @@ async fn dm_init(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let (thread, is_new) = srv.users.init_dm(auth_user.id, target_user_id).await?;
-    s.broadcast(MessageSync::ThreadCreate {
-        thread: Box::new(thread.clone()),
+    s.broadcast(MessageSync::ChannelCreate {
+        channel: Box::new(thread.clone()),
     })?;
     if is_new {
         Ok((StatusCode::CREATED, Json(thread)))
@@ -70,7 +70,7 @@ async fn dm_get(
         return Err(Error::NotFound);
     };
     let srv = s.services();
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(thread_id, Some(auth_user.id)).await?;
     Ok(Json(thread))
 }
 
@@ -87,7 +87,7 @@ async fn dm_get(
     ),
     tags = ["dm"],
     responses(
-        (status = OK, body = PaginationResponse<Thread>, description = "success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "success"),
     )
 )]
 async fn dm_list(
@@ -111,7 +111,7 @@ async fn dm_list(
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
+        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
 

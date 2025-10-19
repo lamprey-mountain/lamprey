@@ -9,7 +9,7 @@ use axum::{
 };
 use common::v1::types::{
     voice::{SfuCommand, SfuEvent, SignallingMessage},
-    ThreadId,
+    ChannelId,
 };
 use common::v1::types::{MessageSync, SfuId};
 use http::HeaderMap;
@@ -188,7 +188,7 @@ impl SfuConnection {
     }
 
     /// if this thread is managed by us
-    fn is_ours(&self, thread_id: ThreadId) -> bool {
+    fn is_ours(&self, thread_id: ChannelId) -> bool {
         self.s.thread_to_sfu.get(&thread_id).map(|i| *i) == Some(self.id)
     }
 }

@@ -9,7 +9,7 @@ use common::v1::types::{
     misc::UserIdReq,
     util::Changes,
     voice::{SfuCommand, SfuPermissions, VoiceState},
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, PaginationResponse, Permission, ThreadId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, PaginationResponse, Permission,
 };
 use serde::Deserialize;
 use utoipa::ToSchema;
@@ -34,7 +34,7 @@ use crate::{Error, ServerState};
     )
 )]
 async fn voice_state_get(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -43,8 +43,8 @@ async fn voice_state_get(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     let state = srv.users.voice_state_get(target_user_id);
     Ok(Json(state))
 }
@@ -63,7 +63,7 @@ async fn voice_state_get(
     )
 )]
 async fn voice_state_disconnect(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((channel_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -75,10 +75,10 @@ async fn voice_state_disconnect(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::VoiceDisconnect)?;
-    let target_perms = srv.perms.for_thread(target_user_id, thread_id).await?;
+    let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
     let Some(_state) = srv.users.voice_state_get(target_user_id) else {
         return Ok(());
     };
@@ -91,7 +91,7 @@ async fn voice_state_disconnect(
             priority: target_perms.has(Permission::VoicePriority),
         },
     });
-    let thread = srv.threads.get(thread_id, None).await?;
+    let thread = srv.channels.get(channel_id, None).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -100,7 +100,7 @@ async fn voice_state_disconnect(
             session_id: None,
             reason,
             ty: AuditLogEntryType::MemberDisconnect {
-                thread_id,
+                channel_id,
                 user_id: target_user_id,
             },
         })
@@ -123,7 +123,7 @@ async fn voice_state_disconnect(
     )
 )]
 async fn voice_state_move(
-    Path((thread_id, target_user_id)): Path<(ThreadId, UserIdReq)>,
+    Path((thread_id, target_user_id)): Path<(ChannelId, UserIdReq)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -136,14 +136,17 @@ async fn voice_state_move(
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
-    let perms_source = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms_source.ensure(Permission::ViewThread)?;
+    let perms_source = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    perms_source.ensure(Permission::ViewChannel)?;
     perms_source.ensure(Permission::VoiceMove)?;
-    let perms_target = srv.perms.for_thread(auth_user.id, json.target_id).await?;
-    perms_target.ensure(Permission::ViewThread)?;
+    let perms_target = srv.perms.for_channel(auth_user.id, json.target_id).await?;
+    perms_target.ensure(Permission::ViewChannel)?;
     perms_target.ensure(Permission::VoiceMove)?;
-    let _perms_user = srv.perms.for_thread(target_user_id, json.target_id).await?;
-    perms_target.ensure(Permission::ViewThread)?;
+    let _perms_user = srv
+        .perms
+        .for_channel(target_user_id, json.target_id)
+        .await?;
+    perms_target.ensure(Permission::ViewChannel)?;
 
     let Some(old) = srv.users.voice_state_get(target_user_id) else {
         return Err(Error::BadStatic("not connected to any thread"));
@@ -154,7 +157,7 @@ async fn voice_state_move(
         ..old
     };
 
-    let target_perms = srv.perms.for_thread(target_user_id, thread_id).await?;
+    let target_perms = srv.perms.for_channel(target_user_id, thread_id).await?;
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
@@ -165,7 +168,7 @@ async fn voice_state_move(
         },
     });
 
-    let thread = srv.threads.get(thread_id, None).await?;
+    let thread = srv.channels.get(thread_id, None).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -188,7 +191,7 @@ async fn voice_state_move(
 
 #[derive(Debug, ToSchema, Deserialize)]
 struct VoiceStateMove {
-    target_id: ThreadId,
+    target_id: ChannelId,
 }
 
 /// Voice state list
@@ -203,13 +206,13 @@ struct VoiceStateMove {
     responses((status = OK, description = "ok"))
 )]
 async fn voice_state_list(
-    Path(thread_id): Path<ThreadId>,
+    Path(thread_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     let states: Vec<_> = srv
         .users
         .voice_states_list()

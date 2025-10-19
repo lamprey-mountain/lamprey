@@ -59,7 +59,7 @@ async fn room_create(
     let extra = DbRoomCreate {
         id: None,
         ty: RoomType::Default,
-        welcome_thread_id: None,
+        welcome_channel_id: None,
     };
     let room = s.services().rooms.create(json, auth_user.id, extra).await?;
     if let Some(media_id) = icon {
@@ -371,10 +371,10 @@ async fn room_ack(
 
     let updated_unreads = data.unread_put_all_in_room(auth_user.id, room_id).await?;
 
-    for (thread_id, message_id, version_id) in updated_unreads {
-        s.broadcast(MessageSync::ThreadAck {
+    for (channel_id, message_id, version_id) in updated_unreads {
+        s.broadcast(MessageSync::ChannelAck {
             user_id: auth_user.id,
-            thread_id,
+            channel_id,
             message_id,
             version_id,
         })?;

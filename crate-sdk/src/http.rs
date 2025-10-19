@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::{
-    media::MediaCreated, misc::UserIdReq, user_status::StatusPatch, ApplicationId, Media,
-    MediaCreate, MediaId, Message, MessageCreate, MessageId, MessagePatch, PuppetCreate, RoomId,
-    SessionToken, Thread, ThreadCreate, ThreadId, ThreadPatch, User, UserId, UserPatch,
+    media::MediaCreated, misc::UserIdReq, user_status::StatusPatch, ApplicationId, Channel,
+    ChannelCreate, ChannelId, ChannelPatch, Media, MediaCreate, MediaId, Message, MessageCreate,
+    MessageId, MessagePatch, PuppetCreate, RoomId, SessionToken, User, UserId, UserPatch,
 };
 use common::v1::types::{RoomMember, RoomMemberPatch};
 use headers::HeaderMapExt;
@@ -97,8 +97,8 @@ impl Http {
     pub async fn thread_list(
         &self,
         room_id: RoomId,
-        query: &PaginationQuery<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>> {
+        query: &PaginationQuery<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
         let url = self
             .base_url
             .join(&format!("/api/v1/room/{room_id}/thread"))?;
@@ -113,7 +113,7 @@ impl Http {
 
     pub async fn message_list(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         query: &PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let url = self
@@ -227,16 +227,16 @@ macro_rules! route {
 
 // FIXME: 304 not modified (see room_member.rs)
 route!(get    "/api/v1/media/{media_id}"                        => media_info_get(media_id: MediaId) -> Media);
-route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Thread, ThreadCreate);
-route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ThreadId) -> Thread, ThreadPatch);
+route!(post   "/api/v1/room/{room_id}/thread"                   => thread_create(room_id: RoomId) -> Channel, ChannelCreate);
+route!(patch  "/api/v1/thread/{thread_id}"                      => thread_update(thread_id: ChannelId) -> Channel, ChannelPatch);
 route!(post   "/api/v1/media"                                   => media_create() -> MediaCreated, MediaCreate);
-route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delete(thread_id: ThreadId, message_id: MessageId));
-route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ThreadId, message_id: MessageId) -> Message, MessagePatch);
-route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ThreadId, message_id: MessageId) -> Message);
-route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ThreadId) -> Message, MessageCreate);
-route!(put    "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_react(thread_id: ThreadId, message_id: MessageId, reaction: String));
-route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_unreact(thread_id: ThreadId, message_id: MessageId, reaction: String));
-route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ThreadId));
+route!(delete "/api/v1/thread/{thread_id}/message/{message_id}" => message_delete(thread_id: ChannelId, message_id: MessageId));
+route!(patch  "/api/v1/thread/{thread_id}/message/{message_id}" => message_update(thread_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
+route!(get    "/api/v1/thread/{thread_id}/message/{message_id}" => message_get(thread_id: ChannelId, message_id: MessageId) -> Message);
+route!(post   "/api/v1/thread/{thread_id}/message"              => message_create(thread_id: ChannelId) -> Message, MessageCreate);
+route!(put    "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_react(thread_id: ChannelId, message_id: MessageId, reaction: String));
+route!(delete "/api/v1/thread/{thread_id}/message/{message_id}/reaction/{reaction}" => message_unreact(thread_id: ChannelId, message_id: MessageId, reaction: String));
+route!(post   "/api/v1/thread/{thread_id}/typing"               => typing_start(thread_id: ChannelId));
 route!(get    "/api/v1/user/{user_id}"                          => user_get(user_id: UserId) -> User);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"         => room_member_put(room_id: RoomId, user_id: UserId));
 route!(patch  "/api/v1/room/{room_id}/member/{user_id}"         => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);

@@ -19,4 +19,4 @@ with recursive message_tree as (
     where
         mt.depth < $3
 )
-select count(*) from message_tree where id in (select id from message where thread_id = $1 and deleted_at is null and is_latest)
+select count(*) from message_tree where id in (select id from message where channel_id = $1 and deleted_at is null and is_latest)

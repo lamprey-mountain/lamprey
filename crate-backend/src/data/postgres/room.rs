@@ -57,9 +57,9 @@ impl DataRoom for Postgres {
                 room.archived_at,
                 room.public,
                 room.owner_id,
-                room.welcome_thread_id,
+                room.welcome_channel_id,
                 (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                 room.quarantined
             FROM room
             WHERE id = $1
@@ -94,9 +94,9 @@ impl DataRoom for Postgres {
                     room.archived_at,
                     room.public,
                     room.owner_id,
-                    room.welcome_thread_id,
+                    room.welcome_channel_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                    (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                     room.quarantined
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
@@ -147,9 +147,9 @@ impl DataRoom for Postgres {
                     room.archived_at,
                     room.public,
                     room.owner_id,
-                    room.welcome_thread_id,
+                    room.welcome_channel_id,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM thread WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!",
+                    (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                     room.quarantined
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
@@ -174,7 +174,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, archived_at, public, welcome_thread_id, quarantined
+            SELECT id, name, description, icon, archived_at, public, welcome_channel_id, quarantined
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -185,14 +185,14 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_thread_id = $7 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, public = $6, welcome_channel_id = $7 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
             patch.description.unwrap_or(room.description),
             patch.icon.map(|i| i.map(|i| *i)).unwrap_or(room.icon),
             patch.public.unwrap_or(room.public),
-            patch.welcome_thread_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_thread_id),
+            patch.welcome_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_channel_id),
         )
         .execute(&mut *tx)
         .await?;
@@ -223,10 +223,10 @@ impl DataRoom for Postgres {
                     r.archived_at,
                     r.public,
                     r.owner_id,
-                    r.welcome_thread_id,
+                    r.welcome_channel_id,
                     r.quarantined,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
-                    (SELECT COUNT(*) FROM thread WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "thread_count!"
+                    (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!"
                 FROM room_member rm1
                 JOIN room_member rm2 ON rm1.room_id = rm2.room_id
                 JOIN room r ON rm1.room_id = r.id
@@ -262,13 +262,13 @@ impl DataRoom for Postgres {
     }
 
     async fn room_metrics(&self, room_id: RoomId) -> Result<RoomMetrics> {
-        let thread_count =
-            query_scalar!("select count(*) from thread where room_id = $1", *room_id)
+        let channel_count =
+            query_scalar!("select count(*) from channel where room_id = $1", *room_id)
                 .fetch_one(&self.pool)
                 .await?
                 .unwrap_or_default();
-        let active_thread_count = query_scalar!(
-            "select count(*) from thread where room_id = $1 and archived_at is null",
+        let active_channel_count = query_scalar!(
+            "select count(*) from channel where room_id = $1 and archived_at is null",
             *room_id
         )
         .fetch_one(&self.pool)
@@ -286,8 +286,8 @@ impl DataRoom for Postgres {
             select
                 count(distinct s.id) as total_messages,
                 count(distinct l.media_id) as total_media
-            from thread t
-            join message s on s.thread_id = t.id
+            from channel t
+            join message s on s.channel_id = t.id
             left join media_link l
                    on l.target_id = s.id
                   and l.link_type = 'Message'
@@ -301,8 +301,8 @@ impl DataRoom for Postgres {
             r#"
             select sum((m.data->'source'->'size')::int) as total_size
             from room r
-            join thread t on t.room_id = r.id
-            join message s on s.thread_id = t.id
+            join channel t on t.room_id = r.id
+            join message s on s.channel_id = t.id
             join media_link l on l.target_id = s.id and l.link_type = 'Message'
             join media m on m.id = l.media_id
             where r.id = $1
@@ -314,8 +314,8 @@ impl DataRoom for Postgres {
         .unwrap_or_default();
 
         Ok(RoomMetrics {
-            thread_count: thread_count as u64,
-            active_thread_count: active_thread_count as u64,
+            channel_count: channel_count as u64,
+            active_channel_count: active_channel_count as u64,
             message_count: message_media_counts.total_messages.unwrap_or_default() as u64,
             member_count: member_count as u64,
             media_count: message_media_counts.total_media.unwrap_or_default() as u64,

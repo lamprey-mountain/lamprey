@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::util::Time;
-use common::v1::types::{Permission, PermissionOverwriteType, RoomId, ThreadId, UserId};
+use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, RoomId, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
@@ -15,7 +15,7 @@ use crate::{Error, ServerStateInner};
 pub struct ServicePermissions {
     state: Arc<ServerStateInner>,
     cache_perm_room: Cache<(UserId, RoomId), Permissions>,
-    cache_perm_thread: Cache<(UserId, RoomId, ThreadId), Permissions>,
+    cache_perm_channel: Cache<(UserId, RoomId, ChannelId), Permissions>,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
     cache_user_rank: Cache<(RoomId, UserId), u64>,
     timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
@@ -31,7 +31,7 @@ impl ServicePermissions {
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            cache_perm_thread: Cache::builder()
+            cache_perm_channel: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
@@ -85,7 +85,7 @@ impl ServicePermissions {
                 let room = srv.rooms.get(room_id, None).await?;
                 if room.owner_id == Some(user_id) {
                     let mut p = Permissions::empty();
-                    p.add(Permission::ViewThread);
+                    p.add(Permission::ViewChannel);
                     p.add(Permission::Admin);
                     return Result::Ok(p);
                 }
@@ -107,15 +107,15 @@ impl ServicePermissions {
             .map_err(|err| err.fake_clone())
     }
 
-    async fn for_thread_inner(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
+    async fn for_thread_inner(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
         let srv = self.state.services();
         let data = self.state.data();
-        let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         let (mut perms, roles) = if let Some(room_id) = thread.room_id {
             let room = srv.rooms.get(room_id, None).await?;
             if room.owner_id == Some(user_id) {
                 let mut p = Permissions::empty();
-                p.add(Permission::ViewThread);
+                p.add(Permission::ViewChannel);
                 p.add(Permission::Admin);
                 return Ok(p);
             }
@@ -125,7 +125,7 @@ impl ServicePermissions {
         } else {
             data.thread_member_get(thread_id, user_id).await?;
             let mut p = Permissions::empty();
-            p.add(Permission::ViewThread);
+            p.add(Permission::ViewChannel);
             for a in EVERYONE_TRUSTED {
                 p.add(*a);
             }
@@ -136,7 +136,7 @@ impl ServicePermissions {
         if !perms.has(Permission::Admin) {
             // NOTE: currently there is a max depth of one - this will break if permissions need to be resolved recursively
             if let Some(parent_id) = thread.parent_id {
-                let parent = srv.threads.get(parent_id, Some(user_id)).await?;
+                let parent = srv.channels.get(parent_id, Some(user_id)).await?;
                 for o in parent.permission_overwrites {
                     if o.ty == PermissionOverwriteType::User {
                         if o.id != *user_id {
@@ -178,11 +178,11 @@ impl ServicePermissions {
         Ok(perms)
     }
 
-    pub async fn for_thread(&self, user_id: UserId, thread_id: ThreadId) -> Result<Permissions> {
+    pub async fn for_channel(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
         let srv = self.state.services();
-        let t = srv.threads.get(thread_id, Some(user_id)).await?;
+        let t = srv.channels.get(thread_id, Some(user_id)).await?;
 
-        self.cache_perm_thread
+        self.cache_perm_channel
             .try_get_with(
                 (
                     user_id,
@@ -197,7 +197,7 @@ impl ServicePermissions {
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {
         self.cache_perm_room.invalidate(&(user_id, room_id)).await;
-        self.cache_perm_thread
+        self.cache_perm_channel
             .invalidate_entries_if(move |(uid, rid, _), _| room_id == *rid && user_id == *uid)
             .expect("failed to invalidate");
         self.cache_user_rank.invalidate(&(room_id, user_id)).await;
@@ -208,7 +208,7 @@ impl ServicePermissions {
         self.cache_perm_room
             .invalidate_entries_if(move |(_, rid), _| room_id == *rid)
             .expect("failed to invalidate");
-        self.cache_perm_thread
+        self.cache_perm_channel
             .invalidate_entries_if(move |(_, rid, _), _| room_id == *rid)
             .expect("failed to invalidate");
         self.cache_user_rank
@@ -216,8 +216,8 @@ impl ServicePermissions {
             .expect("failed to invalidate");
     }
 
-    pub fn invalidate_thread(&self, user_id: UserId, thread_id: ThreadId) {
-        self.cache_perm_thread
+    pub fn invalidate_thread(&self, user_id: UserId, thread_id: ChannelId) {
+        self.cache_perm_channel
             .invalidate_entries_if(move |(uid, _, tid), _| thread_id == *tid && user_id == *uid)
             .expect("failed to invalidate");
     }
@@ -249,7 +249,7 @@ impl ServicePermissions {
 
     pub async fn permission_overwrite_upsert(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         overwrite_id: Uuid,
         ty: PermissionOverwriteType,
         allow: Vec<Permission>,
@@ -266,7 +266,7 @@ impl ServicePermissions {
 
     pub async fn permission_overwrite_delete(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
         let data = self.state.data();
@@ -278,12 +278,12 @@ impl ServicePermissions {
         Ok(())
     }
 
-    async fn invalidate_thread_all(&self, thread_id: ThreadId) {
-        self.cache_perm_thread
+    async fn invalidate_thread_all(&self, thread_id: ChannelId) {
+        self.cache_perm_channel
             .invalidate_entries_if(move |(_, _, tid), _| thread_id == *tid)
             .expect("failed to invalidate");
 
-        if let Ok(t) = self.state.services().threads.get(thread_id, None).await {
+        if let Ok(t) = self.state.services().channels.get(thread_id, None).await {
             if let Some(room_id) = t.room_id {
                 self.invalidate_room_all(room_id);
             }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{MediaId, MessageId, RoomId, ThreadId};
+use common::v1::types::{ChannelId, MediaId, MessageId, RoomId};
 use serenity::all::{
     AttachmentId as DcAttachmentId, ChannelId as DcChannelId, MessageId as DcMessageId,
 };
@@ -48,7 +48,7 @@ impl From<PortalConfig> for PortalConfigRow {
 
 pub struct MessageMetadata {
     pub chat_id: MessageId,
-    pub chat_thread_id: ThreadId,
+    pub chat_thread_id: ChannelId,
     pub discord_id: DcMessageId,
     /// the THREAD id, falling back to channel id
     pub discord_channel_id: DcChannelId,
@@ -160,10 +160,10 @@ impl From<AttachmentMetadata> for AttachmentMetadataRow {
 #[async_trait]
 pub trait Data {
     async fn get_portals(&self) -> Result<Vec<PortalConfig>>;
-    async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>>;
+    async fn get_portal_by_thread_id(&self, id: ChannelId) -> Result<Option<PortalConfig>>;
     async fn get_portal_by_discord_channel(&self, id: DcChannelId) -> Result<Option<PortalConfig>>;
     async fn insert_portal(&self, portal: PortalConfig) -> Result<()>;
-    async fn delete_portal(&self, lamprey_thread_id: ThreadId) -> Result<()>;
+    async fn delete_portal(&self, lamprey_thread_id: ChannelId) -> Result<()>;
     async fn get_message(&self, message_id: MessageId) -> Result<Option<MessageMetadata>>;
     async fn get_message_dc(&self, message_id: DcMessageId) -> Result<Option<MessageMetadata>>;
     async fn get_attachment(&self, media_id: MediaId) -> Result<Option<AttachmentMetadata>>;
@@ -171,7 +171,7 @@ pub trait Data {
         &self,
         attachment_id: DcAttachmentId,
     ) -> Result<Option<AttachmentMetadata>>;
-    async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>>;
+    async fn get_last_message_ch(&self, thread_id: ChannelId) -> Result<Option<MessageMetadata>>;
     async fn get_last_message_dc(&self, channel_id: DcChannelId)
         -> Result<Option<MessageMetadata>>;
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()>;
@@ -194,7 +194,7 @@ impl Data for Globals {
         rows.into_iter().map(|r| r.try_into()).collect()
     }
 
-    async fn get_portal_by_thread_id(&self, id: ThreadId) -> Result<Option<PortalConfig>> {
+    async fn get_portal_by_thread_id(&self, id: ChannelId) -> Result<Option<PortalConfig>> {
         let id = id.to_string();
         let row = query_as!(
             PortalConfigRow,
@@ -239,7 +239,7 @@ impl Data for Globals {
         Ok(())
     }
 
-    async fn delete_portal(&self, lamprey_thread_id: ThreadId) -> Result<()> {
+    async fn delete_portal(&self, lamprey_thread_id: ChannelId) -> Result<()> {
         let id = lamprey_thread_id.to_string();
         query!("DELETE FROM portal WHERE lamprey_thread_id = ?", id)
             .execute(&self.pool)
@@ -340,7 +340,7 @@ impl Data for Globals {
         Ok(())
     }
 
-    async fn get_last_message_ch(&self, thread_id: ThreadId) -> Result<Option<MessageMetadata>> {
+    async fn get_last_message_ch(&self, thread_id: ChannelId) -> Result<Option<MessageMetadata>> {
         let b1 = thread_id.to_string();
         let row = query_as!(
             MessageMetadataRow,

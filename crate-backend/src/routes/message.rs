@@ -10,9 +10,9 @@ use axum::{
 use common::v1::types::{
     notifications::{Notification, NotificationReason},
     util::Time,
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ContextQuery, ContextResponse,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelType, ContextQuery, ContextResponse,
     MessageMigrate, MessageModerate, MessagePin, MessageType, NotificationId, PaginationDirection,
-    PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership, ThreadType,
+    PinsReorder, RepliesQuery, ThreadMemberPut, ThreadMembership,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -20,8 +20,8 @@ use validator::Validate;
 use crate::{
     error::Error,
     types::{
-        DbMessageCreate, Message, MessageCreate, MessageId, MessagePatch, MessageSync,
-        MessageVerId, PaginationQuery, PaginationResponse, Permission, ThreadId,
+        ChannelId, DbMessageCreate, Message, MessageCreate, MessageId, MessagePatch, MessageSync,
+        MessageVerId, PaginationQuery, PaginationResponse, Permission,
     },
     ServerState,
 };
@@ -31,11 +31,11 @@ use crate::error::Result;
 
 /// Message create
 ///
-/// Send a message to a thread
+/// Send a message to a channel
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/message",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/message",
+    params(("channel_id", description = "Channel id")),
     tags = [
         "message",
         "badge.perm.MessageCreate",
@@ -48,7 +48,7 @@ use crate::error::Result;
     )
 )]
 async fn message_create(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -59,8 +59,8 @@ async fn message_create(
 
     let srv = s.services();
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    if thread.ty == ThreadType::Category {
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    if thread.ty == ChannelType::Category {
         return Err(Error::BadStatic("cannot send messages in category threads"));
     }
     if thread.archived_at.is_some() {
@@ -70,7 +70,7 @@ async fn message_create(
         return Err(Error::BadStatic("thread is removed"));
     }
     if thread.locked {
-        let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+        let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
         perms.ensure(Permission::ThreadLock)?;
     }
 
@@ -78,7 +78,7 @@ async fn message_create(
 
     let message = srv
         .messages
-        .create(thread_id, auth_user.id, reason, nonce, json)
+        .create(channel_id, auth_user.id, reason, nonce, json)
         .await?;
 
     let s_clone = s.clone();
@@ -97,7 +97,7 @@ async fn message_create(
             if notified_users.insert(user_id) {
                 let notification = Notification {
                     id: NotificationId::new(),
-                    thread_id,
+                    channel_id,
                     message_id,
                     reason: NotificationReason::Mention,
                     added_at: Time::now_utc(),
@@ -114,9 +114,9 @@ async fn message_create(
         }
 
         // Bulk mentions
-        if mentions.everyone_room || mentions.everyone_thread {
+        if mentions.everyone {
             let mut bulk_mention_users = Vec::new();
-            if mentions.everyone_room {
+            if mentions.everyone {
                 if let Some(room_id) = room_id {
                     let mut after = None;
                     loop {
@@ -156,42 +156,45 @@ async fn message_create(
                         }
                     }
                 }
-            } else if mentions.everyone_thread {
-                let mut after = None;
-                loop {
-                    match s_clone
-                        .data()
-                        .thread_member_list(
-                            thread_id,
-                            PaginationQuery {
-                                from: after,
-                                limit: Some(1000),
-                                ..Default::default()
-                            },
-                        )
-                        .await
-                    {
-                        Ok(page) => {
-                            let has_more = page.has_more;
-                            let items = page.items;
-                            if items.is_empty() {
-                                break;
-                            }
-                            after = Some(items.last().unwrap().user_id.into());
-                            for member in items {
-                                bulk_mention_users.push(member.user_id);
-                            }
-                            if !has_more {
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to get thread members for bulk mention: {}", e);
-                            break;
-                        }
-                    }
-                }
             }
+
+            // TODO: mentions if channel type is ThreadPublic or ThreadPrivate
+            // else if mentions.everyone_thread {
+            //     let mut after = None;
+            //     loop {
+            //         match s_clone
+            //             .data()
+            //             .thread_member_list(
+            //                 channel_id,
+            //                 PaginationQuery {
+            //                     from: after,
+            //                     limit: Some(1000),
+            //                     ..Default::default()
+            //                 },
+            //             )
+            //             .await
+            //         {
+            //             Ok(page) => {
+            //                 let has_more = page.has_more;
+            //                 let items = page.items;
+            //                 if items.is_empty() {
+            //                     break;
+            //                 }
+            //                 after = Some(items.last().unwrap().user_id.into());
+            //                 for member in items {
+            //                     bulk_mention_users.push(member.user_id);
+            //                 }
+            //                 if !has_more {
+            //                     break;
+            //                 }
+            //             }
+            //             Err(e) => {
+            //                 tracing::error!("Failed to get thread members for bulk mention: {}", e);
+            //                 break;
+            //             }
+            //         }
+            //     }
+            // }
 
             for user_id in bulk_mention_users {
                 if user_id == author_id {
@@ -200,7 +203,7 @@ async fn message_create(
                 if notified_users.insert(user_id) {
                     let notification = Notification {
                         id: NotificationId::new(),
-                        thread_id,
+                        channel_id,
                         message_id,
                         reason: NotificationReason::MentionBulk,
                         added_at: Time::now_utc(),
@@ -226,10 +229,10 @@ async fn message_create(
 /// More efficient than calling List messages twice
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/context/{message_id}",
+    path = "/channel/{channel_id}/context/{message_id}",
     params(
         ContextQuery,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id"),
     ),
     tags = ["message"],
@@ -238,7 +241,7 @@ async fn message_create(
     )
 )]
 async fn message_context(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<ContextQuery>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -247,9 +250,9 @@ async fn message_context(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let limit = q.limit.unwrap_or(10);
     if limit > 1024 {
         return Err(Error::BadStatic("limit too big"));
@@ -260,16 +263,18 @@ async fn message_context(
         dir: Some(PaginationDirection::B),
         limit: Some(limit),
     };
-    let before = data.message_list(thread_id, auth_user.id, before_q).await?;
+    let before = data
+        .message_list(channel_id, auth_user.id, before_q)
+        .await?;
     let after_q = PaginationQuery {
         from: Some(message_id),
         to: q.to_end,
         dir: Some(PaginationDirection::F),
         limit: Some(limit),
     };
-    let after = data.message_list(thread_id, auth_user.id, after_q).await?;
+    let after = data.message_list(channel_id, auth_user.id, after_q).await?;
     let message = data
-        .message_get(thread_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth_user.id)
         .await
         .ok();
     let mut res = ContextResponse {
@@ -294,15 +299,15 @@ async fn message_context(
 /// Paginate messages in a thread
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message",
-    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/message",
+    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
     tags = ["message"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     )
 )]
 async fn message_list(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -311,10 +316,10 @@ async fn message_list(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
-    let mut res = data.message_list(thread_id, auth_user.id, q).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let mut res = data.message_list(channel_id, auth_user.id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -324,9 +329,9 @@ async fn message_list(
 /// Message get
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/{message_id}",
+    path = "/channel/{channel_id}/message/{message_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = ["message"],
@@ -335,7 +340,7 @@ async fn message_list(
     )
 )]
 async fn message_get(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -343,11 +348,11 @@ async fn message_get(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let mut message = data
-        .message_get(thread_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth_user.id)
         .await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
@@ -356,9 +361,9 @@ async fn message_get(
 /// Message edit
 #[utoipa::path(
     patch,
-    path = "/thread/{thread_id}/message/{message_id}",
+    path = "/channel/{channel_id}/message/{message_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = ["message"],
@@ -368,7 +373,7 @@ async fn message_get(
     )
 )]
 async fn message_edit(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -376,7 +381,7 @@ async fn message_edit(
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -384,13 +389,13 @@ async fn message_edit(
         return Err(Error::BadStatic("thread is removed"));
     }
     if thread.locked {
-        let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+        let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
         perms.ensure(Permission::ThreadLock)?;
     }
 
     let (_status, message) = srv
         .messages
-        .edit(thread_id, message_id, auth_user.id, reason, json)
+        .edit(channel_id, message_id, auth_user.id, reason, json)
         .await?;
     Ok((StatusCode::OK, Json(message)))
 }
@@ -401,9 +406,9 @@ async fn message_edit(
 /// moderate always requires the full permission
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/message/{message_id}",
+    path = "/channel/{channel_id}/message/{message_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = [
@@ -416,7 +421,7 @@ async fn message_edit(
     )
 )]
 async fn message_delete(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -424,10 +429,10 @@ async fn message_delete(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let mut perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     let message = data
-        .message_get(thread_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth_user.id)
         .await?;
     if !message.message_type.is_deletable() {
         return Err(Error::BadStatic("cant delete that message"));
@@ -436,7 +441,7 @@ async fn message_delete(
         perms.add(Permission::MessageDelete);
     }
     perms.ensure(Permission::MessageDelete)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -447,7 +452,7 @@ async fn message_delete(
         perms.ensure(Permission::ThreadLock)?;
     }
 
-    data.message_delete(thread_id, message_id).await?;
+    data.message_delete(channel_id, message_id).await?;
     data.media_link_delete_all(message_id.into_inner()).await?;
 
     if let Some(room_id) = thread.room_id {
@@ -458,7 +463,7 @@ async fn message_delete(
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageDelete {
-                thread_id,
+                channel_id,
                 message_id,
             },
         })
@@ -469,23 +474,22 @@ async fn message_delete(
         thread.id,
         auth_user.id,
         MessageSync::MessageDelete {
-            room_id: thread.room_id,
-            thread_id,
+            channel_id,
             message_id,
         },
     )
     .await?;
-    s.services().threads.invalidate(thread_id).await; // last version id, message count
+    s.services().channels.invalidate(channel_id).await; // last version id, message count
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Message version list
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/{message_id}/version",
+    path = "/channel/{channel_id}/message/{message_id}/version",
     params(
         PaginationQuery<MessageVerId>,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = ["message"],
@@ -494,7 +498,7 @@ async fn message_delete(
     )
 )]
 async fn message_version_list(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<PaginationQuery<MessageVerId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -503,11 +507,11 @@ async fn message_version_list(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let mut res = data
-        .message_version_list(thread_id, message_id, auth_user.id, q)
+        .message_version_list(channel_id, message_id, auth_user.id, q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -518,9 +522,9 @@ async fn message_version_list(
 /// Message version get
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/{message_id}/version/{version_id}",
+    path = "/channel/{channel_id}/message/{message_id}/version/{version_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id"),
         ("version_id", description = "Version id"),
     ),
@@ -530,7 +534,7 @@ async fn message_version_list(
     )
 )]
 async fn message_version_get(
-    Path((thread_id, _message_id, version_id)): Path<(ThreadId, MessageId, MessageVerId)>,
+    Path((channel_id, _message_id, version_id)): Path<(ChannelId, MessageId, MessageVerId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -538,11 +542,11 @@ async fn message_version_get(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let mut message = data
-        .message_version_get(thread_id, version_id, auth_user.id)
+        .message_version_get(channel_id, version_id, auth_user.id)
         .await?;
     s.presign_message(&mut message).await?;
     Ok(Json(message))
@@ -569,8 +573,8 @@ async fn message_version_get(
 /// - Users can always delete (but not remove) their own messages.
 #[utoipa::path(
     patch,
-    path = "/thread/{thread_id}/message",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/message",
+    params(("channel_id", description = "Channel id")),
     tags = [
         "message",
         "badge.perm-opt.MessageDelete",
@@ -579,7 +583,7 @@ async fn message_version_get(
     responses((status = OK, description = "success")),
 )]
 async fn message_moderate(
-    Path(thread_id): Path<ThreadId>,
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -594,10 +598,10 @@ async fn message_moderate(
 
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -612,13 +616,13 @@ async fn message_moderate(
         perms.ensure(Permission::MessageDelete)?;
         // TODO: fix n+1 query
         for id in &json.delete {
-            let message = data.message_get(thread_id, *id, auth_user.id).await?;
+            let message = data.message_get(channel_id, *id, auth_user.id).await?;
             if !message.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant delete one of the messages"));
             }
         }
 
-        data.message_delete_bulk(thread_id, &json.delete).await?;
+        data.message_delete_bulk(channel_id, &json.delete).await?;
         for id in &json.delete {
             data.media_link_delete_all(id.into_inner()).await?;
         }
@@ -631,7 +635,7 @@ async fn message_moderate(
                 session_id: None,
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageDeleteBulk {
-                    thread_id,
+                    channel_id,
                     message_ids: json.delete.clone(),
                 },
             })
@@ -642,7 +646,7 @@ async fn message_moderate(
             thread.id,
             auth_user.id,
             MessageSync::MessageDeleteBulk {
-                thread_id,
+                channel_id,
                 message_ids: json.delete.clone(),
             },
         )
@@ -653,13 +657,13 @@ async fn message_moderate(
         perms.ensure(Permission::MessageRemove)?;
         // TODO: fix n+1 query
         for id in &json.remove {
-            let message = data.message_get(thread_id, *id, auth_user.id).await?;
+            let message = data.message_get(channel_id, *id, auth_user.id).await?;
             if !message.message_type.is_deletable() {
                 return Err(Error::BadStatic("cant remove one of the messages"));
             }
         }
 
-        data.message_remove_bulk(thread_id, &json.remove).await?;
+        data.message_remove_bulk(channel_id, &json.remove).await?;
 
         if let Some(room_id) = thread.room_id {
             s.audit_log_append(AuditLogEntry {
@@ -669,7 +673,7 @@ async fn message_moderate(
                 session_id: None,
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageRemove {
-                    thread_id,
+                    channel_id,
                     message_ids: json.remove.clone(),
                 },
             })
@@ -680,7 +684,7 @@ async fn message_moderate(
             thread.id,
             auth_user.id,
             MessageSync::MessageRemove {
-                thread_id,
+                channel_id,
                 message_ids: json.remove.clone(),
             },
         )
@@ -689,7 +693,7 @@ async fn message_moderate(
 
     if !json.restore.is_empty() {
         perms.ensure(Permission::MessageRemove)?;
-        data.message_restore_bulk(thread_id, &json.restore).await?;
+        data.message_restore_bulk(channel_id, &json.restore).await?;
 
         if let Some(room_id) = thread.room_id {
             s.audit_log_append(AuditLogEntry {
@@ -699,7 +703,7 @@ async fn message_moderate(
                 session_id: None,
                 reason: reason.clone(),
                 ty: AuditLogEntryType::MessageRestore {
-                    thread_id,
+                    channel_id,
                     message_ids: json.restore.clone(),
                 },
             })
@@ -710,14 +714,14 @@ async fn message_moderate(
             thread.id,
             auth_user.id,
             MessageSync::MessageRestore {
-                thread_id,
+                channel_id,
                 message_ids: json.restore.clone(),
             },
         )
         .await?;
     }
 
-    srv.threads.invalidate(thread_id).await; // last version id, message count
+    srv.channels.invalidate(channel_id).await; // last version id, message count
     Ok(StatusCode::OK)
 }
 
@@ -727,16 +731,16 @@ async fn message_moderate(
 /// source and target thread.
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/migrate",
-    params(("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/migrate",
+    params(("channel_id", description = "Channel id")),
     tags = [
         "message",
         "badge.perm.MessageMove",
     ],
     responses((status = NO_CONTENT, description = "move success")),
 )]
-async fn message_migrate(
-    Path(_thread_id): Path<ThreadId>,
+async fn message_move(
+    Path(_channel_id): Path<ChannelId>,
     Auth(_user_id): Auth,
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
@@ -748,10 +752,10 @@ async fn message_migrate(
 /// Message replies
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/reply/{message_id}",
+    path = "/channel/{channel_id}/reply/{message_id}",
     params(
         RepliesQuery,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id"),
     ),
     tags = ["message"],
@@ -760,7 +764,7 @@ async fn message_migrate(
     ),
 )]
 async fn message_replies(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
@@ -771,12 +775,12 @@ async fn message_replies(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let mut res = data
         .message_replies(
-            thread_id,
+            channel_id,
             Some(message_id),
             auth_user.id,
             q.depth,
@@ -793,10 +797,10 @@ async fn message_replies(
 /// Message roots
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/reply",
+    path = "/channel/{channel_id}/reply",
     params(
         RepliesQuery,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
     ),
     tags = ["message"],
     responses(
@@ -804,7 +808,7 @@ async fn message_replies(
     ),
 )]
 async fn message_roots(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
@@ -815,12 +819,12 @@ async fn message_roots(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let mut res = data
         .message_replies(
-            thread_id,
+            channel_id,
             None,
             auth_user.id,
             q.depth,
@@ -840,9 +844,9 @@ async fn message_roots(
 /// - There can be a maximum of 1024 pinned messages.
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/pin/{message_id}",
+    path = "/channel/{channel_id}/pin/{message_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = [
@@ -854,7 +858,7 @@ async fn message_roots(
     ),
 )]
 async fn message_pin_create(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -862,10 +866,10 @@ async fn message_pin_create(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -873,14 +877,14 @@ async fn message_pin_create(
         return Err(Error::BadStatic("thread is removed"));
     }
 
-    data.message_pin_create(thread_id, message_id).await?;
+    data.message_pin_create(channel_id, message_id).await?;
 
     let message = data
-        .message_get(thread_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth_user.id)
         .await?;
 
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::MessageUpdate { message },
     )
@@ -888,7 +892,7 @@ async fn message_pin_create(
 
     let notice_message_id = data
         .message_create(DbMessageCreate {
-            thread_id,
+            channel_id,
             attachment_ids: vec![],
             author_id: auth_user.id,
             embeds: vec![],
@@ -901,25 +905,25 @@ async fn message_pin_create(
         })
         .await?;
     let mut notice_message = data
-        .message_get(thread_id, notice_message_id, auth_user.id)
+        .message_get(channel_id, notice_message_id, auth_user.id)
         .await?;
 
     let user_id = auth_user.id;
-    let tm = data.thread_member_get(thread_id, user_id).await;
+    let tm = data.thread_member_get(channel_id, user_id).await;
     if tm.is_err() || tm.is_ok_and(|tm| tm.membership == ThreadMembership::Leave) {
-        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+        data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
             .await?;
-        let thread_member = data.thread_member_get(thread_id, user_id).await?;
+        let thread_member = data.thread_member_get(channel_id, user_id).await?;
         let msg = MessageSync::ThreadMemberUpsert {
             member: thread_member,
         };
-        s.broadcast_thread(thread_id, user_id, msg).await?;
+        s.broadcast_thread(channel_id, user_id, msg).await?;
     }
 
     s.presign_message(&mut notice_message).await?;
-    srv.threads.invalidate(thread_id).await; // message count
+    srv.channels.invalidate(channel_id).await; // message count
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::MessageCreate {
             message: notice_message,
@@ -935,7 +939,7 @@ async fn message_pin_create(
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessagePin {
-                thread_id,
+                channel_id,
                 message_id,
             },
         })
@@ -948,9 +952,9 @@ async fn message_pin_create(
 /// Pin delete
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/pin/{message_id}",
+    path = "/channel/{channel_id}/pin/{message_id}",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
         ("message_id", description = "Message id")
     ),
     tags = [
@@ -962,17 +966,17 @@ async fn message_pin_create(
     ),
 )]
 async fn message_pin_delete(
-    Path((thread_id, message_id)): Path<(ThreadId, MessageId)>,
+    Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -980,15 +984,15 @@ async fn message_pin_delete(
         return Err(Error::BadStatic("thread is removed"));
     }
 
-    s.data().message_pin_delete(thread_id, message_id).await?;
+    s.data().message_pin_delete(channel_id, message_id).await?;
 
     let message = s
         .data()
-        .message_get(thread_id, message_id, auth_user.id)
+        .message_get(channel_id, message_id, auth_user.id)
         .await?;
 
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
         MessageSync::MessageUpdate { message },
     )
@@ -1002,7 +1006,7 @@ async fn message_pin_delete(
             session_id: None,
             reason: reason.clone(),
             ty: AuditLogEntryType::MessageUnpin {
-                thread_id,
+                channel_id,
                 message_id,
             },
         })
@@ -1015,9 +1019,9 @@ async fn message_pin_delete(
 /// Pin reorder
 #[utoipa::path(
     patch,
-    path = "/thread/{thread_id}/pin",
+    path = "/channel/{channel_id}/pin",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
     ),
     tags = [
         "message",
@@ -1028,7 +1032,7 @@ async fn message_pin_delete(
     ),
 )]
 async fn message_pin_reorder(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
@@ -1037,10 +1041,10 @@ async fn message_pin_reorder(
     auth_user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::MessagePin)?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -1049,17 +1053,17 @@ async fn message_pin_reorder(
     }
 
     s.data()
-        .message_pin_reorder(thread_id, json.clone())
+        .message_pin_reorder(channel_id, json.clone())
         .await?;
 
     // broadcast update for all affected messages
     for item in json.messages {
         let message = s
             .data()
-            .message_get(thread_id, item.id, auth_user.id)
+            .message_get(channel_id, item.id, auth_user.id)
             .await?;
         s.broadcast_thread(
-            thread_id,
+            channel_id,
             auth_user.id,
             MessageSync::MessageUpdate { message },
         )
@@ -1073,7 +1077,7 @@ async fn message_pin_reorder(
             user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
-            ty: AuditLogEntryType::MessagePinReorder { thread_id },
+            ty: AuditLogEntryType::MessagePinReorder { channel_id },
         })
         .await?;
     }
@@ -1084,10 +1088,10 @@ async fn message_pin_reorder(
 /// Message pin list
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/pin",
+    path = "/channel/{channel_id}/pin",
     params(
         PaginationQuery<MessageId>,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
     ),
     tags = ["message"],
     responses(
@@ -1095,7 +1099,7 @@ async fn message_pin_reorder(
     ),
 )]
 async fn message_pin_list(
-    Path(thread_id): Path<ThreadId>,
+    Path(channel_id): Path<ChannelId>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -1104,10 +1108,10 @@ async fn message_pin_list(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
-    let mut res = data.message_pin_list(thread_id, auth_user.id, q).await?;
+    perms.ensure(Permission::ViewChannel)?;
+    let mut res = data.message_pin_list(channel_id, auth_user.id, q).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -1119,15 +1123,15 @@ async fn message_pin_list(
 /// Paginate deleted messages in a thread
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/deleted",
-    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/message/deleted",
+    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
     tags = ["message", "badge.perm-opt.MessageDelete"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
 )]
 async fn message_list_deleted(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -1136,11 +1140,11 @@ async fn message_list_deleted(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::MessageDelete)?;
     let mut res = data
-        .message_list_deleted(thread_id, auth_user.id, q)
+        .message_list_deleted(channel_id, auth_user.id, q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -1153,15 +1157,15 @@ async fn message_list_deleted(
 /// Paginate removed messages in a thread
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/message/removed",
-    params(PaginationQuery<MessageId>, ("thread_id", description = "Thread id")),
+    path = "/channel/{channel_id}/message/removed",
+    params(PaginationQuery<MessageId>, ("channel_id", description = "Channel id")),
     tags = ["message", "badge.perm-opt.MessageRemove"],
     responses(
         (status = OK, body = PaginationResponse<Message>, description = "success"),
     )
 )]
 async fn message_list_removed(
-    Path((thread_id,)): Path<(ThreadId,)>,
+    Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<PaginationQuery<MessageId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -1170,11 +1174,11 @@ async fn message_list_removed(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
     perms.ensure(Permission::MessageRemove)?;
     let mut res = data
-        .message_list_removed(thread_id, auth_user.id, q)
+        .message_list_removed(channel_id, auth_user.id, q)
         .await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
@@ -1197,7 +1201,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_replies))
         .routes(routes!(message_roots))
         .routes(routes!(message_moderate))
-        .routes(routes!(message_migrate))
+        .routes(routes!(message_move))
         .routes(routes!(message_pin_create))
         .routes(routes!(message_pin_delete))
         .routes(routes!(message_pin_reorder))

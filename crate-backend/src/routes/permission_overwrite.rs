@@ -7,8 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, Permission,
-    PermissionOverwrite, PermissionOverwriteSet, PermissionOverwriteType, ThreadId,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync,
+    Permission, PermissionOverwrite, PermissionOverwriteSet, PermissionOverwriteType,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
@@ -31,16 +31,16 @@ use crate::ServerState;
 async fn permission_thread_overwrite(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
+    Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<PermissionOverwriteSet>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
-    let thread = srv.threads.get(thread_id, None).await?;
+    let thread = srv.channels.get(channel_id, None).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -115,15 +115,15 @@ async fn permission_thread_overwrite(
 
     srv.perms
         .permission_overwrite_upsert(
-            thread_id,
+            channel_id,
             overwrite_id,
             json.ty.clone(),
             json.allow.clone(),
             json.deny.clone(),
         )
         .await?;
-    srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    srv.channels.invalidate(channel_id).await;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
@@ -132,8 +132,8 @@ async fn permission_thread_overwrite(
             user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
-            ty: AuditLogEntryType::ThreadOverwriteSet {
-                thread_id,
+            ty: AuditLogEntryType::PermissionOverwriteSet {
+                channel_id,
                 overwrite_id,
                 ty: json.ty,
                 changes: if let Some(existing) = &existing {
@@ -153,10 +153,10 @@ async fn permission_thread_overwrite(
     }
 
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
-        MessageSync::ThreadUpdate {
-            thread: Box::new(thread),
+        MessageSync::ChannelUpdate {
+            channel: Box::new(thread),
         },
     )
     .await?;
@@ -177,16 +177,16 @@ async fn permission_thread_overwrite(
 async fn permission_thread_delete(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Path((thread_id, overwrite_id)): Path<(ThreadId, Uuid)>,
+    Path((channel_id, overwrite_id)): Path<(ChannelId, Uuid)>,
     HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::RoleManage)?;
 
-    let thread = srv.threads.get(thread_id, None).await?;
+    let thread = srv.channels.get(channel_id, None).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -236,10 +236,10 @@ async fn permission_thread_delete(
     }
 
     srv.perms
-        .permission_overwrite_delete(thread_id, overwrite_id)
+        .permission_overwrite_delete(channel_id, overwrite_id)
         .await?;
-    srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    srv.channels.invalidate(channel_id).await;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
@@ -248,8 +248,8 @@ async fn permission_thread_delete(
             user_id: auth_user.id,
             session_id: None,
             reason: reason.clone(),
-            ty: AuditLogEntryType::ThreadOverwriteDelete {
-                thread_id,
+            ty: AuditLogEntryType::PermissionOverwriteDelete {
+                channel_id,
                 overwrite_id,
             },
         })
@@ -257,10 +257,10 @@ async fn permission_thread_delete(
     }
 
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
-        MessageSync::ThreadUpdate {
-            thread: Box::new(thread),
+        MessageSync::ChannelUpdate {
+            channel: Box::new(thread),
         },
     )
     .await?;

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use common::v1::types::{RoomId, ThreadId};
+use common::v1::types::{ChannelId, RoomId};
 use dashmap::{mapref::one::RefMut, DashMap};
 use serenity::{
     all::{
@@ -144,9 +144,9 @@ async fn backfill_guild(
         let ly = globals.lamprey_handle().await?;
 
         let thread_type = if channel.kind == ChannelType::Category {
-            common::v1::types::ThreadType::Category
+            common::v1::types::ChannelType::Category
         } else {
-            common::v1::types::ThreadType::Chat
+            common::v1::types::ChannelType::Text
         };
 
         let lamprey_parent_id = if let Some(discord_parent_id) = channel.parent_id {
@@ -682,7 +682,7 @@ impl EventHandler for Handler {
                                 }
                             };
 
-                            let lamprey_thread_id: ThreadId = match thread_id_str.parse() {
+                            let lamprey_thread_id: ChannelId = match thread_id_str.parse() {
                                 Ok(id) => id,
                                 Err(_) => {
                                     send_ephemeral_reply(
@@ -1077,7 +1077,7 @@ pub enum DiscordMessage {
     ChannelCreate {
         guild_id: GuildId,
         name: String,
-        ty: common::v1::types::ThreadType,
+        ty: common::v1::types::ChannelType,
         parent_id: Option<ChannelId>,
         response: oneshot::Sender<ChannelId>,
     },
@@ -1170,7 +1170,7 @@ impl Discord {
                 response,
             } => {
                 let mut channel = CreateChannel::new(name).kind(match ty {
-                    common::v1::types::ThreadType::Category => ChannelType::Category,
+                    common::v1::types::ChannelType::Category => ChannelType::Category,
                     _ => ChannelType::Text,
                 });
                 if let Some(parent_id) = parent_id {
@@ -1206,7 +1206,7 @@ pub async fn discord_create_channel(
     globals: Arc<Globals>,
     guild_id: GuildId,
     name: String,
-    ty: common::v1::types::ThreadType,
+    ty: common::v1::types::ChannelType,
     parent_id: Option<serenity::all::ChannelId>,
 ) -> Result<serenity::all::ChannelId> {
     let (send, recv) = oneshot::channel();

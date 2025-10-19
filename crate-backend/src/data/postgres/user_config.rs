@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    user_config::{UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser},
-    RoomId, ThreadId,
+    user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
+    ChannelId, RoomId,
 };
 use sqlx::{query, query_scalar};
 
@@ -76,20 +76,20 @@ impl DataUserConfig for Postgres {
         Ok(conf)
     }
 
-    async fn user_config_thread_set(
+    async fn user_config_channel_set(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
-        config: &UserConfigThread,
+        channel_id: ChannelId,
+        config: &UserConfigChannel,
     ) -> Result<()> {
         query!(
             "
-            INSERT INTO user_config_thread (user_id, thread_id, config)
+            INSERT INTO user_config_channel (user_id, channel_id, config)
             VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, thread_id) DO UPDATE SET config = $3
+            ON CONFLICT (user_id, channel_id) DO UPDATE SET config = $3
             ",
             *user_id,
-            *thread_id,
+            *channel_id,
             serde_json::to_value(config)?,
         )
         .execute(&self.pool)
@@ -97,15 +97,15 @@ impl DataUserConfig for Postgres {
         Ok(())
     }
 
-    async fn user_config_thread_get(
+    async fn user_config_channel_get(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
-    ) -> Result<UserConfigThread> {
+        channel_id: ChannelId,
+    ) -> Result<UserConfigChannel> {
         let conf = query_scalar!(
-            "SELECT config FROM user_config_thread WHERE user_id = $1 AND thread_id = $2",
+            "SELECT config FROM user_config_channel WHERE user_id = $1 AND channel_id = $2",
             *user_id,
-            *thread_id
+            *channel_id,
         )
         .fetch_optional(&self.pool)
         .await?;

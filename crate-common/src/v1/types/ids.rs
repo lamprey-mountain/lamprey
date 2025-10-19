@@ -185,8 +185,8 @@ macro_rules! genid {
 
 genid!(Room, "00000000-0000-0000-0000-00000000room");
 genid!(RoomVer, "00000000-0000-0000-0ver-00000000room");
-genid!(Thread, "00000000-0000-0000-0000-000000thread");
-genid!(ThreadVer, "00000000-0000-0000-0ver-000000thread");
+genid!(Channel, "00000000-0000-0000-0000-00000channel");
+genid!(ChannelVer, "00000000-0000-0000-0ver-00000channelver");
 genid!(Message, "00000000-0000-0000-0000-00000message");
 genid!(MessageVer, "00000000-0000-0000-0ver-00000message");
 genid!(User, "00000000-0000-0000-0000-00000000user");

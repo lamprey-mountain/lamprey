@@ -8,8 +8,8 @@ use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    InviteTarget, InviteTargetId, MemberListGroup, MemberListGroupId, MemberListOp, MessageClient,
-    MessageEnvelope, MessageSync, Permission, RoomId, Session, ThreadId, UserId,
+    ChannelId, InviteTarget, InviteTargetId, MemberListGroup, MemberListGroupId, MemberListOp,
+    MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, UserId,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace};
@@ -52,7 +52,7 @@ struct MemberListSub {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum MemberListTarget {
     Room(RoomId),
-    Thread(ThreadId),
+    Channel(ChannelId),
 }
 
 #[derive(Debug, Clone)]
@@ -68,11 +68,11 @@ enum AuthCheck {
     Room(RoomId),
     RoomPerm(RoomId, Permission),
     RoomOrUser(RoomId, UserId),
-    ThreadOrUser(ThreadId, UserId),
+    ChannelOrUser(ChannelId, UserId),
     User(UserId),
     UserMutual(UserId),
-    Thread(ThreadId),
-    EitherThread(ThreadId, ThreadId),
+    Channel(ChannelId),
+    EitherChannel(ChannelId, ChannelId),
 }
 
 impl Connection {
@@ -214,12 +214,12 @@ impl Connection {
 
                 if let Some(user_id) = session.user_id() {
                     // Send typing states
-                    let typing_states = srv.threads.typing_list();
-                    for (thread_id, typing_user_id, until) in typing_states {
-                        if let Ok(perms) = srv.perms.for_thread(user_id, thread_id).await {
-                            if perms.has(Permission::ViewThread) {
-                                self.push_sync(MessageSync::ThreadTyping {
-                                    thread_id,
+                    let typing_states = srv.channels.typing_list();
+                    for (channel_id, typing_user_id, until) in typing_states {
+                        if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
+                            if perms.has(Permission::ViewChannel) {
+                                self.push_sync(MessageSync::ChannelTyping {
+                                    channel_id,
                                     user_id: typing_user_id,
                                     until: until.into(),
                                 });
@@ -231,11 +231,11 @@ impl Connection {
                     let voice_states = srv.users.voice_states_list();
                     for voice_state in voice_states {
                         if let Ok(perms) =
-                            srv.perms.for_thread(user_id, voice_state.thread_id).await
+                            srv.perms.for_channel(user_id, voice_state.thread_id).await
                         {
                             let is_ours = self.state.session().and_then(|s| s.user_id())
                                 == Some(voice_state.user_id);
-                            if perms.has(Permission::ViewThread) || is_ours {
+                            if perms.has(Permission::ViewChannel) || is_ours {
                                 let mut voice_state = voice_state.clone();
                                 if !is_ours {
                                     voice_state.session_id = None;
@@ -294,9 +294,9 @@ impl Connection {
                     let _perms = srv.perms.for_room(user_id, room_id).await?;
                     MemberListTarget::Room(room_id)
                 } else if let Some(thread_id) = thread_id {
-                    let perms = srv.perms.for_thread(user_id, thread_id).await?;
-                    perms.ensure(Permission::ViewThread)?;
-                    MemberListTarget::Thread(thread_id)
+                    let perms = srv.perms.for_channel(user_id, thread_id).await?;
+                    perms.ensure(Permission::ViewChannel)?;
+                    MemberListTarget::Channel(thread_id)
                 } else {
                     return Err(Error::BadStatic("room_id or thread_id must be provided"));
                 };
@@ -329,10 +329,10 @@ impl Connection {
 
                 match &payload {
                     SignallingMessage::VoiceState { state: Some(state) } => {
-                        let perms = srv.perms.for_thread(user_id, state.thread_id).await?;
-                        perms.ensure(Permission::ViewThread)?;
+                        let perms = srv.perms.for_channel(user_id, state.thread_id).await?;
+                        perms.ensure(Permission::ViewChannel)?;
                         perms.ensure(Permission::VoiceConnect)?;
-                        let thread = srv.threads.get(state.thread_id, Some(user_id)).await?;
+                        let thread = srv.channels.get(state.thread_id, Some(user_id)).await?;
                         if thread.archived_at.is_some() {
                             return Err(Error::BadStatic("thread is archived"));
                         }
@@ -433,10 +433,10 @@ impl Connection {
             MessageSync::RoomCreate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomUpdate { room } => AuthCheck::Room(room.id),
             MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),
-            MessageSync::ThreadCreate { thread } => AuthCheck::Thread(thread.id),
-            MessageSync::ThreadUpdate { thread } => AuthCheck::Thread(thread.id),
-            MessageSync::MessageCreate { message } => AuthCheck::Thread(message.thread_id),
-            MessageSync::MessageUpdate { message } => AuthCheck::Thread(message.thread_id),
+            MessageSync::ChannelCreate { channel } => AuthCheck::Channel(channel.id),
+            MessageSync::ChannelUpdate { channel } => AuthCheck::Channel(channel.id),
+            MessageSync::MessageCreate { message } => AuthCheck::Channel(message.channel_id),
+            MessageSync::MessageUpdate { message } => AuthCheck::Channel(message.channel_id),
             MessageSync::UserCreate { user } => AuthCheck::UserMutual(user.id),
             MessageSync::UserUpdate { user } => {
                 if self.member_list_sub.is_some() {
@@ -457,7 +457,7 @@ impl Connection {
             }
             MessageSync::UserConfigGlobal { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigRoom { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::UserConfigThread { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::UserConfigChannel { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::UserConfigUser { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RoomMemberUpsert { member } => {
                 if self
@@ -473,11 +473,11 @@ impl Connection {
                 if self
                     .member_list_sub
                     .as_ref()
-                    .is_some_and(|s| s.target == MemberListTarget::Thread(member.thread_id))
+                    .is_some_and(|s| s.target == MemberListTarget::Channel(member.thread_id))
                 {
                     self.diff_sync_member_list().await?;
                 }
-                AuthCheck::ThreadOrUser(member.thread_id, member.user_id)
+                AuthCheck::ChannelOrUser(member.thread_id, member.user_id)
             }
             MessageSync::SessionCreate {
                 session: upserted_session,
@@ -506,7 +506,7 @@ impl Connection {
             // FIXME(#612): only return invite events to creator and members with InviteManage
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room, thread: _ } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Gdm { thread, .. } => AuthCheck::Channel(thread.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
@@ -514,14 +514,14 @@ impl Connection {
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room, .. } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { thread, .. } => AuthCheck::Thread(thread.id),
+                InviteTarget::Gdm { thread, .. } => AuthCheck::Channel(thread.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
                 InviteTarget::User { user, .. } => AuthCheck::User(user.id),
             },
-            MessageSync::MessageDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::MessageVersionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::MessageDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::MessageVersionDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::UserDelete { id } => AuthCheck::UserMutual(*id),
             MessageSync::SessionDelete { id, user_id } => {
                 // TODO: send message when other sessions from the same user are deleted
@@ -538,22 +538,22 @@ impl Connection {
             MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::Room { room_id, .. } => AuthCheck::Room(*room_id),
-                InviteTargetId::Gdm { thread_id, .. } => AuthCheck::Thread(*thread_id),
+                InviteTargetId::Gdm { thread_id, .. } => AuthCheck::Channel(*thread_id),
                 InviteTargetId::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
                 InviteTargetId::User { user_id, .. } => AuthCheck::User(*user_id),
             },
-            MessageSync::ThreadTyping { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ThreadAck { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::ChannelTyping { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ChannelAck { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipDelete { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::ReactionCreate { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ReactionDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::ReactionPurge { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::MessageDeleteBulk { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::MessageRemove { thread_id, .. } => AuthCheck::Thread(*thread_id),
-            MessageSync::MessageRestore { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::ReactionCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ReactionDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ReactionPurge { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::MessageDeleteBulk { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::MessageRemove { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::MessageRestore { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::VoiceDispatch { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::VoiceState {
                 state,
@@ -561,9 +561,9 @@ impl Connection {
                 old_state,
             } => match (state, old_state) {
                 (None, None) => AuthCheck::User(*user_id),
-                (None, Some(o)) => AuthCheck::Thread(o.thread_id),
-                (Some(s), None) => AuthCheck::Thread(s.thread_id),
-                (Some(s), Some(o)) => AuthCheck::EitherThread(s.thread_id, o.thread_id),
+                (None, Some(o)) => AuthCheck::Channel(o.thread_id),
+                (Some(s), None) => AuthCheck::Channel(s.thread_id),
+                (Some(s), Some(o)) => AuthCheck::EitherChannel(s.thread_id, o.thread_id),
             },
             MessageSync::EmojiCreate { emoji } => match emoji.owner {
                 EmojiOwner::Room { room_id } => AuthCheck::Room(room_id),
@@ -593,9 +593,9 @@ impl Connection {
             MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkUnread { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxFlush { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::CalendarEventCreate { event } => AuthCheck::Thread(event.thread_id),
-            MessageSync::CalendarEventUpdate { event } => AuthCheck::Thread(event.thread_id),
-            MessageSync::CalendarEventDelete { thread_id, .. } => AuthCheck::Thread(*thread_id),
+            MessageSync::CalendarEventCreate { event } => AuthCheck::Channel(event.thread_id),
+            MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.thread_id),
+            MessageSync::CalendarEventDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
         };
         let should_send = match (session.user_id(), auth_check) {
             (Some(user_id), AuthCheck::Room(room_id)) => {
@@ -619,31 +619,31 @@ impl Connection {
                     true
                 }
             }
-            (Some(user_id), AuthCheck::Thread(thread_id)) => {
+            (Some(user_id), AuthCheck::Channel(thread_id)) => {
                 let perms = self
                     .s
                     .services()
                     .perms
-                    .for_thread(user_id, thread_id)
+                    .for_channel(user_id, thread_id)
                     .await?;
-                perms.has(Permission::ViewThread)
+                perms.has(Permission::ViewChannel)
             }
-            (Some(user_id), AuthCheck::EitherThread(thread_id_0, thread_id_1)) => {
+            (Some(user_id), AuthCheck::EitherChannel(thread_id_0, thread_id_1)) => {
                 let perms0 = self
                     .s
                     .services()
                     .perms
-                    .for_thread(user_id, thread_id_0)
+                    .for_channel(user_id, thread_id_0)
                     .await?;
                 let perms1 = self
                     .s
                     .services()
                     .perms
-                    .for_thread(user_id, thread_id_1)
+                    .for_channel(user_id, thread_id_1)
                     .await?;
-                perms0.has(Permission::ViewThread) || perms1.has(Permission::ViewThread)
+                perms0.has(Permission::ViewChannel) || perms1.has(Permission::ViewChannel)
             }
-            (Some(auth_user_id), AuthCheck::ThreadOrUser(thread_id, target_user_id)) => {
+            (Some(auth_user_id), AuthCheck::ChannelOrUser(thread_id, target_user_id)) => {
                 if auth_user_id == target_user_id {
                     true
                 } else {
@@ -651,9 +651,9 @@ impl Connection {
                         .s
                         .services()
                         .perms
-                        .for_thread(auth_user_id, thread_id)
+                        .for_channel(auth_user_id, thread_id)
                         .await?;
-                    perms.has(Permission::ViewThread)
+                    perms.has(Permission::ViewChannel)
                 }
             }
             (Some(auth_user_id), AuthCheck::User(target_user_id)) => auth_user_id == target_user_id,
@@ -675,16 +675,16 @@ impl Connection {
             let d = self.s.data();
             let srv = self.s.services();
             let msg = match *msg {
-                MessageSync::ThreadCreate { thread } => MessageSync::ThreadCreate {
-                    thread: Box::new(srv.threads.get(thread.id, session.user_id()).await?),
+                MessageSync::ChannelCreate { channel } => MessageSync::ChannelCreate {
+                    channel: Box::new(srv.channels.get(channel.id, session.user_id()).await?),
                 },
-                MessageSync::ThreadUpdate { thread } => MessageSync::ThreadUpdate {
-                    thread: Box::new(srv.threads.get(thread.id, session.user_id()).await?),
+                MessageSync::ChannelUpdate { channel } => MessageSync::ChannelUpdate {
+                    channel: Box::new(srv.channels.get(channel.id, session.user_id()).await?),
                 },
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
                     message: {
                         let mut m = d
-                            .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                            .message_get(message.channel_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
                         m.nonce = message.nonce;
@@ -694,7 +694,7 @@ impl Connection {
                 MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
                     message: {
                         let mut m = d
-                            .message_get(message.thread_id, message.id, session.user_id().unwrap())
+                            .message_get(message.channel_id, message.id, session.user_id().unwrap())
                             .await?;
                         self.s.presign_message(&mut m).await?;
                         m.nonce = message.nonce;
@@ -724,9 +724,9 @@ impl Connection {
                             .s
                             .services()
                             .perms
-                            .for_thread(user_id, s.thread_id)
+                            .for_channel(user_id, s.thread_id)
                             .await?;
-                        if !perms.has(Permission::ViewThread) {
+                        if !perms.has(Permission::ViewChannel) {
                             state = None;
                         }
                     }
@@ -814,8 +814,8 @@ impl Connection {
                 .await?;
                 (Some(members), None, users)
             }
-            MemberListTarget::Thread(thread_id) => {
-                let thread = srv.threads.get(*thread_id, Some(user_id)).await?;
+            MemberListTarget::Channel(thread_id) => {
+                let thread = srv.channels.get(*thread_id, Some(user_id)).await?;
                 let thread_members = data.thread_member_list_all(*thread_id).await?;
                 let room_members = if let Some(room_id) = thread.room_id {
                     Some(data.room_member_list_all(room_id).await?)
@@ -968,7 +968,7 @@ impl Connection {
             } else {
                 None
             },
-            thread_id: if let MemberListTarget::Thread(id) = sub.target {
+            channel_id: if let MemberListTarget::Channel(id) = sub.target {
                 Some(id)
             } else {
                 None
@@ -1051,7 +1051,7 @@ impl Connection {
             } else {
                 None
             },
-            thread_id: if let MemberListTarget::Thread(id) = sub.target {
+            channel_id: if let MemberListTarget::Channel(id) = sub.target {
                 Some(id)
             } else {
                 None

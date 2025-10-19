@@ -41,8 +41,8 @@ mod util;
         types::Room,
         types::RoomPatch,
         types::User,
-        types::Thread,
-        types::ThreadPatch,
+        types::Channel,
+        types::ChannelPatch,
         types::Message,
         types::RoomMember,
         types::Role,
@@ -57,7 +57,7 @@ mod util;
         types::emoji::EmojiCustom,
         types::emoji::EmojiOwner,
         types::reaction::ReactionKey,
-        types::notifications::InboxThreadsOrder,
+        types::notifications::InboxChannelsOrder,
     )),
     info(
         title = "api doccery",
@@ -154,7 +154,7 @@ async fn main() -> Result<()> {
                 DbRoomCreate {
                     id: Some(SERVER_ROOM_ID),
                     ty: RoomType::Server,
-                    welcome_thread_id: None,
+                    welcome_channel_id: None,
                 },
             )
             .await?;

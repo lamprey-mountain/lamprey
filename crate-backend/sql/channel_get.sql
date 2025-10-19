@@ -16,9 +16,9 @@ SELECT
     t.position,
     t.bitrate,
     t.user_limit,
-    (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE thread_id = t.id AND membership = 'Join') AS "member_count!",
-    (SELECT version_id FROM message WHERE thread_id = t.id AND deleted_at IS NULL ORDER BY id DESC LIMIT 1) as last_version_id,
-    (SELECT coalesce(COUNT(*), 0) FROM message WHERE thread_id = t.id AND deleted_at IS NULL) AS "message_count!",
+    (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = t.id AND membership = 'Join') AS "member_count!",
+    (SELECT version_id FROM message WHERE channel_id = t.id AND deleted_at IS NULL ORDER BY id DESC LIMIT 1) as last_version_id,
+    (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS "message_count!",
     coalesce((SELECT json_agg(json_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) FROM permission_overwrite WHERE target_id = t.id), '[]'::json) as "permission_overwrites!"
-FROM thread t
+FROM channel t
 WHERE t.id = $1

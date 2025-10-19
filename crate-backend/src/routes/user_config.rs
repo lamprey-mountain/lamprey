@@ -4,9 +4,9 @@ use axum::extract::Path;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::user_config::{
-    UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser,
+    UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
 };
-use common::v1::types::{MessageSync, RoomId, ThreadId, UserId};
+use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -102,26 +102,26 @@ async fn user_config_room_put(
     Ok(Json(json))
 }
 
-/// User config thread put
+/// User config channel put
 #[utoipa::path(
     put,
     path = "/config/thread/{thread_id}",
     params(("thread_id", description = "Thread id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigThread, description = "success"))
+    responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
-async fn user_config_thread_put(
+async fn user_config_channel_put(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Path(thread_id): Path<ThreadId>,
-    Json(json): Json<UserConfigThread>,
+    Path(channel_id): Path<ChannelId>,
+    Json(json): Json<UserConfigChannel>,
 ) -> Result<impl IntoResponse> {
     s.data()
-        .user_config_thread_set(auth_user.id, thread_id, &json)
+        .user_config_channel_set(auth_user.id, channel_id, &json)
         .await?;
-    s.broadcast(MessageSync::UserConfigThread {
+    s.broadcast(MessageSync::UserConfigChannel {
         user_id: auth_user.id,
-        thread_id,
+        channel_id,
         config: json.clone(),
     })?;
     Ok(Json(json))
@@ -184,22 +184,22 @@ async fn user_config_room_get(
     Ok(Json(config))
 }
 
-/// User config thread get
+/// User config channel get
 #[utoipa::path(
     get,
-    path = "/config/thread/{thread_id}",
-    params(("thread_id", description = "Thread id")),
+    path = "/config/channel/{channel_id}",
+    params(("channel_id", description = "Channel id")),
     tags = ["user_config"],
-    responses((status = OK, body = UserConfigThread, description = "success"))
+    responses((status = OK, body = UserConfigChannel, description = "success"))
 )]
-async fn user_config_thread_get(
+async fn user_config_channel_get(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Path(thread_id): Path<ThreadId>,
+    Path(channel_id): Path<ChannelId>,
 ) -> Result<impl IntoResponse> {
     let config = s
         .data()
-        .user_config_thread_get(auth_user.id, thread_id)
+        .user_config_channel_get(auth_user.id, channel_id)
         .await?;
     Ok(Json(config))
 }
@@ -227,10 +227,10 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(user_config_get))
         .routes(routes!(user_config_global_put))
         .routes(routes!(user_config_room_put))
-        .routes(routes!(user_config_thread_put))
+        .routes(routes!(user_config_channel_put))
         .routes(routes!(user_config_user_put))
         .routes(routes!(user_config_global_get))
         .routes(routes!(user_config_room_get))
-        .routes(routes!(user_config_thread_get))
+        .routes(routes!(user_config_channel_get))
         .routes(routes!(user_config_user_get))
 }

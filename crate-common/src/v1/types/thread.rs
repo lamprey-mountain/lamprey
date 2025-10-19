@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+// TODO: remove
 pub use chat::{ThreadTypeChatPrivate, ThreadTypeChatPublic};
 pub use forum::ThreadTypeForumTreePublic as ThreadTypeForumPublic;
 pub use ThreadTypeChatPrivate as ThreadTypeForumPrivate;
@@ -10,32 +11,31 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::notifications::NotifsThread;
-use crate::v1::types::user_config::UserConfigThread;
+use crate::v1::types::user_config::UserConfigChannel;
 use crate::v1::types::util::{some_option, Time};
-use crate::v1::types::{util::Diff, PermissionOverwrite, ThreadVerId};
+use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
 use crate::v1::types::{MediaId, MessageVerId, TagId, User};
 
-use super::{RoomId, ThreadId, UserId};
+use super::{ChannelId, RoomId, UserId};
 
 pub mod chat;
 pub mod forum;
 pub mod voice;
 
-/// A thread
+/// A channel
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct Thread {
-    pub id: ThreadId,
+pub struct Channel {
+    pub id: ChannelId,
     pub room_id: Option<RoomId>,
     pub creator_id: UserId,
 
     /// owner of the group dm
     pub owner_id: Option<UserId>,
 
-    /// only updates when the thread itself is updated, not the stuff in the thread
-    pub version_id: ThreadVerId,
+    /// only updates when the channel itself is updated, not the stuff in the channel
+    pub version_id: ChannelVerId,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
@@ -48,16 +48,14 @@ pub struct Thread {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
-    /// type specific data for this thread
+    /// type specific data for this channel
     #[serde(rename = "type")]
-    pub ty: ThreadType,
+    pub ty: ChannelType,
 
     /// number of people in this room
-    /// does not not update with ThreadSync
     pub member_count: u64,
 
     /// number of people who are online in this room
-    /// does not not update with ThreadSync
     pub online_count: u64,
 
     // TODO(#72): tags
@@ -69,21 +67,21 @@ pub struct Thread {
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
 
-    /// a locked thread can only be interacted with (sending messages,
+    /// a locked channel can only be interacted with (sending messages,
     /// (un)archiving, etc) by people with the `ThreadLock` permission
     pub locked: bool,
 
-    /// the category thread this thread is in, if any
-    pub parent_id: Option<ThreadId>,
+    /// the channel this channel is in, if any
+    pub parent_id: Option<ChannelId>,
 
-    /// the position of this thread in the navbar
+    /// the position of this channel in the navbar
     ///
-    /// - lower numbers come first (0 is the first thread)
-    /// - threads with the same position are tiebroken by id
-    /// - threads without a position come last, ordered by newest first
+    /// - lower numbers come first (0 is the first channel)
+    /// - channels with the same position are tiebroken by id
+    /// - channels without a position come last, ordered by newest first
     pub position: Option<u16>,
 
-    /// permission overwrites for this thread
+    /// permission overwrites for this channel
     pub permission_overwrites: Vec<PermissionOverwrite>,
 
     /// not safe for work
@@ -93,16 +91,14 @@ pub struct Thread {
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
 
-    /// bitrate, for voice thread. defaults to 65535 (64Kibps).
+    /// bitrate, for voice channels. defaults to 65535 (64Kibps).
     #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
     pub bitrate: Option<u64>,
 
-    /// maximum number of users who can be in this voice thread
+    /// maximum number of users who can be in this voice channel
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     pub user_limit: Option<u64>,
 
-    // private (TODO: maybe move these into a `private` field with their own struct?)
-    // always populated for users
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageVerId>,
     pub mention_count: Option<u64>,
@@ -110,27 +106,33 @@ pub struct Thread {
     // to implement efficiently. if someone marks a very old message as unread,
     // i don't want to hang while counting potentially thousands of messages!
     // pub unread_count: u64,
-    pub notifications: Option<NotifsThread>, // TODO: remove
-    pub user_config: Option<UserConfigThread>,
+    pub user_config: Option<UserConfigChannel>,
 
-    /// for dm threads, this is who the dm is with
+    /// for dm channels, this is who the dm is with
     /// DEPRECATED: use `recipients` instead
+    // TODO: remove
     #[cfg_attr(feature = "utoipa", schema(deprecated))]
     pub recipient: Option<User>,
 
-    /// for dm and gdm threads, this is who the dm is with
+    /// for dm and gdm channels, this is who the dm is with
     pub recipients: Vec<User>,
 
-    /// for gdm threads, a custom icon
+    /// for gdm channels, a custom icon
     pub icon: Option<MediaId>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ThreadType {
+pub enum ChannelType {
     /// instant messaging
     #[default]
-    Chat,
+    Text,
+
+    /// a thread visible to anyone who can see the channel
+    ThreadPublic,
+
+    /// a thread that is only visible to thread members
+    ThreadPrivate,
 
     /// instant messaging direct message
     Dm,
@@ -140,12 +142,13 @@ pub enum ThreadType {
 
     #[cfg(feature = "feat_thread_type_forums")]
     /// long form chat history
+    // NOTE: this will be redone later. Forum will be the type of the parent channel, internal threads will use ThreadFoo channels.
     Forum,
 
-    /// call
+    /// a call
     Voice,
 
-    /// category for grouping threads together
+    /// category for grouping channels together
     Category,
 
     /// a calendar
@@ -155,7 +158,7 @@ pub enum ThreadType {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ThreadCreate {
+pub struct ChannelCreate {
     #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
@@ -169,9 +172,9 @@ pub struct ThreadCreate {
 
     pub icon: Option<MediaId>,
 
-    /// The type of this thread
+    /// The type of this channel
     #[serde(default, rename = "type")]
-    pub ty: ThreadType,
+    pub ty: ChannelType,
 
     /// tags to apply to this thread (overwrite, not append)
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
@@ -190,15 +193,17 @@ pub struct ThreadCreate {
 
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
     pub user_limit: Option<u64>,
+
+    // required for threads
+    pub parent_id: Option<ChannelId>,
     // /// the initial message for this thread
     // pub starter_message: MessageCreate,
-    pub parent_id: Option<ThreadId>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct ThreadPatch {
+pub struct ChannelPatch {
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 64)
@@ -233,32 +238,32 @@ pub struct ThreadPatch {
     pub owner_id: Option<Option<UserId>>,
 }
 
-/// reorder some threads
+/// reorder some channels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct ThreadReorder {
-    /// the threads to reorder
+pub struct ChannelReorder {
+    /// the channels to reorder
     #[serde(default)]
     #[validate(length(min = 1, max = 1024))]
-    pub threads: Vec<ThreadReorderItem>,
+    pub channels: Vec<ChannelReorderItem>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct ThreadReorderItem {
-    pub id: ThreadId,
+pub struct ChannelReorderItem {
+    pub id: ChannelId,
 
     #[serde(default, deserialize_with = "some_option")]
     pub position: Option<Option<u16>>,
 
     #[serde(default, deserialize_with = "some_option")]
-    pub parent_id: Option<Option<ThreadId>>,
+    pub parent_id: Option<Option<ChannelId>>,
 }
 
-impl Diff<Thread> for ThreadPatch {
-    fn changes(&self, other: &Thread) -> bool {
+impl Diff<Channel> for ChannelPatch {
+    fn changes(&self, other: &Channel) -> bool {
         self.name.changes(&other.name)
             || self.description.changes(&other.description)
             || self.icon.changes(&other.icon)
@@ -270,23 +275,22 @@ impl Diff<Thread> for ThreadPatch {
     }
 }
 
-impl Thread {
+impl Channel {
     /// remove private user data
-    pub fn strip(self) -> Thread {
-        Thread {
+    pub fn strip(self) -> Channel {
+        Channel {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
-            notifications: None,
             user_config: None,
             ..self
         }
     }
 }
 
-impl ThreadPatch {
-    pub fn minimal_for(self, other: &Thread) -> ThreadPatch {
-        ThreadPatch {
+impl ChannelPatch {
+    pub fn minimal_for(self, other: &Channel) -> ChannelPatch {
+        ChannelPatch {
             name: if self.name.changes(&other.name) {
                 self.name
             } else {

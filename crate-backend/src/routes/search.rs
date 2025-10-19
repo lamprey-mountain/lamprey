@@ -3,9 +3,9 @@ use std::sync::Arc;
 use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
-use common::v1::types::search::{SearchMessageRequest, SearchRoomsRequest, SearchThreadsRequest};
+use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest, SearchRoomsRequest};
 use common::v1::types::{
-    Message, MessageId, PaginationQuery, PaginationResponse, Room, RoomId, Thread, ThreadId,
+    Channel, ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, Room, RoomId,
 };
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -39,24 +39,24 @@ pub async fn search_messages(
     Ok(Json(res))
 }
 
-/// Search threads
+/// Search channels
 #[utoipa::path(
     post,
-    path = "/search/thread",
+    path = "/search/channels",
     tags = ["search"],
     responses(
-        (status = OK, body = PaginationResponse<Thread>, description = "success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "success"),
     )
 )]
-pub async fn search_threads(
+pub async fn search_channels(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Query(q): Query<PaginationQuery<ThreadId>>,
-    Json(json): Json<SearchThreadsRequest>,
+    Query(q): Query<PaginationQuery<ChannelId>>,
+    Json(json): Json<SearchChannelsRequest>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
-    let res = data.search_thread(auth_user.id, json, q).await?;
+    let res = data.search_channel(auth_user.id, json, q).await?;
     Ok(Json(res))
 }
 
@@ -81,6 +81,6 @@ pub async fn search_rooms(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(search_messages))
-        .routes(routes!(search_threads))
+        .routes(routes!(search_channels))
         .routes(routes!(search_rooms))
 }

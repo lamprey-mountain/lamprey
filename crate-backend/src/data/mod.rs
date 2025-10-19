@@ -3,33 +3,33 @@ use common::v1::types::application::{Application, Connection, Scope};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::{
-    InboxListParams, InboxThreadsParams, Notification, NotificationFlush, NotificationMarkRead,
+    InboxChannelsParams, InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
-use common::v1::types::search::{SearchMessageRequest, SearchThreadsRequest};
+use common::v1::types::search::{SearchChannelsRequest, SearchMessageRequest};
 use common::v1::types::user_config::{
-    UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser,
+    UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
 };
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ApplicationId, AuditLogEntry, AuditLogEntryId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
-    MediaPatch, NotificationId, Permission, PermissionOverwriteType, PinsReorder, Relationship,
+    ApplicationId, AuditLogEntry, AuditLogEntryId, Channel, ChannelId, ChannelPatch,
+    ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch, InviteWithMetadata, MediaPatch,
+    NotificationId, Permission, PermissionOverwriteType, PinsReorder, Relationship,
     RelationshipPatch, RelationshipWithUserId, Role, RoleReorder, RoomBan, RoomMember,
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMembership, RoomMetrics, SessionPatch,
     SessionStatus, SessionToken, Suspended, ThreadMember, ThreadMemberPut, ThreadMembership,
-    ThreadReorder, UserListFilter,
+    UserListFilter,
 };
 
 use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate, DbSessionCreate, DbThreadCreate,
-    DbThreadPrivate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
+    DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbRoleCreate, DbRoomCreate,
+    DbSessionCreate, DbUserCreate, EmailPurpose, InviteCode, Media, MediaId, MediaLink,
     MediaLinkType, Message, MessageId, MessageRef, MessageVerId, PaginationQuery,
     PaginationResponse, Permissions, RoleId, RolePatch, RoleVerId, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, Session, SessionId, Thread, ThreadId, ThreadPatch, ThreadVerId,
-    UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
+    RoomPatch, RoomVerId, Session, SessionId, UrlEmbedQueue, User, UserId, UserPatch, UserVerId,
 };
 
 pub mod postgres;
@@ -45,7 +45,7 @@ pub trait Data:
     + DataMedia
     + DataMessage
     + DataSession
-    + DataThread
+    + DataChannel
     + DataUnread
     + DataUser
     + DataSearch
@@ -207,15 +207,10 @@ pub trait DataRoleMember {
 #[async_trait]
 pub trait DataPermission {
     async fn permission_room_get(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions>;
-    async fn permission_thread_get(
-        &self,
-        user_id: UserId,
-        thread_id: ThreadId,
-    ) -> Result<Permissions>;
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool>;
     async fn permission_overwrite_upsert(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         overwrite_id: Uuid,
         ty: PermissionOverwriteType,
         allow: Vec<Permission>,
@@ -224,7 +219,7 @@ pub trait DataPermission {
 
     async fn permission_overwrite_delete(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()>;
 }
@@ -316,89 +311,89 @@ pub trait DataMessage {
     async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId>;
     async fn message_update(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         create: DbMessageCreate,
     ) -> Result<MessageVerId>;
     async fn message_update_in_place(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         version_id: MessageVerId,
         create: DbMessageCreate,
     ) -> Result<()>;
     async fn message_get(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
     ) -> Result<Message>;
     async fn message_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_deleted(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_removed(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
-    async fn message_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn message_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_remove_bulk(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_restore_bulk(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_version_get(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         version_id: MessageVerId,
         user_id: UserId,
     ) -> Result<Message>;
     async fn message_version_delete(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<()>;
     async fn message_version_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_replies(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         root_message_id: Option<MessageId>,
         user_id: UserId,
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
-    async fn message_pin_create(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
-    async fn message_pin_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
-    async fn message_pin_reorder(&self, thread_id: ThreadId, reorder: PinsReorder) -> Result<()>;
+    async fn message_pin_create(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
+    async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
+    async fn message_pin_reorder(&self, channel_id: ChannelId, reorder: PinsReorder) -> Result<()>;
     async fn message_pin_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
@@ -421,44 +416,48 @@ pub trait DataSession {
 }
 
 #[async_trait]
-pub trait DataThread {
-    async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId>;
-    async fn thread_get(&self, thread_id: ThreadId) -> Result<Thread>;
-    async fn thread_get_private(
+pub trait DataChannel {
+    async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId>;
+    async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel>;
+    async fn channel_get_private(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
-    ) -> Result<DbThreadPrivate>;
-    async fn thread_list(
-        &self,
-        room_id: RoomId,
-        user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>>;
-    async fn thread_list_archived(
+    ) -> Result<DbChannelPrivate>;
+    async fn channel_list(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>>;
-    async fn thread_list_removed(
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
+    async fn channel_list_archived(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>>;
-    async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId>;
-    async fn thread_delete(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_archive(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_unarchive(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_lock(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()>;
-    async fn thread_reorder(&self, data: ThreadReorder) -> Result<()>;
-    async fn thread_upgrade_gdm(&self, thread_id: ThreadId, room_id: RoomId) -> Result<()>;
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
+    async fn channel_list_removed(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
+    async fn channel_update(
+        &self,
+        channel_id: ChannelId,
+        patch: ChannelPatch,
+    ) -> Result<ChannelVerId>;
+    async fn channel_delete(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_archive(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_unarchive(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_undelete(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_lock(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_unlock(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_reorder(&self, data: ChannelReorder) -> Result<()>;
+    async fn channel_upgrade_gdm(&self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
 }
 
 #[async_trait]
@@ -466,7 +465,7 @@ pub trait DataUnread {
     async fn unread_put(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
     ) -> Result<()>;
@@ -474,7 +473,7 @@ pub trait DataUnread {
         &self,
         user_id: UserId,
         room_id: RoomId,
-    ) -> Result<Vec<(ThreadId, MessageId, MessageVerId)>>;
+    ) -> Result<Vec<(ChannelId, MessageId, MessageVerId)>>;
 }
 
 #[async_trait]
@@ -563,12 +562,12 @@ pub trait DataSearch {
         query: SearchMessageRequest,
         paginate: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
-    async fn search_thread(
+    async fn search_channel(
         &self,
         user_id: UserId,
-        query: SearchThreadsRequest,
-        paginate: PaginationQuery<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>>;
+        query: SearchChannelsRequest,
+        paginate: PaginationQuery<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
 }
 
 #[async_trait]
@@ -586,26 +585,28 @@ pub trait DataThreadMember {
     /// is a no-op if membership won't change
     async fn thread_member_put(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         put: ThreadMemberPut,
     ) -> Result<()>;
     async fn thread_member_set_membership(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         membership: ThreadMembership,
     ) -> Result<()>;
-    async fn thread_member_delete(&self, thread_id: ThreadId, user_id: UserId) -> Result<()>;
-    async fn thread_member_get(&self, thread_id: ThreadId, user_id: UserId)
-        -> Result<ThreadMember>;
+    async fn thread_member_delete(&self, thread_id: ChannelId, user_id: UserId) -> Result<()>;
+    async fn thread_member_get(
+        &self,
+        thread_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<ThreadMember>;
     async fn thread_member_list(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
-
-    async fn thread_member_list_all(&self, thread_id: ThreadId) -> Result<Vec<ThreadMember>>;
+    async fn thread_member_list_all(&self, thread_id: ChannelId) -> Result<Vec<ThreadMember>>;
 }
 
 #[async_trait]
@@ -650,17 +651,17 @@ pub trait DataUserConfig {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<UserConfigRoom>;
-    async fn user_config_thread_set(
+    async fn user_config_channel_set(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
-        config: &UserConfigThread,
+        channel_id: ChannelId,
+        config: &UserConfigChannel,
     ) -> Result<()>;
-    async fn user_config_thread_get(
+    async fn user_config_channel_get(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
-    ) -> Result<UserConfigThread>;
+        channel_id: ChannelId,
+    ) -> Result<UserConfigChannel>;
     async fn user_config_user_set(
         &self,
         user_id: UserId,
@@ -679,28 +680,28 @@ pub trait DataReaction {
     async fn reaction_put(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
     async fn reaction_delete(
         &self,
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
     async fn reaction_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ReactionListItem>>;
-    async fn reaction_purge(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()>;
+    async fn reaction_purge(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn reaction_purge_key(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()>;
@@ -823,14 +824,18 @@ pub trait DataEmailQueue {
 
 #[async_trait]
 pub trait DataDm {
-    async fn dm_put(&self, user_a_id: UserId, user_b_id: UserId, thread_id: ThreadId)
-        -> Result<()>;
-    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ThreadId>>;
+    async fn dm_put(
+        &self,
+        user_a_id: UserId,
+        user_b_id: UserId,
+        channel_id: ChannelId,
+    ) -> Result<()>;
+    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ChannelId>>;
     async fn dm_list(
         &self,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
-    ) -> Result<PaginationResponse<Thread>>;
+    ) -> Result<PaginationResponse<Channel>>;
 }
 
 #[async_trait]
@@ -854,11 +859,11 @@ pub trait DataNotification {
         params: NotificationMarkRead,
     ) -> Result<()>;
     async fn notification_flush(&self, user_id: UserId, params: NotificationFlush) -> Result<()>;
-    async fn notification_list_threads(
+    async fn notification_list_channels(
         &self,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        params: InboxThreadsParams,
+        pagination: PaginationQuery<ChannelId>,
+        params: InboxChannelsParams,
         list_params: InboxListParams,
-    ) -> Result<PaginationResponse<Thread>>;
+    ) -> Result<PaginationResponse<Channel>>;
 }

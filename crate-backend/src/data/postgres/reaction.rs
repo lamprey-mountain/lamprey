@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::emoji::Emoji;
 use common::v1::types::reaction::{ReactionKey, ReactionListItem};
 use common::v1::types::{
-    MessageId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadId,
+    ChannelId, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use tracing::debug;
@@ -21,7 +21,7 @@ impl DataReaction for Postgres {
     async fn reaction_put(
         &self,
         user_id: UserId,
-        _thread_id: ThreadId,
+        _thread_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()> {
@@ -92,7 +92,7 @@ impl DataReaction for Postgres {
     async fn reaction_delete(
         &self,
         user_id: UserId,
-        _thread_id: ThreadId,
+        _thread_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()> {
@@ -117,7 +117,7 @@ impl DataReaction for Postgres {
 
     async fn reaction_list(
         &self,
-        _thread_id: ThreadId,
+        _thread_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
         pagination: PaginationQuery<UserId>,
@@ -154,7 +154,7 @@ impl DataReaction for Postgres {
         )
     }
 
-    async fn reaction_purge(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+    async fn reaction_purge(&self, _thread_id: ChannelId, message_id: MessageId) -> Result<()> {
         query!(r#"DELETE FROM reaction WHERE message_id = $1"#, *message_id,)
             .execute(&self.pool)
             .await?;
@@ -163,7 +163,7 @@ impl DataReaction for Postgres {
 
     async fn reaction_purge_key(
         &self,
-        _thread_id: ThreadId,
+        _thread_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     ) -> Result<()> {

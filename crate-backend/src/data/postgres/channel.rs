@@ -1,49 +1,49 @@
 use async_trait::async_trait;
-use common::v1::types::ThreadReorder;
+use common::v1::types::ChannelReorder;
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use tracing::info;
 
 use crate::error::Result;
 use crate::types::{
-    DbThread, DbThreadCreate, DbThreadPrivate, DbThreadType, PaginationDirection, PaginationQuery,
-    PaginationResponse, RoomId, Thread, ThreadId, ThreadPatch, ThreadVerId, UserId,
+    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelType, DbChannelCreate,
+    DbChannelPrivate, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
 use crate::{gen_paginate, Error};
 
-use crate::data::DataThread;
+use crate::data::DataChannel;
 
 use super::{Pagination, Postgres};
 
 #[async_trait]
-impl DataThread for Postgres {
-    async fn thread_create(&self, create: DbThreadCreate) -> Result<ThreadId> {
-        let thread_id = ThreadId::new();
+impl DataChannel for Postgres {
+    async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId> {
+        let channel_id = ChannelId::new();
         let mut tx = self.pool.begin().await?;
 
         if let Some(room_id) = create.room_id {
             let count: i64 = query_scalar!(
-                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                 room_id
             )
             .fetch_one(&mut *tx)
             .await?
             .unwrap_or(0);
 
-            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+            if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
                 return Err(Error::BadRequest(format!(
-                    "too many active threads (max {})",
-                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                    "too many active channels (max {})",
+                    crate::consts::MAX_CHANNEL_COUNT
                 )));
             }
         }
 
         query!(
             "
-			INSERT INTO thread (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9, $10, $11, $12, $13)
         ",
-            thread_id.into_inner(),
-            thread_id.into_inner(),
+            channel_id.into_inner(),
+            channel_id.into_inner(),
             create.creator_id.into_inner(),
             create.room_id.map(|id| id),
             create.name,
@@ -59,32 +59,31 @@ impl DataThread for Postgres {
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
-        info!("inserted thread");
-        Ok(thread_id)
+        info!("inserted channel");
+        Ok(channel_id)
     }
 
-    /// get a thread
-    async fn thread_get(&self, thread_id: ThreadId) -> Result<Thread> {
-        let thread = query_file_as!(DbThread, "sql/thread_get.sql", thread_id.into_inner())
+    async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel> {
+        let thread = query_file_as!(DbChannel, "sql/channel_get.sql", channel_id.into_inner())
             .fetch_one(&self.pool)
             .await?;
         Ok(thread.into())
     }
 
-    async fn thread_list(
+    async fn channel_list(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>> {
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
             self.pool,
             query_file_as!(
-                DbThread,
-                "sql/thread_paginate.sql",
+                DbChannel,
+                "sql/channel_paginate.sql",
                 *room_id,
                 p.after.into_inner(),
                 p.before.into_inner(),
@@ -94,28 +93,28 @@ impl DataThread for Postgres {
                 *user_id
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
                 room_id.into_inner(),
                 parent_id.map(|id| *id)
             ),
-            |i: &Thread| i.id.to_string()
+            |i: &Channel| i.id.to_string()
         )
     }
 
-    async fn thread_list_archived(
+    async fn channel_list_archived(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>> {
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
             self.pool,
             query_file_as!(
-                DbThread,
-                "sql/thread_paginate_archived.sql",
+                DbChannel,
+                "sql/channel_paginate_archived.sql",
                 *room_id,
                 p.after.into_inner(),
                 p.before.into_inner(),
@@ -125,28 +124,28 @@ impl DataThread for Postgres {
                 *user_id
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
                 room_id.into_inner(),
                 parent_id.map(|id| *id)
             ),
-            |i: &Thread| i.id.to_string()
+            |i: &Channel| i.id.to_string()
         )
     }
 
-    async fn thread_list_removed(
+    async fn channel_list_removed(
         &self,
         room_id: RoomId,
         user_id: UserId,
-        pagination: PaginationQuery<ThreadId>,
-        parent_id: Option<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>> {
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
             self.pool,
             query_file_as!(
-                DbThread,
-                "sql/thread_paginate_removed.sql",
+                DbChannel,
+                "sql/channel_paginate_removed.sql",
                 *room_id,
                 p.after.into_inner(),
                 p.before.into_inner(),
@@ -156,22 +155,22 @@ impl DataThread for Postgres {
                 *user_id,
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM thread WHERE room_id = $1 AND deleted_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
+                r#"SELECT count(*) FROM channel WHERE room_id = $1 AND deleted_at IS NOT NULL AND ($2::uuid IS NULL OR parent_id = $2)"#,
                 room_id.into_inner(),
                 parent_id.map(|id| *id)
             ),
-            |i: &Thread| i.id.to_string()
+            |i: &Channel| i.id.to_string()
         )
     }
 
-    async fn thread_get_private(
+    async fn channel_get_private(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
-    ) -> Result<DbThreadPrivate> {
+    ) -> Result<DbChannelPrivate> {
         let thread_private = query_file_as!(
-            DbThreadPrivate,
-            "sql/thread_get_private.sql",
+            DbChannelPrivate,
+            "sql/channel_get_private.sql",
             *thread_id,
             *user_id,
         )
@@ -180,17 +179,21 @@ impl DataThread for Postgres {
         Ok(thread_private)
     }
 
-    async fn thread_update(&self, thread_id: ThreadId, patch: ThreadPatch) -> Result<ThreadVerId> {
+    async fn channel_update(
+        &self,
+        thread_id: ChannelId,
+        patch: ChannelPatch,
+    ) -> Result<ChannelVerId> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let thread = query_file_as!(DbThread, "sql/thread_get.sql", *thread_id,)
+        let thread = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id,)
             .fetch_one(&self.pool)
             .await?;
-        let thread: Thread = thread.into();
-        let version_id = ThreadVerId::new();
+        let thread: Channel = thread.into();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 name = $3,
                 description = $4,
@@ -226,13 +229,13 @@ impl DataThread for Postgres {
         Ok(version_id)
     }
 
-    async fn thread_delete(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_delete(&self, thread_id: ChannelId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 deleted_at = NOW()
             WHERE id = $1
@@ -246,33 +249,34 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_undelete(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_undelete(&self, thread_id: ChannelId) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        if let Some(room_id) = query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
-            .fetch_one(&mut *tx)
-            .await?
+        if let Some(room_id) =
+            query_scalar!("SELECT room_id FROM channel WHERE id = $1", *thread_id)
+                .fetch_one(&mut *tx)
+                .await?
         {
             let count: i64 = query_scalar!(
-                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                 room_id
             )
             .fetch_one(&mut *tx)
             .await?
             .unwrap_or(0);
 
-            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+            if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
                 return Err(Error::BadRequest(format!(
-                    "too many active threads (max {})",
-                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                    "too many active channel (max {})",
+                    crate::consts::MAX_CHANNEL_COUNT
                 )));
             }
         }
 
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 deleted_at = NULL
             WHERE id = $1
@@ -286,13 +290,13 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_archive(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_archive(&self, thread_id: ChannelId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 archived_at = NOW()
             WHERE id = $1
@@ -306,33 +310,34 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_unarchive(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_unarchive(&self, thread_id: ChannelId) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        if let Some(room_id) = query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
-            .fetch_one(&mut *tx)
-            .await?
+        if let Some(room_id) =
+            query_scalar!("SELECT room_id FROM channel WHERE id = $1", *thread_id)
+                .fetch_one(&mut *tx)
+                .await?
         {
             let count: i64 = query_scalar!(
-                "SELECT count(*) FROM thread WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                 room_id
             )
             .fetch_one(&mut *tx)
             .await?
             .unwrap_or(0);
 
-            if count as u32 >= crate::consts::MAX_ACTIVE_THREAD_COUNT {
+            if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
                 return Err(Error::BadRequest(format!(
-                    "too many active threads (max {})",
-                    crate::consts::MAX_ACTIVE_THREAD_COUNT
+                    "too many active channel (max {})",
+                    crate::consts::MAX_CHANNEL_COUNT
                 )));
             }
         }
 
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 archived_at = NULL
             WHERE id = $1
@@ -346,13 +351,13 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_lock(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_lock(&self, thread_id: ChannelId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 locked = true
             WHERE id = $1
@@ -366,13 +371,13 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_unlock(&self, thread_id: ThreadId) -> Result<()> {
+    async fn channel_unlock(&self, thread_id: ChannelId) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
-        let version_id = ThreadVerId::new();
+        let version_id = ChannelVerId::new();
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 locked = false
             WHERE id = $1
@@ -386,13 +391,13 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_reorder(&self, data: ThreadReorder) -> Result<()> {
+    async fn channel_reorder(&self, data: ChannelReorder) -> Result<()> {
         let mut conn = self.pool.acquire().await?;
         let mut tx = conn.begin().await?;
 
-        for thread in data.threads {
+        for thread in data.channels {
             let old = query!(
-                r#"SELECT position, parent_id FROM thread WHERE id = $1"#,
+                r#"SELECT position, parent_id FROM channel WHERE id = $1"#,
                 *thread.id,
             )
             .fetch_one(&mut *tx)
@@ -408,9 +413,9 @@ impl DataThread for Postgres {
                 .unwrap_or(old.parent_id);
 
             if new_position != old.position || new_parent_id != old.parent_id {
-                let version_id = ThreadVerId::new();
+                let version_id = ChannelVerId::new();
                 query!(
-                    r#"UPDATE thread SET version_id = $2, position = $3, parent_id = $4 WHERE id = $1"#,
+                    r#"UPDATE channel SET version_id = $2, position = $3, parent_id = $4 WHERE id = $1"#,
                     *thread.id,
                     *version_id,
                     thread.position.map(|i| i.map(|i| i as i32)).unwrap_or(old.position),
@@ -425,12 +430,12 @@ impl DataThread for Postgres {
         Ok(())
     }
 
-    async fn thread_upgrade_gdm(&self, thread_id: ThreadId, room_id: RoomId) -> Result<()> {
-        let version_id = ThreadVerId::new();
-        let ty = DbThreadType::Chat;
+    async fn channel_upgrade_gdm(&self, thread_id: ChannelId, room_id: RoomId) -> Result<()> {
+        let version_id = ChannelVerId::new();
+        let ty = DbChannelType::Text;
         query!(
             r#"
-            UPDATE thread SET
+            UPDATE channel SET
                 version_id = $2,
                 room_id = $3,
                 type = $4

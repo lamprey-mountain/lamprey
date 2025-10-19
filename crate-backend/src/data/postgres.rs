@@ -12,6 +12,7 @@ impl Data for Postgres {}
 mod application;
 mod audit_logs;
 mod auth;
+mod channel;
 mod connection;
 mod dm;
 mod email_queue;
@@ -29,7 +30,6 @@ mod room;
 mod room_member;
 mod search;
 mod session;
-mod thread;
 mod thread_member;
 mod unread;
 mod user;

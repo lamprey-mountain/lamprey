@@ -1,8 +1,8 @@
 use common::v1::types::Mentions;
 use common::v1::types::{
-    util::Time, Embed, MediaId, MessageId, MessageType, MessageVerId, Permission, Puppet, RoleId,
-    Room, RoomId, RoomMembership, RoomType, Session, SessionStatus, SessionToken, SessionType,
-    Thread, ThreadId, ThreadMembership, ThreadType, ThreadVerId, UserId,
+    util::Time, Channel, ChannelId, ChannelType, ChannelVerId, Embed, MediaId, MessageId,
+    MessageType, MessageVerId, Permission, Puppet, RoleId, Room, RoomId, RoomMembership, RoomType,
+    Session, SessionStatus, SessionToken, SessionType, ThreadMembership, UserId,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -22,16 +22,16 @@ pub struct DbRoom {
     pub archived_at: Option<PrimitiveDateTime>,
     pub public: bool,
     pub ty: DbRoomType,
-    pub welcome_thread_id: Option<Uuid>,
+    pub welcome_channel_id: Option<Uuid>,
     pub member_count: i64,
-    pub thread_count: i64,
+    pub channel_count: i64,
     pub quarantined: bool,
 }
 
 pub struct DbRoomCreate {
     pub id: Option<RoomId>,
     pub ty: RoomType,
-    pub welcome_thread_id: Option<ThreadId>,
+    pub welcome_channel_id: Option<ChannelId>,
 }
 
 pub struct DbUserCreate {
@@ -65,27 +65,27 @@ impl From<DbRoom> for Room {
             room_type: row.ty.into(),
             archived_at: row.archived_at.map(|t| Time::from(t.assume_utc())),
             public: row.public,
-            welcome_thread_id: row.welcome_thread_id.map(|i| i.into()),
+            welcome_channel_id: row.welcome_channel_id.map(|i| i.into()),
             quarantined: row.quarantined,
             member_count: row.member_count as u64,
             online_count: Default::default(),
-            thread_count: row.thread_count as u64,
+            channel_count: row.channel_count as u64,
             user_config: None,
         }
     }
 }
 
 #[derive(Debug, Deserialize)]
-pub struct DbThread {
-    pub id: ThreadId,
+pub struct DbChannel {
+    pub id: ChannelId,
     pub room_id: Option<Uuid>,
     pub creator_id: UserId,
     pub owner_id: Option<Uuid>,
-    pub version_id: ThreadVerId,
+    pub version_id: ChannelVerId,
     pub name: String,
     pub description: Option<String>,
     pub icon: Option<Uuid>,
-    pub ty: DbThreadType,
+    pub ty: DbChannelType,
     pub last_version_id: Option<Uuid>,
     pub message_count: i64,
     pub member_count: i64,
@@ -101,21 +101,21 @@ pub struct DbThread {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct DbThreadPrivate {
-    pub id: ThreadId,
-    pub ty: DbThreadType,
+pub struct DbChannelPrivate {
+    pub id: ChannelId,
+    pub ty: DbChannelType,
     pub last_read_id: Option<Uuid>,
     pub is_unread: bool,
 }
 
-pub struct DbThreadCreate {
+pub struct DbChannelCreate {
     pub room_id: Option<Uuid>,
     pub creator_id: UserId,
     pub owner_id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub icon: Option<Uuid>,
-    pub ty: DbThreadType,
+    pub ty: DbChannelType,
     pub nsfw: bool,
     pub bitrate: Option<i32>,
     pub user_limit: Option<i32>,
@@ -124,31 +124,35 @@ pub struct DbThreadCreate {
 
 #[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[sqlx(type_name = "thread_type")]
-pub enum DbThreadType {
-    Chat,
+pub enum DbChannelType {
+    Text,
     Forum,
     Voice,
     Dm,
     Gdm,
     Category,
+    ThreadPublic,
+    ThreadPrivate,
 }
 
-impl From<DbThreadType> for ThreadType {
-    fn from(value: DbThreadType) -> Self {
+impl From<DbChannelType> for ChannelType {
+    fn from(value: DbChannelType) -> Self {
         match value {
-            DbThreadType::Chat => ThreadType::Chat,
-            DbThreadType::Forum => ThreadType::Forum,
-            DbThreadType::Voice => ThreadType::Voice,
-            DbThreadType::Dm => ThreadType::Dm,
-            DbThreadType::Gdm => ThreadType::Gdm,
-            DbThreadType::Category => ThreadType::Category,
+            DbChannelType::Text => ChannelType::Text,
+            DbChannelType::Forum => ChannelType::Forum,
+            DbChannelType::Voice => ChannelType::Voice,
+            DbChannelType::Dm => ChannelType::Dm,
+            DbChannelType::Gdm => ChannelType::Gdm,
+            DbChannelType::Category => ChannelType::Category,
+            DbChannelType::ThreadPublic => ChannelType::ThreadPublic,
+            DbChannelType::ThreadPrivate => ChannelType::ThreadPrivate,
         }
     }
 }
 
-impl From<DbThread> for Thread {
-    fn from(row: DbThread) -> Self {
-        Thread {
+impl From<DbChannel> for Channel {
+    fn from(row: DbChannel) -> Self {
+        Channel {
             id: row.id,
             room_id: row.room_id.map(Into::into),
             creator_id: row.creator_id,
@@ -177,7 +181,6 @@ impl From<DbThread> for Thread {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
-            notifications: None,
             recipient: None,
             recipients: vec![],
             user_config: None,
@@ -262,7 +265,7 @@ pub struct DbRoleCreate {
 }
 
 pub struct DbMessageCreate {
-    pub thread_id: ThreadId,
+    pub channel_id: ChannelId,
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
@@ -366,19 +369,12 @@ impl_perms!(
     ServerReports,
     TagApply,
     TagManage,
-    ThreadArchive,
-    ThreadCreateChat,
-    ThreadCreateForum,
-    ThreadCreateVoice,
     ThreadCreatePublic,
     ThreadCreatePrivate,
-    ThreadRemove,
     ThreadEdit,
-    ThreadForward,
     ThreadLock,
     ThreadManage,
-    ThreadPublish,
-    ViewThread,
+    ViewChannel,
     ViewAuditLog,
     VoiceConnect,
     VoiceDeafen,
@@ -388,6 +384,9 @@ impl_perms!(
     VoicePriority,
     VoiceSpeak,
     VoiceVideo,
+    ChannelManage,
+    ChannelEdit,
+    CalendarEventManage,
 );
 
 impl From<RoomMembership> for DbMembership {
@@ -460,7 +459,7 @@ pub struct UrlEmbedQueue {
 #[derive(Debug, sqlx::FromRow)]
 pub struct DbNotification {
     pub id: Uuid,
-    pub thread_id: Uuid,
+    pub channel_id: Uuid,
     pub message_id: Uuid,
     pub reason: String,
     pub added_at: PrimitiveDateTime,
@@ -471,7 +470,7 @@ pub struct DbNotification {
 pub struct MessageRef {
     pub message_id: MessageId,
     pub version_id: MessageVerId,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
 }
 
 #[derive(sqlx::FromRow)]

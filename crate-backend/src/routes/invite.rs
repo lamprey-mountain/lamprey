@@ -6,10 +6,10 @@ use axum::{extract::State, Json};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Invite, InviteCode, InviteCreate,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, Invite, InviteCode, InviteCreate,
     InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
     PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
-    RoomMemberPut, RoomMembership, ThreadId, SERVER_ROOM_ID,
+    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -58,7 +58,7 @@ async fn invite_delete(
         InviteTarget::Gdm { thread } => (
             s.services()
                 .perms
-                .for_thread(auth_user.id, thread.id)
+                .for_channel(auth_user.id, thread.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {
@@ -170,7 +170,7 @@ async fn invite_resolve(
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Gdm { thread } => {
-            let perms = s.perms.for_thread(auth_user.id, thread.id).await?;
+            let perms = s.perms.for_channel(auth_user.id, thread.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Server => {
@@ -500,7 +500,7 @@ async fn invite_room_list(
     )
 )]
 async fn invite_thread_create(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Auth(_auth_user): Auth,
     HeaderReason(_reason): HeaderReason,
     State(_s): State<Arc<ServerState>>,
@@ -525,7 +525,7 @@ async fn invite_thread_create(
     )
 )]
 async fn invite_thread_list(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Query(_paginate): Query<PaginationQuery<InviteCode>>,
     Auth(_user): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -573,7 +573,7 @@ async fn invite_patch(
         InviteTarget::Gdm { thread } => (
             s.services()
                 .perms
-                .for_thread(auth_user.id, thread.id)
+                .for_channel(auth_user.id, thread.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {

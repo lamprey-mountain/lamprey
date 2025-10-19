@@ -7,9 +7,9 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageId,
-    Room, RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, ThreadReorder, ThreadType,
-    UserId,
+    util::Changes, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
+    ChannelReorder, ChannelType, MessageId, Room, RoomCreate, RoomMemberOrigin, RoomType,
+    ThreadMemberPut, UserId,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -21,8 +21,8 @@ use validator::Validate;
 use crate::{
     routes::util::AuthSudo,
     types::{
-        DbRoomCreate, DbThreadCreate, DbThreadType, MessageSync, MessageVerId, Permission, RoomId,
-        Thread, ThreadCreate, ThreadId, ThreadPatch,
+        Channel, ChannelCreate, ChannelId, ChannelPatch, DbChannelType, DbRoomCreate,
+        DbChannelCreate, MessageSync, MessageVerId, Permission, RoomId,
     },
     Error, ServerState,
 };
@@ -30,6 +30,9 @@ use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
+
+// TODO: rename **everything** from thread to channel
+// TODO: rename to channel.rs and move thread-specific routes into thread.rs
 
 /// Room thread create
 ///
@@ -45,41 +48,35 @@ use crate::error::Result;
         "badge.perm-opt.ThreadCreateVoice",
     ],
     responses(
-        (status = CREATED, body = Thread, description = "Create thread success"),
+        (status = CREATED, body = Channel, description = "Create thread success"),
     )
 )]
-async fn thread_create_room(
+async fn channel_create_room(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<ThreadCreate>,
+    Json(json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
     let data = s.data();
     let perms = if let Some(parent_id) = json.parent_id {
-        srv.perms.for_thread(auth_user.id, parent_id).await?
+        srv.perms.for_channel(auth_user.id, parent_id).await?
     } else {
         srv.perms.for_room(auth_user.id, room_id).await?
     };
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     match json.ty {
-        ThreadType::Chat => {
-            perms.ensure(Permission::ThreadCreateChat)?;
+        ChannelType::Text | ChannelType::Forum | ChannelType::Voice | ChannelType::Category => {
+            perms.ensure(Permission::ChannelManage)?;
         }
-        ThreadType::Forum => {
-            perms.ensure(Permission::ThreadCreateForum)?;
+        ChannelType::Calendar | ChannelType::ThreadPublic | ChannelType::ThreadPrivate => {
+            return Err(Error::BadStatic("not yet implemented"))
         }
-        ThreadType::Voice => {
-            perms.ensure(Permission::ThreadCreateVoice)?;
-        }
-        ThreadType::Category => {
-            perms.ensure(Permission::ThreadManage)?;
-        }
-        ThreadType::Calendar => return Err(Error::BadStatic("not yet implemented")),
-        ThreadType::Dm | ThreadType::Gdm => {
+        // ThreadType::{ThreadPublic, ThreadPrivate} => require a parent_id, require parent to either be Text or Forum
+        ChannelType::Dm | ChannelType::Gdm => {
             return Err(Error::BadStatic(
                 "can't create a direct message thread in a room",
             ))
@@ -88,27 +85,29 @@ async fn thread_create_room(
     if json.bitrate.is_some_and(|b| b > 393216) {
         return Err(Error::BadStatic("bitrate is too high"));
     }
-    if json.ty != ThreadType::Voice && json.bitrate.is_some() {
+    if json.ty != ChannelType::Voice && json.bitrate.is_some() {
         return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
     }
-    if json.ty != ThreadType::Voice && json.user_limit.is_some() {
+    if json.ty != ChannelType::Voice && json.user_limit.is_some() {
         return Err(Error::BadStatic(
             "cannot set user_limit for non voice thread",
         ));
     }
-    let thread_id = data
-        .thread_create(DbThreadCreate {
+    let channel_id = data
+        .channel_create(DbChannelCreate {
             room_id: Some(room_id.into_inner()),
             creator_id: auth_user.id,
             name: json.name.clone(),
             description: json.description.clone(),
             ty: match json.ty {
-                ThreadType::Chat => DbThreadType::Chat,
-                ThreadType::Forum => DbThreadType::Forum,
-                ThreadType::Voice => DbThreadType::Voice,
-                ThreadType::Category => DbThreadType::Category,
-                ThreadType::Calendar => return Err(Error::BadStatic("not yet implemented")),
-                ThreadType::Dm | ThreadType::Gdm => {
+                ChannelType::Text => DbChannelType::Text,
+                ChannelType::Forum => DbChannelType::Forum,
+                ChannelType::Voice => DbChannelType::Voice,
+                ChannelType::Category => DbChannelType::Category,
+                ChannelType::Calendar | ChannelType::ThreadPublic | ChannelType::ThreadPrivate => {
+                    return Err(Error::BadStatic("not yet implemented"))
+                }
+                ChannelType::Dm | ChannelType::Gdm => {
                     // this should be unreachable due to the check above
                     warn!("unreachable: dm/gdm thread creation in room");
                     return Err(Error::BadStatic(
@@ -125,25 +124,26 @@ async fn thread_create_room(
         })
         .await?;
 
-    data.thread_member_put(thread_id, auth_user.id, ThreadMemberPut {})
+    data.thread_member_put(channel_id, auth_user.id, ThreadMemberPut {})
         .await?;
-    let thread_member = data.thread_member_get(thread_id, auth_user.id).await?;
+    let thread_member = data.thread_member_get(channel_id, auth_user.id).await?;
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     s.audit_log_append(AuditLogEntry {
         id: AuditLogEntryId::new(),
         room_id,
         user_id: auth_user.id,
         session_id: None,
         reason: reason.clone(),
-        ty: AuditLogEntryType::ThreadCreate {
-            thread_id,
+        ty: AuditLogEntryType::ChannelCreate {
+            channel_id,
             changes: Changes::new()
-                .add("name", &thread.name)
-                .add("description", &thread.description)
-                .add("nsfw", &thread.nsfw)
-                .add("user_limit", &thread.user_limit)
-                .add("bitrate", &thread.bitrate)
+                .add("name", &channel.name)
+                .add("description", &channel.description)
+                .add("nsfw", &channel.nsfw)
+                .add("user_limit", &channel.user_limit)
+                .add("bitrate", &channel.bitrate)
+                .add("type", &channel.ty)
                 .build(),
         },
     })
@@ -152,13 +152,13 @@ async fn thread_create_room(
     s.broadcast_room(
         room_id,
         auth_user.id,
-        MessageSync::ThreadCreate {
-            thread: Box::new(thread.clone()),
+        MessageSync::ChannelCreate {
+            channel: Box::new(channel.clone()),
         },
     )
     .await?;
     s.broadcast_thread(
-        thread.id,
+        channel.id,
         auth_user.id,
         MessageSync::ThreadMemberUpsert {
             member: thread_member,
@@ -166,31 +166,31 @@ async fn thread_create_room(
     )
     .await?;
 
-    Ok((StatusCode::CREATED, Json(thread)))
+    Ok((StatusCode::CREATED, Json(channel)))
 }
 
-/// Dm thread create
+/// Channel create dm
 ///
 /// Create a dm or group dm thread (outside of a room)
 #[utoipa::path(
     post,
-    path = "/thread",
-    tags = ["thread"],
+    path = "/channel",
+    tags = ["channel"],
     responses(
-        (status = CREATED, body = Thread, description = "Create thread success"),
+        (status = CREATED, body = Channel, description = "Create thread success"),
     )
 )]
-async fn dm_thread_create(
+async fn channel_create_dm(
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    Json(mut json): Json<ThreadCreate>,
+    Json(mut json): Json<ChannelCreate>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
     let srv = s.services();
     let data = s.data();
     match json.ty {
-        ThreadType::Dm => {
+        ChannelType::Dm => {
             let Some(recipients) = &json.recipients else {
                 return Err(Error::BadStatic("dm thread is missing recipients"));
             };
@@ -201,8 +201,8 @@ async fn dm_thread_create(
             }
             let target_user_id = recipients.first().unwrap();
             let (thread, is_new) = srv.users.init_dm(auth_user.id, *target_user_id).await?;
-            s.broadcast(MessageSync::ThreadCreate {
-                thread: Box::new(thread.clone()),
+            s.broadcast(MessageSync::ChannelCreate {
+                channel: Box::new(thread.clone()),
             })?;
             if is_new {
                 return Ok((StatusCode::CREATED, Json(thread)));
@@ -210,7 +210,7 @@ async fn dm_thread_create(
                 return Ok((StatusCode::OK, Json(thread)));
             }
         }
-        ThreadType::Gdm => {
+        ChannelType::Gdm => {
             let Some(recipients) = &mut json.recipients else {
                 return Err(Error::BadStatic("gdm thread is missing recipients"));
             };
@@ -226,17 +226,17 @@ async fn dm_thread_create(
     if json.bitrate.is_some_and(|b| b > 393216) {
         return Err(Error::BadStatic("bitrate is too high"));
     }
-    if json.ty != ThreadType::Voice && json.bitrate.is_some() {
+    if json.ty != ChannelType::Voice && json.bitrate.is_some() {
         return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
     }
-    if json.ty != ThreadType::Voice && json.user_limit.is_some() {
+    if json.ty != ChannelType::Voice && json.user_limit.is_some() {
         return Err(Error::BadStatic(
             "cannot set user_limit for non voice thread",
         ));
     }
 
     if let Some(icon) = json.icon {
-        if json.ty != ThreadType::Gdm {
+        if json.ty != ChannelType::Gdm {
             return Err(Error::BadStatic("only gdm threads can have icons"));
         }
         let (media, _) = data.media_select(icon).await?;
@@ -248,14 +248,14 @@ async fn dm_thread_create(
         }
     }
 
-    let thread_id = data
-        .thread_create(DbThreadCreate {
+    let channel_id = data
+        .channel_create(DbChannelCreate {
             room_id: None,
             creator_id: auth_user.id,
             name: json.name.clone(),
             description: json.description.clone(),
             icon: json.icon.map(|i| *i),
-            ty: DbThreadType::Gdm,
+            ty: DbChannelType::Gdm,
             nsfw: json.nsfw,
             bitrate: json.bitrate.map(|b| b as i32),
             user_limit: json.bitrate.map(|u| u as i32),
@@ -265,24 +265,28 @@ async fn dm_thread_create(
         .await?;
 
     if let Some(icon) = json.icon {
-        data.media_link_create_exclusive(icon, *thread_id, crate::types::MediaLinkType::IconThread)
-            .await?;
+        data.media_link_create_exclusive(
+            icon,
+            *channel_id,
+            crate::types::MediaLinkType::IconThread,
+        )
+        .await?;
     }
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     let mut members = vec![];
 
     if let Some(recipients) = &json.recipients {
         for id in recipients {
-            data.thread_member_put(thread_id, *id, ThreadMemberPut {})
+            data.thread_member_put(channel_id, *id, ThreadMemberPut {})
                 .await?;
-            let thread_member = data.thread_member_get(thread_id, *id).await?;
+            let thread_member = data.thread_member_get(channel_id, *id).await?;
             members.push(thread_member);
         }
     }
 
-    s.broadcast(MessageSync::ThreadCreate {
-        thread: Box::new(thread.clone()),
+    s.broadcast(MessageSync::ChannelCreate {
+        channel: Box::new(thread.clone()),
     })?;
     for member in members {
         s.broadcast(MessageSync::ThreadMemberUpsert { member })?;
@@ -291,72 +295,71 @@ async fn dm_thread_create(
     Ok((StatusCode::CREATED, Json(thread)))
 }
 
-/// Thread get
+/// Channel get
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}",
+    path = "/channel/{thread_id}",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["channel"],
     responses(
-        (status = OK, body = Thread, description = "Get thread success"),
+        (status = OK, body = Channel, description = "Get thread success"),
     )
 )]
-async fn thread_get(
-    Path((thread_id,)): Path<(ThreadId,)>,
+async fn channel_get(
+    Path((channel_id,)): Path<(ChannelId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
-    let thread = s
+    perms.ensure(Permission::ViewChannel)?;
+    let channel = s
         .services()
-        .threads
-        .get(thread_id, Some(auth_user.id))
+        .channels
+        .get(channel_id, Some(auth_user.id))
         .await?;
-    Ok((StatusCode::OK, Json(thread)))
+    Ok((StatusCode::OK, Json(channel)))
 }
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 struct ThreadListQuery {
-    parent_id: Option<ThreadId>,
+    parent_id: Option<ChannelId>,
 }
 
-/// Room thread list
-// maybe in the future i'll replace this with a more flexible "thread query/search" api
+/// Room channel list
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/thread",
+    path = "/room/{room_id}/channel",
     params(
         ("room_id", description = "Room id"),
         ThreadListQuery,
         PaginationQuery<ThreadId>
     ),
-    tags = ["thread"],
+    tags = ["channel"],
     responses(
-        (status = OK, body = PaginationResponse<Thread>, description = "List room threads success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "List room threads success"),
     )
 )]
-async fn thread_list(
+async fn channel_list(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<ThreadListQuery>,
-    Query(pagination): Query<PaginationQuery<ThreadId>>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     let mut res = data
-        .thread_list(room_id, auth_user.id, pagination, q.parent_id)
+        .channel_list(room_id, auth_user.id, pagination, q.parent_id)
         .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
         // FIXME: dubious performance
-        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
+        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
     Ok(Json(res))
@@ -371,27 +374,27 @@ async fn thread_list(
         ThreadListQuery,
         PaginationQuery<ThreadId>
     ),
-    tags = ["thread"],
+    tags = ["channel"],
     responses(
-        (status = OK, body = PaginationResponse<Thread>, description = "List archived room threads success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "List archived room threads success"),
     )
 )]
-async fn thread_list_archived(
+async fn channel_list_archived(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<ThreadListQuery>,
-    Query(pagination): Query<PaginationQuery<ThreadId>>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     let mut res = data
-        .thread_list_archived(room_id, auth_user.id, pagination, q.parent_id)
+        .channel_list_archived(room_id, auth_user.id, pagination, q.parent_id)
         .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
+        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
     Ok(Json(res))
@@ -408,28 +411,28 @@ async fn thread_list_archived(
         ThreadListQuery,
         PaginationQuery<ThreadId>
     ),
-    tags = ["thread"],
+    tags = ["channel"],
     responses(
-        (status = OK, body = PaginationResponse<Thread>, description = "List removed room threads success"),
+        (status = OK, body = PaginationResponse<Channel>, description = "List removed room threads success"),
     )
 )]
-async fn thread_list_removed(
+async fn channel_list_removed(
     Path((room_id,)): Path<(RoomId,)>,
     Query(q): Query<ThreadListQuery>,
-    Query(pagination): Query<PaginationQuery<ThreadId>>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    perms.ensure(Permission::ThreadRemove)?;
+    perms.ensure(Permission::ThreadManage)?;
     let mut res = data
-        .thread_list_removed(room_id, auth_user.id, pagination, q.parent_id)
+        .channel_list_removed(room_id, auth_user.id, pagination, q.parent_id)
         .await?;
     let srv = s.services();
     let mut threads = vec![];
     for t in &res.items {
-        threads.push(srv.threads.get(t.id, Some(auth_user.id)).await?);
+        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
     }
     res.items = threads;
     Ok(Json(res))
@@ -442,17 +445,17 @@ async fn thread_list_removed(
     patch,
     path = "/room/{room_id}/thread",
     params(("room_id", description = "Room id")),
-    tags = ["thread", "badge.perm.ThreadReorder"],
+    tags = ["channel", "badge.perm.ThreadReorder"],
     responses(
         (status = OK, body = (), description = "Reorder threads success"),
     )
 )]
-async fn thread_reorder(
+async fn channel_reorder(
     Path((room_id,)): Path<(RoomId,)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<ThreadReorder>,
+    Json(json): Json<ChannelReorder>,
 ) -> Result<()> {
     let data = s.data();
     let srv = s.services();
@@ -460,21 +463,21 @@ async fn thread_reorder(
 
     let mut threads_old = HashMap::new();
 
-    for thread in &json.threads {
-        let thread_data = srv.threads.get(thread.id, None).await?;
+    for thread in &json.channels {
+        let thread_data = srv.channels.get(thread.id, None).await?;
         threads_old.insert(thread_data.id, thread_data);
 
-        let perms_thread = srv.perms.for_thread(auth_user.id, thread.id).await?;
-        perms_thread.ensure(Permission::ViewThread)?;
+        let perms_thread = srv.perms.for_channel(auth_user.id, thread.id).await?;
+        perms_thread.ensure(Permission::ViewChannel)?;
         perms_thread.ensure(Permission::ThreadManage)?;
 
         if let Some(Some(parent_id)) = thread.parent_id {
-            let perms_parent = srv.perms.for_thread(auth_user.id, parent_id).await?;
-            perms_thread.ensure(Permission::ViewThread)?;
+            let perms_parent = srv.perms.for_channel(auth_user.id, parent_id).await?;
+            perms_thread.ensure(Permission::ViewChannel)?;
             perms_parent.ensure(Permission::ThreadManage)?;
 
-            let parent_data = srv.threads.get(parent_id, None).await?;
-            if parent_data.ty != ThreadType::Category {
+            let parent_data = srv.channels.get(parent_id, None).await?;
+            if parent_data.ty != ChannelType::Category {
                 return Err(Error::BadStatic(
                     "threads can only be children of category threads",
                 ));
@@ -482,12 +485,12 @@ async fn thread_reorder(
         }
     }
 
-    data.thread_reorder(json.clone()).await?;
+    data.channel_reorder(json.clone()).await?;
 
-    for thread in &json.threads {
-        srv.threads.invalidate(thread.id).await;
+    for thread in &json.channels {
+        srv.channels.invalidate(thread.id).await;
         let thread_old = threads_old.get(&thread.id);
-        let thread = srv.threads.get(thread.id, None).await?;
+        let thread = srv.channels.get(thread.id, None).await?;
         if let Some(thread_old) = thread_old {
             if thread.parent_id == thread_old.parent_id && thread.position == thread_old.position {
                 continue;
@@ -496,8 +499,8 @@ async fn thread_reorder(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -509,8 +512,8 @@ async fn thread_reorder(
         user_id: auth_user.id,
         session_id: None,
         reason,
-        ty: AuditLogEntryType::ThreadReorder {
-            threads: json.threads,
+        ty: AuditLogEntryType::ChannelReorder {
+            channels: json.channels,
         },
     })
     .await?;
@@ -518,25 +521,25 @@ async fn thread_reorder(
     Ok(())
 }
 
-/// Thread edit
+/// Channel edit
 #[utoipa::path(
     patch,
-    path = "/thread/{thread_id}",
+    path = "/channel/{thread_id}",
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread", "badge.perm-opt.ThreadEdit"],
+    tags = ["channel", "badge.perm-opt.ThreadEdit"],
     responses(
-        (status = OK, body = Thread, description = "edit message success"),
-        (status = NOT_MODIFIED, body = Thread, description = "no change"),
+        (status = OK, body = Channel, description = "edit message success"),
+        (status = NOT_MODIFIED, body = Channel, description = "no change"),
     )
 )]
-async fn thread_update(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_update(
+    Path(thread_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
-    Json(json): Json<ThreadPatch>,
+    Json(json): Json<ChannelPatch>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     json.validate()?;
@@ -547,7 +550,7 @@ async fn thread_update(
     }
     let thread = s
         .services()
-        .threads
+        .channels
         .update(auth_user.id, thread_id, json.clone(), reason)
         .await?;
 
@@ -587,22 +590,22 @@ struct AckRes {
     version_id: MessageVerId,
 }
 
-/// Thread ack
+/// Channel ack
 ///
 /// Mark a thread as read (or unread).
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/ack",
+    path = "/channel/{thread_id}/ack",
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread"],
+    tags = ["channel"],
     responses(
         (status = OK, description = "success"),
     )
 )]
-async fn thread_ack(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_ack(
+    Path(thread_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<AckReq>,
@@ -611,9 +614,9 @@ async fn thread_ack(
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, thread_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     let version_id = json.version_id;
     let message_id = if let Some(message_id) = json.message_id {
         message_id
@@ -625,7 +628,7 @@ async fn thread_ack(
     data.unread_put(auth_user.id, thread_id, message_id, version_id)
         .await?;
     s.services()
-        .threads
+        .channels
         .invalidate_user(thread_id, auth_user.id)
         .await;
     Ok(Json(AckRes {
@@ -634,21 +637,21 @@ async fn thread_ack(
     }))
 }
 
-/// Thread archive
+/// Channel archive
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/archive",
+    path = "/channel/{thread_id}/archive",
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread", "badge.perm-opt.ThreadArchive"],
+    tags = ["channel", "badge.perm-opt.ThreadArchive"],
     responses(
-        (status = OK, body = Thread, description = "success"),
-        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
+        (status = OK, body = Channel, description = "success"),
+        (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
     )
 )]
-async fn thread_archive(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_archive(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -656,10 +659,10 @@ async fn thread_archive(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     if auth_user.id != thread_before.creator_id {
-        perms.ensure(Permission::ThreadArchive)?;
+        perms.ensure(Permission::ChannelManage)?;
     }
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -671,10 +674,10 @@ async fn thread_archive(
         return Ok(StatusCode::NO_CONTENT);
     }
 
-    data.thread_archive(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_archive(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    srv.users.disconnect_everyone_from_thread(channel_id)?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -682,8 +685,8 @@ async fn thread_archive(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change(
                         "archived_at",
@@ -697,8 +700,8 @@ async fn thread_archive(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread.clone()),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread.clone()),
             },
         )
         .await?;
@@ -711,21 +714,21 @@ async fn thread_archive(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread unarchive
+/// Channel unarchive
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/archive",
+    path = "/channel/{thread_id}/archive",
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread", "badge.perm-opt.ThreadArchive"],
+    tags = ["channel", "badge.perm-opt.ThreadArchive"],
     responses(
-        (status = OK, body = Thread, description = "success"),
-        (status = NOT_MODIFIED, body = Thread, description = "didn't change anything"),
+        (status = OK, body = Channel, description = "success"),
+        (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
     )
 )]
-async fn thread_unarchive(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_unarchive(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -733,10 +736,10 @@ async fn thread_unarchive(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
+    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     if auth_user.id != thread_before.creator_id {
-        perms.ensure(Permission::ThreadArchive)?;
+        perms.ensure(Permission::ChannelManage)?;
     }
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -747,9 +750,9 @@ async fn thread_unarchive(
     if thread_before.archived_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_unarchive(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_unarchive(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -757,8 +760,8 @@ async fn thread_unarchive(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change(
                         "archived_at",
@@ -772,8 +775,8 @@ async fn thread_unarchive(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -781,19 +784,16 @@ async fn thread_unarchive(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread remove
-// NOTE: this isn't DELETE. in the future, i probably want to be able to add/remove threads in rooms instead of globally, eg.
-// PUT /room/{room_id}/thread/{thread_id}
-// DELETE /room/{room_id}/thread/{thread_id}
+/// Channel remove
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/remove",
+    path = "/channel/{thread_id}/remove",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread", "badge.perm.ThreadDelete"],
+    tags = ["channel", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_remove(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_remove(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -801,16 +801,16 @@ async fn thread_remove(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ThreadRemove)?;
-    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ChannelManage)?;
+    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_some() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_delete(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_delete(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    srv.users.disconnect_everyone_from_thread(channel_id)?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -818,8 +818,8 @@ async fn thread_remove(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
                     .build(),
@@ -829,8 +829,8 @@ async fn thread_remove(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -838,16 +838,16 @@ async fn thread_remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread restore
+/// Channel restore
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/remove",
+    path = "/channel/{thread_id}/remove",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread", "badge.perm.ThreadDelete"],
+    tags = ["channel", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_restore(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_restore(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -855,15 +855,15 @@ async fn thread_restore(
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ThreadRemove)?;
-    let thread_before = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ThreadManage)?;
+    let thread_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread_before.deleted_at.is_none() {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_undelete(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_undelete(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -871,8 +871,8 @@ async fn thread_restore(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change("deleted_at", &thread_before.deleted_at, &thread.deleted_at)
                     .build(),
@@ -882,8 +882,8 @@ async fn thread_restore(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -891,31 +891,31 @@ async fn thread_restore(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread trigger typing indicator
+/// Channel trigger typing indicator
 ///
 /// Send a typing notification to a thread
 #[utoipa::path(
     method(post),
-    path = "/thread/{thread_id}/typing",
+    path = "/channel/{thread_id}/typing",
     params(
         ("thread_id", description = "Thread id"),
     ),
-    tags = ["thread", "badge.perm.MessageCreate"],
+    tags = ["channel", "badge.perm.MessageCreate"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
 )]
-async fn thread_typing(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_typing(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth_user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    perms.ensure(Permission::ViewThread)?;
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::MessageCreate)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread.archived_at.is_some() {
         return Err(Error::BadStatic("thread is archived"));
     }
@@ -926,12 +926,14 @@ async fn thread_typing(
         perms.ensure(Permission::ThreadLock)?;
     }
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
-    srv.threads.typing_set(thread_id, auth_user.id, until).await;
+    srv.channels
+        .typing_set(channel_id, auth_user.id, until)
+        .await;
     s.broadcast_thread(
-        thread_id,
+        channel_id,
         auth_user.id,
-        MessageSync::ThreadTyping {
-            thread_id,
+        MessageSync::ChannelTyping {
+            channel_id,
             user_id: auth_user.id,
             until: until.into(),
         },
@@ -940,16 +942,16 @@ async fn thread_typing(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread lock
+/// Channel lock
 #[utoipa::path(
     put,
-    path = "/thread/{thread_id}/lock",
+    path = "/channel/{thread_id}/lock",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread", "badge.perm.ThreadLock"],
+    tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_lock(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_lock(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -957,13 +959,13 @@ async fn thread_lock(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.threads.get(thread_id, None).await?;
+    let thread_before = srv.channels.get(channel_id, None).await?;
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -971,10 +973,10 @@ async fn thread_lock(
     if thread_before.locked {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_lock(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_lock(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    srv.users.disconnect_everyone_from_thread(channel_id)?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -982,8 +984,8 @@ async fn thread_lock(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change("locked", &thread_before.locked, &thread.locked)
                     .build(),
@@ -993,8 +995,8 @@ async fn thread_lock(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -1002,16 +1004,16 @@ async fn thread_lock(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread unlock
+/// Channel unlock
 #[utoipa::path(
     delete,
-    path = "/thread/{thread_id}/lock",
+    path = "/channel/{thread_id}/lock",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread", "badge.perm.ThreadLock"],
+    tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
 )]
-async fn thread_unlock(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_unlock(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -1019,13 +1021,13 @@ async fn thread_unlock(
     auth_user.ensure_unsuspended()?;
     let data = s.data();
     let srv = s.services();
-    let thread_before = srv.threads.get(thread_id, None).await?;
+    let thread_before = srv.channels.get(channel_id, None).await?;
     let perms = s
         .services()
         .perms
-        .for_thread(auth_user.id, thread_id)
+        .for_channel(auth_user.id, channel_id)
         .await?;
-    perms.ensure(Permission::ViewThread)?;
+    perms.ensure(Permission::ViewChannel)?;
     perms.ensure(Permission::ThreadLock)?;
     if thread_before.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
@@ -1033,10 +1035,10 @@ async fn thread_unlock(
     if !thread_before.locked {
         return Ok(StatusCode::NO_CONTENT);
     }
-    data.thread_unlock(thread_id).await?;
-    srv.threads.invalidate(thread_id).await;
-    srv.users.disconnect_everyone_from_thread(thread_id)?;
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    data.channel_unlock(channel_id).await?;
+    srv.channels.invalidate(channel_id).await;
+    srv.users.disconnect_everyone_from_thread(channel_id)?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if let Some(room_id) = thread.room_id {
         s.audit_log_append(AuditLogEntry {
             id: AuditLogEntryId::new(),
@@ -1044,8 +1046,8 @@ async fn thread_unlock(
             user_id: auth_user.id,
             session_id: None,
             reason,
-            ty: AuditLogEntryType::ThreadUpdate {
-                thread_id,
+            ty: AuditLogEntryType::ChannelUpdate {
+                channel_id,
                 changes: Changes::new()
                     .change("locked", &thread_before.locked, &thread.locked)
                     .build(),
@@ -1055,8 +1057,8 @@ async fn thread_unlock(
         s.broadcast_room(
             room_id,
             auth_user.id,
-            MessageSync::ThreadUpdate {
-                thread: Box::new(thread),
+            MessageSync::ChannelUpdate {
+                channel: Box::new(thread),
             },
         )
         .await?;
@@ -1064,18 +1066,18 @@ async fn thread_unlock(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Thread upgrade
+/// Channel upgrade
 ///
 /// Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/upgrade",
+    path = "/channel/{thread_id}/upgrade",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread"],
+    tags = ["channel"],
     responses((status = OK, body = Room, description = "success")),
 )]
-async fn thread_upgrade(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_upgrade(
+    Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     HeaderReason(reason): HeaderReason,
     State(s): State<Arc<ServerState>>,
@@ -1084,9 +1086,9 @@ async fn thread_upgrade(
     let srv = s.services();
     let data = s.data();
 
-    let thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
-    if thread.ty != ThreadType::Gdm {
+    if thread.ty != ChannelType::Gdm {
         return Err(Error::BadStatic("only group dms can be upgraded"));
     }
 
@@ -1111,13 +1113,13 @@ async fn thread_upgrade(
             DbRoomCreate {
                 id: None,
                 ty: RoomType::Default,
-                welcome_thread_id: Some(thread_id),
+                welcome_channel_id: Some(channel_id),
             },
         )
         .await?;
 
     if let Some(icon) = thread.icon {
-        data.media_link_delete(*thread_id, crate::types::MediaLinkType::IconThread)
+        data.media_link_delete(*channel_id, crate::types::MediaLinkType::IconThread)
             .await?;
         data.media_link_create_exclusive(icon, *room.id, crate::types::MediaLinkType::AvatarRoom)
             .await?;
@@ -1128,7 +1130,7 @@ async fn thread_upgrade(
     loop {
         let page = data
             .thread_member_list(
-                thread_id,
+                channel_id,
                 PaginationQuery {
                     limit: Some(100),
                     from: after.map(|i| i.into()),
@@ -1151,7 +1153,7 @@ async fn thread_upgrade(
         }
     }
 
-    data.thread_upgrade_gdm(thread_id, room.id).await?;
+    data.channel_upgrade_gdm(channel_id, room.id).await?;
 
     for member in &members {
         data.room_member_put(
@@ -1163,11 +1165,11 @@ async fn thread_upgrade(
         .await?;
     }
 
-    srv.threads.invalidate(thread_id).await;
-    let upgraded_thread = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    srv.channels.invalidate(channel_id).await;
+    let upgraded_thread = srv.channels.get(channel_id, Some(auth_user.id)).await?;
 
-    s.broadcast(MessageSync::ThreadUpdate {
-        thread: Box::new(upgraded_thread),
+    s.broadcast(MessageSync::ChannelUpdate {
+        channel: Box::new(upgraded_thread),
     })?;
 
     for member in members {
@@ -1188,10 +1190,10 @@ async fn thread_upgrade(
         user_id: auth_user.id,
         session_id: None,
         reason,
-        ty: AuditLogEntryType::ThreadUpdate {
-            thread_id,
+        ty: AuditLogEntryType::ChannelUpdate {
+            channel_id,
             changes: Changes::new()
-                .change("type", &thread.ty, &ThreadType::Chat)
+                .change("type", &thread.ty, &ChannelType::Text)
                 .change("room_id", &thread.room_id, &Some(room.id))
                 .build(),
         },
@@ -1206,16 +1208,16 @@ struct TransferOwnership {
     owner_id: UserId,
 }
 
-/// Thread transfer ownership
+/// Channel transfer ownership
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/transfer-ownership",
+    path = "/channel/{thread_id}/transfer-ownership",
     params(("thread_id", description = "Thread id")),
-    tags = ["thread", "badge.sudo"],
+    tags = ["channel", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
-async fn thread_transfer_ownership(
-    Path(thread_id): Path<ThreadId>,
+async fn channel_transfer_ownership(
+    Path(thread_id): Path<ChannelId>,
     AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
@@ -1230,18 +1232,18 @@ async fn thread_transfer_ownership(
         .thread_member_get(thread_id, target_user_id)
         .await?;
 
-    let _perms = srv.perms.for_thread(auth_user.id, thread_id).await?;
-    let thread_start = srv.threads.get(thread_id, Some(auth_user.id)).await?;
+    let _perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
+    let thread_start = srv.channels.get(thread_id, Some(auth_user.id)).await?;
     if thread_start.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you aren't the thread owner"));
     }
 
     let thread = srv
-        .threads
+        .channels
         .update(
             auth_user.id,
             thread_id,
-            ThreadPatch {
+            ChannelPatch {
                 owner_id: Some(Some(target_user_id)),
                 ..Default::default()
             },
@@ -1249,31 +1251,37 @@ async fn thread_transfer_ownership(
         )
         .await?;
 
-    let msg = MessageSync::ThreadUpdate {
-        thread: Box::new(thread.clone()),
+    let msg = MessageSync::ChannelUpdate {
+        channel: Box::new(thread.clone()),
     };
     s.broadcast_thread(thread_id, auth_user.id, msg).await?;
     Ok(Json(thread))
 }
 
+// TODO: add these routes
+// thread_list GET /channel/{channel_id}/thread
+// thread_list_archived GET /channel/{channel_id}/thread/archived
+// thread_list_removed GET /channel/{channel_id}/thread/removed
+// these will be thread_list, existing thread_list routes will be channel_list
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(thread_create_room))
-        .routes(routes!(dm_thread_create))
-        .routes(routes!(thread_get))
-        .routes(routes!(thread_list))
-        .routes(routes!(thread_list_archived))
-        .routes(routes!(thread_list_removed))
-        .routes(routes!(thread_reorder))
-        .routes(routes!(thread_update))
-        .routes(routes!(thread_ack))
-        .routes(routes!(thread_archive))
-        .routes(routes!(thread_unarchive))
-        .routes(routes!(thread_remove))
-        .routes(routes!(thread_restore))
-        .routes(routes!(thread_typing))
-        .routes(routes!(thread_lock))
-        .routes(routes!(thread_unlock))
-        .routes(routes!(thread_upgrade))
-        .routes(routes!(thread_transfer_ownership))
+        .routes(routes!(channel_create_room))
+        .routes(routes!(channel_create_dm))
+        .routes(routes!(channel_get))
+        .routes(routes!(channel_list))
+        .routes(routes!(channel_list_archived))
+        .routes(routes!(channel_list_removed))
+        .routes(routes!(channel_reorder))
+        .routes(routes!(channel_update))
+        .routes(routes!(channel_ack))
+        .routes(routes!(channel_archive))
+        .routes(routes!(channel_unarchive))
+        .routes(routes!(channel_remove))
+        .routes(routes!(channel_restore))
+        .routes(routes!(channel_typing))
+        .routes(routes!(channel_lock))
+        .routes(routes!(channel_unlock))
+        .routes(routes!(channel_upgrade))
+        .routes(routes!(channel_transfer_ownership))
 }

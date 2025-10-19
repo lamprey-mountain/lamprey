@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 use crate::v1::types::{
     application::Scope, email::EmailAddr, role::RoleReorderItem, util::Time, ApplicationId,
-    AuditLogEntryId, CalendarEventId, EmojiId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RoleId, RoomId, SessionId, ThreadId, ThreadReorderItem, UserId,
+    AuditLogEntryId, CalendarEventId, ChannelId, ChannelReorderItem, EmojiId, InviteCode,
+    MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, SessionId, UserId,
 };
 
 // TODO: coalesce multiple events into one event, if possible
@@ -55,39 +55,39 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
-    ThreadCreate {
-        thread_id: ThreadId,
+    ChannelCreate {
+        channel_id: ChannelId,
         changes: Vec<AuditLogChange>,
     },
 
-    ThreadUpdate {
-        thread_id: ThreadId,
+    ChannelUpdate {
+        channel_id: ChannelId,
         changes: Vec<AuditLogChange>,
     },
 
     MessageDelete {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
     MessageVersionDelete {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
     },
 
     MessageDeleteBulk {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRemove {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRestore {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
@@ -121,7 +121,7 @@ pub enum AuditLogEntryType {
 
     /// remove all reactions
     ReactionPurge {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
@@ -137,16 +137,16 @@ pub enum AuditLogEntryType {
         emoji_id: EmojiId,
     },
 
-    ThreadOverwriteSet {
-        thread_id: ThreadId,
+    PermissionOverwriteSet {
+        channel_id: ChannelId,
         overwrite_id: Uuid,
         #[serde(rename = "type")]
         ty: PermissionOverwriteType,
         changes: Vec<AuditLogChange>,
     },
 
-    ThreadOverwriteDelete {
-        thread_id: ThreadId,
+    PermissionOverwriteDelete {
+        channel_id: ChannelId,
         overwrite_id: Uuid,
     },
 
@@ -178,7 +178,7 @@ pub enum AuditLogEntryType {
     },
 
     MemberDisconnect {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
     },
 
@@ -203,12 +203,12 @@ pub enum AuditLogEntryType {
     },
 
     ThreadMemberAdd {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
     },
 
     ThreadMemberRemove {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
     },
 
@@ -346,29 +346,31 @@ pub enum AuditLogEntryType {
     },
 
     MessagePin {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
     MessageUnpin {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
     MessagePinReorder {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
     },
 
-    ThreadReorder {
-        threads: Vec<ThreadReorderItem>,
+    ChannelReorder {
+        channels: Vec<ChannelReorderItem>,
     },
 
     CalendarEventCreate {
         changes: Vec<AuditLogChange>,
     },
+
     CalendarEventUpdate {
         changes: Vec<AuditLogChange>,
     },
+
     CalendarEventDelete {
         title: String,
         event_id: CalendarEventId,

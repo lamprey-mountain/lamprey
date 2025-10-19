@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery, PaginationResponse,
-    ThreadId,
+    ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
+    PaginationResponse,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 
-use crate::data::{DataInvite, DataRoom, DataThread, DataUser};
+use crate::data::{DataChannel, DataInvite, DataRoom, DataUser};
 use crate::error::{Error, Result};
 use crate::types::{DbInvite, Invite, InviteCode, RoomId, UserId};
 use common::v1::types::InvitePatch;
@@ -82,9 +82,9 @@ impl DataInvite for Postgres {
                 InviteTarget::Room { room, thread: None }
             }
             "thread" => {
-                // FIXME: get thread via services
+                // FIXME: get channel via services
                 let thread = self
-                    .thread_get(ThreadId::from(row.target_id.unwrap()))
+                    .channel_get(ChannelId::from(row.target_id.unwrap()))
                     .await?;
                 let room_id = thread.room_id.ok_or_else(|| Error::NotFound)?;
                 let room = self.room_get(room_id).await?;

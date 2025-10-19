@@ -574,7 +574,7 @@ impl ServiceEmbed {
             mref.thread_id,
             mref.version_id,
             DbMessageCreate {
-                thread_id: mref.thread_id,
+                channel_id: mref.thread_id,
                 attachment_ids: attachments,
                 author_id: message.author_id,
                 embeds,

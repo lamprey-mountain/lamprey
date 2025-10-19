@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    defaults::EVERYONE_TRUSTED, Permission, PermissionOverwriteType, RoomId, ThreadId, UserId,
+    defaults::EVERYONE_TRUSTED, ChannelId, Permission, PermissionOverwriteType, RoomId, UserId,
 };
 use sqlx::{query_scalar, types::Json};
 use uuid::Uuid;
@@ -44,89 +44,6 @@ impl DataPermission for Postgres {
         Ok(perms)
     }
 
-    // NOTE: unused
-    async fn permission_thread_get(
-        &self,
-        user_id: UserId,
-        thread_id: ThreadId,
-    ) -> Result<Permissions> {
-        let room_id: Option<Uuid> =
-            query_scalar!("SELECT room_id FROM thread WHERE id = $1", *thread_id)
-                .fetch_one(&self.pool)
-                .await?;
-
-        let mut perms = if let Some(room_id_uuid) = room_id {
-            self.permission_room_get(user_id, room_id_uuid.into())
-                .await?
-        } else {
-            query_scalar!(
-                "SELECT 1 FROM thread_member WHERE thread_id = $1 AND user_id = $2",
-                *thread_id,
-                *user_id,
-            )
-            .fetch_one(&self.pool)
-            .await?;
-
-            let mut p = Permissions::empty();
-            p.add(Permission::ViewThread);
-            for a in EVERYONE_TRUSTED {
-                p.add(*a);
-            }
-            p
-        };
-
-        // Apply role overwrites
-        let role_overwrites = sqlx::query!(
-            r#"
-            SELECT
-                po.allow as "allow!: Json<Vec<Permission>>",
-                po.deny as "deny!: Json<Vec<Permission>>"
-            FROM permission_overwrite po
-            JOIN role_member rm ON po.actor_id = rm.role_id
-            WHERE po.target_id = $1 AND rm.user_id = $2
-            "#,
-            *thread_id,
-            *user_id,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        for overwrite in role_overwrites {
-            for p in overwrite.allow.0 {
-                perms.add(p);
-            }
-            for p in overwrite.deny.0 {
-                perms.remove(p);
-            }
-        }
-
-        // Apply user overwrites
-        let user_overwrites = sqlx::query!(
-            r#"
-            SELECT
-                allow as "allow!: Json<Vec<Permission>>",
-                deny as "deny!: Json<Vec<Permission>>"
-            FROM permission_overwrite
-            WHERE target_id = $1 AND actor_id = $2
-            "#,
-            *thread_id,
-            *user_id,
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        if let Some(overwrite) = user_overwrites {
-            for p in overwrite.allow.0 {
-                perms.add(p);
-            }
-            for p in overwrite.deny.0 {
-                perms.remove(p);
-            }
-        }
-
-        Ok(perms.into_iter().collect())
-    }
-
     async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
         let exists = query_scalar!(
             r#"
@@ -146,7 +63,7 @@ impl DataPermission for Postgres {
 
     async fn permission_overwrite_upsert(
         &self,
-        target_id: ThreadId,
+        target_id: ChannelId,
         actor_id: Uuid,
         ty: PermissionOverwriteType,
         allow: Vec<Permission>,
@@ -174,7 +91,7 @@ impl DataPermission for Postgres {
 
     async fn permission_overwrite_delete(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
         sqlx::query!(

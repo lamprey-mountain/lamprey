@@ -8,7 +8,9 @@ use crate::discord::DiscordMessage;
 
 use anyhow::Result;
 use common::v1::types::util::Diff;
-use common::v1::types::{self, media::MediaRef, EmbedCreate, Message, MessageId, RoomId, ThreadId};
+use common::v1::types::{
+    self, media::MediaRef, ChannelId, EmbedCreate, Message, MessageId, RoomId,
+};
 use reqwest::Url;
 use serenity::all::{
     ChannelId as DcChannelId, CreateAllowedMentions, CreateAttachment, CreateEmbed,
@@ -84,7 +86,7 @@ impl Portal {
         self.config.discord_channel_id
     }
 
-    pub fn thread_id(&self) -> ThreadId {
+    pub fn thread_id(&self) -> ChannelId {
         self.config.lamprey_thread_id
     }
 
@@ -353,7 +355,7 @@ impl Portal {
         self.globals
             .insert_message(MessageMetadata {
                 chat_id: message.id,
-                chat_thread_id: message.thread_id,
+                chat_thread_id: message.channel_id,
                 discord_id: res.id,
                 discord_channel_id: res.channel_id,
             })

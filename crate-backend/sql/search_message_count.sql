@@ -1,20 +1,20 @@
 with
-    thread_viewer as (
-        select thread.id, thread.room_id from thread
-        join room_member on thread.room_id = room_member.room_id
+    channel_viewer as (
+        select channel.id, channel.room_id from channel
+        join room_member on channel.room_id = room_member.room_id
         where room_member.user_id = $1
         union
-        select thread.id, thread.room_id from thread
-        join thread_member on thread.id = thread_member.thread_id
-        where thread.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
+        select channel.id, channel.room_id from channel
+        join thread_member on channel.id = thread_member.channel_id
+        where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
     )
 select count(*)
 from message as msg
-join thread_viewer on msg.thread_id = thread_viewer.id
+join channel_viewer on msg.channel_id = channel_viewer.id
 where is_latest and msg.deleted_at is null
   and ($2::text is null or $2 = '' or content @@ websearch_to_tsquery('english', $2))
-  and (cardinality($3::uuid[]) = 0 or thread_viewer.room_id = any($3))
-  and (cardinality($4::uuid[]) = 0 or msg.thread_id = any($4))
+  and (cardinality($3::uuid[]) = 0 or channel_viewer.room_id = any($3))
+  and (cardinality($4::uuid[]) = 0 or msg.channel_id = any($4))
   and (cardinality($5::uuid[]) = 0 or msg.author_id = any($5))
   -- has_attachment: $6
   and ($6::boolean is null or (exists (select 1 from message_attachment where version_id = msg.version_id)) = $6)
@@ -36,7 +36,5 @@ where is_latest and msg.deleted_at is null
   and (cardinality($14::uuid[]) = 0 or (msg.mentions->'users')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($14::uuid[]))))
   -- mentions_roles: $15
   and (cardinality($15::uuid[]) = 0 or (msg.mentions->'roles')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($15::uuid[]))))
-  -- mentions_everyone_room: $16
-  and ($16::boolean is null or (msg.mentions->>'everyone_room')::boolean = $16)
-  -- mentions_everyone_thread: $17
-  and ($17::boolean is null or (msg.mentions->>'everyone_thread')::boolean = $17)
+  -- mentions_everyone: $16
+  and ($16::boolean is null or (msg.mentions->>'everyone')::boolean = $16)

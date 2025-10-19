@@ -5,8 +5,8 @@ use common::v1::types::{
     self,
     misc::UserIdReq,
     pagination::{PaginationQuery, PaginationResponse},
-    user_status, Media, MediaCreate, MediaCreateSource, MessageCreate, MessageId, MessageSync,
-    RoomId, Session, Thread, ThreadId, ThreadType, User, UserId,
+    user_status, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
+    MessageCreate, MessageId, MessageSync, RoomId, Session, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -49,7 +49,7 @@ impl EventHandler for Handle {
 
     async fn sync(&mut self, msg: MessageSync) -> Result<()> {
         match msg {
-            MessageSync::ThreadCreate { thread } => {
+            MessageSync::ChannelCreate { channel: thread } => {
                 info!("chat upsert thread");
                 let Ok(realms) = self.globals.get_realms().await else {
                     return Ok(());
@@ -90,7 +90,7 @@ impl EventHandler for Handle {
                 info!("lamprey message create");
                 self.globals
                     .portal_send(
-                        message.thread_id,
+                        message.channel_id,
                         PortalMessage::LampreyMessageCreate { message },
                     )
                     .await;
@@ -99,14 +99,14 @@ impl EventHandler for Handle {
                 info!("lamprey message update");
                 self.globals
                     .portal_send(
-                        message.thread_id,
+                        message.channel_id,
                         PortalMessage::LampreyMessageUpdate { message },
                     )
                     .await;
             }
             MessageSync::MessageDelete {
                 room_id: _,
-                thread_id,
+                channel_id: thread_id,
                 message_id,
             } => {
                 info!("lamprey message delete");
@@ -207,7 +207,7 @@ impl LampreyHandle {
 
     pub async fn message_get(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
     ) -> Result<types::Message> {
         let res = self.http.message_get(thread_id, message_id).await?;
@@ -216,7 +216,7 @@ impl LampreyHandle {
 
     pub async fn message_list(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         query: &PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<types::Message>> {
         let res = self.http.message_list(thread_id, query).await?;
@@ -225,7 +225,7 @@ impl LampreyHandle {
 
     pub async fn message_create(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         req: MessageCreate,
     ) -> Result<types::Message> {
@@ -239,7 +239,7 @@ impl LampreyHandle {
 
     pub async fn message_update(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         req: types::MessagePatch,
@@ -254,7 +254,7 @@ impl LampreyHandle {
 
     pub async fn message_delete(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
     ) -> Result<()> {
@@ -267,7 +267,7 @@ impl LampreyHandle {
 
     pub async fn message_react(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         reaction: String,
@@ -281,7 +281,7 @@ impl LampreyHandle {
 
     pub async fn message_unreact(
         &self,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         reaction: String,
@@ -293,7 +293,7 @@ impl LampreyHandle {
         Ok(())
     }
 
-    pub async fn typing_start(&self, thread_id: ThreadId, user_id: UserId) -> Result<()> {
+    pub async fn typing_start(&self, thread_id: ChannelId, user_id: UserId) -> Result<()> {
         self.http
             .for_puppet(user_id)
             .typing_start(thread_id)
@@ -367,7 +367,7 @@ impl LampreyHandle {
         Ok(res)
     }
 
-    pub async fn room_threads(&self, room_id: RoomId) -> Result<Vec<Thread>> {
+    pub async fn room_threads(&self, room_id: RoomId) -> Result<Vec<Channel>> {
         let mut all_threads = Vec::new();
         let mut query = PaginationQuery::default();
         loop {
@@ -392,14 +392,14 @@ impl LampreyHandle {
         room_id: RoomId,
         name: String,
         topic: Option<String>,
-        ty: ThreadType,
-        parent_id: Option<ThreadId>,
-    ) -> Result<Thread> {
+        ty: ChannelType,
+        parent_id: Option<ChannelId>,
+    ) -> Result<Channel> {
         let res = self
             .http
             .thread_create(
                 room_id,
-                &types::ThreadCreate {
+                &types::ChannelCreate {
                     name,
                     description: topic,
                     ty,

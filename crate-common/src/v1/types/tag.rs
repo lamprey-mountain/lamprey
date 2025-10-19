@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Color, util::some_option, Room, RoomId, TagId, TagVerId, Thread};
+use crate::v1::types::{misc::Color, util::some_option, Channel, Room, RoomId, TagId, TagVerId};
 
 /// a tag that can be applied to things
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -98,7 +98,7 @@ pub struct TagPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Taggable {
     Room(Room),
-    Thread(Thread),
+    Thread(Channel),
     Tag(Tag),
 }
 

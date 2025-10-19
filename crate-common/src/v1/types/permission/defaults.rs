@@ -33,19 +33,13 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::ServerReports,
     Permission::TagApply,
     Permission::TagManage,
-    Permission::ThreadArchive,
-    Permission::ThreadCreateChat,
-    Permission::ThreadCreateForum,
-    Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
-    Permission::ThreadRemove,
+    Permission::ThreadManage,
     Permission::ThreadEdit,
-    Permission::ThreadForward,
     Permission::ThreadLock,
     Permission::ThreadManage,
-    Permission::ThreadPublish,
-    Permission::ViewThread,
+    Permission::ViewChannel,
     Permission::ViewAuditLog,
     Permission::VoiceConnect,
     Permission::VoiceDeafen,
@@ -55,6 +49,8 @@ pub const ADMIN_ROOM: &[Permission] = &[
     Permission::VoicePriority,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::ChannelManage,
+    Permission::ChannelEdit,
 ];
 
 /// Which permissions are granted to someone with Admin in a thread
@@ -86,14 +82,11 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::ReactionAdd,
     Permission::ReactionPurge,
     Permission::TagApply,
-    Permission::ThreadArchive,
-    Permission::ThreadRemove,
+    Permission::ThreadManage,
     Permission::ThreadEdit,
-    Permission::ThreadForward,
     Permission::ThreadLock,
     Permission::ThreadManage,
-    Permission::ThreadPublish,
-    Permission::ViewThread,
+    Permission::ViewChannel,
     Permission::VoiceConnect,
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,
@@ -102,6 +95,7 @@ pub const ADMIN_THREAD: &[Permission] = &[
     Permission::VoicePriority,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::ChannelEdit,
 ];
 
 /// Default permissions for everyone in a trusted room (eg. with friends)
@@ -119,21 +113,17 @@ pub const EVERYONE_TRUSTED: &[Permission] = &[
     Permission::MemberNickname,
     Permission::TagApply,
     // Permission::TagManage, // maybe?
-    Permission::ThreadArchive, // maybe?
-    Permission::ThreadCreateChat,
-    Permission::ThreadCreateForum,
-    Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
-    Permission::ThreadEdit,    // maybe?
-    Permission::ThreadForward, // maybe?
-    Permission::ViewThread,
+    Permission::ThreadEdit, // maybe?
+    Permission::ViewChannel,
     // Permission::ThreadPin, // maybe?
     // Permission::ThreadPublish, // maybe?
     Permission::ViewAuditLog, // maybe?
     Permission::VoiceConnect,
     Permission::VoiceSpeak,
     Permission::VoiceVideo,
+    Permission::ChannelEdit,
 ];
 
 /// Default permissions for everyone in an untrusted room (eg. public)
@@ -146,14 +136,10 @@ pub const EVERYONE_UNTRUSTED: &[Permission] = &[
     Permission::ReactionAdd,
     Permission::MemberNickname,
     Permission::TagApply, // maybe?
-    Permission::ThreadCreateChat,
-    Permission::ThreadCreateForum,
-    Permission::ThreadCreateVoice,
     Permission::ThreadCreatePublic,
     Permission::ThreadCreatePrivate,
-    Permission::ThreadEdit,    // maybe?
-    Permission::ThreadForward, // maybe?
-    Permission::ViewThread,
+    Permission::ThreadEdit, // maybe?
+    Permission::ViewChannel,
     // Permission::ViewAuditLog, // maybe?
     Permission::VoiceConnect,
     Permission::VoiceSpeak,
@@ -175,13 +161,11 @@ pub const MODERATOR: &[Permission] = &[
     Permission::RoleApply, // maybe?
     Permission::TagApply,
     // Permission::TagManage, // maybe?
-    Permission::ThreadArchive,
-    Permission::ThreadRemove,
+    Permission::ThreadManage,
     Permission::ThreadEdit,
-    Permission::ThreadForward, // maybe?
     Permission::ThreadLock,
     Permission::ThreadManage, // maybe?
-    Permission::ViewThread,
+    Permission::ViewChannel,
     Permission::ViewAuditLog, // maybe?
     Permission::VoiceDeafen,
     Permission::VoiceDisconnect,

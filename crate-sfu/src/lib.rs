@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use common::v1::types::{
     voice::{MediaKind, SfuPermissions, SignallingMessage, Speaking, VoiceState},
-    ThreadId, UserId,
+    ChannelId, UserId,
 };
 use str0m::{
     format::PayloadParams,
@@ -115,7 +115,7 @@ pub struct TrackMetadataServer {
 pub struct TrackMetadataSfu {
     pub source_mid: Mid,
     pub peer_id: UserId,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub kind: MediaKindStr0m,
     pub key: String,
 }
@@ -124,7 +124,7 @@ pub struct TrackMetadataSfu {
 pub struct TrackIn {
     pub kind: MediaKindStr0m,
     pub state: TrackState,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub key: String,
 }
 
@@ -135,7 +135,7 @@ pub struct TrackOut {
     pub peer_id: UserId,
     pub source_mid: Mid,
     pub enabled: bool,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     pub key: String,
 }
 

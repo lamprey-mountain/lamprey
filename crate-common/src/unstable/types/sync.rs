@@ -6,8 +6,9 @@ use utoipa::ToSchema;
 use std::collections::HashMap;
 
 use crate::v1::types::{
-    util::Time, Invite, InviteCode, Message, MessageId, MessageVerId, Relationship, Role, RoleId,
-    Room, RoomId, RoomMember, Session, SessionId, Thread, ThreadId, ThreadMember, User, UserId,
+    util::Time, Channel, ChannelId, Invite, InviteCode, Message, MessageId, MessageVerId,
+    Relationship, Role, RoleId, Room, RoomId, RoomMember, Session, SessionId, ThreadMember, User,
+    UserId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +38,7 @@ pub enum SyncFilter {
     /// subscribe to events in a thread
     SubThread {
         id: SyncFilterId,
-        thread_id: ThreadId,
+        thread_id: ChannelId,
     },
 
     // SubEvents { id: SyncFilterId, want: SyncEventType },
@@ -103,7 +104,7 @@ pub struct MessageSynchronizeRoom {
     pub room_id: RoomId,
     pub role: HashMap<RoleId, Option<Role>>,
     pub room_member: HashMap<(RoomId, UserId), Option<RoomMember>>,
-    pub thread: HashMap<ThreadId, Option<Thread>>,
+    pub thread: HashMap<ChannelId, Option<Channel>>,
     // pub application: HashMap<UserId, Option<Application>>,
 }
 
@@ -111,8 +112,8 @@ pub struct MessageSynchronizeRoom {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageSynchronizeThread {
-    pub thread_id: ThreadId,
-    pub thread_member: HashMap<(ThreadId, UserId), Option<ThreadMember>>,
+    pub thread_id: ChannelId,
+    pub thread_member: HashMap<(ChannelId, UserId), Option<ThreadMember>>,
     // only one of message or message_version gets set per server event
     pub message: HashMap<MessageId, Option<Message>>,
     pub message_version: HashMap<MessageVerId, Option<Message>>,
@@ -163,7 +164,7 @@ pub enum Payload {
 
     /// typing notification
     Typing {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
         user_id: UserId,
         until: Time,
     },

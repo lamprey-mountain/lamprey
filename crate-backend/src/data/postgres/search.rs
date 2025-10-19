@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    search::{SearchMessageRequest, SearchThreadsRequest},
-    Message, MessageId, PaginationDirection, PaginationQuery, PaginationResponse, Thread, ThreadId,
-    UserId,
+    search::{SearchChannelsRequest, SearchMessageRequest},
+    Channel, ChannelId, Message, MessageId, PaginationDirection, PaginationQuery,
+    PaginationResponse, UserId,
 };
 use sqlx::{query_file_as, query_file_scalar, Acquire};
 use uuid::Uuid;
@@ -17,7 +17,7 @@ use crate::{
     },
     error::Result,
     gen_paginate,
-    types::{DbThread, DbThreadType},
+    types::{DbChannel, DbChannelType},
 };
 
 use super::Postgres;
@@ -61,8 +61,7 @@ impl DataSearch for Postgres {
                 &query.link_hostnames,
                 &mentions_users,
                 &mentions_roles,
-                query.mentions_everyone_room,
-                query.mentions_everyone_thread,
+                query.mentions_everyone,
             ),
             query_file_scalar!(
                 "sql/search_message_count.sql",
@@ -81,28 +80,27 @@ impl DataSearch for Postgres {
                 &query.link_hostnames,
                 &mentions_users,
                 &mentions_roles,
-                query.mentions_everyone_room,
-                query.mentions_everyone_thread,
+                query.mentions_everyone,
             ),
             |i: &Message| i.id.to_string()
         )
     }
 
-    async fn search_thread(
+    async fn search_channel(
         &self,
         user_id: UserId,
-        query: SearchThreadsRequest,
-        paginate: PaginationQuery<ThreadId>,
-    ) -> Result<PaginationResponse<Thread>> {
-        let p: Pagination<ThreadId> = paginate.try_into()?;
+        query: SearchChannelsRequest,
+        paginate: PaginationQuery<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
+        let p: Pagination<ChannelId> = paginate.try_into()?;
         let room_ids: Vec<Uuid> = query.room_id.iter().map(|id| **id).collect();
         let parent_ids: Vec<Uuid> = query.parent_id.iter().map(|id| **id).collect();
         gen_paginate!(
             p,
             self.pool,
             query_file_as!(
-                DbThread,
-                "sql/search_thread.sql",
+                DbChannel,
+                "sql/search_channel.sql",
                 *user_id,
                 *p.after,
                 *p.before,
@@ -115,7 +113,7 @@ impl DataSearch for Postgres {
                 query.removed,
             ),
             query_file_scalar!(
-                "sql/search_thread_count.sql",
+                "sql/search_channel_count.sql",
                 *user_id,
                 query.query,
                 &room_ids,
@@ -123,7 +121,7 @@ impl DataSearch for Postgres {
                 query.archived,
                 query.removed,
             ),
-            |i: &Thread| i.id.to_string()
+            |i: &Channel| i.id.to_string()
         )
     }
 }

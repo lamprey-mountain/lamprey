@@ -3,14 +3,14 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::user_status::Status;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, VoiceState};
-use common::v1::types::{MessageSync, Permission, Thread, ThreadId, ThreadMemberPut};
+use common::v1::types::{Channel, ChannelId, MessageSync, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 use tokio::task::JoinHandle;
 use tracing::{debug, error};
 
-use crate::types::{DbThreadCreate, DbThreadType};
+use crate::types::{DbChannelType, DbChannelCreate};
 use crate::{Error, Result, ServerStateInner};
 
 // currently relies on sync heartbeat time
@@ -204,14 +204,14 @@ impl ServiceUsers {
             .collect()
     }
 
-    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Thread, bool)> {
+    pub async fn init_dm(&self, user_id: UserId, other_id: UserId) -> Result<(Channel, bool)> {
         let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
         let data = self.state.data();
         let srv = self.state.services();
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
         if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
-            let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+            let thread = srv.channels.get(thread_id, Some(user_id)).await?;
             data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
             data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
@@ -219,12 +219,12 @@ impl ServiceUsers {
             return Ok((thread, false));
         }
         let thread_id = data
-            .thread_create(DbThreadCreate {
+            .channel_create(DbChannelCreate {
                 room_id: None,
                 creator_id: user_id,
                 name: "dm".to_string(),
                 description: None,
-                ty: DbThreadType::Dm,
+                ty: DbChannelType::Dm,
                 nsfw: false,
                 bitrate: None,
                 user_limit: None,
@@ -238,11 +238,11 @@ impl ServiceUsers {
             .await?;
         data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
             .await?;
-        let thread = srv.threads.get(thread_id, Some(user_id)).await?;
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
         Ok((thread, true))
     }
 
-    pub fn disconnect_everyone_from_thread(&self, thread_id: ThreadId) -> Result<()> {
+    pub fn disconnect_everyone_from_thread(&self, thread_id: ChannelId) -> Result<()> {
         for s in &self.voice_states {
             if s.thread_id == thread_id {
                 let r = self.state.sushi_sfu.send(SfuCommand::VoiceState {

@@ -71,12 +71,12 @@ async fn admin_whisper(
 
     let (thread, _) = srv.users.init_dm(auth_user.id, json.user_id).await?;
     if !thread.locked {
-        d.thread_lock(thread.id).await?;
-        srv.threads.invalidate(thread.id).await;
+        d.channel_lock(thread.id).await?;
+        srv.channels.invalidate(thread.id).await;
     }
 
-    s.broadcast(MessageSync::ThreadCreate {
-        thread: Box::new(thread.clone()),
+    s.broadcast(MessageSync::ChannelCreate {
+        channel: Box::new(thread.clone()),
     })?;
 
     srv.messages
@@ -151,12 +151,12 @@ async fn admin_broadcast(
                 let srv = ss.services();
                 let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id).await?;
                 if !thread.locked {
-                    ss.data().thread_lock(thread.id).await?;
-                    srv.threads.invalidate(thread.id).await;
+                    ss.data().channel_lock(thread.id).await?;
+                    srv.channels.invalidate(thread.id).await;
                 }
 
-                ss.broadcast(MessageSync::ThreadCreate {
-                    thread: Box::new(thread.clone()),
+                ss.broadcast(MessageSync::ChannelCreate {
+                    channel: Box::new(thread.clone()),
                 })?;
 
                 srv.messages

@@ -20,7 +20,7 @@ pub struct Bridge {
 #[derive(Debug, Clone)]
 pub enum BridgeMessage {
     LampreyThreadCreate {
-        thread: common::v1::types::Thread,
+        thread: common::v1::types::Channel,
         discord_guild_id: DcGuildId,
     },
     DiscordChannelCreate {
@@ -93,7 +93,7 @@ impl Bridge {
                 )
                 .await?;
 
-                let webhook_url = if thread.ty != common::v1::types::ThreadType::Category {
+                let webhook_url = if thread.ty != common::v1::types::ChannelType::Category {
                     let webhook = discord::discord_create_webhook(
                         self.globals.clone(),
                         channel_id,
@@ -163,9 +163,9 @@ impl Bridge {
                 };
 
                 let thread_type = if channel_type == serenity::all::ChannelType::Category {
-                    common::v1::types::ThreadType::Category
+                    common::v1::types::ChannelType::Category
                 } else {
-                    common::v1::types::ThreadType::Chat
+                    common::v1::types::ChannelType::Text
                 };
 
                 let lamprey_parent_id = if let Some(discord_parent_id) = parent_id {

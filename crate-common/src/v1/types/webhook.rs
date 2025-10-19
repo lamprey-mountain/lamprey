@@ -1,4 +1,4 @@
-use crate::v1::types::{util::some_option, MediaId, RoomId, ThreadId, WebhookId};
+use crate::v1::types::{util::some_option, ChannelId, MediaId, RoomId, WebhookId};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -9,7 +9,7 @@ use validator::Validate;
 pub struct Webhook {
     pub id: WebhookId,
     pub room_id: Option<RoomId>,
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
     pub avatar: Option<MediaId>,
@@ -30,7 +30,7 @@ pub struct WebhookCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct WebhookUpdate {
-    pub thread_id: Option<ThreadId>,
+    pub thread_id: Option<ChannelId>,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
     #[serde(default, deserialize_with = "some_option")]

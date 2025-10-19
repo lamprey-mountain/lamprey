@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{RoleId, RoomId, ThreadId, UserId};
+use crate::v1::types::{ChannelId, RoleId, RoomId, UserId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -28,7 +28,7 @@ pub struct SearchMessageRequest {
     /// Only return messages in these threads. Defaults to all threads.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    pub thread_id: Vec<ThreadId>,
+    pub thread_id: Vec<ChannelId>,
 
     /// Only return messages from these users. Defaults to all threads.
     #[serde(default)]
@@ -71,17 +71,14 @@ pub struct SearchMessageRequest {
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
     pub mentions_roles: Vec<RoleId>,
 
-    /// Only return messages that mentions everyone in a room
-    pub mentions_everyone_room: Option<bool>,
-
-    /// Only return messages that mentions everyone in a thread
-    pub mentions_everyone_thread: Option<bool>,
+    /// Only return messages that mentions everyone
+    pub mentions_everyone: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct SearchThreadsRequest {
+pub struct SearchChannelsRequest {
     /// The full text search query. Consider this an implementation detail, but I currently use postgres' [`websearch_to_tsquery`](https://www.postgresql.org/docs/17/textsearch-controls.html#TEXTSEARCH-PARSING-QUERIES) function.
     #[cfg_attr(
         feature = "utoipa",
@@ -99,7 +96,7 @@ pub struct SearchThreadsRequest {
     /// Only return threads with these parents. Defaults to all threads.
     #[serde(default)]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    pub parent_id: Vec<ThreadId>,
+    pub parent_id: Vec<ChannelId>,
 
     /// Only return archived (or unarchived) threads
     pub archived: Option<bool>,

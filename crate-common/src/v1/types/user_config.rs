@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 // #[cfg(feature = "validator")]
 // use validator::Validate;
 
-use crate::v1::types::notifications::{NotifsGlobal, NotifsRoom, NotifsThread};
+use crate::v1::types::notifications::{NotifsChannel, NotifsGlobal, NotifsRoom};
 
 /// configuration for a user
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -41,9 +41,9 @@ pub struct UserConfigRoom {
 /// configuration for a user in a thread
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct UserConfigThread {
+pub struct UserConfigChannel {
     /// thread notification config
-    pub notifs: NotifsThread,
+    pub notifs: NotifsChannel,
 
     /// config specific to frontend
     pub frontend: HashMap<String, serde_json::Value>,

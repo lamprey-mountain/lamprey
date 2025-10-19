@@ -45,7 +45,7 @@ message_reaction as (
 select
     msg.type as "message_type: DbMessageType",
     msg.id,
-    msg.thread_id,
+    msg.channel_id,
     msg.version_id,
     msg.ordering,
     msg.content,
@@ -66,6 +66,6 @@ from message as msg
 join ranked_messages rm on msg.id = rm.id
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
-where is_latest and thread_id = $1 and msg.deleted_at is null and (rm.rn <= $4 or $4 is null)
+where is_latest and channel_id = $1 and msg.deleted_at is null and (rm.rn <= $4 or $4 is null)
   and msg.id > $5 AND msg.id < $6
 order by (CASE WHEN $7 = 'f' THEN msg.id END), msg.id DESC LIMIT $8

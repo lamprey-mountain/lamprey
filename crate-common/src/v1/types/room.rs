@@ -11,7 +11,7 @@ use crate::v1::types::{
     notifications::NotifsRoom,
     user_config::UserConfigRoom,
     util::{some_option, Diff},
-    MediaId, Permission, ThreadId, UserId,
+    ChannelId, MediaId, Permission, UserId,
 };
 
 use super::{ids::RoomId, util::Time};
@@ -61,8 +61,8 @@ pub struct Room {
     /// number of people who are online in this room
     pub online_count: u64,
 
-    /// number of active threads
-    pub thread_count: u64,
+    /// number of active channels
+    pub channel_count: u64,
 
     // rooms can't be outright deleted, but some people might want to "clean up"
     // or "close" old rooms. archiving could be a good way to do that.
@@ -72,7 +72,7 @@ pub struct Room {
     pub public: bool,
 
     /// where member join messages will be sent
-    pub welcome_thread_id: Option<ThreadId>,
+    pub welcome_channel_id: Option<ChannelId>,
 
     /// whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user.
     pub quarantined: bool,
@@ -129,7 +129,7 @@ pub struct RoomPatch {
     pub public: Option<bool>,
 
     /// where member join messages will be sent
-    pub welcome_thread_id: Option<Option<ThreadId>>,
+    pub welcome_channel_id: Option<Option<ChannelId>>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,11 +146,11 @@ pub enum RoomType {
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomMetrics {
-    /// Total number of threads in this room (including archived or removed ones).
-    pub thread_count: u64,
+    /// Total number of channels in this room (including archived or removed ones).
+    pub channel_count: u64,
 
-    /// Number of active threads in this room (excluding archived or removed ones).
-    pub active_thread_count: u64,
+    /// Number of active channels in this room (excluding archived or removed ones).
+    pub active_channel_count: u64,
 
     /// Total number of messages across all active threads in this room (excluding removed messages).
     pub message_count: u64,
@@ -171,6 +171,6 @@ impl Diff<Room> for RoomPatch {
             || self.description.changes(&other.description)
             || self.icon.changes(&other.icon)
             || self.public.changes(&other.public)
-            || self.welcome_thread_id.changes(&other.welcome_thread_id)
+            || self.welcome_channel_id.changes(&other.welcome_channel_id)
     }
 }

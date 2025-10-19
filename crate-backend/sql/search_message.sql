@@ -1,12 +1,12 @@
 with
-    thread_viewer as (
-        select thread.id, thread.room_id from thread
-        join room_member on thread.room_id = room_member.room_id
+    channel_viewer as (
+        select channel.id, channel.room_id from channel
+        join room_member on channel.room_id = room_member.room_id
         where room_member.user_id = $1
         union
-        select thread.id, thread.room_id from thread
-        join thread_member on thread.id = thread_member.thread_id
-        where thread.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
+        select channel.id, channel.room_id from channel
+        join thread_member on channel.id = thread_member.channel_id
+        where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'
     ),
     reaction_counts as (
         select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted
@@ -26,7 +26,7 @@ with
 select
     msg.type as "message_type: DbMessageType",
     msg.id,
-    msg.thread_id,
+    msg.channel_id,
     msg.version_id,
     msg.ordering,
     msg.content,
@@ -44,14 +44,14 @@ select
     msg.embeds as "embeds",
     r.json as "reactions"
 from message as msg
-join thread_viewer on msg.thread_id = thread_viewer.id
+join channel_viewer on msg.channel_id = channel_viewer.id
 left join att_json on att_json.version_id = msg.version_id
 left join message_reaction r on r.message_id = msg.id
 where is_latest and msg.deleted_at is null
   and msg.id > $2 AND msg.id < $3
   and ($6::text is null or $6 = '' or content @@ websearch_to_tsquery('english', $6))
-  and (cardinality($7::uuid[]) = 0 or thread_viewer.room_id = any($7))
-  and (cardinality($8::uuid[]) = 0 or msg.thread_id = any($8))
+  and (cardinality($7::uuid[]) = 0 or channel_viewer.room_id = any($7))
+  and (cardinality($8::uuid[]) = 0 or msg.channel_id = any($8))
   and (cardinality($9::uuid[]) = 0 or msg.author_id = any($9))
   -- has_attachment: $10
   and ($10::boolean is null or (exists (select 1 from message_attachment where version_id = msg.version_id)) = $10)
@@ -74,7 +74,5 @@ where is_latest and msg.deleted_at is null
   -- mentions_roles: $19
   and (cardinality($19::uuid[]) = 0 or (msg.mentions->'roles')::jsonb ?| array(select jsonb_array_elements_text(to_jsonb($19::uuid[]))))
   -- mentions_everyone_room: $20
-  and ($20::boolean is null or (msg.mentions->>'everyone_room')::boolean = $20)
-  -- mentions_everyone_thread: $21
-  and ($21::boolean is null or (msg.mentions->>'everyone_thread')::boolean = $21)
+  and ($20::boolean is null or (msg.mentions->>'everyone')::boolean = $20)
 order by (CASE WHEN $4 = 'f' THEN msg.id END), msg.id DESC LIMIT $5

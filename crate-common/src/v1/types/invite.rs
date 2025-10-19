@@ -9,9 +9,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::util::Time;
-use crate::v1::types::{PaginationKey, RoomId, ThreadId, UserId};
+use crate::v1::types::{ChannelId, PaginationKey, RoomId, UserId};
 
-use super::{Room, Thread, User};
+use super::{Channel, Room, User};
 
 /// a short, unique identifier. knowing the code grants access to the invite's target.
 #[derive(Debug, Hash, Clone, PartialEq, Eq, Serialize, Deserialize, PartialOrd, Ord)]
@@ -70,13 +70,13 @@ pub enum InviteTarget {
     /// join a room
     Room {
         room: Room,
-        thread: Option<Box<Thread>>,
+        thread: Option<Box<Channel>>,
         // invites that automatically apply a certain role?
         // roles: Vec<Role>,
     },
 
     /// join a group dm
-    Gdm { thread: Box<Thread> },
+    Gdm { thread: Box<Channel> },
 
     /// register on this server
     Server,
@@ -92,11 +92,11 @@ pub enum InviteTarget {
 pub enum InviteTargetId {
     Room {
         room_id: RoomId,
-        thread_id: Option<ThreadId>,
+        thread_id: Option<ChannelId>,
     },
 
     Gdm {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
     },
 
     Server,

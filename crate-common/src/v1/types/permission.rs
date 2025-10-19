@@ -76,11 +76,11 @@ pub enum Permission {
     /// requires MessageCreate
     MessageEmbeds,
 
-    /// (unimplemented) mention @room, @thread, and all roles
+    /// (unimplemented) mention @everyone, @here, and all roles
     /// requires MessageCreate
     MessageMassMention,
 
-    /// (unimplemented) move messages between threads
+    /// (unimplemented) move messages between channels
     MessageMove,
 
     /// pin and unpin messages
@@ -124,47 +124,29 @@ pub enum Permission {
     /// (unimplemented) create and delete tags
     TagManage,
 
-    /// archive (and unarchive) threads
-    ThreadArchive,
+    /// can change channel names and topics
+    ChannelEdit,
 
-    /// (unimplemented) can create chat threads
-    ThreadCreateChat,
+    /// can create, remove, and archive channels
+    ChannelManage,
 
-    /// (unimplemented) can create forum threads
-    ThreadCreateForum,
-
-    /// (unimplemented) can create private threads (what is "private"?)
+    /// (unimplemented) can create private threads
     ThreadCreatePrivate,
 
-    /// (unimplemented) can create public threads (what is "public"?)
+    /// (unimplemented) can create public threads
     ThreadCreatePublic,
 
-    /// can create voice threads
-    ThreadCreateVoice,
-
-    /// remove (and restore) threads
-    ThreadRemove,
+    /// remove and archive threads, and move threads between channels
+    ThreadManage,
 
     /// change name and description of threads
     ThreadEdit,
 
-    /// (unimplemented) move threads across rooms
-    /// this could be a pretty tricky permission to get right...
-    /// this isnt the same as email forwarding
-    ThreadForward,
-
     /// lock and unlock threads
     ThreadLock,
 
-    /// reorder and pin threads
-    ThreadManage,
-
-    /// (unimplemented) create announcements
-    /// requires ThreadCreate*
-    ThreadPublish,
-
-    /// Can view threads in a room.
-    ViewThread,
+    /// Can view channels
+    ViewChannel,
 
     /// view audit log
     ViewAuditLog,
@@ -195,8 +177,9 @@ pub enum Permission {
     /// stream video and screenshare in voice threads
     /// requires VoiceConnect
     VoiceVideo,
-    // /// can manage calendar events
-    // CalendarEventManage,
+
+    /// can manage calendar events
+    CalendarEventManage,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

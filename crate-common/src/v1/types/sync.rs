@@ -14,10 +14,10 @@ use super::{
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
     reaction::ReactionKey,
     role::RoleReorderItem,
-    user_config::{UserConfigGlobal, UserConfigRoom, UserConfigThread, UserConfigUser},
+    user_config::{UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser},
     voice::{SignallingMessage, VoiceState},
-    EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room, RoomId, RoomMember,
-    Session, SessionId, SessionToken, Thread, ThreadId, User, UserId,
+    Channel, ChannelId, EmojiId, InviteCode, Message, MessageId, MessageVerId, Role, RoleId, Room,
+    RoomId, RoomMember, Session, SessionId, SessionToken, User, UserId,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,7 +52,7 @@ pub enum MessageClient {
     MemberListSubscribe {
         // one of room_id or thread_id must be provided
         room_id: Option<RoomId>,
-        thread_id: Option<ThreadId>,
+        thread_id: Option<ChannelId>,
 
         /// the ranges to subscribe to
         ranges: Vec<(u64, u64)>,
@@ -124,24 +124,24 @@ pub enum MessageSync {
         room_id: RoomId,
     },
 
-    ThreadCreate {
-        thread: Box<Thread>,
+    ChannelCreate {
+        channel: Box<Channel>,
     },
 
-    ThreadUpdate {
-        thread: Box<Thread>,
+    ChannelUpdate {
+        channel: Box<Channel>,
     },
 
-    ThreadTyping {
-        thread_id: ThreadId,
+    ChannelTyping {
+        channel_id: ChannelId,
         user_id: UserId,
         until: Time,
     },
 
     /// read receipt update
-    ThreadAck {
+    ChannelAck {
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
     },
@@ -155,35 +155,29 @@ pub enum MessageSync {
     },
 
     MessageDelete {
-        /// deprecated = "keyed by thread_id"
-        #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: Option<RoomId>,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
     MessageVersionDelete {
-        /// deprecated = "keyed by thread_id"
-        #[cfg_attr(feature = "utoipa", schema(deprecated))]
-        room_id: Option<RoomId>,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
     },
 
     /// delete multiple messages at once
     MessageDeleteBulk {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRemove {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRestore {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
@@ -228,21 +222,21 @@ pub enum MessageSync {
 
     ReactionCreate {
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     },
 
     ReactionDelete {
         user_id: UserId,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
     },
 
     /// remove all reactions
     ReactionPurge {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
     },
 
@@ -294,10 +288,10 @@ pub enum MessageSync {
         config: UserConfigRoom,
     },
 
-    UserConfigThread {
+    UserConfigChannel {
         user_id: UserId,
-        thread_id: ThreadId,
-        config: UserConfigThread,
+        channel_id: ChannelId,
+        config: UserConfigChannel,
     },
 
     UserConfigUser {
@@ -362,7 +356,7 @@ pub enum MessageSync {
         /// which user this list sync is for
         user_id: UserId,
         room_id: Option<RoomId>,
-        thread_id: Option<ThreadId>,
+        channel_id: Option<ChannelId>,
         ops: Vec<MemberListOp>,
         groups: Vec<MemberListGroup>,
     },
@@ -399,7 +393,7 @@ pub enum MessageSync {
     },
 
     CalendarEventDelete {
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         event_id: CalendarEventId,
     },
 }
@@ -413,10 +407,10 @@ pub enum MemberListOp {
         /// the start of the range
         position: u64,
 
-        /// only returned if thread is in a room
+        /// only returned if channel is in a room
         room_members: Option<Vec<RoomMember>>,
 
-        /// only returned if listing members in a thread, not just a room
+        /// only returned if listing members in a thread
         thread_members: Option<Vec<ThreadMember>>,
 
         users: Vec<User>,

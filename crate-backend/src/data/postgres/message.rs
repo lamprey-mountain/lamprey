@@ -9,8 +9,8 @@ use crate::consts::MAX_PINNED_MESSAGES;
 use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
-    DbMessageCreate, Message, MessageId, MessageVerId, PaginationDirection, PaginationQuery,
-    PaginationResponse, ThreadId,
+    ChannelId, DbMessageCreate, Message, MessageId, MessageVerId, PaginationDirection,
+    PaginationQuery, PaginationResponse,
 };
 
 use crate::data::DataMessage;
@@ -22,7 +22,7 @@ use super::{Pagination, Postgres};
 pub struct DbMessage {
     pub message_type: DbMessageType,
     pub id: MessageId,
-    pub thread_id: ThreadId,
+    pub channel_id: ChannelId,
     pub version_id: MessageVerId,
     pub ordering: i32,
     pub content: Option<String>,
@@ -114,7 +114,7 @@ impl From<DbMessage> for Message {
                     panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
                 }
             },
-            thread_id: row.thread_id,
+            channel_id: row.channel_id,
             version_id: row.version_id,
             nonce: None,
             author_id: row.author_id,
@@ -144,11 +144,11 @@ impl DataMessage for Postgres {
         let embeds = serde_json::to_value(create.embeds.clone())?;
         let mentions = serde_json::to_value(create.mentions.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)
+    	    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)
         "#,
             message_id,
-            *create.thread_id,
+            *create.channel_id,
             message_id,
             create.content(),
             create.metadata(),
@@ -182,7 +182,7 @@ impl DataMessage for Postgres {
 
     async fn message_update(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         message_id: MessageId,
         create: DbMessageCreate,
     ) -> Result<MessageVerId> {
@@ -197,11 +197,11 @@ impl DataMessage for Postgres {
         .await?;
         let embeds = serde_json::to_value(create.embeds.clone())?;
         query!(r#"
-    	    INSERT INTO message (id, thread_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, edited_at)
-    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE thread_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11, coalesce($12, now()))
+    	    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, edited_at)
+    	    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, $11, coalesce($12, now()))
         "#,
             *message_id,
-            *create.thread_id,
+            *create.channel_id,
             ver_id,
             create.content(),
             create.metadata(),
@@ -233,10 +233,10 @@ impl DataMessage for Postgres {
         Ok(ver_id.into())
     }
 
-    // NOTE: ignores thread_id, attachment_ids in create
+    // NOTE: ignores channel_id, attachment_ids in create
     async fn message_update_in_place(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         version_id: MessageVerId,
         create: DbMessageCreate,
     ) -> Result<()> {
@@ -277,11 +277,11 @@ impl DataMessage for Postgres {
 
     async fn message_get(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         id: MessageId,
         user_id: UserId,
     ) -> Result<Message> {
-        let row = query_file_as!(DbMessage, "sql/message_get.sql", *thread_id, *id, *user_id)
+        let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id, *user_id)
             .fetch_one(&self.pool)
             .await?;
         Ok(row.into())
@@ -289,7 +289,7 @@ impl DataMessage for Postgres {
 
     async fn message_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
@@ -300,21 +300,21 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate.sql",
-                *thread_id,
+                *channel_id,
                 *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_file_scalar!("sql/message_count.sql", thread_id.into_inner()),
+            query_file_scalar!("sql/message_count.sql", channel_id.into_inner()),
             |i: &Message| i.id.to_string()
         )
     }
 
     async fn message_list_deleted(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
@@ -325,21 +325,21 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate_deleted.sql",
-                *thread_id,
+                *channel_id,
                 *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_file_scalar!("sql/message_count_deleted.sql", thread_id.into_inner()),
+            query_file_scalar!("sql/message_count_deleted.sql", channel_id.into_inner()),
             |i: &Message| i.id.to_string()
         )
     }
 
     async fn message_list_removed(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
@@ -350,19 +350,19 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate_removed.sql",
-                *thread_id,
+                *channel_id,
                 *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_file_scalar!("sql/message_count_removed.sql", thread_id.into_inner()),
+            query_file_scalar!("sql/message_count_removed.sql", channel_id.into_inner()),
             |i: &Message| i.id.to_string()
         )
     }
 
-    async fn message_delete(&self, _thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+    async fn message_delete(&self, _channel_id: ChannelId, message_id: MessageId) -> Result<()> {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
@@ -377,7 +377,7 @@ impl DataMessage for Postgres {
 
     async fn message_delete_bulk(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
         let now = time::OffsetDateTime::now_utc();
@@ -395,7 +395,7 @@ impl DataMessage for Postgres {
 
     async fn message_remove_bulk(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
         let now = time::OffsetDateTime::now_utc();
@@ -413,7 +413,7 @@ impl DataMessage for Postgres {
 
     async fn message_restore_bulk(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
         let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
@@ -428,14 +428,14 @@ impl DataMessage for Postgres {
 
     async fn message_version_get(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         version_id: MessageVerId,
         user_id: UserId,
     ) -> Result<Message> {
         let row = query_file_as!(
             DbMessage,
             "sql/message_version_get.sql",
-            *thread_id,
+            *channel_id,
             *user_id,
             *version_id,
         )
@@ -446,7 +446,7 @@ impl DataMessage for Postgres {
 
     async fn message_version_delete(
         &self,
-        _thread_id: ThreadId,
+        _channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<()> {
         let now = time::OffsetDateTime::now_utc();
@@ -463,7 +463,7 @@ impl DataMessage for Postgres {
 
     async fn message_version_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         message_id: MessageId,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
@@ -475,7 +475,7 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 "sql/message_version_paginate.sql",
-                *thread_id,
+                *channel_id,
                 *message_id,
                 *user_id,
                 *p.after,
@@ -484,8 +484,8 @@ impl DataMessage for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                r"select count(*) from message where thread_id = $1 and id = $2",
-                thread_id.into_inner(),
+                r"select count(*) from message where channel_id = $1 and id = $2",
+                channel_id.into_inner(),
                 message_id.into_inner(),
             ),
             |i: &Message| i.version_id.to_string()
@@ -494,7 +494,7 @@ impl DataMessage for Postgres {
 
     async fn message_replies(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         root_message_id: Option<MessageId>,
         user_id: UserId,
         depth: u16,
@@ -509,7 +509,7 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_replies.sql",
-                *thread_id,
+                *channel_id,
                 rmid,
                 depth as i32,
                 breadth.map(|b| b as i64),
@@ -521,7 +521,7 @@ impl DataMessage for Postgres {
             ),
             query_file_scalar!(
                 "sql/message_replies_count.sql",
-                *thread_id,
+                *channel_id,
                 rmid,
                 depth as i32
             ),
@@ -529,10 +529,10 @@ impl DataMessage for Postgres {
         )
     }
 
-    async fn message_pin_create(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+    async fn message_pin_create(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
         let pin_count: i64 = query_scalar!(
-            "select count(*) from message where thread_id = $1 and pinned is not null",
-            *thread_id
+            "select count(*) from message where channel_id = $1 and pinned is not null",
+            *channel_id
         )
         .fetch_one(&self.pool)
         .await?
@@ -545,8 +545,8 @@ impl DataMessage for Postgres {
         let mut tx = self.pool.begin().await?;
 
         query!(
-            "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where thread_id = $1 and pinned is not null",
-            *thread_id
+            "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where channel_id = $1 and pinned is not null",
+            *channel_id
         )
         .execute(&mut *tx)
         .await?;
@@ -557,10 +557,10 @@ impl DataMessage for Postgres {
         });
 
         query!(
-            "update message set pinned = $1 where id = $2 and thread_id = $3",
+            "update message set pinned = $1 where id = $2 and channel_id = $3",
             pinned,
             *message_id,
-            *thread_id
+            *channel_id
         )
         .execute(&mut *tx)
         .await?;
@@ -570,11 +570,11 @@ impl DataMessage for Postgres {
         Ok(())
     }
 
-    async fn message_pin_delete(&self, thread_id: ThreadId, message_id: MessageId) -> Result<()> {
+    async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
         query!(
-            "update message set pinned = null where id = $1 and thread_id = $2",
+            "update message set pinned = null where id = $1 and channel_id = $2",
             *message_id,
-            *thread_id
+            *channel_id
         )
         .execute(&self.pool)
         .await?;
@@ -583,16 +583,16 @@ impl DataMessage for Postgres {
 
     async fn message_pin_reorder(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         reorder: common::v1::types::PinsReorder,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         for item in reorder.messages {
             if let Some(Some(pos)) = item.position {
                 let old_pinned: Option<serde_json::Value> = query_scalar!(
-                    "select pinned from message where id = $1 and thread_id = $2",
+                    "select pinned from message where id = $1 and channel_id = $2",
                     *item.id,
-                    *thread_id
+                    *channel_id
                 )
                 .fetch_one(&mut *tx)
                 .await?;
@@ -610,19 +610,19 @@ impl DataMessage for Postgres {
                     "position": pos,
                 });
                 query!(
-                    "update message set pinned = $1 where id = $2 and thread_id = $3",
+                    "update message set pinned = $1 where id = $2 and channel_id = $3",
                     pinned,
                     *item.id,
-                    *thread_id
+                    *channel_id
                 )
                 .execute(&mut *tx)
                 .await?;
             } else if let Some(None) = item.position {
                 // unpin
                 query!(
-                    "update message set pinned = null where id = $1 and thread_id = $2",
+                    "update message set pinned = null where id = $1 and channel_id = $2",
                     *item.id,
-                    *thread_id
+                    *channel_id
                 )
                 .execute(&mut *tx)
                 .await?;
@@ -634,7 +634,7 @@ impl DataMessage for Postgres {
 
     async fn message_pin_list(
         &self,
-        thread_id: ThreadId,
+        channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
@@ -645,14 +645,14 @@ impl DataMessage for Postgres {
             query_file_as!(
                 DbMessage,
                 r"sql/message_pin_list.sql",
-                *thread_id,
+                *channel_id,
                 *user_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_file_scalar!("sql/message_pin_list_count.sql", *thread_id),
+            query_file_scalar!("sql/message_pin_list_count.sql", *channel_id),
             |i: &Message| i.id.to_string()
         )
     }

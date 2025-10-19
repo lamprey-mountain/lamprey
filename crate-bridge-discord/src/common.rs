@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use common::v1::types::{ApplicationId, MessageId, RoomId, ThreadId};
+use common::v1::types::{ApplicationId, ChannelId, MessageId, RoomId};
 use dashmap::DashMap;
 use serde::Deserialize;
 use serenity::all::{
@@ -28,8 +28,8 @@ pub struct UserCacheEntry {
 pub struct Globals {
     pub pool: sqlx::SqlitePool,
     pub config: Config,
-    pub portals: Arc<DashMap<ThreadId, mpsc::UnboundedSender<PortalMessage>>>,
-    pub last_lamprey_ids: Arc<DashMap<ThreadId, MessageId>>,
+    pub portals: Arc<DashMap<ChannelId, mpsc::UnboundedSender<PortalMessage>>>,
+    pub last_lamprey_ids: Arc<DashMap<ChannelId, MessageId>>,
     pub last_discord_ids: Arc<DashMap<DcChannelId, DcMessageId>>,
     pub presences: Arc<DashMap<DcUserId, Presence>>,
     pub discord_user_cache: Arc<DashMap<DcUserId, UserCacheEntry>>,
@@ -54,7 +54,7 @@ pub struct Config {
 /// defines a single chatroom bridged together
 #[derive(Debug, Clone)]
 pub struct PortalConfig {
-    pub lamprey_thread_id: ThreadId,
+    pub lamprey_thread_id: ChannelId,
     pub lamprey_room_id: RoomId,
     pub discord_guild_id: DcGuildId,
     // TODO: make discord_channel_id the thread id if the target is a thread, and add this field
@@ -76,13 +76,13 @@ pub struct RealmConfig {
 
 #[async_trait]
 pub trait GlobalsTrait {
-    async fn portal_send(&self, thread_id: ThreadId, msg: PortalMessage);
+    async fn portal_send(&self, thread_id: ChannelId, msg: PortalMessage);
     async fn portal_send_dc(&self, channel_id: DcChannelId, msg: PortalMessage);
 }
 
 #[async_trait]
 impl GlobalsTrait for Arc<Globals> {
-    async fn portal_send(&self, thread_id: ThreadId, msg: PortalMessage) {
+    async fn portal_send(&self, thread_id: ChannelId, msg: PortalMessage) {
         let Ok(Some(config)) = self.get_portal_by_thread_id(thread_id).await else {
             return;
         };

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::v1::types::{ReportId, ThreadId, UserId};
+use crate::v1::types::{ChannelId, ReportId, UserId};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
@@ -15,7 +15,7 @@ pub struct Report {
     pub id: ReportId,
 
     /// the associated thread id of this report. every report has a thread created for it.
-    pub thread_id: ThreadId,
+    pub thread_id: ChannelId,
 
     /// user id of who reported this
     // do i want to make this an Option and allow anonymous reports?

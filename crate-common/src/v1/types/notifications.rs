@@ -7,8 +7,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    util::Time, Message, MessageId, NotificationId, PaginationResponse, Room, RoomId, Thread,
-    ThreadId,
+    util::Time, Channel, ChannelId, Message, MessageId, NotificationId, PaginationResponse, Room,
+    RoomId,
 };
 
 /// how to handle an event
@@ -48,14 +48,14 @@ pub struct NotifsRoom {
     pub threads: Option<NotifAction>,
 }
 
-/// notification config for a thread
-// how do i deal with different thread types
+/// notification config for a channel
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct NotifsThread {
+pub struct NotifsChannel {
     pub mute: Option<Mute>,
     pub messages: Option<NotifAction>,
     pub mentions: Option<NotifAction>,
+    pub threads: Option<NotifAction>,
 }
 
 /// notification config for a message
@@ -81,8 +81,8 @@ pub struct Mute {
 pub struct Notification {
     pub id: NotificationId,
 
-    /// the thread this message was sent in
-    pub thread_id: ThreadId,
+    /// the channel this message was sent in
+    pub channel_id: ChannelId,
 
     /// the id of the message that was sent
     pub message_id: MessageId,
@@ -161,11 +161,11 @@ pub struct InboxListParams {
     #[validate(length(min = 1, max = 32))]
     pub room_id: Vec<RoomId>,
 
-    /// only include notifications from these threads
+    /// only include notifications from these channels
     #[serde(default)]
     #[schema(required = false, min_length = 1, max_length = 32)]
     #[validate(length(min = 1, max = 32))]
-    pub thread_id: Vec<ThreadId>,
+    pub channel_id: Vec<ChannelId>,
 
     /// include messages marked as read too
     #[serde(default)]
@@ -175,8 +175,8 @@ pub struct InboxListParams {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct NotificationCreate {
-    /// the thread this message was sent in
-    pub thread_id: ThreadId,
+    /// the channel this message was sent in
+    pub channel_id: ChannelId,
 
     /// the id of the message that was sent
     pub message_id: MessageId,
@@ -199,7 +199,7 @@ pub struct NotificationMarkRead {
     #[serde(default)]
     #[schema(required = false, min_length = 1, max_length = 1024)]
     #[validate(length(min = 1, max = 1024))]
-    pub thread_ids: Vec<ThreadId>,
+    pub channel_ids: Vec<ChannelId>,
 
     /// mark everything in these rooms as read
     #[serde(default)]
@@ -227,10 +227,10 @@ pub struct NotificationFlush {
     #[validate(length(min = 1, max = 1024))]
     pub message_ids: Option<Vec<MessageId>>,
 
-    /// restrict to just these threads
+    /// restrict to just these channels
     #[schema(required = false, min_length = 1, max_length = 1024)]
     #[validate(length(min = 1, max = 1024))]
-    pub thread_ids: Option<Vec<ThreadId>>,
+    pub channel_ids: Option<Vec<ChannelId>>,
 
     /// restrict to just these rooms
     #[schema(required = false, min_length = 1, max_length = 1024)]
@@ -244,26 +244,28 @@ pub struct NotificationFlush {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct InboxThreadsParams {
-    /// the order to return inbox threads in
-    pub order: InboxThreadsOrder,
+pub struct InboxChannelsParams {
+    /// the order to return inbox channels in
+    pub order: InboxChannelsOrder,
+    // /// only return threads instead of threads and channels
+    // pub threads: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
-pub enum InboxThreadsOrder {
-    /// most active threads first (order by last_version_id desc)
+pub enum InboxChannelsOrder {
+    /// most active channels first (order by last_version_id desc)
     Activity,
 
-    /// last active threads first (order by last_version_id asc)
+    /// last active channels first (order by last_version_id asc)
     // NOTE: not sure how useful this is, but including for completeness
     Inactivity,
 
-    /// most recently created threads first (order by id desc)
+    /// most recently created channels first (order by id desc)
     Newest,
 
-    /// most recently created threads first (order by id desc)
+    /// most recently created channels first (order by id desc)
     Oldest,
 }
 
@@ -272,7 +274,7 @@ pub enum InboxThreadsOrder {
 pub struct NotificationPagination {
     #[serde(flatten)]
     pub inner: PaginationResponse<Notification>,
-    pub threads: Vec<Thread>,
+    pub channels: Vec<Channel>,
     pub messages: Vec<Message>,
     pub rooms: Vec<Room>,
 }

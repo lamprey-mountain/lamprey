@@ -1,4 +1,4 @@
-use crate::v1::types::{reaction::ReactionKey, AutomodRuleId, RoleId, RoomId, ThreadId};
+use crate::v1::types::{reaction::ReactionKey, AutomodRuleId, ChannelId, RoleId, RoomId};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::Validate;
@@ -16,7 +16,7 @@ pub struct AutomodRule {
     #[schema(max_items = 8)]
     pub actions: Vec<AutomodAction>,
     pub except_roles: Vec<RoleId>,
-    pub except_threads: Vec<ThreadId>,
+    pub except_threads: Vec<ChannelId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,7 +31,7 @@ pub struct AutomodRuleCreate {
     #[serde(default)]
     pub except_roles: Vec<RoleId>,
     #[serde(default)]
-    pub except_threads: Vec<ThreadId>,
+    pub except_threads: Vec<ChannelId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,7 +45,7 @@ pub struct AutomodRuleUpdate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
     pub actions: Option<Vec<AutomodAction>>,
     pub except_roles: Option<Vec<RoleId>>,
-    pub except_threads: Option<Vec<ThreadId>>,
+    pub except_threads: Option<Vec<ChannelId>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -78,7 +78,7 @@ pub enum AutomodAction {
     Remove,
 
     SendAlert {
-        thread_id: ThreadId,
+        thread_id: ChannelId,
     },
 
     React {

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{notifications::NotifsThread, MessageVerId};
+use crate::v1::types::{notifications::NotifsChannel, MessageVerId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -23,5 +23,5 @@ pub struct ThreadTypeChatPrivate {
     // to implement efficiently. if someone marks a very old message as unread,
     // i don't want to hang while counting potentially thousands of messages!
     // pub unread_count: u64,
-    pub notifications: NotifsThread,
+    pub notifications: NotifsChannel,
 }

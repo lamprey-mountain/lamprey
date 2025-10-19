@@ -8,7 +8,7 @@ use axum::{
 use common::v1::types::{
     calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch},
     pagination::PaginationQuery,
-    CalendarEventId, ThreadId, UserId,
+    CalendarEventId, ChannelId, UserId,
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -53,11 +53,11 @@ async fn calendar_event_list(
     get,
     path = "/calendar/{thread_id}/event",
     tags = ["calendar"],
-    params(("thread_id" = ThreadId, description = "Thread id")),
+    params(("thread_id" = ChannelId, description = "Thread id")),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_thread_event_list(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Query(_query): Query<PaginationQuery<CalendarEventId>>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -70,12 +70,12 @@ async fn calendar_thread_event_list(
     post,
     path = "/calendar/{thread_id}/event",
     tags = ["calendar"],
-    params(("thread_id" = ThreadId, description = "Thread id")),
+    params(("thread_id" = ChannelId, description = "Thread id")),
     request_body = CalendarEventCreate,
     responses((status = CREATED, body = CalendarEvent, description = "Create calendar event success"))
 )]
 async fn calendar_thread_event_create(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<CalendarEventCreate>,
@@ -89,13 +89,13 @@ async fn calendar_thread_event_create(
     path = "/calendar/{thread_id}/event/{calendar_event_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
     ),
     responses((status = OK, body = CalendarEvent, description = "Get calendar event success"))
 )]
 async fn calendar_thread_event_get(
-    Path((_thread_id, _calendar_event_id)): Path<(ThreadId, CalendarEventId)>,
+    Path((_thread_id, _calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -108,14 +108,14 @@ async fn calendar_thread_event_get(
     path = "/calendar/{thread_id}/event/{calendar_event_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
     ),
     request_body = CalendarEventPatch,
     responses((status = OK, body = CalendarEvent, description = "Update calendar event success"))
 )]
 async fn calendar_thread_event_update(
-    Path((_thread_id, _calendar_event_id)): Path<(ThreadId, CalendarEventId)>,
+    Path((_thread_id, _calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<CalendarEventPatch>,
@@ -129,13 +129,13 @@ async fn calendar_thread_event_update(
     path = "/calendar/{thread_id}/event/{calendar_event_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
     ),
     responses((status = NO_CONTENT, description = "Delete calendar event success"))
 )]
 async fn calendar_thread_event_delete(
-    Path((_thread_id, _calendar_event_id)): Path<(ThreadId, CalendarEventId)>,
+    Path((_thread_id, _calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -148,13 +148,13 @@ async fn calendar_thread_event_delete(
     path = "/calendar/{thread_id}/event/{calendar_event_id}/rsvp",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id")
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_thread_event_rsvp_list(
-    Path((_thread_id, _calendar_event_id)): Path<(ThreadId, CalendarEventId)>,
+    Path((_thread_id, _calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -167,14 +167,14 @@ async fn calendar_thread_event_rsvp_list(
     path = "/calendar/{thread_id}/event/{calendar_event_id}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = UserId, description = "User id")
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_thread_event_rsvp_get(
-    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ThreadId, CalendarEventId, UserId)>,
+    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -187,14 +187,14 @@ async fn calendar_thread_event_rsvp_get(
     path = "/calendar/{thread_id}/event/{calendar_event_id}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = UserId, description = "User id")
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_thread_event_rsvp_update(
-    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ThreadId, CalendarEventId, UserId)>,
+    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -207,14 +207,14 @@ async fn calendar_thread_event_rsvp_update(
     path = "/calendar/{thread_id}/event/{calendar_event_id}/rsvp/{user_id}",
     tags = ["calendar"],
     params(
-        ("thread_id" = ThreadId, description = "Thread id"),
+        ("thread_id" = ChannelId, description = "Thread id"),
         ("calendar_event_id" = CalendarEventId, description = "Calendar event id"),
         ("user_id" = UserId, description = "User id")
     ),
     responses((status = OK, description = "ok"))
 )]
 async fn calendar_thread_event_rsvp_delete(
-    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ThreadId, CalendarEventId, UserId)>,
+    Path((_thread_id, _calendar_event_id, _user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {

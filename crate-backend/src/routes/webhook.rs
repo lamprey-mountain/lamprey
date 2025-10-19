@@ -11,7 +11,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use super::util::Auth;
 use crate::{
     error::{Error, Result},
-    types::{RoomId, ThreadId, WebhookId},
+    types::{ChannelId, RoomId, WebhookId},
     ServerState,
 };
 
@@ -26,7 +26,7 @@ use crate::{
     )
 )]
 async fn create_webhook(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
     Json(_json): Json<WebhookCreate>,
@@ -45,7 +45,7 @@ async fn create_webhook(
     )
 )]
 async fn list_webhooks_thread(
-    Path(_thread_id): Path<ThreadId>,
+    Path(_thread_id): Path<ChannelId>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
