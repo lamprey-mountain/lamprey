@@ -239,6 +239,7 @@ impl ServiceThreads {
                             .change("nsfw", &thread_old.nsfw, &thread_new.nsfw)
                             .change("bitrate", &thread_old.bitrate, &thread_new.bitrate)
                             .change("user_limit", &thread_old.user_limit, &thread_new.user_limit)
+                            .change("type", &thread_old.ty, &thread_new.ty)
                             .build(),
                     },
                 })

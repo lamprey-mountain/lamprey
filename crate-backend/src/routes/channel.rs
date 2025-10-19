@@ -31,8 +31,6 @@ use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use super::util::{Auth, HeaderReason};
 use crate::error::Result;
 
-// TODO: rename to channel.rs and move thread-specific routes into thread.rs
-
 /// Room channel create
 ///
 /// Create a channel in a room
@@ -71,9 +69,31 @@ async fn channel_create_room(
         ChannelType::Text | ChannelType::Forum | ChannelType::Voice | ChannelType::Category => {
             perms.ensure(Permission::ChannelManage)?;
         }
-        ChannelType::Calendar | ChannelType::ThreadPublic | ChannelType::ThreadPrivate => {
-            return Err(Error::BadStatic("not yet implemented"))
+        ChannelType::ThreadPublic => {
+            let parent_id = json
+                .parent_id
+                .ok_or(Error::BadStatic("threads must have a parent channel"))?;
+            let parent = srv.channels.get(parent_id, Some(auth_user.id)).await?;
+            if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                return Err(Error::BadStatic(
+                    "threads can only be created in text or forum channels",
+                ));
+            }
+            perms.ensure(Permission::ThreadCreatePublic)?;
         }
+        ChannelType::ThreadPrivate => {
+            let parent_id = json
+                .parent_id
+                .ok_or(Error::BadStatic("threads must have a parent channel"))?;
+            let parent = srv.channels.get(parent_id, Some(auth_user.id)).await?;
+            if !matches!(parent.ty, ChannelType::Text | ChannelType::Forum) {
+                return Err(Error::BadStatic(
+                    "threads can only be created in text or forum channels",
+                ));
+            }
+            perms.ensure(Permission::ThreadCreatePrivate)?;
+        }
+        ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
         // ThreadType::{ThreadPublic, ThreadPrivate} => require a parent_id, require parent to either be Text or Forum
         ChannelType::Dm | ChannelType::Gdm => {
             return Err(Error::BadStatic(
@@ -103,9 +123,9 @@ async fn channel_create_room(
                 ChannelType::Forum => DbChannelType::Forum,
                 ChannelType::Voice => DbChannelType::Voice,
                 ChannelType::Category => DbChannelType::Category,
-                ChannelType::Calendar | ChannelType::ThreadPublic | ChannelType::ThreadPrivate => {
-                    return Err(Error::BadStatic("not yet implemented"))
-                }
+                ChannelType::ThreadPublic => DbChannelType::ThreadPublic,
+                ChannelType::ThreadPrivate => DbChannelType::ThreadPrivate,
+                ChannelType::Calendar => return Err(Error::BadStatic("not yet implemented")),
                 ChannelType::Dm | ChannelType::Gdm => {
                     // this should be unreachable due to the check above
                     warn!("unreachable: dm/gdm thread creation in room");

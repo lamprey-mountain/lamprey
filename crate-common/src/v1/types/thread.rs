@@ -334,3 +334,9 @@ impl ChannelPatch {
         }
     }
 }
+
+impl ChannelType {
+    pub fn is_thread(&self) -> bool {
+        matches!(self, ChannelType::ThreadPublic | ChannelType::ThreadPrivate)
+    }
+}

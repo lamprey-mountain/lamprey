@@ -134,9 +134,16 @@ impl ServicePermissions {
 
         // admins always have full permissions and ignore overwrites
         if !perms.has(Permission::Admin) {
-            // NOTE: currently there is a max depth of one - this will break if permissions need to be resolved recursively
-            if let Some(parent_id) = thread.parent_id {
+            let mut parents = Vec::new();
+            let mut current_parent_id = thread.parent_id;
+            while let Some(parent_id) = current_parent_id {
                 let parent = srv.channels.get(parent_id, Some(user_id)).await?;
+                current_parent_id = parent.parent_id;
+                parents.push(parent);
+            }
+
+            // apply overwrites from top-most parent down to the direct parent
+            for parent in parents.into_iter().rev() {
                 for o in parent.permission_overwrites {
                     if o.ty == PermissionOverwriteType::User {
                         if o.id != *user_id {
