@@ -318,7 +318,7 @@ async fn channel_create_dm(
 /// Channel get
 #[utoipa::path(
     get,
-    path = "/channel/{thread_id}",
+    path = "/channel/{channel_id}",
     params(("channel_id", description = "channel id")),
     tags = ["channel"],
     responses(
@@ -856,7 +856,7 @@ async fn channel_remove(
 /// Channel restore
 #[utoipa::path(
     delete,
-    path = "/channel/{thread_id}/remove",
+    path = "/channel/{channel_id}/remove",
     params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadDelete"],
     responses((status = NO_CONTENT, description = "success")),
@@ -912,7 +912,7 @@ async fn channel_restore(
 /// Send a typing notification to a thread
 #[utoipa::path(
     method(post),
-    path = "/channel/{thread_id}/typing",
+    path = "/channel/{channel_id}/typing",
     params(
         ("channel_id", description = "channel id"),
     ),
@@ -961,7 +961,7 @@ async fn channel_typing(
 /// Channel lock
 #[utoipa::path(
     put,
-    path = "/channel/{thread_id}/lock",
+    path = "/channel/{channel_id}/lock",
     params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
@@ -1024,7 +1024,7 @@ async fn channel_lock(
 /// Channel unlock
 #[utoipa::path(
     delete,
-    path = "/channel/{thread_id}/lock",
+    path = "/channel/{channel_id}/lock",
     params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.perm.ThreadLock"],
     responses((status = NO_CONTENT, description = "success")),
@@ -1089,7 +1089,7 @@ async fn channel_unlock(
 /// Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
 #[utoipa::path(
     post,
-    path = "/channel/{thread_id}/upgrade",
+    path = "/channel/{channel_id}/upgrade",
     params(("channel_id", description = "channel id")),
     tags = ["channel"],
     responses((status = OK, body = Room, description = "success")),
@@ -1230,13 +1230,13 @@ struct TransferOwnership {
 /// Channel transfer ownership
 #[utoipa::path(
     post,
-    path = "/channel/{thread_id}/transfer-ownership",
+    path = "/channel/{channel_id}/transfer-ownership",
     params(("channel_id", description = "channel id")),
     tags = ["channel", "badge.sudo"],
     responses((status = OK, description = "success"))
 )]
 async fn channel_transfer_ownership(
-    Path(thread_id): Path<ChannelId>,
+    Path(channel_id): Path<ChannelId>,
     AuthSudo(auth_user): AuthSudo,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<TransferOwnership>,
@@ -1248,11 +1248,11 @@ async fn channel_transfer_ownership(
 
     // ensure that target user is a thread member
     s.data()
-        .thread_member_get(thread_id, target_user_id)
+        .thread_member_get(channel_id, target_user_id)
         .await?;
 
-    let _perms = srv.perms.for_channel(auth_user.id, thread_id).await?;
-    let thread_start = srv.channels.get(thread_id, Some(auth_user.id)).await?;
+    let _perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    let thread_start = srv.channels.get(channel_id, Some(auth_user.id)).await?;
     if thread_start.owner_id != Some(auth_user.id) {
         return Err(Error::BadStatic("you aren't the thread owner"));
     }
@@ -1261,7 +1261,7 @@ async fn channel_transfer_ownership(
         .channels
         .update(
             auth_user.id,
-            thread_id,
+            channel_id,
             ChannelPatch {
                 owner_id: Some(Some(target_user_id)),
                 ..Default::default()
@@ -1273,7 +1273,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(thread_id, auth_user.id, msg).await?;
+    s.broadcast_channel(channel_id, auth_user.id, msg).await?;
     Ok(Json(thread))
 }
 
