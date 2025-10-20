@@ -293,7 +293,7 @@ const AutocompleteDropdown = (props: {
 	const api = useApi();
 	const threadMembers = api.thread_members.list(() => props.thread.id);
 	const roomMembers = api.room_members.list(() => props.thread.room_id ?? "");
-	const roomThreads = api.threads.list(() => props.thread.room_id ?? "");
+	const roomThreads = api.channels.list(() => props.thread.room_id ?? "");
 	const roomRoles = api.roles.list(() => props.thread.room_id ?? "");
 
 	const authorSuggestions = createMemo(() => {

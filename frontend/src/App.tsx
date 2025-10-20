@@ -98,6 +98,15 @@ const App: Component = () => {
 				path="/thread/:thread_id/message/:message_id"
 				component={RouteThread}
 			/>
+			<Route
+				path="/channel/:thread_id/settings/:page?"
+				component={RouteThreadSettings}
+			/>
+			<Route path="/channel/:thread_id" component={RouteThread} />
+			<Route
+				path="/channel/:thread_id/message/:message_id"
+				component={RouteThread}
+			/>
 			<Route path="/debug" component={Debug} />
 			<Route path="/feed" component={RouteFeed} />
 			<Route path="/invite/:code" component={RouteInvite} />
@@ -229,7 +238,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	let userConfigLoaded = false;
 
 	(async () => {
-		const { data } = await api.client.http.GET("/api/v1/config");
+		const data = await api.users.getConfig();
 		if (data) setUserConfig(data as UserConfig);
 		userConfigLoaded = true;
 	})();
@@ -238,9 +247,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		const config = userConfig();
 		if (!userConfigLoaded || !config) return;
 		localStorage.setItem("user_config", JSON.stringify(config));
-		api.client.http.PUT("/api/v1/config", {
-			body: config,
-		});
+		api.users.setConfig(config);
 	});
 
 	const [recentThreads, setRecentThreads] = createSignal([] as string[]);

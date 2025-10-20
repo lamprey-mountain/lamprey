@@ -14,7 +14,7 @@ export async function handleSubmit(
 ) {
 	if (text.startsWith("/")) {
 		const [cmd, ...args] = text.slice(1).split(" ");
-		const { room_id } = api.threads.cache.get(thread_id)!;
+		const { room_id } = api.channels.cache.get(thread_id)!;
 		if (cmd === "thread") {
 			if (!room_id) return;
 			const name = text.slice("/thread ".length);

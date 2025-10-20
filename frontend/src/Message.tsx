@@ -90,7 +90,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			modal: {
 				type: "message_edits",
 				message_id: props.message.id,
-				thread_id: props.message.thread_id,
+				thread_id: props.message.channel_id,
 			},
 		});
 	};
@@ -122,13 +122,13 @@ function MessageEditor(
 
 	const editor = createEditor({
 		initialContent: draft(),
-		initialSelection: ctx.editingMessage.get(props.message.thread_id)
+		initialSelection: ctx.editingMessage.get(props.message.channel_id)
 			?.selection,
 		keymap: {
 			ArrowUp: (state) => {
 				if (state.selection.from !== 1) return false;
 
-				const ranges = api.messages.cacheRanges.get(props.message.thread_id);
+				const ranges = api.messages.cacheRanges.get(props.message.channel_id);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
@@ -140,7 +140,7 @@ function MessageEditor(
 				for (let i = currentIndex - 1; i >= 0; i--) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.thread_id, {
+						ctx.editingMessage.set(props.message.channel_id, {
 							message_id: msg.id,
 							selection: "end",
 						});
@@ -153,7 +153,7 @@ function MessageEditor(
 			ArrowDown: (state) => {
 				if (state.selection.to !== state.doc.content.size - 1) return false;
 
-				const ranges = api.messages.cacheRanges.get(props.message.thread_id);
+				const ranges = api.messages.cacheRanges.get(props.message.channel_id);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
@@ -165,7 +165,7 @@ function MessageEditor(
 				for (let i = currentIndex + 1; i < messages.length; i++) {
 					const msg = messages[i];
 					if (msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.message.thread_id, {
+						ctx.editingMessage.set(props.message.channel_id, {
 							message_id: msg.id,
 							selection: "start",
 						});
@@ -174,8 +174,8 @@ function MessageEditor(
 				}
 
 				// No next message, focus main input
-				ctx.editingMessage.delete(props.message.thread_id);
-				ctx.thread_input_focus.get(props.message.thread_id)?.();
+				ctx.editingMessage.delete(props.message.channel_id);
+				ctx.thread_input_focus.get(props.message.channel_id)?.();
 				return true;
 			},
 		},
@@ -183,28 +183,28 @@ function MessageEditor(
 
 	const save = async (content: string) => {
 		if (content.trim() === (props.message.content ?? "").trim()) {
-			ctx.editingMessage.delete(props.message.thread_id);
+			ctx.editingMessage.delete(props.message.channel_id);
 			return;
 		}
 		if (content.trim().length === 0) {
-			ctx.editingMessage.delete(props.message.thread_id);
+			ctx.editingMessage.delete(props.message.channel_id);
 			return;
 		}
 		try {
 			await api.messages.edit(
-				props.message.thread_id,
+				props.message.channel_id,
 				props.message.id,
 				content,
 			);
 		} catch (e) {
 			console.error("failed to edit message", e);
 		}
-		ctx.editingMessage.delete(props.message.thread_id);
+		ctx.editingMessage.delete(props.message.channel_id);
 	};
 
 	const cancel = () => {
-		ctx.editingMessage.delete(props.message.thread_id);
-		ctx.thread_input_focus.get(props.message.thread_id)?.();
+		ctx.editingMessage.delete(props.message.channel_id);
+		ctx.thread_input_focus.get(props.message.channel_id)?.();
 	};
 
 	let containerRef: HTMLDivElement | undefined;
@@ -243,10 +243,10 @@ function MessageEditor(
 export function MessageView(props: MessageProps) {
 	const api = useApi();
 	const ctx = useCtx();
-	const thread = api.threads.fetch(() => props.message.thread_id);
+	const thread = api.channels.fetch(() => props.message.channel_id);
 
 	const inSelectMode = () =>
-		ctx.selectMode.get(props.message.thread_id) ?? false;
+		ctx.selectMode.get(props.message.channel_id) ?? false;
 
 	const onMouseDown = (e: MouseEvent) => {
 		if (inSelectMode() && e.shiftKey) {
@@ -259,7 +259,7 @@ export function MessageView(props: MessageProps) {
 		e.preventDefault();
 		e.stopPropagation();
 
-		const thread_id = props.message.thread_id;
+		const thread_id = props.message.channel_id;
 		const message_id = props.message.id;
 		const selected = ctx.selectedMessages.get(thread_id) ?? [];
 
@@ -290,33 +290,11 @@ export function MessageView(props: MessageProps) {
 	};
 
 	function reactionAdd(key: string) {
-		api.client.http.PUT(
-			"/api/v1/thread/{thread_id}/message/{message_id}/reaction/{key}",
-			{
-				params: {
-					path: {
-						key,
-						message_id: props.message.id,
-						thread_id: props.message.thread_id,
-					},
-				},
-			},
-		);
+		api.reactions.add(props.message.channel_id, props.message.id, key);
 	}
 
 	function reactionDel(key: string) {
-		api.client.http.DELETE(
-			"/api/v1/thread/{thread_id}/message/{message_id}/reaction/{key}",
-			{
-				params: {
-					path: {
-						key,
-						message_id: props.message.id,
-						thread_id: props.message.thread_id,
-					},
-				},
-			},
-		);
+		api.reactions.delete(props.message.channel_id, props.message.id, key);
 	}
 
 	function getComponent() {
@@ -508,7 +486,7 @@ export function MessageView(props: MessageProps) {
 			};
 			const ctx = useCtx();
 			const isEditing = () => {
-				return ctx.editingMessage.get(props.message.thread_id)?.message_id ===
+				return ctx.editingMessage.get(props.message.channel_id)?.message_id ===
 					props.message.id;
 			};
 			const withAvatar = ctx.userConfig().frontend["message_pfps"] === "yes";
@@ -528,7 +506,7 @@ export function MessageView(props: MessageProps) {
 				>
 					<Show when={props.message.reply_id}>
 						<ReplyView
-							thread_id={props.message.thread_id}
+							thread_id={props.message.channel_id}
 							reply_id={props.message.reply_id!}
 							arrow_width={arrow_width()}
 						/>
@@ -666,7 +644,7 @@ function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
 	const api = useApi();
 	const reply = api.messages.fetch(() => props.thread_id, () => props.reply_id);
-	const thread = api.threads.fetch(() => props.thread_id);
+	const thread = api.channels.fetch(() => props.thread_id);
 
 	const content = () => {
 		const r = reply();
@@ -772,10 +750,6 @@ function Author(props: { message: Message; thread?: Thread }) {
 			() => props.message.author_id,
 		)
 		: () => null;
-	const thread_member = api.thread_members.fetch(
-		() => props.message.thread_id,
-		() => props.message.author_id,
-	);
 	const user = api.users.fetch(() => props.message.author_id);
 
 	function name() {
@@ -805,7 +779,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 					ctx.setUserView({
 						user_id: props.message.author_id,
 						room_id: props.thread?.room_id,
-						thread_id: props.message.thread_id,
+						thread_id: props.message.channel_id,
 						ref: currentTarget,
 						source: "message",
 					});

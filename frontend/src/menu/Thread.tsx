@@ -12,14 +12,14 @@ export function ThreadMenu(props: { thread_id: string }) {
 	const nav = useNavigate();
 
 	const self_id = () => api.users.cache.get("@self")!.id;
-	const thread = api.threads.fetch(() => props.thread_id);
+	const thread = api.channels.fetch(() => props.thread_id);
 	const self_thread_member = api.thread_members.fetch(
 		() => props.thread_id,
 		self_id,
 	);
 	const copyId = () => navigator.clipboard.writeText(props.thread_id);
 	const markRead = () => {
-		const thread = api.threads.cache.get(props.thread_id)!;
+		const thread = api.channels.cache.get(props.thread_id)!;
 		const version_id = thread.last_version_id;
 		ctx.dispatch({
 			do: "thread.mark_read",
@@ -55,18 +55,18 @@ export function ThreadMenu(props: { thread_id: string }) {
 		nav(`/thread/${props.thread_id}/settings${to}`);
 
 	const archiveThread = () => {
-		api.threads.archive(props.thread_id);
+		api.channels.archive(props.thread_id);
 	};
 
 	const unarchiveThread = () => {
-		api.threads.unarchive(props.thread_id);
+		api.channels.unarchive(props.thread_id);
 	};
 
 	const toggleLock = () => {
 		if (thread()?.locked) {
-			api.threads.unlock(props.thread_id);
+			api.channels.unlock(props.thread_id);
 		} else {
-			api.threads.lock(props.thread_id);
+			api.channels.lock(props.thread_id);
 		}
 	};
 
@@ -141,7 +141,7 @@ function ThreadNotificationMenu(props: { thread: import("sdk").Thread }) {
 				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
 			}
 		}
-		api.threads.cache.set(props.thread.id, {
+		api.channels.cache.set(props.thread.id, {
 			...props.thread,
 			user_config: newConfig,
 		});

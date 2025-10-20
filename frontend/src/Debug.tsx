@@ -92,13 +92,7 @@ const Search = () => {
 		searchQuery as any,
 		(async (query: string) => {
 			if (!query) return;
-			const { data, error } = await ctx.client.http.POST(
-				"/api/v1/search/message",
-				{
-					body: { query },
-				},
-			);
-			if (error) throw new Error(error);
+			const data = await api.messages.search({ query });
 			return data.items;
 		}) as any,
 	);

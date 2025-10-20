@@ -32,7 +32,7 @@ export class Dms {
 
 			batch(() => {
 				for (const item of data.items) {
-					this.api.threads.cache.set(item.id, item);
+					this.api.channels.cache.set(item.id, item);
 				}
 			});
 

@@ -198,4 +198,16 @@ export class Invites {
 
 		return resource;
 	}
+
+	async use(invite_code: string) {
+		const { error } = await this.api.client.http.POST(
+			"/api/v1/invite/{invite_code}",
+			{
+				params: {
+					path: { invite_code },
+				},
+			},
+		);
+		if (error) throw error;
+	}
 }

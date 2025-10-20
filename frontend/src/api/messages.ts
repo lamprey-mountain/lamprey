@@ -560,6 +560,42 @@ export class Messages {
 		);
 	}
 
+	listReplies(
+		channel_id: () => string,
+		message_id: () => string | undefined,
+		query?: () => { depth?: number; breadth?: number } & PaginationQuery,
+	): Resource<Pagination<Message>> {
+		const [resource] = createResource(
+			() => ({
+				channel_id: channel_id(),
+				message_id: message_id(),
+				query: query?.(),
+			}),
+			async ({ channel_id, message_id, query }) => {
+				if (message_id) {
+					const { data, error } = await this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply/{message_id}",
+						{
+							params: { path: { channel_id, message_id }, query },
+						},
+					);
+					if (error) throw error;
+					return data;
+				} else {
+					const { data, error } = await this.api.client.http.GET(
+						"/api/v1/channel/{channel_id}/reply",
+						{
+							params: { path: { channel_id }, query },
+						},
+					);
+					if (error) throw error;
+					return data;
+				}
+			},
+		);
+		return resource;
+	}
+
 	async reorderPins(
 		thread_id: string,
 		messages: { id: string; position: number }[],
@@ -568,6 +604,31 @@ export class Messages {
 			params: { path: { channel_id: thread_id } },
 			body: { messages },
 		});
+	}
+
+	async deleteBulk(thread_id: string, message_ids: string[]) {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { delete: message_ids },
+		});
+	}
+
+	async removeBulk(thread_id: string, message_ids: string[]) {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
+			params: { path: { channel_id: thread_id } },
+			body: { remove: message_ids },
+		});
+	}
+
+	async search(body: any): Promise<Pagination<Message>> {
+		const { data, error } = await this.api.client.http.POST(
+			"/api/v1/search/message",
+			{
+				body,
+			},
+		);
+		if (error) throw error;
+		return data;
 	}
 
 	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {

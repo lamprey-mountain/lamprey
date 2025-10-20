@@ -112,6 +112,14 @@ export class Rooms {
 		return resource;
 	}
 
+	async create(body: { name: string }): Promise<Room> {
+		const { data, error } = await this.api.client.http.POST("/api/v1/room", {
+			body,
+		});
+		if (error) throw error;
+		return data;
+	}
+
 	list_all(): Resource<Pagination<Room>> {
 		const paginate = async (pagination?: Pagination<Room>) => {
 			if (pagination && !pagination.has_more) return pagination;
@@ -203,7 +211,7 @@ export class Rooms {
 			}
 			for (const thread of data.items) {
 				if (thread.last_version_id) {
-					await this.api.threads.ack(
+					await this.api.channels.ack(
 						thread.id,
 						undefined,
 						thread.last_version_id,

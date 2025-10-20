@@ -366,10 +366,7 @@ export const ChatHeader = (
 			text: `Are you sure you want to delete ${selected().length} messages?`,
 			cont: (confirmed) => {
 				if (!confirmed) return;
-				api.client.http.PATCH("/api/v1/thread/{thread_id}/message", {
-					params: { path: { thread_id: props.thread.id } },
-					body: { delete: selected() },
-				});
+				api.messages.deleteBulk(props.thread.id, selected());
 				exitSelectMode();
 			},
 		});
@@ -381,10 +378,7 @@ export const ChatHeader = (
 			text: `Are you sure you want to remove ${selected().length} messages?`,
 			cont: (confirmed) => {
 				if (!confirmed) return;
-				api.client.http.PATCH("/api/v1/thread/{thread_id}/message", {
-					params: { path: { thread_id: props.thread.id } },
-					body: { remove: selected() },
-				});
+				api.messages.removeBulk(props.thread.id, selected());
 				exitSelectMode();
 			},
 		});
@@ -475,10 +469,10 @@ const SearchResultItem = (props: {
 	onResultClick: (message: Message) => void;
 }) => {
 	const api = useApi();
-	const thread = api.threads.fetch(() => props.message.thread_id);
+	const thread = api.channels.fetch(() => props.message.channel_id);
 	const showHeader = () =>
 		!props.prevMessage ||
-		props.prevMessage.thread_id !== props.message.thread_id;
+		props.prevMessage.channel_id !== props.message.channel_id;
 
 	return (
 		<>
@@ -502,7 +496,7 @@ export const SearchResults = (props: {
 	const navigate = useNavigate();
 
 	const onResultClick = (message: Message) => {
-		navigate(`/thread/${message.thread_id}/message/${message.id}`);
+		navigate(`/channel/${message.channel_id}/message/${message.id}`);
 		ctx.thread_search.delete(props.thread.id);
 	};
 

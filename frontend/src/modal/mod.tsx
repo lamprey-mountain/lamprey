@@ -249,7 +249,7 @@ const ModalPalette = () => {
 	api.dms.list();
 	createEffect(() => {
 		for (const room of rooms()?.items ?? []) {
-			api.threads.list(() => room.id);
+			api.channels.list(() => room.id);
 		}
 	});
 
@@ -267,11 +267,11 @@ const ModalPalette = () => {
 			name: room.name,
 			action: () => navigate(`/room/${room.id}`),
 		}));
-		const threads = [...api.threads.cache.values()].map((thread) => ({
+		const threads = [...api.channels.cache.values()].map((thread) => ({
 			type: "thread" as const,
 			id: thread.id,
 			name: thread.name,
-			action: () => navigate(`/thread/${thread.id}`),
+			action: () => navigate(`/channel/${thread.id}`),
 		}));
 
 		const staticItems: PaletteItem[] = [
@@ -305,7 +305,7 @@ const ModalPalette = () => {
 	});
 
 	const recentThreads = createMemo(() => {
-		return ctx.recentThreads().slice(1).map((i) => api.threads.cache.get(i)!)
+		return ctx.recentThreads().slice(1).map((i) => api.channels.cache.get(i)!)
 			.map((
 				thread,
 			) => ({

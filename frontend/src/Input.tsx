@@ -44,11 +44,7 @@ export function Input(props: InputProps) {
 	const atts = () => ctx.thread_attachments.get(props.thread.id);
 
 	const sendTyping = leading(throttle, () => {
-		ctx.client.http.POST("/api/v1/channel/{channel_id}/typing", {
-			params: {
-				path: { channel_id: props.thread.id },
-			},
-		});
+		api.channels.typing(props.thread.id);
 	}, 8000);
 
 	const getName = (user_id: string) => {

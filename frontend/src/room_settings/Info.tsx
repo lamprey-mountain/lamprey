@@ -57,7 +57,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	const threads = api.threads.list(() => props.room.id);
+	const threads = api.channels.list(() => props.room.id);
 	const archiveAllThreads = () => {
 		ctx.dispatch({
 			do: "modal.confirm",
@@ -66,7 +66,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				if (!confirmed) return;
 				console.log(threads());
 				for (const thread of threads()?.items ?? []) {
-					api.threads.archive(thread.id);
+					api.channels.archive(thread.id);
 				}
 			},
 		});

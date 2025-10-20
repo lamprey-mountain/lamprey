@@ -90,7 +90,7 @@ export function usePermissions(
 		const tid = thread_id();
 		if (tid) {
 			console.log("[perms] in thread", tid);
-			const thread = api.threads.fetch(() => tid)();
+			const thread = api.channels.fetch(() => tid)();
 
 			const memberRoleIds = new Set(member.roles);
 			if (everyoneRole) memberRoleIds.add(everyoneRole.id);
@@ -121,7 +121,7 @@ export function usePermissions(
 
 			if (thread?.parent_id) {
 				console.log("[perms] has parent thread", thread.parent_id);
-				const parentThread = api.threads.fetch(() => thread.parent_id!)();
+				const parentThread = api.channels.fetch(() => thread.parent_id!)();
 				applyOverwrites(parentThread?.permission_overwrites);
 			}
 

@@ -22,14 +22,15 @@ export const Category = (props: { thread: Thread }) => {
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
 	const fetchMore = () => {
-		const filter = threadFilter();
-		if (filter === "active") {
-			return api.threads.list(room_id);
-		} else if (filter === "archived") {
-			return api.threads.listArchived(room_id);
-		} else if (filter === "removed") {
-			return api.threads.listRemoved(room_id);
-		}
+		// const filter = threadFilter();
+		return api.channels.list(room_id);
+		// if (filter === "active") {
+		// 	return api.threads.list(room_id);
+		// } else if (filter === "archived") {
+		// 	return api.threads.listArchived(room_id);
+		// } else if (filter === "removed") {
+		// 	return api.threads.listRemoved(room_id);
+		// }
 	};
 
 	const threadsResource = createMemo(fetchMore);
@@ -58,12 +59,7 @@ export const Category = (props: { thread: Thread }) => {
 			text: "name?",
 			cont(name) {
 				if (!name) return;
-				ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-					params: {
-						path: { room_id },
-					},
-					body: { name },
-				});
+				api.channels.create(room_id, { name });
 			},
 		});
 	}
@@ -199,15 +195,10 @@ const QuickCreate = (
 
 	const onSubmit = async (text: string) => {
 		if (!text) return;
-		const t = await ctx.client.http.POST(
-			"/api/v1/room/{room_id}/channel",
-			{
-				params: {
-					path: { room_id: props.thread.room_id! },
-				},
-				body: { name: "thread", parent_id: props.thread.id },
-			},
-		);
+		const t = await api.channels.create(props.thread.room_id!, {
+			name: "thread",
+			parent_id: props.thread.id,
+		});
 
 		if (!t.data) return;
 		handleSubmit(ctx, t.data.id, text, null as any, api, props.thread.id);

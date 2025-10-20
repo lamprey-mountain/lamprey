@@ -37,7 +37,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	createEffect(() => {
 		if (props.room_id) {
-			api.threads.list(() => props.room_id!);
+			api.channels.list(() => props.room_id!);
 		} else {
 			api.dms.list();
 		}
@@ -49,7 +49,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	// update list when room changes
 	createEffect(() => {
-		const threads = [...api.threads.cache.values()]
+		const threads = [...api.channels.cache.values()]
 			.filter((t) =>
 				props.room_id ? t.room_id === props.room_id : t.room_id === null
 			);
@@ -83,7 +83,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 		}
 		const list = [...categories.entries()]
 			.map(([cid, ts]) => ({
-				category: cid ? api.threads.cache.get(cid)! : null,
+				category: cid ? api.channels.cache.get(cid)! : null,
 				threads: ts,
 			}))
 			.sort((a, b) => {
@@ -119,8 +119,8 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 		if (!fromId || !toId || fromId === toId) return cats;
 
-		const fromThread = api.threads.cache.get(fromId);
-		const toThread = api.threads.cache.get(toId);
+		const fromThread = api.channels.cache.get(fromId);
+		const toThread = api.channels.cache.get(toId);
 		if (!fromThread || !toThread) return cats;
 
 		const newCategories = cats.map((c) => ({
@@ -189,8 +189,8 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 		if (!fromId || !toId || fromId === toId) return;
 
-		const fromThread = api.threads.cache.get(fromId);
-		const toThread = api.threads.cache.get(toId);
+		const fromThread = api.channels.cache.get(fromId);
+		const toThread = api.channels.cache.get(toId);
 		if (!fromThread || !toThread) return;
 
 		const fromCategory = categories().find(

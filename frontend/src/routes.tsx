@@ -109,7 +109,7 @@ export const RouteRoomSettings = (p: RouteSectionProps) => {
 export const RouteThreadSettings = (p: RouteSectionProps) => {
 	const { t } = useCtx();
 	const api = useApi();
-	const thread = api.threads.fetch(() => p.params.thread_id);
+	const thread = api.channels.fetch(() => p.params.thread_id);
 	const title = () =>
 		thread() ? t("page.settings_thread", thread()!.name) : t("loading");
 	return (
@@ -164,7 +164,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
-	const thread = api.threads.fetch(() => p.params.thread_id);
+	const thread = api.channels.fetch(() => p.params.thread_id);
 	const room = api.rooms.fetch(() => thread()?.room_id!);
 
 	createEffect(() => {
@@ -185,7 +185,7 @@ export const RouteThread = (p: RouteSectionProps) => {
 	});
 
 	// fetch threads to populate sidebar
-	api.threads.list(() => thread()?.room_id!);
+	api.channels.list(() => thread()?.room_id!);
 
 	const title = () => {
 		const th = thread();

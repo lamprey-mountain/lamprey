@@ -59,7 +59,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		} else if (menuEl.classList.contains("menu-message")) {
 			const message = api.messages.cache.get(message_id!);
 			if (!message) return;
-			const thread_id = message.thread_id;
+			const thread_id = message.channel_id;
 			const version_id = message.version_id;
 			menu = {
 				type: "message",
@@ -69,7 +69,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 			};
 		} else if (menuEl.classList.contains("menu-user")) {
 			if (!user_id) return;
-			const thread = api.threads.cache.get(thread_id!);
+			const thread = api.channels.cache.get(thread_id!);
 			const room = api.rooms.cache.get(room_id!);
 			if (thread?.room_id && room?.id && thread.room_id !== room.id) {
 				console.warn("mismatched thread/room ids!");

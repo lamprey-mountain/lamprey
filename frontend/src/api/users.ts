@@ -108,4 +108,18 @@ export class Users {
 
 		return resource;
 	}
+
+	async getConfig(): Promise<UserConfig> {
+		const { data, error } = await this.api.client.http.GET("/api/v1/config");
+		if (error) throw error;
+		return data as UserConfig;
+	}
+
+	async createGuest(name: string) {
+		await this.api.client.http.POST("/api/v1/guest", { body: { name } });
+	}
+
+	async setConfig(config: UserConfig) {
+		await this.api.client.http.PUT("/api/v1/config", { body: config });
+	}
 }

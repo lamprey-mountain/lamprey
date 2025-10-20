@@ -17,9 +17,7 @@ export const Home = () => {
 			text: "name?",
 			cont: (name: string | null) => {
 				if (!name) return;
-				ctx.client.http.POST("/api/v1/room", {
-					body: { name },
-				});
+				api.rooms.create({ name });
 			},
 		});
 	}
@@ -30,53 +28,23 @@ export const Home = () => {
 			text: "invite code?",
 			cont(invite_code: string | null) {
 				if (!invite_code) return;
-				ctx.client.http.POST("/api/v1/invite/{invite_code}", {
-					params: {
-						path: { invite_code },
-					},
-				});
+				api.invites.use(invite_code);
 			},
 		});
 	}
 
 	async function loginDiscord() {
-		const res = await ctx.client.http.POST("/api/v1/auth/oauth/{provider}", {
-			params: {
-				path: {
-					provider: "discord",
-				},
-			},
-		});
-		if (res.error) {
-			ctx.dispatch({ do: "modal.alert", text: "failed to create login url" });
-			return;
-		}
-		globalThis.open(res.data.url);
+		const url = await api.auth.oauthUrl("discord");
+		globalThis.open(url);
 	}
 
 	async function loginGithub() {
-		const res = await ctx.client.http.POST("/api/v1/auth/oauth/{provider}", {
-			params: {
-				path: {
-					provider: "github",
-				},
-			},
-		});
-		if (res.error) {
-			ctx.dispatch({ do: "modal.alert", text: "failed to create login url" });
-			return;
-		}
-		globalThis.open(res.data.url);
+		const url = await api.auth.oauthUrl("github");
+		globalThis.open(url);
 	}
 
 	async function logout() {
-		await ctx.client.http.DELETE("/api/v1/session/{session_id}", {
-			params: {
-				path: {
-					session_id: "@self",
-				},
-			},
-		});
+		await api.sessions.delete("@self");
 		localStorage.clear();
 		location.reload(); // TODO: less hacky logout
 	}
@@ -98,8 +66,10 @@ export const Home = () => {
 			});
 		}
 
-		ctx.client.http.POST("/api/v1/auth/password", {
-			body: { type: "Email", email: email(), password: password() },
+		api.auth.passwordLogin({
+			type: "Email",
+			email: email(),
+			password: password(),
 		});
 	}
 
@@ -109,7 +79,7 @@ export const Home = () => {
 			text: "name?",
 			cont(name) {
 				if (!name) return;
-				ctx.client.http.POST("/api/v1/guest", { body: { name } }).then(() => {
+				api.users.createGuest(name).then(() => {
 					location.reload();
 				});
 			},

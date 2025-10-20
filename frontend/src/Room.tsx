@@ -140,14 +140,15 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
 	const fetchMore = () => {
-		const filter = threadFilter();
-		if (filter === "active") {
-			return api.threads.list(room_id);
-		} else if (filter === "archived") {
-			return api.threads.listArchived(room_id);
-		} else if (filter === "removed") {
-			return api.threads.listRemoved(room_id);
-		}
+		return api.channels.list(room_id);
+		// const filter = threadFilter();
+		// if (filter === "active") {
+		// 	return api.threads.list(room_id);
+		// } else if (filter === "archived") {
+		// 	return api.threads.listArchived(room_id);
+		// } else if (filter === "removed") {
+		// 	return api.threads.listRemoved(room_id);
+		// }
 	};
 
 	const threadsResource = createMemo(fetchMore);
@@ -227,8 +228,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
 					{threadsResource()?.()?.total ?? getThreads().length} {threadFilter()}
 					{" "}
-					threads
+					channels
 				</h3>
+				{
+					/*
 				<div class="thread-filter">
 					<button
 						classList={{ selected: threadFilter() === "active" }}
@@ -242,7 +245,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 					>
 						archived
 					</button>
-					<Show when={perms.has("ThreadRemove")}>
+					<Show when={perms.has("ThreadManage")}>
 						<button
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
@@ -251,12 +254,14 @@ export const RoomHome = (props: { room: RoomT }) => {
 						</button>
 					</Show>
 				</div>
+				*/
+				}
 				<button
 					class="primary"
 					style="margin-left: 8px;border-radius:4px"
 					onClick={() => createThread(room_id())}
 				>
-					create thread
+					create channel
 				</button>
 			</div>
 			<ul>

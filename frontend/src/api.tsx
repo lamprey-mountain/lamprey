@@ -13,27 +13,16 @@ import {
 } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import type {
-	AuditLogEntry,
 	Client,
 	ClientState,
-	EmojiCustom,
-	InboxListParams,
-	Invite,
-	InviteWithMetadata,
 	Media,
 	MemberListGroup,
-	Message,
 	MessageCreate,
 	MessageReady,
 	MessageSync,
-	Notification,
 	Pagination,
-	Role,
-	Room,
-	RoomBan,
 	RoomMember,
 	Session,
-	Thread,
 	ThreadMember,
 	User,
 	UserConfig,
@@ -42,12 +31,10 @@ import type {
 } from "sdk";
 import type { Emitter } from "@solid-primitives/event-bus";
 import {
-	type MessageListAnchor,
-	type MessageRange,
-	type MessageRanges,
 	Messages,
 } from "./api/messages.ts";
 import { Rooms } from "./api/rooms.ts";
+import { Channels } from "./api/channels.ts";
 import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
@@ -58,7 +45,10 @@ import { AuditLogs } from "./api/audit_log.ts";
 import { ThreadMembers } from "./api/thread_members.ts";
 import { MediaInfo } from "./api/media.tsx";
 import { Emoji } from "./api/emoji.ts";
+import { Reactions } from "./api/reactions.ts";
 import { Dms } from "./api/dms.ts";
+import { Auth } from "./api/auth.ts";
+import { Sessions } from "./api/sessions.ts";
 import { deepEqual } from "./utils/deepEqual.ts";
 import { Inbox } from "./api/inbox.ts";
 
@@ -100,6 +90,7 @@ export function createApi(
 	client.state.subscribe(setClientState);
 
 	const rooms = new Rooms();
+	const channels = new Channels();
 	const threads = new Threads();
 	const invites = new Invites();
 	const roles = new Roles();
@@ -113,7 +104,10 @@ export function createApi(
 	const typing_timeout = new Map<string, Map<string, NodeJS.Timeout>>();
 	const audit_logs = new AuditLogs();
 	const emoji = new Emoji();
+	const reactions = new Reactions();
 	const dms = new Dms();
+	const auth = new Auth();
+	const sessions = new Sessions();
 	const inbox = new Inbox();
 	const voiceStates = new ReactiveMap();
 	const [voiceState, setVoiceState] = createSignal();
@@ -142,7 +136,7 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelCreate") {
 			const { channel } = msg;
-			threads.cache.set(channel.id, channel);
+			channels.cache.set(channel.id, channel);
 			if (channel.room_id) {
 				const l = threads._cachedListings.get(channel.room_id);
 				if (l?.pagination) {
@@ -160,8 +154,8 @@ export function createApi(
 			}
 		} else if (msg.type === "ChannelUpdate") {
 			const { channel: thread } = msg;
-			const old_thread = threads.cache.get(thread.id);
-			threads.cache.set(thread.id, thread);
+			const old_thread = channels.cache.get(thread.id);
+			channels.cache.set(thread.id, thread);
 
 			if (thread.room_id) {
 				const was_archived = !!old_thread?.archived_at;
@@ -183,8 +177,8 @@ export function createApi(
 					const old_listing = (old_status === "active"
 						? threads._cachedListings
 						: old_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (old_listing?.pagination) {
 						const p = old_listing.pagination;
@@ -203,8 +197,8 @@ export function createApi(
 					const new_listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (new_listing?.pagination) {
 						const p = new_listing.pagination;
@@ -221,8 +215,8 @@ export function createApi(
 					const listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-						? (threads as any)._cachedArchivedListings
-						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+							? (threads as any)._cachedArchivedListings
+							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (listing?.pagination) {
 						const p = listing.pagination;
@@ -292,9 +286,9 @@ export function createApi(
 				});
 			}
 
-			const t = api.threads.cache.get(m.channel_id);
+			const t = api.channels.cache.get(m.channel_id);
 			if (t) {
-				api.threads.cache.set(m.channel_id, {
+				api.channels.cache.set(m.channel_id, {
 					...t,
 					message_count: (t.message_count ?? 0) + (is_new ? 1 : 0),
 					last_version_id: m.version_id,
@@ -346,12 +340,12 @@ export function createApi(
 						messages._updateMutators(ranges, thread_id);
 					});
 				}
-				const t = api.threads.cache.get(msg.channel_id);
+				const t = api.channels.cache.get(msg.channel_id);
 				if (t) {
 					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
 						t.last_version_id;
 					console.log({ last_version_id });
-					api.threads.cache.set(msg.channel_id, {
+					api.channels.cache.set(msg.channel_id, {
 						...t,
 						message_count: t.message_count! - 1,
 						last_version_id,
@@ -381,11 +375,11 @@ export function createApi(
 					}
 				}
 
-				const t = api.threads.cache.get(thread_id);
+				const t = api.channels.cache.get(thread_id);
 				if (t) {
 					const last_version_id = ranges?.live.items.at(-1)?.version_id ??
 						t.last_version_id;
-					api.threads.cache.set(thread_id, {
+					api.channels.cache.set(thread_id, {
 						...t,
 						message_count: t.message_count! - message_ids.length,
 						last_version_id,
@@ -699,9 +693,9 @@ export function createApi(
 			}
 		} else if (msg.type === "UserConfigChannel") {
 			if (msg.user_id === session()?.user_id) {
-				const thread = threads.cache.get(msg.channel_id);
+				const thread = channels.cache.get(msg.channel_id);
 				if (thread) {
-					threads.cache.set(thread.id, {
+					channels.cache.set(thread.id, {
 						...thread,
 						user_config: msg.config,
 					});
@@ -905,6 +899,7 @@ export function createApi(
 
 	const api: Api = {
 		rooms,
+		channels,
 		threads,
 		invites,
 		roles,
@@ -921,7 +916,10 @@ export function createApi(
 		client,
 		clientState,
 		emoji,
+		reactions,
 		dms,
+		auth,
+		sessions,
 		inbox,
 		voiceStates,
 		voiceState,
@@ -938,6 +936,7 @@ export function createApi(
 
 	messages.api = api;
 	rooms.api = api;
+	channels.api = api;
 	threads.api = api;
 	roles.api = api;
 	room_members.api = api;
@@ -948,7 +947,10 @@ export function createApi(
 	audit_logs.api = api;
 	media.api = api;
 	emoji.api = api;
+	reactions.api = api;
 	dms.api = api;
+	auth.api = api;
+	sessions.api = api;
 	inbox.api = api;
 
 	console.log("provider created", api);
@@ -960,120 +962,24 @@ type MessageSendReq = Omit<MessageCreate, "nonce"> & {
 };
 
 export type Api = {
-	rooms: {
-		fetch: (room_id?: () => string) => Resource<Room>;
-		list: () => Resource<Pagination<Room>>;
-		list_all: () => Resource<Pagination<Room>>;
-		cache: ReactiveMap<string, Room>;
-		markRead: (room_id: string) => Promise<void>;
-	};
-	threads: {
-		fetch: (thread_id: () => string) => Resource<Thread>;
-		list: (room_id: () => string) => Resource<Pagination<Thread>>;
-		listArchived: (room_id: () => string) => Resource<Pagination<Thread>>;
-		listRemoved: (room_id: () => string) => Resource<Pagination<Thread>>;
-		cache: ReactiveMap<string, Thread>;
-		ack: (
-			thread_id: string,
-			message_id: string | undefined,
-			version_id: string,
-		) => Promise<void>;
-		lock: (thread_id: string) => Promise<void>;
-		unlock: (thread_id: string) => Promise<void>;
-		archive: (thread_id: string) => Promise<void>;
-		unarchive: (thread_id: string) => Promise<void>;
-	};
-	dms: {
-		list: () => Resource<Pagination<Thread>>;
-	};
+	rooms: Rooms;
+	channels: Channels;
+	threads: Threads;
+	dms: Dms;
+	auth: Auth;
+	sessions: Sessions;
 	inbox: Inbox;
-	invites: {
-		fetch: (invite_code: () => string) => Resource<Invite>;
-		list: (room_id: () => string) => Resource<Pagination<InviteWithMetadata>>;
-		list_server: () => Resource<Pagination<InviteWithMetadata>>;
-		cache: ReactiveMap<string, Invite>;
-	};
-	roles: {
-		fetch: (room_id: () => string, role_id: () => string) => Resource<Role>;
-		list: (room_id: () => string) => Resource<Pagination<Role>>;
-		cache: ReactiveMap<string, Role>;
-	};
-	audit_logs: {
-		fetch: (room_id: () => string) => Resource<Pagination<AuditLogEntry>>;
-	};
-	room_members: {
-		fetch: (
-			room_id: () => string,
-			user_id: () => string,
-		) => Resource<RoomMember>;
-		list: (room_id: () => string) => Resource<Pagination<RoomMember>>;
-		cache: ReactiveMap<string, ReactiveMap<string, RoomMember>>;
-		subscribeList: (room_id: string, ranges: [number, number][]) => void;
-	};
-	room_bans: {
-		fetch: (
-			room_id: () => string,
-			user_id: () => string,
-		) => Resource<RoomBan>;
-		list: (room_id: () => string) => Resource<Pagination<RoomBan>>;
-		cache: ReactiveMap<string, ReactiveMap<string, RoomBan>>;
-	};
-	thread_members: {
-		fetch: (
-			thread_id: () => string,
-			user_id: () => string,
-		) => Resource<ThreadMember>;
-		list: (thread_id: () => string) => Resource<Pagination<ThreadMember>>;
-		cache: ReactiveMap<string, ReactiveMap<string, ThreadMember>>;
-		subscribeList: (thread_id: string, ranges: [number, number][]) => void;
-	};
-	users: {
-		fetch: (user_id: () => string) => Resource<UserWithRelationship>;
-		list: () => Resource<Pagination<User>>;
-		cache: ReactiveMap<string, UserWithRelationship>;
-	};
-	messages: {
-		send: (
-			thread_id: string,
-			message: MessageSendReq,
-		) => Promise<Message>;
-		list: (
-			thread_id: () => string,
-			anchor: () => MessageListAnchor,
-		) => Resource<MessageRange>;
-		listPinned: (
-			thread_id: () => string,
-		) => Resource<Pagination<Message>>;
-		fetch: (
-			thread_id: () => string,
-			message_id: () => string,
-		) => Resource<Message>;
-		cache: ReactiveMap<string, Message>;
-		cacheRanges: Map<string, MessageRanges>;
-		edit: (
-			thread_id: string,
-			message_id: string,
-			content: string,
-		) => Promise<Message>;
-		pin: (thread_id: string, message_id: string) => Promise<void>;
-		unpin: (thread_id: string, message_id: string) => Promise<void>;
-		reorderPins: (
-			thread_id: string,
-			messages: { id: string; position: number }[],
-		) => Promise<void>;
-	};
-	media: {
-		fetchInfo: (media_id: () => string) => Resource<Media>;
-		cacheInfo: ReactiveMap<string, Media>;
-	};
-	emoji: {
-		fetch: (
-			room_id: () => string,
-			emoji_id: () => string,
-		) => Resource<EmojiCustom>;
-		list: (room_id: () => string) => Resource<Pagination<EmojiCustom>>;
-		cache: ReactiveMap<string, ReactiveMap<string, EmojiCustom>>;
-	};
+	invites: Invites;
+	roles: Roles;
+	audit_logs: AuditLogs;
+	room_members: RoomMembers;
+	room_bans: RoomBans;
+	thread_members: ThreadMembers;
+	users: Users;
+	messages: Messages;
+	media: Media;
+	emoji: Emoji;
+	reactions: Reactions;
 	session: Accessor<Session | null>;
 	typing: ReactiveMap<string, Set<string>>;
 	voiceState: Accessor<VoiceState | null>;

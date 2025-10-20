@@ -7,16 +7,10 @@ import { Time } from "./Time";
 
 export const Forum = (props: { thread: Thread }) => {
 	const api = useApi();
-	const [comments] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/thread/{thread_id}/reply",
-			{
-				params: { path: { thread_id: props.thread.id } },
-			},
-		);
-		console.log(data);
-		return data;
-	});
+	const [comments] = api.messages.listReplies(
+		() => props.thread.id,
+		() => undefined,
+	);
 	const collapsed = new ReactiveSet<string>();
 
 	return (
@@ -46,19 +40,11 @@ const Comment = (
 
 	const collapsed = () => props.collapsed.has(props.message.id);
 
-	const [children] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/thread/{thread_id}/reply/{message_id}",
-			{
-				params: {
-					path: { thread_id: props.thread.id, message_id: props.message.id },
-					query: { depth: 2 },
-				},
-			},
-		);
-		console.log(props.message, data);
-		return data;
-	});
+	const [children] = api.messages.listReplies(
+		() => props.thread.id,
+		() => props.message.id,
+		() => ({ depth: 2 }),
+	);
 
 	const countChildren = () => children()?.total ?? 0;
 

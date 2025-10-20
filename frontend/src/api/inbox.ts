@@ -57,8 +57,8 @@ export class Inbox {
 				for (const item of data.items) {
 					this.cache.set(item.id, item);
 				}
-				for (const thread of data.threads) {
-					this.api.threads.cache.set(thread.id, thread);
+				for (const thread of data.channels) {
+					this.api.channels.cache.set(thread.id, thread);
 				}
 				for (const message of data.messages) {
 					this.api.messages.cache.set(message.id, message);
