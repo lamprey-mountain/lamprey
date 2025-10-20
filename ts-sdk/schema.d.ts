@@ -549,115 +549,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Calendar event list all
+		 * Calendar event list user (TODO)
 		 * @description
 		 *
 		 *     List all events the current user can see
 		 */
-		get: operations["calendar_event_list"];
+		get: operations["calendar_event_list_user"];
 		put?: never;
 		post?: never;
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/calendar/{thread_id}/event": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar event list
-		 * @description
-		 */
-		get: operations["calendar_thread_event_list"];
-		put?: never;
-		/**
-		 * Calendar event create
-		 * @description
-		 */
-		post: operations["calendar_thread_event_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar event get
-		 * @description
-		 */
-		get: operations["calendar_thread_event_get"];
-		put?: never;
-		post?: never;
-		/**
-		 * Calendar event delete
-		 * @description
-		 */
-		delete: operations["calendar_thread_event_delete"];
-		options?: never;
-		head?: never;
-		/**
-		 * Calendar event update
-		 * @description
-		 */
-		patch: operations["calendar_thread_event_update"];
-		trace?: never;
-	};
-	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}/rsvp": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar rsvp list
-		 * @description
-		 */
-		get: operations["calendar_thread_event_rsvp_list"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/calendar/{thread_id}/event/{calendar_event_id}/rsvp/{user_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Calendar rsvp get
-		 * @description
-		 */
-		get: operations["calendar_thread_event_rsvp_get"];
-		/**
-		 * Calendar rsvp create
-		 * @description
-		 */
-		put: operations["calendar_thread_event_rsvp_update"];
-		post?: never;
-		/**
-		 * Calendar rsvp delete
-		 * @description
-		 */
-		delete: operations["calendar_thread_event_rsvp_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -732,32 +632,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/archive": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Channel archive
-		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadArchive</div>
-		 */
-		put: operations["channel_archive"];
-		post?: never;
-		/**
-		 * Channel unarchive
-		 * @description <div class="markdown-alert-permission-optional">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 */
-		delete: operations["channel_unarchive"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/channel/{channel_id}/context/{message_id}": {
 		parameters: {
 			query?: never;
@@ -780,25 +654,101 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/lock": {
+	"/api/v1/channel/{channel_id}/event": {
 		parameters: {
 			query?: never;
 			header?: never;
 			path?: never;
 			cookie?: never;
 		};
-		get?: never;
 		/**
-		 * Channel lock
-		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
+		 * Calendar event list
+		 * @description
 		 */
-		put: operations["channel_lock"];
+		get: operations["calendar_event_list"];
+		put?: never;
+		/**
+		 * Calendar event create
+		 * @description
+		 */
+		post: operations["calendar_event_create"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/event/{calendar_event_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar event get
+		 * @description
+		 */
+		get: operations["calendar_event_get"];
+		put?: never;
 		post?: never;
 		/**
-		 * Channel unlock
-		 * @description <div class="markdown-alert-permission-required">ThreadLock</div>
+		 * Calendar event delete
+		 * @description
 		 */
-		delete: operations["channel_unlock"];
+		delete: operations["calendar_event_delete"];
+		options?: never;
+		head?: never;
+		/**
+		 * Calendar event update
+		 * @description
+		 */
+		patch: operations["calendar_channel_event_update"];
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/event/{calendar_event_id}/rsvp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar rsvp list
+		 * @description
+		 */
+		get: operations["calendar_rsvp_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/event/{calendar_event_id}/rsvp/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Calendar rsvp get
+		 * @description
+		 */
+		get: operations["calendar_rsvp_get"];
+		/**
+		 * Calendar rsvp create
+		 * @description
+		 */
+		put: operations["calendar_rsvp_update"];
+		post?: never;
+		/**
+		 * Calendar rsvp delete
+		 * @description
+		 */
+		delete: operations["calendar_rsvp_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1029,7 +979,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/migrate": {
+	"/api/v1/channel/{channel_id}/move-messages": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -1159,10 +1109,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message roots
+		 * Message reply roots
 		 * @description
+		 *
+		 *     Get messages that don't reply to any other messages
 		 */
-		get: operations["message_roots"];
+		get: operations["message_reply_roots"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1179,10 +1131,72 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message replies
+		 * Message reply query
+		 * @description
+		 *
+		 *     Get replies to a message
+		 */
+		get: operations["message_reply_query"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/thread": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Thread list
 		 * @description
 		 */
-		get: operations["message_replies"];
+		get: operations["thread_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/thread/archived": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Thread list archived
+		 * @description
+		 */
+		get: operations["thread_list_archived"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/thread/removed": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Thread list removed
+		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
+		 */
+		get: operations["thread_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2190,7 +2204,7 @@ export interface paths {
 		patch: operations["channel_reorder"];
 		trace?: never;
 	};
-	"/api/v1/room/{room_id}/channel/archived": {
+	"/api/v1/room/{room_id}/channel/removed": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -2198,10 +2212,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room channel list archived
+		 * Room channel list removed
 		 * @description
+		 *
+		 *     List removed threads in a room. Requires the `ChannelManage` permission.
 		 */
-		get: operations["channel_list_archived"];
+		get: operations["channel_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2570,28 +2586,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 */
 		delete: operations["role_member_remove"];
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/room/{room_id}/thread/removed": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Room channel list removed
-		 * @description
-		 *
-		 *     List removed threads in a room. Requires the `ThreadDelete` permission.
-		 */
-		get: operations["channel_list_removed"];
-		put?: never;
-		post?: never;
-		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -4218,14 +4212,14 @@ export interface components {
 			};
 		};
 		CalendarEvent: {
-			creator_id: components["schemas"]["Id"];
+			channel_id: components["schemas"]["Id"];
+			creator_id?: null | components["schemas"]["Id"];
 			description?: string | null;
 			end: components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
 			location?: string | null;
 			recurrence: components["schemas"]["Recurrence"][];
 			start: components["schemas"]["Time"];
-			thread_id: components["schemas"]["Id"];
 			timezone?: string | null;
 			title: string;
 			/** Format: uri */
@@ -4243,9 +4237,9 @@ export interface components {
 			url?: string | null;
 		};
 		CalendarEventPatch: {
+			channel_id?: null | components["schemas"]["Id"];
 			description?: string | null;
 			location?: string | null;
-			thread_id?: null | components["schemas"]["Id"];
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
@@ -4342,10 +4336,12 @@ export interface components {
 			user_limit?: number | null;
 		};
 		ChannelPatch: {
+			archived?: boolean | null;
 			/** Format: int64 */
 			bitrate?: number | null;
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
+			locked?: boolean | null;
 			name?: string | null;
 			/** @description not safe for work */
 			nsfw?: boolean | null;
@@ -7492,7 +7488,7 @@ export interface operations {
 			};
 		};
 	};
-	calendar_event_list: {
+	calendar_event_list_user: {
 		parameters: {
 			query?: {
 				from?: null | components["schemas"]["Id"];
@@ -7503,229 +7499,6 @@ export interface operations {
 			};
 			header?: never;
 			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_list: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["CalendarEventCreate"];
-			};
-		};
-		responses: {
-			/** @description Create calendar event success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_thread_event_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Get calendar event success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_thread_event_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Delete calendar event success */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["CalendarEventPatch"];
-			};
-		};
-		responses: {
-			/** @description Update calendar event success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["CalendarEvent"];
-				};
-			};
-		};
-	};
-	calendar_thread_event_rsvp_list: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_rsvp_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description User id */
-				user_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_rsvp_update: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description User id */
-				user_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description ok */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	calendar_thread_event_rsvp_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: components["schemas"]["Id"];
-				/** @description Calendar event id */
-				calendar_event_id: components["schemas"]["Id"];
-				/** @description User id */
-				user_id: components["schemas"]["Id"];
-			};
 			cookie?: never;
 		};
 		requestBody?: never;
@@ -7847,70 +7620,6 @@ export interface operations {
 			};
 		};
 	};
-	channel_archive: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description channel id */
-				channel_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Channel"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Channel"];
-				};
-			};
-		};
-	};
-	channel_unarchive: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description channel id */
-				channel_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Channel"];
-				};
-			};
-			/** @description didn't change anything */
-			304: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Channel"];
-				};
-			};
-		};
-	};
 	message_context: {
 		parameters: {
 			query?: {
@@ -7940,19 +7649,94 @@ export interface operations {
 			};
 		};
 	};
-	channel_lock: {
+	calendar_event_list: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description channel id */
-				channel_id: string;
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** @description success */
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventCreate"];
+			};
+		};
+		responses: {
+			/** @description Create calendar event success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_event_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_event_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event success */
 			204: {
 				headers: {
 					[name: string]: unknown;
@@ -7961,20 +7745,128 @@ export interface operations {
 			};
 		};
 	};
-	channel_unlock: {
+	calendar_channel_event_update: {
 		parameters: {
 			query?: never;
 			header?: never;
 			path: {
-				/** @description channel id */
-				channel_id: string;
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CalendarEventPatch"];
+			};
+		};
+		responses: {
+			/** @description Update calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CalendarEvent"];
+				};
+			};
+		};
+	};
+	calendar_rsvp_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
 			};
 			cookie?: never;
 		};
 		requestBody?: never;
 		responses: {
-			/** @description success */
-			204: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Id"][];
+				};
+			};
+		};
+	};
+	calendar_rsvp_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_rsvp_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: components["schemas"]["Id"];
+				/** @description Calendar event id */
+				calendar_event_id: components["schemas"]["Id"];
+				/** @description User id */
+				user_id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -8593,7 +8485,7 @@ export interface operations {
 			};
 		};
 	};
-	message_roots: {
+	message_reply_roots: {
 		parameters: {
 			query?: {
 				/** @description how deeply to fetch replies */
@@ -8622,7 +8514,7 @@ export interface operations {
 			};
 		};
 	};
-	message_replies: {
+	message_reply_query: {
 		parameters: {
 			query?: {
 				/** @description how deeply to fetch replies */
@@ -8649,6 +8541,93 @@ export interface operations {
 				content: {
 					"application/json":
 						components["schemas"]["PaginationResponse_Message"];
+				};
+			};
+		};
+	};
+	thread_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List channel threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
+				};
+			};
+		};
+	};
+	thread_list_archived: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List channel archived threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
+				};
+			};
+		};
+	};
+	thread_list_removed: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List channel removed threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
@@ -10245,7 +10224,7 @@ export interface operations {
 			};
 		};
 	};
-	channel_list_archived: {
+	channel_list_removed: {
 		parameters: {
 			query?: {
 				parent_id?: null | components["schemas"]["Id"];
@@ -10263,7 +10242,7 @@ export interface operations {
 		};
 		requestBody?: never;
 		responses: {
-			/** @description List archived room channels success */
+			/** @description List removed room threads success */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -11031,36 +11010,6 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["RoomMember"];
-				};
-			};
-		};
-	};
-	channel_list_removed: {
-		parameters: {
-			query?: {
-				parent_id?: null | components["schemas"]["Id"];
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Room id */
-				room_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description List removed room threads success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Channel"];
 				};
 			};
 		};
