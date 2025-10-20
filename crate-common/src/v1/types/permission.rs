@@ -50,7 +50,7 @@ pub enum Permission {
 
     /// allow adding users with type Puppet and use timestamp massaging
     /// intended for bridge bots
-    // TODO: rename to `Bridge`?
+    // TODO: rename to `Bridge`
     MemberBridge,
 
     /// kick members
@@ -119,9 +119,11 @@ pub enum Permission {
 
     /// (unimplemented) apply tags to threads
     /// applying tags to rooms would probably be a RoomEdit thing
+    // TODO: merge with ThreadEdit?
     TagApply,
 
     /// (unimplemented) create and delete tags
+    // TODO: merge with ChannelManage or ChannelEdit?
     TagManage,
 
     /// can change channel names and topics
@@ -130,10 +132,10 @@ pub enum Permission {
     /// can create, remove, and archive channels. can also list all channels.
     ChannelManage,
 
-    /// (unimplemented) can create private threads
+    /// can create private threads
     ThreadCreatePrivate,
 
-    /// (unimplemented) can create public threads
+    /// can create public threads
     ThreadCreatePublic,
 
     /// remove and archive threads, and move threads between channels. can also view all threads.
@@ -143,6 +145,7 @@ pub enum Permission {
     ThreadEdit,
 
     /// lock and unlock threads
+    // TODO: merge with ThreadManage?
     ThreadLock,
 
     /// Can view channels

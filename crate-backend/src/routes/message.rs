@@ -731,7 +731,7 @@ async fn message_moderate(
 /// source and target thread.
 #[utoipa::path(
     post,
-    path = "/channel/{channel_id}/migrate",
+    path = "/channel/{channel_id}/move-messages",
     params(("channel_id", description = "Channel id")),
     tags = [
         "message",
@@ -749,7 +749,9 @@ async fn message_move(
     Ok(Error::Unimplemented)
 }
 
-/// Message replies
+/// Message reply query
+///
+/// Get replies to a message
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/reply/{message_id}",
@@ -763,7 +765,7 @@ async fn message_move(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     ),
 )]
-async fn message_replies(
+async fn message_reply_query(
     Path((channel_id, message_id)): Path<(ChannelId, MessageId)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
@@ -794,7 +796,9 @@ async fn message_replies(
     Ok(Json(res))
 }
 
-/// Message roots
+/// Message reply roots
+///
+/// Get messages that don't reply to any other messages
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/reply",
@@ -807,7 +811,7 @@ async fn message_replies(
         (status = OK, body = PaginationResponse<Message>, description = "List thread messages success"),
     ),
 )]
-async fn message_roots(
+async fn message_reply_roots(
     Path((channel_id,)): Path<(ChannelId,)>,
     Query(q): Query<RepliesQuery>,
     Query(pagination): Query<PaginationQuery<MessageId>>,
@@ -1198,8 +1202,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(message_delete))
         .routes(routes!(message_version_list))
         .routes(routes!(message_version_get))
-        .routes(routes!(message_replies))
-        .routes(routes!(message_roots))
+        .routes(routes!(message_reply_query))
+        .routes(routes!(message_reply_roots))
         .routes(routes!(message_moderate))
         .routes(routes!(message_move))
         .routes(routes!(message_pin_create))

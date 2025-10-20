@@ -453,11 +453,7 @@ pub trait DataChannel {
         patch: ChannelPatch,
     ) -> Result<ChannelVerId>;
     async fn channel_delete(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_archive(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_unarchive(&self, channel_id: ChannelId) -> Result<()>;
     async fn channel_undelete(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_lock(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_unlock(&self, channel_id: ChannelId) -> Result<()>;
     async fn channel_reorder(&self, data: ChannelReorder) -> Result<()>;
     async fn channel_upgrade_gdm(&self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
 }

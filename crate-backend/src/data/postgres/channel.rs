@@ -184,13 +184,39 @@ impl DataChannel for Postgres {
         thread_id: ChannelId,
         patch: ChannelPatch,
     ) -> Result<ChannelVerId> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let thread = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id,)
-            .fetch_one(&self.pool)
-            .await?;
-        let thread: Channel = thread.into();
+        let mut tx = self.pool.begin().await?;
+        let thread: Channel = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id)
+            .fetch_one(&mut *tx)
+            .await?
+            .into();
+
+        if patch.archived == Some(false) && thread.archived_at.is_some() {
+            if let Some(room_id) = thread.room_id {
+                let count: i64 = query_scalar!(
+                    "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                    *room_id
+                )
+                .fetch_one(&mut *tx)
+                .await?
+                .unwrap_or(0);
+
+                if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
+                    return Err(Error::BadRequest(format!(
+                        "too many active channel (max {})",
+                        crate::consts::MAX_CHANNEL_COUNT
+                    )));
+                }
+            }
+        }
+
         let version_id = ChannelVerId::new();
+
+        let archived_at = match patch.archived {
+            Some(true) => Some(time::OffsetDateTime::now_utc()),
+            Some(false) => None,
+            None => thread.archived_at.map(|t| *t),
+        };
+
         query!(
             r#"
             UPDATE channel SET
@@ -201,7 +227,9 @@ impl DataChannel for Postgres {
                 bitrate = $6,
                 user_limit = $7,
                 owner_id = $8,
-                icon = $9
+                icon = $9,
+                locked = $10,
+                archived_at = $11
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -218,10 +246,9 @@ impl DataChannel for Postgres {
                 .owner_id
                 .unwrap_or(thread.owner_id)
                 .map(|i| i.into_inner()),
-            patch
-                .icon
-                .map(|i| i.map(|i| *i))
-                .unwrap_or(thread.icon.map(|i| *i)),
+            patch.icon.unwrap_or(thread.icon).map(|id| *id),
+            patch.locked.unwrap_or(thread.locked),
+            archived_at as _,
         )
         .execute(&mut *tx)
         .await?;
@@ -279,107 +306,6 @@ impl DataChannel for Postgres {
             UPDATE channel SET
                 version_id = $2,
                 deleted_at = NULL
-            WHERE id = $1
-            "#,
-            thread_id.into_inner(),
-            version_id.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
-    async fn channel_archive(&self, thread_id: ChannelId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let version_id = ChannelVerId::new();
-        query!(
-            r#"
-            UPDATE channel SET
-                version_id = $2,
-                archived_at = NOW()
-            WHERE id = $1
-            "#,
-            thread_id.into_inner(),
-            version_id.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
-    async fn channel_unarchive(&self, thread_id: ChannelId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-
-        if let Some(room_id) =
-            query_scalar!("SELECT room_id FROM channel WHERE id = $1", *thread_id)
-                .fetch_one(&mut *tx)
-                .await?
-        {
-            let count: i64 = query_scalar!(
-                "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
-                room_id
-            )
-            .fetch_one(&mut *tx)
-            .await?
-            .unwrap_or(0);
-
-            if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
-                return Err(Error::BadRequest(format!(
-                    "too many active channel (max {})",
-                    crate::consts::MAX_CHANNEL_COUNT
-                )));
-            }
-        }
-
-        let version_id = ChannelVerId::new();
-        query!(
-            r#"
-            UPDATE channel SET
-                version_id = $2,
-                archived_at = NULL
-            WHERE id = $1
-            "#,
-            thread_id.into_inner(),
-            version_id.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
-    async fn channel_lock(&self, thread_id: ChannelId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let version_id = ChannelVerId::new();
-        query!(
-            r#"
-            UPDATE channel SET
-                version_id = $2,
-                locked = true
-            WHERE id = $1
-            "#,
-            thread_id.into_inner(),
-            version_id.into_inner(),
-        )
-        .execute(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
-    async fn channel_unlock(&self, thread_id: ChannelId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-        let version_id = ChannelVerId::new();
-        query!(
-            r#"
-            UPDATE channel SET
-                version_id = $2,
-                locked = false
             WHERE id = $1
             "#,
             thread_id.into_inner(),

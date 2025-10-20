@@ -66,9 +66,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				if (!confirmed) return;
 				console.log(threads());
 				for (const thread of threads()?.items ?? []) {
-					ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
-						params: { path: { thread_id: thread.id } },
-					});
+					api.threads.archive(thread.id);
 				}
 			},
 		});

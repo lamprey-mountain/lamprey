@@ -980,6 +980,8 @@ export type Api = {
 		) => Promise<void>;
 		lock: (thread_id: string) => Promise<void>;
 		unlock: (thread_id: string) => Promise<void>;
+		archive: (thread_id: string) => Promise<void>;
+		unarchive: (thread_id: string) => Promise<void>;
 	};
 	dms: {
 		list: () => Resource<Pagination<Thread>>;

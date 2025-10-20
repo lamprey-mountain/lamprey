@@ -35,9 +35,9 @@ export function ThreadMenu(props: { thread_id: string }) {
 			text: "are you sure you want to remove this tread?",
 			cont(confirmed) {
 				if (!confirmed) return;
-				ctx.client.http.PUT("/api/v1/thread/{thread_id}/remove", {
+				ctx.client.http.PUT("/api/v1/channel/{channel_id}/remove", {
 					params: {
-						path: { thread_id: props.thread_id },
+						path: { channel_id: props.thread_id },
 					},
 				});
 			},
@@ -55,15 +55,11 @@ export function ThreadMenu(props: { thread_id: string }) {
 		nav(`/thread/${props.thread_id}/settings${to}`);
 
 	const archiveThread = () => {
-		ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
-			params: { path: { thread_id: props.thread_id } },
-		});
+		api.threads.archive(props.thread_id);
 	};
 
 	const unarchiveThread = () => {
-		ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
-			params: { path: { thread_id: props.thread_id } },
-		});
+		api.threads.unarchive(props.thread_id);
 	};
 
 	const toggleLock = () => {

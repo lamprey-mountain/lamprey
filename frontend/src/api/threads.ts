@@ -349,14 +349,30 @@ export class Threads {
 	}
 
 	async lock(thread_id: string) {
-		await this.api.client.http.PUT("/api/v1/channel/{channel_id}/lock", {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: thread_id } },
+			body: { locked: true },
 		});
 	}
 
 	async unlock(thread_id: string) {
-		await this.api.client.http.DELETE("/api/v1/channel/{channel_id}/lock", {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: thread_id } },
+			body: { locked: false },
+		});
+	}
+
+	async archive(thread_id: string) {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+			params: { path: { channel_id: thread_id } },
+			body: { archived: true },
+		});
+	}
+
+	async unarchive(thread_id: string) {
+		await this.api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+			params: { path: { channel_id: thread_id } },
+			body: { archived: false },
 		});
 	}
 }

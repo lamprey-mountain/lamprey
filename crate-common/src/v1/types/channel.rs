@@ -217,6 +217,9 @@ pub struct ChannelPatch {
 
     #[serde(default, deserialize_with = "some_option")]
     pub owner_id: Option<Option<UserId>>,
+
+    pub archived: Option<bool>,
+    pub locked: Option<bool>,
 }
 
 /// reorder some channels
@@ -253,6 +256,10 @@ impl Diff<Channel> for ChannelPatch {
             || self.bitrate.changes(&other.bitrate)
             || self.user_limit.changes(&other.user_limit)
             || self.owner_id.changes(&other.owner_id)
+            || self.locked.changes(&other.locked)
+            || self
+                .archived
+                .is_some_and(|a| a != other.archived_at.is_some())
     }
 }
 
@@ -265,53 +272,6 @@ impl Channel {
             mention_count: None,
             user_config: None,
             ..self
-        }
-    }
-}
-
-impl ChannelPatch {
-    pub fn minimal_for(self, other: &Channel) -> ChannelPatch {
-        ChannelPatch {
-            name: if self.name.changes(&other.name) {
-                self.name
-            } else {
-                None
-            },
-            description: if self.description.changes(&other.description) {
-                self.description
-            } else {
-                None
-            },
-            icon: if self.icon.changes(&other.icon) {
-                self.icon
-            } else {
-                None
-            },
-            tags: if self.tags.changes(&other.tags) {
-                self.tags
-            } else {
-                None
-            },
-            nsfw: if self.nsfw.changes(&other.nsfw) {
-                self.nsfw
-            } else {
-                None
-            },
-            bitrate: if self.bitrate.changes(&other.bitrate) {
-                self.bitrate
-            } else {
-                None
-            },
-            user_limit: if self.user_limit.changes(&other.user_limit) {
-                self.user_limit
-            } else {
-                None
-            },
-            owner_id: if self.owner_id.changes(&other.owner_id) {
-                self.owner_id
-            } else {
-                None
-            },
         }
     }
 }

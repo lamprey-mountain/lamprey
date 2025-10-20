@@ -1,9 +1,11 @@
 import type { Thread } from "sdk";
 import { createSignal, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
+import { useApi } from "../api.tsx";
 
 export function Info(props: VoidProps<{ thread: Thread }>) {
 	const ctx = useCtx();
+	const api = useApi();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.thread.nsfw);
 	const [editingName, setEditingName] = createSignal(props.thread.name);
 	const [editingDescription, setEditingDescription] = createSignal(
@@ -11,8 +13,8 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 	);
 
 	const save = () => {
-		ctx.client.http.PATCH("/api/v1/thread/{thread_id}", {
-			params: { path: { thread_id: props.thread.id } },
+		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
+			params: { path: { channel_id: props.thread.id } },
 			body: {
 				name: editingName(),
 				description: editingDescription(),
@@ -23,25 +25,17 @@ export function Info(props: VoidProps<{ thread: Thread }>) {
 
 	const toggleArchived = () => {
 		if (props.thread.archived_at) {
-			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/archive", {
-				params: { path: { thread_id: props.thread.id } },
-			});
+			api.threads.unarchive(props.thread.id);
 		} else {
-			ctx.client.http.PUT("/api/v1/thread/{thread_id}/archive", {
-				params: { path: { thread_id: props.thread.id } },
-			});
+			api.threads.archive(props.thread.id);
 		}
 	};
 
 	const toggleLocked = () => {
 		if (props.thread.locked) {
-			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/lock", {
-				params: { path: { thread_id: props.thread.id } },
-			});
+			api.threads.unlock(props.thread.id);
 		} else {
-			ctx.client.http.PUT("/api/v1/thread/{thread_id}/lock", {
-				params: { path: { thread_id: props.thread.id } },
-			});
+			api.threads.lock(props.thread.id);
 		}
 	};
 

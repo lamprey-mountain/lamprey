@@ -159,7 +159,7 @@ impl ServiceThreads {
         reason: Option<String>,
     ) -> Result<Channel> {
         // check update perms
-        let mut perms = self
+        let perms = self
             .state
             .services()
             .perms
@@ -175,13 +175,19 @@ impl ServiceThreads {
         if chan_old.deleted_at.is_some() {
             return Err(Error::BadStatic("thread is removed"));
         }
+
         if chan_old.locked {
             perms.ensure(Permission::ThreadLock)?;
         }
-        if chan_old.creator_id == user_id {
-            perms.add(Permission::ThreadEdit);
+
+        // FIXME: don't require ThreadEdit or ChannelEdit permissions to archive/lock threads
+        if chan_old.ty.is_thread() {
+            if chan_old.creator_id != user_id {
+                perms.ensure(Permission::ThreadEdit)?;
+            }
+        } else {
+            perms.ensure(Permission::ChannelEdit)?;
         }
-        perms.ensure(Permission::ThreadEdit)?;
 
         // shortcut if it wont modify the thread
         if !patch.changes(&chan_old) {
@@ -198,6 +204,26 @@ impl ServiceThreads {
             return Err(Error::BadStatic(
                 "cannot set user_limit for non voice thread",
             ));
+        }
+
+        if patch
+            .archived
+            .is_some_and(|a| a != chan_old.archived_at.is_some())
+        {
+            if !chan_old.ty.is_thread() {
+                return Err(Error::BadStatic("not a thread"));
+            }
+            if chan_old.creator_id != user_id {
+                perms.ensure(Permission::ThreadManage)?;
+            }
+        }
+
+        if patch.locked.is_some_and(|a| a != chan_old.locked) {
+            if chan_old.ty.is_thread() {
+                perms.ensure(Permission::ThreadLock)?;
+            } else {
+                perms.ensure(Permission::ChannelManage)?;
+            }
         }
 
         if let Some(Some(icon)) = patch.icon {
@@ -230,13 +256,19 @@ impl ServiceThreads {
                         channel_id: thread_id,
                         channel_type: chan_new.ty,
                         changes: Changes::new()
+                            .change("type", &chan_old.ty, &chan_new.ty)
                             .change("name", &chan_old.name, &chan_new.name)
                             .change("description", &chan_old.description, &chan_new.description)
                             .change("icon", &chan_old.icon, &chan_new.icon)
                             .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
                             .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
                             .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
-                            .change("type", &chan_old.ty, &chan_new.ty)
+                            .change(
+                                "archived",
+                                &chan_old.archived_at.is_some(),
+                                &chan_new.archived_at.is_some(),
+                            )
+                            .change("locked", &chan_old.locked, &chan_new.locked)
                             .build(),
                     },
                 })

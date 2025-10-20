@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, Json};
-use common::v1::types::PaginationQuery;
 use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageCreate, MessageSync,
     Permission, UserId, SERVER_ROOM_ID, SERVER_USER_ID,
 };
+use common::v1::types::{ChannelPatch, PaginationQuery};
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -71,7 +71,14 @@ async fn admin_whisper(
 
     let (thread, _) = srv.users.init_dm(auth_user.id, json.user_id).await?;
     if !thread.locked {
-        d.channel_lock(thread.id).await?;
+        d.channel_update(
+            thread.id,
+            ChannelPatch {
+                locked: Some(true),
+                ..Default::default()
+            },
+        )
+        .await?;
         srv.channels.invalidate(thread.id).await;
     }
 
@@ -151,7 +158,15 @@ async fn admin_broadcast(
                 let srv = ss.services();
                 let (thread, _) = srv.users.init_dm(SERVER_USER_ID, user.id).await?;
                 if !thread.locked {
-                    ss.data().channel_lock(thread.id).await?;
+                    ss.data()
+                        .channel_update(
+                            thread.id,
+                            ChannelPatch {
+                                locked: Some(true),
+                                ..Default::default()
+                            },
+                        )
+                        .await?;
                     srv.channels.invalidate(thread.id).await;
                 }
 

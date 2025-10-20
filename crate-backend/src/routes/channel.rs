@@ -246,10 +246,10 @@ async fn channel_create_dm(
     if json.bitrate.is_some_and(|b| b > 393216) {
         return Err(Error::BadStatic("bitrate is too high"));
     }
-    if json.ty != ChannelType::Voice && json.bitrate.is_some() {
+    if !json.ty.has_voice() && json.bitrate.is_some() {
         return Err(Error::BadStatic("cannot set bitrate for non voice thread"));
     }
-    if json.ty != ChannelType::Voice && json.user_limit.is_some() {
+    if !json.ty.has_voice() && json.user_limit.is_some() {
         return Err(Error::BadStatic(
             "cannot set user_limit for non voice thread",
         ));
@@ -385,47 +385,12 @@ async fn channel_list(
     Ok(Json(res))
 }
 
-/// Room channel list archived
-#[utoipa::path(
-    get,
-    path = "/room/{room_id}/channel/archived",
-    params(
-        ("room_id", description = "Room id"),
-        ChannelListQuery,
-        PaginationQuery<channelId>
-    ),
-    tags = ["channel"],
-    responses(
-        (status = OK, body = PaginationResponse<Channel>, description = "List archived room channels success"),
-    )
-)]
-async fn channel_list_archived(
-    Path((room_id,)): Path<(RoomId,)>,
-    Query(q): Query<ChannelListQuery>,
-    Query(pagination): Query<PaginationQuery<ChannelId>>,
-    Auth(auth_user): Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let data = s.data();
-    let _perms = s.services().perms.for_room(auth_user.id, room_id).await?;
-    let mut res = data
-        .channel_list_archived(room_id, auth_user.id, pagination, q.parent_id)
-        .await?;
-    let srv = s.services();
-    let mut threads = vec![];
-    for t in &res.items {
-        threads.push(srv.channels.get(t.id, Some(auth_user.id)).await?);
-    }
-    res.items = threads;
-    Ok(Json(res))
-}
-
 /// Room channel list removed
 ///
-/// List removed threads in a room. Requires the `ThreadDelete` permission.
+/// List removed threads in a room. Requires the `ChannelManage` permission.
 #[utoipa::path(
     get,
-    path = "/room/{room_id}/thread/removed",
+    path = "/room/{room_id}/channel/removed",
     params(
         ("room_id", description = "Room id"),
         ChannelListQuery,
@@ -657,147 +622,6 @@ async fn channel_ack(
     }))
 }
 
-/// Channel archive
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/archive",
-    params(
-        ("channel_id", description = "channel id"),
-    ),
-    tags = ["channel", "badge.perm-opt.ChannelManage", "badge.perm-opt.ThreadArchive"],
-    responses(
-        (status = OK, body = Channel, description = "success"),
-        (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
-    )
-)]
-async fn channel_archive(
-    Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let data = s.data();
-    let srv = s.services();
-    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    if auth_user.id != chan_before.creator_id {
-        perms.ensure(Permission::ChannelManage)?;
-    }
-    if chan_before.deleted_at.is_some() {
-        return Err(Error::BadStatic("channel is removed"));
-    }
-    if chan_before.locked {
-        perms.ensure(Permission::ThreadLock)?;
-    }
-    if chan_before.archived_at.is_some() {
-        return Ok(StatusCode::NO_CONTENT);
-    }
-
-    data.channel_archive(channel_id).await?;
-    srv.channels.invalidate(channel_id).await;
-    srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan.ty,
-                changes: Changes::new()
-                    .change("archived_at", &chan_before.archived_at, &chan.archived_at)
-                    .build(),
-            },
-        })
-        .await?;
-        s.broadcast_room(
-            room_id,
-            auth_user.id,
-            MessageSync::ChannelUpdate {
-                channel: Box::new(chan.clone()),
-            },
-        )
-        .await?;
-        s.sushi_sfu
-            .send(SfuCommand::Thread {
-                thread: chan.into(),
-            })
-            .unwrap();
-    }
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Channel unarchive
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/archive",
-    params(
-        ("channel_id", description = "channel id"),
-    ),
-    tags = ["channel", "badge.perm-opt.ThreadManage", "badge.perm-opt.ChannelManage"],
-    responses(
-        (status = OK, body = Channel, description = "success"),
-        (status = NOT_MODIFIED, body = Channel, description = "didn't change anything"),
-    )
-)]
-async fn channel_unarchive(
-    Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let srv = s.services();
-    let data = s.data();
-    let chan_before = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
-    if auth_user.id != chan_before.creator_id {
-        perms.ensure(Permission::ChannelManage)?;
-    }
-    if chan_before.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
-    }
-    if chan_before.locked {
-        perms.ensure(Permission::ThreadLock)?;
-    }
-    if chan_before.archived_at.is_none() {
-        return Ok(StatusCode::NO_CONTENT);
-    }
-    data.channel_unarchive(channel_id).await?;
-    srv.channels.invalidate(channel_id).await;
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan.ty,
-                changes: Changes::new()
-                    .change("archived_at", &chan_before.archived_at, &chan.archived_at)
-                    .build(),
-            },
-        })
-        .await?;
-        s.broadcast_room(
-            room_id,
-            auth_user.id,
-            MessageSync::ChannelUpdate {
-                channel: Box::new(chan),
-            },
-        )
-        .await?;
-    }
-    Ok(StatusCode::NO_CONTENT)
-}
-
 /// Channel remove
 #[utoipa::path(
     put,
@@ -911,7 +735,7 @@ async fn channel_restore(
 ///
 /// Send a typing notification to a thread
 #[utoipa::path(
-    method(post),
+    post,
     path = "/channel/{channel_id}/typing",
     params(
         ("channel_id", description = "channel id"),
@@ -955,132 +779,6 @@ async fn channel_typing(
         },
     )
     .await?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Channel lock
-#[utoipa::path(
-    put,
-    path = "/channel/{channel_id}/lock",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadLock"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
-async fn channel_lock(
-    Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let data = s.data();
-    let srv = s.services();
-    let chan_before = srv.channels.get(channel_id, None).await?;
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ThreadLock)?;
-    if chan_before.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
-    }
-    if chan_before.locked {
-        return Ok(StatusCode::NO_CONTENT);
-    }
-    data.channel_lock(channel_id).await?;
-    srv.channels.invalidate(channel_id).await;
-    srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan.ty,
-                changes: Changes::new()
-                    .change("locked", &chan_before.locked, &chan.locked)
-                    .build(),
-            },
-        })
-        .await?;
-        s.broadcast_room(
-            room_id,
-            auth_user.id,
-            MessageSync::ChannelUpdate {
-                channel: Box::new(chan),
-            },
-        )
-        .await?;
-    }
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Channel unlock
-#[utoipa::path(
-    delete,
-    path = "/channel/{channel_id}/lock",
-    params(("channel_id", description = "channel id")),
-    tags = ["channel", "badge.perm.ThreadLock"],
-    responses((status = NO_CONTENT, description = "success")),
-)]
-async fn channel_unlock(
-    Path(channel_id): Path<ChannelId>,
-    Auth(auth_user): Auth,
-    HeaderReason(reason): HeaderReason,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth_user.ensure_unsuspended()?;
-    let data = s.data();
-    let srv = s.services();
-    let chan_before = srv.channels.get(channel_id, None).await?;
-    let perms = s
-        .services()
-        .perms
-        .for_channel(auth_user.id, channel_id)
-        .await?;
-    perms.ensure(Permission::ViewChannel)?;
-    perms.ensure(Permission::ThreadLock)?;
-    if chan_before.deleted_at.is_some() {
-        return Err(Error::BadStatic("thread is removed"));
-    }
-    if !chan_before.locked {
-        return Ok(StatusCode::NO_CONTENT);
-    }
-    data.channel_unlock(channel_id).await?;
-    srv.channels.invalidate(channel_id).await;
-    srv.users.disconnect_everyone_from_thread(channel_id)?;
-    let chan = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    if let Some(room_id) = chan.room_id {
-        s.audit_log_append(AuditLogEntry {
-            id: AuditLogEntryId::new(),
-            room_id,
-            user_id: auth_user.id,
-            session_id: None,
-            reason,
-            ty: AuditLogEntryType::ChannelUpdate {
-                channel_id,
-                channel_type: chan.ty,
-                changes: Changes::new()
-                    .change("locked", &chan_before.locked, &chan.locked)
-                    .build(),
-            },
-        })
-        .await?;
-        s.broadcast_room(
-            room_id,
-            auth_user.id,
-            MessageSync::ChannelUpdate {
-                channel: Box::new(chan),
-            },
-        )
-        .await?;
-    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -1289,18 +987,13 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(channel_create_dm))
         .routes(routes!(channel_get))
         .routes(routes!(channel_list))
-        .routes(routes!(channel_list_archived))
         .routes(routes!(channel_list_removed))
         .routes(routes!(channel_reorder))
         .routes(routes!(channel_update))
         .routes(routes!(channel_ack))
-        .routes(routes!(channel_archive))
-        .routes(routes!(channel_unarchive))
         .routes(routes!(channel_remove))
         .routes(routes!(channel_restore))
         .routes(routes!(channel_typing))
-        .routes(routes!(channel_lock))
-        .routes(routes!(channel_unlock))
         .routes(routes!(channel_upgrade))
         .routes(routes!(channel_transfer_ownership))
 }
