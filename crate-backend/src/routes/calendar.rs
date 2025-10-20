@@ -44,7 +44,7 @@ pub struct CalendarEventListQuery {
     params(CalendarEventListQuery),
     responses((status = OK, description = "ok"))
 )]
-async fn calendar_event_list(
+async fn calendar_event_list_user(
     Query(_query): Query<CalendarEventListQuery>,
     Auth(_auth_user): Auth,
     State(_s): State<Arc<ServerState>>,
@@ -60,7 +60,7 @@ async fn calendar_event_list(
     params(("channel_id" = ChannelId, description = "Channel id")),
     responses((status = OK, description = "ok"))
 )]
-async fn calendar_channel_event_list(
+async fn calendar_event_list(
     Path(channel_id): Path<ChannelId>,
     Query(query): Query<PaginationQuery<CalendarEventId>>,
     Auth(auth_user): Auth,
@@ -87,7 +87,7 @@ async fn calendar_channel_event_list(
     request_body = CalendarEventCreate,
     responses((status = CREATED, body = CalendarEvent, description = "Create calendar event success"))
 )]
-async fn calendar_channel_event_create(
+async fn calendar_event_create(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -120,7 +120,7 @@ async fn calendar_channel_event_create(
     ),
     responses((status = OK, body = CalendarEvent, description = "Get calendar event success"))
 )]
-async fn calendar_channel_event_get(
+async fn calendar_event_get(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -191,7 +191,7 @@ async fn calendar_channel_event_update(
     ),
     responses((status = NO_CONTENT, description = "Delete calendar event success"))
 )]
-async fn calendar_channel_event_delete(
+async fn calendar_event_delete(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -224,7 +224,7 @@ async fn calendar_channel_event_delete(
     ),
     responses((status = OK, body = Vec<UserId>, description = "ok"))
 )]
-async fn calendar_channel_event_rsvp_list(
+async fn calendar_rsvp_list(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -257,7 +257,7 @@ async fn calendar_channel_event_rsvp_list(
     ),
     responses((status = OK, description = "ok"))
 )]
-async fn calendar_channel_event_rsvp_get(
+async fn calendar_rsvp_get(
     Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -294,7 +294,7 @@ async fn calendar_channel_event_rsvp_get(
     ),
     responses((status = OK, description = "ok"))
 )]
-async fn calendar_channel_event_rsvp_update(
+async fn calendar_rsvp_update(
     Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -329,7 +329,7 @@ async fn calendar_channel_event_rsvp_update(
     ),
     responses((status = OK, description = "ok"))
 )]
-async fn calendar_channel_event_rsvp_delete(
+async fn calendar_rsvp_delete(
     Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -357,14 +357,14 @@ async fn calendar_channel_event_rsvp_delete(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
+        .routes(routes!(calendar_event_list_user))
         .routes(routes!(calendar_event_list))
-        .routes(routes!(calendar_channel_event_list))
-        .routes(routes!(calendar_channel_event_create))
-        .routes(routes!(calendar_channel_event_get))
+        .routes(routes!(calendar_event_create))
+        .routes(routes!(calendar_event_get))
         .routes(routes!(calendar_channel_event_update))
-        .routes(routes!(calendar_channel_event_delete))
-        .routes(routes!(calendar_channel_event_rsvp_list))
-        .routes(routes!(calendar_channel_event_rsvp_get))
-        .routes(routes!(calendar_channel_event_rsvp_update))
-        .routes(routes!(calendar_channel_event_rsvp_delete))
+        .routes(routes!(calendar_event_delete))
+        .routes(routes!(calendar_rsvp_list))
+        .routes(routes!(calendar_rsvp_get))
+        .routes(routes!(calendar_rsvp_update))
+        .routes(routes!(calendar_rsvp_delete))
 }

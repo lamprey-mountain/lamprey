@@ -109,7 +109,7 @@ impl Modify for NestedTags {
             {
                 "name": "channel",
                 "description": "working with channels",
-                "tags": ["channel", "thread_member", "message", "reaction", "voice", "calendar"],
+                "tags": ["channel", "thread", "message", "reaction", "voice", "calendar"],
             },
             {
                 "name": "user",

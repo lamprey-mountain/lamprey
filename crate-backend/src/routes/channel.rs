@@ -7,9 +7,8 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    util::Changes, voice::SfuCommand, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    ChannelReorder, ChannelType, MessageId, Room, RoomCreate, RoomMemberOrigin, RoomType,
-    ThreadMemberPut, UserId,
+    util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelReorder, ChannelType,
+    MessageId, Room, RoomCreate, RoomMemberOrigin, RoomType, ThreadMemberPut, UserId,
 };
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -974,12 +973,6 @@ async fn channel_transfer_ownership(
     s.broadcast_channel(channel_id, auth_user.id, msg).await?;
     Ok(Json(thread))
 }
-
-// TODO: add these routes
-// thread_list GET /channel/{channel_id}/thread
-// thread_list_archived GET /channel/{channel_id}/thread/archived
-// thread_list_removed GET /channel/{channel_id}/thread/removed
-// these will be thread_list, existing thread_list routes will be channel_list
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()

@@ -53,6 +53,7 @@ pub trait Data:
     + DataAuth
     + DataAuditLogs
     + DataThreadMember
+    + DataThread
     + DataUserRelationship
     + DataUserConfig
     + DataReaction
@@ -605,6 +606,35 @@ pub trait DataThreadMember {
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>>;
     async fn thread_member_list_all(&self, thread_id: ChannelId) -> Result<Vec<ThreadMember>>;
+}
+
+#[async_trait]
+pub trait DataThread {
+    // returns all public threads and private threads the user is in by default. include_all should return all threads and should be set for thread moderators.
+    async fn thread_list_active(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+        include_all: bool,
+    ) -> Result<PaginationResponse<Channel>>;
+    async fn thread_list_archived(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+        include_all: bool,
+    ) -> Result<PaginationResponse<Channel>>;
+    async fn thread_list_removed(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+        include_all: bool,
+    ) -> Result<PaginationResponse<Channel>>;
 }
 
 #[async_trait]

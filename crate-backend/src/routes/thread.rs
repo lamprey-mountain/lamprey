@@ -4,9 +4,9 @@ use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageMember, MessageSync,
-    MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember, ThreadMemberPut,
-    ThreadMembership, UserId,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, MessageMember,
+    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, RoomId,
+    ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -18,8 +18,6 @@ use crate::ServerState;
 use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
-// TODO: rename to channel members
-
 /// Thread member list
 #[utoipa::path(
     get,
@@ -28,7 +26,7 @@ use crate::error::{Error, Result};
         PaginationQuery<UserId>,
         ("thread_id" = ChannelId, description = "Thread id"),
     ),
-    tags = ["thread_member"],
+    tags = ["thread"],
     responses(
         (status = OK, body = PaginationResponse<ThreadMember>, description = "success"),
     )
@@ -58,7 +56,7 @@ pub async fn thread_member_list(
         ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread_member"],
+    tags = ["thread"],
     responses(
         (status = OK, body = ThreadMember, description = "success"),
     )
@@ -96,7 +94,7 @@ pub async fn thread_member_get(
         ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread_member", "badge.perm-opt.MemberKick"],
+    tags = ["thread", "badge.perm-opt.MemberKick"],
     responses(
         (status = OK, body = ThreadMember, description = "success"),
         (status = NOT_MODIFIED, description = "not modified"),
@@ -204,7 +202,7 @@ pub async fn thread_member_add(
         ("thread_id" = ChannelId, description = "Thread id"),
         ("user_id" = String, description = "User id"),
     ),
-    tags = ["thread_member", "badge.perm-opt.MemberKick"],
+    tags = ["thread", "badge.perm-opt.MemberKick"],
     responses(
         (status = NO_CONTENT, description = "success"),
     )
@@ -307,10 +305,150 @@ pub async fn thread_member_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Thread list
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/thread",
+    params(
+        ("channel_id", description = "Channel id"),
+        PaginationQuery<ChannelId>
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = PaginationResponse<Channel>, description = "List channel threads success"),
+    )
+)]
+pub async fn thread_list(
+    Path(channel_id): Path<ChannelId>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let Some(room_id) = channel.room_id else {
+        return Err(Error::BadStatic("channel is not in a room"));
+    };
+
+    let include_all = perms.has(Permission::ThreadManage);
+    let mut res = data
+        .thread_list_active(
+            room_id,
+            auth_user.id,
+            pagination,
+            Some(channel_id),
+            include_all,
+        )
+        .await?;
+
+    let mut channels = vec![];
+    for c in &res.items {
+        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
+    }
+    res.items = channels;
+    Ok(Json(res))
+}
+
+/// Thread list archived
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/thread/archived",
+    params(
+        ("channel_id", description = "Channel id"),
+        PaginationQuery<ChannelId>
+    ),
+    tags = ["thread"],
+    responses(
+        (status = OK, body = PaginationResponse<Channel>, description = "List channel archived threads success"),
+    )
+)]
+pub async fn thread_list_archived(
+    Path(channel_id): Path<ChannelId>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ViewChannel)?;
+
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let Some(room_id) = channel.room_id else {
+        return Err(Error::BadStatic("channel is not in a room"));
+    };
+
+    let include_all = perms.has(Permission::ThreadManage);
+    let mut res = data
+        .thread_list_archived(
+            room_id,
+            auth_user.id,
+            pagination,
+            Some(channel_id),
+            include_all,
+        )
+        .await?;
+
+    let mut channels = vec![];
+    for c in &res.items {
+        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
+    }
+    res.items = channels;
+    Ok(Json(res))
+}
+
+/// Thread list removed
+#[utoipa::path(
+    get,
+    path = "/channel/{channel_id}/thread/removed",
+    params(
+        ("channel_id", description = "Channel id"),
+        PaginationQuery<ChannelId>
+    ),
+    tags = ["thread", "badge.perm.ThreadManage"],
+    responses(
+        (status = OK, body = PaginationResponse<Channel>, description = "List channel removed threads success"),
+    )
+)]
+pub async fn thread_list_removed(
+    Path(channel_id): Path<ChannelId>,
+    Query(pagination): Query<PaginationQuery<ChannelId>>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
+    perms.ensure(Permission::ThreadManage)?;
+
+    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
+    let Some(room_id) = channel.room_id else {
+        return Err(Error::BadStatic("channel is not in a room"));
+    };
+
+    let mut res = data
+        .thread_list_removed(room_id, auth_user.id, pagination, Some(channel_id), true)
+        .await?;
+
+    let mut channels = vec![];
+    for c in &res.items {
+        channels.push(srv.channels.get(c.id, Some(auth_user.id)).await?);
+    }
+    res.items = channels;
+    Ok(Json(res))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(thread_member_list))
         .routes(routes!(thread_member_get))
         .routes(routes!(thread_member_add))
         .routes(routes!(thread_member_delete))
+        .routes(routes!(thread_list))
+        .routes(routes!(thread_list_archived))
+        .routes(routes!(thread_list_removed))
 }
