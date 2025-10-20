@@ -329,20 +329,9 @@ pub async fn thread_list(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    let Some(room_id) = channel.room_id else {
-        return Err(Error::BadStatic("channel is not in a room"));
-    };
-
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
-        .thread_list_active(
-            room_id,
-            auth_user.id,
-            pagination,
-            Some(channel_id),
-            include_all,
-        )
+        .thread_list_active(auth_user.id, pagination, channel_id, include_all)
         .await?;
 
     let mut channels = vec![];
@@ -377,20 +366,9 @@ pub async fn thread_list_archived(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ViewChannel)?;
 
-    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    let Some(room_id) = channel.room_id else {
-        return Err(Error::BadStatic("channel is not in a room"));
-    };
-
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
-        .thread_list_archived(
-            room_id,
-            auth_user.id,
-            pagination,
-            Some(channel_id),
-            include_all,
-        )
+        .thread_list_archived(auth_user.id, pagination, channel_id, include_all)
         .await?;
 
     let mut channels = vec![];
@@ -425,13 +403,8 @@ pub async fn thread_list_removed(
     let perms = srv.perms.for_channel(auth_user.id, channel_id).await?;
     perms.ensure(Permission::ThreadManage)?;
 
-    let channel = srv.channels.get(channel_id, Some(auth_user.id)).await?;
-    let Some(room_id) = channel.room_id else {
-        return Err(Error::BadStatic("channel is not in a room"));
-    };
-
     let mut res = data
-        .thread_list_removed(room_id, auth_user.id, pagination, Some(channel_id), true)
+        .thread_list_removed(auth_user.id, pagination, channel_id, true)
         .await?;
 
     let mut channels = vec![];

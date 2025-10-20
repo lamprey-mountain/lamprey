@@ -21,16 +21,15 @@ SELECT
     (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS "message_count!",
     '[]'::json as "permission_overwrites!"
 FROM channel t
-LEFT JOIN thread_member tm ON t.id = tm.channel_id AND tm.user_id = $7
-WHERE t.room_id = $1
-  AND t.id > $2
-  AND t.id < $3
+LEFT JOIN thread_member tm ON t.id = tm.channel_id AND tm.user_id = $6
+WHERE t.parent_id = $5
+  AND t.id > $1
+  AND t.id < $2
   AND t.deleted_at IS NULL
   AND t.archived_at IS NULL
-  AND ($6::uuid IS NULL OR t.parent_id = $6)
   AND t.type IN ('ThreadPublic', 'ThreadPrivate')
-  AND ($8::boolean OR t.type = 'ThreadPublic' OR (t.type = 'ThreadPrivate' AND tm.user_id IS NOT NULL AND tm.membership = 'Join'))
+  AND ($7::boolean OR t.type = 'ThreadPublic' OR (t.type = 'ThreadPrivate' AND tm.user_id IS NOT NULL AND tm.membership = 'Join'))
 ORDER BY
-    (CASE WHEN $4 = 'f' THEN t.id END),
+    (CASE WHEN $3 = 'f' THEN t.id END),
     t.id DESC
-LIMIT $5
+LIMIT $4
