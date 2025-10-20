@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at\n                FROM calendar_event\n                WHERE channel_id = $1 AND id > $2 AND id < $3 AND deleted_at IS NULL\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "location",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "timezone",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "recurrence",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "start_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "end_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "34c482a02efc815eb31d301ff4b6b8f639889e6df3570c75b952d84e16a0f249"
+}

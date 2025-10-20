@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    INSERT INTO message (id, channel_id, version_id, ordering, content, metadata, reply_id, author_id, type, override_name, is_latest, embeds, created_at, mentions)\n    \t    VALUES ($1, $2, $3, (SELECT coalesce(max(ordering), 0) FROM message WHERE channel_id = $2), $4, $5, $6, $7, $8, $9, true, $10, coalesce($11, now()), $12)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ThreadRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5da42da540bc8fa4ea9681d02d3cad933ac9ec927c7ab1b8eaa07c14c5149e94"
+}

@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with\n    channel_viewer as (\n        select channel.id from channel\n        join room_member on channel.room_id = room_member.room_id\n        where room_member.user_id = $1\n        union\n        select channel.id from channel\n        join thread_member on channel.id = thread_member.channel_id\n        where channel.room_id is null and thread_member.user_id = $1 and thread_member.membership = 'Join'\n    )\nselect count(*)\nfrom channel\njoin channel_viewer on channel.id = channel_viewer.id\nwhere ($5::boolean is null or (channel.archived_at is not null) = $5)\n  and ($6::boolean is null or (channel.deleted_at is not null) = $6)\n  and (\n    $2::text is null or $2 = '' or\n    channel.name @@ websearch_to_tsquery('english', $2) or\n    coalesce(channel.description, '') @@ websearch_to_tsquery('english', $2)\n  )\n  and (cardinality($3::uuid[]) = 0 or channel.room_id = any($3))\n  and (cardinality($4::uuid[]) = 0 or channel.parent_id = any($4))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "UuidArray",
+        "UuidArray",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "686cc1130e230391f000f6235af7a81ca381762a36b4d692563dfe3c163c6bce"
+}

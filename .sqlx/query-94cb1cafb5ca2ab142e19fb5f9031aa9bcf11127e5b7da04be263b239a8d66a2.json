@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, channel_id as \"channel_id!\", message_id as \"message_id!\", reason as \"reason!\", added_at, read_at\nFROM inbox\nWHERE user_id = $1\n  AND ($2 OR read_at IS NULL)\n  AND (array_length($3::uuid[], 1) IS NULL OR room_id = ANY($3))\n  AND (array_length($4::uuid[], 1) IS NULL OR channel_id = ANY($4))\n  AND id > $5 AND id < $6\nORDER BY (CASE WHEN $7 = 'f' THEN id END), id DESC\nLIMIT $8\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "message_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "reason!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "added_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "read_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "UuidArray",
+        "UuidArray",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "94cb1cafb5ca2ab142e19fb5f9031aa9bcf11127e5b7da04be263b239a8d66a2"
+}

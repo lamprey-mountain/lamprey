@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT\n            \tchannel_id,\n            \tuser_id,\n            \tmembership as \"membership: _\",\n            \tjoined_at\n            FROM thread_member\n            WHERE channel_id = $1 AND user_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban",
+                "Leave"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "joined_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2aa2615cfad53b8a08a1e1c80c8ce7bfd6606e420a2da510a948d77b320ed5c7"
+}

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO user_config_channel (user_id, channel_id, config)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (user_id, channel_id) DO UPDATE SET config = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d87c86a9391007b51d5d3bebeb7c6c540fed4b65460143c466317adcf3916c0a"
+}

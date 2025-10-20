@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE inbox SET read_at = NULL WHERE user_id = $1 AND (\n                    (array_length($2::uuid[], 1) IS NOT NULL AND message_id = ANY($2)) OR\n                    (array_length($3::uuid[], 1) IS NOT NULL AND channel_id = ANY($3)) OR\n                    (array_length($4::uuid[], 1) IS NOT NULL AND room_id = ANY($4))\n                )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a29d561f39a578c677036904bb869f4d72196e9ecc85e49c7891082f646b7d28"
+}

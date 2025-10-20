@@ -1,0 +1,166 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH user_roles AS (\n    SELECT array_agg(rm.role_id) as roles\n    FROM role_member rm\n    JOIN role r ON rm.role_id = r.id\n    WHERE rm.user_id = $7 AND r.room_id = $1\n)\nSELECT\n    t.id,\n    t.room_id,\n    t.creator_id,\n    t.owner_id,\n    t.version_id,\n    t.name,\n    t.description,\n    t.icon,\n    t.type as \"ty: _\",\n    t.nsfw,\n    t.locked,\n    t.archived_at,\n    t.deleted_at,\n    t.parent_id,\n    t.position,\n    t.bitrate,\n    t.user_limit,\n    (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = t.id AND membership = 'Join') AS \"member_count!\",\n    (SELECT version_id FROM message WHERE channel_id = t.id AND deleted_at IS NULL ORDER BY id DESC LIMIT 1) as last_version_id,\n    (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS \"message_count!\",\n    coalesce((SELECT json_agg(json_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) FROM permission_overwrite WHERE target_id = t.id), '[]'::json) as \"permission_overwrites!\"\nFROM channel t\nWHERE t.room_id = $1\n  AND t.id > $2\n  AND t.id < $3\n  AND t.deleted_at IS NULL\n  AND t.archived_at IS NOT NULL\n  AND ($6::uuid IS NULL OR t.parent_id = $6)\n  AND NOT EXISTS (\n    SELECT 1\n    FROM permission_overwrite po\n    WHERE (po.target_id = t.id OR po.target_id = t.parent_id)\n      AND po.deny @> '\"ViewChannel\"'::jsonb\n      AND (\n          (po.type = 'User' AND po.actor_id = $7)\n          OR (po.type = 'Role' AND po.actor_id = t.room_id) -- @everyone\n          OR (po.type = 'Role' AND po.actor_id = ANY(COALESCE((SELECT roles FROM user_roles), '{}'::uuid[])))\n      )\n  )\nORDER BY\n    (CASE WHEN $4 = 'f' THEN t.id END),\n    t.id DESC\nLIMIT $5\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "icon",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "ty: _",
+        "type_info": {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "nsfw",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "locked",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "archived_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 12,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 13,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "position",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "bitrate",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 16,
+        "name": "user_limit",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "member_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 18,
+        "name": "last_version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 19,
+        "name": "message_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 20,
+        "name": "permission_overwrites!",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "0d5f03419e4d73aa12cd110145a40d6b1aa79dc0580611b58e730f879190e18f"
+}

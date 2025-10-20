@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE channel SET\n                version_id = $2,\n                room_id = $3,\n                type = $4\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8dbed95c9affe2c2094fb37baaa078053a7d93641c3e238b891fb745a6d72f7f"
+}

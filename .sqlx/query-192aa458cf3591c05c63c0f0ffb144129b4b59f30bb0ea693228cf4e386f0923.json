@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,\n                   a.owner_id as \"app_owner_id?\", a.bridge as \"app_bridge?\", a.public as \"app_public?\"\n            FROM usr u\n            LEFT JOIN application a ON u.id = a.id\n            WHERE u.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "avatar",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "banner",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "puppet",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "system",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "registered_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 11,
+        "name": "suspended",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "app_owner_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 13,
+        "name": "app_bridge?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "app_public?",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "192aa458cf3591c05c63c0f0ffb144129b4b59f30bb0ea693228cf4e386f0923"
+}

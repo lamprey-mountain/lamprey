@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with recursive message_tree as (\n    select\n        id,\n        reply_id,\n        1 as depth\n    from\n        message\n    where\n        ($2::uuid is not null and id = $2::uuid)\n        or ($2::uuid is null and reply_id is null)\n    union all\n    select\n        m.id,\n        m.reply_id,\n        mt.depth + 1\n    from\n        message m\n        join message_tree mt on m.reply_id = mt.id\n    where\n        mt.depth < $3\n)\nselect count(*) from message_tree where id in (select id from message where channel_id = $1 and deleted_at is null and is_latest)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "355e9edef04ca9c552a3862654311398329d313ac152a196f17d373fc9c7992b"
+}

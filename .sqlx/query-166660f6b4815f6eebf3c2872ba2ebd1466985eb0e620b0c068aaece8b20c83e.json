@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE channel SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                nsfw = $5,\n                bitrate = $6,\n                user_limit = $7,\n                owner_id = $8,\n                icon = $9,\n                locked = $10,\n                archived_at = $11\n            WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Uuid",
+        "Uuid",
+        "Bool",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "166660f6b4815f6eebf3c2872ba2ebd1466985eb0e620b0c068aaece8b20c83e"
+}

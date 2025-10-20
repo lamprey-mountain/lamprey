@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM room_member WHERE room_id = $1 AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f12471dfef4713304c75da21904c8890ee2c3f11efc3227d9e3ae6016d25f565"
+}

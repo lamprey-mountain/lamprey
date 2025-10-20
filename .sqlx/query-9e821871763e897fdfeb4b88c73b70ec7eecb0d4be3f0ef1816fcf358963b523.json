@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with unread_channels as (\n    select distinct channel_id from inbox\n    where user_id = $1\n    and ($2 or read_at is null)\n    and (array_length($3::uuid[], 1) is null or room_id = any($3))\n    and (array_length($4::uuid[], 1) is null or channel_id = any($4))\n)\nselect count(*) from unread_channels\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "UuidArray",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9e821871763e897fdfeb4b88c73b70ec7eecb0d4be3f0ef1816fcf358963b523"
+}
