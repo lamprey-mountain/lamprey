@@ -72,7 +72,15 @@ export const RouteRoom = (p: RouteSectionProps) => {
 		<>
 			<Title title={room() ? room()!.name : t("loading")} />
 			<RoomNav />
-			<ThreadNav room_id={p.params.room_id} />
+			<Resizable
+				storageKey="thread-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ThreadNav room_id={p.params.room_id} />
+			</Resizable>
 			<header>
 				<b>home</b>
 			</header>
@@ -217,7 +225,15 @@ export const RouteThread = (p: RouteSectionProps) => {
 		<>
 			<Title title={title()} />
 			<RoomNav />
-			<ThreadNav room_id={thread()?.room_id ?? undefined} />
+			<Resizable
+				storageKey="thread-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ThreadNav room_id={thread()?.room_id ?? undefined} />
+			</Resizable>
 			<Show when={thread()}>
 				<Show when={thread()!.type !== "Voice"}>
 					<ChatHeader thread={thread()!} />
@@ -250,7 +266,15 @@ export const RouteHome = () => {
 		<>
 			<Title title={t("page.home")} />
 			<RoomNav />
-			<ThreadNav />
+			<Resizable
+				storageKey="thread-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ThreadNav />
+			</Resizable>
 			<Home />
 			<VoiceTray />
 		</>
@@ -273,7 +297,15 @@ export const RouteInvite = (p: RouteSectionProps) => {
 		<>
 			<Show when={p.params.code}>
 				<RoomNav />
-				<ThreadNav room_id={p.params.room_id} />
+				<Resizable
+					storageKey="thread-nav-width"
+					side="left"
+					initialWidth={256}
+					minWidth={180}
+					maxWidth={500}
+				>
+					<ThreadNav room_id={p.params.room_id} />
+				</Resizable>
 				<RouteInviteInner code={p.params.code!} />
 				<VoiceTray />
 			</Show>

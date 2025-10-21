@@ -1,16 +1,18 @@
-import { createSignal, onCleanup, onMount, type ParentProps } from "solid-js";
+import { createSignal, onMount, type ParentProps } from "solid-js";
 
 type ResizableProps = ParentProps<{
 	storageKey: string;
 	initialWidth: number;
 	minWidth?: number;
 	maxWidth?: number;
+	side?: "left" | "right";
 }>;
 
 export const Resizable = (props: ResizableProps) => {
 	const [width, setWidth] = createSignal(props.initialWidth);
 	const minWidth = () => props.minWidth ?? 240;
 	const maxWidth = () => props.maxWidth ?? 800;
+	const side = () => props.side ?? "right";
 
 	onMount(() => {
 		const savedWidth = localStorage.getItem(props.storageKey);
@@ -29,7 +31,14 @@ export const Resizable = (props: ResizableProps) => {
 
 		const handleMouseMove = (e: MouseEvent) => {
 			const dx = e.clientX - startX;
-			let newWidth = startWidth - dx; // Resizing from the left edge
+			let newWidth;
+			if (side() === "right") {
+				// Right sidebar, handle on left
+				newWidth = startWidth - dx;
+			} else {
+				// Left sidebar, handle on right
+				newWidth = startWidth + dx;
+			}
 			if (newWidth < minWidth()) newWidth = minWidth();
 			if (newWidth > maxWidth()) newWidth = maxWidth();
 			setWidth(newWidth);
@@ -47,7 +56,11 @@ export const Resizable = (props: ResizableProps) => {
 	};
 
 	return (
-		<div class="resizable-sidebar" style={{ width: `${width()}px` }}>
+		<div
+			class="resizable-sidebar"
+			data-side={side()}
+			style={{ width: `${width()}px` }}
+		>
 			<div class="resize-handle" onMouseDown={handleMouseDown} />
 			{props.children}
 		</div>
