@@ -433,7 +433,7 @@ const ItemThread = (props: { thread: Thread }) => {
 					<ThreadIcon id={props.thread.id} icon={props.thread.icon} />
 				</Match>
 			</Switch>
-			<div>
+			<div style="pointer-events:none">
 				<div
 					style={{
 						"text-overflow": "ellipsis",
