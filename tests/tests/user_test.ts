@@ -31,4 +31,8 @@ Deno.test("user routes", async (t) => {
 			status: 200,
 		});
 	});
+
+	// TODO: test user patch
+	// TODO: test user delete
+	// TODO: test user undelete
 });

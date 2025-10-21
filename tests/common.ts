@@ -35,11 +35,20 @@ export const makeTester =
 
 export const admin = makeTester({ token: TOKEN!, name: "admin" });
 
+const createdTesters: Record<
+	string,
+	{ tester: ReturnType<typeof makeTester>; token: string; user: any }
+> = {};
+
 export async function createTester(
 	name: string,
 ): Promise<
 	{ tester: ReturnType<typeof makeTester>; token: string; user: any }
 > {
+	if (createdTesters[name]) {
+		return createdTesters[name];
+	}
+
 	const session = await fetch(`${BASE_URL}/session`, {
 		method: "POST",
 		headers: { "content-type": "application/json" },
@@ -66,8 +75,12 @@ export async function createTester(
 	const tester = makeTester({ token: session.token, name });
 	const user = await tester({ url: "/user/@self", status: 200 });
 
-	return { tester, token: session.token, user };
+	const result = { tester, token: session.token, user };
+	createdTesters[name] = result;
+	return result;
 }
+
+const syncClients: Record<string, SyncClient> = {};
 
 export class SyncClient {
 	private ws: WebSocket;
@@ -169,4 +182,14 @@ export class SyncClient {
 			this.ws.close();
 		});
 	}
+}
+
+export async function getSyncClient(token: string): Promise<SyncClient> {
+	if (syncClients[token]) {
+		return syncClients[token];
+	}
+	const client = new SyncClient(token);
+	await client.connect();
+	syncClients[token] = client;
+	return client;
 }

@@ -1,4 +1,4 @@
-import { admin, createTester, SyncClient } from "../common.ts";
+import { admin, createTester, getSyncClient } from "../common.ts";
 import { assertEquals } from "@std/assert";
 
 Deno.test("role permissions", async (t) => {
@@ -27,8 +27,7 @@ Deno.test("role permissions", async (t) => {
 		status: 204,
 	});
 
-	const syncClient = new SyncClient(regularToken);
-	await syncClient.connect();
+	const syncClient = await getSyncClient(regularToken);
 
 	try {
 		await t.step("user cannot create channel without permission", async () => {
