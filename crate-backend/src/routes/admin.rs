@@ -6,19 +6,15 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageCreate, MessageSync, Permission,
     UserId, SERVER_ROOM_ID, SERVER_USER_ID,
 };
-use common::v1::types::{
-    ChannelPatch, PaginationQuery, SessionStatus, SessionType, SessionWithToken,
-};
+use common::v1::types::{ChannelPatch, PaginationQuery, SessionWithToken};
 use http::StatusCode;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use uuid::Uuid;
 
 use super::util::{Auth, HeaderReason};
 
 use crate::error::Result;
-use crate::types::{DbSessionCreate, DbUserCreate, SessionToken};
 use crate::ServerState;
 
 #[derive(Deserialize, ToSchema)]

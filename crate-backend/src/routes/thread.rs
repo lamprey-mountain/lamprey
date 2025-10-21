@@ -5,8 +5,8 @@ use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, MessageMember,
-    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, RoomId,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserId,
+    MessageSync, MessageType, PaginationQuery, PaginationResponse, Permission, ThreadMember,
+    ThreadMemberPut, ThreadMembership, UserId,
 };
 use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};

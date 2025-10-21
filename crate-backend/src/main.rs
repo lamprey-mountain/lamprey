@@ -13,7 +13,7 @@ use tower_http::{
     catch_panic::CatchPanicLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
 };
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;

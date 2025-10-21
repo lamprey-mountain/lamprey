@@ -6,7 +6,7 @@ use crate::data::postgres::Pagination;
 use crate::data::DataThread;
 use crate::error::Result;
 use crate::gen_paginate;
-use crate::types::{Channel, DbChannel, PaginationDirection, RoomId};
+use crate::types::{Channel, DbChannel, PaginationDirection};
 
 use super::Postgres;
 

@@ -12,7 +12,7 @@ use common::v1::types::{
     ChannelId,
 };
 use common::v1::types::{MessageSync, SfuId};
-use http::{HeaderMap, StatusCode};
+use http::HeaderMap;
 use tokio::select;
 use tracing::{debug, error, warn};
 use utoipa_axum::{router::OpenApiRouter, routes};
