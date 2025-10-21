@@ -263,7 +263,7 @@ async fn room_delete(
     })
     .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Room undelete
@@ -318,7 +318,7 @@ async fn room_undelete(
     })
     .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Room audit logs

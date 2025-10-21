@@ -11,6 +11,7 @@ use common::v1::types::{
     voice::{SfuCommand, SfuPermissions, VoiceState},
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, PaginationResponse, Permission,
 };
+use http::StatusCode;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -80,7 +81,7 @@ async fn voice_state_disconnect(
     perms.ensure(Permission::VoiceDisconnect)?;
     let target_perms = srv.perms.for_channel(target_user_id, channel_id).await?;
     let Some(_state) = srv.users.voice_state_get(target_user_id) else {
-        return Ok(());
+        return Ok(StatusCode::NO_CONTENT);
     };
     let _ = s.sushi_sfu.send(SfuCommand::VoiceState {
         user_id: target_user_id,
@@ -106,7 +107,7 @@ async fn voice_state_disconnect(
         })
         .await?;
     }
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Voice state move
@@ -186,7 +187,7 @@ async fn voice_state_move(
         .await?;
     }
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Debug, ToSchema, Deserialize)]

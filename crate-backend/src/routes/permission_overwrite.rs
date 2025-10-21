@@ -10,6 +10,7 @@ use common::v1::types::{
     util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, MessageSync,
     Permission, PermissionOverwriteSet, PermissionOverwriteType,
 };
+use http::StatusCode;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
@@ -165,7 +166,7 @@ async fn permission_overwrite(
         },
     )
     .await?;
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Permission delete
@@ -237,7 +238,7 @@ async fn permission_delete(
             perms.ensure(*p)?;
         }
     } else {
-        return Ok(());
+        return Ok(StatusCode::NO_CONTENT);
     }
 
     srv.perms
@@ -269,7 +270,7 @@ async fn permission_delete(
         },
     )
     .await?;
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

@@ -101,7 +101,7 @@ async fn admin_whisper(
         .create(thread.id, SERVER_USER_ID, None, None, json.message)
         .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Admin broadcast
@@ -197,7 +197,7 @@ async fn admin_broadcast(
         }
     }
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Admin register user

@@ -440,7 +440,7 @@ async fn channel_reorder(
     State(s): State<Arc<ServerState>>,
     HeaderReason(reason): HeaderReason,
     Json(json): Json<ChannelReorder>,
-) -> Result<()> {
+) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
     let _perms = srv.perms.for_room(auth_user.id, room_id).await?;
@@ -502,7 +502,7 @@ async fn channel_reorder(
     })
     .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Channel edit

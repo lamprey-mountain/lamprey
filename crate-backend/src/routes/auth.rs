@@ -256,7 +256,7 @@ async fn auth_email_exec(
     srv.email
         .send(email, "Login to lamprey".to_string(), message, None)
         .await?;
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth email reset
@@ -285,7 +285,7 @@ async fn auth_email_reset(
     srv.email
         .send(email, "Lamprey password reset".to_string(), message, None)
         .await?;
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth email complete
@@ -372,7 +372,7 @@ async fn auth_email_complete(
             .await?;
         }
     }
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -512,7 +512,7 @@ async fn auth_password_delete(
     let data = s.data();
     let has_password = data.auth_password_get(auth_user.id).await?.is_some();
     if !has_password {
-        return Ok(());
+        return Ok(StatusCode::NO_CONTENT);
     }
 
     data.auth_password_delete(auth_user.id).await?;
@@ -531,7 +531,7 @@ async fn auth_password_delete(
     })
     .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Auth password exec

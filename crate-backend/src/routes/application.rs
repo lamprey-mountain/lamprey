@@ -861,7 +861,7 @@ async fn oauth_revoke(
     let srv = s.services();
     data.session_delete(session.id).await?;
     srv.sessions.invalidate(session.id).await;
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Oauth autoconfig

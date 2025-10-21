@@ -238,7 +238,7 @@ async fn invite_use(
             };
             let existing = d.room_member_get(room.id, auth_user.id).await;
             if existing.is_ok_and(|e| e.membership == RoomMembership::Join) {
-                return Ok(());
+                return Ok(StatusCode::NO_CONTENT);
             }
 
             d.room_member_put(
@@ -343,15 +343,15 @@ async fn invite_use(
     // TODO: send welcome message to gdm
     let room_id = match &invite.invite.target {
         InviteTarget::Room { room, .. } => room.id,
-        InviteTarget::Gdm { .. } => return Ok(()),
+        InviteTarget::Gdm { .. } => return Ok(StatusCode::NO_CONTENT),
         InviteTarget::Server => SERVER_ROOM_ID,
-        InviteTarget::User { .. } => return Ok(()),
+        InviteTarget::User { .. } => return Ok(StatusCode::NO_CONTENT),
     };
     srv.rooms
         .send_welcome_message(room_id, auth_user.id)
         .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Invite room create
