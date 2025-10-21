@@ -82,7 +82,14 @@ export const RouteRoom = (p: RouteSectionProps) => {
 					when={flags.has("room_member_list") &&
 						ctx.userConfig().frontend.showMembers !== false}
 				>
-					<RoomMembers room={room()!} />
+					<Resizable
+						storageKey="room-members-width"
+						initialWidth={198}
+						minWidth={180}
+						maxWidth={500}
+					>
+						<RoomMembers room={room()!} />
+					</Resizable>
 				</Show>
 			</Show>
 			<VoiceTray />
@@ -154,7 +161,14 @@ const ThreadSidebar = (props: { thread: Thread }) => {
 				</Resizable>
 			</Match>
 			<Match when={showMembers()}>
-				<ThreadMembers thread={props.thread} />
+				<Resizable
+					storageKey="thread-members-width"
+					initialWidth={198}
+					minWidth={180}
+					maxWidth={500}
+				>
+					<ThreadMembers thread={props.thread} />
+				</Resizable>
 			</Match>
 		</Switch>
 	);

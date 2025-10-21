@@ -1639,12 +1639,10 @@ svg.avatar {
 }
 
 .member-list {
-	grid-area: sidebar;
 	padding: 4px 0;
-	width: 196px;
+	width: 100%;
 	background-color: $bg-150;
 	overflow-y: auto;
-	border-left: solid $sep-300 1px;
 
 	& > div {
 		@include truncate;
