@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch},
-    pagination::{PaginationDirection, PaginationQuery, PaginationResponse},
-    CalendarEventId, ChannelId, UserId,
+    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch},
+    pagination::{PaginationDirection, PaginationResponse},
+    CalendarEventId, ChannelId, PaginationKey, UserId,
 };
 use sqlx::{query, query_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;
@@ -109,9 +109,35 @@ impl DataCalendar for Postgres {
     async fn calendar_event_list(
         &self,
         channel_id: ChannelId,
-        pagination: PaginationQuery<CalendarEventId>,
+        query: CalendarEventListQuery,
     ) -> Result<PaginationResponse<CalendarEvent>> {
-        let p: Pagination<_> = pagination.try_into()?;
+        let dir = query.dir.unwrap_or_default();
+        let after = match dir {
+            PaginationDirection::F => query.from.clone(),
+            _ => query.to.clone(),
+        };
+        let after = after.unwrap_or(PaginationKey::min());
+        let before = match dir {
+            PaginationDirection::F => query.to,
+            _ => query.from,
+        };
+        let before = before.unwrap_or(PaginationKey::max());
+        let p: Pagination<_> = Pagination {
+            before,
+            after,
+            dir,
+            limit: query.limit.unwrap_or(10),
+        };
+
+        let from_time = query
+            .from_time
+            .map(Into::into)
+            .unwrap_or(PrimitiveDateTime::MIN);
+        let to_time = query
+            .to_time
+            .map(Into::into)
+            .unwrap_or(PrimitiveDateTime::MAX);
+
         gen_paginate!(
             p,
             self.pool,
@@ -120,18 +146,22 @@ impl DataCalendar for Postgres {
                 r#"
                 SELECT id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at
                 FROM calendar_event
-                WHERE channel_id = $1 AND id > $2 AND id < $3 AND deleted_at IS NULL
+                WHERE channel_id = $1 AND id > $2 AND id < $3 AND deleted_at IS NULL AND end_at > $6 AND start_at < $7
                 ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
                 "#,
                 *channel_id,
                 *p.after,
                 *p.before,
                 p.dir.to_string(),
-                (p.limit + 1) as i32
+                (p.limit + 1) as i32,
+                from_time,
+                to_time,
             ),
             query_scalar!(
-                "SELECT count(*) FROM calendar_event WHERE channel_id = $1 AND deleted_at IS NULL",
-                *channel_id
+                "SELECT count(*) FROM calendar_event WHERE channel_id = $1 AND deleted_at IS NULL AND end_at > $2 AND start_at < $3",
+                *channel_id,
+                from_time,
+                to_time
             ),
             |i: &CalendarEvent| i.id.to_string()
         )

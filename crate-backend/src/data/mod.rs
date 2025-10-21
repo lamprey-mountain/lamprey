@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use common::v1::types::application::{Application, Connection, Scope};
-use common::v1::types::calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch};
+use common::v1::types::calendar::{
+    CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch,
+};
 use common::v1::types::email::{EmailAddr, EmailInfo, EmailInfoPatch};
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch};
 use common::v1::types::notifications::{
@@ -927,7 +929,7 @@ pub trait DataCalendar {
     async fn calendar_event_list(
         &self,
         channel_id: ChannelId,
-        pagination: PaginationQuery<CalendarEventId>,
+        query: CalendarEventListQuery,
     ) -> Result<PaginationResponse<CalendarEvent>>;
     async fn calendar_event_update(
         &self,

@@ -7,10 +7,10 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch}, pagination::PaginationQuery, permission::Permission, util::Time, CalendarEventId, ChannelId, UserId
+    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventPatch},
+    permission::Permission,
+    CalendarEventId, ChannelId, UserId,
 };
-use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -22,15 +22,6 @@ use crate::{
 use common::v1::types::{util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType};
 
 use super::util::Auth;
-
-#[derive(Debug, Deserialize, ToSchema, IntoParams)]
-pub struct CalendarEventListQuery {
-    from: Option<CalendarEventId>,
-    to: Option<CalendarEventId>,
-    limit: Option<u32>,
-    from_time: Option<Time>,
-    to_time: Option<Time>,
-}
 
 /// Calendar event list user (TODO)
 ///
@@ -60,10 +51,12 @@ async fn calendar_event_list_user(
 )]
 async fn calendar_event_list(
     Path(channel_id): Path<ChannelId>,
-    Query(query): Query<PaginationQuery<CalendarEventId>>,
+    Query(query): Query<CalendarEventListQuery>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    query.validate()?;
+
     let perms = s
         .services()
         .perms
@@ -178,7 +171,7 @@ async fn calendar_event_get(
     request_body = CalendarEventPatch,
     responses((status = OK, body = CalendarEvent, description = "Update calendar event success"))
 )]
-async fn calendar_channel_event_update(
+async fn calendar_event_update(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -376,7 +369,6 @@ async fn calendar_rsvp_update(
     Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
-    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let _perms = s
         .services()
@@ -440,7 +432,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(calendar_event_list))
         .routes(routes!(calendar_event_create))
         .routes(routes!(calendar_event_get))
-        .routes(routes!(calendar_channel_event_update))
+        .routes(routes!(calendar_event_update))
         .routes(routes!(calendar_event_delete))
         .routes(routes!(calendar_rsvp_list))
         .routes(routes!(calendar_rsvp_get))

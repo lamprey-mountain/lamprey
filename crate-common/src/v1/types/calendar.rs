@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{CalendarEventId, ChannelId, UserId};
+use crate::v1::types::{pagination::PaginationDirection, CalendarEventId, ChannelId, UserId};
 
 use super::util::Time;
 
@@ -74,6 +74,19 @@ pub struct CalendarEventPatch {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Cron(pub String);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct CalendarEventListQuery {
+    #[cfg_attr(feature = "validator", validate(range(max = 1024)))]
+    pub limit: Option<u16>,
+    pub from: Option<CalendarEventId>,
+    pub to: Option<CalendarEventId>,
+    pub dir: Option<PaginationDirection>,
+    pub from_time: Option<Time>,
+    pub to_time: Option<Time>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

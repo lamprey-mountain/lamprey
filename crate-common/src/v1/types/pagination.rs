@@ -72,7 +72,7 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum PaginationDirection {
