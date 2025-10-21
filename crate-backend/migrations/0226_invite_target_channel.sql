@@ -1,0 +1,1 @@
+ALTER TABLE invite ADD COLUMN target_channel_id UUID REFERENCES channel(id) ON DELETE SET NULL;

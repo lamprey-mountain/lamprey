@@ -505,8 +505,8 @@ impl Connection {
             MessageSync::RoleUpdate { role } => AuthCheck::Room(role.room_id),
             // FIXME(#612): only return invite events to creator and members with InviteManage
             MessageSync::InviteCreate { invite } => match &invite.invite.target {
-                InviteTarget::Room { room, thread: _ } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { thread, .. } => AuthCheck::Channel(thread.id),
+                InviteTarget::Room { room, channel: _ } => AuthCheck::Room(room.id),
+                InviteTarget::Gdm { channel, .. } => AuthCheck::Channel(channel.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
@@ -514,7 +514,7 @@ impl Connection {
             },
             MessageSync::InviteUpdate { invite } => match &invite.invite.target {
                 InviteTarget::Room { room, .. } => AuthCheck::Room(room.id),
-                InviteTarget::Gdm { thread, .. } => AuthCheck::Channel(thread.id),
+                InviteTarget::Gdm { channel, .. } => AuthCheck::Channel(channel.id),
                 InviteTarget::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }
@@ -538,7 +538,7 @@ impl Connection {
             MessageSync::RoleReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::InviteDelete { target, .. } => match target {
                 InviteTargetId::Room { room_id, .. } => AuthCheck::Room(*room_id),
-                InviteTargetId::Gdm { thread_id, .. } => AuthCheck::Channel(*thread_id),
+                InviteTargetId::Gdm { channel_id, .. } => AuthCheck::Channel(*channel_id),
                 InviteTargetId::Server => {
                     AuthCheck::RoomPerm(SERVER_ROOM_ID, Permission::ServerOversee)
                 }

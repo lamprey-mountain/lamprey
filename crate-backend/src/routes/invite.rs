@@ -6,10 +6,7 @@ use axum::{extract::State, Json};
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, Invite, InviteCode, InviteCreate,
-    InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery,
-    PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin,
-    RoomMemberPut, RoomMembership, SERVER_ROOM_ID,
+    AuditLogEntry, AuditLogEntryId, AuditLogEntryType, ChannelId, ChannelType, Invite, InviteCode, InviteCreate, InvitePatch, InviteTarget, InviteTargetId, InviteWithMetadata, MessageSync, PaginationQuery, PaginationResponse, Permission, RelationshipPatch, RelationshipType, RoomId, RoomMemberOrigin, RoomMemberPut, RoomMembership, SERVER_ROOM_ID
 };
 use http::StatusCode;
 use nanoid::nanoid;
@@ -44,7 +41,7 @@ async fn invite_delete(
     let d = s.data();
     let invite = d.invite_select(code.clone()).await?;
     let (has_perm, id_target) = match invite.invite.target {
-        InviteTarget::Room { room, thread } => (
+        InviteTarget::Room { room, channel } => (
             s.services()
                 .perms
                 .for_room(auth_user.id, room.id)
@@ -52,17 +49,17 @@ async fn invite_delete(
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
                 room_id: room.id,
-                thread_id: thread.map(|t| t.id),
+                channel_id: channel.map(|t| t.id),
             },
         ),
-        InviteTarget::Gdm { thread } => (
+        InviteTarget::Gdm { channel } => (
             s.services()
                 .perms
-                .for_channel(auth_user.id, thread.id)
+                .for_channel(auth_user.id, channel.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {
-                thread_id: thread.id,
+                channel_id: channel.id,
             },
         ),
         InviteTarget::Server => (
@@ -107,9 +104,9 @@ async fn invite_delete(
                 )
                 .await?;
             }
-            InviteTargetId::Gdm { thread_id } => {
+            InviteTargetId::Gdm { channel_id } => {
                 s.broadcast_channel(
-                    thread_id,
+                    channel_id,
                     auth_user.id,
                     MessageSync::InviteDelete {
                         code,
@@ -169,8 +166,8 @@ async fn invite_resolve(
             let perms = s.perms.for_room(auth_user.id, room.id).await?;
             !perms.has(Permission::InviteManage)
         }
-        InviteTarget::Gdm { thread } => {
-            let perms = s.perms.for_channel(auth_user.id, thread.id).await?;
+        InviteTarget::Gdm { channel } => {
+            let perms = s.perms.for_channel(auth_user.id, channel.id).await?;
             !perms.has(Permission::InviteManage)
         }
         InviteTarget::Server => {
@@ -266,7 +263,17 @@ async fn invite_use(
             )
             .await?;
         }
-        InviteTarget::Gdm { .. } => todo!(),
+        InviteTarget::Gdm { channel } => {
+            d.thread_member_put(channel.id, auth_user.id, Default::default())
+                .await?;
+            let member = d.thread_member_get(channel.id, auth_user.id).await?;
+            s.broadcast_channel(
+                channel.id,
+                auth_user.id,
+                MessageSync::ThreadMemberUpsert { member },
+            )
+            .await?;
+        }
         InviteTarget::Server => {
             let srv = s.services();
             let user = srv.users.get(auth_user.id, None).await?;
@@ -485,39 +492,96 @@ async fn invite_room_list(
     Ok(Json(res))
 }
 
-/// Invite thread create
+/// Invite channel create
 ///
-/// Create an invite that goes to a thread
+/// Create an invite that goes to a channel
 #[utoipa::path(
     post,
-    path = "/thread/{thread_id}/invite",
+    path = "/channel/{channel_id}/invite",
     params(
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
     ),
-    tags = ["invite", "badge.perm.InviteCreate"],
+    tags = ["invite", "badge.perm-opt.InviteCreate"],
     responses(
         (status = OK, body = Invite, description = "success"),
     )
 )]
 async fn invite_channel_create(
-    Path(_thread_id): Path<ChannelId>,
-    Auth(_auth_user): Auth,
-    HeaderReason(_reason): HeaderReason,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<InviteCreate>,
+    Path(channel_id): Path<ChannelId>,
+    Auth(auth_user): Auth,
+    HeaderReason(reason): HeaderReason,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<InviteCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    auth_user.ensure_unsuspended()?;
+
+    let d = s.data();
+    let channel = d.channel_get(channel_id).await?;
+
+    let room_id = if channel.ty == ChannelType::Gdm {
+        // anyone can create invites for a gdm
+        None
+    } else if let Some(room_id) = channel.room_id {
+        let perms = s.services.perms.for_room(auth_user.id, room_id).await?;
+        perms.ensure(Permission::InviteCreate)?;
+        Some(room_id)
+    } else {
+        return Err(Error::BadStatic("Channel is not in a room or a GDM"));
+    };
+
+    let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        .chars()
+        .collect();
+    let code = InviteCode(nanoid!(8, &alphabet));
+    d.invite_insert_channel(
+        channel_id,
+        auth_user.id,
+        code.clone(),
+        json.expires_at,
+        json.max_uses,
+    )
+    .await?;
+    let invite = d.invite_select(code).await?;
+
+    let changes = Changes::new()
+        .add("code", &invite.invite.code)
+        .add("description", &invite.invite.description)
+        .add("expires_at", &invite.invite.expires_at)
+        .add("max_uses", &invite.max_uses)
+        .build();
+
+    if let Some(room_id) = room_id {
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id,
+            user_id: auth_user.id,
+            session_id: None,
+            reason: reason.clone(),
+            ty: AuditLogEntryType::InviteCreate { changes },
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        channel_id,
+        auth_user.id,
+        MessageSync::InviteCreate {
+            invite: invite.clone(),
+        },
+    )
+    .await?;
+    Ok((StatusCode::CREATED, Json(invite)))
 }
 
-/// Invite thread list
+/// Invite channel list
 ///
-/// List invites that go to a thread
+/// List invites that go to a channel
 #[utoipa::path(
     get,
-    path = "/thread/{thread_id}/invite",
+    path = "/channel/{channel_id}/invite",
     params(
         PaginationQuery<InviteCode>,
-        ("thread_id", description = "Thread id"),
+        ("channel_id", description = "Channel id"),
     ),
     tags = ["invite"],
     responses(
@@ -525,12 +589,51 @@ async fn invite_channel_create(
     )
 )]
 async fn invite_channel_list(
-    Path(_thread_id): Path<ChannelId>,
-    Query(_paginate): Query<PaginationQuery<InviteCode>>,
-    Auth(_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+    Query(paginate): Query<PaginationQuery<InviteCode>>,
+    Auth(user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let d = s.data();
+    let channel = d.channel_get(channel_id).await?;
+
+    let has_perm = if channel.ty == ChannelType::Gdm {
+        true
+    } else if let Some(room_id) = channel.room_id {
+        s.services
+            .perms
+            .for_room(user.id, room_id)
+            .await?
+            .has(Permission::InviteManage)
+    } else {
+        false
+    };
+
+    let res = d.invite_list_channel(channel_id, paginate).await?;
+    let items: Vec<_> = res
+        .items
+        .into_iter()
+        .map(|i| {
+            if i.invite.creator_id != user.id && !has_perm {
+                InviteWithPotentialMetadata::Invite(i.strip_metadata())
+            } else {
+                InviteWithPotentialMetadata::InviteWithMetadata(i)
+            }
+        })
+        .collect();
+    let cursor = items.last().map(|i| match i {
+        InviteWithPotentialMetadata::Invite(invite) => invite.code.0.clone(),
+        InviteWithPotentialMetadata::InviteWithMetadata(invite_with_metadata) => {
+            invite_with_metadata.invite.code.0.clone()
+        }
+    });
+    let res = PaginationResponse {
+        items,
+        total: res.total,
+        has_more: res.has_more,
+        cursor,
+    };
+    Ok(Json(res))
 }
 
 /// Invite patch
@@ -559,7 +662,7 @@ async fn invite_patch(
     let start_invite = d.invite_select(code.clone()).await?;
 
     let (has_perm, _id_target) = match start_invite.invite.target {
-        InviteTarget::Room { room, thread } => (
+        InviteTarget::Room { room, channel } => (
             s.services()
                 .perms
                 .for_room(auth_user.id, room.id)
@@ -567,17 +670,17 @@ async fn invite_patch(
                 .has(Permission::InviteManage),
             InviteTargetId::Room {
                 room_id: room.id,
-                thread_id: thread.map(|t| t.id),
+                channel_id: channel.map(|t| t.id),
             },
         ),
-        InviteTarget::Gdm { thread } => (
+        InviteTarget::Gdm { channel } => (
             s.services()
                 .perms
-                .for_channel(auth_user.id, thread.id)
+                .for_channel(auth_user.id, channel.id)
                 .await?
                 .has(Permission::InviteManage),
             InviteTargetId::Gdm {
-                thread_id: thread.id,
+                channel_id: channel.id,
             },
         ),
         InviteTarget::Server => (
@@ -866,7 +969,6 @@ async fn invite_user_list(
     Ok(Json(res))
 }
 
-// TODO: consider merging invite_server_* with invite_room_*?
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(invite_delete))

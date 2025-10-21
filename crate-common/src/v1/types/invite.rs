@@ -70,13 +70,11 @@ pub enum InviteTarget {
     /// join a room
     Room {
         room: Room,
-        thread: Option<Box<Channel>>,
-        // invites that automatically apply a certain role?
-        // roles: Vec<Role>,
+        channel: Option<Box<Channel>>,
     },
 
     /// join a group dm
-    Gdm { thread: Box<Channel> },
+    Gdm { channel: Box<Channel> },
 
     /// register on this server
     Server,
@@ -92,11 +90,11 @@ pub enum InviteTarget {
 pub enum InviteTargetId {
     Room {
         room_id: RoomId,
-        thread_id: Option<ChannelId>,
+        channel_id: Option<ChannelId>,
     },
 
     Gdm {
-        thread_id: ChannelId,
+        channel_id: ChannelId,
     },
 
     Server,

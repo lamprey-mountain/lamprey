@@ -284,6 +284,20 @@ pub trait DataInvite {
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>>;
 
+    async fn invite_insert_channel(
+        &self,
+        channel_id: ChannelId,
+        creator_id: UserId,
+        code: InviteCode,
+        expires_at: Option<Time>,
+        max_uses: Option<u16>,
+    ) -> Result<()>;
+    async fn invite_list_channel(
+        &self,
+        channel_id: ChannelId,
+        paginate: PaginationQuery<InviteCode>,
+    ) -> Result<PaginationResponse<InviteWithMetadata>>;
+
     async fn invite_incr_use(&self, code: InviteCode) -> Result<()>;
     async fn invite_update(
         &self,
