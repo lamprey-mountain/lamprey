@@ -1,6 +1,6 @@
 {
 	"tasks": {
-		"test": "deno run --env-file=.env --allow-env --allow-net main.ts"
+		"test": "deno test --env-file=.env --allow-env --allow-net --trace-leaks"
 	},
 	"imports": {
 		"@std/assert": "jsr:@std/assert@1"
