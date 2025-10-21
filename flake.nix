@@ -54,14 +54,16 @@
           src = ./.;
           version = "0.0.0";
 
-          nativeBuildInputs = [ pkgs.nodejs pkgs.pnpm.configHook ];
+          nativeBuildInputs = with pkgs; [ nodejs pnpm.configHook git ];
 
-          pnpmRoot = "frontend";
-          pnpmDepsHash = "sha256-woA5C1airy7eKbk3EP7cggldNFpz+9y68A16QkGrmeA=";
+          VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
+          VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
+
+          pnpmDepsHash = "sha256-NgoJEHUBENjPLlr/Hpt6HZrEV16FUClTIUPbNSl2xTI=";
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit (finalAttrs) src pname version;
+            fetcherVersion = 2;
             hash = pnpmDepsHash;
-            sourceRoot = "${finalAttrs.src}/frontend";
           };
 
           buildPhase = ''

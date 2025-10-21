@@ -3,15 +3,34 @@ import solid from "vite-plugin-solid";
 import pkg from "./package.json";
 import { execSync, spawnSync } from "node:child_process";
 
+function getGitCommit() {
+	if (process.env.VITE_GIT_SHA) {
+		return process.env.VITE_GIT_SHA;
+	}
+	try {
+		return execSync("git rev-parse HEAD").toString().trim();
+	} catch {
+		return "unknown";
+	}
+}
+
+function isGitDirty() {
+	if (process.env.VITE_GIT_DIRTY !== undefined) {
+		return process.env.VITE_GIT_DIRTY === "true";
+	}
+	try {
+		return spawnSync("git diff-index --quiet HEAD --").status !== 0;
+	} catch {
+		return false;
+	}
+}
+
 // https://vite.dev/config/
 export default defineConfig({
 	define: {
 		__VITE_PACKAGE_JSON__: pkg,
-		__VITE_GIT_COMMIT__: JSON.stringify(
-			execSync("git rev-parse HEAD").toString().trim(),
-		),
-		__VITE_GIT_DIRTY__:
-			spawnSync("git diff-index --quiet HEAD --").status !== 0,
+		__VITE_GIT_COMMIT__: JSON.stringify(getGitCommit()),
+		__VITE_GIT_DIRTY__: isGitDirty(),
 	},
 	plugins: [solid()],
 	server: {
