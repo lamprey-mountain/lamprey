@@ -154,6 +154,12 @@ pub trait DataRoomMember {
         room_id: RoomId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomBan>>;
+    async fn room_ban_search(
+        &self,
+        room_id: RoomId,
+        query: String,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomBan>>;
     async fn room_ban_create_bulk(
         &self,
         room_id: RoomId,

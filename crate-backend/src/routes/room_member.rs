@@ -25,6 +25,11 @@ use crate::ServerState;
 use super::util::{Auth, HeaderReason};
 use crate::error::{Error, Result};
 
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
+pub struct RoomBanSearchQuery {
+    pub query: String,
+}
+
 /// Room member list
 #[utoipa::path(
     get,
@@ -862,11 +867,12 @@ async fn room_ban_list(
     Ok(Json(res))
 }
 
-/// Room ban search (TODO)
+/// Room ban search
 #[utoipa::path(
     get,
     path = "/room/{room_id}/ban/search",
     params(
+        RoomBanSearchQuery,
         PaginationQuery<UserId>,
         ("room_id" = RoomId, description = "Room id"),
     ),
@@ -877,14 +883,16 @@ async fn room_ban_list(
 )]
 async fn room_ban_search(
     Path(room_id): Path<RoomId>,
-    Query(_search): Query<RoomMemberSearch>,
+    Query(search): Query<RoomBanSearchQuery>,
+    Query(pagination): Query<PaginationQuery<UserId>>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let _d = s.data();
+    let d = s.data();
     let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
     perms.ensure(Permission::MemberBan)?;
-    Ok(Error::Unimplemented)
+    let res = d.room_ban_search(room_id, search.query, pagination).await?;
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

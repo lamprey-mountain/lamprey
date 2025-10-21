@@ -388,6 +388,49 @@ impl DataRoomMember for Postgres {
         )
     }
 
+    async fn room_ban_search(
+        &self,
+        room_id: RoomId,
+        query: String,
+        paginate: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RoomBan>> {
+        let p: Pagination<_> = paginate.try_into()?;
+        let query = format!("%{}%", query);
+
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbRoomBan,
+                r#"
+                SELECT b.user_id, b.reason, b.created_at, b.expires_at
+                FROM room_ban b
+                JOIN usr u ON b.user_id = u.id
+                WHERE b.room_id = $1 AND u.name ILIKE $2 AND b.user_id > $3 AND b.user_id < $4
+                ORDER BY (CASE WHEN $5 = 'f' THEN b.user_id END), b.user_id DESC
+                LIMIT $6
+                "#,
+                *room_id,
+                query,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"
+                SELECT count(*)
+                FROM room_ban b
+                JOIN usr u ON b.user_id = u.id
+                WHERE b.room_id = $1 AND u.name ILIKE $2
+                "#,
+                *room_id,
+                query
+            ),
+            |i: &RoomBan| i.user_id.to_string()
+        )
+    }
+
     async fn room_ban_create_bulk(
         &self,
         room_id: RoomId,
