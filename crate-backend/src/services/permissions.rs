@@ -107,7 +107,11 @@ impl ServicePermissions {
             .map_err(|err| err.fake_clone())
     }
 
-    async fn for_thread_inner(&self, user_id: UserId, thread_id: ChannelId) -> Result<Permissions> {
+    async fn for_channel_inner(
+        &self,
+        user_id: UserId,
+        thread_id: ChannelId,
+    ) -> Result<Permissions> {
         let srv = self.state.services();
         let data = self.state.data();
         let thread = srv.channels.get(thread_id, Some(user_id)).await?;
@@ -150,7 +154,9 @@ impl ServicePermissions {
                             continue;
                         }
                     } else if o.ty == PermissionOverwriteType::Role {
-                        if !roles.contains(&o.id.into()) {
+                        if !roles.contains(&o.id.into())
+                            && thread.room_id.is_none_or(|room_id| *room_id != o.id)
+                        {
                             continue;
                         }
                     }
@@ -169,7 +175,9 @@ impl ServicePermissions {
                         continue;
                     }
                 } else if o.ty == PermissionOverwriteType::Role {
-                    if !roles.contains(&o.id.into()) {
+                    if !roles.contains(&o.id.into())
+                        && thread.room_id.is_none_or(|room_id| *room_id != o.id)
+                    {
                         continue;
                     }
                 }
@@ -196,7 +204,7 @@ impl ServicePermissions {
                     t.room_id.unwrap_or_else(|| Uuid::nil().into()),
                     thread_id,
                 ),
-                self.for_thread_inner(user_id, thread_id),
+                self.for_channel_inner(user_id, thread_id),
             )
             .await
             .map_err(|err| err.fake_clone())
