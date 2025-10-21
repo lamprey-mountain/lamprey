@@ -9,6 +9,7 @@ use common::v1::types::{
 use common::v1::types::{
     ChannelPatch, PaginationQuery, SessionStatus, SessionType, SessionWithToken,
 };
+use http::StatusCode;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -243,7 +244,7 @@ async fn admin_register_user(
     })
     .await?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
