@@ -378,6 +378,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlx",
+ "strum",
  "thiserror 2.0.16",
  "time",
  "tokio",

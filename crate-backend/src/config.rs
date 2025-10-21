@@ -1,7 +1,14 @@
-use std::collections::HashMap;
+use core::fmt;
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    net::{IpAddr, Ipv4Addr},
+    path::PathBuf,
+};
 
 use ipnet::IpNet;
 use serde::Deserialize;
+use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
 
 #[derive(Debug, Deserialize)]
@@ -25,6 +32,8 @@ pub struct Config {
     pub email_queue_workers: usize,
     #[serde(default = "default_require_server_invite")]
     pub require_server_invite: bool,
+    #[serde(default = "default_listen")]
+    pub listen: Vec<ListenConfig>,
 }
 
 fn default_require_server_invite() -> bool {
@@ -72,4 +81,74 @@ pub struct ConfigSmtp {
     pub password: String,
     pub host: String,
     pub from: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+// Incompatible with deny_unknown_fields due to serde(flatten).
+pub struct ListenConfig {
+    #[serde(default = "ListenComponent::all_components")]
+    pub components: HashSet<ListenComponent>,
+    #[serde(flatten)]
+    pub transport: ListenTransport,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, EnumIter, strum::Display)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+pub enum ListenComponent {
+    Api,
+    Metrics,
+}
+
+impl ListenComponent {
+    fn all_components() -> HashSet<Self> {
+        Self::iter().collect()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(deny_unknown_fields)]
+pub enum ListenTransport {
+    Tcp {
+        #[serde(default = "default_address")]
+        address: IpAddr,
+        #[serde(default = "default_port")]
+        port: u16,
+    },
+    Unix {
+        path: PathBuf,
+    },
+}
+
+impl Display for ListenTransport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ListenTransport::Tcp { address, port } => {
+                write!(f, "http://{address}:{port}")
+            }
+            ListenTransport::Unix { path } => {
+                write!(f, "http+unix://{}", path.display())
+            }
+        }
+    }
+}
+
+fn default_listen() -> Vec<ListenConfig> {
+    vec![ListenConfig {
+        components: ListenComponent::all_components(),
+        transport: ListenTransport::Tcp {
+            address: default_address(),
+            port: default_port(),
+        },
+    }]
+}
+
+fn default_address() -> IpAddr {
+    Ipv4Addr::LOCALHOST.into()
+}
+
+fn default_port() -> u16 {
+    4000
 }

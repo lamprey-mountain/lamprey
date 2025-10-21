@@ -8,14 +8,17 @@ use http::{header, HeaderName};
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::postgres::PgPoolOptions;
+use tokio::task::JoinSet;
 use tower_http::{
     catch_panic::CatchPanicLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
 };
-use tracing::info;
+use tracing::{error, info, trace, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
+
+use crate::config::{ListenComponent, ListenTransport};
 
 use backend::{
     cli, config, error,
@@ -24,7 +27,7 @@ use backend::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
         RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
     },
-    ServerState,
+    Error, ServerState,
 };
 
 use config::Config;
@@ -212,13 +215,36 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+async fn serve_transport(transport: ListenTransport, router: axum::Router) -> Result<()> {
+    match transport {
+        ListenTransport::Tcp { address, port } => {
+            let listener = tokio::net::TcpListener::bind((address, port)).await?;
+            axum::serve(listener, router).await?;
+        }
+        ListenTransport::Unix { path } => {
+            if let Some(p) = path.parent() {
+                tokio::fs::create_dir_all(p).await?;
+            }
+            if path.exists() {
+                warn!("deleting existing socket {}", path.display());
+                tokio::fs::remove_file(&path).await?;
+            }
+            let listener = tokio::net::UnixListener::bind(&path)?;
+            let res = axum::serve(listener, router).await;
+            let _ = tokio::fs::remove_file(path).await;
+            res?;
+        }
+    }
+    Ok(())
+}
+
 /// start the main server
 async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api/v1", routes::routes())
-        .with_state(state)
+        .with_state(state.clone())
         .split_for_parts();
     NestedTags.modify(&mut api);
     BadgeModifier.modify(&mut api);
@@ -237,8 +263,27 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",
         )));
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
-    axum::serve(listener, router).await?;
+
+    let mut set = JoinSet::new();
+
+    for config in &state.config.listen {
+        if config.components.contains(&ListenComponent::Api) {
+            let router = router.clone();
+            let transport = config.transport.clone();
+            info!("api listening on {}", transport);
+            set.spawn(async move { serve_transport(transport, router).await });
+        }
+    }
+
+    if set.is_empty() {
+        error!("no components enabled for any listeners");
+        return Err(Error::BadStatic("no components enabled for any listeners"));
+    }
+
+    while let Some(res) = set.join_next().await {
+        res.unwrap()?;
+    }
+
     Ok(())
 }
 
