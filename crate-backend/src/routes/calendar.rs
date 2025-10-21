@@ -7,10 +7,7 @@ use axum::{
     Json,
 };
 use common::v1::types::{
-    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch},
-    pagination::PaginationQuery,
-    permission::Permission,
-    CalendarEventId, ChannelId, UserId,
+    calendar::{CalendarEvent, CalendarEventCreate, CalendarEventPatch}, pagination::PaginationQuery, permission::Permission, util::Time, CalendarEventId, ChannelId, UserId
 };
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
@@ -22,6 +19,7 @@ use crate::{
     routes::util::HeaderReason,
     ServerState,
 };
+use common::v1::types::{util::Changes, AuditLogEntry, AuditLogEntryId, AuditLogEntryType};
 
 use super::util::Auth;
 
@@ -30,8 +28,8 @@ pub struct CalendarEventListQuery {
     from: Option<CalendarEventId>,
     to: Option<CalendarEventId>,
     limit: Option<u32>,
-    from_time: Option<String>,
-    to_time: Option<String>,
+    from_time: Option<Time>,
+    to_time: Option<Time>,
 }
 
 /// Calendar event list user (TODO)
@@ -91,6 +89,7 @@ async fn calendar_event_create(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventCreate>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -103,8 +102,34 @@ async fn calendar_event_create(
 
     let event = s
         .data()
-        .calendar_event_create(json, channel_id, auth_user.id)
+        .calendar_event_create(json.clone(), channel_id, auth_user.id)
         .await?;
+
+    let room_id = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::CalendarEventCreate {
+            changes: Changes::new()
+                .add("title", &event.title)
+                .add("description", &event.description)
+                .add("location", &event.location)
+                .add("start", &event.start)
+                .add("end", &event.end)
+                .build(),
+        },
+    })
+    .await?;
 
     Ok((StatusCode::CREATED, Json(event)))
 }
@@ -157,6 +182,7 @@ async fn calendar_channel_event_update(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
     Json(json): Json<CalendarEventPatch>,
 ) -> Result<impl IntoResponse> {
     json.validate()?;
@@ -167,15 +193,45 @@ async fn calendar_channel_event_update(
         .await?;
     perms.ensure(Permission::CalendarEventManage)?;
 
-    let event = s.data().calendar_event_get(calendar_event_id).await?;
-    if event.channel_id != channel_id {
+    let old_event = s.data().calendar_event_get(calendar_event_id).await?;
+    if old_event.channel_id != channel_id {
         return Err(Error::NotFound);
     }
 
     let updated_event = s
         .data()
-        .calendar_event_update(calendar_event_id, json)
+        .calendar_event_update(calendar_event_id, json.clone())
         .await?;
+
+    let room_id = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::CalendarEventUpdate {
+            changes: Changes::new()
+                .change("title", &old_event.title, &updated_event.title)
+                .change(
+                    "description",
+                    &old_event.description,
+                    &updated_event.description,
+                )
+                .change("location", &old_event.location, &updated_event.location)
+                .change("start", &old_event.start, &updated_event.start)
+                .change("end", &old_event.end, &updated_event.end)
+                .build(),
+        },
+    })
+    .await?;
 
     Ok(Json(updated_event))
 }
@@ -195,6 +251,7 @@ async fn calendar_event_delete(
     Path((channel_id, calendar_event_id)): Path<(ChannelId, CalendarEventId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let perms = s
         .services()
@@ -209,6 +266,27 @@ async fn calendar_event_delete(
     }
 
     s.data().calendar_event_delete(calendar_event_id).await?;
+
+    let room_id = s
+        .services()
+        .channels
+        .get(channel_id, Some(auth_user.id))
+        .await?
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id,
+        user_id: auth_user.id,
+        session_id: None,
+        reason: reason.clone(),
+        ty: AuditLogEntryType::CalendarEventDelete {
+            title: event.title,
+            event_id: event.id,
+        },
+    })
+    .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -298,6 +376,7 @@ async fn calendar_rsvp_update(
     Path((channel_id, calendar_event_id, user_id)): Path<(ChannelId, CalendarEventId, UserId)>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
 ) -> Result<impl IntoResponse> {
     let _perms = s
         .services()

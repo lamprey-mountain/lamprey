@@ -4,11 +4,11 @@ use common::v1::types::{
     ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
     PaginationResponse,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_scalar, Acquire};
 
 use crate::data::{DataChannel, DataInvite, DataRoom, DataUser};
 use crate::error::{Error, Result};
-use crate::types::{DbInvite, Invite, InviteCode, RoomId, UserId};
+use crate::types::{Invite, InviteCode, RoomId, UserId};
 use common::v1::types::InvitePatch;
 use time::PrimitiveDateTime;
 
