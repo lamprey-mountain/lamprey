@@ -1265,7 +1265,7 @@ summary {
 
 	& .role-edit {
 		background: $bg-100;
-		width: max(360px, 50%);
+		width: 100%;
 		overflow-y: auto;
 
 		& .toolbar {

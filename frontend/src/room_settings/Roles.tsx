@@ -16,6 +16,7 @@ import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
 import { md } from "../Message.tsx";
 import { moderatorPermissions, permissionGroups } from "../permissions.ts";
+import { Resizable } from "../Resizable.tsx";
 
 function isDirty(a: Role, b: Role): boolean {
 	return a.name !== b.name ||
@@ -137,7 +138,15 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					</Show>
 				</div>
 				<Show when={api.roles.cache.has(edit.role.id!)}>
-					<RoleEditor room={props.room} edit={edit} />
+					<Resizable
+						storageKey="role-editor-width"
+						initialWidth={400}
+						minWidth={300}
+						maxWidth={800}
+						class="role-edit-resizable"
+					>
+						<RoleEditor room={props.room} edit={edit} />
+					</Resizable>
 				</Show>
 			</div>
 		</>
