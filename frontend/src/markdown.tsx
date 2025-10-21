@@ -2,9 +2,14 @@ import { marked, type Token } from "marked";
 import { EditorState } from "prosemirror-state";
 import { Decoration, DecorationAttrs, DecorationSet } from "prosemirror-view";
 
-const md = marked.use({
+export const md = marked.use({
 	breaks: true,
 	gfm: true,
+	renderer: {
+		del({ tokens }) {
+			return `<s>${this.parser.parseInline(tokens)}</s>`;
+		},
+	},
 });
 
 // TODO: refactor
@@ -203,8 +208,8 @@ export function decorate(state: EditorState, placeholderText?: string) {
 	}
 
 	/*
-  some nice colors from an old project
-    --background-1: #24262b;
+	some nice colors from an old project
+		--background-1: #24262b;
 --background-2: #1e2024;
 --background-3: #191b1d;
 --background-4: #17181a;
@@ -212,7 +217,7 @@ export function decorate(state: EditorState, placeholderText?: string) {
 --foreground-2: #eae8ef9f;
 --foreground-link: #b18cf3;
 --foreground-danger: #fa6261;
-  */
+	*/
 
 	const reduced = reduceDecorations(md.lexer(state.doc.textContent), 1);
 	return DecorationSet.create(

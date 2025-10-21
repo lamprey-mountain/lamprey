@@ -1,19 +1,8 @@
-import {
-	type Command,
-	EditorState,
-	Plugin,
-	TextSelection,
-} from "prosemirror-state";
-import {
-	Decoration,
-	type DecorationAttrs,
-	DecorationSet,
-	EditorView,
-} from "prosemirror-view";
+import { type Command, EditorState, TextSelection } from "prosemirror-state";
+import { EditorView } from "prosemirror-view";
 import { DOMParser, Schema } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { marked, type Token } from "marked";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { initTurndownService } from "./turndown.ts";
 import { decorate } from "./markdown.tsx";

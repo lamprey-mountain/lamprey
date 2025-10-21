@@ -1,8 +1,8 @@
 import type { Embed } from "sdk";
 import { Show, type VoidProps } from "solid-js";
 import { ImageView } from "./media/mod.tsx";
-import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
+import { md } from "./markdown.tsx";
 
 type EmbedProps = {
 	embed: Embed;
@@ -13,10 +13,6 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 		del: "s",
 	},
 };
-const md = marked.use({
-	breaks: true,
-	gfm: true,
-});
 
 export const EmbedView = (props: VoidProps<EmbedProps>) => {
 	const description = () => {

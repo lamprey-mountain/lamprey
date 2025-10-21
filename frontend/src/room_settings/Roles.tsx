@@ -14,9 +14,9 @@ import type { RoomT } from "../types.ts";
 import type { Pagination, Permission, Role } from "sdk";
 import { Copyable } from "../util.tsx";
 import { createStore, produce } from "solid-js/store";
-import { md } from "../Message.tsx";
 import { moderatorPermissions, permissionGroups } from "../permissions.ts";
 import { Resizable } from "../Resizable.tsx";
+import { md } from "../markdown.tsx";
 
 function isDirty(a: Role, b: Role): boolean {
 	return a.name !== b.name ||

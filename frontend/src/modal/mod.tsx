@@ -186,10 +186,10 @@ const ModalMessageEdits = (
 	// FIXME: pagination
 	const api = useApi();
 	const [edits] = createResource(
-		{ thread_id: props.thread_id, message_id: props.message_id },
+		{ channel_id: props.thread_id, message_id: props.message_id },
 		async (path) => {
 			const { data } = await api.client.http.GET(
-				"/api/v1/thread/{thread_id}/message/{message_id}/version",
+				"/api/v1/channel/{channel_id}/message/{message_id}/version",
 				{
 					params: {
 						path,

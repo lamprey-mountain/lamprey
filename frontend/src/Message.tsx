@@ -9,7 +9,6 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { marked } from "marked";
 import sanitizeHtml from "sanitize-html";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
@@ -29,6 +28,7 @@ import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import twemoji from "twemoji";
 import { Reactions } from "./Reactions.tsx";
+import { md } from "./markdown.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -49,11 +49,6 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 	// },
 	allowedTags: sanitizeHtml.defaults.allowedTags.concat(["ins", "del"]),
 };
-
-export const md = marked.use({
-	breaks: true,
-	gfm: true,
-});
 
 const contentToHtml = new WeakMap();
 
