@@ -499,6 +499,9 @@ async fn room_member_delete(
         return Err(Error::NotFound);
     }
     let room = srv.rooms.get(room_id, None).await?;
+    if room.owner_id == Some(target_user_id) {
+        return Err(Error::BadStatic("room owner cannot leave the room"));
+    }
     if auth_user.id != target_user_id {
         if room.owner_id != Some(auth_user.id) {
             let rank = srv.perms.get_user_rank(room_id, auth_user.id).await?;
