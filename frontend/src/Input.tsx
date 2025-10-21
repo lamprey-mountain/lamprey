@@ -11,6 +11,7 @@ import { EditorState } from "prosemirror-state";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip.tsx";
+import { EmojiButton } from "./atoms/EmojiButton.tsx";
 
 type InputProps = {
 	thread: ThreadT;
@@ -73,6 +74,16 @@ export function Input(props: InputProps) {
 
 	const onSubmit = (text: string) => {
 		ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+	};
+
+	const onEmojiPick = (emoji: string) => {
+		const editorState = ctx.thread_editor_state.get(props.thread.id);
+		if (editorState) {
+			const { from, to } = editorState.selection;
+			const tr = editorState.tr.insertText(emoji, from, to);
+			const newState = editorState.apply(tr);
+			ctx.thread_editor_state.set(props.thread.id, newState);
+		}
 	};
 
 	const onChange = (state: EditorState) => {
@@ -189,6 +200,7 @@ export function Input(props: InputProps) {
 						: `send a message...`}
 					disabled={locked()}
 				/>
+				<EmojiButton picked={onEmojiPick} />
 			</div>
 		</div>
 	);

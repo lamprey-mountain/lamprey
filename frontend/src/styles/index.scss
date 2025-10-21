@@ -8,6 +8,7 @@
 @use "./media.scss";
 @use "./inbox.scss";
 @use "./voice-debug.scss";
+@use "./emoji-picker.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
@@ -2266,20 +2267,24 @@ table {
 	display: flex;
 	gap: 4px;
 
-	li {
+	.reaction {
 		cursor: pointer;
 		border: solid #445 1px;
 		background: #4452;
-		border-radius: 3px;
+		border-radius: 4px;
 		padding: 2px 4px;
 		display: flex;
 		align-items: center;
 		gap: 4px;
 	}
 
-	li.me {
-		border: solid #44f 1px;
-		background: #44f2;
+	.reaction.self {
+		border: solid #88f 1px;
+		background: #88f4;
+	}
+
+	.key {
+		display: contents;
 	}
 }
 
@@ -3095,5 +3100,47 @@ button.link {
 
 	& > .user-profile {
 		box-shadow: none;
+	}
+}
+
+.emoji {
+	height: 1em;
+	width: 1em;
+}
+
+.emoji-button {
+	position: relative;
+	margin: -8px 0;
+	height: 32px;
+	width: 32px;
+
+	.button {
+		display: grid;
+		place-items: center;
+		height: 100%;
+		pointer-events: all;
+		cursor: pointer;
+	}
+
+	.button .icon {
+		display: contents;
+	}
+
+	.button .emoji {
+		transform: none;
+		margin-right: 0;
+		height: 22px;
+		width: 22px;
+		transition: all 0.1s;
+	}
+
+	.button .emoji {
+		filter: grayscale(1);
+		transition: all 0.2s ease-out;
+	}
+
+	:is(.button:hover, .button.shown) .emoji {
+		filter: grayscale(0);
+		transform: scale(1.1);
 	}
 }

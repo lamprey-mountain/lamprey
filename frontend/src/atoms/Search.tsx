@@ -1,6 +1,5 @@
 import { Accessor, Setter } from "solid-js";
 
-// A simple input to replace the Search component for now
 export const Search = (props: {
 	placeholder: string;
 	size: string;
@@ -11,7 +10,7 @@ export const Search = (props: {
 }) => {
 	return (
 		<input
-			type="text"
+			type="search"
 			placeholder={props.placeholder}
 			value={props.value()}
 			onInput={(e) => props.onValue(e.currentTarget.value)}

@@ -21,6 +21,7 @@ import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.ts";
+import { Placement } from "@floating-ui/dom";
 
 export type Slice = {
 	start: number;
@@ -118,6 +119,13 @@ export type UserViewData = {
 	source?: "member-list" | "message";
 };
 
+export type Popout = {
+	id?: string;
+	ref?: HTMLElement;
+	props?: any;
+	placement?: Placement;
+} | {};
+
 export type ChatCtx = {
 	client: Client;
 	data: Data;
@@ -127,6 +135,8 @@ export type ChatCtx = {
 	events: Emitter<Events>;
 	menu: Accessor<Menu | null>;
 	setMenu: Setter<Menu | null>;
+	popout: Accessor<Popout>;
+	setPopout: Setter<Popout>;
 	userView: Accessor<UserViewData | null>;
 	setUserView: Setter<UserViewData | null>;
 	thread_anchor: ReactiveMap<string, MessageListAnchor>;

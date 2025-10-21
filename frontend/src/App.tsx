@@ -15,6 +15,7 @@ import {
 	type Events,
 	type MediaCtx,
 	type Menu,
+	Popout,
 	useCtx,
 	type UserViewData,
 } from "./context.ts";
@@ -76,6 +77,7 @@ import { ThreadNav } from "./Nav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
 import { UserView } from "./User.tsx";
+import { EmojiPicker } from "./EmojiPicker.tsx";
 
 const App: Component = () => {
 	return (
@@ -229,6 +231,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 
 	const [currentMedia, setCurrentMedia] = createSignal<MediaCtx | null>(null);
 	const [menu, setMenu] = createSignal<Menu | null>(null);
+	const [popout, setPopout] = createSignal<Popout>({});
 	const [userView, setUserView] = createSignal<UserViewData | null>(null);
 	const editingMessage = new ReactiveMap<
 		string,
@@ -263,6 +266,8 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		events,
 		menu,
 		setMenu,
+		popout,
+		setPopout,
 		userView,
 		setUserView,
 		thread_anchor: new ReactiveMap(),
@@ -300,10 +305,10 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	};
 	createEffect(() => {
 		const loc = useLocation();
-		const path = loc.pathname.match(/^\/thread\/([^/]+)/);
+		const path = loc.pathname.match(/^\/(thread|channel)\/([^/]+)/);
 		if (!path) return;
 		ctx.setRecentThreads((s) =>
-			[path[1], ...s.filter((i) => i !== path[1])].slice(0, 11)
+			[path[2], ...s.filter((i) => i !== path[2])].slice(0, 11)
 		);
 	});
 
@@ -588,6 +593,32 @@ function Overlay() {
 		onCleanup(cleanup);
 	});
 
+	const [popoutRef, setPopoutRef] = createSignal<HTMLElement>();
+	const [popoutFloating, setPopoutFloating] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+
+	createEffect(() => {
+		const reference = ctx.popout()?.ref;
+		const floating = popoutRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(
+			reference,
+			floating,
+			() => {
+				computePosition(reference, floating, {
+					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+					placement: ctx.popout()?.placement ?? "top",
+				}).then(({ x, y, strategy }) => {
+					setPopoutFloating({ x, y, strategy });
+				});
+			},
+		);
+		onCleanup(cleanup);
+	});
+
 	createEffect(() => {
 		ctx.menu();
 
@@ -654,9 +685,7 @@ function Overlay() {
 
 	return (
 		<>
-			<For each={ctx.data.modals}>
-				{(modal) => getModal(modal)}
-			</For>
+			<For each={ctx.data.modals}>{(modal) => getModal(modal)}</For>
 			<Show when={ctx.menu()}>
 				<div class="contextmenu">
 					<div
@@ -671,6 +700,20 @@ function Overlay() {
 					>
 						{getMenu(ctx.menu()!)}
 					</div>
+				</div>
+			</Show>
+			<Show when={ctx.popout()?.id === "emoji" && ctx.popout().ref}>
+				<div
+					ref={setPopoutRef}
+					style={{
+						position: popoutFloating.strategy,
+						top: "0px",
+						left: "0px",
+						translate: `${popoutFloating.x}px ${popoutFloating.y}px`,
+						"z-index": 100,
+					}}
+				>
+					<EmojiPicker {...ctx.popout().props} />
 				</div>
 			</Show>
 			<Show when={userViewData()?.user()}>

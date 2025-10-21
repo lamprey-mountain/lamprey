@@ -5,7 +5,6 @@ import shortJoypixels from "emojibase-data/en/shortcodes/joypixels.json";
 import shortEmojibase from "emojibase-data/en/shortcodes/emojibase.json";
 import emojis from "emojibase-data/en/compact.json";
 import { Search } from "./atoms/Search";
-import "./styles/EmojiPicker.scss";
 
 type Emoji = {
 	group?: number;
@@ -59,7 +58,7 @@ const getShortcode = (hex: string) => {
 
 const getTwemoji = (unicode: string) => {
 	return twemoji.parse(unicode, {
-		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji @14.0.2/assets/",
+		base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
 		attributes: () => ({ loading: "lazy" }),
 		folder: "svg",
 		ext: ".svg",
@@ -107,18 +106,16 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	};
 
 	return (
-		<div class="selector" onClick={(e) => e.stopPropagation()}>
-			<div class="header">
-				<div style="flex: 1">
-					<Search
-						placeholder="shift for multiple, ctrl for raw text"
-						size="input"
-						value={search}
-						onValue={setSearch}
-						submitted={handleSubmit}
-						escaped={() => props.selected(null, false)}
-					/>
-				</div>
+		<div class="emoji-picker" onClick={(e) => e.stopPropagation()}>
+			<header>
+				<Search
+					placeholder="shift for multiple, ctrl for raw text"
+					size="input"
+					value={search}
+					onValue={setSearch}
+					submitted={handleSubmit}
+					escaped={() => props.selected(null, false)}
+				/>
 				{/* TODO: (low priority) skin tone */}
 				<div
 					style="font-size: 24px; height: 28px; width: 28px; margin-left: 8px; cursor: pointer"
@@ -126,20 +123,34 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					innerHTML={getTwemoji("")}
 				>
 				</div>
+			</header>
+			<div class="categories">
+				{
+					/* TODO: icons for categories
+				<div>history</div>
+				<div>emoji_emotions</div>
+				<div>emoji_people</div>
+				<div>park</div>
+				<div>emoji_food_beverage</div>
+				<div>snowmobile</div>
+				<div>emoji_events</div>
+				<div>emoji_objects</div>
+				<div>emoji_symbols</div>
+				<div>flag</div>
+					*/
+				}
+				<div>0</div>
+				<div>1</div>
+				<div>2</div>
+				<div>3</div>
+				<div>4</div>
+				<div>5</div>
+				<div>6</div>
+				<div>7</div>
+				<div>8</div>
+				<div>9</div>
 			</div>
-			<div class="categories scroll">
-				<div class="icon">history</div>
-				<div class="icon">emoji_emotions</div>
-				<div class="icon">emoji_people</div>
-				<div class="icon">park</div>
-				<div class="icon">emoji_food_beverage</div>
-				<div class="icon">snowmobile</div>
-				<div class="icon">emoji_events</div>
-				<div class="icon">emoji_objects</div>
-				<div class="icon">emoji_symbols</div>
-				<div class="icon">flag</div>
-			</div>
-			<div class="emojis scroll">
+			<div class="emojis">
 				<Show
 					when={!groupsResource.loading}
 					fallback={
@@ -181,7 +192,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 				<Show when={hover()}>
 					{(h) => (
 						<>
-							<div class="emoji" innerHTML={getTwemoji(h().unicode)}></div>
+							<div innerHTML={getTwemoji(h().unicode)}></div>
 							<b>:{getShortcode(h().hexcode)}:</b>
 							{/* <span style="color: var(--fg-dim)">{h().tags?.join(", ")}</span> */}
 						</>

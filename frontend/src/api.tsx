@@ -30,9 +30,7 @@ import type {
 	VoiceState,
 } from "sdk";
 import type { Emitter } from "@solid-primitives/event-bus";
-import {
-	Messages,
-} from "./api/messages.ts";
+import { Messages } from "./api/messages.ts";
 import { Rooms } from "./api/rooms.ts";
 import { Channels } from "./api/channels.ts";
 import { Threads } from "./api/threads.ts";
@@ -177,8 +175,8 @@ export function createApi(
 					const old_listing = (old_status === "active"
 						? threads._cachedListings
 						: old_status === "archived"
-							? (threads as any)._cachedArchivedListings
-							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (old_listing?.pagination) {
 						const p = old_listing.pagination;
@@ -197,8 +195,8 @@ export function createApi(
 					const new_listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-							? (threads as any)._cachedArchivedListings
-							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (new_listing?.pagination) {
 						const p = new_listing.pagination;
@@ -215,8 +213,8 @@ export function createApi(
 					const listing = (new_status === "active"
 						? threads._cachedListings
 						: new_status === "archived"
-							? (threads as any)._cachedArchivedListings
-							: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
+						? (threads as any)._cachedArchivedListings
+						: (threads as any)._cachedRemovedListings)?.get(thread.room_id);
 
 					if (listing?.pagination) {
 						const p = listing.pagination;

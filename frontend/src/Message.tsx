@@ -27,6 +27,8 @@ import { Avatar, UserView } from "./User.tsx";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { createEditor } from "./Editor.tsx";
 import { uuidv7 } from "uuidv7";
+import twemoji from "twemoji";
+import { Reactions } from "./Reactions.tsx";
 
 type MessageProps = {
 	message: MessageT;
@@ -64,8 +66,13 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			md.parse(props.message.content ?? "") as string,
 			sanitizeHtmlOptions,
 		).trim();
-		contentToHtml.set(props.message, html);
-		return html;
+		const twemojified = twemoji.parse(html, {
+			base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
+			folder: "svg",
+			ext: ".svg",
+		});
+		contentToHtml.set(props.message, twemojified);
+		return twemojified;
 	}
 
 	let highlightEl: HTMLDivElement;
@@ -288,14 +295,6 @@ export function MessageView(props: MessageProps) {
 			}
 		}
 	};
-
-	function reactionAdd(key: string) {
-		api.reactions.add(props.message.channel_id, props.message.id, key);
-	}
-
-	function reactionDel(key: string) {
-		api.reactions.delete(props.message.channel_id, props.message.id, key);
-	}
 
 	function getComponent() {
 		const date = new Date(
@@ -548,20 +547,7 @@ export function MessageView(props: MessageProps) {
 								</ul>
 							</Show>
 							<Show when={props.message.reactions?.length}>
-								<ul class="reactions">
-									<For each={props.message.reactions}>
-										{(r) => (
-											<li
-												classList={{ me: r.self }}
-												onClick={() =>
-													r.self ? reactionAdd(r.key) : reactionDel(r.key)}
-											>
-												<span class="emoji">{r.key.toString()}</span>
-												<span class="count">{r.count}</span>
-											</li>
-										)}
-									</For>
-								</ul>
+								<Reactions message={props.message} />
 							</Show>
 						</div>
 					</Show>
@@ -598,20 +584,7 @@ export function MessageView(props: MessageProps) {
 								</ul>
 							</Show>
 							<Show when={props.message.reactions?.length}>
-								<ul class="reactions">
-									<For each={props.message.reactions}>
-										{(r) => (
-											<li
-												classList={{ me: r.self }}
-												onClick={() =>
-													r.self ? reactionAdd(r.key) : reactionDel(r.key)}
-											>
-												<span class="emoji">{r.key.toString()}</span>
-												<span class="count">{r.count}</span>
-											</li>
-										)}
-									</For>
-								</ul>
+								<Reactions message={props.message} />
 							</Show>
 						</div>
 						<Time date={date} animGroup="message-ts" />
