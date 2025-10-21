@@ -32,7 +32,9 @@ pub async fn search_messages(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
-    let mut res = data.search_message(auth_user.id, json, q).await?;
+    let srv = s.services();
+    let vis = srv.channels.list_user_room_channels(auth_user.id).await?;
+    let mut res = data.search_message(auth_user.id, json, q, &vis).await?;
     for message in &mut res.items {
         s.presign_message(message).await?;
     }
@@ -56,7 +58,9 @@ pub async fn search_channels(
 ) -> Result<impl IntoResponse> {
     json.validate()?;
     let data = s.data();
-    let res = data.search_channel(auth_user.id, json, q).await?;
+    let srv = s.services();
+    let vis = srv.channels.list_user_room_channels(auth_user.id).await?;
+    let res = data.search_channel(auth_user.id, json, q, &vis).await?;
     Ok(Json(res))
 }
 

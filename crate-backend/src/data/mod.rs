@@ -560,12 +560,14 @@ pub trait DataSearch {
         user_id: UserId,
         query: SearchMessageRequest,
         paginate: PaginationQuery<MessageId>,
+        channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Message>>;
     async fn search_channel(
         &self,
         user_id: UserId,
         query: SearchChannelsRequest,
         paginate: PaginationQuery<ChannelId>,
+        channel_visibility: &[(ChannelId, bool)],
     ) -> Result<PaginationResponse<Channel>>;
 }
 

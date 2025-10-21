@@ -1,8 +1,10 @@
 with
     channel_viewer as (
         select channel.id from channel
-        join room_member on channel.room_id = room_member.room_id
-        where room_member.user_id = $1
+        where channel.id = any($7)
+        union
+        select channel.id from channel
+        where channel.parent_id = any($8)
         union
         select channel.id from channel
         join thread_member on channel.id = thread_member.channel_id

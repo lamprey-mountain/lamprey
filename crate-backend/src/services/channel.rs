@@ -4,7 +4,8 @@ use std::time::Duration;
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, Channel, ChannelId, ChannelPatch,
-    ChannelType, MessageSync, MessageThreadRename, MessageType, Permission, User, UserId,
+    ChannelType, MessageSync, MessageThreadRename, MessageType, PaginationQuery, Permission,
+    RoomId, User, UserId,
 };
 use futures::stream::FuturesOrdered;
 use futures::StreamExt;
@@ -79,7 +80,7 @@ impl ServiceThreads {
                         .data()
                         .thread_member_list(
                             channel_id,
-                            common::v1::types::PaginationQuery {
+                            PaginationQuery {
                                 from: None,
                                 to: None,
                                 dir: None,
@@ -325,5 +326,67 @@ impl ServiceThreads {
             .iter()
             .map(|(key, until)| (key.0, key.1, until))
             .collect()
+    }
+
+    /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
+    pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<(ChannelId, bool)>> {
+        let rooms = self
+            .state
+            .data()
+            .room_list(
+                user_id,
+                PaginationQuery {
+                    from: None,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+                false,
+            )
+            .await?;
+        let mut out = vec![];
+        for room in rooms.items {
+            out.extend(
+                self.list_user_room_channels_single(user_id, room.id)
+                    .await?,
+            );
+        }
+        Ok(out)
+    }
+
+    /// like list_user_room_channels, but only for a single room
+    pub async fn list_user_room_channels_single(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+    ) -> Result<Vec<(ChannelId, bool)>> {
+        let channels = self
+            .state
+            .data()
+            .channel_list(
+                room_id,
+                user_id,
+                PaginationQuery {
+                    from: None,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+                None,
+            )
+            .await?;
+        let mut out = vec![];
+        for ch in channels.items {
+            let p = self
+                .state
+                .services()
+                .perms
+                .for_channel(user_id, ch.id)
+                .await?;
+            if p.has(Permission::ViewChannel) {
+                out.push((ch.id, p.has(Permission::ThreadManage)));
+            }
+        }
+        Ok(out)
     }
 }
