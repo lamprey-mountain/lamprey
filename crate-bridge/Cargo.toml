@@ -1,10 +1,14 @@
 [package]
-name = "bridge-discord"
+name = "lamprey-bridge"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
+
+[[bin]]
+name = "bridge"
+path = "src/main.rs"
 
 [dependencies]
 async-trait = "0.1.85"
@@ -17,10 +21,10 @@ sqlx = { version = "0.8.3", features = ["runtime-tokio", "sqlite"] }
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-common = { version = "0.1.0", path = "../crate-common" }
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 uuid = "1.12.0"
-crate-hakari = { version = "0.1", path = "../crate-hakari" }
-sdk = { version = "0.1.0", path = "../crate-sdk" }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
 time = { version = "0.3", features = ["serde-human-readable", "macros"] }
 anyhow = "1.0.95"
 figment = { version = "0.10.19", features = ["env", "toml"] }

@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use figment::providers::{Env, Format, Toml};
+use lamprey_voice::{config::Config, sfu::Sfu};
 use tracing_subscriber::EnvFilter;
-use voice::{config::Config, sfu::Sfu};
 
 #[tokio::main]
 async fn main() -> Result<()> {

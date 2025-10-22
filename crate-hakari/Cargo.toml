@@ -3,7 +3,7 @@
 #     cargo hakari generate
 
 [package]
-name = "crate-hakari"
+name = "lamprey-hakari"
 description = "workspace-hack package, managed by hakari"
 version.workspace = true
 edition.workspace = true

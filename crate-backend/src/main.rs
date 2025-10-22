@@ -20,7 +20,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::config::{ListenComponent, ListenTransport};
 
-use backend::{
+use lamprey_backend::{
     cli, config, error,
     routes::{self},
     types::{

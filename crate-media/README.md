@@ -1,6 +1,6 @@
-# cdn
+# media
 
-WORK IN PROGRESS! this is a cdn proxy that can generate thumbnails
+this is media cdn proxy that can generate thumbnails
 
 ## notes
 

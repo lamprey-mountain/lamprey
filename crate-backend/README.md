@@ -1,3 +1,3 @@
 # backend
 
-it has been rewritten
+the main monolith. provide rest/http and websocket apis.

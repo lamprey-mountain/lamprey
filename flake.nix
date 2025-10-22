@@ -44,9 +44,9 @@
           });
 
         backend = mkCrate "backend";
-        bridge-discord = mkCrate "bridge-discord";
-        sfu = mkCrate "voice";
-        cdn = mkCrate "cdn";
+        bridge = mkCrate "bridge";
+        voice = mkCrate "voice";
+        media = mkCrate "media";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
@@ -74,7 +74,7 @@
         });
       in {
         packages = rec {
-          inherit backend bridge-discord sfu cdn frontend;
+          inherit backend bridge voice media frontend;
 
           cargo-deps = cargoArtifacts;
 
@@ -89,41 +89,41 @@
             };
           };
 
-          bridge-discord-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "bridge-discord";
+          bridge-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "bridge";
             tag = "latest";
             contents = [ pkgs.dockerTools.caCertificates ];
             config = {
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
                 "--"
-                "${bridge-discord}/bin/bridge-discord"
+                "${bridge}/bin/bridge"
               ];
             };
           };
 
-          sfu-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "sfu";
+          voice-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "voice";
             tag = "latest";
             contents = [ pkgs.dockerTools.caCertificates ];
             config = {
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
                 "--"
-                "${sfu}/bin/sfu"
+                "${voice}/bin/voice"
               ];
             };
           };
 
-          cdn-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "cdn";
+          media-oci = pkgs.dockerTools.streamLayeredImage {
+            name = "media";
             tag = "latest";
             contents = [ pkgs.dockerTools.caCertificates ];
             config = {
               Entrypoint = [
                 "${pkgs.tini}/bin/tini"
                 "--"
-                "${cdn}/bin/cdn"
+                "${media}/bin/media"
               ];
             };
           };

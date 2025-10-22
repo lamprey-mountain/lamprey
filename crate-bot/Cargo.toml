@@ -1,19 +1,23 @@
 [package]
-name = "bot"
+name = "lamprey-bot"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "bot"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = "1.0.99"
 clap = { version = "4.5.47", features = ["derive"] }
-common = { version = "0.1.0", path = "../crate-common" }
-crate-hakari = { version = "0.1", path = "../crate-hakari" }
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env", "toml"] }
-sdk = { version = "0.1.0", path = "../crate-sdk" }
+sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
 str0m = "0.10.0"

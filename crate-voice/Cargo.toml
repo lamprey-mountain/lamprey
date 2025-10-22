@@ -1,16 +1,20 @@
 [package]
-name = "voice"
+name = "lamprey-voice"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 description.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "voice"
+path = "src/main.rs"
+
 [dependencies]
-common = { version = "0.1.0", path = "../crate-common" }
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 str0m = "0.10.0"
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
-crate-hakari = { version = "0.1", path = "../crate-hakari" }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 anyhow = "1.0.98"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
