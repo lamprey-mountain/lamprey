@@ -27,15 +27,13 @@ enum DbUserRelType {
 
 struct DbUserRel {
     rel: Option<DbUserRelType>,
-    note: Option<String>,
-    petname: Option<String>,
+    ignore: bool,
     ignore_until: Option<PrimitiveDateTime>,
 }
 
 struct DbUserRelWithId {
     rel: Option<DbUserRelType>,
-    note: Option<String>,
-    petname: Option<String>,
+    ignore: bool,
     ignore_until: Option<PrimitiveDateTime>,
     user_id: Uuid,
 }
@@ -66,8 +64,7 @@ impl From<Relationship> for DbUserRel {
     fn from(value: Relationship) -> Self {
         DbUserRel {
             rel: value.relation.map(Into::into),
-            note: value.note,
-            petname: value.petname,
+            ignore: value.ignore.is_some(),
             ignore_until: value.ignore.and_then(|i| i.until.map(Into::into)),
         }
     }
@@ -76,12 +73,14 @@ impl From<Relationship> for DbUserRel {
 impl From<DbUserRel> for Relationship {
     fn from(value: DbUserRel) -> Self {
         Relationship {
-            note: value.note,
             relation: value.rel.map(Into::into),
-            petname: value.petname,
-            ignore: value.ignore_until.map(|t| Ignore {
-                until: Some(t.into()),
-            }),
+            ignore: if value.ignore {
+                Some(Ignore {
+                    until: value.ignore_until.map(|t| t.into()),
+                })
+            } else {
+                None
+            },
         }
     }
 }
@@ -91,9 +90,7 @@ impl From<DbUserRelWithId> for RelationshipWithUserId {
         RelationshipWithUserId {
             user_id: value.user_id.into(),
             inner: Relationship {
-                note: value.note,
                 relation: value.rel.map(Into::into),
-                petname: value.petname,
                 ignore: value.ignore_until.map(|t| Ignore {
                     until: Some(t.into()),
                 }),
@@ -113,19 +110,17 @@ impl DataUserRelationship for Postgres {
         let rel: DbUserRel = rel.into();
         query!(
             r#"
-            INSERT INTO user_relationship (user_id, other_id, rel, note, petname, ignore_until)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO user_relationship (user_id, other_id, rel, ignore, ignore_until)
+            VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT ON CONSTRAINT user_relationship_pkey DO UPDATE SET
     			rel = excluded.rel,
-    			note = excluded.note,
-    			petname = excluded.petname,
+    			ignore = excluded.ignore,
     			ignore_until = excluded.ignore_until;
             "#,
             user_id.into_inner(),
             other_id.into_inner(),
             rel.rel as _,
-            rel.note,
-            rel.petname,
+            rel.ignore,
             rel.ignore_until,
         )
         .execute(&self.pool)
@@ -143,7 +138,7 @@ impl DataUserRelationship for Postgres {
         let row = query_as!(
             DbUserRel,
             r#"
-            SELECT rel as "rel: _", note, petname, ignore_until FROM user_relationship
+            SELECT rel as "rel: _", ignore, ignore_until FROM user_relationship
             WHERE user_id = $1 AND other_id = $2
             FOR UPDATE
             "#,
@@ -154,27 +149,23 @@ impl DataUserRelationship for Postgres {
         .await?;
         let rel: Relationship = row.map(Into::into).unwrap_or_default();
         let rel = Relationship {
-            note: patch.note.unwrap_or(rel.note),
             relation: patch.relation.unwrap_or(rel.relation),
-            petname: patch.petname.unwrap_or(rel.petname),
             ignore: patch.ignore.unwrap_or(rel.ignore),
         };
         let rel: DbUserRel = rel.into();
         query!(
             r#"
-            INSERT INTO user_relationship (user_id, other_id, rel, note, petname, ignore_until)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO user_relationship (user_id, other_id, rel, ignore, ignore_until)
+            VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT ON CONSTRAINT user_relationship_pkey DO UPDATE SET
     			rel = excluded.rel,
-    			note = excluded.note,
-    			petname = excluded.petname,
+    			ignore = excluded.ignore,
     			ignore_until = excluded.ignore_until;
             "#,
             user_id.into_inner(),
             other_id.into_inner(),
             rel.rel as _,
-            rel.note,
-            rel.petname,
+            rel.ignore,
             rel.ignore_until,
         )
         .execute(&mut *tx)
@@ -202,7 +193,7 @@ impl DataUserRelationship for Postgres {
         let row = query_as!(
             DbUserRel,
             r#"
-            SELECT rel as "rel: _", note, petname, ignore_until FROM user_relationship
+            SELECT rel as "rel: _", ignore, ignore_until FROM user_relationship
             WHERE user_id = $1 AND other_id = $2
             "#,
             user_id.into_inner(),
@@ -213,7 +204,7 @@ impl DataUserRelationship for Postgres {
         Ok(row.map(Into::into))
     }
 
-    async fn user_relationship_list(
+    async fn user_relationship_list_blocked(
         &self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
@@ -225,8 +216,8 @@ impl DataUserRelationship for Postgres {
             query_as!(
                 DbUserRelWithId,
                 r#"
-                SELECT rel as "rel: _", note, petname, ignore_until, other_id as user_id FROM user_relationship
-            	WHERE user_id = $1 AND other_id > $2 AND other_id < $3
+                SELECT rel as "rel: _", ignore, ignore_until, other_id as user_id FROM user_relationship
+            	WHERE user_id = $1 AND other_id > $2 AND other_id < $3 AND rel = 'Block'
             	ORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5
                 "#,
                 user_id.into_inner(),
@@ -236,7 +227,97 @@ impl DataUserRelationship for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1"#,
+                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1 AND rel = 'Block'"#,
+                user_id.into_inner(),
+            ),
+            |i: &RelationshipWithUserId| i.user_id.to_string()
+        )
+    }
+
+    async fn user_relationship_list_friends(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbUserRelWithId,
+                r#"
+                SELECT rel as "rel: _", ignore, ignore_until, other_id as user_id FROM user_relationship
+                WHERE user_id = $1 AND other_id > $2 AND other_id < $3 AND rel = 'Friend'
+                ORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5
+                "#,
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1 AND rel = 'Friend'"#,
+                user_id.into_inner(),
+            ),
+            |i: &RelationshipWithUserId| i.user_id.to_string()
+        )
+    }
+
+    async fn user_relationship_list_pending(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbUserRelWithId,
+                r#"
+                SELECT rel as "rel: _", ignore, ignore_until, other_id as user_id FROM user_relationship
+                WHERE user_id = $1 AND other_id > $2 AND other_id < $3 AND (rel = 'Incoming' OR rel = 'Outgoing')
+                ORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5
+                "#,
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1 AND (rel = 'Incoming' OR rel = 'Outgoing')"#,
+                user_id.into_inner(),
+            ),
+            |i: &RelationshipWithUserId| i.user_id.to_string()
+        )
+    }
+
+    async fn user_relationship_list_ignored(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self.pool,
+            query_as!(
+                DbUserRelWithId,
+                r#"
+                SELECT rel as "rel: _", ignore, ignore_until, other_id as user_id FROM user_relationship
+                WHERE user_id = $1 AND other_id > $2 AND other_id < $3 AND ignore = TRUE
+                ORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5
+                "#,
+                user_id.into_inner(),
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM user_relationship WHERE user_id = $1 AND ignore = TRUE"#,
                 user_id.into_inner(),
             ),
             |i: &RelationshipWithUserId| i.user_id.to_string()

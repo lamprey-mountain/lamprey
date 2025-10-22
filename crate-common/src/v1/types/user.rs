@@ -250,18 +250,8 @@ impl Diff<User> for UserPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Relationship {
-    /// whatever you want to write
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
-    pub note: Option<String>,
-
     /// your relationship with this other user
     pub relation: Option<RelationshipType>,
-
-    /// personal petname for this user
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub petname: Option<String>,
 
     #[serde(flatten)]
     pub ignore: Option<Ignore>,
@@ -287,23 +277,9 @@ pub struct UserWithRelationship {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RelationshipPatch {
-    #[deprecated = "will be moved to user config"]
-    /// whatever you want to write
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
-    #[serde(default, deserialize_with = "some_option")]
-    pub note: Option<Option<String>>,
-
     /// relationship with other user
     #[serde(default, deserialize_with = "some_option")]
     pub relation: Option<Option<RelationshipType>>,
-
-    #[deprecated = "will be moved to user config"]
-    /// personal petname for this user
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    #[serde(default, deserialize_with = "some_option")]
-    pub petname: Option<Option<String>>,
 
     #[cfg_attr(feature = "utoipa", schema(required = false))]
     #[serde(default, flatten, deserialize_with = "some_option")]
@@ -336,9 +312,7 @@ pub enum RelationshipType {
 
 impl Diff<Relationship> for RelationshipPatch {
     fn changes(&self, other: &Relationship) -> bool {
-        self.note.changes(&other.note)
-            || self.relation.changes(&other.relation)
-            || self.petname.changes(&other.petname)
+        self.relation.changes(&other.relation)
             || self.ignore.changes(&other.ignore)
     }
 }

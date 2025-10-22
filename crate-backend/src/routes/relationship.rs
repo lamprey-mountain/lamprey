@@ -38,7 +38,32 @@ async fn friend_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let rels = data.user_relationship_list(auth_user.id, q).await?;
+    let rels = data.user_relationship_list_friends(auth_user.id, q).await?;
+    Ok(Json(rels))
+}
+
+/// Friend list pending
+///
+/// List (mutual) friends.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/friend/pending",
+    params(
+        PaginationQuery<UserId>,
+        ("user_id", description = "User id to list friends from"),
+    ),
+    tags = ["relationship"],
+    responses(
+        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
+    )
+)]
+async fn friend_list_pending(
+    Auth(auth_user): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let rels = data.user_relationship_list_pending(auth_user.id, q).await?;
     Ok(Json(rels))
 }
 
@@ -80,19 +105,16 @@ async fn friend_add(
                 auth_user.id,
                 target_user_id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
                 },
+
             )
             .await?;
             data.user_relationship_edit(
                 target_user_id,
                 auth_user.id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
                 },
@@ -117,8 +139,6 @@ async fn friend_add(
                 auth_user.id,
                 target_user_id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Outgoing)),
                 },
@@ -128,8 +148,6 @@ async fn friend_add(
                 target_user_id,
                 auth_user.id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Incoming)),
                 },
@@ -283,7 +301,7 @@ async fn block_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let rels = data.user_relationship_list(auth_user.id, q).await?;
+    let rels = data.user_relationship_list_blocked(auth_user.id, q).await?;
     Ok(Json(rels))
 }
 
@@ -309,8 +327,6 @@ async fn block_add(
         auth_user.id,
         target_user_id,
         RelationshipPatch {
-            note: None,
-            petname: None,
             ignore: None,
             relation: Some(Some(RelationshipType::Block)),
         },
@@ -431,8 +447,7 @@ async fn ignore_list(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let data = s.data();
-    let mut rels = data.user_relationship_list(auth_user.id, q).await?;
-    rels.items.retain(|r| r.inner.ignore.is_some());
+    let rels = data.user_relationship_list_ignored(auth_user.id, q).await?;
     Ok(Json(rels))
 }
 
@@ -459,8 +474,6 @@ async fn ignore_add(
         auth_user.id,
         target_user_id,
         RelationshipPatch {
-            note: None,
-            petname: None,
             ignore: Some(Some(ignore)),
             relation: None,
         },
@@ -520,8 +533,6 @@ async fn ignore_remove(
             auth_user.id,
             target_user_id,
             RelationshipPatch {
-                note: None,
-                petname: None,
                 ignore: Some(None),
                 relation: None,
             },
@@ -556,6 +567,7 @@ async fn ignore_remove(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(friend_list))
+        .routes(routes!(friend_list_pending))
         .routes(routes!(friend_add))
         .routes(routes!(friend_remove))
         .routes(routes!(block_list))

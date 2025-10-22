@@ -678,7 +678,30 @@ pub trait DataUserRelationship {
         user_id: UserId,
         other_id: UserId,
     ) -> Result<Option<Relationship>>;
-    async fn user_relationship_list(
+
+    /// paginate users who have relationship Block
+    async fn user_relationship_list_blocked(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>>;
+
+    /// paginate users who have relationship Friend
+    async fn user_relationship_list_friends(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>>;
+
+    /// paginate users who have relationship Incoming or Outgoing
+    async fn user_relationship_list_pending(
+        &self,
+        user_id: UserId,
+        pagination: PaginationQuery<UserId>,
+    ) -> Result<PaginationResponse<RelationshipWithUserId>>;
+
+    /// paginate users who are currently ignored
+    async fn user_relationship_list_ignored(
         &self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,

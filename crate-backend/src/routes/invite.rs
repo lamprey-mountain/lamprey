@@ -310,8 +310,6 @@ async fn invite_use(
                 auth_user.id,
                 user.id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
                 },
@@ -321,8 +319,6 @@ async fn invite_use(
                 user.id,
                 auth_user.id,
                 RelationshipPatch {
-                    note: None,
-                    petname: None,
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
                 },
