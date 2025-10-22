@@ -21,23 +21,23 @@ services:
       - postgres
     volumes:
       - ./config-backend.toml:/config.toml:ro
-  cdn:
-    container_name: lamprey-cdn
-    image: git.celery.eu.org/lamprey/lamprey-cdn:latest
+  media:
+    container_name: lamprey-media
+    image: git.celery.eu.org/lamprey/lamprey-media:latest
     restart: unless-stopped
     depends_on:
       - postgres
     volumes:
-      - ./config-cdn.toml:/cdn.toml:ro
-  bridge-discord:
-    container_name: lamprey-bridge-discord
-    image: git.celery.eu.org/lamprey/lamprey-bridge-discord:latest
+      - ./config-media.toml:/cdn.toml:ro
+  bridge:
+    container_name: lamprey-bridge
+    image: git.celery.eu.org/lamprey/lamprey-bridge:latest
     restart: unless-stopped
     depends_on:
       - backend
     volumes:
-      - bridge_discord:/data
-      - ./config-bridge-discord.toml:/config.toml:ro
+      - bridge:/data
+      - ./config-bridge.toml:/config.toml:ro
   proxy:
     container_name: lamprey-proxy
     build:
@@ -51,6 +51,6 @@ services:
       - caddy_config:/config
 volumes:
   postgres:
-  bridge_discord:
+  bridge:
   caddy_data:
   caddy_config:
