@@ -36,7 +36,6 @@ common = { package = "lamprey-common", version = "0.1.0", path = "../crate-commo
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid"] }
 uuid = { version = "1.11.1", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 nanoid = "0.4.0"
 utoipa-axum = "0.2.0"
 image = { version = "0.25.6", features = ["avif"] }
@@ -61,6 +60,7 @@ sha2 = "0.10.9"
 base64 = "0.22.1"
 diff = "0.1.13"
 strum = { version = "0.27.2", features = ["derive"] }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 
 [build-dependencies]
 vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc"] }
