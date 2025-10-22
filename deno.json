@@ -2,7 +2,7 @@
 	"workspace": ["frontend", "ts-sdk", "tests"],
 	"fmt": {
 		"useTabs": true,
-		"exclude": [".sqlx", "pnpm-lock.yaml"]
+		"exclude": ["**/.sqlx", "pnpm-lock.yaml"]
 	},
 	"tasks": {
 		"hakari": "cargo hakari generate && cargo hakari manage-deps",
