@@ -8,7 +8,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 authors = ["tezlm"]
-description = "unnamed chat thing?"
+description = "yet another chat thing"
 license = "MIT OR Apache-2.0"
 
 [profile.dev]

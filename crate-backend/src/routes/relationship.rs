@@ -108,7 +108,6 @@ async fn friend_add(
                     ignore: None,
                     relation: Some(Some(RelationshipType::Friend)),
                 },
-
             )
             .await?;
             data.user_relationship_edit(

@@ -1,15 +1,10 @@
-use std::{
-    net::{IpAddr, SocketAddr, ToSocketAddrs},
-    path::PathBuf,
-    time::Instant,
-};
-use stunclient::StunClient;
-use systemstat::{Platform, System};
-use tokio::time;
-
-use anyhow::{anyhow, Result};
 use common::v1::types::voice::{
     MediaKind, SessionDescription, SignallingMessage, TrackId, TrackMetadata,
+};
+use std::{
+    net::{SocketAddr, ToSocketAddrs},
+    path::PathBuf,
+    time::Instant,
 };
 use str0m::{
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
@@ -18,6 +13,7 @@ use str0m::{
     net::Protocol,
     Candidate, Rtc,
 };
+use stunclient::StunClient;
 use symphonia::core::{
     codecs::CODEC_TYPE_OPUS,
     formats::{FormatOptions, FormatReader, Track},
@@ -25,6 +21,7 @@ use symphonia::core::{
     meta::MetadataOptions,
     probe::Hint,
 };
+use tokio::time;
 use tokio::{
     net::UdpSocket,
     sync::mpsc::{Receiver, Sender},
@@ -334,22 +331,4 @@ impl Player {
             error!("failed to write rtp packet: {e}");
         }
     }
-}
-
-fn select_host_address_ipv4() -> Result<IpAddr> {
-    let system = System::new();
-    let networks = system.networks().unwrap();
-
-    for net in networks.values() {
-        for n in &net.addrs {
-            if let systemstat::IpAddr::V4(v) = n.addr {
-                if !v.is_loopback() && !v.is_link_local() && !v.is_broadcast() && !v.is_private() {
-                    debug!("selected ipv4 addr {v}");
-                    return Ok(IpAddr::V4(v));
-                }
-            }
-        }
-    }
-
-    Err(anyhow!("Found no usable network interface"))
 }

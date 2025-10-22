@@ -312,8 +312,7 @@ pub enum RelationshipType {
 
 impl Diff<Relationship> for RelationshipPatch {
     fn changes(&self, other: &Relationship) -> bool {
-        self.relation.changes(&other.relation)
-            || self.ignore.changes(&other.ignore)
+        self.relation.changes(&other.relation) || self.ignore.changes(&other.ignore)
     }
 }
 

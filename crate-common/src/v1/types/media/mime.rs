@@ -52,7 +52,7 @@ mod schema {
             let schema = schema!(String)
                 .title(Some("Mime"))
                 .description(Some("a mime/media type"))
-                .example(Some(serde_json::to_value("application/json").unwrap()))
+                .examples([serde_json::json!("application/json")])
                 .build();
             RefOr::T(Schema::Object(schema))
         }

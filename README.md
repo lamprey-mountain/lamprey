@@ -1,16 +1,13 @@
 # lamprey mountain
 
-the internet's finest asylum
+> the internet's finest asylum
 
-a testing playground for interesting ideas
+its another chat app because all the other ones kind of suck right now.
 
 ## status
 
-do not use this yet!
-
-ley is full of strange experiments and hacks what will probably lead nowhere. it
-might end up with a ton of state-of-the-art fancy tech, but it probably won't be
-stable enough to seriously use... at least for now
+do not use this yet! lamprey mountain is full of experiments that will probably
+lead nowhere. it's also full of hacky and buggy code.
 
 ## license
 

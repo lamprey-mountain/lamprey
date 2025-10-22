@@ -28,7 +28,7 @@ pub struct Invite {
     pub target: InviteTarget,
 
     /// the user who created this invite
-    #[deprecated = "use creator_id"]
+    // #[deprecated = "use creator_id"]
     pub creator: User,
 
     /// the id of the user who created this invite
