@@ -39,12 +39,12 @@ jobs:
         derivation:
           - backend
           - backend-oci
-          - bridge-discord
-          - bridge-discord-oci
-          - sfu
-          - sfu-oci
-          - cdn
-          - cdn-oci
+          - bridge
+          - bridge-oci
+          - voice
+          - voice-oci
+          - media
+          - media-oci
     steps:
       - name: setup
         run: |
@@ -68,9 +68,9 @@ jobs:
       matrix:
         derivation:
           - backend
-          - bridge-discord
-          - sfu
-          - cdn
+          - bridge
+          - voice
+          - media
     steps:
       - name: setup
         run: |
