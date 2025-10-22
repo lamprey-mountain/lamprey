@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n            where code = $1 and deleted_at is null\n            FOR UPDATE\n            ",
+  "query": "\n            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n        \tWHERE target_type = 'user' AND target_id = $1 AND code > $2 AND code < $3 and deleted_at is null\n        \tORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5\n        ",
   "describe": {
     "columns": [
       {
@@ -15,47 +15,57 @@
       },
       {
         "ordinal": 2,
+        "name": "target_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "code",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "expires_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "max_uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "description",
         "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
       ]
     },
     "nullable": [
       false,
+      true,
       true,
       false,
       false,
@@ -66,5 +76,5 @@
       true
     ]
   },
-  "hash": "7a006bb687cc50d413062f6f61b3403ddf3c5c25bfd8df78428967b5265a8e6e"
+  "hash": "c7c8eed1c04f34c9094c86916484af97c13fc6c7a6b377f5dfc996b16c57857f"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT rel as \"rel: _\", note, petname, ignore_forever, ignore_until FROM user_relationship\n            WHERE user_id = $1 AND other_id = $2\n            ",
+  "query": "\n            SELECT rel as \"rel: _\", ignore, ignore_until FROM user_relationship\n            WHERE user_id = $1 AND other_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -22,21 +22,11 @@
       },
       {
         "ordinal": 1,
-        "name": "note",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
-        "name": "petname",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 3,
-        "name": "ignore_forever",
+        "name": "ignore",
         "type_info": "Bool"
       },
       {
-        "ordinal": 4,
+        "ordinal": 2,
         "name": "ignore_until",
         "type_info": "Timestamp"
       }
@@ -49,11 +39,9 @@
     },
     "nullable": [
       true,
-      true,
-      true,
       false,
       true
     ]
   },
-  "hash": "5378fcb72a0e669cc227f5e36d692782682ebe2eccf714a05afaff442df433ba"
+  "hash": "e1f341626c18e7c63f0ccacaf3f642311f9937a838d7ec27a19098a05f7a2e0b"
 }

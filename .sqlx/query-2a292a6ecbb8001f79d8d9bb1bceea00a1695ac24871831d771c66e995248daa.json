@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at\n                FROM calendar_event\n                WHERE channel_id = $1 AND id > $2 AND id < $3 AND deleted_at IS NULL\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
+  "query": "\n                SELECT id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at\n                FROM calendar_event\n                WHERE channel_id = $1 AND id > $2 AND id < $3 AND deleted_at IS NULL AND end_at > $6 AND start_at < $7\n                ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5\n                ",
   "describe": {
     "columns": [
       {
@@ -65,7 +65,9 @@
         "Uuid",
         "Uuid",
         "Text",
-        "Int8"
+        "Int8",
+        "Timestamp",
+        "Timestamp"
       ]
     },
     "nullable": [
@@ -82,5 +84,5 @@
       false
     ]
   },
-  "hash": "34c482a02efc815eb31d301ff4b6b8f639889e6df3570c75b952d84e16a0f249"
+  "hash": "2a292a6ecbb8001f79d8d9bb1bceea00a1695ac24871831d771c66e995248daa"
 }

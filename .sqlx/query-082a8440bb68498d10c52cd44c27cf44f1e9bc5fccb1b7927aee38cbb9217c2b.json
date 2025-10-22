@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n        \tWHERE target_type = 'server' AND creator_id = $1 AND code > $2 AND code < $3 and deleted_at is null\n        \tORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5\n        ",
+  "query": "\n            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n            where code = $1 and deleted_at is null\n        ",
   "describe": {
     "columns": [
       {
@@ -15,51 +15,53 @@
       },
       {
         "ordinal": 2,
+        "name": "target_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "code",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "expires_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "max_uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "description",
         "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Text",
-        "Text",
-        "Int8"
+        "Text"
       ]
     },
     "nullable": [
       false,
+      true,
       true,
       false,
       false,
@@ -70,5 +72,5 @@
       true
     ]
   },
-  "hash": "8e81de44f1294e2f776c5e70e4e3ba6e2c76d8a932fa05f5e15e496fb4ef7b0e"
+  "hash": "082a8440bb68498d10c52cd44c27cf44f1e9bc5fccb1b7927aee38cbb9217c2b"
 }

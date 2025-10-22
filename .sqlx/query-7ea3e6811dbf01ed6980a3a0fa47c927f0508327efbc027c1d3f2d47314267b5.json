@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM user_relationship WHERE user_id = $1 AND (rel = 'Incoming' OR rel = 'Outgoing')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7ea3e6811dbf01ed6980a3a0fa47c927f0508327efbc027c1d3f2d47314267b5"
+}

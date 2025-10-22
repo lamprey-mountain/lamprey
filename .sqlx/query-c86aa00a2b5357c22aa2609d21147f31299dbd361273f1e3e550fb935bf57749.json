@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select target_type, target_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n        \tWHERE target_id = $1 AND code > $2 AND code < $3 and deleted_at is null\n        \tORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5\n        ",
+  "query": "\n            select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description\n            from invite\n        \tWHERE target_type = 'server' AND creator_id = $1 AND code > $2 AND code < $3 and deleted_at is null\n        \tORDER BY (CASE WHEN $4 = 'f' THEN code END), code DESC LIMIT $5\n        ",
   "describe": {
     "columns": [
       {
@@ -15,36 +15,41 @@
       },
       {
         "ordinal": 2,
+        "name": "target_channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "code",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "creator_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "expires_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "max_uses",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "description",
         "type_info": "Text"
       }
@@ -61,6 +66,7 @@
     "nullable": [
       false,
       true,
+      true,
       false,
       false,
       false,
@@ -70,5 +76,5 @@
       true
     ]
   },
-  "hash": "5a5f1eaa64e575c21d1457972760770508c0cc17ad558875ba30eb671c3c21b3"
+  "hash": "c86aa00a2b5357c22aa2609d21147f31299dbd361273f1e3e550fb935bf57749"
 }

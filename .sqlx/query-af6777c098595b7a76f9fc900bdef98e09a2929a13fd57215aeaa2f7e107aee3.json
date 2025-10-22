@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM user_relationship WHERE user_id = $1",
+  "query": "SELECT count(*) FROM invite WHERE target_id = $1 AND target_type = 'room' and deleted_at is null",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "c3666e57bff65a93bb5803f0a22e4a1f47cffb33cd02f2edfe88cd0f882c0c7d"
+  "hash": "af6777c098595b7a76f9fc900bdef98e09a2929a13fd57215aeaa2f7e107aee3"
 }
