@@ -8,8 +8,10 @@ members = [
 version = "0.1.0"
 edition = "2021"
 authors = ["tezlm"]
-description = "yet another chat thing"
+description = "yet another chat thing?"
 license = "MIT OR Apache-2.0"
+repository = "https://git.celery.eu.org/lamprey/lamprey"
+keywords = ["lamprey"]
 
 [profile.dev]
 opt-level = 0
