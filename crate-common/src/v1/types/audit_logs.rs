@@ -250,6 +250,14 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
+    IgnoreAdd {
+        user_id: UserId,
+    },
+
+    IgnoreRemove {
+        user_id: UserId,
+    },
+
     SessionLogin {
         user_id: UserId,
         session_id: SessionId,

@@ -287,6 +287,7 @@ pub struct UserWithRelationship {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RelationshipPatch {
+    #[deprecated = "will be moved to user config"]
     /// whatever you want to write
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
@@ -297,6 +298,7 @@ pub struct RelationshipPatch {
     #[serde(default, deserialize_with = "some_option")]
     pub relation: Option<Option<RelationshipType>>,
 
+    #[deprecated = "will be moved to user config"]
     /// personal petname for this user
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
@@ -311,10 +313,8 @@ pub struct RelationshipPatch {
 /// how a user is ignoring another user
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[serde(tag = "ignore")]
-pub enum Ignore {
-    Until { ignore_until: Time },
-    Forever,
+pub struct Ignore {
+    pub until: Option<Time>,
 }
 
 /// a relationship between two users

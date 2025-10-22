@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
+use common::v1::types::user::Ignore;
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, PaginationQuery,
     PaginationResponse, RelationshipPatch, RelationshipType, RelationshipWithUserId, UserId,
@@ -409,6 +410,149 @@ async fn block_remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Ignore list
+///
+/// List ignored users.
+#[utoipa::path(
+    get,
+    path = "/user/{user_id}/ignore",
+    params(
+        PaginationQuery<UserId>,
+        ("user_id", description = "User id to list ignored users from"),
+    ),
+    tags = ["relationship"],
+    responses(
+        (status = OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
+    )
+)]
+async fn ignore_list(
+    Auth(auth_user): Auth,
+    Query(q): Query<PaginationQuery<UserId>>,
+    State(s): State<Arc<ServerState>>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+    let mut rels = data.user_relationship_list(auth_user.id, q).await?;
+    rels.items.retain(|r| r.inner.ignore.is_some());
+    Ok(Json(rels))
+}
+
+/// Ignore add
+///
+/// Ignore a user.
+#[utoipa::path(
+    put,
+    path = "/user/@self/ignore/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn ignore_add(
+    Path(target_user_id): Path<UserId>,
+    AuthWithSession(session, auth_user): AuthWithSession,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+    Json(ignore): Json<Ignore>,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    data.user_relationship_edit(
+        auth_user.id,
+        target_user_id,
+        RelationshipPatch {
+            note: None,
+            petname: None,
+            ignore: Some(Some(ignore)),
+            relation: None,
+        },
+    )
+    .await?;
+
+    let rel = data
+        .user_relationship_get(auth_user.id, target_user_id)
+        .await?
+        .unwrap();
+
+    s.broadcast(MessageSync::RelationshipUpsert {
+        user_id: auth_user.id,
+        target_user_id,
+        relationship: rel,
+    })?;
+
+    s.audit_log_append(AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: auth_user.id.into_inner().into(),
+        user_id: auth_user.id,
+        session_id: Some(session.id),
+        reason,
+        ty: AuditLogEntryType::IgnoreAdd {
+            user_id: target_user_id,
+        },
+    })
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Ignore remove
+///
+/// Unignore a user.
+#[utoipa::path(
+    delete,
+    path = "/user/@self/ignore/{target_id}",
+    params(("target_id", description = "Target user's id")),
+    tags = ["relationship"],
+    responses((status = NO_CONTENT, description = "success"))
+)]
+async fn ignore_remove(
+    Path(target_user_id): Path<UserId>,
+    AuthWithSession(session, auth_user): AuthWithSession,
+    State(s): State<Arc<ServerState>>,
+    HeaderReason(reason): HeaderReason,
+) -> Result<impl IntoResponse> {
+    let data = s.data();
+
+    let existing = data
+        .user_relationship_get(auth_user.id, target_user_id)
+        .await?;
+
+    if existing.as_ref().is_some_and(|r| r.ignore.is_some()) {
+        data.user_relationship_edit(
+            auth_user.id,
+            target_user_id,
+            RelationshipPatch {
+                note: None,
+                petname: None,
+                ignore: Some(None),
+                relation: None,
+            },
+        )
+        .await?;
+
+        let mut updated_rel = existing.unwrap();
+        updated_rel.ignore = None;
+
+        s.broadcast(MessageSync::RelationshipUpsert {
+            user_id: auth_user.id,
+            target_user_id,
+            relationship: updated_rel,
+        })?;
+
+        s.audit_log_append(AuditLogEntry {
+            id: AuditLogEntryId::new(),
+            room_id: auth_user.id.into_inner().into(),
+            user_id: auth_user.id,
+            session_id: Some(session.id),
+            reason,
+            ty: AuditLogEntryType::IgnoreRemove {
+                user_id: target_user_id,
+            },
+        })
+        .await?;
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(friend_list))
@@ -417,4 +561,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(block_list))
         .routes(routes!(block_add))
         .routes(routes!(block_remove))
+        .routes(routes!(ignore_list))
+        .routes(routes!(ignore_add))
+        .routes(routes!(ignore_remove))
 }
