@@ -9,10 +9,10 @@ license.workspace = true
 [dependencies]
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.135"
-time = "0.3.37"
+time = { version = "0.3.37", features = ["formatting", "parsing", "serde"] }
 url = { version = "2.5.4", features = ["serde"] }
 utoipa = { version = "5.3.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
-uuid = { version = "1.12.0", features = ["serde"] }
+uuid = { version = "1.12.0", features = ["serde", "v7"] }
 mediatype = { version = "0.20.0", features = ["serde"] }
 validator = { version = "0.20.0", features = ["derive"], optional = true }
 strum = { version = "0.27.1", features = ["derive"] }
