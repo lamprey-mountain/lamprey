@@ -91,9 +91,13 @@ impl From<DbUserRelWithId> for RelationshipWithUserId {
             user_id: value.user_id.into(),
             inner: Relationship {
                 relation: value.rel.map(Into::into),
-                ignore: value.ignore_until.map(|t| Ignore {
-                    until: Some(t.into()),
-                }),
+                ignore: if value.ignore {
+                    Some(Ignore {
+                        until: value.ignore_until.map(|t| t.into()),
+                    })
+                } else {
+                    None
+                },
             },
         }
     }
