@@ -43,10 +43,10 @@
             };
           });
 
-        backend = mkCrate "backend";
-        bridge = mkCrate "bridge";
-        voice = mkCrate "voice";
-        media = mkCrate "media";
+        backend = mkCrate "lamprey-backend";
+        bridge = mkCrate "lamprey-bridge";
+        voice = mkCrate "lamprey-voice";
+        media = mkCrate "lamprey-media";
 
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
