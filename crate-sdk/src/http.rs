@@ -229,6 +229,7 @@ macro_rules! route {
 route!(get    "/api/v1/media/{media_id}"                          => media_info_get(media_id: MediaId) -> Media);
 route!(post   "/api/v1/room/{room_id}/channel"                    => channel_create(room_id: RoomId) -> Channel, ChannelCreate);
 route!(patch  "/api/v1/channel/{channel_id}"                      => channel_update(channel_id: ChannelId) -> Channel, ChannelPatch);
+route!(get    "/api/v1/channel/{channel_id}"                      => channel_get(channel_id: ChannelId) -> Channel);
 route!(post   "/api/v1/media"                                     => media_create() -> MediaCreated, MediaCreate);
 route!(delete "/api/v1/channel/{channel_id}/message/{message_id}" => message_delete(channel_id: ChannelId, message_id: MessageId));
 route!(patch  "/api/v1/channel/{channel_id}/message/{message_id}" => message_update(channel_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
