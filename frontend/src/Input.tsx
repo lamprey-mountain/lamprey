@@ -196,7 +196,7 @@ export function Input(props: InputProps) {
 					onChange={onChange}
 					onUpload={handleUpload}
 					placeholder={locked()
-						? "you cannot send mesages here"
+						? "you cannot send messages here"
 						: `send a message...`}
 					disabled={locked()}
 				/>

@@ -257,7 +257,7 @@ impl Handle {
                 while let Some(ev) = events_recv.recv().await {
                     match ev {
                         rtc::PlayerEvent::Signalling(msg) => {
-                            info!("sending signalling mesage: {msg:?}");
+                            info!("sending signalling message: {msg:?}");
                             self_control
                                 .send(MessageClient::VoiceDispatch {
                                     user_id,
