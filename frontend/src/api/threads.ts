@@ -1,19 +1,19 @@
-import type { Pagination, Thread } from "sdk";
+import type { Channel, Pagination } from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 
 export class Threads {
 	api: Api = null as unknown as Api;
-	_cachedRoomListings = new Map<string, Listing<Thread>>();
-	_cachedRoomListingsArchived = new Map<string, Listing<Thread>>();
-	_cachedRoomListingsRemoved = new Map<string, Listing<Thread>>();
+	_cachedRoomListings = new Map<string, Listing<Channel>>();
+	_cachedRoomListingsArchived = new Map<string, Listing<Channel>>();
+	_cachedRoomListingsRemoved = new Map<string, Listing<Channel>>();
 
 	private createLister(
 		key: () => string,
 		endpoint: any,
-		cache: Map<string, Listing<Thread>>,
-	): Resource<Pagination<Thread>> {
-		const paginate = async (pagination?: Pagination<Thread>) => {
+		cache: Map<string, Listing<Channel>>,
+	): Resource<Pagination<Channel>> {
+		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(endpoint, {
@@ -51,8 +51,8 @@ export class Threads {
 			return l.resource;
 		}
 
-		const l2: Listing<Thread> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+		const l2: Listing<Channel> = {
+			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 			refetch: () => {},
 			mutate: () => {},
 			prom: null,
@@ -85,7 +85,7 @@ export class Threads {
 		return resource;
 	}
 
-	listForRoom(room_id: () => string): Resource<Pagination<Thread>> {
+	listForRoom(room_id: () => string): Resource<Pagination<Channel>> {
 		return this.createLister(
 			room_id,
 			"/api/v1/room/{room_id}/thread",
@@ -93,7 +93,7 @@ export class Threads {
 		);
 	}
 
-	listArchivedForRoom(room_id: () => string): Resource<Pagination<Thread>> {
+	listArchivedForRoom(room_id: () => string): Resource<Pagination<Channel>> {
 		return this.createLister(
 			room_id,
 			"/api/v1/room/{room_id}/thread/archived",
@@ -101,7 +101,7 @@ export class Threads {
 		);
 	}
 
-	listRemovedForRoom(room_id: () => string): Resource<Pagination<Thread>> {
+	listRemovedForRoom(room_id: () => string): Resource<Pagination<Channel>> {
 		return this.createLister(
 			room_id,
 			"/api/v1/room/{room_id}/thread/removed",

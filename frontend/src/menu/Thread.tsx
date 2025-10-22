@@ -124,7 +124,7 @@ export function ThreadMenu(props: { thread_id: string }) {
 	);
 }
 
-function ThreadNotificationMenu(props: { thread: import("sdk").Thread }) {
+function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
 	const api = useApi();
 	const threadConfig = () => props.thread.user_config;
 

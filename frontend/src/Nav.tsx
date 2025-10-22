@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { useApi } from "./api.tsx";
-import type { Thread } from "sdk";
+import type { Channel } from "sdk";
 import { flags } from "./flags.ts";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "./config.tsx";
@@ -32,7 +32,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	);
 
 	const [categories, setCategories] = createSignal<
-		Array<{ category: Thread | null; threads: Array<Thread> }>
+		Array<{ category: Channel | null; threads: Array<Channel> }>
 	>([]);
 
 	createEffect(() => {
@@ -70,7 +70,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 			);
 		}
 
-		const categories = new Map<string | null, Array<Thread>>();
+		const categories = new Map<string | null, Array<Channel>>();
 		for (const t of threads) {
 			if (t.type === "Category") {
 				const cat = categories.get(t.id) ?? [];
@@ -398,7 +398,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	);
 };
 
-const ItemThread = (props: { thread: Thread }) => {
+const ItemThread = (props: { thread: Channel }) => {
 	const api = useApi();
 	const otherUser = createMemo(() => {
 		if (props.thread.type === "Dm") {

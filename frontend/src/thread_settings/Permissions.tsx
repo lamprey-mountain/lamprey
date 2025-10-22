@@ -1,4 +1,4 @@
-import type { Permission, PermissionOverwrite, Thread } from "sdk";
+import type { Channel, Permission, PermissionOverwrite } from "sdk";
 import { batch, createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import { createStore, produce } from "solid-js/store";
@@ -20,7 +20,7 @@ function getPermState(
 	return "inherit";
 }
 
-export function Permissions(props: VoidProps<{ thread: Thread }>) {
+export function Permissions(props: VoidProps<{ thread: Channel }>) {
 	const api = useApi();
 	const roles = api.roles.list(() => props.thread.room_id);
 	const users = api.room_members.list(() => props.thread.room_id);

@@ -1,11 +1,11 @@
-import { getTimestampFromUUID, Message, Thread } from "sdk";
+import { Channel, getTimestampFromUUID, Message } from "sdk";
 import { createResource, For, Show } from "solid-js";
 import { useCtx } from "./context";
 import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 
-export const Forum = (props: { thread: Thread }) => {
+export const Forum = (props: { thread: Channel }) => {
 	const api = useApi();
 	const [comments] = api.messages.listReplies(
 		() => props.thread.id,
@@ -34,7 +34,7 @@ export const Forum = (props: { thread: Thread }) => {
 };
 
 const Comment = (
-	props: { collapsed: ReactiveSet<string>; thread: Thread; message: Message },
+	props: { collapsed: ReactiveSet<string>; thread: Channel; message: Message },
 ) => {
 	const api = useApi();
 

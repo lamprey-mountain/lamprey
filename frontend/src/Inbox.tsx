@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
 import { useApi } from "./api.tsx";
-import type { Message, Notification, Room, Thread } from "sdk";
+import type { Channel, Message, Notification, Room } from "sdk";
 import { A } from "@solidjs/router";
 import { Time } from "./Time.tsx";
 import { MessageView } from "./Message.tsx";

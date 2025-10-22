@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
-import { getTimestampFromUUID, Thread } from "sdk";
+import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { createEditor } from "./Editor.tsx";
@@ -13,7 +13,7 @@ import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 
-export const Category = (props: { thread: Thread }) => {
+export const Category = (props: { thread: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
@@ -166,7 +166,7 @@ export const Category = (props: { thread: Thread }) => {
 
 // NOTE the room id is reused as the thread id for draft messages and attachments
 const QuickCreate = (
-	props: { thread: Thread },
+	props: { thread: Channel },
 ) => {
 	const ctx = useCtx();
 	const api = useApi();

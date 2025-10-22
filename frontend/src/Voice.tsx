@@ -1,4 +1,4 @@
-import { Thread } from "sdk";
+import { Channel } from "sdk";
 import {
 	createEffect,
 	createSignal,
@@ -27,7 +27,7 @@ import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
 import { getColor } from "./colors.ts";
 
-export const Voice = (p: { thread: Thread }) => {
+export const Voice = (p: { thread: Channel }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice, actions] = useVoice();

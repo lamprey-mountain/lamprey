@@ -1,13 +1,13 @@
-import type { Pagination, Thread } from "sdk";
+import type { Channel, Pagination } from "sdk";
 import { batch, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 
 export class Dms {
 	api: Api = null as unknown as Api;
-	_cachedListing: Listing<Thread> | null = null;
+	_cachedListing: Listing<Channel> | null = null;
 
-	list(): Resource<Pagination<Thread>> {
-		const paginate = async (pagination?: Pagination<Thread>) => {
+	list(): Resource<Pagination<Channel>> {
+		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
@@ -49,7 +49,7 @@ export class Dms {
 		}
 
 		this._cachedListing = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 			refetch: () => {},
 			mutate: () => {},
 			prom: null,

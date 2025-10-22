@@ -1,9 +1,9 @@
-import type { Thread } from "sdk";
+import type { Channel } from "sdk";
 import { createSignal, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 
-export function Info(props: VoidProps<{ thread: Thread }>) {
+export function Info(props: VoidProps<{ thread: Channel }>) {
 	const ctx = useCtx();
 	const api = useApi();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.thread.nsfw);

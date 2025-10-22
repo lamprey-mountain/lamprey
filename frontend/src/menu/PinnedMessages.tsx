@@ -1,11 +1,11 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Thread } from "sdk";
+import type { Channel } from "sdk";
 import { useApi } from "../api.tsx";
 import { MessageView } from "../Message.tsx";
 import type { Message } from "sdk";
 
 type PinnedMessagesProps = {
-	thread: Thread;
+	thread: Channel;
 };
 
 export function PinnedMessages(props: PinnedMessagesProps) {

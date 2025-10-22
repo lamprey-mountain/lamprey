@@ -16,7 +16,7 @@ import { getThumbFromId } from "./media/util.tsx";
 import { RouteInviteInner } from "./Invite.tsx";
 import { Forum } from "./Forum.tsx";
 import { Category } from "./Category.tsx";
-import { SERVER_ROOM_ID, type Thread } from "sdk";
+import { type Channel, SERVER_ROOM_ID } from "sdk";
 import { PinnedMessages } from "./menu/PinnedMessages.tsx";
 import { Resizable } from "./Resizable.tsx";
 import { UserProfile } from "./UserProfile.tsx";
@@ -137,7 +137,7 @@ export const RouteThreadSettings = (p: RouteSectionProps) => {
 	);
 };
 
-const ThreadSidebar = (props: { thread: Thread }) => {
+const ThreadSidebar = (props: { thread: Channel }) => {
 	const ctx = useCtx();
 	const search = () => ctx.thread_search.get(props.thread.id);
 	const showMembers = () =>

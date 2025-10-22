@@ -1,26 +1,26 @@
-import type { Pagination, Thread } from "sdk";
+import type { Channel, Pagination } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { batch, createEffect, createResource, type Resource } from "solid-js";
 import type { Api, Listing } from "../api.tsx";
 
 export class Channels {
 	api: Api = null as unknown as Api;
-	cache = new ReactiveMap<string, Thread>();
-	_requests = new Map<string, Promise<Thread>>();
-	_cachedListings = new Map<string, Listing<Thread>>();
+	cache = new ReactiveMap<string, Channel>();
+	_requests = new Map<string, Promise<Channel>>();
+	_cachedListings = new Map<string, Listing<Channel>>();
 	_listingMutators = new Set<
-		{ room_id: string; mutate: (value: Pagination<Thread>) => void }
+		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
-	_cachedListingsArchived = new Map<string, Listing<Thread>>();
+	_cachedListingsArchived = new Map<string, Listing<Channel>>();
 	_listingMutatorsArchived = new Set<
-		{ room_id: string; mutate: (value: Pagination<Thread>) => void }
+		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
-	_cachedListingsRemoved = new Map<string, Listing<Thread>>();
+	_cachedListingsRemoved = new Map<string, Listing<Channel>>();
 	_listingMutatorsRemoved = new Set<
-		{ room_id: string; mutate: (value: Pagination<Thread>) => void }
+		{ room_id: string; mutate: (value: Pagination<Channel>) => void }
 	>();
 
-	fetch(channel_id: () => string): Resource<Thread> {
+	fetch(channel_id: () => string): Resource<Channel> {
 		const [resource, { mutate }] = createResource(channel_id, (channel_id) => {
 			const cached = this.cache.get(channel_id);
 			if (cached) return cached;
@@ -51,8 +51,8 @@ export class Channels {
 		return resource;
 	}
 
-	list(room_id_signal: () => string): Resource<Pagination<Thread>> {
-		const paginate = async (pagination?: Pagination<Thread>) => {
+	list(room_id_signal: () => string): Resource<Pagination<Channel>> {
+		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
@@ -94,8 +94,8 @@ export class Channels {
 			return l.resource;
 		}
 
-		const l2: Listing<Thread> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+		const l2: Listing<Channel> = {
+			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 			refetch: () => {},
 			mutate: () => {},
 			prom: null,
@@ -109,7 +109,7 @@ export class Channels {
 				let l = this._cachedListings.get(room_id)!;
 				if (!l) {
 					l = {
-						resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+						resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 						refetch: () => {},
 						mutate: () => {},
 						prom: null,
@@ -162,7 +162,7 @@ export class Channels {
 	async create(
 		room_id: string,
 		body: { name: string; parent_id?: string },
-	): Promise<Thread> {
+	): Promise<Channel> {
 		const { data, error } = await this.api.client.http.POST(
 			"/api/v1/room/{room_id}/channel",
 			{
@@ -174,8 +174,8 @@ export class Channels {
 		return data;
 	}
 
-	listArchived(room_id_signal: () => string): Resource<Pagination<Thread>> {
-		const paginate = async (pagination?: Pagination<Thread>) => {
+	listArchived(room_id_signal: () => string): Resource<Pagination<Channel>> {
+		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
@@ -217,8 +217,8 @@ export class Channels {
 			return l.resource;
 		}
 
-		const l2: Listing<Thread> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+		const l2: Listing<Channel> = {
+			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 			refetch: () => {},
 			mutate: () => {},
 			prom: null,
@@ -263,8 +263,8 @@ export class Channels {
 		return resource;
 	}
 
-	listRemoved(room_id_signal: () => string): Resource<Pagination<Thread>> {
-		const paginate = async (pagination?: Pagination<Thread>) => {
+	listRemoved(room_id_signal: () => string): Resource<Pagination<Channel>> {
+		const paginate = async (pagination?: Pagination<Channel>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
 			const { data, error } = await this.api.client.http.GET(
@@ -306,8 +306,8 @@ export class Channels {
 			return l.resource;
 		}
 
-		const l2: Listing<Thread> = {
-			resource: (() => {}) as unknown as Resource<Pagination<Thread>>,
+		const l2: Listing<Channel> = {
+			resource: (() => {}) as unknown as Resource<Pagination<Channel>>,
 			refetch: () => {},
 			mutate: () => {},
 			prom: null,

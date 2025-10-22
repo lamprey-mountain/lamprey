@@ -1,7 +1,7 @@
 import type { components } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
-export type Thread = components["schemas"]["Channel"];
+export type Channel = components["schemas"]["Channel"];
 export type User = components["schemas"]["User"];
 export type Message = components["schemas"]["Message"] & { is_local?: true };
 export type Role = components["schemas"]["Role"];

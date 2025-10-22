@@ -1,9 +1,9 @@
 import type {
+	Channel,
 	InboxListParams,
 	Notification,
 	Pagination,
 	Room,
-	Thread,
 } from "sdk";
 import {
 	batch,
@@ -16,7 +16,7 @@ import type { Api } from "../api.tsx";
 import type { Message } from "sdk";
 
 export interface NotificationPagination extends Pagination<Notification> {
-	threads: Thread[];
+	threads: Channel[];
 	messages: Message[];
 	rooms: Room[];
 }

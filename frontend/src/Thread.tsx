@@ -1,11 +1,11 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import type { Thread } from "sdk";
+import type { Channel } from "sdk";
 import { useApi } from "./api.tsx";
 import { AvatarWithStatus } from "./User.tsx";
 import { useCtx } from "./context.ts";
 import { ReactiveMap } from "@solid-primitives/map";
 
-export const ThreadMembers = (props: { thread: Thread }) => {
+export const ThreadMembers = (props: { thread: Channel }) => {
 	const api = useApi();
 	const thread_id = () => props.thread.id;
 	const room_id = () => props.thread.room_id;

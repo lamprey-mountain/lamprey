@@ -1,4 +1,4 @@
-import { getTimestampFromUUID, type Message, type Thread, User } from "sdk";
+import { type Channel, getTimestampFromUUID, type Message, User } from "sdk";
 import { type MessageT, MessageType } from "./types.ts";
 import {
 	createEffect,
@@ -709,7 +709,7 @@ export function AttachmentView(props: MediaProps) {
 	}
 }
 
-function Author(props: { message: Message; thread?: Thread }) {
+function Author(props: { message: Message; thread?: Channel }) {
 	const api = useApi();
 	const ctx = useCtx();
 	const room_member = props.thread?.room_id
@@ -759,7 +759,7 @@ function Author(props: { message: Message; thread?: Thread }) {
 	);
 }
 
-function Actor(props: { user_id: string; thread: Thread }) {
+function Actor(props: { user_id: string; thread: Channel }) {
 	const api = useApi();
 	const room_member = props.thread.room_id
 		? api.room_members.fetch(
