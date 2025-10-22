@@ -36,3 +36,4 @@ serde_json = "1.0.143"
 percent-encoding = "2.3.2"
 thiserror = "2.0.16"
 moka = { version = "0.12.10", features = ["future"] }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }

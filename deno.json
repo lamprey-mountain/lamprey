@@ -6,7 +6,7 @@
 	},
 	"tasks": {
 		"hakari": "cargo hakari generate && cargo hakari manage-deps",
-		"sqlx-prep": "cargo sqlx prep --workspace",
+		"sqlx-prep": "deno run -A scripts/sqlx-prep.ts",
 		"rustdoc": "cargo doc --no-deps -p types -p backend",
 		"fmt": "cargo fmt && deno fmt"
 	}
