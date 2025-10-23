@@ -26,6 +26,29 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/admin/register-user": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin register user
+		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 *
+		 *     Registers an existing guest user, promoting them to a regular user.
+		 *     Bypasses the normal invite/auth method flow.
+		 */
+		post: operations["admin_register_user"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/admin/whisper": {
 		parameters: {
 			query?: never;
@@ -703,7 +726,7 @@ export interface paths {
 		 * Calendar event update
 		 * @description
 		 */
-		patch: operations["calendar_channel_event_update"];
+		patch: operations["calendar_event_update"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/event/{calendar_event_id}/rsvp": {
@@ -749,6 +772,34 @@ export interface paths {
 		 * @description
 		 */
 		delete: operations["calendar_rsvp_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/invite": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Invite channel list
+		 * @description
+		 *
+		 *     List invites that go to a channel
+		 */
+		get: operations["invite_channel_list"];
+		put?: never;
+		/**
+		 * Invite channel create
+		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
+		 *
+		 *     Create an invite that goes to a channel
+		 */
+		post: operations["invite_channel_create"];
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2130,7 +2181,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Room ban search (TODO)
+		 * Room ban search
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 */
 		get: operations["room_ban_search"];
@@ -2813,34 +2864,6 @@ export interface paths {
 		patch: operations["session_update"];
 		trace?: never;
 	};
-	"/api/v1/thread/{thread_id}/invite": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Invite thread list
-		 * @description
-		 *
-		 *     List invites that go to a thread
-		 */
-		get: operations["invite_channel_list"];
-		put?: never;
-		/**
-		 * Invite thread create
-		 * @description <div class="markdown-alert-permission-required">InviteCreate</div>
-		 *
-		 *     Create an invite that goes to a thread
-		 */
-		post: operations["invite_channel_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/thread/{thread_id}/member": {
 		parameters: {
 			query?: never;
@@ -2990,6 +3013,34 @@ export interface paths {
 		 *     Remove friend or reject a friend request.
 		 */
 		delete: operations["friend_remove"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/@self/ignore/{target_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Ignore add
+		 * @description
+		 *
+		 *     Ignore a user.
+		 */
+		put: operations["ignore_add"];
+		post?: never;
+		/**
+		 * Ignore remove
+		 * @description
+		 *
+		 *     Unignore a user.
+		 */
+		delete: operations["ignore_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -3232,6 +3283,50 @@ export interface paths {
 		 *     List (mutual) friends.
 		 */
 		get: operations["friend_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/{user_id}/friend/pending": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Friend list pending
+		 * @description
+		 *
+		 *     List (mutual) friends.
+		 */
+		get: operations["friend_list_pending"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/{user_id}/ignore": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Ignore list
+		 * @description
+		 *
+		 *     List ignored users.
+		 */
+		get: operations["ignore_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3571,6 +3666,9 @@ export interface components {
 		};
 		AdminBroadcast: {
 			message: components["schemas"]["MessageCreate"];
+		};
+		AdminRegisterUser: {
+			user_id: components["schemas"]["Id"];
 		};
 		AdminWhisper: {
 			message: components["schemas"]["MessageCreate"];
@@ -3916,6 +4014,18 @@ export interface components {
 			};
 			/** @enum {string} */
 			type: "BlockDelete";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "IgnoreAdd";
+		} | {
+			metadata: {
+				user_id: components["schemas"]["Id"];
+			};
+			/** @enum {string} */
+			type: "IgnoreRemove";
 		} | {
 			metadata: {
 				session_id: components["schemas"]["Id"];
@@ -4499,12 +4609,7 @@ export interface components {
 		Id: string;
 		/** @description how a user is ignoring another user */
 		Ignore: {
-			/** @enum {string} */
-			ignore: "Until";
-			ignore_until: components["schemas"]["Time"];
-		} | {
-			/** @enum {string} */
-			ignore: "Forever";
+			until?: null | components["schemas"]["Time"];
 		};
 		/** @description metadata for images */
 		Image: {
@@ -4565,12 +4670,12 @@ export interface components {
 		};
 		/** @description where this invite leads */
 		InviteTarget: {
+			channel?: null | components["schemas"]["Channel"];
 			room: components["schemas"]["Room"];
-			thread?: null | components["schemas"]["Channel"];
 			/** @enum {string} */
 			type: "Room";
 		} | {
-			thread: components["schemas"]["Channel"];
+			channel: components["schemas"]["Channel"];
 			/** @enum {string} */
 			type: "Gdm";
 		} | {
@@ -4583,12 +4688,12 @@ export interface components {
 		};
 		/** @description the type and id of this invite's target */
 		InviteTargetId: {
+			channel_id?: null | components["schemas"]["Id"];
 			room_id: components["schemas"]["Id"];
-			thread_id?: null | components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Room";
 		} | {
-			thread_id: components["schemas"]["Id"];
+			channel_id: components["schemas"]["Id"];
 			/** @enum {string} */
 			type: "Gdm";
 		} | {
@@ -5252,7 +5357,6 @@ export interface components {
 		/**
 		 * Mime
 		 * @description a mime/media type
-		 * @example application/json
 		 */
 		Mime: string;
 		/** @description multiple pieces of metadata mixed together */
@@ -5984,10 +6088,6 @@ export interface components {
 				type: "Exclude";
 			});
 		Relationship: (null | components["schemas"]["Ignore"]) & {
-			/** @description whatever you want to write */
-			note?: string | null;
-			/** @description personal petname for this user */
-			petname?: string | null;
 			relation?: null | components["schemas"]["RelationshipType"];
 		};
 		/**
@@ -6769,6 +6869,30 @@ export interface operations {
 			};
 		};
 	};
+	admin_register_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AdminRegisterUser"];
+			};
+		};
+		responses: {
+			/** @description User registered */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionWithToken"];
+				};
+			};
+		};
+	};
 	admin_whisper: {
 		parameters: {
 			query?: never;
@@ -7491,11 +7615,12 @@ export interface operations {
 	calendar_event_list_user: {
 		parameters: {
 			query?: {
+				limit?: number | null;
 				from?: null | components["schemas"]["Id"];
 				to?: null | components["schemas"]["Id"];
-				limit?: number | null;
-				from_time?: string | null;
-				to_time?: string | null;
+				dir?: null | components["schemas"]["PaginationDirection"];
+				from_time?: null | components["schemas"]["Time"];
+				to_time?: null | components["schemas"]["Time"];
 			};
 			header?: never;
 			path?: never;
@@ -7745,7 +7870,7 @@ export interface operations {
 			};
 		};
 	};
-	calendar_channel_event_update: {
+	calendar_event_update: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -7871,6 +7996,62 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	invite_channel_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_Invite"];
+				};
+			};
+		};
+	};
+	invite_channel_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Channel id */
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["InviteCreate"];
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Invite"];
+				};
 			};
 		};
 	};
@@ -10039,13 +10220,15 @@ export interface operations {
 	};
 	room_ban_search: {
 		parameters: {
-			query?: never;
+			query: {
+				query: string;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
 			header?: never;
 			path: {
-				from: string;
-				to: string;
-				dir: "b" | "f";
-				limit: number;
 				/** @description Room id */
 				room_id: components["schemas"]["Id"];
 			};
@@ -11361,62 +11544,6 @@ export interface operations {
 			};
 		};
 	};
-	invite_channel_list: {
-		parameters: {
-			query?: {
-				from?: string;
-				to?: string;
-				dir?: "b" | "f";
-				limit?: number;
-			};
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Invite"];
-				};
-			};
-		};
-	};
-	invite_channel_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Thread id */
-				thread_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["InviteCreate"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Invite"];
-				};
-			};
-		};
-	};
 	thread_member_list: {
 		parameters: {
 			query?: {
@@ -11669,6 +11796,52 @@ export interface operations {
 		};
 	};
 	friend_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	ignore_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Target user's id */
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["Ignore"];
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	ignore_remove: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -12063,6 +12236,64 @@ export interface operations {
 			header?: never;
 			path: {
 				/** @description User id to list friends from */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
+				};
+			};
+		};
+	};
+	friend_list_pending: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description User id to list friends from */
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json":
+						components["schemas"]["PaginationResponse_RelationshipWithUserId"];
+				};
+			};
+		};
+	};
+	ignore_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				/** @description User id to list ignored users from */
 				user_id: string;
 			};
 			cookie?: never;
