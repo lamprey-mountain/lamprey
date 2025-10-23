@@ -2,42 +2,44 @@ import { useNavigate } from "@solidjs/router";
 import { useApi } from "../api.tsx";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { createResource, Match, Show, Switch } from "solid-js";
+import { Match, Show, Switch } from "solid-js";
 import { timeAgo } from "../Time.tsx";
+import { Channel } from "sdk";
 
-// the context menu for threads
-export function ThreadMenu(props: { thread_id: string }) {
+// the context menu for channels
+export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
 
 	const self_id = () => api.users.cache.get("@self")!.id;
-	const thread = api.channels.fetch(() => props.thread_id);
-	const self_thread_member = api.thread_members.fetch(
-		() => props.thread_id,
+	const channel = api.channels.fetch(() => props.channel_id);
+	const self_channel_member = api.thread_members.fetch(
+		() => props.channel_id,
 		self_id,
 	);
-	const copyId = () => navigator.clipboard.writeText(props.thread_id);
+	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = () => {
-		const thread = api.channels.cache.get(props.thread_id)!;
-		const version_id = thread.last_version_id;
+		const channel = api.channels.cache.get(props.channel_id)!;
+		const version_id = channel.last_version_id;
+		if (!version_id) return;
 		ctx.dispatch({
 			do: "thread.mark_read",
-			thread_id: props.thread_id,
+			thread_id: props.channel_id,
 			also_local: true,
 			version_id,
 		});
 	};
 
-	const removeThread = () => {
+	const removeChannel = () => {
 		ctx.dispatch({
 			do: "modal.confirm",
-			text: "are you sure you want to remove this tread?",
+			text: "are you sure you want to remove this channel?",
 			cont(confirmed) {
 				if (!confirmed) return;
 				ctx.client.http.PUT("/api/v1/channel/{channel_id}/remove", {
 					params: {
-						path: { channel_id: props.thread_id },
+						path: { channel_id: props.channel_id },
 					},
 				});
 			},
@@ -45,43 +47,43 @@ export function ThreadMenu(props: { thread_id: string }) {
 	};
 
 	const copyLink = () => {
-		const url = `${ctx.client.opts.apiUrl}/thread/${props.thread_id}`;
+		const url = `${ctx.client.opts.apiUrl}/channel/${props.channel_id}`;
 		navigator.clipboard.writeText(url);
 	};
 
-	const logToConsole = () => console.log(JSON.parse(JSON.stringify(thread())));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(channel())));
 
 	const settings = (to: string) => () =>
-		nav(`/thread/${props.thread_id}/settings${to}`);
+		nav(`/channel/${props.channel_id}/settings${to}`);
 
-	const archiveThread = () => {
-		api.channels.archive(props.thread_id);
+	const archiveChannel = () => {
+		api.channels.archive(props.channel_id);
 	};
 
-	const unarchiveThread = () => {
-		api.channels.unarchive(props.thread_id);
+	const unarchiveChannel = () => {
+		api.channels.unarchive(props.channel_id);
 	};
 
 	const toggleLock = () => {
-		if (thread()?.locked) {
-			api.channels.unlock(props.thread_id);
+		if (channel()?.locked) {
+			api.channels.unlock(props.channel_id);
 		} else {
-			api.channels.lock(props.thread_id);
+			api.channels.lock(props.channel_id);
 		}
 	};
 
-	const joinOrLeaveThread = () => {
-		if (self_thread_member()?.membership === "Leave") {
+	const joinOrLeaveChannel = () => {
+		if (self_channel_member()?.membership === "Leave") {
 			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
 				params: {
-					path: { thread_id: props.thread_id, user_id: "@self" },
+					path: { thread_id: props.channel_id, user_id: "@self" },
 				},
 				body: {},
 			});
 		} else {
 			ctx.client.http.DELETE("/api/v1/thread/{thread_id}/member/{user_id}", {
 				params: {
-					path: { thread_id: props.thread_id, user_id: "@self" },
+					path: { thread_id: props.channel_id, user_id: "@self" },
 				},
 			});
 		}
@@ -91,11 +93,11 @@ export function ThreadMenu(props: { thread_id: string }) {
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
-			<Show when={thread()}>
-				{(t) => <ThreadNotificationMenu thread={t()} />}
+			<Show when={channel()}>
+				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>
-			<Item onClick={joinOrLeaveThread}>
-				{self_thread_member()?.membership === "Leave" ? "join" : "leave"}
+			<Item onClick={joinOrLeaveChannel}>
+				{self_channel_member()?.membership === "Leave" ? "join" : "leave"}
 			</Item>
 			<Separator />
 			<Submenu content={"edit"} onClick={settings("")}>
@@ -108,15 +110,15 @@ export function ThreadMenu(props: { thread_id: string }) {
 				</Submenu>
 			</Submenu>
 			<Switch>
-				<Match when={!thread()?.archived_at}>
-					<Item onClick={archiveThread}>archive</Item>
+				<Match when={!channel()?.archived_at}>
+					<Item onClick={archiveChannel}>archive</Item>
 				</Match>
-				<Match when={thread()?.archived_at}>
-					<Item onClick={unarchiveThread}>unarchive</Item>
+				<Match when={channel()?.archived_at}>
+					<Item onClick={unarchiveChannel}>unarchive</Item>
 				</Match>
 			</Switch>
-			<Item onClick={toggleLock}>{thread()?.locked ? "unlock" : "lock"}</Item>
-			<Item onClick={removeThread}>remove</Item>
+			<Item onClick={toggleLock}>{channel()?.locked ? "unlock" : "lock"}</Item>
+			<Item onClick={removeChannel}>remove</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
@@ -124,12 +126,12 @@ export function ThreadMenu(props: { thread_id: string }) {
 	);
 }
 
-function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
+function ChannelNotificationMenu(props: { channel: Channel }) {
 	const api = useApi();
-	const threadConfig = () => props.thread.user_config;
+	const channelConfig = () => props.channel.user_config;
 
-	const setNotifs = (notifs: Partial<import("sdk").NotifsThread>) => {
-		const current = threadConfig() ?? { notifs: {}, frontend: {} };
+	const setNotifs = (notifs: Partial<NotifsChannel>) => {
+		const current = channelConfig() ?? { notifs: {}, frontend: {} };
 		const newConfig = {
 			...current,
 			notifs: { ...current.notifs, ...notifs },
@@ -141,12 +143,12 @@ function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
 				delete newConfig.notifs[key as keyof typeof newConfig.notifs];
 			}
 		}
-		api.channels.cache.set(props.thread.id, {
-			...props.thread,
+		api.channels.cache.set(props.channel.id, {
+			...props.channel,
 			user_config: newConfig,
 		});
 		api.client.http.PUT("/api/v1/config/thread/{thread_id}", {
-			params: { path: { thread_id: props.thread.id } },
+			params: { path: { thread_id: props.channel.id } },
 			body: newConfig,
 		});
 	};
@@ -161,7 +163,7 @@ function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
 	const unmute = () => setNotifs({ mute: undefined });
 
 	const isMuted = () => {
-		const c = threadConfig();
+		const c = channelConfig();
 		if (!c?.notifs.mute) return false;
 		if (c.notifs.mute.expires_at === null) return true;
 		return Date.parse(c.notifs.mute.expires_at) > Date.now();
@@ -188,13 +190,13 @@ function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
 				<Item onClick={() => setNotifs({ messages: "Notify" })}>
 					<div>everything</div>
 					<div class="subtext">
-						You will be notified of all new messages in this thread.
+						You will be notified of all new messages in this channel.
 					</div>
 				</Item>
 				<Item onClick={() => setNotifs({ messages: "Watching" })}>
 					<div>watching</div>
 					<div class="subtext">
-						Messages in this thread will show up in your inbox.
+						Messages in this channel will show up in your inbox.
 					</div>
 				</Item>
 				<Item
@@ -228,10 +230,10 @@ function ThreadNotificationMenu(props: { thread: import("sdk").CChannel }) {
 			>
 				<Item onClick={unmute}>
 					<div>unmute</div>
-					<Show when={threadConfig()?.notifs.mute?.expires_at}>
+					<Show when={channelConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
 							unmutes {timeAgo(
-								new Date(Date.parse(threadConfig()!.notifs.mute!.expires_at!)),
+								new Date(Date.parse(channelConfig()!.notifs.mute!.expires_at!)),
 							)}
 						</div>
 					</Show>

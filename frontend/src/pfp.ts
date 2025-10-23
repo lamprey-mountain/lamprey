@@ -38,7 +38,10 @@ export async function generatePfp(userId: string): Promise<string> {
 	const rand = LCG(cyrb53(userId));
 	const rnd = (n: number) => Math.floor(rand() * n);
 
-	ctx.fillStyle = getColor(userId);
+	const color = getColor(userId);
+	if (color) {
+		ctx.fillStyle = color;
+	}
 	ctx.fillRect(0, 0, SIZE, SIZE);
 
 	const PADDING = 0;

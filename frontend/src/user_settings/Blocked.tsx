@@ -33,9 +33,12 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 
 	const [blockedUsers, { refetch }] = createResource(async () => {
 		const { data, error } = await api.client.http.GET(
-			"/api/v1/user/@self/block",
+			"/api/v1/user/{user_id}/block",
 			{
-				params: { query: { limit: 100 } },
+				params: {
+					path: { user_id: "@self" },
+					query: { limit: 100 },
+				},
 			},
 		);
 		if (error) {
@@ -50,9 +53,12 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 			text: "Are you sure you want to unblock this user?",
 			cont: async (confirmed) => {
 				if (confirmed) {
-					await api.client.http.DELETE("/api/v1/user/@self/block/{target_id}", {
-						params: { path: { target_id: userId } },
-					});
+					await api.client.http.DELETE(
+						"/api/v1/user/@self/block/{target_id}",
+						{
+							params: { path: { target_id: userId } },
+						},
+					);
 					refetch();
 				}
 			},

@@ -20,8 +20,6 @@ export function usePermissions(
 		if (!rid) {
 			console.log("[perms] no room id");
 			const defaultPermissions: Permission[] = [
-				"BotsAdd",
-				"EmojiAdd",
 				"EmojiUseExternal",
 				"InviteCreate",
 				"MessageCreate",
@@ -31,21 +29,10 @@ export function usePermissions(
 				"MessageMove",
 				"MessagePin",
 				"ReactionAdd",
-				"ProfileAvatar",
-				"ProfileOverride",
 				"TagApply",
-				"ThreadArchive",
-				"ThreadCreateChat",
-				"ThreadCreateDocument",
-				"ThreadCreateEvent",
-				"ThreadCreateForumLinear",
-				"ThreadCreateForumTree",
-				"ThreadCreateTable",
-				"ThreadCreateVoice",
 				"ThreadCreatePublic",
 				"ThreadCreatePrivate",
-				"ThreadEdit",
-				"ThreadForward",
+				"ChannelEdit",
 				"ViewAuditLog",
 				"VoiceConnect",
 				"VoiceSpeak",
@@ -66,7 +53,7 @@ export function usePermissions(
 			return { permissions: new Set(["Admin"]), rank: Infinity };
 		}
 
-		const member = api.room_members.fetch(() => rid, user_id)();
+		const member = api.room_members.fetch(() => rid, user_id as () => string)();
 		const rolesResource = api.roles.list(() => rid);
 
 		if (!room || !member || !rolesResource() || member.membership !== "Join") {
@@ -121,7 +108,9 @@ export function usePermissions(
 
 			if (thread?.parent_id) {
 				console.log("[perms] has parent thread", thread.parent_id);
-				const parentThread = api.channels.fetch(() => thread.parent_id!)();
+				const parentThread = api.channels.fetch(
+					() => thread.parent_id!,
+				)();
 				applyOverwrites(parentThread?.permission_overwrites);
 			}
 

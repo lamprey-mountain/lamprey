@@ -18,13 +18,21 @@ import { moderatorPermissions, permissionGroups } from "../permissions.ts";
 import { Resizable } from "../Resizable.tsx";
 import { md } from "../markdown.tsx";
 
+function setDifference<T>(a: Set<T>, b: Set<T>) {
+	return new Set([...a].filter((x) => !b.has(x)));
+}
+
 function isDirty(a: Role, b: Role): boolean {
+	const permsA = new Set(a.permissions);
+	const permsB = new Set(b.permissions);
+	const diff1 = setDifference(permsA, permsB);
+	const diff2 = setDifference(permsB, permsA);
+
 	return a.name !== b.name ||
 		a.description !== b.description ||
 		a.is_self_applicable !== b.is_self_applicable ||
 		a.is_mentionable !== b.is_mentionable ||
-		new Set(a.permissions).symmetricDifference(new Set(b.permissions)).size !==
-			0;
+		diff1.size + diff2.size > 0;
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
@@ -143,7 +151,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						initialWidth={400}
 						minWidth={300}
 						maxWidth={800}
-						class="role-edit-resizable"
+						classList={{ "role-edit-resizable": true }}
 					>
 						<RoleEditor room={props.room} edit={edit} />
 					</Resizable>
@@ -324,14 +332,15 @@ const RoleList = (
 								<Match when={true}>
 									<div>
 										<span class="perm-safe">
-											{i.permissions.filter((i) =>
-												!moderatorPermissions.includes(i)
+											{i.permissions.filter(
+												(perm: Permission) =>
+													!(moderatorPermissions as string[]).includes(perm),
 											).length}
 										</span>
 										+
 										<span class="perm-mod">
-											{i.permissions.filter((i) =>
-												moderatorPermissions.includes(i)
+											{i.permissions.filter((perm) =>
+												(moderatorPermissions as string[]).includes(perm)
 											).length}
 										</span>{" "}
 										permissions
@@ -552,15 +561,15 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 															onInput={(e) => {
 																const { checked } = e
 																	.target as HTMLInputElement;
-																props.edit.setRole((r) => {
-																	const old = (r as Role).permissions;
-																	return {
-																		...r,
-																		permissions: checked
-																			? [...old, perm.id]
-																			: old.filter((i) => i !== perm.id),
-																	};
-																});
+																props.edit.setRole(
+																	"permissions",
+																	(
+																		p,
+																	) =>
+																		checked
+																			? [...p, perm.id]
+																			: p.filter((x) => x !== perm.id),
+																);
 															}}
 														/>
 														<div>

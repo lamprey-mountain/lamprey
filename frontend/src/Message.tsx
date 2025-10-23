@@ -118,7 +118,7 @@ function MessageEditor(
 	const api = useApi();
 
 	const [draft, setDraft] = createSignal(
-		ctx.thread_edit_drafts.get(props.message.id) ?? props.message.content ??
+		ctx.channel_edit_drafts.get(props.message.id) ?? props.message.content ??
 			"",
 	);
 
@@ -177,7 +177,7 @@ function MessageEditor(
 
 				// No next message, focus main input
 				ctx.editingMessage.delete(props.message.channel_id);
-				ctx.thread_input_focus.get(props.message.channel_id)?.();
+				ctx.channel_input_focus.get(props.message.channel_id)?.();
 				return true;
 			},
 		},
@@ -206,7 +206,7 @@ function MessageEditor(
 
 	const cancel = () => {
 		ctx.editingMessage.delete(props.message.channel_id);
-		ctx.thread_input_focus.get(props.message.channel_id)?.();
+		ctx.channel_input_focus.get(props.message.channel_id)?.();
 	};
 
 	let containerRef: HTMLDivElement | undefined;
@@ -231,7 +231,7 @@ function MessageEditor(
 				onChange={(state) => {
 					const text = state.doc.textContent;
 					setDraft(text);
-					ctx.thread_edit_drafts.set(props.message.id, text);
+					ctx.channel_edit_drafts.set(props.message.id, text);
 				}}
 			/>
 			<div class="edit-info dim">
@@ -625,12 +625,12 @@ function ReplyView(props: ReplyProps) {
 
 	const scrollToReply = () => {
 		// if (!props.reply) return;
-		ctx.thread_anchor.set(props.thread_id, {
+		ctx.channel_anchor.set(props.thread_id, {
 			type: "context",
 			limit: 50, // TODO: calc dynamically
 			message_id: props.reply_id,
 		});
-		ctx.thread_highlight.set(props.thread_id, props.reply_id);
+		ctx.channel_highlight.set(props.thread_id, props.reply_id);
 	};
 
 	return (

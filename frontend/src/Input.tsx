@@ -12,15 +12,16 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import cancelIc from "./assets/x.png";
 import { createTooltip } from "./Tooltip.tsx";
 import { EmojiButton } from "./atoms/EmojiButton.tsx";
+import { Channel } from "sdk";
 
 type InputProps = {
-	thread: ThreadT;
+	channel: Channel;
 };
 
 export function Input(props: InputProps) {
 	const ctx = useCtx();
 	const api = useApi();
-	const reply_id = () => ctx.thread_reply_id.get(props.thread.id);
+	const reply_id = () => ctx.channel_reply_id.get(props.channel.id);
 	const reply = () => api.messages.cache.get(reply_id()!);
 
 	function handleUpload(file: File) {
@@ -30,7 +31,7 @@ export function Input(props: InputProps) {
 			do: "upload.init",
 			file,
 			local_id,
-			thread_id: props.thread.id,
+			thread_id: props.channel.id,
 		});
 	}
 
@@ -42,15 +43,15 @@ export function Input(props: InputProps) {
 		}
 	}
 
-	const atts = () => ctx.thread_attachments.get(props.thread.id);
+	const atts = () => ctx.channel_attachments.get(props.channel.id);
 
 	const sendTyping = leading(throttle, () => {
-		api.channels.typing(props.thread.id);
+		api.channels.typing(props.channel.id);
 	}, 8000);
 
 	const getName = (user_id: string) => {
 		const user = api.users.fetch(() => user_id);
-		const room_id = props.thread.room_id;
+		const room_id = props.channel.room_id;
 		if (!room_id) {
 			return user()?.name;
 		}
@@ -67,27 +68,27 @@ export function Input(props: InputProps) {
 
 	const typingUsers = createMemo(() => {
 		const user_id = api.users.cache.get("@self")?.id;
-		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
+		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
 	});
 
 	const onSubmit = (text: string) => {
-		ctx.dispatch({ do: "thread.send", thread_id: props.thread.id, text });
+		ctx.dispatch({ do: "thread.send", thread_id: props.channel.id, text });
 	};
 
 	const onEmojiPick = (emoji: string) => {
-		const editorState = ctx.thread_editor_state.get(props.thread.id);
+		const editorState = ctx.channel_editor_state.get(props.channel.id);
 		if (editorState) {
 			const { from, to } = editorState.selection;
 			const tr = editorState.tr.insertText(emoji, from, to);
 			const newState = editorState.apply(tr);
-			ctx.thread_editor_state.set(props.thread.id, newState);
+			ctx.channel_editor_state.set(props.channel.id, newState);
 		}
 	};
 
 	const onChange = (state: EditorState) => {
-		ctx.thread_editor_state.set(props.thread.id, state);
+		ctx.channel_editor_state.set(props.channel.id, state);
 		const hasContent = state.doc.textContent.trim().length > 0;
 		if (hasContent) {
 			sendTyping();
@@ -103,7 +104,7 @@ export function Input(props: InputProps) {
 					return false; // not empty, do default behavior
 				}
 
-				const ranges = api.messages.cacheRanges.get(props.thread.id);
+				const ranges = api.messages.cacheRanges.get(props.channel.id);
 				if (!ranges) return false;
 
 				const self_id = api.users.cache.get("@self")?.id;
@@ -112,7 +113,7 @@ export function Input(props: InputProps) {
 				for (let i = ranges.live.items.length - 1; i >= 0; i--) {
 					const msg = ranges.live.items[i];
 					if (msg.author_id === self_id && msg.type === "DefaultMarkdown") {
-						ctx.editingMessage.set(props.thread.id, {
+						ctx.editingMessage.set(props.channel.id, {
 							message_id: msg.id,
 							selection: "end",
 						});
@@ -126,27 +127,27 @@ export function Input(props: InputProps) {
 	});
 
 	onMount(() => {
-		ctx.thread_input_focus.set(props.thread.id, () => editor.focus());
+		ctx.channel_input_focus.set(props.channel.id, () => editor.focus());
 		onCleanup(() => {
-			ctx.thread_input_focus.delete(props.thread.id);
+			ctx.channel_input_focus.delete(props.channel.id);
 		});
 	});
 
 	createEffect(() => {
-		const state = ctx.thread_editor_state.get(props.thread.id);
+		const state = ctx.channel_editor_state.get(props.channel.id);
 		editor.setState(state);
 		editor.focus();
 	});
 
 	const perms = usePermissions(
 		() => api.users.cache.get("@self")?.id ?? "",
-		() => props.thread.room_id ?? undefined,
-		() => props.thread.id,
+		() => props.channel.room_id ?? undefined,
+		() => props.channel.id,
 	);
 
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
-			(props.thread.locked && !perms.has("ThreadLock"));
+			(props.channel.locked && !perms.has("ThreadLock"));
 	};
 
 	return (
@@ -171,14 +172,14 @@ export function Input(props: InputProps) {
 					<ul>
 						<For each={atts()}>
 							{(att) => (
-								<RenderUploadItem thread_id={props.thread.id} att={att} />
+								<RenderUploadItem thread_id={props.channel.id} att={att} />
 							)}
 						</For>
 					</ul>
 				</div>
 			</Show>
 			<Show when={reply()}>
-				<InputReply thread={props.thread} reply={reply()!} />
+				<InputReply thread={props.channel} reply={reply()!} />
 			</Show>
 			<div class="text">
 				<label class="upload">
@@ -322,7 +323,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 		<div class="reply">
 			<button
 				class="cancel"
-				onClick={() => ctx.thread_reply_id.delete(props.thread.id)}
+				onClick={() => ctx.channel_reply_id.delete(props.thread.id)}
 				ref={tip.content}
 			>
 				<img class="icon" src={cancelIc} />

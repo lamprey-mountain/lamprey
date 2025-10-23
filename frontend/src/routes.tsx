@@ -2,11 +2,11 @@ import { A, Navigate, RouteSectionProps } from "@solidjs/router";
 import { useApi } from "./api.tsx";
 import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
-import { ThreadNav } from "./Nav.tsx";
+import { ChannelNav } from "./Nav.tsx";
 import { RoomHome, RoomMembers } from "./Room.tsx";
 import { createEffect, For, Match, Show, Switch } from "solid-js";
 import { RoomSettings } from "./RoomSettings.tsx";
-import { ThreadSettings } from "./ThreadSettings.tsx";
+import { ChannelSettings } from "./ChannelSettings.tsx";
 import { ChatHeader, ChatMain, SearchResults } from "./Chat.tsx";
 import { ThreadMembers } from "./Thread.tsx";
 import { Home } from "./Home.tsx";
@@ -73,13 +73,13 @@ export const RouteRoom = (p: RouteSectionProps) => {
 			<Title title={room() ? room()!.name : t("loading")} />
 			<RoomNav />
 			<Resizable
-				storageKey="thread-nav-width"
+				storageKey="channel-nav-width"
 				side="left"
 				initialWidth={256}
 				minWidth={180}
 				maxWidth={500}
 			>
-				<ThreadNav room_id={p.params.room_id} />
+				<ChannelNav room_id={p.params.room_id} />
 			</Resizable>
 			<header>
 				<b>home</b>
@@ -121,51 +121,52 @@ export const RouteRoomSettings = (p: RouteSectionProps) => {
 	);
 };
 
-export const RouteThreadSettings = (p: RouteSectionProps) => {
+export const RouteChannelSettings = (p: RouteSectionProps) => {
 	const { t } = useCtx();
 	const api = useApi();
-	const thread = api.channels.fetch(() => p.params.thread_id);
+	const channel = api.channels.fetch(() => p.params.channel_id);
 	const title = () =>
-		thread() ? t("page.settings_thread", thread()!.name) : t("loading");
+		channel() ? t("page.settings_channel", channel()!.name) : t("loading");
 	return (
 		<>
 			<Title title={title()} />
-			<Show when={thread()}>
-				<ThreadSettings thread={thread()!} page={p.params.page} />
+			<Show when={channel()}>
+				<ChannelSettings channel={channel()!} page={p.params.page} />
 			</Show>
 		</>
 	);
 };
 
-const ThreadSidebar = (props: { thread: Channel }) => {
+const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const search = () => ctx.thread_search.get(props.thread.id);
+	const search = () => ctx.channel_search.get(props.channel.id);
 	const showMembers = () =>
-		props.thread.type !== "Voice" &&
-		flags.has("thread_member_list") &&
+		props.channel.type !== "Voice" &&
+		flags.has("channel_member_list") &&
 		ctx.userConfig().frontend.showMembers !== false;
-	const showPinned = () => ctx.thread_pinned_view.get(props.thread.id) ?? false;
+	const showPinned = () =>
+		ctx.channel_pinned_view.get(props.channel.id) ?? false;
 	const showVoiceChat = () =>
-		props.thread.type === "Voice" &&
-		ctx.voice_chat_sidebar_open.get(props.thread.id);
+		props.channel.type === "Voice" &&
+		ctx.voice_chat_sidebar_open.get(props.channel.id);
 
 	return (
 		<Switch>
 			<Match when={showVoiceChat()}>
 				<Resizable storageKey="voice-chat-sidebar-width" initialWidth={320}>
 					<div class="voice-chat-sidebar">
-						<ChatMain thread={props.thread} />
+						<ChatMain channel={props.channel} />
 					</div>
 				</Resizable>
 			</Match>
 			<Match when={search()}>
 				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
-					<SearchResults thread={props.thread} search={search()!} />
+					<SearchResults channel={props.channel} search={search()!} />
 				</Resizable>
 			</Match>
 			<Match when={showPinned()}>
 				<Resizable storageKey="pinned-sidebar-width" initialWidth={320}>
-					<PinnedMessages thread={props.thread} />
+					<PinnedMessages channel={props.channel} />
 				</Resizable>
 			</Match>
 			<Match when={showMembers()}>
@@ -175,50 +176,50 @@ const ThreadSidebar = (props: { thread: Channel }) => {
 					minWidth={180}
 					maxWidth={500}
 				>
-					<ThreadMembers thread={props.thread} />
+					<ThreadMembers thread={props.channel} />
 				</Resizable>
 			</Match>
 		</Switch>
 	);
 };
 
-export const RouteThread = (p: RouteSectionProps) => {
+export const RouteChannel = (p: RouteSectionProps) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api = useApi();
-	const thread = api.channels.fetch(() => p.params.thread_id);
-	const room = api.rooms.fetch(() => thread()?.room_id!);
+	const channel = api.channels.fetch(() => p.params.channel_id);
+	const room = api.rooms.fetch(() => channel()?.room_id!);
 
 	createEffect(() => {
-		const { thread_id, message_id } = p.params;
-		if (thread_id && message_id) {
-			ctx.thread_anchor.set(thread_id, {
+		const { channel_id, message_id } = p.params;
+		if (channel_id && message_id) {
+			ctx.channel_anchor.set(channel_id, {
 				type: "context",
 				limit: 50,
 				message_id: message_id,
 			});
-			ctx.thread_highlight.set(thread_id, message_id);
-		} else if (thread_id) {
-			const current_anchor = ctx.thread_anchor.get(thread_id);
+			ctx.channel_highlight.set(channel_id, message_id);
+		} else if (channel_id) {
+			const current_anchor = ctx.channel_anchor.get(channel_id);
 			if (current_anchor?.type === "context") {
-				ctx.thread_anchor.delete(thread_id);
+				ctx.channel_anchor.delete(channel_id);
 			}
 		}
 	});
 
-	// fetch threads to populate sidebar
-	api.channels.list(() => thread()?.room_id!);
+	// fetch channels to populate sidebar
+	api.channels.list(() => channel()?.room_id!);
 
 	const title = () => {
-		const th = thread();
-		if (!th) return t("loading");
-		if (th.type === "Dm") {
+		const ch = channel();
+		if (!ch) return t("loading");
+		if (ch.type === "Dm") {
 			const user_id = api.users.cache.get("@self")!.id;
-			return th.recipients.find((i) => i.id !== user_id)?.name ??
+			return ch.recipients.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}
 
-		return room() && th.room_id ? `${th.name} - ${room()!.name}` : th.name;
+		return room() && ch.room_id ? `${ch.name} - ${room()!.name}` : ch.name;
 	};
 
 	return (
@@ -226,37 +227,37 @@ export const RouteThread = (p: RouteSectionProps) => {
 			<Title title={title()} />
 			<RoomNav />
 			<Resizable
-				storageKey="thread-nav-width"
+				storageKey="channel-nav-width"
 				side="left"
 				initialWidth={256}
 				minWidth={180}
 				maxWidth={500}
 			>
-				<ThreadNav room_id={thread()?.room_id ?? undefined} />
+				<ChannelNav room_id={channel()?.room_id ?? undefined} />
 			</Resizable>
-			<Show when={thread()}>
-				<Show when={thread()!.type !== "Voice"}>
-					<ChatHeader thread={thread()!} />
+			<Show when={channel()}>
+				<Show when={channel()!.type !== "Voice"}>
+					<ChatHeader channel={channel()!} />
 				</Show>
 				<Show
-					when={thread()!.type === "Text" ||
-						thread()!.type === "Dm" ||
-						thread()!.type === "Gdm" ||
-						thread()!.type === "ThreadPublic" ||
-						thread()!.type === "ThreadPrivate"}
+					when={channel()!.type === "Text" ||
+						channel()!.type === "Dm" ||
+						channel()!.type === "Gdm" ||
+						channel()!.type === "ThreadPublic" ||
+						channel()!.type === "ThreadPrivate"}
 				>
-					<ChatMain thread={thread()!} />
+					<ChatMain channel={channel()!} />
 				</Show>
-				<Show when={thread()!.type === "Voice"}>
-					<Voice thread={thread()!} />
+				<Show when={channel()!.type === "Voice"}>
+					<Voice channel={channel()!} />
 				</Show>
-				<Show when={thread()!.type === "Forum"}>
-					<Forum thread={thread()!} />
+				<Show when={channel()!.type === "Forum"}>
+					<Forum channel={channel()!} />
 				</Show>
-				<Show when={thread()!.type === "Category"}>
-					<Category thread={thread()!} />
+				<Show when={channel()!.type === "Category"}>
+					<Category channel={channel()!} />
 				</Show>
-				<ThreadSidebar thread={thread()!} />
+				<ChannelSidebar channel={channel()!} />
 				<VoiceTray />
 			</Show>
 		</>
@@ -269,13 +270,13 @@ export const RouteHome = () => {
 			<Title title={t("page.home")} />
 			<RoomNav />
 			<Resizable
-				storageKey="thread-nav-width"
+				storageKey="channel-nav-width"
 				side="left"
 				initialWidth={256}
 				minWidth={180}
 				maxWidth={500}
 			>
-				<ThreadNav />
+				<ChannelNav />
 			</Resizable>
 			<Home />
 			<VoiceTray />
@@ -300,13 +301,13 @@ export const RouteInvite = (p: RouteSectionProps) => {
 			<Show when={p.params.code}>
 				<RoomNav />
 				<Resizable
-					storageKey="thread-nav-width"
+					storageKey="channel-nav-width"
 					side="left"
 					initialWidth={256}
 					minWidth={180}
 					maxWidth={500}
 				>
-					<ThreadNav room_id={p.params.room_id} />
+					<ChannelNav room_id={p.params.room_id} />
 				</Resizable>
 				<RouteInviteInner code={p.params.code!} />
 				<VoiceTray />
@@ -323,7 +324,7 @@ export const RouteUser = (p: RouteSectionProps) => {
 		<>
 			<Title title={user()?.name ?? "loading..."} />
 			<RoomNav />
-			<ThreadNav />
+			<ChannelNav />
 			<header class="chat-header">
 				<b>{user()?.name}</b>
 			</header>

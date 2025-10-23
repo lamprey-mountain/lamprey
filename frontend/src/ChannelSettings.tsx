@@ -1,8 +1,8 @@
 import { For, Show } from "solid-js";
-import type { ThreadT } from "./types.ts";
+import type { Channel } from "sdk";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Info, Permissions, Todo } from "./thread_settings/mod.tsx";
+import { Info, Permissions, Todo } from "./channel_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
@@ -11,21 +11,21 @@ const tabs = [
 	{ name: "members", path: "members", component: Todo },
 ];
 
-export const ThreadSettings = (props: { thread: ThreadT; page: string }) => {
+export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
 
 	return (
 		<div class="settings">
 			<header>
-				thread settings: {currentTab()?.name}{" "}
-				<A href={`/thread/${props.thread.id}`}>back</A>
+				channel settings: {currentTab()?.name}{" "}
+				<A href={`/channel/${props.channel.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>
 					<For each={tabs}>
 						{(tab) => (
 							<li>
-								<A href={`/thread/${props.thread.id}/settings/${tab.path}`}>
+								<A href={`/channel/${props.channel.id}/settings/${tab.path}`}>
 									{tab.name}
 								</A>
 							</li>
@@ -37,7 +37,7 @@ export const ThreadSettings = (props: { thread: ThreadT; page: string }) => {
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
 						component={currentTab()?.component}
-						thread={props.thread}
+						channel={props.channel}
 					/>
 				</Show>
 			</main>

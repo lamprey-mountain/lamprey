@@ -27,20 +27,20 @@ import { createPopup } from "./popup.tsx";
 import { useCtx } from "./context.ts";
 import { getColor } from "./colors.ts";
 
-export const Voice = (p: { thread: Channel }) => {
+export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice, actions] = useVoice();
 	const ctx = useCtx();
 
-	createEffect(on(() => p.thread.id, (tid) => {
+	createEffect(on(() => p.channel.id, (tid) => {
 		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
 	}));
 
 	const getName = (uid: string) => {
 		const user = api.users.fetch(() => uid);
-		const room_member = p.thread.room_id
-			? api.room_members.fetch(() => p.thread.room_id!, () => uid)
+		const room_member = p.channel.room_id
+			? api.room_members.fetch(() => p.channel.room_id!, () => uid)
 			: null;
 		const rm = room_member?.();
 		return (rm?.membership === "Join" && rm.override_name) || user()?.name ||
@@ -54,7 +54,7 @@ export const Voice = (p: { thread: Channel }) => {
 		}
 		const users = [];
 		for (const state of api.voiceStates.values()) {
-			if (state.thread_id === p.thread.id && !hasStream.has(state.user_id)) {
+			if (state.thread_id === p.channel.id && !hasStream.has(state.user_id)) {
 				users.push(state.user_id);
 			}
 		}
@@ -85,9 +85,9 @@ export const Voice = (p: { thread: Channel }) => {
 	});
 
 	const isChatOpen = () =>
-		ctx.voice_chat_sidebar_open.get(p.thread.id) ?? false;
+		ctx.voice_chat_sidebar_open.get(p.channel.id) ?? false;
 	const toggleChat = () => {
-		ctx.voice_chat_sidebar_open.set(p.thread.id, !isChatOpen());
+		ctx.voice_chat_sidebar_open.set(p.channel.id, !isChatOpen());
 	};
 
 	return (
@@ -198,16 +198,16 @@ export const Voice = (p: { thread: Channel }) => {
 				</div>
 			</div>
 			<header class="top">
-				<b>{p.thread.name}</b>
-				<Show when={p.thread.description}>
+				<b>{p.channel.name}</b>
+				<Show when={p.channel.description}>
 					<span class="dim" style="white-space:pre;font-size:1em">
 						{"  -  "}
 					</span>
-					{p.thread.description}
+					{p.channel.description}
 				</Show>
 				<Switch>
-					<Match when={p.thread.deleted_at}>{" (removed)"}</Match>
-					<Match when={p.thread.archived_at}>{" (archived)"}</Match>
+					<Match when={p.channel.deleted_at}>{" (removed)"}</Match>
+					<Match when={p.channel.archived_at}>{" (archived)"}</Match>
 				</Switch>
 				<div style="flex:1"></div>
 				<button

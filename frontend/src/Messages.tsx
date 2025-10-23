@@ -67,7 +67,7 @@ export function renderTimelineItem(thread: ThreadT, item: TimelineItemT) {
 				<li
 					class="message"
 					classList={{
-						selected: item.message.id === ctx.thread_reply_id.get(thread.id),
+						selected: item.message.id === ctx.channel_reply_id.get(thread.id),
 						"message-selected": isSelected(),
 						mentioned: is_mentioned(),
 					}}

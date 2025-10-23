@@ -3,18 +3,18 @@ import { createSignal, type VoidProps } from "solid-js";
 import { useCtx } from "../context.ts";
 import { useApi } from "../api.tsx";
 
-export function Info(props: VoidProps<{ thread: Channel }>) {
+export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
 	const api = useApi();
-	const [editingNsfw, setEditingNsfw] = createSignal(props.thread.nsfw);
-	const [editingName, setEditingName] = createSignal(props.thread.name);
+	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
+	const [editingName, setEditingName] = createSignal(props.channel.name);
 	const [editingDescription, setEditingDescription] = createSignal(
-		props.thread.description,
+		props.channel.description,
 	);
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: props.thread.id } },
+			params: { path: { channel_id: props.channel.id } },
 			body: {
 				name: editingName(),
 				description: editingDescription(),
@@ -24,18 +24,18 @@ export function Info(props: VoidProps<{ thread: Channel }>) {
 	};
 
 	const toggleArchived = () => {
-		if (props.thread.archived_at) {
-			api.threads.unarchive(props.thread.id);
+		if (props.channel.archived_at) {
+			api.channels.unarchive(props.channel.id);
 		} else {
-			api.threads.archive(props.thread.id);
+			api.channels.archive(props.channel.id);
 		}
 	};
 
 	const toggleLocked = () => {
-		if (props.thread.locked) {
-			api.threads.unlock(props.thread.id);
+		if (props.channel.locked) {
+			api.channels.unlock(props.channel.id);
 		} else {
-			api.threads.lock(props.thread.id);
+			api.channels.lock(props.channel.id);
 		}
 	};
 
@@ -61,7 +61,7 @@ export function Info(props: VoidProps<{ thread: Channel }>) {
 			<br />
 			<br />
 			<div>
-				thread id: <code class="select-all">{props.thread.id}</code>
+				channel id: <code class="select-all">{props.channel.id}</code>
 			</div>
 			<div>
 				<label>
@@ -73,7 +73,7 @@ export function Info(props: VoidProps<{ thread: Channel }>) {
 						/>
 						<b>nsfw</b>
 					</div>
-					<div>mark this thread as not safe for work</div>
+					<div>mark this channel as not safe for work</div>
 				</label>
 			</div>
 			<div>(todo) tags</div>
@@ -85,30 +85,30 @@ export function Info(props: VoidProps<{ thread: Channel }>) {
 				<label>
 					{/* should this really be in the "danger zone"? archiving doesnt do much */}
 					<button onClick={toggleArchived}>
-						{props.thread.archived_at ? "unarchive" : "archive"}
+						{props.channel.archived_at ? "unarchive" : "archive"}
 					</button>
 					<span style="margin-left:8px">
-						{props.thread.archived_at
-							? "shows this thread in the nav bar"
-							: "hides this thread in the nav bar"}
+						{props.channel.archived_at
+							? "shows this channel in the nav bar"
+							: "hides this channel in the nav bar"}
 					</span>
 				</label>
 				<br />
 				<label>
 					<button onClick={toggleLocked}>
-						{props.thread.locked ? "unlock" : "lock"}
+						{props.channel.locked ? "unlock" : "lock"}
 					</button>
 					<span style="margin-left:8px">
-						{props.thread.locked
-							? "anyone will be able to chat in this thread"
-							: "only moderators can chat in this thread"}
+						{props.channel.locked
+							? "anyone will be able to chat in this channel"
+							: "only moderators can chat in this channel"}
 					</span>
 				</label>
 				<br />
 				<label>
 					<button onClick={() => alert("todo")}>remove</button>
 					<span style="margin-left:8px">
-						archives and locks this thread and hides it from all listings
+						archives and locks this channel and hides it from all listings
 						(direct links still work)
 					</span>
 				</label>

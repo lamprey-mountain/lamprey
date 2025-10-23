@@ -133,6 +133,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 													user_id: i.user_id,
 													x: e.clientX,
 													y: e.clientY,
+													admin: true,
 												});
 											});
 										}}

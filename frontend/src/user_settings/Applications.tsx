@@ -451,7 +451,7 @@ const InviteToRoom = (
 					return (
 						<button
 							onClick={[inviteToRoom, r.id]}
-							disabled={!perms.has("BotsAdd")}
+							disabled={!perms.has("IntegrationsManage")}
 						>
 							{r.name}
 						</button>

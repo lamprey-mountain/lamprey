@@ -354,10 +354,10 @@ const QuickCreate = (
 
 	const onChange = (state: EditorState) => {
 		// reuse room id as the thread id for draft messages
-		ctx.thread_editor_state.set(props.room.id, state);
+		ctx.channel_editor_state.set(props.room.id, state);
 	};
 
-	const atts = () => ctx.thread_attachments.get(props.room.id);
+	const atts = () => ctx.channel_attachments.get(props.room.id);
 	return (
 		<div class="message-input quick-create">
 			<div style="margin-bottom: 2px">quick create thread</div>

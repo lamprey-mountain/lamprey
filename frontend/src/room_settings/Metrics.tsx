@@ -24,9 +24,9 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 						{metrics()!.media_count} files
 					</li>
 					<li>members: {metrics()!.member_count}</li>
-					<li>total threads: {metrics()!.thread_count}</li>
+					<li>total channels: {metrics()!.channel_count}</li>
 					<li>
-						active threads: {metrics()!.active_thread_count}{" "}
+						active channels: {metrics()!.active_channel_count}{" "}
 						(not archived or removed)
 					</li>
 					<li>messages: {metrics()?.message_count}</li>

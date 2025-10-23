@@ -141,6 +141,7 @@ export function Integrations(props: VoidProps<{ room: RoomT }>) {
 													user_id: i.user_id,
 													x: e.clientX,
 													y: e.clientY,
+													admin: true,
 												});
 											});
 										}}

@@ -5,12 +5,12 @@ import { MessageView } from "../Message.tsx";
 import type { Message } from "sdk";
 
 type PinnedMessagesProps = {
-	thread: Channel;
+	channel: Channel;
 };
 
 export function PinnedMessages(props: PinnedMessagesProps) {
 	const api = useApi();
-	const pinnedMessages = api.messages.listPinned(() => props.thread.id);
+	const pinnedMessages = api.messages.listPinned(() => props.channel.id);
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
 	const [target, setTarget] = createSignal<
@@ -82,12 +82,12 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 			position: i,
 		}));
 
-		api.messages.reorderPins(props.thread.id, body);
+		api.messages.reorderPins(props.channel.id, body);
 
 		// optimistic update
 		const current = pinnedMessages();
 		if (current) {
-			api.messages._pinnedListings.get(props.thread.id)?.mutate({
+			api.messages._pinnedListings.get(props.channel.id)?.mutate({
 				...current,
 				items: reordered,
 			});
@@ -122,7 +122,7 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 	});
 
 	return (
-		<div class="pinned-messages-list" data-thread-id={props.thread.id}>
+		<div class="pinned-messages-list" data-channel-id={props.channel.id}>
 			<Show
 				when={pinnedMessages.loading}
 				fallback={

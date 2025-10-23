@@ -51,29 +51,29 @@ import * as i18n from "@solid-primitives/i18n";
 import { createResource } from "solid-js";
 import type en from "./i18n/en.ts";
 import {
+	ChannelMenu,
 	MessageMenu,
 	RoomMenu,
-	ThreadMenu,
 	UserAdminMenu,
 	UserMenu,
 } from "./menu/mod.ts";
 import {
 	RoomNav,
 	RouteAuthorize,
+	RouteChannel,
+	RouteChannelSettings,
 	RouteFeed,
 	RouteHome,
 	RouteInvite,
 	RouteRoom,
 	RouteRoomSettings,
-	RouteThread,
-	RouteThreadSettings,
 	RouteUser,
 } from "./routes.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
 import { UserProfile } from "./UserProfile.tsx";
 import { useContextMenu } from "./hooks/useContextMenu.ts";
 import { Inbox } from "./Inbox.tsx";
-import { ThreadNav } from "./Nav.tsx";
+import { ChannelNav } from "./Nav.tsx";
 import { useVoice, VoiceProvider } from "./voice-provider.tsx";
 import { Config, ConfigProvider, useConfig } from "./config.tsx";
 import { UserView } from "./User.tsx";
@@ -92,22 +92,22 @@ const App: Component = () => {
 				component={RouteRoomSettings}
 			/>
 			<Route
-				path="/thread/:thread_id/settings/:page?"
-				component={RouteThreadSettings}
+				path="/channel/:channel_id/settings/:page?"
+				component={RouteChannelSettings}
 			/>
-			<Route path="/thread/:thread_id" component={RouteThread} />
+			<Route path="/channel/:channel_id" component={RouteChannel} />
 			<Route
-				path="/thread/:thread_id/message/:message_id"
-				component={RouteThread}
+				path="/channel/:channel_id/message/:message_id"
+				component={RouteChannel}
 			/>
 			<Route
-				path="/channel/:thread_id/settings/:page?"
-				component={RouteThreadSettings}
+				path="/thread/:channel_id/settings/:page?"
+				component={RouteChannelSettings}
 			/>
-			<Route path="/channel/:thread_id" component={RouteThread} />
+			<Route path="/thread/:channel_id" component={RouteChannel} />
 			<Route
-				path="/channel/:thread_id/message/:message_id"
-				component={RouteThread}
+				path="/thread/:channel_id/message/:message_id"
+				component={RouteChannel}
 			/>
 			<Route path="/debug" component={Debug} />
 			<Route path="/feed" component={RouteFeed} />
@@ -253,7 +253,7 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		api.users.setConfig(config);
 	});
 
-	const [recentThreads, setRecentThreads] = createSignal([] as string[]);
+	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
 
 	const ctx: ChatCtx = {
 		client,
@@ -270,24 +270,24 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 		setPopout,
 		userView,
 		setUserView,
-		thread_anchor: new ReactiveMap(),
-		thread_attachments: new ReactiveMap(),
-		thread_editor_state: new Map(),
-		thread_highlight: new ReactiveMap(),
-		thread_read_marker_id: new ReactiveMap(),
-		thread_reply_id: new ReactiveMap(),
-		thread_scroll_pos: new Map(),
-		thread_search: new ReactiveMap(),
-		thread_pinned_view: new ReactiveMap(),
+		channel_anchor: new ReactiveMap(),
+		channel_attachments: new ReactiveMap(),
+		channel_editor_state: new Map(),
+		channel_highlight: new ReactiveMap(),
+		channel_read_marker_id: new ReactiveMap(),
+		channel_reply_id: new ReactiveMap(),
+		channel_scroll_pos: new Map(),
+		channel_search: new ReactiveMap(),
+		channel_pinned_view: new ReactiveMap(),
 		voice_chat_sidebar_open: new ReactiveMap(),
 		uploads: new ReactiveMap(),
-		thread_edit_drafts: new ReactiveMap(),
-		thread_input_focus: new Map(),
+		channel_edit_drafts: new ReactiveMap(),
+		channel_input_focus: new Map(),
 
 		editingMessage,
 
-		recentThreads,
-		setRecentThreads,
+		recentChannels,
+		setRecentChannels,
 
 		currentMedia,
 		setCurrentMedia,
@@ -305,9 +305,9 @@ export const Root2 = (props: ParentProps<{ resolved: boolean }>) => {
 	};
 	createEffect(() => {
 		const loc = useLocation();
-		const path = loc.pathname.match(/^\/(thread|channel)\/([^/]+)/);
+		const path = loc.pathname.match(/^\/(channel)\/([^/]+)/);
 		if (!path) return;
-		ctx.setRecentThreads((s) =>
+		ctx.setRecentChannels((s) =>
 			[path[2], ...s.filter((i) => i !== path[2])].slice(0, 11)
 		);
 	});
@@ -482,7 +482,7 @@ function RouteInbox() {
 		<>
 			<Title title="inbox" />
 			<RoomNav />
-			<ThreadNav />
+			<ChannelNav />
 			<Inbox />
 		</>
 	);
@@ -645,13 +645,13 @@ function Overlay() {
 			case "room": {
 				return <RoomMenu room_id={menu.room_id} />;
 			}
-			case "thread": {
-				return <ThreadMenu thread_id={menu.thread_id} />;
+			case "channel": {
+				return <ChannelMenu channel_id={menu.channel_id} />;
 			}
 			case "message": {
 				return (
 					<MessageMenu
-						thread_id={menu.thread_id}
+						channel_id={menu.channel_id}
 						message_id={menu.message_id}
 						version_id={menu.version_id}
 					/>
@@ -662,7 +662,7 @@ function Overlay() {
 					<UserMenu
 						user_id={menu.user_id}
 						room_id={menu.room_id}
-						thread_id={menu.thread_id}
+						channel_id={menu.channel_id}
 						admin={menu.admin}
 					/>
 				);
@@ -677,8 +677,8 @@ function Overlay() {
 		const room_member = uv.room_id
 			? api.room_members.fetch(() => uv.room_id!, () => uv.user_id)
 			: () => null;
-		const thread_member = uv.thread_id
-			? api.thread_members.fetch(() => uv.thread_id!, () => uv.user_id)
+		const thread_member = uv.channel_id
+			? api.thread_members.fetch(() => uv.channel_id!, () => uv.user_id)
 			: () => null;
 		return { user, room_member, thread_member };
 	});

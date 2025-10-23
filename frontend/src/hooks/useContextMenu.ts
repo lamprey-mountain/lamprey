@@ -10,7 +10,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		const targetEl = e.target as HTMLElement;
 
 		const menuEl = targetEl.closest(
-			".menu-room, .menu-thread, .menu-message, .menu-user",
+			".menu-room, .menu-channel, .menu-thread, .menu-message, .menu-user",
 		) as HTMLElement | null;
 		const mediaEl = targetEl.closest(
 			"a:not(.nav), img:not(.avatar), video, audio",
@@ -34,7 +34,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 
 		let menu: Partial<Menu> | null = null;
 		const room_id = getData("data-room-id");
-		const thread_id = getData("data-thread-id");
+		const thread_id = getData("data-channel-id") ?? getData("data-thread-id");
 		const message_id = getData("data-message-id");
 		const user_id = getData("data-user-id");
 		console.log("[menu] menu id data", {
@@ -50,20 +50,22 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 				type: "room",
 				room_id,
 			};
-		} else if (menuEl.classList.contains("menu-thread")) {
+		} else if (
+			menuEl.classList.contains("menu-channel") ||
+			menuEl.classList.contains("menu-thread")
+		) {
 			if (!thread_id) return;
 			menu = {
-				type: "thread",
-				thread_id,
+				type: "channel",
+				channel_id: thread_id,
 			};
 		} else if (menuEl.classList.contains("menu-message")) {
 			const message = api.messages.cache.get(message_id!);
 			if (!message) return;
-			const thread_id = message.channel_id;
-			const version_id = message.version_id;
+			const { channel_id, version_id } = message;
 			menu = {
 				type: "message",
-				thread_id,
+				channel_id,
 				message_id,
 				version_id,
 			};
@@ -77,7 +79,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 
 			menu = {
 				type: "user",
-				thread_id: thread?.id,
+				channel_id: thread?.id,
 				room_id: thread?.room_id ?? room?.id ?? undefined,
 				user_id,
 			};

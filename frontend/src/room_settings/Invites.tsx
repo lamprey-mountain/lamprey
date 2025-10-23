@@ -1,6 +1,7 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi } from "../api.tsx";
 import type { RoomT } from "../types.ts";
+import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../User.tsx";
 import { Time } from "../Time.tsx";
 import { Copyable } from "../util.tsx";
@@ -42,7 +43,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.items}>
+						<For each={invites()!.items as InviteWithMetadata[]}>
 							{(i) => {
 								const user = api.users.fetch(() => i.creator_id);
 								const rm = api.room_members.fetch(() => props.room.id, () =>

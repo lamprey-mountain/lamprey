@@ -14,7 +14,7 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 		const { data } = await api.client.http.GET(
 			"/api/v1/user/{user_id}/audit-logs",
 			{
-				params: { path: { user_id: "@self" }, query: { dir: "b", limit: 100 } },
+				params: { path: { user_id: "@self" } },
 			},
 		);
 		return data;

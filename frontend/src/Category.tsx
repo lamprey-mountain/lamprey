@@ -13,11 +13,11 @@ import { flags } from "./flags.ts";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 
-export const Category = (props: { thread: Channel }) => {
+export const Category = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
-	const room_id = () => props.thread.room_id!;
+	const room_id = () => props.channel.room_id!;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
@@ -47,7 +47,7 @@ export const Category = (props: { thread: Channel }) => {
 		const items = threadsResource()?.()?.items;
 		if (!items) return [];
 		// sort descending by id
-		return [...items].filter((t) => t.parent_id === props.thread.id).sort((
+		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
 			a,
 			b,
 		) => (a.id < b.id ? 1 : -1));
@@ -71,13 +71,13 @@ export const Category = (props: { thread: Channel }) => {
 		<div class="room-home">
 			<div style="display:flex">
 				<div style="flex:1">
-					<h2>{props.thread.name}</h2>
-					<p>{props.thread.description}</p>
+					<h2>{props.channel.name}</h2>
+					<p>{props.channel.description}</p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<A
 						style="padding: 0 4px"
-						href={`/thread/${props.thread.id}/settings`}
+						href={`/channel/${props.channel.id}/settings`}
 					>
 						settings
 					</A>
@@ -85,7 +85,7 @@ export const Category = (props: { thread: Channel }) => {
 			</div>
 			<Show when={flags.has("thread_quick_create")}>
 				<br />
-				<QuickCreate thread={props.thread} />
+				<QuickCreate channel={props.channel} />
 				<br />
 			</Show>
 			<div style="display:flex; align-items:center">
@@ -164,9 +164,9 @@ export const Category = (props: { thread: Channel }) => {
 	);
 };
 
-// NOTE the room id is reused as the thread id for draft messages and attachments
+// NOTE the room id is reused as the channel id for draft messages and attachments
 const QuickCreate = (
-	props: { thread: Channel },
+	props: { channel: Channel },
 ) => {
 	const ctx = useCtx();
 	const api = useApi();
@@ -189,27 +189,27 @@ const QuickCreate = (
 			do: "upload.init",
 			file,
 			local_id,
-			thread_id: props.thread.id,
+			channel_id: props.channel.id,
 		});
 	}
 
 	const onSubmit = async (text: string) => {
 		if (!text) return;
-		const t = await api.channels.create(props.thread.room_id!, {
+		const t = await api.channels.create(props.channel.room_id!, {
 			name: "thread",
-			parent_id: props.thread.id,
+			parent_id: props.channel.id,
 		});
 
 		if (!t.data) return;
-		handleSubmit(ctx, t.data.id, text, null as any, api, props.thread.id);
-		n(`/thread/${t.data.id}`);
+		handleSubmit(ctx, t.data.id, text, null as any, api, props.channel.id);
+		n(`/channel/${t.data.id}`);
 	};
 
 	const onChange = (state: EditorState) => {
-		ctx.thread_editor_state.set(props.thread.id, state);
+		ctx.channel_editor_state.set(props.channel.id, state);
 	};
 
-	const atts = () => ctx.thread_attachments.get(props.thread.id);
+	const atts = () => ctx.channel_attachments.get(props.channel.id);
 	return (
 		<div class="message-input quick-create">
 			<div style="margin-bottom: 2px">quick create thread</div>
@@ -223,7 +223,7 @@ const QuickCreate = (
 						<For each={atts()}>
 							{(att) => (
 								<RenderUploadItem
-									thread_id={props.thread.id}
+									channel_id={props.channel.id}
 									att={att}
 								/>
 							)}

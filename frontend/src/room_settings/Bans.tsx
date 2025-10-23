@@ -75,7 +75,7 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 											{(exp) => <Time date={new Date(exp())} />}
 										</Show>
 									</div>
-									<div class="reason" use:tipContent>
+									<div class="reason">
 										{i.reason}
 									</div>
 									<button

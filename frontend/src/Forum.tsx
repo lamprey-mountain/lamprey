@@ -5,10 +5,10 @@ import { useApi } from "./api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./Time";
 
-export const Forum = (props: { thread: Channel }) => {
+export const Forum = (props: { channel: Channel }) => {
 	const api = useApi();
-	const [comments] = api.messages.listReplies(
-		() => props.thread.id,
+	const comments = api.messages.listReplies(
+		() => props.channel.id,
 		() => undefined,
 	);
 	const collapsed = new ReactiveSet<string>();
@@ -22,7 +22,7 @@ export const Forum = (props: { thread: Channel }) => {
 						<li class="toplevel">
 							<Comment
 								collapsed={collapsed}
-								thread={props.thread}
+								channel={props.channel}
 								message={c}
 							/>
 						</li>
@@ -34,14 +34,14 @@ export const Forum = (props: { thread: Channel }) => {
 };
 
 const Comment = (
-	props: { collapsed: ReactiveSet<string>; thread: Channel; message: Message },
+	props: { collapsed: ReactiveSet<string>; channel: Channel; message: Message },
 ) => {
 	const api = useApi();
 
 	const collapsed = () => props.collapsed.has(props.message.id);
 
-	const [children] = api.messages.listReplies(
-		() => props.thread.id,
+	const children = api.messages.listReplies(
+		() => props.channel.id,
 		() => props.message.id,
 		() => ({ depth: 2 }),
 	);
@@ -89,7 +89,7 @@ const Comment = (
 								<li>
 									<Comment
 										collapsed={props.collapsed}
-										thread={props.thread}
+										channel={props.channel}
 										message={child}
 									/>
 								</li>

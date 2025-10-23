@@ -60,7 +60,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 		ctx.dispatch({
 			do: "modal.confirm",
 			text: "really delete this session?",
-			cont(confirmed: string | null) {
+			cont(confirmed: boolean) {
 				if (!confirmed) return;
 				ctx.client.http.DELETE("/api/v1/session/{session_id}", {
 					params: { path: { session_id } },

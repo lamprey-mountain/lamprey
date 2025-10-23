@@ -1623,6 +1623,7 @@ export interface paths {
 		};
 		/**
 		 * Inbox channels
+		 * @deprecated
 		 * @description
 		 *
 		 *     Get a list of all unread channel

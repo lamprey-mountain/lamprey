@@ -20,13 +20,13 @@ function getPermState(
 	return "inherit";
 }
 
-export function Permissions(props: VoidProps<{ thread: Channel }>) {
+export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api = useApi();
-	const roles = api.roles.list(() => props.thread.room_id);
-	const users = api.room_members.list(() => props.thread.room_id);
+	const roles = api.roles.list(() => props.channel.room_id);
+	const users = api.room_members.list(() => props.channel.room_id);
 
 	const [overwrites, setOverwrites] = createStore(
-		structuredClone(props.thread.permission_overwrites),
+		structuredClone(props.channel.permission_overwrites),
 	);
 	const [editingId, setEditingId] = createSignal<string | null>(null);
 
@@ -57,11 +57,11 @@ export function Permissions(props: VoidProps<{ thread: Channel }>) {
 		const overwrite = editingOverwrite();
 		if (!overwrite) return;
 		api.client.http.PUT(
-			"/api/v1/thread/{thread_id}/permission/{overwrite_id}",
+			"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
 			{
 				params: {
 					path: {
-						thread_id: props.thread.id,
+						channel_id: props.channel.id,
 						overwrite_id: overwrite.id,
 					},
 				},
@@ -78,11 +78,11 @@ export function Permissions(props: VoidProps<{ thread: Channel }>) {
 		const id = editingId();
 		if (!id) return;
 		api.client.http.DELETE(
-			"/api/v1/thread/{thread_id}/permission/{overwrite_id}",
+			"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
 			{
 				params: {
 					path: {
-						thread_id: props.thread.id,
+						channel_id: props.channel.id,
 						overwrite_id: id,
 					},
 				},

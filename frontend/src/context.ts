@@ -53,17 +53,17 @@ export type Menu =
 	}
 	& (
 		| { type: "room"; room_id: string }
-		| { type: "thread"; thread_id: string }
+		| { type: "channel"; channel_id: string }
 		| {
 			type: "message";
-			thread_id: string;
+			channel_id: string;
 			message_id: string;
 			version_id: string;
 		}
 		| {
 			type: "user";
 			user_id: string;
-			thread_id?: string;
+			channel_id?: string;
 			room_id?: string;
 			admin: boolean;
 		}
@@ -87,7 +87,7 @@ export type Modal =
 	}
 	| {
 		type: "message_edits";
-		thread_id: string;
+		channel_id: string;
 		message_id: string;
 	}
 	| {
@@ -101,20 +101,20 @@ export type AttachmentCreateT = {
 	id: string;
 };
 
-export type ThreadSearch = {
+export type ChannelSearch = {
 	query: string;
 	results: Pagination<Message> | null;
 	loading: boolean;
 	author?: string[];
 	before?: string;
 	after?: string;
-	thread?: string[];
+	channel?: string[];
 };
 
 export type UserViewData = {
 	user_id: string;
 	room_id?: string;
-	thread_id?: string;
+	channel_id?: string;
 	ref: HTMLElement;
 	source?: "member-list" | "message";
 };
@@ -139,27 +139,27 @@ export type ChatCtx = {
 	setPopout: Setter<Popout>;
 	userView: Accessor<UserViewData | null>;
 	setUserView: Setter<UserViewData | null>;
-	thread_anchor: ReactiveMap<string, MessageListAnchor>;
-	thread_attachments: ReactiveMap<string, Array<Attachment>>;
-	thread_editor_state: Map<string, EditorState>;
-	thread_highlight: Map<string, string>;
-	thread_read_marker_id: ReactiveMap<string, string>;
-	thread_reply_id: ReactiveMap<string, string>;
-	thread_scroll_pos: Map<string, number>;
-	thread_search: ReactiveMap<string, ThreadSearch>;
-	thread_pinned_view: ReactiveMap<string, boolean>; // thread_id -> showing_pinned
+	channel_anchor: ReactiveMap<string, MessageListAnchor>;
+	channel_attachments: ReactiveMap<string, Array<Attachment>>;
+	channel_editor_state: Map<string, EditorState>;
+	channel_highlight: Map<string, string>;
+	channel_read_marker_id: ReactiveMap<string, string>;
+	channel_reply_id: ReactiveMap<string, string>;
+	channel_scroll_pos: Map<string, number>;
+	channel_search: ReactiveMap<string, ChannelSearch>;
+	channel_pinned_view: ReactiveMap<string, boolean>; // channel_id -> showing_pinned
 	voice_chat_sidebar_open: ReactiveMap<string, boolean>;
 	uploads: ReactiveMap<string, Upload>;
-	thread_edit_drafts: ReactiveMap<string, string>;
-	thread_input_focus: Map<string, () => void>;
+	channel_edit_drafts: ReactiveMap<string, string>;
+	channel_input_focus: Map<string, () => void>;
 
 	editingMessage: ReactiveMap<
 		string,
 		{ message_id: string; selection?: "start" | "end" }
-	>; // thread_id -> message_id
+	>; // channel_id -> message_id
 
-	recentThreads: Accessor<Array<string>>;
-	setRecentThreads: Setter<Array<string>>;
+	recentChannels: Accessor<Array<string>>;
+	setRecentChannels: Setter<Array<string>>;
 
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
@@ -169,8 +169,8 @@ export type ChatCtx = {
 
 	scrollToChatList: (pos: number) => void;
 
-	selectMode: ReactiveMap<string, boolean>; // thread_id -> boolean
-	selectedMessages: ReactiveMap<string, string[]>; // thread_id -> message_id[]
+	selectMode: ReactiveMap<string, boolean>; // channel_id -> boolean
+	selectedMessages: ReactiveMap<string, string[]>; // channel_id -> message_id[]
 };
 export type MediaCtx = {
 	media: Media;

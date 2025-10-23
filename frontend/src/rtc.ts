@@ -90,9 +90,7 @@ export const createVoiceClient = () => {
 		});
 
 		conn.addEventListener("icecandidate", (e) => {
-			return;
-			if (!e.candidate) return;
-			if (!e.candidate.candidate) return;
+			if (!e.candidate?.candidate) return;
 			console.debug("[rtc:core] icecandidate", e.candidate);
 			send({ type: "Candidate", candidate: e.candidate.candidate });
 		});

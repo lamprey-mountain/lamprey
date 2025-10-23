@@ -160,7 +160,7 @@ export function Info(props: VoidProps<{ user: User }>) {
 						onClick={() =>
 							ctx.dispatch({
 								do: "modal.open",
-								modal: { type: "reset_password" },
+								modal: { type: "settings", user_id: props.user.id },
 							})}
 					>
 						change password

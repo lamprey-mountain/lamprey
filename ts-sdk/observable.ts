@@ -87,10 +87,10 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 				return init(key).observable;
 			},
 			entries() {
-				return entries
-					.entries()
-					.filter(([_k, o]) => o.get() !== empty)
-					.map(([k, o]) => [k, o.get()]);
+				return Array.from(entries.entries())
+					.filter(([_k, o]: [K, Observable<V>]) => o.get() !== empty)
+					.map(([k, o]: [K, Observable<V>]) => [k, o.get()] as [K, V])
+					.values();
 			},
 			watchEntries() {
 				return listing.observable;
@@ -102,11 +102,9 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 				const exists = has(key);
 				init(key).set(value);
 				if (!exists) {
-					const arr = entries
-						.entries()
-						.filter(([_k, o]) => o.get() !== empty)
-						.map(([k, o]) => [k, o.observable])
-						.toArray();
+					const arr = Array.from(entries.entries())
+						.filter(([_k, o]: [K, Observable<V>]) => o.get() !== empty)
+						.map(([k, o]: [K, Observable<V>]) => [k, o.observable]);
 					listing.set(arr as Array<[K, Observer<V>]>);
 				}
 			},
@@ -115,11 +113,9 @@ export function createObservableMap<K, V>(empty: V): ObservableMap<K, V> {
 				if (!o) return;
 				if (o === empty) return;
 				o.set(empty);
-				const arr = entries
-					.entries()
-					.filter(([_k, o]) => o.get() !== empty)
-					.map(([k, o]) => [k, o.observable])
-					.toArray();
+				const arr = Array.from(entries.entries())
+					.filter(([_k, o]: [K, Observable<V>]) => o.get() !== empty)
+					.map(([k, o]: [K, Observable<V>]) => [k, o.observable]);
 				listing.set(arr as Array<[K, Observer<V>]>);
 			},
 		},

@@ -533,7 +533,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 	);
 };
 
-export const ThreadIcon = (
+export const ChannelIcon = (
 	props: { id: string; icon?: string | null; pad?: number },
 ) => {
 	const pad = () => props.pad ?? 4;

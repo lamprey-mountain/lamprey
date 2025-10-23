@@ -304,10 +304,12 @@ const ModalPalette = () => {
 		return [...staticItems, ...rooms, ...threads];
 	});
 
-	const recentThreads = createMemo(() => {
-		return ctx.recentThreads().slice(1).map((i) => api.channels.cache.get(i)!)
+	const recentChannels = createMemo(() => {
+		return ctx.recentChannels().slice(1).map((i: any) =>
+			api.channels.cache.get(i)!
+		)
 			.map((
-				thread,
+				thread: any,
 			) => ({
 				type: "thread" as const,
 				id: thread.id,
@@ -319,7 +321,7 @@ const ModalPalette = () => {
 	const filteredItems = createMemo(() => {
 		const q = query().toLowerCase();
 		if (!q) {
-			return recentThreads();
+			return recentChannels();
 		}
 		return allItems().filter((item) =>
 			item.name && item.name.toLowerCase().includes(q)

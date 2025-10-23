@@ -13,10 +13,10 @@ import type { Channel } from "sdk";
 import { flags } from "./flags.ts";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "./config.tsx";
-import { Avatar, AvatarWithStatus, ThreadIcon } from "./User.tsx";
+import { Avatar, AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 
-export const ThreadNav = (props: { room_id?: string }) => {
+export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
 	const api = useApi();
 	const [voice] = useVoice();
@@ -32,7 +32,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	);
 
 	const [categories, setCategories] = createSignal<
-		Array<{ category: Channel | null; threads: Array<Channel> }>
+		Array<{ category: Channel | null; channels: Array<Channel> }>
 	>([]);
 
 	createEffect(() => {
@@ -49,13 +49,13 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 	// update list when room changes
 	createEffect(() => {
-		const threads = [...api.channels.cache.values()]
-			.filter((t) =>
-				props.room_id ? t.room_id === props.room_id : t.room_id === null
+		const channels = [...api.channels.cache.values()]
+			.filter((c) =>
+				props.room_id ? c.room_id === props.room_id : c.room_id === null
 			);
 		if (props.room_id) {
 			// sort by id
-			threads.sort((a, b) => {
+			channels.sort((a, b) => {
 				if (a.position === null && b.position === null) {
 					return a.id < b.id ? 1 : -1;
 				}
@@ -65,26 +65,26 @@ export const ThreadNav = (props: { room_id?: string }) => {
 			});
 		} else {
 			// sort by activity in dms list
-			threads.sort((a, b) =>
+			channels.sort((a, b) =>
 				(a.last_version_id ?? "") < (b.last_version_id ?? "") ? 1 : -1
 			);
 		}
 
 		const categories = new Map<string | null, Array<Channel>>();
-		for (const t of threads) {
-			if (t.type === "Category") {
-				const cat = categories.get(t.id) ?? [];
-				categories.set(t.id, cat);
+		for (const c of channels) {
+			if (c.type === "Category") {
+				const cat = categories.get(c.id) ?? [];
+				categories.set(c.id, cat);
 			} else {
-				const children = categories.get(t.parent_id!) ?? [];
-				children.push(t);
-				categories.set(t.parent_id!, children);
+				const children = categories.get(c.parent_id!) ?? [];
+				children.push(c);
+				categories.set(c.parent_id!, children);
 			}
 		}
 		const list = [...categories.entries()]
-			.map(([cid, ts]) => ({
+			.map(([cid, cs]) => ({
 				category: cid ? api.channels.cache.get(cid)! : null,
-				threads: ts,
+				channels: cs,
 			}))
 			.sort((a, b) => {
 				// null category comes first
@@ -119,55 +119,55 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 		if (!fromId || !toId || fromId === toId) return cats;
 
-		const fromThread = api.channels.cache.get(fromId);
-		const toThread = api.channels.cache.get(toId);
-		if (!fromThread || !toThread) return cats;
+		const fromChannel = api.channels.cache.get(fromId);
+		const toChannel = api.channels.cache.get(toId);
+		if (!fromChannel || !toChannel) return cats;
 
 		const newCategories = cats.map((c) => ({
 			category: c.category,
-			threads: [...c.threads],
+			channels: [...c.channels],
 		}));
 
 		const fromCat = newCategories.find(
-			(c) => (c.category?.id ?? null) === fromThread.parent_id,
+			(c) => (c.category?.id ?? null) === fromChannel.parent_id,
 		);
 		if (!fromCat) return cats;
-		const fromIndex = fromCat.threads.findIndex((t) => t.id === fromId);
+		const fromIndex = fromCat.channels.findIndex((c) => c.id === fromId);
 		if (fromIndex === -1) return cats;
 
-		const [moved] = fromCat.threads.splice(fromIndex, 1);
+		const [moved] = fromCat.channels.splice(fromIndex, 1);
 
-		if (toThread.type === "Category") {
+		if (toChannel.type === "Category") {
 			const toCat = newCategories.find((c) => c.category?.id === toId);
 			if (!toCat) return cats;
-			if (after) toCat.threads.push(moved);
-			else toCat.threads.unshift(moved);
+			if (after) toCat.channels.push(moved);
+			else toCat.channels.unshift(moved);
 		} else {
 			const toCat = newCategories.find(
-				(c) => (c.category?.id ?? null) === toThread.parent_id,
+				(c) => (c.category?.id ?? null) === toChannel.parent_id,
 			);
 			if (!toCat) return cats;
-			let toIndex = toCat.threads.findIndex((t) => t.id === toId);
+			let toIndex = toCat.channels.findIndex((c) => c.id === toId);
 			if (toIndex === -1) return cats;
 			if (after) toIndex++;
-			toCat.threads.splice(toIndex, 0, moved);
+			toCat.channels.splice(toIndex, 0, moved);
 		}
 
 		return newCategories;
 	});
 
-	// helper to get thread id from the element's data attribute
-	const getThreadId = (e: DragEvent) =>
-		(e.currentTarget as HTMLElement).dataset.threadId;
+	// helper to get channel id from the element's data attribute
+	const getChannelId = (e: DragEvent) =>
+		(e.currentTarget as HTMLElement).dataset.channelId;
 
 	const handleDragStart = (e: DragEvent) => {
-		const id = getThreadId(e);
+		const id = getChannelId(e);
 		if (id) setDragging(id);
 	};
 
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
-		const id = getThreadId(e);
+		const id = getChannelId(e);
 		if (!id || id === dragging()) {
 			return;
 		}
@@ -189,67 +189,67 @@ export const ThreadNav = (props: { room_id?: string }) => {
 
 		if (!fromId || !toId || fromId === toId) return;
 
-		const fromThread = api.channels.cache.get(fromId);
-		const toThread = api.channels.cache.get(toId);
-		if (!fromThread || !toThread) return;
+		const fromChannel = api.channels.cache.get(fromId);
+		const toChannel = api.channels.cache.get(toId);
+		if (!fromChannel || !toChannel) return;
 
 		const fromCategory = categories().find(
-			(c) => (c.category?.id ?? null) === fromThread.parent_id,
+			(c) => (c.category?.id ?? null) === fromChannel.parent_id,
 		);
 		if (!fromCategory) return;
 
-		const fromIndex = fromCategory.threads.findIndex((t) => t.id === fromId);
+		const fromIndex = fromCategory.channels.findIndex((c) => c.id === fromId);
 		if (fromIndex === -1) return;
 
 		let toCategory;
 		let toIndex;
 		let newParentId;
 
-		if (toThread.type === "Category") {
+		if (toChannel.type === "Category") {
 			toCategory = categories().find((c) => c.category?.id === toId);
 			if (!toCategory) return;
-			toIndex = after ? toCategory.threads.length : 0;
+			toIndex = after ? toCategory.channels.length : 0;
 			newParentId = toId;
 		} else {
 			toCategory = categories().find(
-				(c) => (c.category?.id ?? null) === toThread.parent_id,
+				(c) => (c.category?.id ?? null) === toChannel.parent_id,
 			);
 			if (!toCategory) return;
-			toIndex = toCategory.threads.findIndex((t) => t.id === toId);
+			toIndex = toCategory.channels.findIndex((c) => c.id === toId);
 			if (toIndex === -1) return;
 			if (after) toIndex++;
-			newParentId = toThread.parent_id;
+			newParentId = toChannel.parent_id;
 		}
 
-		const reordered = [...toCategory.threads];
+		const reordered = [...toCategory.channels];
 		if (fromCategory === toCategory) {
 			if (fromIndex < toIndex) toIndex--;
 			const [moved] = reordered.splice(fromIndex, 1);
 			reordered.splice(toIndex, 0, moved);
 		} else {
-			reordered.splice(toIndex, 0, fromThread);
+			reordered.splice(toIndex, 0, fromChannel);
 		}
 
 		if (
 			fromCategory === toCategory &&
-			JSON.stringify(fromCategory.threads.map((t) => t.id)) ===
-				JSON.stringify(reordered.map((t) => t.id))
+			JSON.stringify(fromCategory.channels.map((c) => c.id)) ===
+				JSON.stringify(reordered.map((c) => c.id))
 		) {
 			return;
 		}
 
-		const body = reordered.map((t, i) => ({
-			id: t.id,
+		const body = reordered.map((c, i) => ({
+			id: c.id,
 			parent_id: newParentId,
 			position: i,
 		}));
 
 		if (fromCategory !== toCategory) {
-			const sourceBody = fromCategory.threads
-				.filter((t) => t.id !== fromId)
-				.map((t, i) => ({
-					id: t.id,
-					parent_id: fromThread.parent_id,
+			const sourceBody = fromCategory.channels
+				.filter((c) => c.id !== fromId)
+				.map((c, i) => ({
+					id: c.id,
+					parent_id: fromChannel.parent_id,
 					position: i,
 				}));
 			body.push(...sourceBody);
@@ -275,7 +275,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				<li>
 					<A
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
-						class="menu-thread"
+						class="menu-channel"
 						draggable={false}
 						end
 					>
@@ -288,7 +288,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 						<li>
 							<A
 								href="/inbox"
-								class="menu-thread"
+								class="menu-channel"
 								draggable={false}
 								end
 							>
@@ -299,13 +299,13 @@ export const ThreadNav = (props: { room_id?: string }) => {
 				</Show>
 
 				<For each={previewedCategories()}>
-					{({ category, threads }) => (
+					{({ category, channels }) => (
 						<>
 							<Show when={category}>
 								<div
 									class="dim"
 									style="margin-left:8px;margin-top:8px"
-									data-thread-id={category!.id}
+									data-channel-id={category!.id}
 									draggable="true"
 									onDragStart={handleDragStart}
 									onDragOver={handleDragOver}
@@ -314,7 +314,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 										setDragging(null);
 										setTarget(null);
 									}}
-									onClick={[nav, `/thread/${category!.id}`]}
+									onClick={[nav, `/channel/${category!.id}`]}
 									classList={{
 										dragging: dragging() === category!.id,
 									}}
@@ -323,14 +323,14 @@ export const ThreadNav = (props: { room_id?: string }) => {
 								</div>
 							</Show>
 							<For
-								each={threads}
+								each={channels}
 								fallback={
-									<div class="dim" style="margin-left: 16px">(no threads)</div>
+									<div class="dim" style="margin-left: 16px">(no channels)</div>
 								}
 							>
-								{(thread) => (
+								{(channel) => (
 									<li
-										data-thread-id={thread.id}
+										data-channel-id={channel.id}
 										draggable="true"
 										onDragStart={handleDragStart}
 										onDragOver={handleDragOver}
@@ -340,14 +340,14 @@ export const ThreadNav = (props: { room_id?: string }) => {
 											setTarget(null);
 										}}
 										classList={{
-											dragging: dragging() === thread.id,
-											unread: thread.type !== "Voice" && !!thread.is_unread,
+											dragging: dragging() === channel.id,
+											unread: channel.type !== "Voice" && !!channel.is_unread,
 										}}
 									>
-										<ItemThread thread={thread} />
+										<ItemChannel channel={channel} />
 										<For
 											each={[...api.voiceStates.values()].filter((i) =>
-												i.thread_id === thread.id
+												i.channel_id === channel.id
 											).sort((a, b) =>
 												Date.parse(a.joined_at) - Date.parse(b.joined_at)
 											)}
@@ -377,7 +377,7 @@ export const ThreadNav = (props: { room_id?: string }) => {
 																	0) &
 																	1) === 1,
 														}}
-														data-thread-id={s.thread_id}
+														data-channel-id={s.channel_id}
 														data-user-id={s.user_id}
 													>
 														<Avatar user={user()} />
@@ -398,39 +398,39 @@ export const ThreadNav = (props: { room_id?: string }) => {
 	);
 };
 
-const ItemThread = (props: { thread: Channel }) => {
+const ItemChannel = (props: { channel: Channel }) => {
 	const api = useApi();
 	const otherUser = createMemo(() => {
-		if (props.thread.type === "Dm") {
+		if (props.channel.type === "Dm") {
 			const selfId = api.users.cache.get("@self")!.id;
-			return props.thread.recipients.find((i) => i.id !== selfId);
+			return props.channel.recipients.find((i) => i.id !== selfId);
 		}
 		return undefined;
 	});
 
 	const name = () => {
-		if (props.thread.type === "Dm") {
+		if (props.channel.type === "Dm") {
 			return otherUser()?.name ?? "dm";
 		}
 
-		return props.thread.name;
+		return props.channel.name;
 	};
 
 	return (
 		<A
-			href={`/thread/${props.thread.id}`}
-			class="menu-thread"
+			href={`/channel/${props.channel.id}`}
+			class="menu-channel"
 			classList={{
-				unread: props.thread.type !== "Voice" && !!props.thread.is_unread,
+				unread: props.channel.type !== "Voice" && !!props.channel.is_unread,
 			}}
-			data-thread-id={props.thread.id}
+			data-channel-id={props.channel.id}
 		>
 			<Switch>
-				<Match when={props.thread.type === "Dm" && otherUser()}>
+				<Match when={props.channel.type === "Dm" && otherUser()}>
 					<AvatarWithStatus user={otherUser()} />
 				</Match>
-				<Match when={props.thread.type === "Gdm"}>
-					<ThreadIcon id={props.thread.id} icon={props.thread.icon} />
+				<Match when={props.channel.type === "Gdm"}>
+					<ChannelIcon id={props.channel.id} icon={props.channel.icon} />
 				</Match>
 			</Switch>
 			<div style="pointer-events:none">

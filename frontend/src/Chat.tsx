@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 import { useCtx } from "./context.ts";
 import { createList } from "./list.tsx";
-import type { ThreadT } from "./types.ts";
+import type { Channel } from "sdk";
 import { renderTimelineItem, type TimelineItemT } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
 import { useApi } from "./api.tsx";
@@ -28,7 +28,7 @@ import { MessageView } from "./Message.tsx";
 import { SearchInput } from "./SearchInput.tsx";
 
 type ChatProps = {
-	thread: ThreadT;
+	channel: Channel;
 };
 
 export const ChatMain = (props: ChatProps) => {
@@ -36,17 +36,17 @@ export const ChatMain = (props: ChatProps) => {
 	const api = useApi();
 	const { t } = useCtx();
 
-	const read_marker_id = () => ctx.thread_read_marker_id.get(props.thread.id);
+	const read_marker_id = () => ctx.channel_read_marker_id.get(props.channel.id);
 
 	const anchor = (): MessageListAnchor => {
-		const a = ctx.thread_anchor.get(props.thread.id);
+		const a = ctx.channel_anchor.get(props.channel.id);
 		const r = read_marker_id();
 		if (a) return a;
 		if (r) return { type: "context", limit: 50, message_id: r };
 		return { type: "backwards", limit: 50 };
 	};
 
-	const messages = api.messages.list(() => props.thread.id, anchor);
+	const messages = api.messages.list(() => props.channel.id, anchor);
 	const [tl, setTl] = createSignal<Array<TimelineItemT>>([]);
 
 	createEffect(() =>
@@ -61,11 +61,11 @@ export const ChatMain = (props: ChatProps) => {
 
 	const markRead = throttle(
 		() => {
-			const version_id = props.thread.last_version_id;
+			const version_id = props.channel.last_version_id;
 			if (version_id) {
 				ctx.dispatch({
-					do: "thread.mark_read",
-					thread_id: props.thread.id,
+					do: "channel.mark_read",
+					channel_id: props.channel.id,
 					delay: true,
 					version_id,
 					also_local: false,
@@ -87,10 +87,10 @@ export const ChatMain = (props: ChatProps) => {
 		bottomQuery: ":nth-last-child(1 of .message) > .content",
 		onPaginate(dir) {
 			// FIXME: this tends to fire an excessive number of times
-			// it's not a problem when *actually* paginating, but is for eg. marking threads read or scrolling to replies
+			// it's not a problem when *actually* paginating, but is for eg. marking channels read or scrolling to replies
 			console.log("paginate", dir, messages.loading);
 			if (messages.loading) return;
-			const thread_id = props.thread.id;
+			const channel_id = props.channel.id;
 
 			// messages are approx. 20 px high, show 3 pages of messages
 			const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
@@ -101,13 +101,13 @@ export const ChatMain = (props: ChatProps) => {
 			const msgs = messages()!;
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
-					ctx.thread_anchor.set(thread_id, {
+					ctx.channel_anchor.set(channel_id, {
 						type: "forwards",
 						limit: SLICE_LEN,
 						message_id: messages()?.items.at(-PAGINATE_LEN)?.id,
 					});
 				} else {
-					ctx.thread_anchor.set(thread_id, {
+					ctx.channel_anchor.set(channel_id, {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
@@ -115,7 +115,7 @@ export const ChatMain = (props: ChatProps) => {
 					if (list.isAtBottom()) markRead();
 				}
 			} else {
-				ctx.thread_anchor.set(thread_id, {
+				ctx.channel_anchor.set(channel_id, {
 					type: "backwards",
 					limit: SLICE_LEN,
 					message_id: messages()?.items[PAGINATE_LEN]?.id,
@@ -131,27 +131,27 @@ export const ChatMain = (props: ChatProps) => {
 				);
 				console.log("scroll restore: to anchor", a.message_id, target);
 				if (target) {
-					last_thread_id = props.thread.id;
+					last_thread_id = props.channel.id;
 					target.scrollIntoView({
 						behavior: "instant",
 						block: "center",
 					});
-					const hl = ctx.thread_highlight.get(props.thread.id);
+					const hl = ctx.channel_highlight.get(props.channel.id);
 					if (hl) scrollAndHighlight(hl);
 					return true;
 				} else {
 					console.warn("couldn't find target to scroll to");
 					return false;
 				}
-			} else if (last_thread_id !== props.thread.id) {
-				const pos = ctx.thread_scroll_pos.get(props.thread.id);
+			} else if (last_thread_id !== props.channel.id) {
+				const pos = ctx.channel_scroll_pos.get(props.channel.id);
 				console.log("scroll restore: load pos", pos);
 				if (pos === undefined || pos === -1) {
 					list.scrollTo(999999);
 				} else {
 					list.scrollTo(pos);
 				}
-				last_thread_id = props.thread.id;
+				last_thread_id = props.channel.id;
 				return true;
 			} else {
 				console.log("nothing special");
@@ -187,19 +187,19 @@ export const ChatMain = (props: ChatProps) => {
 		}),
 	);
 
-	// effect to initialize new threads
-	createEffect(on(() => props.thread.id, (thread_id) => {
-		const last_read_id = props.thread.last_read_id ??
-			props.thread.last_version_id;
-		if (ctx.thread_read_marker_id.has(thread_id)) return;
-		if (!last_read_id) return; // no messages in the thread
-		ctx.thread_read_marker_id.set(thread_id, last_read_id);
+	// effect to initialize new channels
+	createEffect(on(() => props.channel.id, (channel_id) => {
+		const last_read_id = props.channel.last_read_id ??
+			props.channel.last_version_id;
+		if (ctx.channel_read_marker_id.has(channel_id)) return;
+		if (!last_read_id) return; // no messages in the channel
+		ctx.channel_read_marker_id.set(channel_id, last_read_id);
 	}));
 
 	// effect to update saved scroll position
 	const setPos = throttle(() => {
 		const pos = list.isAtBottom() ? -1 : list.scrollPos();
-		ctx.thread_scroll_pos.set(props.thread.id, pos);
+		ctx.channel_scroll_pos.set(props.channel.id, pos);
 	}, 300);
 
 	// called both during reanchor and when thread_highlight changes
@@ -226,11 +226,11 @@ export const ChatMain = (props: ChatProps) => {
 			block: "center",
 		});
 		highlight(target);
-		ctx.thread_highlight.delete(props.thread.id);
+		ctx.channel_highlight.delete(props.channel.id);
 	}
 
 	createEffect(
-		on(() => ctx.thread_highlight.get(props.thread.id), scrollAndHighlight),
+		on(() => ctx.channel_highlight.get(props.channel.id), scrollAndHighlight),
 	);
 
 	createEffect(on(list.scrollPos, setPos));
@@ -240,7 +240,7 @@ export const ChatMain = (props: ChatProps) => {
 	const getTyping = () => {
 		// TODO: fix types here
 		const user_id = api.users.cache.get("@self")?.id;
-		const user_ids = [...api.typing.get(props.thread.id)?.values() ?? []]
+		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
 	};
@@ -250,29 +250,29 @@ export const ChatMain = (props: ChatProps) => {
 			ref={chatRef}
 			class="chat"
 			classList={{ "has-typing": !!getTyping().length }}
-			data-thread-id={props.thread.id}
+			data-channel-id={props.channel.id}
 			role="log"
 			onKeyDown={(e) => {
 				// console.log(e);
 				if (e.key === "Escape") {
-					const thread_id = props.thread.id;
+					const channel_id = props.channel.id;
 
 					// messages are approx. 20 px high, show 3 pages of messages
 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
 
-					ctx.thread_anchor.set(thread_id, {
+					ctx.channel_anchor.set(channel_id, {
 						type: "backwards",
 						limit: SLICE_LEN,
 					});
 
 					const version_id =
-						api.messages.cacheRanges.get(thread_id)?.live.end ??
-							props.thread.last_version_id;
+						api.messages.cacheRanges.get(channel_id)?.live.end ??
+							props.channel.last_version_id;
 
 					if (version_id) {
 						ctx.dispatch({
-							do: "thread.mark_read",
-							thread_id: thread_id,
+							do: "channel.mark_read",
+							channel_id: channel_id,
 							delay: false,
 							also_local: true,
 							version_id,
@@ -311,7 +311,7 @@ export const ChatMain = (props: ChatProps) => {
 						do: "upload.init",
 						file,
 						local_id,
-						thread_id: props.thread.id,
+						channel_id: props.channel.id,
 					});
 				}
 			}}
@@ -320,9 +320,9 @@ export const ChatMain = (props: ChatProps) => {
 				<div class="loading">{t("loading")}</div>
 			</Show>
 			<list.List>
-				{(item) => renderTimelineItem(props.thread, item)}
+				{(item) => renderTimelineItem(props.channel, item)}
 			</list.List>
-			<Input thread={props.thread} />
+			<Input channel={props.channel} />
 			<Portal>
 				<Show when={dragging()}>
 					<div class="dnd-upload-message">
@@ -344,20 +344,20 @@ export const ChatHeader = (
 	const ctx = useCtx();
 	const api = useApi();
 
-	const selected = () => ctx.selectedMessages.get(props.thread.id) ?? [];
-	const inSelectMode = () => ctx.selectMode.get(props.thread.id) ?? false;
+	const selected = () => ctx.selectedMessages.get(props.channel.id) ?? [];
+	const inSelectMode = () => ctx.selectMode.get(props.channel.id) ?? false;
 
 	const { has: hasPermission } = usePermissions(
 		() => api.users.cache.get("@self")?.id,
-		() => props.thread.room_id,
-		() => props.thread.id,
+		() => props.channel.room_id,
+		() => props.channel.id,
 	);
 	const canDelete = () => hasPermission("MessageDelete");
 	const canRemove = () => hasPermission("MessageRemove");
 
 	const exitSelectMode = () => {
-		ctx.selectMode.set(props.thread.id, false);
-		ctx.selectedMessages.set(props.thread.id, []);
+		ctx.selectMode.set(props.channel.id, false);
+		ctx.selectedMessages.set(props.channel.id, []);
 	};
 
 	const deleteSelected = () => {
@@ -366,7 +366,7 @@ export const ChatHeader = (
 			text: `Are you sure you want to delete ${selected().length} messages?`,
 			cont: (confirmed) => {
 				if (!confirmed) return;
-				api.messages.deleteBulk(props.thread.id, selected());
+				api.messages.deleteBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
 		});
@@ -378,7 +378,7 @@ export const ChatHeader = (
 			text: `Are you sure you want to remove ${selected().length} messages?`,
 			cont: (confirmed) => {
 				if (!confirmed) return;
-				api.messages.removeBulk(props.thread.id, selected());
+				api.messages.removeBulk(props.channel.id, selected());
 				exitSelectMode();
 			},
 		});
@@ -396,20 +396,20 @@ export const ChatHeader = (
 	};
 
 	const isShowingPinned = () =>
-		ctx.thread_pinned_view.get(props.thread.id) ?? false;
+		ctx.channel_pinned_view.get(props.channel.id) ?? false;
 
 	const togglePinned = () => {
-		ctx.thread_pinned_view.set(props.thread.id, !isShowingPinned());
+		ctx.channel_pinned_view.set(props.channel.id, !isShowingPinned());
 	};
 
 	const name = () => {
-		if (props.thread.type === "Dm") {
+		if (props.channel.type === "Dm") {
 			const user_id = api.users.cache.get("@self")?.id;
-			return props.thread.recipients.find((i) => i.id !== user_id)?.name ??
+			return props.channel.recipients.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}
 
-		return props.thread.name;
+		return props.channel.name;
 	};
 
 	return (
@@ -418,18 +418,18 @@ export const ChatHeader = (
 			fallback={
 				<header class="chat-header" style="display:flex">
 					<b>{name()}</b>
-					<Show when={props.thread.description}>
+					<Show when={props.channel.description}>
 						<span class="dim" style="white-space:pre;font-size:1em">
 							{"  -  "}
 						</span>
-						{props.thread.description}
+						{props.channel.description}
 					</Show>
 					<Switch>
-						<Match when={props.thread.deleted_at}>{" (removed)"}</Match>
-						<Match when={props.thread.archived_at}>{" (archived)"}</Match>
+						<Match when={props.channel.deleted_at}>{" (removed)"}</Match>
+						<Match when={props.channel.archived_at}>{" (archived)"}</Match>
 					</Switch>
 					<div style="flex:1"></div>
-					<SearchInput thread={props.thread} />
+					<SearchInput channel={props.channel} />
 					<button
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
@@ -469,16 +469,16 @@ const SearchResultItem = (props: {
 	onResultClick: (message: Message) => void;
 }) => {
 	const api = useApi();
-	const thread = api.channels.fetch(() => props.message.channel_id);
+	const channel = api.channels.fetch(() => props.message.channel_id);
 	const showHeader = () =>
 		!props.prevMessage ||
 		props.prevMessage.channel_id !== props.message.channel_id;
 
 	return (
 		<>
-			<Show when={showHeader() && thread()}>
+			<Show when={showHeader() && channel()}>
 				<div style="padding: 4px 12px 0; font-weight: bold; color: var(--text-dim);">
-					#{thread()!.name}
+					#{channel()!.name}
 				</div>
 			</Show>
 			<li onClick={() => props.onResultClick(props.message)}>
@@ -489,7 +489,7 @@ const SearchResultItem = (props: {
 };
 
 export const SearchResults = (props: {
-	thread: ThreadT;
+	channel: Channel;
 	search: ThreadSearch;
 }) => {
 	const ctx = useCtx();
@@ -497,7 +497,7 @@ export const SearchResults = (props: {
 
 	const onResultClick = (message: Message) => {
 		navigate(`/channel/${message.channel_id}/message/${message.id}`);
-		ctx.thread_search.delete(props.thread.id);
+		ctx.channel_search.delete(props.channel.id);
 	};
 
 	return (
@@ -506,7 +506,7 @@ export const SearchResults = (props: {
 				<Show when={!props.search.loading} fallback={<>Searching...</>}>
 					{props.search.results?.total ?? 0} results
 				</Show>
-				<button onClick={() => ctx.thread_search.delete(props.thread.id)}>
+				<button onClick={() => ctx.channel_search.delete(props.channel.id)}>
 					Clear
 				</button>
 			</header>

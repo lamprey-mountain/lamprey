@@ -73,8 +73,8 @@ export async function handleSubmit(
 		}
 		return;
 	}
-	const atts = ctx.thread_attachments.get(atts_thread_id ?? thread_id) ?? [];
-	const reply_id = ctx.thread_reply_id.get(thread_id);
+	const atts = ctx.channel_attachments.get(atts_thread_id ?? thread_id) ?? [];
+	const reply_id = ctx.channel_reply_id.get(thread_id);
 	if (text.length === 0 && atts.length === 0) return false;
 	if (!atts.every((i) => i.status === "uploaded")) return false;
 	const attachments = atts.map((i) => i.media);
@@ -84,6 +84,6 @@ export async function handleSubmit(
 		attachments,
 		embeds: [],
 	});
-	ctx.thread_attachments.delete(atts_thread_id ?? thread_id);
-	ctx.thread_reply_id.delete(thread_id);
+	ctx.channel_attachments.delete(atts_thread_id ?? thread_id);
+	ctx.channel_reply_id.delete(thread_id);
 }
