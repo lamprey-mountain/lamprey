@@ -241,7 +241,9 @@ export const RouteThread = (p: RouteSectionProps) => {
 				<Show
 					when={thread()!.type === "Text" ||
 						thread()!.type === "Dm" ||
-						thread()!.type === "Gdm"}
+						thread()!.type === "Gdm" ||
+						thread()!.type === "ThreadPublic" ||
+						thread()!.type === "ThreadPrivate"}
 				>
 					<ChatMain thread={thread()!} />
 				</Show>
