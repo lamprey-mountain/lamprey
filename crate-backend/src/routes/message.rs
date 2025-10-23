@@ -63,9 +63,6 @@ async fn message_create(
     if !thread.ty.has_text() {
         return Err(Error::BadStatic("cannot send messages in this thread"));
     }
-    if thread.archived_at.is_some() {
-        return Err(Error::BadStatic("thread is archived"));
-    }
     if thread.deleted_at.is_some() {
         return Err(Error::BadStatic("thread is removed"));
     }

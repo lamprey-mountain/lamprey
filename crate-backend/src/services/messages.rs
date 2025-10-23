@@ -7,8 +7,8 @@ use tracing::error;
 use common::v1::types::misc::Color;
 use common::v1::types::util::Diff;
 use common::v1::types::{
-    ChannelId, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId, MessagePatch,
-    MessageSync, MessageType, Permission, ThreadMembership,
+    ChannelId, ChannelPatch, Embed, Message, MessageCreate, MessageDefaultMarkdown, MessageId,
+    MessagePatch, MessageSync, MessageType, Permission, ThreadMembership,
 };
 use common::v1::types::{ThreadMemberPut, UserId};
 use http::StatusCode;
@@ -102,6 +102,21 @@ impl ServiceMessages {
         let perms = srv.perms.for_channel(user_id, thread_id).await?;
         perms.ensure(Permission::ViewChannel)?;
         perms.ensure(Permission::MessageCreate)?;
+
+        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+        if thread.archived_at.is_some() {
+            srv.channels
+                .update(
+                    user_id,
+                    thread_id,
+                    ChannelPatch {
+                        archived: Some(Some(false)),
+                        ..Default::default()
+                    },
+                    None,
+                )
+                .await?;
+        }
         if !json.attachments.is_empty() {
             perms.ensure(Permission::MessageAttachments)?;
         }
