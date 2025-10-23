@@ -136,6 +136,7 @@ async fn inbox_post(
     params(PaginationQuery<ThreadId>, InboxListParams, InboxChannelsParams),
     responses((status = OK, body = PaginationResponse<Channel>, description = "success"))
 )]
+#[deprecated]
 async fn inbox_channels(
     Auth(auth_user): Auth,
     Query(pagination): Query<PaginationQuery<ChannelId>>,

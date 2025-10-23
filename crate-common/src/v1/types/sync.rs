@@ -50,6 +50,7 @@ pub enum MessageClient {
 
     /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
     MemberListSubscribe {
+        // TODO: rename thread_id -> channel_id
         // one of room_id or thread_id must be provided
         room_id: Option<RoomId>,
         thread_id: Option<ChannelId>,
@@ -178,6 +179,7 @@ pub enum MessageSync {
 
     MessageRestore {
         channel_id: ChannelId,
+        // NOTE: if messages are not returned for listing endpoints, i should return a vec of Messages insetad
         message_ids: Vec<MessageId>,
     },
 
@@ -277,6 +279,7 @@ pub enum MessageSync {
         user: User,
     },
 
+    // TODO: rename these UserConfig -> Config
     UserConfigGlobal {
         user_id: UserId,
         config: UserConfigGlobal,
