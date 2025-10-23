@@ -110,7 +110,7 @@ impl ServiceMessages {
                     user_id,
                     thread_id,
                     ChannelPatch {
-                        archived: Some(Some(false)),
+                        archived: Some(false),
                         ..Default::default()
                     },
                     None,

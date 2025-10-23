@@ -11,6 +11,7 @@ use common::v1::types::{
     ChannelId, InviteTarget, InviteTargetId, MemberListGroup, MemberListGroupId, MemberListOp,
     MessageClient, MessageEnvelope, MessageSync, Permission, RoomId, Session, UserId,
 };
+use futures::StreamExt;
 use tokio::time::Instant;
 use tracing::{debug, error, trace};
 
@@ -816,20 +817,54 @@ impl Connection {
             }
             MemberListTarget::Channel(thread_id) => {
                 let thread = srv.channels.get(*thread_id, Some(user_id)).await?;
-                let thread_members = data.thread_member_list_all(*thread_id).await?;
-                let room_members = if let Some(room_id) = thread.room_id {
-                    Some(data.room_member_list_all(room_id).await?)
+
+                if !thread.ty.is_thread() && thread.room_id.is_some() {
+                    let room_id = thread.room_id.unwrap();
+                    let members = data.room_member_list_all(room_id).await?;
+
+                    let mut fut = futures::stream::FuturesUnordered::new();
+                    for member in members {
+                        let srv = srv.clone();
+                        fut.push(async move {
+                            if srv
+                                .perms
+                                .for_channel(member.user_id, *thread_id)
+                                .await
+                                .is_ok_and(|p| p.has(Permission::ViewChannel))
+                            {
+                                Some(member)
+                            } else {
+                                None
+                            }
+                        });
+                    }
+                    let visible_members: Vec<types::RoomMember> =
+                        fut.filter_map(|m| async { m }).collect().await;
+
+                    let user_ids: Vec<_> = visible_members.iter().map(|m| m.user_id).collect();
+                    let users = futures::future::try_join_all(
+                        user_ids
+                            .into_iter()
+                            .map(|id| srv.users.get(id, Some(user_id))),
+                    )
+                    .await?;
+                    (Some(visible_members), None, users)
                 } else {
-                    None
-                };
-                let user_ids: Vec<_> = thread_members.iter().map(|m| m.user_id).collect();
-                let users = futures::future::try_join_all(
-                    user_ids
-                        .into_iter()
-                        .map(|id| srv.users.get(id, Some(user_id))),
-                )
-                .await?;
-                (room_members, Some(thread_members), users)
+                    let thread_members = data.thread_member_list_all(*thread_id).await?;
+                    let room_members = if let Some(room_id) = thread.room_id {
+                        Some(data.room_member_list_all(room_id).await?)
+                    } else {
+                        None
+                    };
+                    let user_ids: Vec<_> = thread_members.iter().map(|m| m.user_id).collect();
+                    let users = futures::future::try_join_all(
+                        user_ids
+                            .into_iter()
+                            .map(|id| srv.users.get(id, Some(user_id))),
+                    )
+                    .await?;
+                    (room_members, Some(thread_members), users)
+                }
             }
         };
 
