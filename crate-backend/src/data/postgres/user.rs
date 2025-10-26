@@ -34,6 +34,9 @@ pub struct DbUser {
     pub app_owner_id: Option<Uuid>,
     pub app_bridge: Option<bool>,
     pub app_public: Option<bool>,
+    pub webhook_channel_id: Option<Uuid>,
+    pub webhook_creator_id: Option<Uuid>,
+    pub webhook_room_id: Option<Uuid>,
 }
 
 impl From<DbUser> for User {
@@ -56,6 +59,18 @@ impl From<DbUser> for User {
             None
         };
 
+        let webhook = if let (Some(channel_id), Some(creator_id)) =
+            (row.webhook_channel_id, row.webhook_creator_id)
+        {
+            Some(common::v1::types::UserWebhook {
+                room_id: row.webhook_room_id.map(Into::into),
+                channel_id: channel_id.into(),
+                creator_id: creator_id.into(),
+            })
+        } else {
+            None
+        };
+
         User {
             id: row.id,
             version_id: row.version_id,
@@ -66,6 +81,7 @@ impl From<DbUser> for User {
             banner: row.banner.map(Into::into),
             bot,
             puppet: row.puppet.and_then(|r| serde_json::from_value(r).ok()),
+            webhook,
             suspended: row
                 .suspended
                 .and_then(|r| serde_json::from_value(r).unwrap()),
@@ -93,6 +109,7 @@ impl DataUser for Postgres {
             bot: None,
             system: patch.system,
             puppet: patch.puppet,
+            webhook: None,
             suspended: None,
             registered_at: patch.registered_at,
             deleted_at: None,
@@ -127,9 +144,12 @@ impl DataUser for Postgres {
             DbUser,
             r#"
             SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
             FROM usr u
             LEFT JOIN application a ON u.id = a.id
+            LEFT JOIN webhook w ON u.id = w.id
+            LEFT JOIN channel c ON w.channel_id = c.id
             WHERE u.id = $1
             FOR UPDATE OF u
             "#,
@@ -181,9 +201,12 @@ impl DataUser for Postgres {
             DbUser,
             r#"
             SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                   a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
             FROM usr u
             LEFT JOIN application a ON u.id = a.id
+            LEFT JOIN webhook w ON u.id = w.id
+            LEFT JOIN channel c ON w.channel_id = c.id
             WHERE u.id = $1
             "#,
             *id
@@ -208,9 +231,12 @@ impl DataUser for Postgres {
                         DbUser,
                         r#"
                         SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
+                        LEFT JOIN webhook w ON u.id = w.id
+                        LEFT JOIN channel c ON w.channel_id = c.id
                         WHERE u.id > $1 AND u.id < $2
                           AND u.registered_at IS NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
@@ -232,9 +258,12 @@ impl DataUser for Postgres {
                         DbUser,
                         r#"
                         SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
+                        LEFT JOIN webhook w ON u.id = w.id
+                        LEFT JOIN channel c ON w.channel_id = c.id
                         WHERE u.id > $1 AND u.id < $2
                           AND u.registered_at IS NOT NULL AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
@@ -256,9 +285,12 @@ impl DataUser for Postgres {
                         DbUser,
                         r#"
                         SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
                         FROM usr u
                         JOIN application a ON u.id = a.id
+                        LEFT JOIN webhook w ON u.id = w.id
+                        LEFT JOIN channel c ON w.channel_id = c.id
                         WHERE u.id > $1 AND u.id < $2
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
                         "#,
@@ -279,9 +311,12 @@ impl DataUser for Postgres {
                         DbUser,
                         r#"
                         SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
+                        LEFT JOIN webhook w ON u.id = w.id
+                        LEFT JOIN channel c ON w.channel_id = c.id
                         WHERE u.id > $1 AND u.id < $2
                           AND u.puppet->'owner_id' IS NOT NULL
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4
@@ -303,9 +338,12 @@ impl DataUser for Postgres {
                         DbUser,
                         r#"
                         SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.puppet, u.system, u.registered_at, u.deleted_at, u.suspended,
-                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?"
+                               a.owner_id as "app_owner_id?", a.bridge as "app_bridge?", a.public as "app_public?",
+                               w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?"
                         FROM usr u
                         LEFT JOIN application a ON u.id = a.id
+                        LEFT JOIN webhook w ON u.id = w.id
+                        LEFT JOIN channel c ON w.channel_id = c.id
                         WHERE u.id > $1 AND u.id < $2
                           AND a.id IS NULL AND u.puppet->'owner_id' IS NULL AND u.system = false
                         ORDER BY (CASE WHEN $3 = 'f' THEN u.id END), u.id DESC LIMIT $4

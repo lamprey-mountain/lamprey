@@ -14,6 +14,8 @@ use common::v1::types::user_config::{
     UserConfigChannel, UserConfigGlobal, UserConfigRoom, UserConfigUser,
 };
 use common::v1::types::util::Time;
+use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
+
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, CalendarEventId, Channel, ChannelId,
     ChannelPatch, ChannelReorder, ChannelVerId, Embed, EmojiId, InvitePatch, InviteWithMetadata,
@@ -21,7 +23,7 @@ use common::v1::types::{
     PermissionOverwriteType, PinsReorder, Relationship, RelationshipPatch, RelationshipWithUserId,
     Role, RoleReorder, RoomBan, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
     RoomMembership, RoomMetrics, SessionPatch, SessionStatus, SessionToken, Suspended,
-    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter,
+    ThreadMember, ThreadMemberPut, ThreadMembership, UserListFilter, WebhookId,
 };
 
 use uuid::Uuid;
@@ -68,6 +70,7 @@ pub trait Data:
     + DataEmailQueue
     + DataDm
     + DataNotification
+    + DataWebhook
     + Send
     + Sync
 {
@@ -971,4 +974,27 @@ pub trait DataCalendar {
         user_id: UserId,
     ) -> Result<()>;
     async fn calendar_event_rsvp_list(&self, event_id: CalendarEventId) -> Result<Vec<UserId>>;
+}
+
+#[async_trait]
+pub trait DataWebhook {
+    async fn webhook_create(
+        &self,
+        channel_id: ChannelId,
+        creator_id: UserId,
+        create: WebhookCreate,
+    ) -> Result<Webhook>;
+    async fn webhook_get(&self, webhook_id: WebhookId) -> Result<Webhook>;
+    async fn webhook_get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook>;
+    async fn webhook_list_channel(&self, channel_id: ChannelId) -> Result<Vec<Webhook>>;
+    async fn webhook_list_room(&self, room_id: RoomId) -> Result<Vec<Webhook>>;
+    async fn webhook_update(&self, webhook_id: WebhookId, patch: WebhookUpdate) -> Result<Webhook>;
+    async fn webhook_update_with_token(
+        &self,
+        webhook_id: WebhookId,
+        token: &str,
+        patch: WebhookUpdate,
+    ) -> Result<Webhook>;
+    async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()>;
+    async fn webhook_delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()>;
 }

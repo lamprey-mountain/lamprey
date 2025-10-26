@@ -323,7 +323,11 @@ impl LampreyHandle {
             .await?;
         debug!("ensured user");
         self.http
-            .room_member_add(room_id, UserIdReq::UserId(user.id), &RoomMemberPut::default())
+            .room_member_add(
+                room_id,
+                UserIdReq::UserId(user.id),
+                &RoomMemberPut::default(),
+            )
             .await?;
         debug!("ensured room member");
         Ok(user)

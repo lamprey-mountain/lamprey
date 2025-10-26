@@ -15,7 +15,15 @@ use crate::v1::types::MediaId;
 
 use super::email::EmailInfo;
 use super::user_config::UserConfigGlobal;
-use super::{UserId, UserVerId};
+use super::{ChannelId, RoomId, UserId, UserVerId};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct UserWebhook {
+    pub room_id: Option<RoomId>,
+    pub channel_id: ChannelId,
+    pub creator_id: UserId,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -40,6 +48,7 @@ pub struct User {
     pub bot: Option<Bot>,
     pub system: bool,
     pub puppet: Option<Puppet>,
+    pub webhook: Option<UserWebhook>,
     pub suspended: Option<Suspended>,
     // TODO: rename to presence
     pub status: Status,

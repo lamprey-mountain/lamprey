@@ -99,40 +99,46 @@ impl ServiceMessages {
         let s = &self.state;
         let data = s.data();
         let srv = s.services();
-        let perms = srv.perms.for_channel(user_id, thread_id).await?;
-        perms.ensure(Permission::ViewChannel)?;
-        perms.ensure(Permission::MessageCreate)?;
 
-        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
-        if thread.archived_at.is_some() {
-            srv.channels
-                .update(
-                    user_id,
-                    thread_id,
-                    ChannelPatch {
-                        archived: Some(false),
-                        ..Default::default()
-                    },
-                    None,
-                )
-                .await?;
-        }
-        if !json.attachments.is_empty() {
-            perms.ensure(Permission::MessageAttachments)?;
-        }
-        if !json.embeds.is_empty() {
-            perms.ensure(Permission::MessageEmbeds)?;
-        }
-        if json.created_at.is_some() {
-            let usr = data.user_get(user_id).await?;
-            if let Some(puppet) = usr.puppet {
-                let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
-                owner_perms.ensure(Permission::ViewChannel)?;
-                owner_perms.ensure(Permission::MemberBridge)?;
-            } else {
-                return Err(Error::BadStatic("not a puppet"));
+        let user = data.user_get(user_id).await?;
+        let is_webhook = user.webhook.is_some();
+
+        if !is_webhook {
+            let perms = srv.perms.for_channel(user_id, thread_id).await?;
+            perms.ensure(Permission::ViewChannel)?;
+            perms.ensure(Permission::MessageCreate)?;
+
+            let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+            if thread.archived_at.is_some() {
+                srv.channels
+                    .update(
+                        user_id,
+                        thread_id,
+                        ChannelPatch {
+                            archived: Some(false),
+                            ..Default::default()
+                        },
+                        None,
+                    )
+                    .await?;
+            }
+            if !json.attachments.is_empty() {
+                perms.ensure(Permission::MessageAttachments)?;
+            }
+            if !json.embeds.is_empty() {
+                perms.ensure(Permission::MessageEmbeds)?;
+            }
+            if json.created_at.is_some() {
+                if let Some(puppet) = user.puppet {
+                    let owner_perms = srv.perms.for_channel(puppet.owner_id, thread_id).await?;
+                    owner_perms.ensure(Permission::ViewChannel)?;
+                    owner_perms.ensure(Permission::MemberBridge)?;
+                } else {
+                    return Err(Error::BadStatic("not a puppet"));
+                }
             }
         }
+
         // TODO: move this to validation
         if json.content.as_ref().is_none_or(|s| s.is_empty())
             && json.attachments.is_empty()
@@ -186,7 +192,14 @@ impl ServiceMessages {
         let mut message = data.message_get(thread_id, message_id, user_id).await?;
 
         if let Some(content) = &content {
-            if perms.has(Permission::MessageEmbeds) {
+            let mut should_embed = is_webhook;
+            if !should_embed {
+                if let Ok(perms) = srv.perms.for_channel(user_id, thread_id).await {
+                    should_embed = perms.has(Permission::MessageEmbeds);
+                }
+            }
+
+            if should_embed {
                 tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
             }
         }

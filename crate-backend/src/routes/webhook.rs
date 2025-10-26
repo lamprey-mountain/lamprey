@@ -2,10 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
+use common::v1::types::{
+    webhook::{Webhook, WebhookCreate, WebhookUpdate},
+    Message, MessageCreate, Permission,
+};
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -15,7 +19,7 @@ use crate::{
     ServerState,
 };
 
-/// Webhook create (TODO)
+/// Webhook create
 #[utoipa::path(
     post,
     path = "/channel/{channel_id}/webhook",
@@ -26,15 +30,27 @@ use crate::{
     )
 )]
 async fn create_webhook(
-    Path(_thread_id): Path<ChannelId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<WebhookCreate>,
+    Path(channel_id): Path<ChannelId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<WebhookCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let channel = s.data().channel_get(channel_id).await?;
+    let room_id = channel
+        .room_id
+        .ok_or(Error::BadRequest("Channel not in a room".to_string()))?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    let webhook = s
+        .data()
+        .webhook_create(channel_id, auth_user.id, json)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(webhook)))
 }
 
-/// Webhook list thread (TODO)
+/// Webhook list thread
 #[utoipa::path(
     get,
     path = "/channel/{channel_id}/webhook",
@@ -45,14 +61,23 @@ async fn create_webhook(
     )
 )]
 async fn list_webhooks_thread(
-    Path(_thread_id): Path<ChannelId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(channel_id): Path<ChannelId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let channel = s.data().channel_get(channel_id).await?;
+    let room_id = channel
+        .room_id
+        .ok_or(Error::BadRequest("Channel not in a room".to_string()))?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    let webhooks = s.data().webhook_list_channel(channel_id).await?;
+
+    Ok(Json(webhooks))
 }
 
-/// Webhook list room (TODO)
+/// Webhook list room
 #[utoipa::path(
     get,
     path = "/room/{room_id}/webhook",
@@ -63,14 +88,19 @@ async fn list_webhooks_thread(
     )
 )]
 async fn list_webhooks_room(
-    Path(_room_id): Path<RoomId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    let webhooks = s.data().webhook_list_room(room_id).await?;
+
+    Ok(Json(webhooks))
 }
 
-/// Webhook get (TODO)
+/// Webhook get
 #[utoipa::path(
     get,
     path = "/webhook/{webhook_id}",
@@ -81,14 +111,21 @@ async fn list_webhooks_room(
     )
 )]
 async fn get_webhook(
-    Path(_webhook_id): Path<WebhookId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(webhook_id): Path<WebhookId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let webhook = s.data().webhook_get(webhook_id).await?;
+    let room_id = webhook
+        .room_id
+        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    Ok(Json(webhook))
 }
 
-/// Webhook get with token (TODO)
+/// Webhook get with token
 #[utoipa::path(
     get,
     path = "/webhook/{webhook_id}/{token}",
@@ -102,13 +139,14 @@ async fn get_webhook(
     )
 )]
 async fn get_webhook_with_token(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
+    Path((webhook_id, token)): Path<(WebhookId, String)>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
+    Ok(Json(webhook))
 }
 
-/// Webhook delete (TODO)
+/// Webhook delete
 #[utoipa::path(
     delete,
     path = "/webhook/{webhook_id}",
@@ -119,14 +157,23 @@ async fn get_webhook_with_token(
     )
 )]
 async fn delete_webhook(
-    Path(_webhook_id): Path<WebhookId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
+    Path(webhook_id): Path<WebhookId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let webhook = s.data().webhook_get(webhook_id).await?;
+    let room_id = webhook
+        .room_id
+        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    s.data().webhook_delete(webhook_id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Webhook delete with token (TODO)
+/// Webhook delete with token
 #[utoipa::path(
     delete,
     path = "/webhook/{webhook_id}/{token}",
@@ -140,13 +187,16 @@ async fn delete_webhook(
     )
 )]
 async fn delete_webhook_with_token(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
+    Path((webhook_id, token)): Path<(WebhookId, String)>,
+    State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    s.data()
+        .webhook_delete_with_token(webhook_id, &token)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Webhook update (TODO)
+/// Webhook update
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}",
@@ -157,15 +207,24 @@ async fn delete_webhook_with_token(
     )
 )]
 async fn update_webhook(
-    Path(_webhook_id): Path<WebhookId>,
-    Auth(_auth_user): Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<WebhookUpdate>,
+    Path(webhook_id): Path<WebhookId>,
+    Auth(auth_user): Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let webhook = s.data().webhook_get(webhook_id).await?;
+    let room_id = webhook
+        .room_id
+        .ok_or(Error::BadRequest("Webhook not in a room".to_string()))?;
+    let perms = s.services().perms.for_room(auth_user.id, room_id).await?;
+    perms.ensure(Permission::IntegrationsManage)?;
+
+    let updated_webhook = s.data().webhook_update(webhook_id, json).await?;
+
+    Ok(Json(updated_webhook))
 }
 
-/// Webhook update with token (TODO)
+/// Webhook update with token
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}/{token}",
@@ -179,14 +238,18 @@ async fn update_webhook(
     )
 )]
 async fn update_webhook_with_token(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<WebhookUpdate>,
+    Path((webhook_id, token)): Path<(WebhookId, String)>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<WebhookUpdate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let updated_webhook = s
+        .data()
+        .webhook_update_with_token(webhook_id, &token, json)
+        .await?;
+    Ok(Json(updated_webhook))
 }
 
-/// Webhook execute (TODO)
+/// Webhook execute
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}",
@@ -194,16 +257,29 @@ async fn update_webhook_with_token(
         ("webhook_id", description = "Webhook id"),
         ("token", description = "Webhook token")
     ),
+    request_body = MessageCreate,
     tags = ["webhook"],
     responses(
-        (status = NO_CONTENT, description = "Execute webhook success"),
+        (status = CREATED, body = Message, description = "Execute webhook success, returns created message"),
     )
 )]
 async fn execute_webhook(
-    Path((_webhook_id, _token)): Path<(WebhookId, String)>,
-    State(_s): State<Arc<ServerState>>,
+    Path((webhook_id, token)): Path<(WebhookId, String)>,
+    State(s): State<Arc<ServerState>>,
+    Json(json): Json<MessageCreate>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
+
+    let author_id = (*webhook.id).into();
+    let channel_id = webhook.thread_id;
+
+    let srv = s.services();
+    let message = srv
+        .messages
+        .create(channel_id, author_id, None, None, json)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(message)))
 }
 
 /// Webhook execute discord (TODO)

@@ -39,6 +39,7 @@ mod user_config;
 mod user_email;
 mod user_relationship;
 mod util;
+mod webhook;
 
 pub use util::Pagination;
 

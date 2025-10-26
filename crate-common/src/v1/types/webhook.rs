@@ -9,6 +9,7 @@ use validator::Validate;
 pub struct Webhook {
     pub id: WebhookId,
     pub room_id: Option<RoomId>,
+    // TODO: rename to channel_id
     pub thread_id: ChannelId,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
