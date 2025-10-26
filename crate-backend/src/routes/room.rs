@@ -9,11 +9,9 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     application::Integration, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryType,
-    RoomMetrics, RoomType, UserId, SERVER_ROOM_ID,
+    RoomMetrics, RoomType, TransferOwnership, SERVER_ROOM_ID,
 };
 use headers::ETag;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -442,11 +440,6 @@ async fn room_transfer_ownership(
     let msg = MessageSync::RoomUpdate { room: room.clone() };
     s.broadcast_room(room_id, auth_user.id, msg).await?;
     Ok(Json(room))
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, ToSchema)]
-struct TransferOwnership {
-    owner_id: UserId,
 }
 
 /// Room integration list

@@ -165,6 +165,12 @@ pub struct RoomMetrics {
     pub media_size: u64,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TransferOwnership {
+    pub owner_id: UserId,
+}
+
 impl Diff<Room> for RoomPatch {
     fn changes(&self, other: &Room) -> bool {
         self.name.changes(&other.name)

@@ -10,11 +10,9 @@ use common::v1::types::{
     MediaTrackInfo, MessageSync, PaginationQuery, PaginationResponse, Room, RoomId, SessionStatus,
     User, UserCreate, UserId, UserPatch, UserWithRelationship,
 };
-use common::v1::types::{Permission, Suspended, UserListParams, SERVER_ROOM_ID};
+use common::v1::types::{Permission, SuspendRequest, Suspended, UserListParams, SERVER_ROOM_ID};
 use http::StatusCode;
-use serde::Deserialize;
 use tracing::warn;
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::routes::util::{AuthWithSession, HeaderReason};
@@ -425,11 +423,6 @@ async fn guest_create(
     .await?;
 
     Ok((StatusCode::CREATED, Json(user)))
-}
-
-#[derive(Deserialize, ToSchema)]
-struct SuspendRequest {
-    expires_at: Option<Time>,
 }
 
 /// User suspend

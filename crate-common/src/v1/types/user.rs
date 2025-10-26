@@ -354,3 +354,9 @@ pub enum UserListFilter {
 pub struct UserListParams {
     pub filter: Option<UserListFilter>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct SuspendRequest {
+    pub expires_at: Option<Time>,
+}

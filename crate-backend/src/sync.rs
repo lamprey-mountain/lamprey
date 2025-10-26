@@ -822,7 +822,7 @@ impl Connection {
                     let room_id = thread.room_id.unwrap();
                     let members = data.room_member_list_all(room_id).await?;
 
-                    let mut fut = futures::stream::FuturesUnordered::new();
+                    let fut = futures::stream::FuturesUnordered::new();
                     for member in members {
                         let srv = srv.clone();
                         fut.push(async move {

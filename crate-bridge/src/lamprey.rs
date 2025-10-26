@@ -6,7 +6,7 @@ use common::v1::types::{
     misc::UserIdReq,
     pagination::{PaginationQuery, PaginationResponse},
     user_status, Channel, ChannelId, ChannelType, Media, MediaCreate, MediaCreateSource,
-    MessageCreate, MessageId, MessageSync, RoomId, Session, User, UserId,
+    MessageCreate, MessageId, MessageSync, RoomId, RoomMemberPut, Session, User, UserId,
 };
 use sdk::{Client, EventHandler, Http};
 use tokio::sync::{mpsc, oneshot};
@@ -246,7 +246,7 @@ impl LampreyHandle {
         let res = self
             .http
             .for_puppet(user_id)
-            .message_update(thread_id, message_id, &req)
+            .message_edit(thread_id, message_id, &req)
             .await?;
         Ok(res)
     }
@@ -295,7 +295,7 @@ impl LampreyHandle {
     pub async fn typing_start(&self, thread_id: ChannelId, user_id: UserId) -> Result<()> {
         self.http
             .for_puppet(user_id)
-            .typing_start(thread_id)
+            .channel_typing(thread_id)
             .await?;
         Ok(())
     }
@@ -322,14 +322,16 @@ impl LampreyHandle {
             )
             .await?;
         debug!("ensured user");
-        self.http.room_member_put(room_id, user.id).await?;
+        self.http
+            .room_member_add(room_id, UserIdReq::UserId(user.id), &RoomMemberPut::default())
+            .await?;
         debug!("ensured room member");
         Ok(user)
     }
 
     pub async fn user_fetch(&self, user_id: UserId) -> Result<User> {
-        let res = self.http.user_get(user_id).await?;
-        Ok(res)
+        let res = self.http.user_get(UserIdReq::UserId(user_id)).await?;
+        Ok(res.inner)
     }
 
     pub async fn user_update(&self, user_id: UserId, patch: &types::UserPatch) -> Result<User> {
@@ -371,7 +373,7 @@ impl LampreyHandle {
         let mut query = PaginationQuery::default();
         loop {
             info!("get room threads");
-            let res = self.http.thread_list(room_id, &query).await?;
+            let res = self.http.channel_list(room_id, &query).await?;
             debug!("threads: {res:?}");
             all_threads.extend(res.items);
             if let Some(cursor) = res.cursor {
@@ -396,7 +398,7 @@ impl LampreyHandle {
     ) -> Result<Channel> {
         let res = self
             .http
-            .channel_create(
+            .channel_create_room(
                 room_id,
                 &types::ChannelCreate {
                     name,
