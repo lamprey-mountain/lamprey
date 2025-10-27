@@ -454,6 +454,7 @@ pub trait DataSession {
 pub trait DataChannel {
     async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId>;
     async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel>;
+    async fn channel_get_many(&self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>>;
     async fn channel_get_private(
         &self,
         channel_id: ChannelId,

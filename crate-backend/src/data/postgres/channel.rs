@@ -70,6 +70,14 @@ impl DataChannel for Postgres {
         Ok(thread.into())
     }
 
+    async fn channel_get_many(&self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>> {
+        let ids: Vec<uuid::Uuid> = channel_ids.iter().map(|id| id.into_inner()).collect();
+        let threads = query_file_as!(DbChannel, "sql/channel_get_many.sql", &ids)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(threads.into_iter().map(Into::into).collect())
+    }
+
     async fn channel_list(
         &self,
         room_id: RoomId,

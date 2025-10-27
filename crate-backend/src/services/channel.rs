@@ -139,6 +139,100 @@ impl ServiceThreads {
         Ok(thread)
     }
 
+    pub async fn get_many(
+        &self,
+        channel_ids: &[ChannelId],
+        user_id: Option<UserId>,
+    ) -> Result<Vec<Channel>> {
+        if channel_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut channels = self.state.data().channel_get_many(channel_ids).await?;
+        if let Some(user_id) = user_id {
+            for channel in &mut channels {
+                let channel_id = channel.id;
+                let private_data = self
+                    .cache_thread_private
+                    .try_get_with(
+                        (channel.id, user_id),
+                        self.state.data().channel_get_private(channel_id, user_id),
+                    )
+                    .await
+                    .map_err(|err| err.fake_clone())?;
+
+                let state = self.state.clone();
+                let thread_ty = channel.ty;
+                let recipients = self
+                    .cache_thread_recipients
+                    .try_get_with(channel_id, async move {
+                        if !matches!(thread_ty, ChannelType::Dm | ChannelType::Gdm) {
+                            return Ok(vec![]);
+                        }
+
+                        let members = state
+                            .data()
+                            .thread_member_list(
+                                channel_id,
+                                PaginationQuery {
+                                    from: None,
+                                    to: None,
+                                    dir: None,
+                                    limit: Some(1024),
+                                },
+                            )
+                            .await?;
+                        let srv = state.services();
+                        let mut futures = FuturesOrdered::new();
+                        for member in members.items {
+                            futures.push_back(srv.users.get(member.user_id, Some(user_id)));
+                        }
+                        let mut users = vec![];
+                        while let Some(user) = futures.next().await {
+                            users.push(user?);
+                        }
+                        Result::Ok(users)
+                    })
+                    .await
+                    .map_err(|err| err.fake_clone())?;
+                let recipients: Vec<_> =
+                    recipients.into_iter().filter(|u| u.id != user_id).collect();
+
+                let user_config = self
+                    .state
+                    .data()
+                    .user_config_channel_get(user_id, channel_id)
+                    .await?;
+
+                channel.recipients = recipients;
+                channel.is_unread = Some(private_data.is_unread);
+                channel.last_read_id = private_data.last_read_id.map(Into::into);
+                channel.mention_count = Some(0); // TODO
+                channel.user_config = Some(user_config);
+            }
+        }
+
+        for channel in &mut channels {
+            let members = self.state.data().thread_member_list_all(channel.id).await?;
+            let mut online_count = 0;
+            for member in members {
+                if self
+                    .state
+                    .services()
+                    .users
+                    .status_get(member.user_id)
+                    .status
+                    .is_online()
+                {
+                    online_count += 1;
+                }
+            }
+            channel.online_count = online_count;
+        }
+
+        Ok(channels)
+    }
+
     pub async fn invalidate(&self, thread_id: ChannelId) {
         self.cache_thread.invalidate(&thread_id).await;
         self.cache_thread_private
