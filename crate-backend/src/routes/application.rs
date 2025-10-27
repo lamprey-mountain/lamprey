@@ -514,7 +514,7 @@ async fn app_rotate_secret(
 #[utoipa::path(
     get,
     path = "/oauth/authorize",
-    tags = ["application"],
+    tags = ["oauth"],
     params(OauthAuthorizeParams),
     responses(
         (status = OK, description = "success", body = OauthAuthorizeInfo)
@@ -562,7 +562,7 @@ async fn oauth_info(
 #[utoipa::path(
     post,
     path = "/oauth/authorize",
-    tags = ["application"],
+    tags = ["oauth"],
     params(OauthAuthorizeParams),
     responses(
         (status = OK, description = "success", body = OauthAuthorizeResponse)
@@ -821,7 +821,7 @@ async fn oauth_token(
 #[utoipa::path(
     post,
     path = "/oauth/introspect",
-    tags = ["application"],
+    tags = ["oauth"],
     responses(
         (status = OK, description = "success", body = OauthIntrospectResponse)
     )
@@ -848,7 +848,7 @@ async fn oauth_introspect(
 #[utoipa::path(
     post,
     path = "/oauth/revoke",
-    tags = ["application"],
+    tags = ["oauth"],
     responses(
         (status = NO_CONTENT, description = "success")
     )
@@ -868,7 +868,7 @@ async fn oauth_revoke(
 #[utoipa::path(
     get,
     path = "/oauth/.well-known/openid-configuration",
-    tags = ["application"],
+    tags = ["oauth"],
     responses(
         (status = OK, description = "success", body = Autoconfig)
     )
@@ -900,7 +900,7 @@ async fn oauth_autoconfig(State(s): State<Arc<ServerState>>) -> Result<impl Into
 #[utoipa::path(
     get,
     path = "/oauth/userinfo",
-    tags = ["application"],
+    tags = ["oauth"],
     responses(
         (status = OK, description = "success", body = Userinfo)
     )
