@@ -33,7 +33,7 @@ use crate::{
         (status = CREATED, body = Webhook, description = "Create webhook success"),
     )
 )]
-async fn create_webhook(
+async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -86,7 +86,7 @@ async fn create_webhook(
         (status = OK, body = Vec<Webhook>, description = "List webhooks success"),
     )
 )]
-async fn list_webhooks_channel(
+async fn webhook_list_channel(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -113,7 +113,7 @@ async fn list_webhooks_channel(
         (status = OK, body = Vec<Webhook>, description = "List webhooks success"),
     )
 )]
-async fn list_webhooks_room(
+async fn webhook_list_room(
     Path(room_id): Path<RoomId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -136,7 +136,7 @@ async fn list_webhooks_room(
         (status = OK, body = Webhook, description = "Get webhook success"),
     )
 )]
-async fn get_webhook(
+async fn webhook_get(
     Path(webhook_id): Path<WebhookId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -164,7 +164,7 @@ async fn get_webhook(
         (status = OK, body = Webhook, description = "Get webhook success"),
     )
 )]
-async fn get_webhook_with_token(
+async fn webhook_get_with_token(
     Path((webhook_id, token)): Path<(WebhookId, String)>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -182,7 +182,7 @@ async fn get_webhook_with_token(
         (status = NO_CONTENT, description = "Delete webhook success"),
     )
 )]
-async fn delete_webhook(
+async fn webhook_delete(
     Path(webhook_id): Path<WebhookId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -230,7 +230,7 @@ async fn delete_webhook(
         (status = NO_CONTENT, description = "Delete webhook success"),
     )
 )]
-async fn delete_webhook_with_token(
+async fn webhook_delete_with_token(
     Path((webhook_id, token)): Path<(WebhookId, String)>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -250,7 +250,7 @@ async fn delete_webhook_with_token(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )
 )]
-async fn update_webhook(
+async fn webhook_update(
     Path(webhook_id): Path<WebhookId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -320,7 +320,7 @@ async fn update_webhook(
         (status = OK, body = Webhook, description = "Update webhook success"),
     )
 )]
-async fn update_webhook_with_token(
+async fn webhook_update_with_token(
     Path((webhook_id, token)): Path<(WebhookId, String)>,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<WebhookUpdate>,
@@ -346,7 +346,7 @@ async fn update_webhook_with_token(
         (status = CREATED, body = Message, description = "Execute webhook success, returns created message"),
     )
 )]
-async fn execute_webhook(
+async fn webhook_execute(
     Path((webhook_id, token)): Path<(WebhookId, String)>,
     State(s): State<Arc<ServerState>>,
     Json(json): Json<MessageCreate>,
@@ -378,7 +378,7 @@ async fn execute_webhook(
         (status = NO_CONTENT, description = "Execute webhook success"),
     )
 )]
-async fn execute_webhook_discord(
+async fn webhook_execute_discord(
     Path((_webhook_id, _token)): Path<(WebhookId, String)>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -398,7 +398,7 @@ async fn execute_webhook_discord(
         (status = NO_CONTENT, description = "Execute webhook success"),
     )
 )]
-async fn execute_webhook_github(
+async fn webhook_execute_github(
     Path((_webhook_id, _token)): Path<(WebhookId, String)>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -418,7 +418,7 @@ async fn execute_webhook_github(
         (status = NO_CONTENT, description = "Execute webhook success"),
     )
 )]
-async fn execute_webhook_slack(
+async fn webhook_execute_slack(
     Path((_webhook_id, _token)): Path<(WebhookId, String)>,
     State(_s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
@@ -427,17 +427,17 @@ async fn execute_webhook_slack(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(create_webhook))
-        .routes(routes!(list_webhooks_channel))
-        .routes(routes!(list_webhooks_room))
-        .routes(routes!(get_webhook))
-        .routes(routes!(get_webhook_with_token))
-        .routes(routes!(delete_webhook))
-        .routes(routes!(delete_webhook_with_token))
-        .routes(routes!(update_webhook))
-        .routes(routes!(update_webhook_with_token))
-        .routes(routes!(execute_webhook))
-        .routes(routes!(execute_webhook_discord))
-        .routes(routes!(execute_webhook_github))
-        .routes(routes!(execute_webhook_slack))
+        .routes(routes!(webhook_create))
+        .routes(routes!(webhook_list_channel))
+        .routes(routes!(webhook_list_room))
+        .routes(routes!(webhook_get))
+        .routes(routes!(webhook_get_with_token))
+        .routes(routes!(webhook_delete))
+        .routes(routes!(webhook_delete_with_token))
+        .routes(routes!(webhook_update))
+        .routes(routes!(webhook_update_with_token))
+        .routes(routes!(webhook_execute))
+        .routes(routes!(webhook_execute_discord))
+        .routes(routes!(webhook_execute_github))
+        .routes(routes!(webhook_execute_slack))
 }
