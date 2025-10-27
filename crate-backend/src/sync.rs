@@ -599,10 +599,10 @@ impl Connection {
             MessageSync::CalendarEventUpdate { event } => AuthCheck::Channel(event.channel_id),
             MessageSync::CalendarEventDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::WebhookCreate { webhook } => {
-                AuthCheck::ChannelPerm(webhook.thread_id, Permission::IntegrationsManage)
+                AuthCheck::ChannelPerm(webhook.channel_id, Permission::IntegrationsManage)
             }
             MessageSync::WebhookUpdate { webhook } => {
-                AuthCheck::ChannelPerm(webhook.thread_id, Permission::IntegrationsManage)
+                AuthCheck::ChannelPerm(webhook.channel_id, Permission::IntegrationsManage)
             }
             MessageSync::WebhookDelete { channel_id, .. } => {
                 AuthCheck::ChannelPerm(*channel_id, Permission::IntegrationsManage)

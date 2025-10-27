@@ -13,7 +13,7 @@ use common::v1::types::{
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
     AuditLogEntryId, Message, MessageCreate, Permission,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderReason};
@@ -62,7 +62,7 @@ async fn create_webhook(
             webhook_id: webhook.id,
             changes: Changes::new()
                 .add("name", &webhook.name)
-                .add("channel_id", &webhook.thread_id)
+                .add("channel_id", &webhook.channel_id)
                 .build(),
         },
     };
@@ -86,7 +86,7 @@ async fn create_webhook(
         (status = OK, body = Vec<Webhook>, description = "List webhooks success"),
     )
 )]
-async fn list_webhooks_thread(
+async fn list_webhooks_channel(
     Path(channel_id): Path<ChannelId>,
     Auth(auth_user): Auth,
     State(s): State<Arc<ServerState>>,
@@ -210,7 +210,7 @@ async fn delete_webhook(
     let sync_msg = MessageSync::WebhookDelete {
         webhook_id,
         room_id: webhook.room_id,
-        channel_id: webhook.thread_id,
+        channel_id: webhook.channel_id,
     };
     s.broadcast_room(room_id, auth_user.id, sync_msg).await?;
 
@@ -271,8 +271,8 @@ async fn update_webhook(
         .change("avatar", &before_webhook.avatar, &updated_webhook.avatar)
         .change(
             "channel_id",
-            &before_webhook.thread_id,
-            &updated_webhook.thread_id,
+            &before_webhook.channel_id,
+            &updated_webhook.channel_id,
         )
         .build();
 
@@ -354,7 +354,7 @@ async fn execute_webhook(
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
 
     let author_id = (*webhook.id).into();
-    let channel_id = webhook.thread_id;
+    let channel_id = webhook.channel_id;
 
     let srv = s.services();
     let message = srv
@@ -428,7 +428,7 @@ async fn execute_webhook_slack(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(create_webhook))
-        .routes(routes!(list_webhooks_thread))
+        .routes(routes!(list_webhooks_channel))
         .routes(routes!(list_webhooks_room))
         .routes(routes!(get_webhook))
         .routes(routes!(get_webhook_with_token))

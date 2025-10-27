@@ -9,8 +9,7 @@ use validator::Validate;
 pub struct Webhook {
     pub id: WebhookId,
     pub room_id: Option<RoomId>,
-    // TODO: rename to channel_id
-    pub thread_id: ChannelId,
+    pub channel_id: ChannelId,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: String,
     pub avatar: Option<MediaId>,
@@ -31,7 +30,7 @@ pub struct WebhookCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct WebhookUpdate {
-    pub thread_id: Option<ChannelId>,
+    pub channel_id: Option<ChannelId>,
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
     pub name: Option<String>,
     #[serde(default, deserialize_with = "some_option")]

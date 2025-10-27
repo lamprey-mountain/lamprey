@@ -77,7 +77,7 @@ impl DataWebhook for Postgres {
         Ok(Webhook {
             id: row.id.into(),
             room_id: row.room_id.map(Into::into),
-            thread_id: row.channel_id.into(),
+            channel_id: row.channel_id.into(),
             name: row.name,
             avatar: row.avatar.map(Into::into),
             token: Some(row.token),
@@ -102,7 +102,7 @@ impl DataWebhook for Postgres {
         Ok(Webhook {
             id: row.id.into(),
             room_id: row.room_id.map(Into::into),
-            thread_id: row.channel_id.into(),
+            channel_id: row.channel_id.into(),
             name: row.name,
             avatar: row.avatar.map(Into::into),
             token: None,
@@ -128,7 +128,7 @@ impl DataWebhook for Postgres {
             .map(|row| Webhook {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
-                thread_id: row.channel_id.into(),
+                channel_id: row.channel_id.into(),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
@@ -155,7 +155,7 @@ impl DataWebhook for Postgres {
             .map(|row| Webhook {
                 id: row.id.into(),
                 room_id: row.room_id.map(Into::into),
-                thread_id: row.channel_id.into(),
+                channel_id: row.channel_id.into(),
                 name: row.name,
                 avatar: row.avatar.map(Into::into),
                 token: None,
@@ -180,7 +180,7 @@ impl DataWebhook for Postgres {
             .execute(&mut *tx)
             .await?;
         }
-        if let Some(channel_id) = patch.thread_id {
+        if let Some(channel_id) = patch.channel_id {
             sqlx::query!(
                 "UPDATE webhook SET channel_id = $1 WHERE id = $2",
                 *channel_id,
@@ -238,7 +238,7 @@ impl DataWebhook for Postgres {
             .execute(&mut *tx)
             .await?;
         }
-        if let Some(channel_id) = patch.thread_id {
+        if let Some(channel_id) = patch.channel_id {
             sqlx::query!(
                 "UPDATE webhook SET channel_id = $1 WHERE id = $2",
                 *channel_id,
