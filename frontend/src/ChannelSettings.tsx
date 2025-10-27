@@ -2,13 +2,18 @@ import { For, Show } from "solid-js";
 import type { Channel } from "sdk";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
-import { Info, Permissions, Todo } from "./channel_settings/mod.tsx";
+import {
+	Info,
+	Integrations,
+	Invites,
+	Permissions,
+} from "./channel_settings/mod.tsx";
 
 const tabs = [
 	{ name: "info", path: "", component: Info },
-	{ name: "invites", path: "invites", component: Todo },
+	{ name: "invites", path: "invites", component: Invites },
 	{ name: "permissions", path: "permissions", component: Permissions },
-	{ name: "members", path: "members", component: Todo },
+	{ name: "integrations", path: "integrations", component: Integrations },
 ];
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {

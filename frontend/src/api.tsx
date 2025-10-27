@@ -36,6 +36,8 @@ import { Channels } from "./api/channels.ts";
 import { Threads } from "./api/threads.ts";
 import { Users } from "./api/users.ts";
 import { Invites } from "./api/invite.ts";
+import { ChannelInvites } from "./api/channel_invite.ts";
+import { Webhooks } from "./api/webhooks.ts";
 import { RoomMembers } from "./api/room_members.ts";
 import { RoomBans } from "./api/room_bans.ts";
 import { Roles } from "./api/roles.ts";
@@ -91,6 +93,8 @@ export function createApi(
 	const channels = new Channels();
 	const threads = new Threads();
 	const invites = new Invites();
+	const channel_invites = new ChannelInvites();
+	const webhooks = new Webhooks();
 	const roles = new Roles();
 	const room_members = new RoomMembers();
 	const room_bans = new RoomBans();
@@ -538,6 +542,19 @@ export function createApi(
 						});
 					}
 				}
+			} else if (invite.target.type === "Gdm") {
+				const channel_id = invite.target.channel.id;
+				const l = channel_invites._cachedListings.get(channel_id);
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						l.mutate({
+							...p,
+							items: [...p.items, invite],
+							total: p.total + 1,
+						});
+					}
+				}
 			} else if (invite.target.type === "Server") {
 				const l = invites._cachedServerListing;
 				if (l?.pagination) {
@@ -556,6 +573,22 @@ export function createApi(
 			if (msg.target.type === "Room") {
 				const room_id = msg.target.room_id;
 				const l = invites._cachedListings.get(room_id);
+				if (l?.pagination) {
+					const p = l.resource.latest;
+					if (p) {
+						const idx = p.items.findIndex((i) => i.code === msg.code);
+						if (idx !== -1) {
+							l.mutate({
+								...p,
+								items: p.items.toSpliced(idx, 1),
+								total: p.total - 1,
+							});
+						}
+					}
+				}
+			} else if (msg.target.type === "Gdm") {
+				const channel_id = msg.target.channel_id;
+				const l = channel_invites._cachedListings.get(channel_id);
 				if (l?.pagination) {
 					const p = l.resource.latest;
 					if (p) {
@@ -841,6 +874,48 @@ export function createApi(
 			}
 			list.groups = groups;
 			memberLists.set(id, { ...list });
+		} else if (msg.type === "WebhookCreate") {
+			const { webhook } = msg;
+			webhooks.cache.set(webhook.id, webhook);
+			const l = webhooks._cachedListings.get(webhook.channel_id);
+			if (l?.pagination) {
+				const p = l.resource.latest;
+				if (p) {
+					l.mutate({
+						...p,
+						items: [...p.items, webhook],
+						total: p.total + 1,
+					});
+				}
+			}
+		} else if (msg.type === "WebhookUpdate") {
+			const { webhook } = msg;
+			webhooks.cache.set(webhook.id, webhook);
+			const l = webhooks._cachedListings.get(webhook.channel_id);
+			if (l?.pagination) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex((i) => i.id === webhook.id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1, webhook),
+					});
+				}
+			}
+		} else if (msg.type === "WebhookDelete") {
+			webhooks.cache.delete(msg.webhook_id);
+			const l = webhooks._cachedListings.get(msg.channel_id);
+			if (l?.pagination) {
+				const p = l.resource.latest;
+				const idx = p.items.findIndex((i) => i.id === msg.webhook_id);
+				if (idx !== -1) {
+					l.mutate({
+						...p,
+						items: p.items.toSpliced(idx, 1),
+						total: p.total - 1,
+					});
+				}
+			}
 		} else if (msg.type === "InboxNotificationCreate") {
 			if (msg.user_id === session()?.user_id) {
 				inbox.cache.set(msg.notification.id, msg.notification);
@@ -900,6 +975,8 @@ export function createApi(
 		channels,
 		threads,
 		invites,
+		channel_invites,
+		webhooks,
 		roles,
 		room_members,
 		room_bans,
@@ -941,6 +1018,8 @@ export function createApi(
 	room_bans.api = api;
 	thread_members.api = api;
 	invites.api = api;
+	channel_invites.api = api;
+	webhooks.api = api;
 	users.api = api;
 	audit_logs.api = api;
 	media.api = api;
@@ -968,6 +1047,8 @@ export type Api = {
 	sessions: Sessions;
 	inbox: Inbox;
 	invites: Invites;
+	channel_invites: ChannelInvites;
+	webhooks: Webhooks;
 	roles: Roles;
 	audit_logs: AuditLogs;
 	room_members: RoomMembers;
